@@ -131,11 +131,6 @@ public class Advisory implements Serializable {
         // no args for jdo
     }
 
-    public Advisory(String name, String url) {
-        this.title = name;
-        this.url = url;
-    }
-
     public long getId() {
         return id;
     }

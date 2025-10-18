@@ -58,6 +58,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.AdvisoryDao;
 import org.dependencytrack.plugin.ConfigRegistryImpl;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
@@ -78,6 +79,7 @@ import java.util.NoSuchElementException;
 import java.util.function.Predicate;
 
 import static org.dependencytrack.model.Vulnerability.Source.CSAF;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.resources.v1.CsafSourceConfigProvider.getCsafSourceByIdFromConfig;
 import static org.dependencytrack.resources.v1.CsafSourceConfigProvider.updateSourcesInConfig;
 
@@ -244,10 +246,14 @@ public class CsafResource extends AbstractApiResource {
     })
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_READ)
     public Response getCsafDocuments(@QueryParam("searchText") String searchText, @QueryParam("pageSize") int pageSize, @QueryParam("pageNumber") int pageNumber, @QueryParam("sortName") String sortName, @QueryParam("sortOrder") String sortOrder) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            var results = qm.getAllAdvisories("CSAF", searchText, pageSize, pageNumber, sortName, sortOrder);
-            return Response.ok(results.getObjects()).header(TOTAL_COUNT_HEADER, results.getTotal()).build();
-        }
+        // normalize search term: trim and treat empty as null so DAO SQL conditional behaves predictably
+        final String searchParam = (searchText == null || searchText.trim().isEmpty()) ? null : searchText.trim();
+
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
+            List<AdvisoryDao.AdvisoryDetailRow> advisories = handle.attach(AdvisoryDao.class).getAllAdvisories("CSAF", searchParam);
+            final long totalCount = handle.attach(AdvisoryDao.class).getTotalAdvisories("CSAF", searchParam);
+            return Response.ok(advisories).header(TOTAL_COUNT_HEADER, totalCount).build();
+        });
     }
 
     @POST

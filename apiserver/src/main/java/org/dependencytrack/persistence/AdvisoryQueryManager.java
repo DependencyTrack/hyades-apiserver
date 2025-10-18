@@ -19,17 +19,12 @@
 package org.dependencytrack.persistence;
 
 import alpine.common.logging.Logger;
-import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
-import org.datanucleus.store.rdbms.query.ForwardQueryResult;
 import org.dependencytrack.model.Advisory;
 
 import javax.annotation.Nullable;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
 
@@ -91,56 +86,6 @@ public class AdvisoryQueryManager extends QueryManager implements IQueryManager 
         return singleResult(query.execute(publisher, name));
     }
 
-    @Override
-    public PaginatedResult getAllAdvisories(String format, String searchText, int pageSize, int pageNumber, String sortName, String sortOrder) {
-        searchText = (searchText == null ? "" : searchText);
-        String totalSql = "SELECT COUNT(*) FROM public.\"ADVISORY\" ";
-        totalSql += "WHERE \"FORMAT\"=? ";
-        if (!searchText.isBlank()) {
-            totalSql += "AND searchvector @@ websearch_to_tsquery(?) ";
-        }
-        var totalQuery = pm.newQuery("javax.jdo.query.SQL", totalSql);
-
-        Object totalRawResult = (searchText.isBlank()) ? totalQuery.execute(format) : totalQuery.execute(format, searchText);
-        ForwardQueryResult<Long> totalQueryResult = (ForwardQueryResult<Long>) totalRawResult;
-        long total = totalQueryResult.getFirst();
-
-        // Construct query
-        StringBuilder docSql = new StringBuilder("SELECT \"ID\",\"TITLE\",\"URL\",\"SEEN\",\"LASTFETCHED\",\"PUBLISHER\",\"NAME\",\"VERSION\" FROM public.\"ADVISORY\" ");
-        ArrayList<Object> docParams = new ArrayList<>();
-        docSql.append("WHERE \"FORMAT\"=? ");
-        docParams.add(format);
-        if (!searchText.isBlank()) {
-            docSql.append("AND searchvector @@ websearch_to_tsquery(?) ");
-            docParams.add(searchText);
-        }
-
-        if (!sortName.isBlank() && ALLOWED_SORT_COLUMNS.containsKey(sortName) && !sortOrder.isBlank() && ALLOWED_SORT_ORDERS.containsKey(sortOrder)) {
-            docSql.append("ORDER BY ");
-            docSql.append(ALLOWED_SORT_COLUMNS.get(sortName));
-            docSql.append(" ");
-            docSql.append(ALLOWED_SORT_ORDERS.get(sortOrder));
-            docSql.append(" ");
-        } else {
-            docSql.append("ORDER BY \"ID\" ASC ");
-        }
-
-        docSql.append("LIMIT ? OFFSET ? ");
-        long offset = (long) (pageNumber - 1) * pageSize;
-        docParams.add(pageSize);
-        docParams.add(offset);
-
-        var query = pm.newQuery("javax.jdo.query.SQL", docSql.toString());
-        query.setParameters(docParams.toArray());
-        query.setResultClass(Advisory.class);
-        List<Advisory> results = query.executeList();
-
-        PaginatedResult pr = new PaginatedResult();
-        pr.setObjects(results);
-        pr.setTotal(total);
-        return pr;
-    }
-
     /**
      * Updates an existing advisory.
      *
@@ -170,20 +115,6 @@ public class AdvisoryQueryManager extends QueryManager implements IQueryManager 
     public void toggleAdvisorySeen(Advisory advisory) {
         advisory.setSeen(!advisory.isSeen());
         pm.makePersistent(advisory);
-        return;
     }
-
-    private static final Map<String, String> ALLOWED_SORT_COLUMNS = Map.of(
-            "id", "\"ID\"",
-            "name", "\"NAME\"",
-            "publisherNamespace", "\"PUBLISHER\"",
-            "trackingVersion", "\"VERSION\"",
-            "lastFetched", "\"LASTFETCHED\"",
-            "seen", "\"SEEN\""
-    );
-    private static final Map<String, String> ALLOWED_SORT_ORDERS = Map.of(
-            "asc", "ASC",
-            "desc", "DESC"
-    );
 
 }

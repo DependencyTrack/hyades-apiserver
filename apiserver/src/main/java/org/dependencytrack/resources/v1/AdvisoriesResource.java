@@ -99,10 +99,10 @@ public class AdvisoriesResource extends AbstractApiResource {
         // normalize search term: trim and treat empty as null so DAO SQL conditional behaves predictably
         final String searchParam = (searchText == null || searchText.trim().isEmpty()) ? null : searchText.trim();
 
-        List<AdvisoryDao.AdvisoriesPortfolioRow> advisoryRows = withJdbiHandle(getAlpineRequest(), handle ->
-                    handle.attach(AdvisoryDao.class).getAllAdvisories(searchParam));
+        List<AdvisoryDao.AdvisoryDetailRow> advisoryRows = withJdbiHandle(getAlpineRequest(), handle ->
+                    handle.attach(AdvisoryDao.class).getAllAdvisories(null, searchParam));
         final long totalCount = withJdbiHandle(getAlpineRequest(), handle ->
-                    handle.attach(AdvisoryDao.class).getAllAdvisoriesTotal(searchParam));
+                    handle.attach(AdvisoryDao.class).getTotalAdvisories(null, searchParam));
         return Response.ok(advisoryRows.stream().toList()).header(TOTAL_COUNT_HEADER, totalCount).build();
     }
 

@@ -1054,10 +1054,6 @@ public class QueryManager extends AlpineQueryManager {
         getMetricsQueryManager().synchronizeVulnerabilityMetrics(metrics);
     }
 
-    public PaginatedResult getAllAdvisories(String format, String searchText, int pageSize, int pageNumber, String sortName, String sortOrder) {
-        return getAdvisoryQueryManager().getAllAdvisories(format, searchText, pageSize, pageNumber, sortName, sortOrder);
-    }
-
     public Advisory synchronizeAdvisory(Advisory advisory) {
         return getAdvisoryQueryManager().synchronizeAdvisory(advisory);
     }

@@ -160,43 +160,69 @@ public interface AdvisoryDao {
             """)
     Long getAmountFindingsTotal(long advisoryId);
 
-    record AdvisoriesPortfolioRow(
-            String name,
-            int affectedComponents,
-            int affectedProjects,
+    record AdvisoryDetailRow(
+            long id,
+            String title,
             String url,
-            int documentId
+            boolean seen,
+            java.time.Instant lastFetched,
+            String publisher,
+            String name,
+            String version,
+            int affectedComponents,
+            int affectedProjects
     ) {
     }
 
+    @AllowUnusedBindings
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-
-            SELECT "ADVISORY"."TITLE" as "name",
-            COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID") AS "affectedComponents",
-            COUNT(DISTINCT "PROJECT_ID") AS "affectedProjects",
-            "URL" AS "url",
-            "ADVISORY"."ID" AS "documentId"
+            
+            SELECT "ADVISORY"."ID" AS "id",
+                   "ADVISORY"."TITLE" AS "title",
+                   "ADVISORY"."URL" AS "url",
+                   "ADVISORY"."SEEN" AS "seen",
+                   "ADVISORY"."LASTFETCHED" AS "lastFetched",
+                   "ADVISORY"."PUBLISHER" AS "publisher",
+                   "ADVISORY"."NAME" AS "name",
+                   "ADVISORY"."VERSION" AS "version",
+                   COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID") AS "affectedComponents",
+                   COUNT(DISTINCT "FINDINGATTRIBUTION"."PROJECT_ID") AS "affectedProjects"
             FROM "ADVISORY"
             LEFT JOIN "ADVISORIES_VULNERABILITIES" ON "ADVISORIES_VULNERABILITIES"."ADVISORY_ID" = "ADVISORY"."ID"
             LEFT JOIN "FINDINGATTRIBUTION" ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
-            WHERE (:searchTerm IS NULL OR :searchTerm = '' OR LOWER("ADVISORY"."TITLE") LIKE CONCAT('%', LOWER(:searchTerm), '%'))
-            GROUP BY "ADVISORY"."ID","ADVISORY"."TITLE","URL"
+            WHERE 1=1
+            AND (:format IS NULL OR "ADVISORY"."FORMAT" = :format)
+            AND (:searchText IS NULL OR "ADVISORY"."searchvector" @@ websearch_to_tsquery(:searchText))
+            GROUP BY "ADVISORY"."ID", "ADVISORY"."TITLE", "ADVISORY"."URL", "ADVISORY"."SEEN", "ADVISORY"."LASTFETCHED", "ADVISORY"."PUBLISHER", "ADVISORY"."NAME", "ADVISORY"."VERSION"
             
              ${apiOffsetLimitClause!}
             """)
-    @RegisterConstructorMapper(AdvisoryDao.AdvisoriesPortfolioRow.class)
-    List<AdvisoriesPortfolioRow> getAllAdvisories(@Bind("searchTerm") String searchTerm);
+    @RegisterConstructorMapper(AdvisoryDetailRow.class)
+    @AllowApiOrdering(alwaysBy = "id", by = {
+            @AllowApiOrdering.Column(name = "id", queryName = "\"ADVISORY\".\"ID\""),
+            @AllowApiOrdering.Column(name = "title", queryName = "\"ADVISORY\".\"TITLE\""),
+            @AllowApiOrdering.Column(name = "publisher", queryName = "\"ADVISORY\".\"PUBLISHER\""),
+            @AllowApiOrdering.Column(name = "name", queryName = "\"ADVISORY\".\"NAME\""),
+            @AllowApiOrdering.Column(name = "version", queryName = "\"ADVISORY\".\"VERSION\""),
+            @AllowApiOrdering.Column(name = "lastFetched", queryName = "\"ADVISORY\".\"LASTFETCHED\""),
+            @AllowApiOrdering.Column(name = "seen", queryName = "\"ADVISORY\".\"SEEN\""),
+            @AllowApiOrdering.Column(name = "affectedComponents", queryName = "COUNT(DISTINCT \"FINDINGATTRIBUTION\".\"COMPONENT_ID\")"),
+            @AllowApiOrdering.Column(name = "affectedProjects", queryName = "COUNT(DISTINCT \"FINDINGATTRIBUTION\".\"PROJECT_ID\")")
+    })
+    List<AdvisoryDetailRow> getAllAdvisories(@Bind("format") String format, @Bind("searchText") String searchText);
 
     @AllowUnusedBindings
-    @SqlQuery(/* language=InjectedFreeMarker */ """            
-            SELECT COALESCE(COUNT(DISTINCT "ADVISORY"."ID"), 0) as "totalCount"
+    @SqlQuery(/* language=InjectedFreeMarker */ """
+            SELECT COUNT(DISTINCT "ADVISORY"."ID") AS "totalCount"
             FROM "ADVISORY"
             LEFT JOIN "ADVISORIES_VULNERABILITIES" ON "ADVISORIES_VULNERABILITIES"."ADVISORY_ID" = "ADVISORY"."ID"
             LEFT JOIN "FINDINGATTRIBUTION" ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
-            WHERE (:searchTerm IS NULL OR :searchTerm = '' OR LOWER("ADVISORY"."TITLE") LIKE CONCAT('%', LOWER(:searchTerm), '%'))
+            WHERE 1=1
+            AND (:format IS NULL OR "ADVISORY"."FORMAT" = :format)
+            AND (:searchText IS NULL OR "ADVISORY"."searchvector" @@ websearch_to_tsquery(:searchText))
             """)
-    long getAllAdvisoriesTotal(@Bind("searchTerm") String searchTerm);
+    long getTotalAdvisories(@Bind("format") String format, @Bind("searchText") String searchText);
 
     record ProjectAdvisoryFinding(
             String name,
