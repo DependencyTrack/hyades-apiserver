@@ -61,7 +61,7 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
         // Create test data
         createAdvisory("Advisory Alpha", "CSAF", "publisher1", "ADV-001", "1.0");
         createAdvisory("Advisory Beta", "CSAF", "publisher2", "ADV-002", "2.0");
-        createAdvisory("Advisory Gamma", "VEX", "publisher3", "ADV-003", "1.5");
+        createAdvisory("Advisory Gamma", "OTHER", "publisher3", "ADV-003", "1.5");
 
         // Test: Get all advisories without a filter
         List<AdvisoryDao.AdvisoryDetailRow> results = advisoryDao.getAllAdvisories(null, null);
@@ -73,9 +73,9 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
         assertThat(csafResults).extracting(AdvisoryDao.AdvisoryDetailRow::title)
                 .containsExactlyInAnyOrder("Advisory Alpha", "Advisory Beta");
 
-        List<AdvisoryDao.AdvisoryDetailRow> vexResults = advisoryDao.getAllAdvisories("VEX", null);
+        List<AdvisoryDao.AdvisoryDetailRow> vexResults = advisoryDao.getAllAdvisories("OTHER", null);
         assertThat(vexResults).hasSize(1);
-        assertThat(vexResults.get(0).title()).isEqualTo("Advisory Gamma");
+        assertThat(vexResults.getFirst().title()).isEqualTo("Advisory Gamma");
     }
 
     @Test
@@ -121,7 +121,7 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
         List<AdvisoryDao.AdvisoryDetailRow> results = advisoryDao.getAllAdvisories("CSAF", null);
         assertThat(results).hasSize(1);
 
-        AdvisoryDao.AdvisoryDetailRow result = results.get(0);
+        AdvisoryDao.AdvisoryDetailRow result = results.getFirst();
         assertThat(result.title()).isEqualTo("Test Advisory");
         assertThat(result.affectedComponents()).isEqualTo(3);
         assertThat(result.affectedProjects()).isEqualTo(2);
@@ -130,16 +130,16 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
     @Test
     public void testGetAllAdvisoriesSearchText() {
         // Create test data with searchable content
-        final var advisory1 = createAdvisory("Security Alert for Apache", "CSAF", "apache", "APACHE-001", "1.0");
-        final var advisory2 = createAdvisory("Critical Bug in Nginx", "CSAF", "nginx", "NGINX-001", "1.0");
-        final var advisory3 = createAdvisory("Apache Tomcat Vulnerability", "CSAF", "apache", "APACHE-002", "1.0");
+        createAdvisory("Security Alert for Apache", "CSAF", "apache", "APACHE-001", "1.0");
+        createAdvisory("Critical Bug in Nginx", "CSAF", "nginx", "NGINX-001", "1.0");
+        createAdvisory("Apache Tomcat Vulnerability", "CSAF", "apache", "APACHE-002", "1.0");
 
         // Note: searchvector functionality requires the database to have proper text search setup
         // This test demonstrates the API; actual search behavior depends on database configuration
 
         // Test: Search returns results (exact behavior depends on searchvector index)
-        List<AdvisoryDao.AdvisoryDetailRow> allResults = advisoryDao.getAllAdvisories("CSAF", null);
-        assertThat(allResults).hasSize(3);
+        List<AdvisoryDao.AdvisoryDetailRow> allResults = advisoryDao.getAllAdvisories("CSAF", "Apache");
+        assertThat(allResults).hasSize(2);
     }
 
     @Test
@@ -341,15 +341,15 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
         vuln1.setSource(CSAF);
         qm.persist(vuln1);
         advisory1.addVulnerability(vuln1);
-        qm.addVulnerability(vuln1, component1, AnalyzerIdentity.INTERNAL_ANALYZER, "Test", "http://test.com", new Date());
+        qm.addVulnerability(vuln1, component1, AnalyzerIdentity.CSAF_ANALYZER, "Test", "http://test.com", new Date());
 
         final var vuln2 = new Vulnerability();
         vuln2.setVulnId("VULN-002");
         vuln2.setSource(CSAF);
         qm.persist(vuln2);
         advisory2.addVulnerability(vuln2);
-        qm.addVulnerability(vuln2, component1, AnalyzerIdentity.INTERNAL_ANALYZER, "Test", "http://test.com", new Date());
-        qm.addVulnerability(vuln2, component2, AnalyzerIdentity.INTERNAL_ANALYZER, "Test", "http://test.com", new Date());
+        qm.addVulnerability(vuln2, component1, AnalyzerIdentity.CSAF_ANALYZER, "Test", "http://test.com", new Date());
+        qm.addVulnerability(vuln2, component2, AnalyzerIdentity.CSAF_ANALYZER, "Test", "http://test.com", new Date());
 
         List<AdvisoryDao.AdvisoryDetailRow> results = advisoryDao.getAllAdvisories("CSAF", null);
         assertThat(results).hasSize(3);
@@ -379,8 +379,8 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
         // Test
         List<AdvisoryDao.AdvisoryInProjectRow> results = advisoryDao.getAdvisoriesWithFindingsByProject(project.getId(), false);
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).name()).isEqualTo("Test Advisory");
-        assertThat(results.get(0).findingsPerDoc()).isEqualTo(1);
+        assertThat(results.getFirst().name()).isEqualTo("Test Advisory");
+        assertThat(results.getFirst().findingsPerDoc()).isEqualTo(1);
     }
 
     // Helper method to create advisories
