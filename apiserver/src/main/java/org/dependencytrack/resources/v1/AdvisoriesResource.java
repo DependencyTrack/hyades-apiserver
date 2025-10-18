@@ -328,7 +328,7 @@ public class AdvisoriesResource extends AbstractApiResource {
     @Operation(summary = "Returns a list of findings associated to project x advisory", description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "A list of all advisory findings for a specific project and advisory", content = {
-                    @Content(array = @ArraySchema(schema = @Schema(implementation = AdvisoryDao.ProjectAdvisoryFinding.class)), mediaType = MediaType.APPLICATION_JSON),
+                    @Content(array = @ArraySchema(schema = @Schema(implementation = AdvisoryDao.ProjectAdvisoryFindingRow.class)), mediaType = MediaType.APPLICATION_JSON),
             }),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "403", description = "Access to the requested project is forbidden", content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
@@ -342,7 +342,7 @@ public class AdvisoriesResource extends AbstractApiResource {
             @HeaderParam("accept") String acceptHeader) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             LOGGER.info("Querying for " + projectId + " :: " + advisoryId);
-            List<AdvisoryDao.ProjectAdvisoryFinding> advisoryRows = withJdbiHandle(getAlpineRequest(),
+            List<AdvisoryDao.ProjectAdvisoryFindingRow> advisoryRows = withJdbiHandle(getAlpineRequest(),
                     handle -> handle.attach(AdvisoryDao.class)
                             .getFindingsByProjectAdvisory(projectId, advisoryId));
             final long totalCount = advisoryRows.size();

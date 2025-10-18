@@ -226,7 +226,7 @@ public interface AdvisoryDao {
             """)
     long getTotalAdvisories(@Bind("format") String format, @Bind("searchText") String searchText);
 
-    record ProjectAdvisoryFinding(
+    record ProjectAdvisoryFindingRow(
             String name,
             float confidence,
             String desc,
@@ -242,7 +242,7 @@ public interface AdvisoryDao {
                , "MATCHING_PERCENTAGE" AS "confidence"
                , "DESCRIPTION" AS "desc"
                , "GROUP" AS "group"
-               , "VERSION" AS "version"
+               , "COMPONENT"."VERSION" AS "version"
                , "COMPONENT"."UUID" AS "componentUuid"
             FROM "FINDINGATTRIBUTION"
             INNER JOIN "COMPONENT" ON "FINDINGATTRIBUTION"."COMPONENT_ID" = "COMPONENT"."ID"
@@ -254,8 +254,8 @@ public interface AdvisoryDao {
 
              ${apiOffsetLimitClause!}
             """)
-    @RegisterConstructorMapper(AdvisoryDao.ProjectAdvisoryFinding.class)
-    List<AdvisoryDao.ProjectAdvisoryFinding> getFindingsByProjectAdvisory(@Bind long projectId,
-            @Bind long advisoryId);
+    @RegisterConstructorMapper(ProjectAdvisoryFindingRow.class)
+    List<ProjectAdvisoryFindingRow> getFindingsByProjectAdvisory(@Bind long projectId,
+                                                                 @Bind long advisoryId);
 
 }
