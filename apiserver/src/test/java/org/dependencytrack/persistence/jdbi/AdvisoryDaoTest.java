@@ -147,6 +147,30 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void testGetAllAdvisoriesSearchTextCaseInsensitive() {
+        // Create test data with searchable content
+        createAdvisory("Case Test Apache", "CSAF", "apache", "CASE-APACHE-001", "1.0");
+        createAdvisory("Another Apache Issue", "CSAF", "apache", "CASE-APACHE-002", "1.0");
+        createAdvisory("Unrelated Issue", "CSAF", "other", "CASE-OTHER-001", "1.0");
+
+        // Search with lowercase
+        List<AdvisoryDao.AdvisoryDetailRow> lowerResults = advisoryDao.getAllAdvisories("CSAF", "apache");
+        // Search with uppercase
+        List<AdvisoryDao.AdvisoryDetailRow> upperResults = advisoryDao.getAllAdvisories("CSAF", "APACHE");
+        // Search with mixed case
+        List<AdvisoryDao.AdvisoryDetailRow> mixedResults = advisoryDao.getAllAdvisories("CSAF", "ApAcHe");
+
+        assertThat(lowerResults).hasSize(2);
+        assertThat(upperResults).hasSize(2);
+        assertThat(mixedResults).hasSize(2);
+
+        // Verify that titles returned are the same across casings
+        assertThat(lowerResults).extracting(AdvisoryDao.AdvisoryDetailRow::title).containsExactlyInAnyOrder("Case Test Apache", "Another Apache Issue");
+        assertThat(upperResults).extracting(AdvisoryDao.AdvisoryDetailRow::title).containsExactlyInAnyOrder("Case Test Apache", "Another Apache Issue");
+        assertThat(mixedResults).extracting(AdvisoryDao.AdvisoryDetailRow::title).containsExactlyInAnyOrder("Case Test Apache", "Another Apache Issue");
+    }
+
+    @Test
     public void testGetTotalAdvisories() {
         // Create test data
         createAdvisory("Advisory 1", "CSAF", "pub1", "ADV-001", "1.0");
