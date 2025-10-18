@@ -56,6 +56,7 @@ public abstract class ResourceTest {
     protected final String V1_COMPONENT = "/v1/component";
     protected final String V1_DEPENDENCY_GRAPH = "/v1/dependencyGraph";
     protected final String V1_CONFIG_PROPERTY = "/v1/configProperty";
+    protected final String V1_CSAF = "/v1/csaf";
     protected final String V1_CWE = "/v1/cwe";
     protected final String V1_DEPENDENCY = "/v1/dependency";
     protected final String V1_EVENT = "/v1/event";

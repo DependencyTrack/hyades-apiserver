@@ -250,4 +250,80 @@
             $$;
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-12" author="oxisto">
+        <createTable tableName="ADVISORY">
+            <column name="ID" autoIncrement="true" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="ADVISORY_PK"/>
+            </column>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VERSION" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PUBLISHER" type="VARCHAR(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TITLE" type="VARCHAR(2048)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="URL" type="VARCHAR(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FORMAT" type="VARCHAR(255)"/>
+            <column name="CONTENT" type="TEXT"/>
+            <column name="SEEN" type="BOOLEAN"/>
+            <column name="LASTFETCHED" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v5.7.0-13" author="oxisto">
+        <sql>
+            ALTER TABLE "ADVISORY"
+            ADD COLUMN searchvector tsvector
+            GENERATED ALWAYS AS (to_tsvector('english', coalesce("TITLE", '') || ' ' || coalesce("URL", '') || ' ' ||
+            coalesce("CONTENT", ''))) STORED;
+        </sql>
+        <sql>
+            CREATE INDEX searchvector_idx ON "ADVISORY" USING GIN (searchvector);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-14" author="oxisto">
+        <addColumn tableName="VULNERABILITYALIAS">
+            <column name="CSAF_ID" type="VARCHAR(255)"/>
+        </addColumn>
+        <createIndex indexName="VULNERABILITYALIAS_CSAF_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="CSAF_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="v5.7.0-15" author="oxisto">
+        <addColumn tableName="FINDINGATTRIBUTION">
+            <column name="MATCHING_PERCENTAGE" type="FLOAT"/>
+        </addColumn>
+    </changeSet>
+    <changeSet id="v5.7.0-16" author="oxisto">
+        <createTable tableName="ADVISORIES_VULNERABILITIES">
+            <column name="ADVISORY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNERABILITY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="ADVISORIES_VULNERABILITIES"
+                baseColumnNames="ADVISORY_ID"
+                referencedTableName="ADVISORY"
+                referencedColumnNames="ID"
+                constraintName="ADVISORIES_VULNERABILITIES_ADVISORY_FK"/>
+        <addForeignKeyConstraint
+                baseTableName="ADVISORIES_VULNERABILITIES"
+                baseColumnNames="VULNERABILITY_ID"
+                referencedTableName="VULNERABILITY"
+                referencedColumnNames="ID"
+                constraintName="ADVISORIES_VULNERABILITIES_VULNERABILITY_FK"/>
+    </changeSet>
+
 </databaseChangeLog>
