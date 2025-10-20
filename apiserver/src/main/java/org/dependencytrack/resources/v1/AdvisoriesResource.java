@@ -237,6 +237,31 @@ public class AdvisoriesResource extends AbstractApiResource {
         }
     }
 
+    @POST
+    @Path("/seen/{advisoryId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Marks an advisory as seen", description = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS_UPDATE</strong></p>")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Advisory marked as seen successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The advisory could not be found")
+    })
+    @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE)
+    public Response markAdvisoryAsSeen(@PathParam("advisoryId") String advisoryId) {
+        try (QueryManager qm = new QueryManager()) {
+            final Advisory entity = qm.getObjectById(Advisory.class, advisoryId);
+            if (entity != null) {
+                entity.setSeen(true);
+                qm.persist(entity);
+                return Response.ok(entity).build();
+            } else {
+                return Response.status(Response.Status.NOT_FOUND)
+                        .entity("The advisory could not be found.").build();
+            }
+        }
+    }
+
     @GET
     @Path("/{advisoryId}")
     @Consumes(MediaType.APPLICATION_JSON)
