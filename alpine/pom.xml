@@ -87,7 +87,7 @@
         <lib.jaxb-runtime.version>4.0.6</lib.jaxb-runtime.version>
         <lib.jsonwebtoken.version>0.13.0</lib.jsonwebtoken.version>
         <lib.jsr305.version>3.0.2</lib.jsr305.version>
-        <lib.logback.version>1.5.19</lib.logback.version>
+        <lib.logback.version>1.5.20</lib.logback.version>
         <lib.logstash-logback-encoder.version>8.1</lib.logstash-logback-encoder.version>
         <lib.microprofile-health-api.version>4.0.1</lib.microprofile-health-api.version>
         <lib.nimbus-oauth2-oidc-sdk.version>11.30</lib.nimbus-oauth2-oidc-sdk.version>
