@@ -20,6 +20,7 @@ package org.dependencytrack.datasource.vuln.csaf;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.csaf.retrieval.CsafLoader;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
@@ -31,6 +32,8 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.SequencedCollection;
 
+import static io.csaf.retrieval.CsafLoader.withSettings;
+import static io.csaf.retrieval.CsafLoaderJvmKt.javaClientEngine;
 import static org.dependencytrack.datasource.vuln.csaf.CsafVulnDataSourceConfigs.CONFIG_ENABLED;
 import static org.dependencytrack.datasource.vuln.csaf.CsafVulnDataSourceConfigs.CONFIG_SOURCES;
 
@@ -43,6 +46,7 @@ public class CsafVulnDataSourceFactory implements VulnDataSourceFactory {
 
     private ConfigRegistry configRegistry;
     private ObjectMapper objectMapper;
+    private CsafLoader csafLoader;
 
     @Override
     public String extensionName() {
@@ -70,6 +74,13 @@ public class CsafVulnDataSourceFactory implements VulnDataSourceFactory {
     public void init(final ExtensionContext ctx) {
         this.configRegistry = ctx.configRegistry();
         this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        this.csafLoader = withSettings(
+                5,
+                1000,
+                5000,
+                60000,
+                javaClientEngine(ctx.proxySelector())
+        );
     }
 
     @Override
@@ -85,7 +96,7 @@ public class CsafVulnDataSourceFactory implements VulnDataSourceFactory {
         }
 
         final var sourcesManagers = SourcesManager.create(configRegistry, objectMapper);
-        return new CsafVulnDataSource(sourcesManagers);
+        return new CsafVulnDataSource(sourcesManagers, csafLoader);
     }
 
 }

@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import jakarta.annotation.Nullable;
 import org.dependencytrack.model.Advisory;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.AllowUnusedBindings;
@@ -75,10 +76,10 @@ public interface AdvisoryDao {
              ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(AdvisoryInProjectRow.class)
-    List<AdvisoryInProjectRow> getAdvisoriesWithFindingsByProject(@Bind long projectId, @Bind boolean suppressed);
+    List<AdvisoryInProjectRow> getAdvisoriesWithFindingsByProject(@Bind long projectId);
 
     record AdvisoryResult(
-            Advisory entity,
+            AdvisoryDetailRow entity,
             List<ProjectRow> affectedProjects,
             long numAffectedComponents,
             List<AdvisoryDao.VulnerabilityRow> vulnerabilities) {
@@ -133,34 +134,6 @@ public interface AdvisoryDao {
     @RegisterConstructorMapper(AdvisoryDao.VulnerabilityRow.class)
     List<VulnerabilityRow> getVulnerabilitiesByAdvisory(long advisoryId);
 
-    @SqlQuery(/* language=InjectedFreeMarker */ """
-            <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-
-            SELECT COALESCE(COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID"), 0) AS "findingsWithAnalysis"
-            FROM "FINDINGATTRIBUTION"
-            INNER JOIN "ADVISORIES_VULNERABILITIES"
-            ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
-            INNER JOIN "ANALYSIS" ON
-            "FINDINGATTRIBUTION"."PROJECT_ID" = "ANALYSIS"."PROJECT_ID"
-            WHERE "ADVISORY_ID" = :advisoryId
-
-             ${apiOffsetLimitClause!}
-            """)
-    Long getAmountFindingsMarked(long advisoryId);
-
-    @SqlQuery(/* language=InjectedFreeMarker */ """
-            <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-
-            SELECT COALESCE(COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID"), 0) AS "findingsWithAnalysis"
-            FROM "FINDINGATTRIBUTION"
-            INNER JOIN "ADVISORIES_VULNERABILITIES"
-            ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
-            WHERE "ADVISORY_ID" = :advisoryId
-
-             ${apiOffsetLimitClause!}
-            """)
-    Long getAmountFindingsTotal(long advisoryId);
-
     record AdvisoryDetailRow(
             long id,
             String title,
@@ -171,7 +144,8 @@ public interface AdvisoryDao {
             String name,
             String version,
             int affectedComponents,
-            int affectedProjects) {
+            int affectedProjects,
+            @Nullable String content) {
     }
 
     @AllowUnusedBindings
@@ -194,7 +168,7 @@ public interface AdvisoryDao {
             LEFT JOIN "FINDINGATTRIBUTION" ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
             WHERE 1=1
             AND (:format IS NULL OR "ADVISORY"."FORMAT" = :format)
-            AND (:searchText IS NULL OR "ADVISORY"."searchvector" @@ websearch_to_tsquery(:searchText))
+            AND (:searchText IS NULL OR "ADVISORY"."SEARCHVECTOR" @@ websearch_to_tsquery(:searchText))
             GROUP BY "ADVISORY"."ID", "ADVISORY"."TITLE", "ADVISORY"."URL", "ADVISORY"."SEEN", "ADVISORY"."LASTFETCHED", "ADVISORY"."PUBLISHER", "ADVISORY"."NAME", "ADVISORY"."VERSION"
 
              ${apiOrderByClause!}
@@ -214,6 +188,28 @@ public interface AdvisoryDao {
     })
     List<AdvisoryDetailRow> getAllAdvisories(@Bind("format") String format, @Bind("searchText") String searchText);
 
+    @SqlQuery(/* language=InjectedFreeMarker */ """
+            SELECT
+                   "ADVISORY"."ID" AS "id",
+                   "ADVISORY"."TITLE" AS "title",
+                   "ADVISORY"."URL" AS "url",
+                   "ADVISORY"."SEEN" AS "seen",
+                   "ADVISORY"."LASTFETCHED" AS "lastFetched",
+                   "ADVISORY"."PUBLISHER" AS "publisher",
+                   "ADVISORY"."NAME" AS "name",
+                   "ADVISORY"."VERSION" AS "version",
+                   COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID") AS "affectedComponents",
+                   COUNT(DISTINCT "FINDINGATTRIBUTION"."PROJECT_ID") AS "affectedProjects",
+                   "ADVISORY"."CONTENT" AS "content"
+            FROM "ADVISORY"
+            LEFT JOIN "ADVISORIES_VULNERABILITIES" ON "ADVISORIES_VULNERABILITIES"."ADVISORY_ID" = "ADVISORY"."ID"
+            LEFT JOIN "FINDINGATTRIBUTION" ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
+            WHERE "ADVISORY"."ID" = :id
+            GROUP BY "ADVISORY"."ID", "ADVISORY"."TITLE", "ADVISORY"."URL", "ADVISORY"."SEEN", "ADVISORY"."LASTFETCHED", "ADVISORY"."PUBLISHER", "ADVISORY"."NAME", "ADVISORY"."VERSION"
+            """)
+    @RegisterConstructorMapper(AdvisoryDao.AdvisoryDetailRow.class)
+    AdvisoryDetailRow getAdvisoryById(@Bind("id") long id);
+
     @AllowUnusedBindings
     @SqlQuery(/* language=InjectedFreeMarker */ """
             SELECT COUNT(DISTINCT "ADVISORY"."ID") AS "totalCount"
@@ -222,7 +218,7 @@ public interface AdvisoryDao {
             LEFT JOIN "FINDINGATTRIBUTION" ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
             WHERE 1=1
             AND (:format IS NULL OR "ADVISORY"."FORMAT" = :format)
-            AND (:searchText IS NULL OR "ADVISORY"."searchvector" @@ websearch_to_tsquery(:searchText))
+            AND (:searchText IS NULL OR "ADVISORY"."SEARCHVECTOR" @@ websearch_to_tsquery(:searchText))
             """)
     long getTotalAdvisories(@Bind("format") String format, @Bind("searchText") String searchText);
 

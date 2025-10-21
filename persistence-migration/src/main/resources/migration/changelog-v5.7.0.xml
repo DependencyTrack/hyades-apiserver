@@ -286,7 +286,7 @@
             coalesce("CONTENT", ''))) STORED;
         </sql>
         <sql>
-            CREATE INDEX "ADVISORY_SEARCHVECTOR_IDX" ON "ADVISORY" USING GIN (searchvector);
+            CREATE INDEX "ADVISORY_SEARCHVECTOR_IDX" ON "ADVISORY" USING GIN ("SEARCHVECTOR");
         </sql>
     </changeSet>
 

@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.resources.v1;
+package org.dependencytrack.resources.v2;
 
 import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
@@ -48,16 +48,15 @@ import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.datasource.vuln.csaf.CsafSource;
 import org.dependencytrack.datasource.vuln.csaf.CsafVulnDataSourceConfigs;
-
 import org.dependencytrack.datasource.vuln.csaf.SourcesManager;
 import org.dependencytrack.event.CsafMirrorEvent;
 import org.dependencytrack.model.Repository;
+import org.dependencytrack.model.validation.ValidDomainValidator;
+import org.dependencytrack.model.validation.ValidURLValidator;
 import org.dependencytrack.plugin.ConfigRegistryImpl;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.tasks.CsafMirrorTask;
-import org.dependencytrack.util.CsafUtil;
-
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -65,13 +64,13 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Predicate;
 
-import static org.dependencytrack.resources.v1.CsafSourceConfigProvider.getCsafSourceByIdFromConfig;
-import static org.dependencytrack.resources.v1.CsafSourceConfigProvider.updateSourcesInConfig;
+import static org.dependencytrack.resources.v2.CsafSourceConfigProvider.getCsafSourceByIdFromConfig;
+import static org.dependencytrack.resources.v2.CsafSourceConfigProvider.updateSourcesInConfig;
 
 /**
  * Resource for vulnerability policies.
  */
-@Path("/v1/csaf")
+@Path("/csaf")
 @Tag(name = "csaf")
 @SecurityRequirements({
         @SecurityRequirement(name = "ApiKeyAuth"),
@@ -80,6 +79,9 @@ import static org.dependencytrack.resources.v1.CsafSourceConfigProvider.updateSo
 @Provider
 public class CsafResource extends AbstractApiResource {
     private static final Logger LOGGER = Logger.getLogger(CsafResource.class);
+
+    private static final ValidDomainValidator DOMAIN_VALIDATOR = new ValidDomainValidator();
+    private static final ValidURLValidator URL_VALIDATOR = new ValidURLValidator();
 
     @POST
     @Path("/trigger-mirror/")
@@ -272,7 +274,8 @@ public class CsafResource extends AbstractApiResource {
      */
     private static Response createCsafSource(CsafSource source, Boolean isAggregator) {
         // Validate URL (which can either be a domain or a full URL)
-        if (!CsafUtil.validateUrlOrDomain(source.getUrl())) {
+        if (!DOMAIN_VALIDATOR.isValid(source.getUrl(), null) &&
+                !URL_VALIDATOR.isValid(source.getUrl(), null)) {
             return Response.status(Response.Status.BAD_REQUEST).entity("Invalid domain or url").build();
         }
 
@@ -295,7 +298,7 @@ public class CsafResource extends AbstractApiResource {
         // appropriately.
         source.setAggregator(isAggregator);
         source.setId(newId);
-        source.setDomain(CsafUtil.validateDomain(source.getUrl()));
+        source.setDomain(DOMAIN_VALIDATOR.isValid(source.getUrl(), null));
         sources.add(source);
 
         // Update config
@@ -314,7 +317,8 @@ public class CsafResource extends AbstractApiResource {
      */
     private static Response updateCsafSource(CsafSource source, Boolean isAggregator) {
         // Validate URL (which can either be a domain or a full URL)
-        if (!CsafUtil.validateUrlOrDomain(source.getUrl())) {
+        if (!DOMAIN_VALIDATOR.isValid(source.getUrl(), null) &&
+                !URL_VALIDATOR.isValid(source.getUrl(), null)) {
             return Response.status(Response.Status.BAD_REQUEST).entity("Invalid domain or url").build();
         }
 
@@ -331,7 +335,7 @@ public class CsafResource extends AbstractApiResource {
         existingSource.setEnabled(source.isEnabled());
         existingSource.setUrl(source.getUrl());
         existingSource.setAggregator(isAggregator);
-        existingSource.setDomain(CsafUtil.validateDomain(source.getUrl()));
+        existingSource.setDomain(DOMAIN_VALIDATOR.isValid(source.getUrl(), null));
         existingSource.setDiscovered(source.isDiscovered());
         existingSource.setLastFetched(source.getLastFetched());
 

@@ -66,10 +66,10 @@ public class CsafVulnDataSource implements VulnDataSource {
     private final Set<CsafSource> successfullyCompletedProviders;
 
     public CsafVulnDataSource(
-            SourcesManager sourcesManager
-    ) {
+            SourcesManager sourcesManager,
+            CsafLoader csafLoader) {
         this.sourcesManager = sourcesManager;
-        this.csafLoader = CsafLoader.Companion.getLazyLoader();
+        this.csafLoader = csafLoader;
         this.enabledProviders = sourcesManager.listProviders(filter -> filter.isEnabled() && !filter.isAggregator());
         this.successfullyCompletedProviders = new HashSet<>();
     }
@@ -154,6 +154,8 @@ public class CsafVulnDataSource implements VulnDataSource {
 
     @Override
     public void close() {
+        LOGGER.info("Completed {} out of {} enabled CSAF providers", successfullyCompletedProviders.size(), enabledProviders.size());
+
         sourcesManager.maybeCommit();
         closeCurrentProvider();
     }

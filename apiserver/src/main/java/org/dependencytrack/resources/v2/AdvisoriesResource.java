@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.resources.v1;
+package org.dependencytrack.resources.v2;
 
 import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
@@ -33,15 +33,16 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import io.csaf.retrieval.RetrievedDocument;
@@ -57,9 +58,7 @@ import java.time.Instant;
 
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Advisory;
-import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao;
 import org.dependencytrack.resources.AbstractApiResource;
@@ -67,7 +66,9 @@ import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 
 import java.util.List;
+import java.util.UUID;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.resources.v1.FindingResource.MEDIA_TYPE_SARIF_JSON;
 
@@ -75,9 +76,9 @@ import static org.dependencytrack.resources.v1.FindingResource.MEDIA_TYPE_SARIF_
  * JAX-RS resources for advisories.
  *
  * @author Lawrence Dean
- * @since TODO set version
+ * @since 5.7.0
  */
-@Path("/v1/advisories")
+@Path("/advisories")
 @Tag(name = "advisories")
 @SecurityRequirements({
         @SecurityRequirement(name = "ApiKeyAuth"),
@@ -158,59 +159,61 @@ public class AdvisoriesResource extends AbstractApiResource {
      * @return a JAX-RS Response indicating success or error
      */
     private Response processCsafDocument(String content, String fileName, QueryManager qm) {
-        final var result = RetrievedDocument.fromJson(content, fileName);
-        if (result.isFailure()) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("The uploaded file is not a valid CSAF document: " +
-                            (result.exceptionOrNull() != null
-                                    ? result.exceptionOrNull().getMessage()
-                                    : null))
-                    .build();
-        }
-        assert result.getOrNull() != null;
-        final var doc = result.getOrNull().getJson();
-        final var publisher = doc.getDocument().getPublisher().getNamespace().toString();
+        return qm.callInTransaction(() -> {
+            final var result = RetrievedDocument.fromJson(content, fileName);
+            if (result.isFailure()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("The uploaded file is not a valid CSAF document: " +
+                                (result.exceptionOrNull() != null
+                                        ? result.exceptionOrNull().getMessage()
+                                        : null))
+                        .build();
+            }
+            assert result.getOrNull() != null;
+            final var doc = result.getOrNull().getJson();
+            final var publisher = doc.getDocument().getPublisher().getNamespace().toString();
 
-        // Create a new advisory that we have already "seen" and was just fetched
-        final var advisory = new Advisory();
-        advisory.setTitle(doc.getDocument().getTitle());
-        advisory.setUrl(fileName);
-        advisory.setContent(content);
-        advisory.setLastFetched(Instant.now());
-        advisory.setPublisher(publisher);
-        advisory.setName(doc.getDocument().getTracking().getId());
-        advisory.setVersion(doc.getDocument().getTracking().getVersion());
-        advisory.setFormat("CSAF");
-        advisory.setSeen(true);
+            // Create a new advisory that we have already "seen" and was just fetched
+            final var advisory = new Advisory();
+            advisory.setTitle(doc.getDocument().getTitle());
+            advisory.setUrl(fileName);
+            advisory.setContent(content);
+            advisory.setLastFetched(Instant.now());
+            advisory.setPublisher(publisher);
+            advisory.setName(doc.getDocument().getTracking().getId());
+            advisory.setVersion(doc.getDocument().getTracking().getVersion());
+            advisory.setFormat("CSAF");
+            advisory.setSeen(true);
 
-        // Create a pseudo-source populated by the information we have
-        var manual = new CsafSource();
-        manual.setDomain(true);
-        manual.setUrl(URI.create(publisher).getHost());
-        manual.setName(publisher);
+            // Create a pseudo-source populated by the information we have
+            var manual = new CsafSource();
+            manual.setDomain(true);
+            manual.setUrl(URI.create(publisher).getHost());
+            manual.setName(publisher);
 
-        final var bov = ModelConverter.convert(result, manual);
-        if (bov == null) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("Could not extract vulnerability information").build();
-        }
+            final var bov = ModelConverter.convert(result, manual);
+            if (bov == null) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("Could not extract vulnerability information").build();
+            }
 
-        for (final var v : bov.getVulnerabilitiesList()) {
-            final Vulnerability vuln = BovModelConverter.convert(bov, v, true);
-            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+            for (final var v : bov.getVulnerabilitiesList()) {
+                final Vulnerability vuln = BovModelConverter.convert(bov, v, true);
+                final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
 
-            LOGGER.debug("Synchronizing vulnerability " + vuln.getVulnId());
-            final Vulnerability persistentVuln = qm.synchronizeVulnerability(vuln, false);
-            qm.synchronizeVulnerableSoftware(persistentVuln, vsList, Vulnerability.Source.CSAF);
+                LOGGER.debug("Synchronizing vulnerability " + vuln.getVulnId());
+                final Vulnerability persistentVuln = qm.synchronizeVulnerability(vuln, false);
+                qm.synchronizeVulnerableSoftware(persistentVuln, vsList, Vulnerability.Source.CSAF);
 
-            advisory.addVulnerability(persistentVuln);
-        }
+                advisory.addVulnerability(persistentVuln);
+            }
 
-        // Sync the document into the database, replacing an older version with the same
-        // combination of tracking ID and publisher namespace if necessary
-        qm.synchronizeAdvisory(advisory);
+            // Sync the document into the database, replacing an older version with the same
+            // combination of tracking ID and publisher namespace if necessary
+            qm.synchronizeAdvisory(advisory);
 
-        return Response.ok("File uploaded successfully: " + fileName).build();
+            return Response.ok("File uploaded successfully: " + fileName).build();
+        });
     }
 
     @DELETE
@@ -225,15 +228,17 @@ public class AdvisoriesResource extends AbstractApiResource {
     })
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE)
     public Response deleteAdvisory(@PathParam("advisoryId") String advisoryId) {
-        try (QueryManager qm = new QueryManager()) {
-            final Advisory entity = qm.getObjectById(Advisory.class, advisoryId);
-            if (entity != null) {
-                qm.delete(entity);
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND)
-                        .entity("The advisory could not be found.").build();
-            }
+        try (final var qm = new QueryManager()) {
+            return qm.callInTransaction(() -> {
+                final Advisory entity = qm.getObjectById(Advisory.class, advisoryId);
+                if (entity != null) {
+                    qm.delete(entity);
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND)
+                            .entity("The advisory could not be found.").build();
+                }
+            });
         }
     }
 
@@ -249,16 +254,18 @@ public class AdvisoriesResource extends AbstractApiResource {
     })
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE)
     public Response markAdvisoryAsSeen(@PathParam("advisoryId") String advisoryId) {
-        try (QueryManager qm = new QueryManager()) {
-            final Advisory entity = qm.getObjectById(Advisory.class, advisoryId);
-            if (entity != null) {
-                entity.setSeen(true);
-                qm.persist(entity);
-                return Response.ok(entity).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND)
-                        .entity("The advisory could not be found.").build();
-            }
+        try (final var qm = new QueryManager()) {
+            return qm.callInTransaction(() -> {
+                final Advisory entity = qm.getObjectById(Advisory.class, advisoryId);
+                if (entity != null) {
+                    entity.setSeen(true);
+                    qm.persist(entity);
+                    return Response.ok(entity).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND)
+                            .entity("The advisory could not be found.").build();
+                }
+            });
         }
     }
 
@@ -273,37 +280,28 @@ public class AdvisoriesResource extends AbstractApiResource {
     })
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_READ)
     public Response getAdvisoryById(
-            @Parameter(description = "The ID of the advisory to view", schema = @Schema(type = "string", format = "long"), required = true) @PathParam("advisoryId") String advisoryId) {
-        try (QueryManager qm = new QueryManager()) {
-            final var advisoryEntity = qm.getObjectById(Advisory.class, advisoryId);
+            @Parameter(description = "The ID of the advisory to view", schema = @Schema(type = "int", format = "long"), required = true) @PathParam("advisoryId") long advisoryId) {
+        return inJdbiTransaction(handle -> {
+            final var advisory = handle.attach(AdvisoryDao.class).getAdvisoryById(advisoryId);
 
-            if (advisoryEntity == null) {
+            if (advisory == null) {
                 return Response.status(Response.Status.NOT_FOUND)
                         .entity("The requested advisory could not be found.")
                         .build();
-            } else {
-                List<AdvisoryDao.ProjectRow> affectedProjects = withJdbiHandle(getAlpineRequest(),
-                        handle -> handle.attach(AdvisoryDao.class)
-                                .getProjectsByAdvisory(advisoryEntity.getId()));
-
-                List<AdvisoryDao.VulnerabilityRow> vulnerabilities = withJdbiHandle(getAlpineRequest(),
-                        handle -> handle.attach(AdvisoryDao.class)
-                                .getVulnerabilitiesByAdvisory(advisoryEntity.getId()));
-
-                Long numAffectedComponentsBoxed = withJdbiHandle(getAlpineRequest(),
-                        handle -> handle.attach(AdvisoryDao.class)
-                                .getAmountFindingsTotal(advisoryEntity.getId()));
-                long numAffectedComponents = numAffectedComponentsBoxed != null
-                        ? numAffectedComponentsBoxed
-                        : 0L;
-
-                return Response.ok(new AdvisoryDao.AdvisoryResult(
-                        advisoryEntity,
-                        affectedProjects,
-                        numAffectedComponents,
-                        vulnerabilities)).build();
             }
-        }
+
+            List<AdvisoryDao.ProjectRow> affectedProjects = handle.attach(AdvisoryDao.class)
+                            .getProjectsByAdvisory(advisory.id());
+
+            List<AdvisoryDao.VulnerabilityRow> vulnerabilities = handle.attach(AdvisoryDao.class)
+                            .getVulnerabilitiesByAdvisory(advisory.id());
+
+            return Response.ok(new AdvisoryDao.AdvisoryResult(
+                    advisory,
+                    affectedProjects,
+                    advisory.affectedComponents(),
+                    vulnerabilities)).build();
+        });
     }
 
     @GET
@@ -322,29 +320,20 @@ public class AdvisoriesResource extends AbstractApiResource {
     @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
     public Response getAdvisoriesByProject(
-            @Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true) @PathParam("uuid") @ValidUuid String uuid,
-            @Parameter(description = "Optionally includes suppressed advisories") @QueryParam("suppressed") boolean suppressed,
-            @Parameter(description = "Optionally limit advisories to specific sources of vulnerability intelligence") @QueryParam("source") Vulnerability.Source source,
-            @HeaderParam("accept") String acceptHeader) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final Project project = qm.getObjectByUuid(Project.class, uuid);
-            if (project != null) {
-                requireAccess(qm, project);
-
-                List<AdvisoryDao.AdvisoryInProjectRow> advisoryWithFindingRows = withJdbiHandle(
-                        getAlpineRequest(),
-                        handle -> handle.attach(AdvisoryDao.class)
-                                .getAdvisoriesWithFindingsByProject(project.getId(),
-                                        suppressed));
-                final long totalCount = advisoryWithFindingRows.size();
-
-                return Response.ok(advisoryWithFindingRows.stream().toList())
-                        .header(TOTAL_COUNT_HEADER, totalCount).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND)
-                        .entity("The project could not be found.").build();
+            @Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true) @PathParam("uuid") UUID uuid) {
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
+            var projectId = handle.attach(ProjectDao.class).getProjectId(uuid);
+            if (projectId == null) {
+                throw new NotFoundException();
             }
-        }
+            requireProjectAccess(handle, UUID.fromString(String.valueOf(uuid)));
+            List<AdvisoryDao.AdvisoryInProjectRow> advisoryWithFindingRows = handle.attach(AdvisoryDao.class)
+                            .getAdvisoriesWithFindingsByProject(projectId);
+            final long totalCount = advisoryWithFindingRows.size();
+
+            return Response.ok(advisoryWithFindingRows.stream().toList())
+                    .header(TOTAL_COUNT_HEADER, totalCount).build();
+        });
     }
 
     @GET
@@ -363,18 +352,14 @@ public class AdvisoriesResource extends AbstractApiResource {
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
     public Response getFindingsByProjectAdvisory(
             @Parameter(description = "The ID of the project", schema = @Schema(type = "string"), required = true) @PathParam("projectId") long projectId,
-            @Parameter(description = "The advisoryId", schema = @Schema(type = "string"), required = true) @PathParam("advisoryId") long advisoryId,
-            @HeaderParam("accept") String acceptHeader) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            LOGGER.info("Querying for " + projectId + " :: " + advisoryId);
-            List<AdvisoryDao.ProjectAdvisoryFindingRow> advisoryRows = withJdbiHandle(getAlpineRequest(),
-                    handle -> handle.attach(AdvisoryDao.class)
-                            .getFindingsByProjectAdvisory(projectId, advisoryId));
+            @Parameter(description = "The advisoryId", schema = @Schema(type = "string"), required = true) @PathParam("advisoryId") long advisoryId) {
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
+            List<AdvisoryDao.ProjectAdvisoryFindingRow> advisoryRows = handle.attach(AdvisoryDao.class)
+                            .getFindingsByProjectAdvisory(projectId, advisoryId);
             final long totalCount = advisoryRows.size();
-            LOGGER.info("retrieved size " + totalCount);
 
             return Response.ok(advisoryRows.stream().toList()).header(TOTAL_COUNT_HEADER, totalCount)
                     .build();
-        }
+        });
     }
 }

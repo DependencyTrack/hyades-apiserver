@@ -514,7 +514,7 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
         qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER, "Test", "http://test.com", new Date());
 
         // Test
-        List<AdvisoryDao.AdvisoryInProjectRow> results = advisoryDao.getAdvisoriesWithFindingsByProject(project.getId(), false);
+        List<AdvisoryDao.AdvisoryInProjectRow> results = advisoryDao.getAdvisoriesWithFindingsByProject(project.getId());
         assertThat(results).hasSize(1);
         assertThat(results.getFirst().name()).isEqualTo("Test Advisory");
         assertThat(results.getFirst().findingsPerDoc()).isEqualTo(1);
