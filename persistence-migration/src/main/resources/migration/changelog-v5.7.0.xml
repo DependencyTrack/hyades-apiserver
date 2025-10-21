@@ -281,12 +281,12 @@
     <changeSet id="v5.7.0-13" author="oxisto">
         <sql>
             ALTER TABLE "ADVISORY"
-            ADD COLUMN searchvector tsvector
+            ADD COLUMN "SEARCHVECTOR" tsvector
             GENERATED ALWAYS AS (to_tsvector('english', coalesce("TITLE", '') || ' ' || coalesce("URL", '') || ' ' ||
             coalesce("CONTENT", ''))) STORED;
         </sql>
         <sql>
-            CREATE INDEX searchvector_idx ON "ADVISORY" USING GIN (searchvector);
+            CREATE INDEX "ADVISORY_SEARCHVECTOR_IDX" ON "ADVISORY" USING GIN (searchvector);
         </sql>
     </changeSet>
 
@@ -312,6 +312,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
+        <addPrimaryKey
+                tableName="ADVISORIES_VULNERABILITIES"
+                columnNames="ADVISORY_ID,VULNERABILITY_ID"
+                constraintName="ADVISORIES_VULNERABILITIES_PK"/>
         <addForeignKeyConstraint
                 baseTableName="ADVISORIES_VULNERABILITIES"
                 baseColumnNames="ADVISORY_ID"
