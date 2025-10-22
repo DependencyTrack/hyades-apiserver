@@ -20,16 +20,13 @@ package org.dependencytrack.resources.v2;
 
 import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
+import io.csaf.retrieval.RetrievedDocument;
 import jakarta.validation.constraints.NotNull;
-import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
-import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
-import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.dependencytrack.api.v2.AdvisoriesApi;
 import org.dependencytrack.api.v2.model.AdvisoryProject;
 import org.dependencytrack.api.v2.model.AdvisoryVulnerability;
@@ -37,26 +34,25 @@ import org.dependencytrack.api.v2.model.GetAdvisoryResponse;
 import org.dependencytrack.api.v2.model.ListAdvisoriesResponseItem;
 import org.dependencytrack.api.v2.model.ListProjectAdvisoriesResponseItem;
 import org.dependencytrack.api.v2.model.ListProjectAdvisoryFindingsResponseItem;
-import org.dependencytrack.persistence.jdbi.ProjectDao;
-import io.csaf.retrieval.RetrievedDocument;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.datasource.vuln.csaf.CsafSource;
 import org.dependencytrack.datasource.vuln.csaf.ModelConverter;
-import org.dependencytrack.parser.dependencytrack.BovModelConverter;
+import org.dependencytrack.model.Advisory;
+import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
+import org.dependencytrack.parser.dependencytrack.BovModelConverter;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.AdvisoryDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.resources.AbstractApiResource;
+import org.glassfish.jersey.media.multipart.FormDataParam;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.time.Instant;
 import java.time.ZoneOffset;
-
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Advisory;
-import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.AdvisoryDao;
-import org.dependencytrack.resources.AbstractApiResource;
-
 import java.util.List;
 import java.util.UUID;
 
