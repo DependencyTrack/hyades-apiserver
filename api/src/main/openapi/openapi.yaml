@@ -27,25 +27,37 @@ info:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
 security:
-- apiKeyAuth: [ ]
-- bearerAuth: [ ]
+  - apiKeyAuth: []
+  - bearerAuth: []
 servers:
-- url: /api/v2
+  - url: /api/v2
 tags:
-- name: Components
-  description: Endpoints related to components
-- name: Extensions
-  description: Endpoints related to extensions
-- name: Metrics
-  description: Endpoints related to metrics
-- name: Projects
-  description: Endpoints related to projects
-- name: Teams
-  description: Endpoints related to teams
-- name: Workflows
-  description: Endpoints related to workflows
+  - name: Advisories
+    description: Endpoints related to advisories
+  - name: Components
+    description: Endpoints related to components
+  - name: Extensions
+    description: Endpoints related to extensions
+  - name: Metrics
+    description: Endpoints related to metrics
+  - name: Projects
+    description: Endpoints related to projects
+  - name: Teams
+    description: Endpoints related to teams
+  - name: Workflows
+    description: Endpoints related to workflows
 
 paths:
+  /advisories:
+    $ref: "./paths/advisories.yaml"
+  /advisories/{advisoryId}:
+    $ref: "./paths/advisories__advisoryid_.yaml"
+  /advisories/seen/{advisoryId}:
+    $ref: "./paths/advisories_seen__advisoryid_.yaml"
+  /advisories/project/{uuid}:
+    $ref: "./paths/advisories_project__uuid_.yaml"
+  /advisories/project/{projectId}/advisory/{advisoryId}:
+    $ref: "./paths/advisories_project__projectid__advisory__advisoryid_.yaml"
   /components:
     $ref: "./paths/components.yaml"
   /extension-points:

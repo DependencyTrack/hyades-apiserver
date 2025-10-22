@@ -20,31 +20,24 @@ package org.dependencytrack.resources.v2;
 
 import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.headers.Header;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.security.SecurityRequirements;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.POST;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.persistence.jdbi.ProjectDao;
+import jakarta.ws.rs.ext.Provider;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.dependencytrack.api.v2.AdvisoriesApi;
+import org.dependencytrack.api.v2.model.AdvisoryProject;
+import org.dependencytrack.api.v2.model.AdvisoryVulnerability;
+import org.dependencytrack.api.v2.model.GetAdvisoryResponse;
+import org.dependencytrack.api.v2.model.ListAdvisoriesResponseItem;
+import org.dependencytrack.api.v2.model.ListProjectAdvisoriesResponseItem;
+import org.dependencytrack.api.v2.model.ListProjectAdvisoryFindingsResponseItem;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import io.csaf.retrieval.RetrievedDocument;
 import org.dependencytrack.datasource.vuln.csaf.CsafSource;
 import org.dependencytrack.datasource.vuln.csaf.ModelConverter;
@@ -55,6 +48,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.time.Instant;
+import java.time.ZoneOffset;
 
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Advisory;
@@ -62,84 +56,73 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao;
 import org.dependencytrack.resources.AbstractApiResource;
-import org.dependencytrack.resources.v1.openapi.PaginatedApi;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.resources.v1.FindingResource.MEDIA_TYPE_SARIF_JSON;
 
 /**
- * JAX-RS resources for advisories.
+ * API resources for advisories.
  *
  * @author Lawrence Dean
+ * @author Christian Banse
  * @since 5.7.0
  */
-@Path("/advisories")
-@Tag(name = "advisories")
-@SecurityRequirements({
-        @SecurityRequirement(name = "ApiKeyAuth"),
-        @SecurityRequirement(name = "BearerAuth")
-})
-public class AdvisoriesResource extends AbstractApiResource {
+@Provider
+public class AdvisoriesResource extends AbstractApiResource implements AdvisoriesApi {
     private static final Logger LOGGER = Logger.getLogger(AdvisoriesResource.class);
 
-    @GET
-    @Produces({ MediaType.APPLICATION_JSON, MEDIA_TYPE_SARIF_JSON })
-    @Operation(summary = "Returns a list of all advisories", description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "A list of all advisories for a specific project, or a SARIF file", headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of advisories", schema = @Schema(format = "integer")), content = {
-                    @Content(array = @ArraySchema(schema = @Schema(implementation = AdvisoryDao.AdvisoryInProjectRow.class)), mediaType = MediaType.APPLICATION_JSON),
-                    @Content(schema = @Schema(type = "string"), mediaType = MEDIA_TYPE_SARIF_JSON)
-            }),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to advisories prohibited", content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
-    })
-    @PaginatedApi
+    @Override
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
-    public Response getAllAdvisories(@QueryParam("format") String format,
-            @QueryParam("searchText") String searchText) {
-        // Normalize parameters: trim and treat empty as null so DAO SQL conditional
-        // behaves predictably
-        final String searchParam = (searchText == null || searchText.trim().isEmpty()) ? null
-                : searchText.trim();
-        final String formatParam = (format == null || format.trim().isEmpty()) ? null : format.trim();
+    public Response listAdvisories(String format, String searchText) {
+        return inJdbiTransaction(handle -> {
+            // Normalize parameters: trim and treat empty as null so DAO SQL conditional
+            // behaves predictably
+            final String searchParam = (searchText == null || searchText.trim().isEmpty()) ? null
+                    : searchText.trim();
+            final String formatParam = (format == null || format.trim().isEmpty()) ? null : format.trim();
 
-        List<AdvisoryDao.AdvisoryDetailRow> advisoryRows = withJdbiHandle(getAlpineRequest(),
-                handle -> handle.attach(AdvisoryDao.class).getAllAdvisories(formatParam, searchParam));
-        final long totalCount = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(AdvisoryDao.class)
-                .getTotalAdvisories(formatParam, searchParam));
-        return Response.ok(advisoryRows.stream().toList()).header(TOTAL_COUNT_HEADER, totalCount).build();
+            List<AdvisoryDao.AdvisoryDetailRow> advisoryRows = handle.attach(AdvisoryDao.class)
+                    .getAllAdvisories(formatParam, searchParam);
+            final long totalCount = handle.attach(AdvisoryDao.class)
+                    .getTotalAdvisories(formatParam, searchParam);
+
+            final List<ListAdvisoriesResponseItem> responseItems = advisoryRows.stream()
+                    .<ListAdvisoriesResponseItem>map(row -> ListAdvisoriesResponseItem.builder()
+                            .id(row.id())
+                            .title(row.title())
+                            .url(row.url())
+                            .seen(row.seen())
+                            .lastFetched(row.lastFetched().atOffset(ZoneOffset.UTC))
+                            .publisher(row.publisher())
+                            .name(row.name())
+                            .version(row.version())
+                            .affectedComponents(row.affectedComponents())
+                            .affectedProjects(row.affectedProjects())
+                            .content(row.content())
+                            .build())
+                    .toList();
+
+            return Response.ok(responseItems).header(TOTAL_COUNT_HEADER, totalCount).build();
+        });
     }
 
     @POST
-    @Consumes(MediaType.MULTIPART_FORM_DATA)
-    @Produces(MediaType.TEXT_PLAIN)
+    @Override
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_CREATE)
-    @Operation(summary = "Upload an advisory document", description = "<p>Uploads and processes an advisory document. Currently only CSAF format is supported.</p>"
-            +
-            "<p>Requires permission <strong>VULNERABILITY_ANALYSIS_CREATE</strong></p>")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Advisory uploaded and processed successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid format or malformed document"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "500", description = "File upload failed")
-    })
     public Response uploadAdvisory(
-            @Parameter(description = "The format of the advisory document (currently only 'CSAF' is supported)", required = true, schema = @Schema(allowableValues = {
-                    "CSAF" })) @QueryParam("format") String format,
-            @Parameter(description = "The advisory document file to upload", required = true) @FormDataParam("file") InputStream uploadStream,
-            @FormDataParam("file") FormDataContentDisposition fileDetail) {
+            @QueryParam("format") @NotNull String format,
+            @FormDataParam("file") InputStream _fileInputStream) {
         try (var qm = new QueryManager(); var uploadBuffer = new ByteArrayOutputStream()) {
-            uploadStream.transferTo(uploadBuffer);
+            _fileInputStream.transferTo(uploadBuffer);
             String content = uploadBuffer.toString();
+            // TODO(oxisto): retrieve URL from form data again
+            String fileName = "uploaded-advisory.json";
 
             // Process-format-specific upload
             return switch (format) {
-                case "CSAF" -> processCsafDocument(content, fileDetail.getFileName(), qm);
+                case "CSAF" -> processCsafDocument(content, fileName, qm);
                 default -> Response.status(Response.Status.BAD_REQUEST)
                         .entity("Unsupported format: " + format).build();
             };
@@ -192,14 +175,10 @@ public class AdvisoriesResource extends AbstractApiResource {
             manual.setName(publisher);
 
             final var bov = ModelConverter.convert(result, manual);
-            if (bov == null) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity("Could not extract vulnerability information").build();
-            }
-
             for (final var v : bov.getVulnerabilitiesList()) {
                 final Vulnerability vuln = BovModelConverter.convert(bov, v, true);
-                final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+                final List<VulnerableSoftware> vsList = BovModelConverter
+                        .extractVulnerableSoftware(bov);
 
                 LOGGER.debug("Synchronizing vulnerability " + vuln.getVulnId());
                 final Vulnerability persistentVuln = qm.synchronizeVulnerability(vuln, false);
@@ -216,18 +195,9 @@ public class AdvisoriesResource extends AbstractApiResource {
         });
     }
 
-    @DELETE
-    @Path("/{advisoryId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Deletes an advisory", description = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS_UPDATE</strong></p>")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Advisory removed successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "The advisory could not be found")
-    })
+    @Override
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE)
-    public Response deleteAdvisory(@PathParam("advisoryId") String advisoryId) {
+    public Response deleteAdvisory(String advisoryId) {
         try (final var qm = new QueryManager()) {
             return qm.callInTransaction(() -> {
                 final Advisory entity = qm.getObjectById(Advisory.class, advisoryId);
@@ -242,124 +212,151 @@ public class AdvisoriesResource extends AbstractApiResource {
         }
     }
 
-    @POST
-    @Path("/seen/{advisoryId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Marks an advisory as seen", description = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS_UPDATE</strong></p>")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Advisory marked as seen successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "The advisory could not be found")
-    })
+    @Override
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE)
-    public Response markAdvisoryAsSeen(@PathParam("advisoryId") String advisoryId) {
-        try (final var qm = new QueryManager()) {
-            return qm.callInTransaction(() -> {
-                final Advisory entity = qm.getObjectById(Advisory.class, advisoryId);
-                if (entity != null) {
-                    entity.setSeen(true);
-                    qm.persist(entity);
-                    return Response.ok(entity).build();
-                } else {
-                    return Response.status(Response.Status.NOT_FOUND)
-                            .entity("The advisory could not be found.").build();
-                }
-            });
-        }
-    }
-
-    @GET
-    @Path("/{advisoryId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Returns the details of an advisory", description = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS_READ</strong></p>")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Details of given advisory"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_READ)
-    public Response getAdvisoryById(
-            @Parameter(description = "The ID of the advisory to view", schema = @Schema(type = "int", format = "long"), required = true) @PathParam("advisoryId") long advisoryId) {
+    public Response markAdvisoryAsSeen(String advisoryId) {
         return inJdbiTransaction(handle -> {
-            final var advisory = handle.attach(AdvisoryDao.class).getAdvisoryById(advisoryId);
+            final var advisoryDao = handle.attach(AdvisoryDao.class);
 
-            if (advisory == null) {
-                return Response.status(Response.Status.NOT_FOUND)
-                        .entity("The requested advisory could not be found.")
-                        .build();
+            // First mark as seen using QueryManager
+            try (final var qm = new QueryManager()) {
+                final Advisory entity = qm.getObjectById(Advisory.class, advisoryId);
+                if (entity == null) {
+                    throw new NotFoundException();
+                }
+                entity.setSeen(true);
+                qm.persist(entity);
             }
 
-            List<AdvisoryDao.ProjectRow> affectedProjects = handle.attach(AdvisoryDao.class)
-                            .getProjectsByAdvisory(advisory.id());
+            // Then fetch the updated advisory to return
+            final var advisory = advisoryDao.getAdvisoryById(Long.parseLong(advisoryId));
+            if (advisory == null) {
+                throw new NotFoundException();
+            }
 
-            List<AdvisoryDao.VulnerabilityRow> vulnerabilities = handle.attach(AdvisoryDao.class)
-                            .getVulnerabilitiesByAdvisory(advisory.id());
+            final ListAdvisoriesResponseItem response = ListAdvisoriesResponseItem.builder()
+                    .id(advisory.id())
+                    .title(advisory.title())
+                    .url(advisory.url())
+                    .seen(advisory.seen())
+                    .lastFetched(advisory.lastFetched().atOffset(ZoneOffset.UTC))
+                    .publisher(advisory.publisher())
+                    .name(advisory.name())
+                    .version(advisory.version())
+                    .affectedComponents(advisory.affectedComponents())
+                    .affectedProjects(advisory.affectedProjects())
+                    .content(advisory.content())
+                    .build();
 
-            return Response.ok(new AdvisoryDao.AdvisoryResult(
-                    advisory,
-                    affectedProjects,
-                    advisory.affectedComponents(),
-                    vulnerabilities)).build();
+            return Response.ok(response).build();
         });
     }
 
-    @GET
-    @Path("/project/{uuid}")
-    @Produces({ MediaType.APPLICATION_JSON, MEDIA_TYPE_SARIF_JSON })
-    @Operation(summary = "Returns a list of matched advisories on a given project", description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "A list of all advisories for a specific project, or a SARIF file", headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of advisories", schema = @Schema(format = "integer")), content = {
-                    @Content(array = @ArraySchema(schema = @Schema(implementation = AdvisoryDao.AdvisoryInProjectRow.class)), mediaType = MediaType.APPLICATION_JSON),
-                    @Content(schema = @Schema(type = "string"), mediaType = MEDIA_TYPE_SARIF_JSON)
-            }),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the requested project is forbidden", content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
-            @ApiResponse(responseCode = "404", description = "The project could not be found")
-    })
-    @PaginatedApi
+    @Override
+    @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_READ)
+    public Response getAdvisoryById(Long advisoryId) {
+        return inJdbiTransaction(handle -> {
+            final var advisoryDao = handle.attach(AdvisoryDao.class);
+            final var advisory = advisoryDao.getAdvisoryById(advisoryId);
+
+            if (advisory == null) {
+                throw new NotFoundException();
+            }
+
+            List<AdvisoryDao.ProjectRow> affectedProjects = advisoryDao.getProjectsByAdvisory(advisory.id());
+            List<AdvisoryDao.VulnerabilityRow> vulnerabilities = advisoryDao
+                    .getVulnerabilitiesByAdvisory(advisory.id());
+
+            final GetAdvisoryResponse response = GetAdvisoryResponse.builder()
+                    .entity(ListAdvisoriesResponseItem.builder()
+                            .id(advisory.id())
+                            .title(advisory.title())
+                            .url(advisory.url())
+                            .seen(advisory.seen())
+                            .lastFetched(advisory.lastFetched().atOffset(ZoneOffset.UTC))
+                            .publisher(advisory.publisher())
+                            .name(advisory.name())
+                            .version(advisory.version())
+                            .affectedComponents(advisory.affectedComponents())
+                            .affectedProjects(advisory.affectedProjects())
+                            .content(advisory.content())
+                            .build())
+                    .affectedProjects(affectedProjects.stream()
+                            .<AdvisoryProject>map(project -> AdvisoryProject.builder()
+                                    .id(project.id())
+                                    .name(project.name())
+                                    .uuid(UUID.fromString(project.uuid()))
+                                    .desc(project.desc())
+                                    .version(project.version())
+                                    .build())
+                            .toList())
+                    .numAffectedComponents((long) advisory.affectedComponents())
+                    .vulnerabilities(vulnerabilities.stream()
+                            .<AdvisoryVulnerability>map(vuln -> AdvisoryVulnerability.builder()
+                                    .id(vuln.id())
+                                    .source(vuln.source())
+                                    .vulnId(vuln.vulnId())
+                                    .title(vuln.title())
+                                    .severity(vuln.severity())
+                                    .build())
+                            .toList())
+                    .build();
+
+            return Response.ok(response).build();
+        });
+    }
+
+    @Override
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
-    public Response getAdvisoriesByProject(
-            @Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true) @PathParam("uuid") UUID uuid) {
+    public Response getAdvisoriesByProject(UUID uuid) {
         return inJdbiTransaction(getAlpineRequest(), handle -> {
             var projectId = handle.attach(ProjectDao.class).getProjectId(uuid);
             if (projectId == null) {
                 throw new NotFoundException();
             }
-            requireProjectAccess(handle, UUID.fromString(String.valueOf(uuid)));
-            List<AdvisoryDao.AdvisoryInProjectRow> advisoryWithFindingRows = handle.attach(AdvisoryDao.class)
-                            .getAdvisoriesWithFindingsByProject(projectId);
+            requireProjectAccess(handle, uuid);
+
+            List<AdvisoryDao.AdvisoryInProjectRow> advisoryWithFindingRows = handle
+                    .attach(AdvisoryDao.class)
+                    .getAdvisoriesWithFindingsByProject(projectId);
             final long totalCount = advisoryWithFindingRows.size();
 
-            return Response.ok(advisoryWithFindingRows.stream().toList())
+            final List<ListProjectAdvisoriesResponseItem> responseItems = advisoryWithFindingRows.stream()
+                    .<ListProjectAdvisoriesResponseItem>map(row -> ListProjectAdvisoriesResponseItem.builder()
+                            .name(row.name())
+                            .projectId(row.projectId())
+                            .url(row.url())
+                            .documentId(row.documentId())
+                            .findingsPerDoc(row.findingsPerDoc())
+                            .build())
+                    .toList();
+
+            return Response.ok(responseItems)
                     .header(TOTAL_COUNT_HEADER, totalCount).build();
         });
     }
 
-    @GET
-    @Path("/project/{projectId}/advisory/{advisoryId}")
-    @Produces({ MediaType.APPLICATION_JSON })
-    @Operation(summary = "Returns a list of findings associated to project x advisory", description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "A list of all advisory findings for a specific project and advisory", content = {
-                    @Content(array = @ArraySchema(schema = @Schema(implementation = AdvisoryDao.ProjectAdvisoryFindingRow.class)), mediaType = MediaType.APPLICATION_JSON),
-            }),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the requested project is forbidden", content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
-            @ApiResponse(responseCode = "404", description = "The project or advisory could not be found")
-    })
-    @PaginatedApi
+    @Override
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
-    public Response getFindingsByProjectAdvisory(
-            @Parameter(description = "The ID of the project", schema = @Schema(type = "string"), required = true) @PathParam("projectId") long projectId,
-            @Parameter(description = "The advisoryId", schema = @Schema(type = "string"), required = true) @PathParam("advisoryId") long advisoryId) {
+    public Response getFindingsByProjectAdvisory(Long projectId, Long advisoryId) {
         return inJdbiTransaction(getAlpineRequest(), handle -> {
             List<AdvisoryDao.ProjectAdvisoryFindingRow> advisoryRows = handle.attach(AdvisoryDao.class)
-                            .getFindingsByProjectAdvisory(projectId, advisoryId);
+                    .getFindingsByProjectAdvisory(projectId, advisoryId);
             final long totalCount = advisoryRows.size();
 
-            return Response.ok(advisoryRows.stream().toList()).header(TOTAL_COUNT_HEADER, totalCount)
-                    .build();
+            final List<ListProjectAdvisoryFindingsResponseItem> responseItems = advisoryRows.stream()
+                    .<ListProjectAdvisoryFindingsResponseItem>map(
+                            row -> ListProjectAdvisoryFindingsResponseItem.builder()
+                                    .name(row.name())
+                                    .confidence(row.confidence())
+                                    .desc(row.desc())
+                                    .group(row.group())
+                                    .version(row.version())
+                                    .componentUuid(UUID.fromString(row.componentUuid()))
+                                    .build())
+                    .toList();
+
+            return Response.ok(responseItems).header(TOTAL_COUNT_HEADER, totalCount).build();
         });
     }
 }
