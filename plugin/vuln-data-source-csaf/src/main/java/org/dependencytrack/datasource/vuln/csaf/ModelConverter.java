@@ -34,6 +34,7 @@ import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.cyclonedx.proto.v1_6.VulnerabilityCredits;
 import org.cyclonedx.proto.v1_6.VulnerabilityRating;
 import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import us.springett.cvss.Cvss;
@@ -82,11 +83,7 @@ public final class ModelConverter {
      * @param currentProvider the current CSAF source provider
      * @return the converted CycloneDX BOM, or null if the result is a failure
      */
-    public static Bom convert(final ResultCompat<RetrievedDocument> result, final CsafSource currentProvider) {
-        if (result.isFailure()) {
-            return null;
-        }
-
+    public static Bom convert(@NotNull final ResultCompat<RetrievedDocument> result, final CsafSource currentProvider) {
         final RetrievedDocument retrievedDocument = result.getOrNull();
         assert retrievedDocument != null;
         final Csaf csaf = retrievedDocument.getJson();

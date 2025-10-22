@@ -89,38 +89,30 @@ public class CsafVulnDataSource implements VulnDataSource {
 
         hasNextCalled = true;
 
-        if (currentDocumentIterator != null) {
-            final Bom item = readNextDocument();
+        // Loop until we find a valid document or run out of providers
+        while (true) {
+            // If we don't have a current iterator, try to open the next provider
+            if (currentDocumentIterator == null) {
+                if (!openNextProvider()) {
+                    // No more providers to try
+                    nextItem = null;
+                    return false;
+                }
+            }
+
+            // Try to read a document from the current provider. This will skip over failed documents.
+            final Bom item = readNextValidDocument();
             if (item != null) {
                 nextItem = item;
                 return true;
             }
 
+            // Current provider exhausted, mark as completed and close
             successfullyCompletedProviders.add(currentProvider);
             LOGGER.info("Mirroring documents from CSAF provider {} completed", currentProvider.getUrl());
-
             closeCurrentProvider();
             currentProviderIndex++;
         }
-
-        while (currentProviderIndex < enabledProviders.size()) {
-            final boolean nextEcosystemOpened = openNextProvider();
-            if (nextEcosystemOpened) {
-                final Bom item = readNextDocument();
-                if (item != null) {
-                    nextItem = item;
-                    return true;
-                }
-                successfullyCompletedProviders.add(currentProvider);
-                LOGGER.info("Mirroring documents from CSAF provider {} completed", currentProvider.getUrl());
-
-                closeCurrentProvider();
-            }
-            currentProviderIndex++;
-        }
-
-        nextItem = null;
-        return false;
     }
 
     @Override
@@ -270,18 +262,34 @@ public class CsafVulnDataSource implements VulnDataSource {
     }
 
     /**
-     * Reads the next document from the current provider's document iterator and converts it to a CycloneDX BOM.
+     * Reads the next valid document from the current provider's document iterator and converts it to a CycloneDX BOM.
+     * This method will skip over failed documents and continue until it finds a valid one.
      *
      * @return the next CycloneDX BOM, or null if there are no more documents or if the current provider is not set
      */
     @Nullable
-    Bom readNextDocument() {
-        if (currentDocumentIterator == null || !currentDocumentIterator.hasNext()) {
+    Bom readNextValidDocument() {
+        if (currentDocumentIterator == null) {
             return null;
         }
 
-        final ResultCompat<RetrievedDocument> result = currentDocumentIterator.next();
-        return ModelConverter.convert(result, currentProvider);
+        // Loop through documents until we find a valid one or run out
+        while (currentDocumentIterator.hasNext()) {
+            final ResultCompat<RetrievedDocument> result = currentDocumentIterator.next();
+
+            // If we encounter a failure, continue to the next document (skipping the failed one)
+            if (result.isFailure()) {
+                LOGGER.warn("Failed to retrieve document from provider {}: {}",
+                        currentProvider.getUrl(),
+                        result.exceptionOrNull() != null ? result.exceptionOrNull().getMessage() : null);
+                continue;
+            }
+
+            return ModelConverter.convert(result, currentProvider);
+        }
+
+        // No more documents available
+        return null;
     }
 
 }
