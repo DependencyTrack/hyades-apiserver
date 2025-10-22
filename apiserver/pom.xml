@@ -79,11 +79,6 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>persistence-jooq</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
             <artifactId>persistence-migration</artifactId>
             <version>${project.version}</version>
         </dependency>
