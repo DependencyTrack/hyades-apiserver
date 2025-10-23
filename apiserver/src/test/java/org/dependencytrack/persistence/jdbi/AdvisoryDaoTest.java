@@ -32,8 +32,10 @@ import alpine.persistence.OrderDirection;
 import alpine.resources.AlpineRequest;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.Vulnerability.Source.CSAF;
@@ -397,8 +399,16 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
         assertThat(results).hasSize(3);
 
         // Verify all timestamps are present
-        assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::lastFetched)
-                .containsExactlyInAnyOrder(yesterday, now, tomorrow);
+        List<Instant> actualTimestamps = results.stream()
+                .map(AdvisoryDao.AdvisoryDetailRow::lastFetched)
+                .map(i -> i == null ? null : i.truncatedTo(ChronoUnit.MICROS))
+                .collect(Collectors.toList());
+
+        assertThat(actualTimestamps).containsExactlyInAnyOrder(
+                yesterday.truncatedTo(ChronoUnit.MICROS),
+                now.truncatedTo(ChronoUnit.MICROS),
+                tomorrow.truncatedTo(ChronoUnit.MICROS)
+        );
     }
 
     @Test
