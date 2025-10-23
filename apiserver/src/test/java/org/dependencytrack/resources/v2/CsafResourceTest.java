@@ -27,7 +27,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.datasource.vuln.csaf.CsafSource;
+import org.dependencytrack.api.v2.model.CsafSourceUpdateRequest;
+import org.dependencytrack.api.v2.model.CsafSource;
 import org.dependencytrack.datasource.vuln.csaf.CsafVulnDataSourceFactory;
 import org.dependencytrack.plugin.ConfigRegistryImpl;
 import org.dependencytrack.plugin.PluginManager;
@@ -90,11 +91,12 @@ public class CsafResourceTest extends ResourceTest {
         doReturn(List.of(extensionPointSpec)).when(PLUGIN_MANAGER_MOCK).getExtensionPoints();
         doReturn(List.of(extensionFactory)).when(PLUGIN_MANAGER_MOCK).getFactories(eq(VulnDataSource.class));
 
-        CsafSource aggregator = new CsafSource();
-        aggregator.setName("Testsource");
-        aggregator.setUrl("example.com");
-        aggregator.setEnabled(true);
-        aggregator.setAggregator(true);
+        var aggregator = CsafSource.builder()
+                .name("Testsource")
+                .url("example.com")
+                .enabled(true)
+                .aggregator(true)
+                .build();
 
         Response response = jersey.target("/extension-points/vuln.datasource/extensions/csaf")
                 .path("/sources").request().header(X_API_KEY, apiKey)
@@ -122,12 +124,13 @@ public class CsafResourceTest extends ResourceTest {
         doReturn(List.of(extensionPointSpec)).when(PLUGIN_MANAGER_MOCK).getExtensionPoints();
         doReturn(List.of(extensionFactory)).when(PLUGIN_MANAGER_MOCK).getFactories(eq(VulnDataSource.class));
 
-        CsafSource aggregator = new CsafSource();
-        aggregator.setId(0);
-        aggregator.setName("Testsource");
-        aggregator.setUrl("example.com");
-        aggregator.setEnabled(true);
-        aggregator.setAggregator(true);
+        var aggregator = CsafSourceUpdateRequest.builder()
+                .id(0)
+                .name("Testsource")
+                .url("example.com")
+                .enabled(true)
+                .aggregator(true)
+                .build();
 
         Response response = jersey.target("/extension-points/vuln.datasource/extensions/csaf")
                 .path("/sources").request().header(X_API_KEY, apiKey)

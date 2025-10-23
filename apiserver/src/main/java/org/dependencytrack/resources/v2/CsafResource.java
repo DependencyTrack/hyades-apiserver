@@ -26,6 +26,7 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.CsafApi;
+import org.dependencytrack.api.v2.model.CsafSourceUpdateRequest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.datasource.vuln.csaf.CsafSource;
 import org.dependencytrack.datasource.vuln.csaf.CsafVulnDataSourceConfigs;
@@ -71,8 +72,8 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
     public Response listCsafSources(String type, Boolean discovered, String searchText) {
         // Determine filter based on type parameter
         final Boolean isAggregatorFilter;
-        final Boolean isDiscoveredFilter;
-        
+        final boolean isDiscoveredFilter;
+
         if ("aggregator".equalsIgnoreCase(type)) {
             isAggregatorFilter = true;
         } else if ("provider".equalsIgnoreCase(type)) {
@@ -119,7 +120,7 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
 
         // Compute globally unique ID
         int newId = sources.stream()
-                .mapToInt(org.dependencytrack.datasource.vuln.csaf.CsafSource::getId)
+                .mapToInt(CsafSource::getId)
                 .max()
                 .orElse(-1) + 1;
 
@@ -136,7 +137,7 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
 
     @Override
     @PermissionRequired(Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE)
-    public Response updateCsafSource(org.dependencytrack.api.v2.model.CsafSourceUpdateRequest apiSource) {
+    public Response updateCsafSource(CsafSourceUpdateRequest apiSource) {
         // Validate URL (which can either be a domain or a full URL)
         if (!DOMAIN_VALIDATOR.isValid(apiSource.getUrl(), null) &&
                 !URL_VALIDATOR.isValid(apiSource.getUrl(), null)) {
@@ -191,11 +192,11 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
     }
 
     /**
-     * Converts a Plugin {@link org.dependencytrack.datasource.vuln.csaf.CsafSource} to an
+     * Converts a Plugin {@link CsafSource} to an
      * API {@link org.dependencytrack.api.v2.model.CsafSource}.
      */
     private org.dependencytrack.api.v2.model.CsafSource mapToApiSource(
-            org.dependencytrack.datasource.vuln.csaf.CsafSource pluginSource) {
+            CsafSource pluginSource) {
         return org.dependencytrack.api.v2.model.CsafSource.builder()
                 .id(pluginSource.getId())
                 .name(pluginSource.getName())
@@ -212,11 +213,11 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
 
     /**
      * Converts an API {@link org.dependencytrack.api.v2.model.CsafSource} to a Plugin
-     * {@link org.dependencytrack.datasource.vuln.csaf.CsafSource}.
+     * {@link CsafSource}.
      */
-    private org.dependencytrack.datasource.vuln.csaf.CsafSource mapToPluginSource(
+    private CsafSource mapToPluginSource(
             org.dependencytrack.api.v2.model.CsafSource apiSource) {
-        var pluginSource = new org.dependencytrack.datasource.vuln.csaf.CsafSource();
+        var pluginSource = new CsafSource();
         pluginSource.setId(apiSource.getId());
         pluginSource.setName(apiSource.getName());
         pluginSource.setUrl(apiSource.getUrl());
@@ -236,8 +237,8 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
      * @param filter the predicate to filter the sources
      * @return a list of plugin CSAF sources
      */
-    private static List<org.dependencytrack.datasource.vuln.csaf.CsafSource> getPluginCsafSourcesFromConfig(
-            @Nullable Predicate<org.dependencytrack.datasource.vuln.csaf.CsafSource> filter) {
+    private static List<CsafSource> getPluginCsafSourcesFromConfig(
+            @Nullable Predicate<CsafSource> filter) {
         if (filter == null) {
             filter = s -> true;
         }
