@@ -28,13 +28,22 @@ public class BomUploadResponse implements Serializable {
     private static final long serialVersionUID = -7592436786586686865L;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Token used to check task progress")
-    private UUID token;
+    private final UUID token;
 
-    public void setToken(UUID token) {
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "UUID of the project the BOM was uploaded for")
+    private final UUID projectUuid;
+
+    public BomUploadResponse(final UUID token, final UUID projectUuid) {
         this.token = token;
+        this.projectUuid = projectUuid;
     }
 
     public UUID getToken() {
         return this.token;
     }
+
+    public UUID getProjectUuid() {
+        return projectUuid;
+    }
+
 }

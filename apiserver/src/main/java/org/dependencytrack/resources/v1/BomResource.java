@@ -574,8 +574,8 @@ public class BomResource extends AbstractApiResource {
             final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFileMetadata);
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
-            BomUploadResponse bomUploadResponse = new BomUploadResponse();
-            bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
+            final var bomUploadResponse = new BomUploadResponse(
+                    bomUploadEvent.getChainIdentifier(), project.getUuid());
             final var response = Response.ok(bomUploadResponse).build();
 
             return new ProcessingResult(response, bomUploadEvent);
@@ -610,8 +610,8 @@ public class BomResource extends AbstractApiResource {
 
                 qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
-                BomUploadResponse bomUploadResponse = new BomUploadResponse();
-                bomUploadResponse.setToken(bomUploadEvent.getChainIdentifier());
+                final var bomUploadResponse = new BomUploadResponse(
+                        bomUploadEvent.getChainIdentifier(), project.getUuid());
                 final var response = Response.ok(bomUploadResponse).build();
 
                 return new ProcessingResult(response, bomUploadEvent);

@@ -1056,9 +1056,14 @@ public class BomResourceTest extends ResourceTest {
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertNotNull(json.getString("token"));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
+        assertThatJson(json.toString())
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "token": "${json-unit.any-string}",
+                          "projectUuid": "${json-unit.matches:projectUuid}"
+                        }
+                        """);
         UUID uuid = UUID.fromString(json.getString("token"));
         assertThat(qm.getAllWorkflowStatesForAToken(uuid)).satisfiesExactlyInAnyOrder(
                workflowState -> {
@@ -1527,9 +1532,10 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(multiPart, multiPart.getMediaType()));
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "token": "${json-unit.any-string}"
+                  "token": "${json-unit.any-string}",
+                  "projectUuid": "${json-unit.any-string}"
                 }
                 """);
 
@@ -1560,11 +1566,14 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(multiPart, multiPart.getMediaType()));
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
-                {
-                  "token": "${json-unit.any-string}"
-                }
-                """);
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "token": "${json-unit.any-string}",
+                          "projectUuid": "${json-unit.matches:projectUuid}"
+                        }
+                        """);
 
         final var projectResponse = qm.getProject("Acme Example", "1.0");
         assertThat(projectResponse).isNotNull();
