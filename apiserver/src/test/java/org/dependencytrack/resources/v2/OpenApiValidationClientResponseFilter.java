@@ -35,11 +35,11 @@ import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.parser.ObjectMapperFactory;
 import io.swagger.v3.parser.core.models.ParseOptions;
-import org.junit.Assert;
-
 import jakarta.ws.rs.client.ClientRequestContext;
 import jakarta.ws.rs.client.ClientResponseContext;
 import jakarta.ws.rs.client.ClientResponseFilter;
+import org.junit.Assert;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -96,19 +96,41 @@ public class OpenApiValidationClientResponseFilter implements ClientResponseFilt
 
         // Identity the correct response object in the spec based on the status.
         final String responseStatus = String.valueOf(responseContext.getStatus());
-        assertThat(operationDef.getResponses().keySet()).contains(responseStatus);
+        assertThat(operationDef.getResponses().keySet())
+                .as("""
+                                Got response with status %s, but the OpenAPI spec of \
+                                %s %s does not define it""",
+                        responseStatus,
+                        requestContext.getMethod(),
+                        requestContext.getUri())
+                .contains(responseStatus);
         final ApiResponse responseDef = operationDef.getResponses().get(responseStatus);
 
         // If the spec does not define a response, ensure that the actual
         // response is also empty.
         if (responseDef.getContent() == null) {
-            assertThat(responseBytes).asString().isEmpty();
+            assertThat(responseBytes).asString()
+                    .as("""
+                                    Got response with content, but the OpenAPI spec of \
+                                    %s %s -> %s does not define any""",
+                            requestContext.getMethod(),
+                            requestContext.getUri(),
+                            responseStatus)
+                    .isEmpty();
             return;
         }
 
         // Identity the correct media type in the spec response.
         final String responseContentType = responseContext.getHeaderString("Content-Type");
-        assertThat(responseDef.getContent().keySet()).contains(responseContentType);
+        assertThat(responseDef.getContent().keySet())
+                .as("""
+                                Got response with content-type %s, but the OpenAPI spec of \
+                                %s %s -> %s does not define any responses for it""",
+                        responseContentType,
+                        requestContext.getMethod(),
+                        requestContext.getUri(),
+                        responseStatus)
+                .contains(responseContentType);
         final MediaType mediaType = responseDef.getContent().get(responseContentType);
 
         // Serialize the response schema to JSON so it can be used for validation.
@@ -118,7 +140,15 @@ public class OpenApiValidationClientResponseFilter implements ClientResponseFilt
 
         final Set<ValidationMessage> messages = schema.validate(
                 new String(responseBytes), InputFormat.JSON);
-        assertThat(messages).isEmpty();
+        assertThat(messages)
+                .as("""
+                                Got response content that failed to validate against the \
+                                OpenAPI spec of %s %s -> %s (%s)""",
+                        requestContext.getMethod(),
+                        requestContext.getUri(),
+                        responseStatus,
+                        responseContentType)
+                .isEmpty();
     }
 
     private Operation findOpenApiOperation(final ClientRequestContext requestContext) {
