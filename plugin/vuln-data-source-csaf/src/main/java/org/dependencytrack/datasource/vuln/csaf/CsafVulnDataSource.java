@@ -232,8 +232,11 @@ public class CsafVulnDataSource implements VulnDataSource {
             currentRetrievedProvider = currentProvider.isDomain()
                     ? RetrievedProvider.fromDomainAsync(currentProvider.getUrl(), this.csafLoader).get()
                     : RetrievedProvider.fromUrlAsync(currentProvider.getUrl(), this.csafLoader).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Failed to retrieve provider from " + currentProvider.getUrl(), e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("Failed to retrieve provider from " + currentProvider.getUrl(), e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while retrieving providers from " + currentProvider.getUrl(), e);
         }
 
         // If we have a lastFetched timestamp, use it to only fetch documents updated since then
