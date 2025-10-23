@@ -344,7 +344,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
                     .<ListProjectAdvisoryFindingsResponseItem>map(
                             row -> ListProjectAdvisoryFindingsResponseItem.builder()
                                     .name(row.name())
-                                    .confidence(row.confidence())
+                                    .confidence((int) row.confidence())
                                     .desc(row.desc())
                                     .group(row.group())
                                     .version(row.version())

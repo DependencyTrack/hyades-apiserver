@@ -20,9 +20,10 @@ properties:
     type: string
     description: The name of the component
   confidence:
-    type: number
-    format: float
-    description: The confidence/matching percentage of the finding
+    type: integer
+    minimum: 0
+    maximum: 100
+    description: The confidence/matching percentage of the finding as integer ranging 0...100
   desc:
     type: string
     description: The description of the component

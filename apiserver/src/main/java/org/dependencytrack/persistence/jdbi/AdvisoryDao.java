@@ -224,7 +224,7 @@ public interface AdvisoryDao {
 
     record ProjectAdvisoryFindingRow(
             String name,
-            float confidence,
+            short confidence,
             String desc,
             String group,
             String version,

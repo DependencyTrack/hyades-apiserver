@@ -82,9 +82,12 @@ public class FindingAttribution implements Serializable {
     @NotNull
     private Vulnerability vulnerability;
 
+    /**
+     * The percentage of this match ranging from 0...100.
+     */
     @Persistent
     @Column(name = "MATCHING_PERCENTAGE", allowsNull = "true")
-    private Float matchingPercentage;
+    private Short matchingPercentage;
 
     @Persistent
     @Column(name = "ALT_ID", allowsNull = "true")
@@ -154,11 +157,11 @@ public class FindingAttribution implements Serializable {
         this.vulnerability = vulnerability;
     }
 
-    public Float getMatchingPercentage() {
+    public Short getMatchingPercentage() {
         return matchingPercentage;
     }
 
-    public void setMatchingPercentage(Float matchingPercentage) {
+    public void setMatchingPercentage(Short matchingPercentage) {
         this.matchingPercentage = matchingPercentage;
     }
 

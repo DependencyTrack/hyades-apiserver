@@ -300,7 +300,7 @@
     </changeSet>
     <changeSet id="v5.7.0-15" author="oxisto">
         <addColumn tableName="FINDINGATTRIBUTION">
-            <column name="MATCHING_PERCENTAGE" type="FLOAT"/>
+            <column name="MATCHING_PERCENTAGE" type="SMALLINT"/>
         </addColumn>
     </changeSet>
     <changeSet id="v5.7.0-16" author="oxisto">
