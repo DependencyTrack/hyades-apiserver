@@ -96,11 +96,16 @@ public class CsafResourceTest extends ResourceTest {
         aggregator.setEnabled(true);
         aggregator.setAggregator(true);
 
-        Response response = jersey.target(V2_CSAF).path("/sources").request().header(X_API_KEY, apiKey)
+        Response response = jersey.target("/extension-points/vuln.datasource/extensions/csaf")
+                .path("/sources").request().header(X_API_KEY, apiKey)
                 .put(Entity.entity(aggregator, MediaType.APPLICATION_JSON));
         Assert.assertEquals(Response.Status.CREATED.getStatusCode(), response.getStatus());
 
-        response = jersey.target(V2_CSAF).path("/sources").queryParam("type", "aggregator").request().header(X_API_KEY, apiKey).get(Response.class);
+        response = jersey.target("/extension-points/vuln.datasource/extensions/csaf")
+                .path("/sources")
+                .queryParam("type", "aggregator")
+                .request().header(X_API_KEY, apiKey)
+                .get(Response.class);
         Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus(), 0);
 
         JsonArray json = parseJsonArray(response);
@@ -124,7 +129,8 @@ public class CsafResourceTest extends ResourceTest {
         aggregator.setEnabled(true);
         aggregator.setAggregator(true);
 
-        Response response = jersey.target(V2_CSAF).path("/sources").request().header(X_API_KEY, apiKey)
+        Response response = jersey.target("/extension-points/vuln.datasource/extensions/csaf")
+                .path("/sources").request().header(X_API_KEY, apiKey)
                 .post(Entity.entity(aggregator, MediaType.APPLICATION_JSON));
         Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
