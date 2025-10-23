@@ -23,7 +23,7 @@ SCRIPT_DIR="$(cd -P -- "$(dirname "$0")" && pwd -P)"
 API_MODULE_DIR="$(cd -P -- "${SCRIPT_DIR}/../../api" && pwd -P)"
 
 # NB: Currently there's no arm64 image variant.
-docker run --rm -it -w /work \
+docker run --rm -i -w /work \
   --platform linux/amd64 \
   -v "${API_MODULE_DIR}:/work" \
   stoplight/spectral lint \
