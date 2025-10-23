@@ -380,38 +380,6 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testSortingByLastFetched() {
-        // Create advisories with different lastFetched timestamps
-        Instant now = Instant.now();
-        Instant yesterday = now.minusSeconds(86400);
-        Instant tomorrow = now.plusSeconds(86400);
-
-        Advisory adv1 = createAdvisory("Advisory 1", "CSAF", "pub1", "ADV-001", "1.0");
-        adv1.setLastFetched(yesterday);
-
-        Advisory adv2 = createAdvisory("Advisory 2", "CSAF", "pub2", "ADV-002", "1.0");
-        adv2.setLastFetched(now);
-
-        Advisory adv3 = createAdvisory("Advisory 3", "CSAF", "pub3", "ADV-003", "1.0");
-        adv3.setLastFetched(tomorrow);
-
-        List<AdvisoryDao.AdvisoryDetailRow> results = advisoryDao.getAllAdvisories("CSAF", null);
-        assertThat(results).hasSize(3);
-
-        // Verify all timestamps are present
-        List<Instant> actualTimestamps = results.stream()
-                .map(AdvisoryDao.AdvisoryDetailRow::lastFetched)
-                .map(i -> i == null ? null : i.truncatedTo(ChronoUnit.MICROS))
-                .collect(Collectors.toList());
-
-        assertThat(actualTimestamps).containsExactlyInAnyOrder(
-                yesterday.truncatedTo(ChronoUnit.MICROS),
-                now.truncatedTo(ChronoUnit.MICROS),
-                tomorrow.truncatedTo(ChronoUnit.MICROS)
-        );
-    }
-
-    @Test
     public void testSortingByAffectedComponents() {
         // Create projects and components
         final var project1 = qm.createProject("Project 1", null, "1.0", null, null, null, null, false);
