@@ -16,24 +16,9 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  id:
-    type: string
-    description: The unique identifier of the vulnerability
-  source:
-    type: string
-    description: The source of the vulnerability
-  vuln_id:
-    type: string
-    description: The vulnerability ID (e.g., CVE ID)
-  title:
-    type: string
-    description: The title of the vulnerability
-  severity:
-    type: string
-    description: The severity of the vulnerability
+  data:
+    type: array
+    items:
+      $ref: "./list-advisories-response-item.yaml"
 required:
-  - id
-  - source
-  - vuln_id
-  - title
-  - severity
+  - data

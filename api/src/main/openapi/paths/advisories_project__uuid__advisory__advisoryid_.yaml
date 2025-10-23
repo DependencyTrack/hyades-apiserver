@@ -41,9 +41,7 @@ get:
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: "../components/schemas/list-project-advisory-findings-response-item.yaml"
+            $ref: "../components/schemas/list-project-advisory-findings-response.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":

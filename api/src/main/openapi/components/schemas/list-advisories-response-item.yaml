@@ -29,10 +29,11 @@ properties:
   seen:
     type: boolean
     description: Whether the advisory has been marked as seen
-  lastFetched:
+  last_fetched:
     type: string
     format: date-time
     description: The timestamp when the advisory was last fetched
+    example: "2024-01-15T10:30:00Z"
   publisher:
     type: string
     description: The publisher of the advisory
@@ -42,11 +43,11 @@ properties:
   version:
     type: string
     description: The version of the advisory
-  affectedComponents:
+  affected_components:
     type: integer
     format: int32
     description: The number of affected components
-  affectedProjects:
+  affected_projects:
     type: integer
     format: int32
     description: The number of affected projects
@@ -59,9 +60,9 @@ required:
   - title
   - url
   - seen
-  - lastFetched
+  - last_fetched
   - publisher
   - name
   - version
-  - affectedComponents
-  - affectedProjects
+  - affected_components
+  - affected_projects

@@ -68,12 +68,12 @@ paths:
     $ref: "./paths/extension-points__name__extensions.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/configs:
     $ref: "./paths/extension-points__name__extensions__name__configs.yaml"
-  /extension-points/vuln.datasource/extensions/csaf/trigger-mirror:
-    $ref: "./paths/extension-points__vuln.datasource__extensions__csaf__trigger-mirror.yaml"
-  /extension-points/vuln.datasource/extensions/csaf/sources:
-    $ref: "./paths/extension-points__vuln.datasource__extensions__csaf__sources.yaml"
-  /extension-points/vuln.datasource/extensions/csaf/sources/{csafSourceId}:
-    $ref: "./paths/extension-points__vuln.datasource__extensions__csaf__sources__csafSourceId_.yaml"
+  /extension-points/vuln-datasource/extensions/csaf/trigger-mirror:
+    $ref: "./paths/extension-points__vuln-datasource__extensions__csaf__trigger-mirror.yaml"
+  /extension-points/vuln-datasource/extensions/csaf/sources:
+    $ref: "./paths/extension-points__vuln-datasource__extensions__csaf__sources.yaml"
+  /extension-points/vuln-datasource/extensions/csaf/sources/{csafSourceId}:
+    $ref: "./paths/extension-points__vuln-datasource__extensions__csaf__sources__csafSourceId_.yaml"
   /projects/{uuid}/clone:
     $ref: "./paths/projects__uuid__clone.yaml"
   /projects/{uuid}/components:

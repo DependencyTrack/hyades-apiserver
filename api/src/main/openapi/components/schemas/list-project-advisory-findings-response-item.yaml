@@ -21,6 +21,7 @@ properties:
     description: The name of the component
   confidence:
     type: integer
+    format: int32
     minimum: 0
     maximum: 100
     description: The confidence/matching percentage of the finding as integer ranging 0...100
@@ -33,7 +34,7 @@ properties:
   version:
     type: string
     description: The version of the component
-  componentUuid:
+  component_uuid:
     type: string
     format: uuid
     description: The UUID of the component
@@ -43,4 +44,4 @@ required:
   - desc
   - group
   - version
-  - componentUuid
+  - component_uuid

@@ -27,7 +27,7 @@ get:
       required: false
       schema:
         type: string
-    - name: searchText
+    - name: search_text
       in: query
       description: Search text to filter advisories
       required: false
@@ -45,9 +45,7 @@ get:
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: "../components/schemas/list-advisories-response-item.yaml"
+            $ref: "../components/schemas/list-advisories-response.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":
@@ -99,8 +97,8 @@ post:
     "500":
       description: Internal Server Error
       content:
-        text/plain:
+        application/problem+json:
           schema:
-            type: string
+            $ref: "../components/schemas/problem-details.yaml"
     default:
       $ref: "../components/responses/generic-error.yaml"

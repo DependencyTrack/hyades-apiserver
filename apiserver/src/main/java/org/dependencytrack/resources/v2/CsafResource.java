@@ -22,6 +22,7 @@ import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.CsafApi;
@@ -30,6 +31,7 @@ import org.dependencytrack.datasource.vuln.csaf.CsafSource;
 import org.dependencytrack.datasource.vuln.csaf.CsafVulnDataSourceConfigs;
 import org.dependencytrack.datasource.vuln.csaf.SourcesManager;
 import org.dependencytrack.event.CsafMirrorEvent;
+import org.dependencytrack.exception.AlreadyExistsException;
 import org.dependencytrack.model.validation.ValidDomainValidator;
 import org.dependencytrack.model.validation.ValidURLValidator;
 import org.dependencytrack.plugin.ConfigRegistryImpl;
@@ -112,8 +114,7 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
 
         // Ensure that the new source does not already exist, by the URL
         if (sources.stream().anyMatch(s -> s.getUrl().equalsIgnoreCase(pluginSource.getUrl()))) {
-            return Response.status(Response.Status.CONFLICT)
-                    .entity("A CSAF source with the specified URL already exists").build();
+            throw new AlreadyExistsException("A CSAF source with the specified URL already exists", null);
         }
 
         // Compute globally unique ID
@@ -146,8 +147,7 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
         var sources = getPluginCsafSourcesFromConfig(filter -> true);
         var existingSource = getCsafSourceByIdFromConfig(sources, apiSource.getId());
         if (existingSource == null) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity("The ID of the CSAF source could not be found.").build();
+            throw new NotFoundException();
         }
 
         // Update the existing source with values from the update request
@@ -178,8 +178,7 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
         var sources = new ArrayList<>(getPluginCsafSourcesFromConfig(null));
         var source = getCsafSourceByIdFromConfig(sources, csafSourceId);
         if (source == null) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity("The ID of the source could not be found.").build();
+            throw new NotFoundException();
         }
 
         // Remove the source from the list

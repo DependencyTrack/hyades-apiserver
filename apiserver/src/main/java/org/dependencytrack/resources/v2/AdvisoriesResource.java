@@ -50,6 +50,7 @@ import org.glassfish.jersey.media.multipart.FormDataParam;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -123,8 +124,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
                         .entity("Unsupported format: " + format).build();
             };
         } catch (IOException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("File upload failed").build();
+            throw new UncheckedIOException("File upload failed", e);
         }
     }
 
@@ -201,8 +201,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
                     qm.delete(entity);
                     return Response.status(Response.Status.NO_CONTENT).build();
                 } else {
-                    return Response.status(Response.Status.NOT_FOUND)
-                            .entity("The advisory could not be found.").build();
+                    throw new NotFoundException();
                 }
             });
         }

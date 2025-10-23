@@ -28,15 +28,15 @@ get:
       schema:
         type: string
         enum:
-          - aggregator
-          - provider
+          - AGGREGATOR
+          - PROVIDER
     - name: discovered
       in: query
       description: Filter by discovery status (true for discovered sources only, false for manually added only)
       required: false
       schema:
         type: boolean
-    - name: searchText
+    - name: search_text
       in: query
       description: Search text to filter sources
       required: false
@@ -54,9 +54,7 @@ get:
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: "../components/schemas/csaf-source.yaml"
+            $ref: "../components/schemas/list-csaf-sources-response.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":

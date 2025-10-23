@@ -18,12 +18,12 @@ type: object
 properties:
   entity:
     $ref: "./list-advisories-response-item.yaml"
-  affectedProjects:
+  affected_projects:
     type: array
     items:
       $ref: "./advisory-project.yaml"
     description: List of projects affected by this advisory
-  numAffectedComponents:
+  num_affected_components:
     type: integer
     format: int64
     description: The number of affected components
@@ -34,6 +34,6 @@ properties:
     description: List of vulnerabilities associated with this advisory
 required:
   - entity
-  - affectedProjects
-  - numAffectedComponents
+  - affected_projects
+  - num_affected_components
   - vulnerabilities
