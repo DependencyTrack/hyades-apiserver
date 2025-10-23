@@ -27,6 +27,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.CsafApi;
 import org.dependencytrack.api.v2.model.CsafSourceUpdateRequest;
+import org.dependencytrack.api.v2.model.ListCsafSourcesResponse;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.datasource.vuln.csaf.CsafSource;
 import org.dependencytrack.datasource.vuln.csaf.CsafVulnDataSourceConfigs;
@@ -95,7 +96,12 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
                 .map(this::mapToApiSource)
                 .toList();
 
-        return Response.ok(apiSources).header(TOTAL_COUNT_HEADER, apiSources.size()).build();
+        return Response
+                .ok(ListCsafSourcesResponse.builder()
+                        .data(apiSources)
+                        .build())
+                .header(TOTAL_COUNT_HEADER, apiSources.size())
+                .build();
     }
 
     @Override
@@ -218,7 +224,7 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
     private CsafSource mapToPluginSource(
             org.dependencytrack.api.v2.model.CsafSource apiSource) {
         var pluginSource = new CsafSource();
-        pluginSource.setId(apiSource.getId());
+        pluginSource.setId(apiSource.getId() != null ? apiSource.getId() : 0);
         pluginSource.setName(apiSource.getName());
         pluginSource.setUrl(apiSource.getUrl());
         pluginSource.setAggregator(apiSource.getAggregator() != null && apiSource.getAggregator());

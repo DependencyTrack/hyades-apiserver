@@ -18,27 +18,22 @@
  */
 package org.dependencytrack.resources.v2;
 
-import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
-import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.api.v2.model.CsafSourceUpdateRequest;
 import org.dependencytrack.api.v2.model.CsafSource;
+import org.dependencytrack.api.v2.model.CsafSourceUpdateRequest;
 import org.dependencytrack.datasource.vuln.csaf.CsafVulnDataSourceFactory;
 import org.dependencytrack.plugin.ConfigRegistryImpl;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.PluginManagerBinder;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPointSpec;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSourceSpec;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -47,6 +42,9 @@ import org.junit.Test;
 
 import java.util.List;
 
+import static org.dependencytrack.auth.Permissions.VULNERABILITY_MANAGEMENT_CREATE;
+import static org.dependencytrack.auth.Permissions.VULNERABILITY_MANAGEMENT_READ;
+import static org.dependencytrack.auth.Permissions.VULNERABILITY_MANAGEMENT_UPDATE;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -58,10 +56,7 @@ public class CsafResourceTest extends ResourceTest {
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
-            new ResourceConfig(CsafResource.class)
-                    .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class)
-                    .register(PluginManagerBinder.class)
+            new ResourceConfig()
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
@@ -83,6 +78,10 @@ public class CsafResourceTest extends ResourceTest {
 
     @Test
     public void createCsafSourceTest() {
+        initializeWithPermissions(
+                VULNERABILITY_MANAGEMENT_CREATE,
+                VULNERABILITY_MANAGEMENT_READ);
+
         final ExtensionPointSpec<VulnDataSource> extensionPointSpec = new VulnDataSourceSpec();
         final ExtensionFactory<VulnDataSource> extensionFactory = new CsafVulnDataSourceFactory();
         final var configRegistry = ConfigRegistryImpl.forExtension(extensionPointSpec.name(), extensionFactory.extensionName());
@@ -96,6 +95,7 @@ public class CsafResourceTest extends ResourceTest {
                 .url("example.com")
                 .enabled(true)
                 .aggregator(true)
+                .domain(true)
                 .build();
 
         Response response = jersey.target("/extension-points/vuln.datasource/extensions/csaf")
@@ -110,12 +110,14 @@ public class CsafResourceTest extends ResourceTest {
                 .get(Response.class);
         Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus(), 0);
 
-        JsonArray json = parseJsonArray(response);
+        JsonObject json = parseJsonObject(response);
         Assert.assertNotNull(json);
     }
 
     @Test
     public void updateCsafSourceTest() {
+        initializeWithPermissions(VULNERABILITY_MANAGEMENT_UPDATE);
+
         final ExtensionPointSpec<VulnDataSource> extensionPointSpec = new VulnDataSourceSpec();
         final ExtensionFactory<VulnDataSource> extensionFactory = new CsafVulnDataSourceFactory();
         final var configRegistry = ConfigRegistryImpl.forExtension(extensionPointSpec.name(), extensionFactory.extensionName());
