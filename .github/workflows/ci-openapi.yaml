@@ -19,8 +19,10 @@ name: OpenAPI
 on:
   pull_request:
     paths:
+    - .github/workflows/ci-openapi.yaml
     - api/src/main/openapi/**
     - api/src/main/spectral/**
+    - dev/scripts/openapi-lint.sh
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -32,17 +34,13 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    permissions:
-      checks: write
     timeout-minutes: 5
     steps:
     - name: Checkout Repository
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # tag=v5.0.0
     - name: Lint OpenAPI Spec
-      uses: stoplightio/spectral-action@6416fd018ae38e60136775066eb3e98172143141 # tag=v0.8.13
-      with:
-        spectral_ruleset: "api/src/main/spectral/ruleset.yaml"
-        file_glob: "api/src/main/openapi/openapi.yaml"
+      run: |-
+        ./dev/scripts/openapi-lint.sh
 
   breaking-changes:
     name: Breaking Changes
