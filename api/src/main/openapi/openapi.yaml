@@ -58,8 +58,8 @@ paths:
     $ref: "./paths/advisories_seen__advisoryid_.yaml"
   /advisories/project/{uuid}:
     $ref: "./paths/advisories_project__uuid_.yaml"
-  /advisories/project/{projectId}/advisory/{advisoryId}:
-    $ref: "./paths/advisories_project__projectid__advisory__advisoryid_.yaml"
+  /advisories/project/{uuid}/advisory/{advisoryId}:
+    $ref: "./paths/advisories_project__uuid__advisory__advisoryid_.yaml"
   /components:
     $ref: "./paths/components.yaml"
   /extension-points:

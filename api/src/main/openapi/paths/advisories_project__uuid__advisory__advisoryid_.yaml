@@ -21,13 +21,13 @@ get:
   tags:
     - Advisories
   parameters:
-    - name: projectId
+    - name: uuid
       in: path
-      description: The ID of the project
+      description: The UUID of the project
       required: true
       schema:
-        type: integer
-        format: int64
+        type: string
+        format: uuid
     - name: advisoryId
       in: path
       description: The advisory ID

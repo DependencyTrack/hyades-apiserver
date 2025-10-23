@@ -334,8 +334,14 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
 
     @Override
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
-    public Response getFindingsByProjectAdvisory(Long projectId, Long advisoryId) {
+    public Response getFindingsByProjectAdvisory(UUID projectUuid, Long advisoryId) {
         return inJdbiTransaction(getAlpineRequest(), handle -> {
+            var projectId = handle.attach(ProjectDao.class).getProjectId(projectUuid);
+            if (projectId == null) {
+                throw new NotFoundException();
+            }
+            requireProjectAccess(handle, projectUuid);
+
             List<AdvisoryDao.ProjectAdvisoryFindingRow> advisoryRows = handle.attach(AdvisoryDao.class)
                     .getFindingsByProjectAdvisory(projectId, advisoryId);
             final long totalCount = advisoryRows.size();
