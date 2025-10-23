@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import alpine.persistence.OrderDirection;
+import alpine.resources.AlpineRequest;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Advisory;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -28,14 +30,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import alpine.persistence.OrderDirection;
-import alpine.resources.AlpineRequest;
-
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.Vulnerability.Source.CSAF;
