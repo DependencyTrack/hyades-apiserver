@@ -64,7 +64,6 @@ import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -280,7 +279,10 @@ public class VexResource extends AbstractApiResource {
             BomResource.validate(decoded, project);
             final VexUploadEvent vexUploadEvent = new VexUploadEvent(project.getUuid(), decoded);
             Event.dispatch(vexUploadEvent);
-            return Response.ok(Collections.singletonMap("token", vexUploadEvent.getChainIdentifier())).build();
+
+            final var bomUploadResponse = new BomUploadResponse(
+                    vexUploadEvent.getChainIdentifier(), project.getUuid());
+            return Response.ok(bomUploadResponse).build();
         } else {
             return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
         }
@@ -299,7 +301,10 @@ public class VexResource extends AbstractApiResource {
                     BomResource.validate(content, project);
                     final VexUploadEvent vexUploadEvent = new VexUploadEvent(project.getUuid(), content);
                     Event.dispatch(vexUploadEvent);
-                    return Response.ok(Collections.singletonMap("token", vexUploadEvent.getChainIdentifier())).build();
+
+                    final var bomUploadResponse = new BomUploadResponse(
+                            vexUploadEvent.getChainIdentifier(), project.getUuid());
+                    return Response.ok(bomUploadResponse).build();
                 } catch (IOException e) {
                     return Response.status(Response.Status.BAD_REQUEST).build();
                 }

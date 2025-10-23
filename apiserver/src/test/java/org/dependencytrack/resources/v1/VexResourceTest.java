@@ -421,6 +421,14 @@ public class VexResourceTest extends ResourceTest {
 
         response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "token": "${json-unit.any-string}",
+                          "projectUuid": "${json-unit.matches:projectUuid}"
+                        }
+                        """);
     }
 
     @Test
