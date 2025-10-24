@@ -26,8 +26,6 @@ import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
-import alpine.notification.Notification;
-import alpine.notification.NotificationLevel;
 import alpine.security.crypto.KeyManager;
 import alpine.server.auth.AlpineAuthenticationException;
 import alpine.server.auth.AuthenticationNotRequired;
@@ -49,6 +47,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.FormParam;
@@ -62,15 +61,11 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.notification.KafkaNotificationEmitter;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.ModifyUserProjectRoleRequest;
@@ -83,10 +78,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static org.dependencytrack.notification.NotificationFactory.createUserCreatedNotification;
+import static org.dependencytrack.notification.NotificationFactory.createUserDeletedNotification;
 
 /**
  * JAX-RS resources for processing users.
@@ -103,8 +100,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class UserResource extends AlpineResource {
 
     private static final Logger LOGGER = Logger.getLogger(UserResource.class);
-
-    private final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
 
     @POST
     @Path("login")
@@ -450,21 +445,28 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     public Response createLdapUser(LdapUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
-            return qm.callInTransaction(() -> {
+        try (final var qm = new QueryManager()) {
+            final LdapUser createdUser = qm.callInTransaction(() -> {
                 if (StringUtils.isBlank(jsonUser.getUsername())) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("Username cannot be null or blank.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.BAD_REQUEST)
+                                    .entity("Username cannot be null or blank.")
+                                    .build());
                 }
                 LdapUser user = qm.getLdapUser(jsonUser.getUsername());
                 if (user == null) {
-                    user = qm.createLdapUser(jsonUser.getUsername());
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user created: " + jsonUser.getUsername());
-                    dispatchUserCreatedNotification("LDAP user created", buildUserSubject(jsonUser.getUsername(), jsonUser.getEmail()));
-                    return Response.status(Response.Status.CREATED).entity(user).build();
+                    return qm.createLdapUser(jsonUser.getUsername());
                 } else {
-                    return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.CONFLICT)
+                                    .entity("A user with the same username already exists. Cannot create new user.")
+                                    .build());
                 }
             });
+
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user created: " + jsonUser.getUsername());
+            new KafkaNotificationEmitter().emit(createUserCreatedNotification(createdUser));
+            return Response.status(Response.Status.CREATED).entity(createdUser).build();
         }
     }
 
@@ -483,19 +485,23 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteLdapUser(LdapUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
-            return qm.callInTransaction(() -> {
+        try (final var qm = new QueryManager()) {
+            final LdapUser deletedUser = qm.callInTransaction(() -> {
                 final LdapUser user = qm.getLdapUser(jsonUser.getUsername());
                 if (user != null) {
-                    final LdapUser detachedUser = qm.getPersistenceManager().detachCopy(user);
                     qm.delete(user);
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user deleted: " + detachedUser.getUsername());
-                    dispatchUserDeletedNotification("LDAP user deleted", buildUserSubject(detachedUser.getUsername(), detachedUser.getEmail()));
-                    return Response.status(Response.Status.NO_CONTENT).build();
+                    return user;
                 } else {
-                    return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.NOT_FOUND)
+                                    .entity("The user could not be found.")
+                                    .build());
                 }
             });
+
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user deleted: " + deletedUser.getUsername());
+            new KafkaNotificationEmitter().emit(createUserDeletedNotification(deletedUser));
+            return Response.status(Response.Status.NO_CONTENT).build();
         }
     }
 
@@ -519,36 +525,55 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     public Response createManagedUser(ManagedUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
-            return qm.callInTransaction(() -> {
+        try (final var qm = new QueryManager()) {
+            final ManagedUser createdUser = qm.callInTransaction(() -> {
                 if (StringUtils.isBlank(jsonUser.getUsername())) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("Username cannot be null or blank.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.BAD_REQUEST)
+                                    .entity("Username cannot be null or blank.")
+                                    .build());
                 }
                 if (StringUtils.isBlank(jsonUser.getFullname())) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("The users full name is missing.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.BAD_REQUEST)
+                                    .entity("The users full name is missing.")
+                                    .build());
                 }
                 if (StringUtils.isBlank(jsonUser.getEmail())) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("The users email address is missing.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.BAD_REQUEST)
+                                    .entity("The users email address is missing.")
+                                    .build());
                 }
                 if (StringUtils.isBlank(jsonUser.getNewPassword()) || StringUtils.isBlank(jsonUser.getConfirmPassword())) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("A password must be set.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.BAD_REQUEST)
+                                    .entity("A password must be set.")
+                                    .build());
                 }
                 if (!jsonUser.getNewPassword().equals(jsonUser.getConfirmPassword())) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("The passwords do not match.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.BAD_REQUEST)
+                                    .entity("The passwords do not match.")
+                                    .build());
                 }
 
                 ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
                 if (user == null) {
-                    user = qm.createManagedUser(jsonUser.getUsername(), jsonUser.getFullname(), jsonUser.getEmail(),
+                    return qm.createManagedUser(jsonUser.getUsername(), jsonUser.getFullname(), jsonUser.getEmail(),
                             String.valueOf(PasswordService.createHash(jsonUser.getNewPassword().toCharArray())),
                             jsonUser.isForcePasswordChange(), jsonUser.isNonExpiryPassword(), jsonUser.isSuspended());
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user created: " + jsonUser.getUsername());
-                    dispatchUserCreatedNotification("Managed user created", buildUserSubject(jsonUser.getUsername(), jsonUser.getEmail()));
-                    return Response.status(Response.Status.CREATED).entity(user).build();
                 } else {
-                    return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.CONFLICT)
+                                    .entity("A user with the same username already exists. Cannot create new user.")
+                                    .build());
                 }
             });
+
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user created: " + createdUser.getUsername());
+            new KafkaNotificationEmitter().emit(createUserCreatedNotification(createdUser));
+            return Response.status(Response.Status.CREATED).entity(createdUser).build();
         }
     }
 
@@ -616,19 +641,23 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteManagedUser(ManagedUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
-            return qm.callInTransaction(() -> {
+        try (final var qm = new QueryManager()) {
+            final ManagedUser deletedUser = qm.callInTransaction(() -> {
                 final ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
                 if (user != null) {
-                    final ManagedUser detachedUser = qm.getPersistenceManager().detachCopy(user);
                     qm.delete(user);
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user deleted: " + detachedUser.getUsername());
-                    dispatchUserDeletedNotification("Managed user deleted", buildUserSubject(detachedUser.getUsername(), detachedUser.getEmail()));
-                    return Response.status(Response.Status.NO_CONTENT).build();
+                    return user;
                 } else {
-                    return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.NOT_FOUND)
+                                    .entity("The user could not be found.")
+                                    .build());
                 }
             });
+
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user deleted: " + deletedUser.getUsername());
+            new KafkaNotificationEmitter().emit(createUserDeletedNotification(deletedUser));
+            return Response.status(Response.Status.NO_CONTENT).build();
         }
     }
 
@@ -652,21 +681,28 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     public Response createOidcUser(final OidcUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
-            return qm.callInTransaction(() -> {
+        try (final var qm = new QueryManager()) {
+            final OidcUser createdUser = qm.callInTransaction(() -> {
                 if (StringUtils.isBlank(jsonUser.getUsername())) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("Username cannot be null or blank.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.BAD_REQUEST)
+                                    .entity("Username cannot be null or blank.")
+                                    .build());
                 }
                 OidcUser user = qm.getOidcUser(jsonUser.getUsername());
                 if (user == null) {
-                    user = qm.createOidcUser(jsonUser.getUsername());
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user created: " + jsonUser.getUsername());
-                    dispatchUserCreatedNotification("OpenID Connect user created", buildUserSubject(jsonUser.getUsername(), jsonUser.getEmail()));
-                    return Response.status(Response.Status.CREATED).entity(user).build();
+                    return qm.createOidcUser(jsonUser.getUsername());
                 } else {
-                    return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.CONFLICT)
+                                    .entity("A user with the same username already exists. Cannot create new user.")
+                                    .build());
                 }
             });
+
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user created: " + createdUser.getUsername());
+            new KafkaNotificationEmitter().emit(createUserCreatedNotification(createdUser));
+            return Response.status(Response.Status.CREATED).entity(createdUser).build();
         }
     }
 
@@ -685,19 +721,23 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteOidcUser(final OidcUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
-            return qm.callInTransaction(() -> {
+        try (final var qm = new QueryManager()) {
+            final OidcUser deletedUser = qm.callInTransaction(() -> {
                 final OidcUser user = qm.getOidcUser(jsonUser.getUsername());
                 if (user != null) {
-                    final OidcUser detachedUser = qm.getPersistenceManager().detachCopy(user);
                     qm.delete(user);
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user deleted: " + detachedUser.getUsername());
-                    dispatchUserDeletedNotification("OpenID Connect user deleted", buildUserSubject(detachedUser.getUsername(), detachedUser.getEmail()));
-                    return Response.status(Response.Status.NO_CONTENT).build();
+                    return user;
                 } else {
-                    return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+                    throw new ClientErrorException(
+                            Response.status(Response.Status.NOT_FOUND)
+                                    .entity("The user could not be found.")
+                                    .build());
                 }
             });
+
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user deleted: " + deletedUser.getUsername());
+            new KafkaNotificationEmitter().emit(createUserDeletedNotification(deletedUser));
+            return Response.status(Response.Status.NO_CONTENT).build();
         }
     }
 
@@ -855,32 +895,6 @@ public class UserResource extends AlpineResource {
                 return Response.ok(principal).build();
             });
         }
-    }
-
-    private void dispatchUserCreatedNotification(final String content, final UserSubject subject) {
-        eventDispatcher.dispatchNotification(new Notification()
-                .scope(NotificationScope.SYSTEM)
-                .group(NotificationGroup.USER_CREATED)
-                .level(NotificationLevel.INFORMATIONAL)
-                .title(NotificationConstants.Title.USER_CREATED)
-                .content(content)
-                .subject(subject));
-    }
-
-    private void dispatchUserDeletedNotification(final String content, final UserSubject subject) {
-        eventDispatcher.dispatchNotification(new Notification()
-                .scope(NotificationScope.SYSTEM)
-                .group(NotificationGroup.USER_DELETED)
-                .level(NotificationLevel.INFORMATIONAL)
-                .title(NotificationConstants.Title.USER_DELETED)
-                .content(content)
-                .subject(subject));
-    }
-
-    private UserSubject buildUserSubject(final String username, final String email) {
-        var userBuilder = UserSubject.newBuilder().setUsername(username);
-        Optional.ofNullable(email).ifPresent(userBuilder::setEmail);
-        return userBuilder.build();
     }
 
     @SuppressWarnings("null")

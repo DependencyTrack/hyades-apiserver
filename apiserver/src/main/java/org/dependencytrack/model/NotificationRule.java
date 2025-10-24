@@ -37,6 +37,7 @@ import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.Extensions;
 import javax.jdo.annotations.ForeignKey;
 import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
@@ -110,6 +111,10 @@ public class NotificationRule implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "NOTIFICATION_LEVEL", jdbcType = "VARCHAR")
+    @Extensions(value = {
+            @Extension(vendorName = "datanucleus", key = "insert-function", value = "CAST(? AS notification_level)"),
+            @Extension(vendorName = "datanucleus", key = "update-function", value = "CAST(? AS notification_level)")
+    })
     private NotificationLevel notificationLevel;
 
     @Persistent(table = "NOTIFICATIONRULE_PROJECTS", defaultFetchGroup = "true")

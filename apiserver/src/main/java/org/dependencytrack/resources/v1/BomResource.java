@@ -21,8 +21,6 @@ package org.dependencytrack.resources.v1;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.model.ConfigProperty;
-import alpine.notification.Notification;
-import alpine.notification.NotificationLevel;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.filters.ResourceAccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
@@ -59,16 +57,12 @@ import org.cyclonedx.CycloneDxMediaType;
 import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.vo.BomValidationFailed;
+import org.dependencytrack.notification.KafkaNotificationEmitter;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
@@ -76,6 +70,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
+import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
@@ -103,6 +98,8 @@ import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
+import static org.dependencytrack.notification.NotificationFactory.createBomValidationFailedNotification;
+import static org.dependencytrack.notification.NotificationFactory.createProjectCreatedNotification;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -383,14 +380,7 @@ public class BomResource extends AbstractApiResource {
                                     null, null, request.isLatestProjectVersion(), true);
                             Principal principal = getPrincipal();
                             qm.updateNewProjectACL(project, principal);
-                            notifications.add(
-                                    new Notification()
-                                            .scope(NotificationScope.PORTFOLIO)
-                                            .group(NotificationGroup.PROJECT_CREATED)
-                                            .level(NotificationLevel.INFORMATIONAL)
-                                            .title(NotificationConstants.Title.PROJECT_CREATED)
-                                            .content(project.getName() + " was created")
-                                            .subject(project));
+                            notifications.add(createProjectCreatedNotification(project));
                         } else {
                             final var response = Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                             return new ProcessingResult(response, null);
@@ -405,8 +395,8 @@ public class BomResource extends AbstractApiResource {
             Event.dispatch(processingResult.event());
         }
 
-        for (final Notification notification : notifications) {
-            new KafkaEventDispatcher().dispatchNotification(notification);
+        if (!notifications.isEmpty()) {
+            new KafkaNotificationEmitter().emitAll(notifications);
         }
 
         return processingResult.response();
@@ -516,14 +506,7 @@ public class BomResource extends AbstractApiResource {
                             project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, tags, parent, null, null, isLatest, true);
                             Principal principal = getPrincipal();
                             qm.updateNewProjectACL(project, principal);
-                            notifications.add(
-                                    new Notification()
-                                            .scope(NotificationScope.PORTFOLIO)
-                                            .group(NotificationGroup.PROJECT_CREATED)
-                                            .level(NotificationLevel.INFORMATIONAL)
-                                            .title(NotificationConstants.Title.PROJECT_CREATED)
-                                            .content(project.getName() + " was created")
-                                            .subject(project));
+                            notifications.add(createProjectCreatedNotification(project));
                         } else {
                             final var response = Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                             return new ProcessingResult(response, null);
@@ -538,8 +521,8 @@ public class BomResource extends AbstractApiResource {
             Event.dispatch(processingResult.event());
         }
 
-        for (final Notification notification : notifications) {
-            new KafkaEventDispatcher().dispatchNotification(notification);
+        if (!notifications.isEmpty()) {
+            new KafkaNotificationEmitter().emitAll(notifications);
         }
 
         return processingResult.response();
@@ -663,7 +646,9 @@ public class BomResource extends AbstractApiResource {
                 problemDetails.setErrors(e.getValidationErrors());
             }
 
-            dispatchBomValidationFailedNotification(project, problemDetails.getErrors());
+            new KafkaNotificationEmitter().emit(
+                    createBomValidationFailedNotification(
+                            project, problemDetails.getErrors()));
 
             throw new WebApplicationException(problemDetails.toResponse());
         } catch (RuntimeException e) {
@@ -671,17 +656,6 @@ public class BomResource extends AbstractApiResource {
             final Response response = Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             throw new WebApplicationException(response);
         }
-    }
-
-    private static void dispatchBomValidationFailedNotification(Project project, List<String> errors) {
-        final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
-        eventDispatcher.dispatchNotification(new Notification()
-                .scope(NotificationScope.PORTFOLIO)
-                .group(NotificationGroup.BOM_VALIDATION_FAILED)
-                .level(NotificationLevel.ERROR)
-                .title(NotificationConstants.Title.BOM_VALIDATION_FAILED)
-                .content("An error occurred while validating a BOM")
-                .subject(new BomValidationFailed(project, /* bom */ "(Omitted)", errors)));
     }
 
     private static boolean shouldValidate(final Project project) {

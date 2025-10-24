@@ -23,7 +23,6 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import com.google.protobuf.Any;
-import com.google.protobuf.util.Timestamps;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.event.kafka.KafkaEvent;
@@ -37,7 +36,6 @@ import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
-import org.dependencytrack.proto.notification.v1.Notification;
 import org.jdbi.v3.core.Handle;
 
 import java.time.Duration;
@@ -50,6 +48,7 @@ import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
 import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_TOKEN;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_RETENTION_HOURS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES;
+import static org.dependencytrack.notification.NotificationFactory.newNotificationBuilder;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
@@ -146,11 +145,10 @@ public class WorkflowMaintenanceTask implements Subscriber {
                 final List<BomProcessingFailedSubject> notificationSubjectsForFailure =
                         notificationSubjectDao.getForVulnAnalysisTimedOut(failedStepIds);
                 notificationSubjectsForFailure.stream()
-                        .map(subject -> Notification.newBuilder()
+                        .map(subject -> newNotificationBuilder()
                                 .setScope(SCOPE_PORTFOLIO)
                                 .setGroup(GROUP_BOM_PROCESSING_FAILED)
                                 .setLevel(LEVEL_INFORMATIONAL)
-                                .setTimestamp(Timestamps.now())
                                 .setTitle(NotificationConstants.Title.BOM_PROCESSING_FAILED)
                                 .setContent("A %s BOM processing failed".formatted(subject.getBom().getFormat()))
                                 .setSubject(Any.pack(subject))

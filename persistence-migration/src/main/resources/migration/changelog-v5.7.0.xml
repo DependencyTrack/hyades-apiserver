@@ -250,4 +250,26 @@
             $$;
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-666" author="nscuro">
+        <createTable tableName="NOTIFICATION">
+            <column name="ID" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="NOTIFICATION_PK"/>
+            </column>
+            <column name="PAYLOAD" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v5.7.0-777" author="nscuro">
+        <sql splitStatements="true">
+            CREATE TYPE notification_level AS ENUM('INFORMATIONAL', 'WARNING', 'ERROR');
+        </sql>
+        <sql>
+            ALTER TABLE "NOTIFICATIONRULE"
+            ALTER COLUMN "NOTIFICATION_LEVEL"
+             TYPE notification_level USING "NOTIFICATION_LEVEL"::notification_level;
+        </sql>
+    </changeSet>
 </databaseChangeLog>

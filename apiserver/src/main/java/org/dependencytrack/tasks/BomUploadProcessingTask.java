@@ -24,8 +24,6 @@ import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
 import alpine.event.framework.Subscriber;
-import alpine.notification.Notification;
-import alpine.notification.NotificationLevel;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
@@ -55,11 +53,7 @@ import org.dependencytrack.model.VulnerabilityScan.TargetType;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
-import org.dependencytrack.notification.vo.BomProcessingFailed;
+import org.dependencytrack.notification.KafkaNotificationEmitter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
@@ -109,6 +103,9 @@ import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TIME_SPAN;
+import static org.dependencytrack.notification.NotificationFactory.createBomConsumedNotification;
+import static org.dependencytrack.notification.NotificationFactory.createBomProcessedNotification;
+import static org.dependencytrack.notification.NotificationFactory.createBomProcessingFailedNotification;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertComponents;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertDependencyGraph;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertServices;
@@ -1104,36 +1101,21 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private void dispatchBomConsumedNotification(final Context ctx) {
-        kafkaEventDispatcher.dispatchNotification(new Notification()
-                .scope(NotificationScope.PORTFOLIO)
-                .group(NotificationGroup.BOM_CONSUMED)
-                .level(NotificationLevel.INFORMATIONAL)
-                .title(NotificationConstants.Title.BOM_CONSUMED)
-                .content("A %s BOM was consumed and will be processed".formatted(ctx.bomFormat.getFormatShortName()))
-                .subject(new BomConsumedOrProcessed(ctx.token, ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
+        new KafkaNotificationEmitter().emit(
+                createBomConsumedNotification(
+                        ctx.project, ctx.bomFormat, ctx.bomSpecVersion, ctx.token));
     }
 
     private void dispatchBomProcessedNotification(final Context ctx) {
-        kafkaEventDispatcher.dispatchNotification(new Notification()
-                .scope(NotificationScope.PORTFOLIO)
-                .group(NotificationGroup.BOM_PROCESSED)
-                .level(NotificationLevel.INFORMATIONAL)
-                .title(NotificationConstants.Title.BOM_PROCESSED)
-                .content("A %s BOM was processed".formatted(ctx.bomFormat.getFormatShortName()))
-                // FIXME: Add reference to BOM after we have dedicated BOM server
-                .subject(new BomConsumedOrProcessed(ctx.token, ctx.project, /* bom */ "(Omitted)", ctx.bomFormat, ctx.bomSpecVersion)));
+        new KafkaNotificationEmitter().emit(
+                createBomProcessedNotification(
+                        ctx.project, ctx.bomFormat, ctx.bomSpecVersion, ctx.token));
     }
 
     private void dispatchBomProcessingFailedNotification(final Context ctx, final Throwable throwable) {
-        kafkaEventDispatcher.dispatchNotification(new Notification()
-                .scope(NotificationScope.PORTFOLIO)
-                .group(NotificationGroup.BOM_PROCESSING_FAILED)
-                .level(NotificationLevel.ERROR)
-                .title(NotificationConstants.Title.BOM_PROCESSING_FAILED)
-                .content("An error occurred while processing a BOM")
-                // TODO: Look into adding more fields to BomProcessingFailed, to also cover serial number, version, etc.
-                // FIXME: Add reference to BOM after we have dedicated BOM server
-                .subject(new BomProcessingFailed(ctx.token, ctx.project, /* bom */ "(Omitted)", throwable.getMessage(), ctx.bomFormat, ctx.bomSpecVersion)));
+        new KafkaNotificationEmitter().emit(
+                createBomProcessingFailedNotification(
+                        ctx.project, ctx.bomFormat, ctx.bomSpecVersion, throwable, ctx.token));
     }
 
     private static List<ComponentVulnerabilityAnalysisEvent> createVulnAnalysisEvents(

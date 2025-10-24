@@ -19,13 +19,10 @@
 package org.dependencytrack.integrations;
 
 import alpine.common.logging.Logger;
-import alpine.notification.Notification;
-import alpine.notification.NotificationLevel;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.notification.KafkaNotificationEmitter;
 import org.dependencytrack.persistence.QueryManager;
+
+import static org.dependencytrack.notification.NotificationFactory.createIntegrationErrorNotification;
 
 public abstract class AbstractIntegrationPoint implements IntegrationPoint {
 
@@ -40,28 +37,18 @@ public abstract class AbstractIntegrationPoint implements IntegrationPoint {
         logger.error("HTTP Status : " + statusCode + " " + statusText);
         logger.error("Request URL : " + url);
 
-        final var notification = new Notification()
-                .scope(NotificationScope.SYSTEM)
-                .group(NotificationGroup.INTEGRATION)
-                .level(NotificationLevel.ERROR)
-                .title(NotificationConstants.Title.INTEGRATION_ERROR)
-                .content("""
+        new KafkaNotificationEmitter().emit(
+                createIntegrationErrorNotification("""
                         An error occurred while communicating with the %s integration point. \
-                        URL: %s - HTTP Status: %s. Check log for details.""".formatted(name(), url, statusCode));
-        new KafkaEventDispatcher().dispatchNotification(notification);
+                        URL: %s - HTTP Status: %s. Check log for details.""".formatted(name(), url, statusCode)));
     }
 
     public void handleException(final Logger logger, final Exception e) {
         logger.error("An error occurred with the " + name() + " integration point", e);
 
-        final var notification = new Notification()
-                .scope(NotificationScope.SYSTEM)
-                .group(NotificationGroup.INTEGRATION)
-                .level(NotificationLevel.ERROR)
-                .title(NotificationConstants.Title.INTEGRATION_ERROR)
-                .content("""
+        new KafkaNotificationEmitter().emit(
+                createIntegrationErrorNotification("""
                         An error occurred with the %s integration point. \
-                        Check log for details. %s""".formatted(name(), e));
-        new KafkaEventDispatcher().dispatchNotification(notification);
+                        Check log for details. %s""".formatted(name(), e)));
     }
 }
