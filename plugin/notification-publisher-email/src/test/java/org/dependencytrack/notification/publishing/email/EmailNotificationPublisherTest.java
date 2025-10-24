@@ -1,0 +1,271 @@
+/*
+ * This file is part of Dependency-Track.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
+ */
+package org.dependencytrack.notification.publishing.email;
+
+import com.icegreen.greenmail.junit5.GreenMailExtension;
+import com.icegreen.greenmail.util.ServerSetup;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeBodyPart;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
+import org.dependencytrack.notification.publishing.testing.AbstractNotificationPublisherTest;
+import org.dependencytrack.plugin.api.notification.publishing.MutableNotificationRuleConfig;
+import org.dependencytrack.plugin.api.notification.publishing.NotificationPublisherFactory;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
+import static com.icegreen.greenmail.configuration.GreenMailConfiguration.aConfig;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.notification.publishing.email.EmailNotificationPublisherRuleConfigs.PASSWORD_CONFIG;
+import static org.dependencytrack.notification.publishing.email.EmailNotificationPublisherRuleConfigs.SMTP_FROM_ADDRESS_CONFIG;
+import static org.dependencytrack.notification.publishing.email.EmailNotificationPublisherRuleConfigs.SMTP_HOST_CONFIG;
+import static org.dependencytrack.notification.publishing.email.EmailNotificationPublisherRuleConfigs.SMTP_PORT_CONFIG;
+import static org.dependencytrack.notification.publishing.email.EmailNotificationPublisherRuleConfigs.USERNAME_CONFIG;
+
+class EmailNotificationPublisherTest extends AbstractNotificationPublisherTest {
+
+    @RegisterExtension
+    private static final GreenMailExtension GREEN_MAIL =
+            new GreenMailExtension(ServerSetup.SMTP.dynamicPort())
+                    .withConfiguration(aConfig().withUser("username", "password"));
+
+    @Override
+    protected NotificationPublisherFactory createPublisherFactory() {
+        return new EmailNotificationPublisherFactory();
+    }
+
+    @Override
+    protected void customizeRuleConfig(final MutableNotificationRuleConfig ruleConfig) {
+        ruleConfig.setValue(SMTP_HOST_CONFIG, GREEN_MAIL.getSmtp().getBindTo());
+        ruleConfig.setValue(SMTP_PORT_CONFIG, GREEN_MAIL.getSmtp().getPort());
+        ruleConfig.setValue(SMTP_FROM_ADDRESS_CONFIG, "foo@example.com");
+        ruleConfig.setValue(USERNAME_CONFIG, "username");
+        ruleConfig.setValue(PASSWORD_CONFIG, "password");
+    }
+
+    @Override
+    protected String getDestination() {
+        return "username@example.com";
+    }
+
+    @Override
+    protected void validateBomConsumedNotificationPublish() {
+        final ReceivedMessage message = getReceivedMessage();
+        assertThat(message.subject()).isEqualTo("[Dependency-Track] Bill of Materials Consumed");
+        assertThat(message.content()).isEqualToNormalizingNewlines("""
+                Bill of Materials Consumed
+                
+                --------------------------------------------------------------------------------
+                
+                Project:           projectName
+                Version:           projectVersion
+                Description:       projectDescription
+                Project URL:       https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95
+                
+                --------------------------------------------------------------------------------
+                
+                A CycloneDX BOM was consumed and will be processed
+                
+                --------------------------------------------------------------------------------
+                
+                1970-01-01T18:31:06.000Z
+                """);
+    }
+
+    @Override
+    protected void validateBomProcessingFailedNotificationPublish() {
+        final ReceivedMessage message = getReceivedMessage();
+        assertThat(message.subject()).isEqualTo("[Dependency-Track] Bill of Materials Processing Failed");
+        assertThat(message.content()).isEqualToNormalizingNewlines("""
+                Bill of Materials Processing Failed
+                
+                --------------------------------------------------------------------------------
+                
+                Project:           projectName
+                Version:           projectVersion
+                Description:       projectDescription
+                Project URL:       https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95
+                
+                --------------------------------------------------------------------------------
+                
+                Cause:
+                cause
+                
+                --------------------------------------------------------------------------------
+                
+                An error occurred while processing a BOM
+                
+                --------------------------------------------------------------------------------
+                
+                1970-01-01T18:31:06.000Z
+                """);
+    }
+
+    @Override
+    protected void validateBomValidationFailedNotificationPublish() {
+        final ReceivedMessage message = getReceivedMessage();
+        assertThat(message.subject()).isEqualTo("[Dependency-Track] Bill of Materials Validation Failed");
+        assertThat(message.content()).isEqualToNormalizingNewlines("""
+                Bill of Materials Validation Failed
+                
+                --------------------------------------------------------------------------------
+                
+                Project:           projectName
+                Version:           projectVersion
+                Description:       projectDescription
+                Project URL:       https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95
+                
+                --------------------------------------------------------------------------------
+                
+                Errors:
+                
+                cause 1
+                
+                cause 2
+                
+                
+                --------------------------------------------------------------------------------
+                
+                An error occurred while validating a BOM
+                
+                --------------------------------------------------------------------------------
+                
+                1970-01-01T18:31:06.000Z
+                """);
+    }
+
+    @Override
+    protected void validateDataSourceMirroringNotificationPublish() {
+        final ReceivedMessage message = getReceivedMessage();
+        assertThat(message.subject()).isEqualTo("[Dependency-Track] GitHub Advisory Mirroring");
+        assertThat(message.content()).isEqualToNormalizingNewlines("""
+                GitHub Advisory Mirroring
+                
+                --------------------------------------------------------------------------------
+                
+                Level:     LEVEL_ERROR
+                Scope:     SCOPE_SYSTEM
+                Group:     GROUP_DATASOURCE_MIRRORING
+                
+                --------------------------------------------------------------------------------
+                
+                An error occurred mirroring the contents of GitHub Advisories. Check log for details.
+                
+                --------------------------------------------------------------------------------
+                
+                1970-01-01T18:31:06.000Z
+                """);
+    }
+
+    @Override
+    protected void validateNewVulnerabilityNotificationPublish() {
+        final ReceivedMessage message = getReceivedMessage();
+        assertThat(message.subject()).isEqualTo("[Dependency-Track] New Vulnerability Identified");
+        assertThat(message.content()).isEqualToNormalizingNewlines("""
+                New Vulnerability Identified
+                
+                --------------------------------------------------------------------------------
+
+                Vulnerability ID:  INT-001
+                Vulnerability URL: https://example.com/vulnerability/?source=INTERNAL&vulnId=INT-001
+                Severity:          MEDIUM
+                Source:            INTERNAL
+                Component:         componentName : componentVersion
+                Component URL:     https://example.com/component/?uuid=94f87321-a5d1-4c2f-b2fe-95165debebc6
+                Project:           projectName
+                Version:           projectVersion
+                Description:       projectDescription
+                Project URL:       https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95
+                --------------------------------------------------------------------------------
+
+                Other affected projects: https://example.com/vulnerabilities/INTERNAL/INT-001/affectedProjects
+
+                --------------------------------------------------------------------------------
+
+
+
+                --------------------------------------------------------------------------------
+
+                1970-01-01T18:31:06.000Z
+                """);
+    }
+
+    @Override
+    protected void validateNewVulnerableDependencyNotificationPublish() {
+        final ReceivedMessage message = getReceivedMessage();
+        assertThat(message.subject()).isEqualTo("[Dependency-Track] Vulnerable Dependency Introduced");
+        assertThat(message.content()).isEqualToNormalizingNewlines("""
+                Vulnerable Dependency Introduced
+               
+                --------------------------------------------------------------------------------
+
+                Project:           pkg:maven/org.acme/projectName@projectVersion
+                Project URL:       https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95
+                Component:         componentName : componentVersion
+                Component URL:     https://example.com/component/?uuid=94f87321-a5d1-4c2f-b2fe-95165debebc6
+
+                Vulnerabilities
+
+                Vulnerability ID:  INT-001
+                Vulnerability URL: https://example.com/vulnerability/?source=INTERNAL&vulnId=INT-001
+                Severity:          MEDIUM
+                Source:            INTERNAL
+                Description:
+                vulnerabilityDescription
+
+
+
+                --------------------------------------------------------------------------------
+
+
+
+                --------------------------------------------------------------------------------
+
+                1970-01-01T18:31:06.000Z
+                """);
+    }
+
+    private record ReceivedMessage(String subject, String content) {
+    }
+
+    private ReceivedMessage getReceivedMessage() {
+        final MimeMessage[] messages = GREEN_MAIL.getReceivedMessages();
+        assertThat(messages).hasSize(1);
+
+        try {
+            final MimeMessage message = messages[0];
+            assertThat(message.getContent()).isInstanceOf(MimeMultipart.class);
+
+            final MimeMultipart content = (MimeMultipart) message.getContent();
+            assertThat(content.getCount()).isEqualTo(1);
+            assertThat(content.getBodyPart(0)).isInstanceOf(MimeBodyPart.class);
+
+            return new ReceivedMessage(
+                    message.getSubject(),
+                    (String) content.getBodyPart(0).getContent());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } catch (MessagingException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+}

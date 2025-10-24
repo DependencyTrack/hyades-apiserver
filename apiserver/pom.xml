@@ -23,11 +23,9 @@
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>11.0.0</lib.cyclonedx-java.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <lib.kafka.version>3.9.1</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.kotlin-stdlib.version>2.2.20</lib.kotlin-stdlib.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
-        <lib.pebble.version>3.2.4</lib.pebble.version>
         <lib.swagger.version>2.2.39</lib.swagger.version>
         <lib.swagger-parser.version>2.1.35</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
@@ -106,6 +104,38 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>file-storage-s3</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>notification-publisher-console</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>notification-publisher-email</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>notification-publisher-jira</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>notification-publisher-kafka</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>notification-publisher-webhook</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>notification-templating-pebble</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -281,7 +311,6 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
-            <version>${lib.kafka.version}</version>
         </dependency>
 
         <!-- shedlock dependencies -->
@@ -316,7 +345,6 @@
         <dependency>
             <groupId>io.pebbletemplates</groupId>
             <artifactId>pebble</artifactId>
-            <version>${lib.pebble.version}</version>
         </dependency>
         <!-- Protobuf -->
         <dependency>

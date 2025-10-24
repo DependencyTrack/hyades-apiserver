@@ -37,6 +37,13 @@
         <module>plugin/file-storage-local</module>
         <module>plugin/file-storage-memory</module>
         <module>plugin/file-storage-s3</module>
+        <module>plugin/notification-templating-pebble</module>
+        <module>plugin/notification-publisher-testing</module>
+        <module>plugin/notification-publisher-console</module>
+        <module>plugin/notification-publisher-email</module>
+        <module>plugin/notification-publisher-jira</module>
+        <module>plugin/notification-publisher-kafka</module>
+        <module>plugin/notification-publisher-webhook</module>
         <module>plugin/vuln-data-source-github</module>
         <module>plugin/vuln-data-source-nvd</module>
         <module>plugin/vuln-data-source-osv</module>
@@ -102,6 +109,7 @@
         <!-- Dependency versions -->
         <lib.assertj.version>3.27.6</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
+        <lib.caffeine.version>3.2.2</lib.caffeine.version>
         <lib.cel-java.version>0.5.3</lib.cel-java.version>
         <lib.cpe-parser.version>3.0.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
@@ -109,6 +117,8 @@
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
+        <lib.eclipse-angus.version>2.0.5</lib.eclipse-angus.version>
+        <lib.greenmail.version>2.1.6</lib.greenmail.version>
         <lib.httpclient5.version>5.5.1</lib.httpclient5.version>
         <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.1.1</lib.java-uuid-generator.version>
@@ -119,6 +129,7 @@
         <lib.json-unit.version>5.0.0</lib.json-unit.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>6.0.0</lib.junit-jupiter.version>
+        <lib.kafka-clients.version>3.9.1</lib.kafka-clients.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.micrometer.version>1.15.5</lib.micrometer.version>
         <lib.minio.version>8.6.0</lib.minio.version>
@@ -126,6 +137,7 @@
         <lib.okhttp.version>5.2.1</lib.okhttp.version>
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
+        <lib.pebble.version>3.2.4</lib.pebble.version>
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
         <lib.protobuf-java.version>4.33.0</lib.protobuf-java.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
@@ -154,6 +166,12 @@
                 <groupId>org.awaitility</groupId>
                 <artifactId>awaitility</artifactId>
                 <version>${lib.awaitility.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${lib.caffeine.version}</version>
             </dependency>
 
             <dependency>
@@ -195,6 +213,18 @@
                 <groupId>org.datanucleus</groupId>
                 <artifactId>datanucleus-rdbms</artifactId>
                 <version>${lib.datanucleus-rdbms.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.eclipse.angus</groupId>
+                <artifactId>angus-mail</artifactId>
+                <version>${lib.eclipse-angus.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.icegreen</groupId>
+                <artifactId>greenmail-junit5</artifactId>
+                <version>${lib.greenmail.version}</version>
             </dependency>
 
             <dependency>
@@ -277,6 +307,12 @@
             </dependency>
 
             <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-clients</artifactId>
+                <version>${lib.kafka-clients.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.liquibase</groupId>
                 <artifactId>liquibase-core</artifactId>
                 <version>${lib.liquibase.version}</version>
@@ -320,6 +356,12 @@
                 <groupId>com.github.package-url</groupId>
                 <artifactId>packageurl-java</artifactId>
                 <version>${lib.packageurl.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.pebbletemplates</groupId>
+                <artifactId>pebble</artifactId>
+                <version>${lib.pebble.version}</version>
             </dependency>
 
             <dependency>
