@@ -104,6 +104,7 @@ public interface FindingDao {
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
+            <#-- @ftlvariable name="includeSuppressed" type="boolean" -->
             SELECT "PROJECT"."UUID" AS "projectUuid"
                  , "PROJECT"."NAME" AS "projectName"
                  , "PROJECT"."VERSION" AS "projectVersion"
@@ -185,13 +186,15 @@ public interface FindingDao {
               INNER JOIN "PROJECT"
                 ON "COMPONENT"."PROJECT_ID" = "PROJECT"."ID"
              WHERE "COMPONENT"."PROJECT_ID" = :projectId
-               AND (:includeSuppressed OR "A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
+            <#if !includeSuppressed>
+               AND "A"."SUPPRESSED" IS DISTINCT FROM TRUE
+            </#if>
                AND (:hasAnalysis IS NULL OR ("A"."ID" IS NOT NULL) = :hasAnalysis)
              ORDER BY "FINDINGATTRIBUTION"."ID"
              ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(FindingRow.class)
-    List<FindingRow> getFindingsByProject(@Bind long projectId, @Bind boolean includeSuppressed, @Bind Boolean hasAnalysis);
+    List<FindingRow> getFindingsByProject(@Bind long projectId, @Define boolean includeSuppressed, @Bind Boolean hasAnalysis);
 
     default List<Finding> getFindings(final long projectId, final boolean includeSuppressed) {
         List<FindingRow> findingRows = getFindingsByProject(projectId, includeSuppressed, null);
@@ -292,7 +295,7 @@ public interface FindingDao {
                 AND "PROJECT"."INACTIVE_SINCE" IS NULL
              </#if>
              <#if !suppressedFilter>
-                AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
+                AND "A"."SUPPRESSED" IS DISTINCT FROM TRUE
              </#if>
              <#if queryFilter??>
                 ${queryFilter}
