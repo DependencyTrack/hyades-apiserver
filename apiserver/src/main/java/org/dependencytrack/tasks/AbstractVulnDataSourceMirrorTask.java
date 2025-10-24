@@ -54,8 +54,8 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
     private final PluginManager pluginManager;
     private final Class<? extends Event> eventClass;
     private final String vulnDataSourceExtensionName;
-    private final Vulnerability.Source source;
-    private final Logger logger;
+    protected final Vulnerability.Source source;
+    protected final Logger logger;
     private LockConfiguration lockConfig;
     private Instant lockAcquiredAt;
 
@@ -131,7 +131,7 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
         }
     }
 
-    private void processBatch(final VulnDataSource dataSource, final Collection<Bom> bovs) {
+    protected void processBatch(final VulnDataSource dataSource, final Collection<Bom> bovs) {
         logger.debug("Processing batch of {} BOVs", bovs.size());
 
         final var vulns = new ArrayList<Vulnerability>(bovs.size());

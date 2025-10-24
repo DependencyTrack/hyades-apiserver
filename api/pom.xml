@@ -99,6 +99,7 @@
                                 <generateBuilders>true</generateBuilders>
                                 <generatePom>false</generatePom>
                                 <sourceFolder>.</sourceFolder>
+                                <openApiNullable>false</openApiNullable>
                                 <additionalModelTypeAnnotations>
                                     @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
                                 </additionalModelTypeAnnotations>

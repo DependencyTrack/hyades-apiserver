@@ -19,3 +19,17 @@ extends:
 - ["./zalando.yaml", "all"]
 formats:
 - "oas3"
+rules:
+  # Override the path naming rule to exclude CSAF extension point paths
+  # These paths use "vuln.datasource" which doesn't conform to lowercase-with-hyphens
+  must-use-lowercase-with-hypens-for-path-segements:
+    message: Path segments have to be lowercase separate words with hyphens
+    description: MUST use lowercase separate words with hyphens for path segments [129]
+    documentationUrl: https://opensource.zalando.com/restful-api-guidelines/#129
+    severity: error
+    # Exclude CSAF extension point paths from this rule
+    given: $.paths[?(!@property.match(/^\/extension-points\/vuln\.datasource\/extensions\/csaf\//))]~
+    then:
+      function: pattern
+      functionOptions:
+        match: ^(?=((([\/a-z][a-z0-9\-\/]*)?({[^}]*})?)+))\1$

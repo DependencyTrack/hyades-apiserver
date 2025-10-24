@@ -33,6 +33,7 @@
     <class>alpine.model.Permission</class>
     <class>alpine.model.Team</class>
     <class>alpine.model.User</class>
+    <class>org.dependencytrack.model.Advisory</class>
     <class>org.dependencytrack.model.AffectedVersionAttribution</class>
     <class>org.dependencytrack.model.Analysis</class>
     <class>org.dependencytrack.model.AnalysisComment</class>
