@@ -343,7 +343,7 @@ public class NotificationPublisherResourceTest extends ResourceTest {
                 .post(Entity.entity("", MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 
         Assert.assertEquals(200, response.getStatus());
-        assertThat(kafkaMockProducer.history().size()).isEqualTo(11);
+        assertThat(qm.getNotificationOutbox()).hasSize(11);
     }
 
     @Test

@@ -91,6 +91,7 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.persistence.jdbi.EffectivePermissionDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
+import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
@@ -1188,6 +1189,14 @@ public class QueryManager extends AlpineQueryManager {
 
     public boolean bind(final NotificationRule notificationRule, final Collection<Tag> tags) {
         return getNotificationQueryManager().bind(notificationRule, tags);
+    }
+
+    public List<Notification> getNotificationOutbox() {
+        return getNotificationQueryManager().getNotificationOutbox();
+    }
+
+    public void truncateNotificationOutbox() {
+        getNotificationQueryManager().truncateNotificationOutbox();
     }
 
     /**

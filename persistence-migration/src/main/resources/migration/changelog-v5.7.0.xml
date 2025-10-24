@@ -250,4 +250,15 @@
             $$;
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-12" author="nscuro">
+        <createTable tableName="NOTIFICATION_OUTBOX">
+            <column name="ID" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="NOTIFICATION_OUTBOX_PK"/>
+            </column>
+            <column name="PAYLOAD" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
 </databaseChangeLog>
