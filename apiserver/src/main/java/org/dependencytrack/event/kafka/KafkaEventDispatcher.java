@@ -20,8 +20,6 @@ package org.dependencytrack.event.kafka;
 
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
-import alpine.notification.Notification;
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -51,8 +49,7 @@ public class KafkaEventDispatcher {
         this(KafkaProducerInitializer.getProducer());
     }
 
-    @VisibleForTesting
-    KafkaEventDispatcher(final Producer<byte[], byte[]> producer) {
+    public KafkaEventDispatcher(final Producer<byte[], byte[]> producer) {
         this.producer = producer;
     }
 
@@ -65,24 +62,10 @@ public class KafkaEventDispatcher {
         return dispatchAll(List.of(kafkaEvent)).getFirst();
     }
 
-    public CompletableFuture<RecordMetadata> dispatchNotification(final Notification notification) {
-        if (notification == null) {
-            return completedFuture(null);
-        }
-
-        final KafkaEvent<?, ?> kafkaEvent = KafkaEventConverter.convert(notification);
-        return dispatchAll(List.of(kafkaEvent)).getFirst();
-    }
-
-    public CompletableFuture<RecordMetadata> dispatchNotificationProto(final org.dependencytrack.proto.notification.v1.Notification notification) {
-        if (notification == null) {
-            return completedFuture(null);
-        }
-
-        final KafkaEvent<?, ?> kafkaEvent = KafkaEventConverter.convert(notification);
-        return dispatchAll(List.of(kafkaEvent)).getFirst();
-    }
-
+    /**
+     * @deprecated Use {@link org.dependencytrack.notification.NotificationEmitter} instead.
+     */
+    @Deprecated(since = "5.7.0", forRemoval = true)
     public List<CompletableFuture<RecordMetadata>> dispatchAllNotificationProtos(final Collection<org.dependencytrack.proto.notification.v1.Notification> notifications) {
         final List<KafkaEvent<?, ?>> kafkaEvents = KafkaEventConverter.convertAllNotificationProtos(notifications);
         return dispatchAll(kafkaEvents);

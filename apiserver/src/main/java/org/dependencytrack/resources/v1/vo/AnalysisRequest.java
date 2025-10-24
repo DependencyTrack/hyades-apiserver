@@ -23,12 +23,11 @@ import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
-
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 
 /**
  * Defines a custom request object used when updating analysis decisions.
@@ -38,6 +37,10 @@ import jakarta.validation.constraints.Pattern;
  */
 public class AnalysisRequest {
 
+    /**
+     * @deprecated The project is inferred from {@link #component}. This value is ignored.
+     */
+    @Deprecated(since = "5.7.0", forRemoval = true)
     @Pattern(regexp = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", message = "The project must be a valid 36 character UUID")
     private final String project;
 

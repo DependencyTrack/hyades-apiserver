@@ -20,7 +20,6 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.validation.RegexSequence;
 import alpine.common.validation.ValidationTask;
-import alpine.model.User;
 import alpine.server.auth.PermissionRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -31,19 +30,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.PolicyViolation;
-import org.dependencytrack.model.ViolationAnalysis;
-import org.dependencytrack.model.ViolationAnalysisState;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.AbstractApiResource;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-import org.dependencytrack.resources.v1.vo.ViolationAnalysisRequest;
-import org.dependencytrack.util.NotificationUtil;
-
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -53,6 +39,16 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.PolicyViolation;
+import org.dependencytrack.model.ViolationAnalysis;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
+import org.dependencytrack.resources.AbstractApiResource;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.ViolationAnalysisRequest;
 
 /**
  * JAX-RS resources for processing violation analysis decisions.
@@ -140,50 +136,33 @@ public class ViolationAnalysisResource extends AbstractApiResource {
                 validator.validateProperty(request, "analysisState"),
                 validator.validateProperty(request, "comment")
         );
-        try (QueryManager qm = new QueryManager()) {
+        try (final var qm = new QueryManager(getAlpineRequest())) {
             return qm.callInTransaction(() -> {
                 final Component component = qm.getObjectByUuid(Component.class, request.getComponent());
                 if (component == null) {
-                    return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
+                    return Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The component could not be found.")
+                            .build();
                 }
+
                 requireAccess(qm, component.getProject());
+
                 final PolicyViolation violation = qm.getObjectByUuid(PolicyViolation.class, request.getPolicyViolation());
                 if (violation == null) {
-                    return Response.status(Response.Status.NOT_FOUND).entity("The policy violation could not be found.").build();
+                    return Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The policy violation could not be found.")
+                            .build();
                 }
 
-                String commenter = null;
-                if (getPrincipal() instanceof final User user) {
-                    commenter = user.getUsername();
-                }
+                final long analysisId = qm.makeViolationAnalysis(
+                        new MakeViolationAnalysisCommand(component, violation)
+                                .withState(request.getAnalysisState())
+                                .withSuppress(request.isSuppressed())
+                                .withComment(request.getComment()));
 
-                boolean analysisStateChange = false;
-                boolean suppressionChange = false;
-                ViolationAnalysis analysis = qm.getViolationAnalysis(component, violation);
-                if (analysis != null) {
-                    if (request.getAnalysisState() != null && analysis.getAnalysisState() != request.getAnalysisState()) {
-                        analysisStateChange = true;
-                        qm.makeViolationAnalysisComment(analysis, String.format("%s → %s", analysis.getAnalysisState(), request.getAnalysisState()), commenter);
-                    }
-                    if (request.isSuppressed() != null && analysis.isSuppressed() != request.isSuppressed()) {
-                        suppressionChange = true;
-                        final String message = (request.isSuppressed()) ? "Suppressed" : "Unsuppressed";
-                        qm.makeViolationAnalysisComment(analysis, message, commenter);
-                    }
-                    analysis = qm.makeViolationAnalysis(component, violation, request.getAnalysisState(), request.isSuppressed());
-                } else {
-                    analysis = qm.makeViolationAnalysis(component, violation, request.getAnalysisState(), request.isSuppressed());
-                    analysisStateChange = true; // this is a new analysis - so set to true because it was previously null
-                    if (ViolationAnalysisState.NOT_SET != request.getAnalysisState()) {
-                        qm.makeViolationAnalysisComment(analysis, String.format("%s → %s", ViolationAnalysisState.NOT_SET, request.getAnalysisState()), commenter);
-                    }
-                }
-
-                final String comment = StringUtils.trimToNull(request.getComment());
-                qm.makeViolationAnalysisComment(analysis, comment, commenter);
-                analysis = qm.getObjectById(ViolationAnalysis.class, analysis.getId());
-                NotificationUtil.analyzeNotificationCriteria(qm, analysis, analysisStateChange, suppressionChange);
-                return Response.ok(analysis).build();
+                return Response.ok(qm.getObjectById(ViolationAnalysis.class, analysisId)).build();
             });
         }
     }

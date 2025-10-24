@@ -23,8 +23,6 @@ import alpine.event.framework.Event;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.User;
-import alpine.notification.Notification;
-import alpine.notification.NotificationLevel;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.filters.ResourceAccessRequired;
@@ -57,7 +55,6 @@ import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
@@ -65,9 +62,7 @@ import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.notification.NotificationEmitter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
@@ -93,6 +88,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNullElseGet;
+import static org.dependencytrack.notification.NotificationFactory.createProjectCreatedNotification;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.PersistenceUtil.isPersistent;
@@ -574,17 +570,14 @@ public class ProjectResource extends AbstractApiResource {
                     LOGGER.error("Failed to create project %s".formatted(jsonProject), e);
                     throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
                 }
+
+                NotificationEmitter.using(qm).emit(
+                        createProjectCreatedNotification(project));
+
                 return project;
             });
 
             LOGGER.info("Project " + createdProject + " created by " + super.getPrincipal().getName());
-            new KafkaEventDispatcher().dispatchNotification(new Notification()
-                    .scope(NotificationScope.PORTFOLIO)
-                    .group(NotificationGroup.PROJECT_CREATED)
-                    .level(NotificationLevel.INFORMATIONAL)
-                    .title(NotificationConstants.Title.PROJECT_CREATED)
-                    .content(createdProject.getName() + " was created")
-                    .subject(createdProject));
             return Response.status(Response.Status.CREATED).entity(createdProject).build();
         }
     }
