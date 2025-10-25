@@ -18,18 +18,13 @@
  */
 package org.dependencytrack.event.kafka;
 
-import alpine.notification.Notification;
-import alpine.notification.NotificationLevel;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
-import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.junit.Before;
 import org.junit.Test;
@@ -107,77 +102,6 @@ public class KafkaEventDispatcherTest {
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> eventDispatcher.dispatchEvent(new PortfolioMetricsUpdateEvent()))
                 .withMessageStartingWith("Unable to convert event");
-    }
-
-    @Test
-    public void testDispatchNotificationWithNull() {
-        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchNotification(null);
-        assertThat(mockProducer.completeNext()).isFalse();
-        assertThat(future).isCompletedWithValue(null);
-    }
-
-    @Test
-    public void testDispatchNotification() {
-        final var notification = new Notification()
-                .scope(NotificationScope.SYSTEM)
-                .group(NotificationGroup.ANALYZER)
-                .level(NotificationLevel.ERROR);
-        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchNotification(notification);
-        assertThat(mockProducer.completeNext()).isTrue();
-        assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
-
-        assertThat(mockProducer.history()).satisfiesExactly(record -> {
-            assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_ANALYZER.name());
-            assertThat(record.key()).isNull();
-            assertThat(record.value()).isNotNull();
-            assertThat(record.headers()).isEmpty();
-        });
-    }
-
-    @Test
-    public void testDispatchNotificationWithoutGroup() {
-        final var notification = new Notification()
-                .scope(NotificationScope.SYSTEM)
-                .level(NotificationLevel.ERROR);
-
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> eventDispatcher.dispatchNotification(notification))
-                .withMessage("""
-                        Unable to determine destination topic because the notification does not \
-                        specify a notification group: GROUP_UNSPECIFIED""");
-    }
-
-    @Test
-    public void testDispatchNotificationWitMissingSubject() {
-        final var notification = new Notification()
-                .scope(NotificationScope.SYSTEM)
-                .group(NotificationGroup.BOM_CONSUMED)
-                .level(NotificationLevel.INFORMATIONAL);
-
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> eventDispatcher.dispatchNotification(notification))
-                .withMessage("""
-                        Expected subject of type matching any of [class org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject], \
-                        but notification has no subject""");
-    }
-
-    @Test
-    public void testDispatchNotificationWithSubjectMismatch() {
-        final var project = new Project();
-        project.setUuid(UUID.randomUUID());
-        project.setName("foo");
-
-        final var notification = new Notification()
-                .scope(NotificationScope.SYSTEM)
-                .group(NotificationGroup.BOM_CONSUMED)
-                .level(NotificationLevel.INFORMATIONAL)
-                .subject(project);
-
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> eventDispatcher.dispatchNotification(notification))
-                .withMessage("""
-                        Expected subject of type matching any of [class org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject], \
-                        but is type.googleapis.com/org.dependencytrack.notification.v1.Project""");
     }
 
     @Test

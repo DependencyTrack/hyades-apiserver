@@ -100,6 +100,7 @@
         <project.parentBaseDir>.</project.parentBaseDir>
 
         <!-- Dependency versions -->
+        <lib.archunit.version>1.4.1</lib.archunit.version>
         <lib.assertj.version>3.27.6</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.cel-java.version>0.5.3</lib.cel-java.version>
@@ -144,6 +145,12 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit-junit4</artifactId>
+                <version>${lib.archunit.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>

@@ -34,7 +34,6 @@ import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -48,27 +47,23 @@ import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
-import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.resources.v1.vo.AnalysisRequest;
 import org.dependencytrack.util.NotificationUtil;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
-import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
 @NotThreadSafe
 public class AnalysisResourceTest extends ResourceTest {
@@ -389,14 +384,13 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
         assertThat(responseJson.getBoolean("isSuppressed")).isTrue();
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().getFirst());
-        assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
-        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.ANALYSIS_DECISION_NOT_AFFECTED, project));
-        assertThat(notification.getContent()).isEqualTo("An analysis decision was made to a finding affecting a project");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.ANALYSIS_DECISION_NOT_AFFECTED, project));
+            assertThat(notification.getContent()).isEqualTo("An analysis decision was made to a finding affecting a project");
+        });
     }
 
     @Test
@@ -448,14 +442,13 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(responseJson.getBoolean("isSuppressed")).isTrue();
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().getFirst());
-        assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
-        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.ANALYSIS_DECISION_NOT_AFFECTED, project));
-        assertThat(notification.getContent()).isEqualTo("An analysis decision was made to a finding affecting a project");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.ANALYSIS_DECISION_NOT_AFFECTED, project));
+            assertThat(notification.getContent()).isEqualTo("An analysis decision was made to a finding affecting a project");
+        });
     }
 
     @Test
@@ -496,14 +489,13 @@ public class AnalysisResourceTest extends ResourceTest {
         assertThat(responseJson.getJsonArray("analysisComments")).isEmpty();
         assertThat(responseJson.getBoolean("isSuppressed")).isFalse();
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().getFirst());
-        assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
-        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.ANALYSIS_DECISION_NOT_SET, project));
-        assertThat(notification.getContent()).isEqualTo("An analysis decision was made to a finding affecting a project");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.ANALYSIS_DECISION_NOT_SET, project));
+            assertThat(notification.getContent()).isEqualTo("An analysis decision was made to a finding affecting a project");
+        });
     }
 
     @Test
@@ -575,14 +567,13 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
         assertThat(responseJson.getBoolean("isSuppressed")).isFalse();
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().getFirst());
-        assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
-        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.ANALYSIS_DECISION_EXPLOITABLE, project));
-        assertThat(notification.getContent()).isEqualTo("An analysis decision was made to a finding affecting a project");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.ANALYSIS_DECISION_EXPLOITABLE, project));
+            assertThat(notification.getContent()).isEqualTo("An analysis decision was made to a finding affecting a project");
+        });
     }
 
     @Test
@@ -635,7 +626,7 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Analysis comment here"))
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("Jane Doe"));
 
-        assertThat(kafkaMockProducer.history()).isEmpty();
+        assertThat(qm.getNotificationOutbox()).isEmpty();
     }
 
     @Test
@@ -696,14 +687,13 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Vendor Response: WILL_NOT_FIX → NOT_SET"))
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().getFirst());
-        assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
-        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.ANALYSIS_DECISION_NOT_SET, project));
-        assertThat(notification.getContent()).isEqualTo("An analysis decision was made to a finding affecting a project");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.ANALYSIS_DECISION_NOT_SET, project));
+            assertThat(notification.getContent()).isEqualTo("An analysis decision was made to a finding affecting a project");
+        });
     }
 
     @Test
@@ -865,14 +855,13 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
         assertThat(responseJson.getBoolean("isSuppressed")).isFalse();
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().getFirst());
-        assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
-        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.ANALYSIS_DECISION_NOT_AFFECTED, project));
-        assertThat(notification.getContent()).isEqualTo("An analysis decision was made to a finding affecting a project");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.ANALYSIS_DECISION_NOT_AFFECTED, project));
+            assertThat(notification.getContent()).isEqualTo("An analysis decision was made to a finding affecting a project");
+        });
     }
 
     @Test

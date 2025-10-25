@@ -25,7 +25,6 @@ import alpine.model.Team;
 import alpine.model.User;
 import alpine.server.auth.PermissionRequired;
 import com.google.protobuf.Any;
-import com.google.protobuf.util.Timestamps;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -35,15 +34,24 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.notification.NotificationEmitter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
@@ -55,19 +63,11 @@ import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.AnalysisRequest;
 import org.dependencytrack.util.AnalysisCommentFormatter.AnalysisCommentField;
 
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static org.dependencytrack.notification.NotificationFactory.newNotificationBuilder;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
@@ -236,16 +236,13 @@ public class AnalysisResource extends AbstractApiResource {
             if (analysisStateChange || suppressionChange) {
                 var notificationTitle = generateTitle(analysis.getAnalysisState(), analysis.isSuppressed(), analysisStateChange, suppressionChange);
                 handle.attach(NotificationSubjectDao.class).getForProjectAuditChange(componentUuid, vulnUuid, analysis.getAnalysisState(), analysis.isSuppressed())
-                        .map(subject -> org.dependencytrack.proto.notification.v1.Notification.newBuilder()
-                                .setScope(SCOPE_PORTFOLIO)
-                                .setGroup(GROUP_PROJECT_AUDIT_CHANGE)
-                                .setLevel(LEVEL_INFORMATIONAL)
-                                .setTimestamp(Timestamps.now())
+                        // TODO: Move this to NotificationFactory.
+                        .map(subject -> newNotificationBuilder(SCOPE_PORTFOLIO, GROUP_PROJECT_AUDIT_CHANGE, LEVEL_INFORMATIONAL)
                                 .setTitle(generateNotificationTitle(notificationTitle, subject.getProject()))
                                 .setContent("An analysis decision was made to a finding affecting a project")
                                 .setSubject(Any.pack(subject))
                                 .build())
-                        .ifPresent(notification -> new KafkaEventDispatcher().dispatchNotificationProto(notification));
+                        .ifPresent(NotificationEmitter.using(handle)::emit);
             }
             analysis.setAnalysisComments(dao.getComments(analysis.getId()));
             return Response.ok(analysis).build();
