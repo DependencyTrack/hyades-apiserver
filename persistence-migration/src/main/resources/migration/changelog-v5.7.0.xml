@@ -282,4 +282,14 @@
             ALTER TABLE "NOTIFICATION_OUTBOX" SET (autovacuum_vacuum_scale_factor = 0.1)
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-13" author="nscuro">
+        <sql splitStatements="true">
+            CREATE TYPE notification_level AS ENUM ('INFORMATIONAL', 'WARNING', 'ERROR');
+
+            ALTER TABLE "NOTIFICATIONRULE"
+            ALTER COLUMN "NOTIFICATION_LEVEL"
+              SET DATA TYPE notification_level USING "NOTIFICATION_LEVEL"::notification_level;
+        </sql>
+    </changeSet>
 </databaseChangeLog>

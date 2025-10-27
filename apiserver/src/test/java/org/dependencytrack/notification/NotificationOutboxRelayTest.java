@@ -54,6 +54,7 @@ public class NotificationOutboxRelayTest extends PersistenceCapableTest {
         relay = new NotificationOutboxRelay(
                 new KafkaEventDispatcher(mockProducer),
                 new SimpleMeterRegistry(),
+                /* routerEnabled */ true,
                 /* pollIntervalMillis */ 10,
                 /* batchSize */ 10);
     }
@@ -141,6 +142,7 @@ public class NotificationOutboxRelayTest extends PersistenceCapableTest {
                 .isThrownBy(() -> new NotificationOutboxRelay(
                         null,
                         new SimpleMeterRegistry(),
+                        true,
                         100,
                         10));
     }
@@ -152,6 +154,7 @@ public class NotificationOutboxRelayTest extends PersistenceCapableTest {
                 .isThrownBy(() -> new NotificationOutboxRelay(
                         new KafkaEventDispatcher(mockProducer),
                         null,
+                        true,
                         100,
                         10));
     }
@@ -163,6 +166,7 @@ public class NotificationOutboxRelayTest extends PersistenceCapableTest {
                 .isThrownBy(() -> new NotificationOutboxRelay(
                         new KafkaEventDispatcher(mockProducer),
                         new SimpleMeterRegistry(),
+                        true,
                         0,
                         10));
     }
@@ -174,6 +178,7 @@ public class NotificationOutboxRelayTest extends PersistenceCapableTest {
                 .isThrownBy(() -> new NotificationOutboxRelay(
                         new KafkaEventDispatcher(mockProducer),
                         new SimpleMeterRegistry(),
+                        true,
                         100,
                         0));
     }

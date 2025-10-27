@@ -69,6 +69,7 @@ final class NotificationOutboxRelay implements Closeable {
 
     private final KafkaEventDispatcher delegateDispatcher;
     private final MeterRegistry meterRegistry;
+    private final boolean routerEnabled;
     private final long pollIntervalMillis;
     private final int batchSize;
     private final BlockingQueue<Notification> currentBatch;
@@ -83,6 +84,7 @@ final class NotificationOutboxRelay implements Closeable {
     public NotificationOutboxRelay(
             final KafkaEventDispatcher delegateDispatcher,
             final MeterRegistry meterRegistry,
+            final boolean routerEnabled,
             final long pollIntervalMillis,
             final int batchSize) {
         this.delegateDispatcher = requireNonNull(delegateDispatcher, "delegate dispatcher must not be null");
@@ -93,6 +95,7 @@ final class NotificationOutboxRelay implements Closeable {
         if (batchSize <= 0) {
             throw new IllegalArgumentException("batchSize must be greater than 0");
         }
+        this.routerEnabled = routerEnabled;
         this.pollIntervalMillis = pollIntervalMillis;
         this.batchSize = batchSize;
         this.currentBatch = new ArrayBlockingQueue<>(batchSize);
@@ -220,6 +223,18 @@ final class NotificationOutboxRelay implements Closeable {
 
             if (currentBatch.isEmpty()) {
                 return RelayCycleOutcome.COMPLETED;
+            }
+
+            if (routerEnabled) {
+                try {
+                    final List<NotificationPublishTask> publishTasks =
+                            new NotificationRouter(handle, meterRegistry).route(currentBatch);
+                    LOGGER.debug("Router generated {} publish tasks", publishTasks.size());
+                } catch (RuntimeException e) {
+                    LOGGER.warn("""
+                            Router failed, but since routing results are not currently used,
+                            the failure is ignored. If it continues to fail, consider disabling the router.""", e);
+                }
             }
 
             final Timer.Sample sendLatencySample = Timer.start();

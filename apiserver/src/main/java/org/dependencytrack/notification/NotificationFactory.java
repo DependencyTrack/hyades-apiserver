@@ -18,9 +18,6 @@
  */
 package org.dependencytrack.notification;
 
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochRandomGenerator;
 import com.google.protobuf.Any;
@@ -46,6 +43,7 @@ import org.dependencytrack.proto.notification.v1.Project;
 import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
 import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus;
 import org.dependencytrack.proto.notification.v1.Scope;
+import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.dependencytrack.proto.notification.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.Vulnerability;
 import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysis;
@@ -453,16 +451,14 @@ public final class NotificationFactory {
             final alpine.model.User user) {
         requireNonNull(user, "user must not be null");
 
+        return createUserCreatedNotification(convert(user));
+    }
+
+    static Notification createUserCreatedNotification(final UserSubject user) {
         return newNotificationBuilder(SCOPE_SYSTEM, GROUP_USER_CREATED, LEVEL_INFORMATIONAL)
                 .setTitle("User Created")
-                .setContent(switch (user) {
-                    case LdapUser ignored -> "LDAP";
-                    case ManagedUser ignored -> "Managed";
-                    case OidcUser ignored -> "OpenID Connect";
-                    default -> throw new IllegalStateException(
-                            "Unexpected user type: " + user.getClass());
-                } + " user created")
-                .setSubject(Any.pack(convert(user)))
+                .setContent("User %s was created".formatted(user.getUsername()))
+                .setSubject(Any.pack(user))
                 .build();
     }
 
@@ -470,16 +466,14 @@ public final class NotificationFactory {
             final alpine.model.User user) {
         requireNonNull(user, "user must not be null");
 
+        return createUserDeletedNotification(convert(user));
+    }
+
+    static Notification createUserDeletedNotification(final UserSubject user) {
         return newNotificationBuilder(SCOPE_SYSTEM, GROUP_USER_DELETED, LEVEL_INFORMATIONAL)
                 .setTitle("User Deleted")
-                .setContent(switch (user) {
-                    case LdapUser ignored -> "LDAP";
-                    case ManagedUser ignored -> "Managed";
-                    case OidcUser ignored -> "OpenID Connect";
-                    default -> throw new IllegalStateException(
-                            "Unexpected user type: " + user.getClass());
-                } + " user deleted")
-                .setSubject(Any.pack(convert(user)))
+                .setContent("User %s was deleted".formatted(user.getUsername()))
+                .setSubject(Any.pack(user))
                 .build();
     }
 

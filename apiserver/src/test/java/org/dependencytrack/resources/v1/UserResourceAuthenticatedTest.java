@@ -237,7 +237,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
             assertThat(notification.getGroup()).isEqualTo(GROUP_USER_CREATED);
             assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
             assertThat(notification.getTitle()).isEqualTo("User Created");
-            assertThat(notification.getContent()).isEqualTo("LDAP user created");
+            assertThat(notification.getContent()).isEqualTo("User blackbeard was created");
         });
     }
 
@@ -284,7 +284,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
             assertThat(notification.getGroup()).isEqualTo(GROUP_USER_DELETED);
             assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
             assertThat(notification.getTitle()).isEqualTo("User Deleted");
-            assertThat(notification.getContent()).isEqualTo("LDAP user deleted");
+            assertThat(notification.getContent()).isEqualTo("User blackbeard was deleted");
         });
     }
 
@@ -312,7 +312,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
             assertThat(notification.getGroup()).isEqualTo(GROUP_USER_CREATED);
             assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
             assertThat(notification.getTitle()).isEqualTo("User Created");
-            assertThat(notification.getContent()).isEqualTo("Managed user created");
+            assertThat(notification.getContent()).isEqualTo("User blackbeard was created");
         });
     }
 
@@ -517,7 +517,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
             assertThat(notification.getGroup()).isEqualTo(GROUP_USER_DELETED);
             assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
             assertThat(notification.getTitle()).isEqualTo("User Deleted");
-            assertThat(notification.getContent()).isEqualTo("Managed user deleted");
+            assertThat(notification.getContent()).isEqualTo("User blackbeard was deleted");
         });
     }
 
@@ -539,7 +539,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
             assertThat(notification.getGroup()).isEqualTo(GROUP_USER_CREATED);
             assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
             assertThat(notification.getTitle()).isEqualTo("User Created");
-            assertThat(notification.getContent()).isEqualTo("OpenID Connect user created");
+            assertThat(notification.getContent()).isEqualTo("User blackbeard was created");
         });
     }
 
