@@ -32,7 +32,7 @@ public class LoggableUncaughtExceptionHandler implements Thread.UncaughtExceptio
     private static final Logger LOGGER = Logger.getLogger(LoggableUncaughtExceptionHandler.class);
 
     public void uncaughtException(Thread myThread, Throwable e) {
-        LOGGER.error("An unknown error occurred in an asynchronous event or notification thread", e);
+        LOGGER.error("An unknown error occurred in an asynchronous event thread", e);
     }
 
 }

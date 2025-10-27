@@ -32,16 +32,17 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.VulnerabilityDao;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertCdxVulnAnalysisJustificationToDtAnalysisJustification;
+import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertCdxVulnAnalysisStateToDtAnalysisState;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.util.PersistenceUtil.isPersistent;
 
 public class CycloneDXVexImporter {
 
@@ -142,42 +143,46 @@ public class CycloneDXVexImporter {
 
     private static void updateAnalysis(final QueryManager qm, final Component component, final Vulnerability vuln,
                                        final org.cyclonedx.model.vulnerability.Vulnerability cdxVuln) {
-        // The vulnerability object is detached, so refresh it.
-        final Vulnerability refreshedVuln = qm.getObjectByUuid(Vulnerability.class, vuln.getUuid());
-        inJdbiTransaction(handle -> {
-            final var dao = handle.attach(AnalysisDao.class);
-            var analysis = dao.getAnalysis(component.getId(), vuln.getId());
-            var updatedAnalysis = new Object() {
-                AnalysisState analysisState = null;
-                AnalysisJustification analysisJustification = null;
-                String analysisDetails = null;
-                AnalysisResponse analysisResponse = null;
-                boolean suppress = false;
-            };
-            if (analysis == null) {
-                analysis = dao.makeAnalysis(component.getProject().getId(), component.getId(), refreshedVuln.getId(), AnalysisState.NOT_SET, null, null, null, false);
+        qm.runInTransaction(() -> {
+            final AnalysisState state =
+                    convertCdxVulnAnalysisStateToDtAnalysisState(cdxVuln.getAnalysis().getState());
+            final AnalysisJustification justification =
+                    convertCdxVulnAnalysisJustificationToDtAnalysisJustification(cdxVuln.getAnalysis().getJustification());
+
+            // CycloneDX supports multiple responses, DT only one.
+            // The decision to effectively pick the last one is legacy behavior,
+            // there's no other particular reason for doing it.
+            final AnalysisResponse response;
+            if (cdxVuln.getAnalysis().getResponses() != null
+                    && !cdxVuln.getAnalysis().getResponses().isEmpty()) {
+                response = cdxVuln.getAnalysis().getResponses().stream()
+                        .map(ModelConverter::convertCdxVulnAnalysisResponseToDtAnalysisResponse)
+                        .toList()
+                        .getLast();
+            } else {
+                response = null;
             }
-            if (cdxVuln.getAnalysis().getState() != null) {
-                updatedAnalysis.analysisState = ModelConverter.convertCdxVulnAnalysisStateToDtAnalysisState(cdxVuln.getAnalysis().getState());
-                updatedAnalysis.suppress = (AnalysisState.FALSE_POSITIVE == updatedAnalysis.analysisState || AnalysisState.NOT_AFFECTED == updatedAnalysis.analysisState || AnalysisState.RESOLVED == updatedAnalysis.analysisState);
-                dao.makeStateComment(analysis, updatedAnalysis.analysisState, COMMENTER);
-            }
-            if (cdxVuln.getAnalysis().getJustification() != null) {
-                updatedAnalysis.analysisJustification = ModelConverter.convertCdxVulnAnalysisJustificationToDtAnalysisJustification(cdxVuln.getAnalysis().getJustification());
-                dao.makeJustificationComment(analysis, updatedAnalysis.analysisJustification, COMMENTER);
-            }
-            if (trimToNull(cdxVuln.getAnalysis().getDetail()) != null) {
-                updatedAnalysis.analysisDetails = cdxVuln.getAnalysis().getDetail().trim();
-                dao.makeAnalysisDetailsComment(analysis, cdxVuln.getAnalysis().getDetail().trim(), COMMENTER);
-            }
-            if (cdxVuln.getAnalysis().getResponses() != null) {
-                for (org.cyclonedx.model.vulnerability.Vulnerability.Analysis.Response cdxRes : cdxVuln.getAnalysis().getResponses()) {
-                    updatedAnalysis.analysisResponse = ModelConverter.convertCdxVulnAnalysisResponseToDtAnalysisResponse(cdxRes);
-                    dao.makeAnalysisResponseComment(analysis, updatedAnalysis.analysisResponse, COMMENTER);
-                }
-            }
-            return dao.makeAnalysis(component.getProject().getId(), component.getId(), refreshedVuln.getId(),
-                            updatedAnalysis.analysisState, updatedAnalysis.analysisJustification, updatedAnalysis.analysisResponse, updatedAnalysis.analysisDetails, updatedAnalysis.suppress);
+
+            final boolean isSuppressed =
+                    state == AnalysisState.FALSE_POSITIVE
+                            || state == AnalysisState.NOT_AFFECTED
+                            || state == AnalysisState.RESOLVED;
+
+            final Component persistentComponent = !isPersistent(component)
+                    ? qm.getObjectById(Component.class, component.getId())
+                    : component;
+            final Vulnerability persistentVuln = !isPersistent(vuln)
+                    ? qm.getObjectById(Vulnerability.class, vuln.getId())
+                    : vuln;
+
+            qm.makeAnalysis(
+                    new MakeAnalysisCommand(persistentComponent, persistentVuln)
+                            .withState(state)
+                            .withJustification(justification)
+                            .withResponse(response)
+                            .withDetails(cdxVuln.getAnalysis().getDetail())
+                            .withCommenter(COMMENTER)
+                            .withSuppress(isSuppressed));
         });
     }
 }

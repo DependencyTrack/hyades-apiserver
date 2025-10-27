@@ -16,12 +16,22 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.notification.vo;
+package org.dependencytrack.notification;
 
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.Vulnerability;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.jdbi.v3.core.Handle;
 
-import java.util.Set;
+import static java.util.Objects.requireNonNull;
 
-public record NewVulnerableDependency(Component component, Set<Vulnerability> vulnerabilities) {
+/**
+ * A {@link NotificationEmitter} that uses the JDBI API for database interactions.
+ *
+ * @since 5.7.0
+ */
+final class JdbiNotificationEmitter extends JdbcNotificationEmitter {
+
+    JdbiNotificationEmitter(final Handle jdbiHandle, final MeterRegistry meterRegistry) {
+        super(requireNonNull(jdbiHandle, "jdbiHandle must not be null").getConnection(), meterRegistry);
+    }
+
 }

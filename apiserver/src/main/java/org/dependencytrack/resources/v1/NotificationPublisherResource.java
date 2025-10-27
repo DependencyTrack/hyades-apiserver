@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.notification.Notification;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,19 +31,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.model.NotificationPublisher;
-import org.dependencytrack.model.NotificationRule;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.publisher.PublisherClass;
-import org.dependencytrack.persistence.DatabaseSeedingInitTask;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
-import org.dependencytrack.util.NotificationUtil;
-
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -56,10 +42,24 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.NotificationPublisher;
+import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.NotificationLevel;
+import org.dependencytrack.notification.publisher.PublisherClass;
+import org.dependencytrack.persistence.DatabaseSeedingInitTask;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
+
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED;
+import static org.dependencytrack.notification.TestNotificationFactory.createTestNotification;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 /**
@@ -231,8 +231,8 @@ public class NotificationPublisherResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the notification publisher could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.SYSTEM_CONFIGURATION,
-            Permissions.Constants.SYSTEM_CONFIGURATION_DELETE })
+    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_DELETE})
     public Response deleteNotificationPublisher(@Parameter(description = "The UUID of the notification publisher to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
                                                 @PathParam("notificationPublisherUuid") @ValidUuid String notificationPublisherUuid) {
         try (QueryManager qm = new QueryManager()) {
@@ -299,16 +299,32 @@ public class NotificationPublisherResource extends AlpineResource {
                 if (rule == null) {
                     return Response.status(Response.Status.NOT_FOUND).build();
                 }
-                final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
-                for (NotificationGroup group : rule.getNotifyOn()) {
-                    eventDispatcher.dispatchNotification(new Notification()
-                            .scope(rule.getScope())
-                            .group(group.toString())
-                            .level(rule.getNotificationLevel())
-                            .title(NotificationConstants.Title.NOTIFICATION_TEST)
-                            .subject(NotificationUtil.generateSubjectForTestRuleNotification(group))
-                            .content("Rule configuration test"));
-                }
+
+                final List<org.dependencytrack.proto.notification.v1.Notification> notifications =
+                        rule.getNotifyOn().stream()
+                                // Notifications of the same group may have different contents,
+                                // depending on the level, or may only support a single level.
+                                // To increase utility of this test feature, ensure that we
+                                // generate notifications for all applicable levels.
+                                .flatMap(group -> switch (rule.getNotificationLevel()) {
+                                    case INFORMATIONAL -> Stream.of(
+                                            createTestNotification(rule.getScope(), group, NotificationLevel.INFORMATIONAL),
+                                            createTestNotification(rule.getScope(), group, NotificationLevel.WARNING),
+                                            createTestNotification(rule.getScope(), group, NotificationLevel.ERROR));
+                                    case WARNING -> Stream.of(
+                                            createTestNotification(rule.getScope(), group, NotificationLevel.WARNING),
+                                            createTestNotification(rule.getScope(), group, NotificationLevel.ERROR));
+                                    case ERROR -> Stream.of(
+                                            createTestNotification(rule.getScope(), group, NotificationLevel.ERROR));
+                                })
+                                .filter(Objects::nonNull)
+                                .peek(notification -> notification.toBuilder()
+                                        .setTitle("[TEST] " + notification.getTitle())
+                                        .build())
+                                .toList();
+
+                NotificationEmitter.using(qm).emitAll(notifications);
+
                 return Response.ok().build();
             });
         } catch (Exception e) {

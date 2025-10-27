@@ -48,6 +48,9 @@
         <listener-class>org.dependencytrack.event.EventSubsystemInitializer</listener-class>
     </listener>
     <listener>
+        <listener-class>org.dependencytrack.notification.NotificationSubsystemInitializer</listener-class>
+    </listener>
+    <listener>
         <listener-class>org.dependencytrack.event.kafka.processor.ProcessorInitializer</listener-class>
     </listener>
     <listener>

@@ -18,9 +18,7 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import alpine.notification.NotificationLevel;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -41,10 +39,12 @@ import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Vex;
-import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.persistence.command.MakeAnalysisCommand;
+import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.util.DateUtil;
 import org.jdbi.v3.core.Handle;
 import org.junit.After;
@@ -63,7 +63,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class ProjectDaoTest extends PersistenceCapableTest {
 
@@ -111,13 +110,13 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         vuln.setSource(Vulnerability.Source.INTERNAL);
         qm.persist(vuln);
         qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), component.getId(), vuln.getId(), AnalysisState.NOT_AFFECTED,
-                        AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WORKAROUND_AVAILABLE,
-                        "analysisDetails", false));
-        final Analysis analysis = qm.getAnalysis(component, vuln);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysisComment(analysis.getId(), "someComment", "someCommenter"));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(component, vuln)
+                        .withState(AnalysisState.NOT_AFFECTED)
+                        .withJustification(AnalysisJustification.CODE_NOT_REACHABLE)
+                        .withResponse(AnalysisResponse.WORKAROUND_AVAILABLE)
+                        .withDetails("analysisDetails")
+                        .withComment("someComment"));
 
         // Create a child component to validate that deletion is indeed recursive.
         final var componentChild = new Component();
@@ -146,9 +145,11 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         policyViolation.setType(PolicyViolation.Type.OPERATIONAL);
         policyViolation.setTimestamp(new Date());
         qm.persist(policyViolation);
-        final ViolationAnalysis violationAnalysis = qm.makeViolationAnalysis(componentChild, policyViolation,
-                ViolationAnalysisState.REJECTED, false);
-        qm.makeViolationAnalysisComment(violationAnalysis, "someComment", "someCommenter");
+        qm.makeViolationAnalysis(
+                new MakeViolationAnalysisCommand(componentChild, policyViolation)
+                        .withState(ViolationAnalysisState.REJECTED)
+                        .withCommenter("someCommenter")
+                        .withComment("someComment"));
 
         // Assign am integrity analysis to componentChild
         final var integrityAnalysis = new IntegrityAnalysis();

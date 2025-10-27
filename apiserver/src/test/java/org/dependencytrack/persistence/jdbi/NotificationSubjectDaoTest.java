@@ -28,7 +28,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
-import org.dependencytrack.model.VulnerabilityAnalysisLevel;
+import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
 import org.dependencytrack.proto.notification.v1.NewVulnerableDependencySubject;
 import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubject;
@@ -103,12 +103,13 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         qm.addVulnerability(vulnB, component, AnalyzerIdentity.INTERNAL_ANALYZER);
 
         // Suppress vulnB, it should not appear in the query results.
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), component.getId(), vulnB.getId(), AnalysisState.FALSE_POSITIVE, null, null, null, true));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(component, vulnB)
+                        .withState(AnalysisState.FALSE_POSITIVE)
+                        .withSuppress(true));
 
         final List<NewVulnerabilitySubject> subjects = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
-                .getForNewVulnerabilities(component.getUuid(), List.of(vulnA.getUuid(), vulnB.getUuid()),
-                        VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+                .getForNewVulnerabilities(component.getUuid(), List.of(vulnA.getUuid(), vulnB.getUuid())));
 
         assertThat(subjects).satisfiesExactly(subject ->
                 assertThatJson(JsonFormat.printer().print(subject))
@@ -184,11 +185,6 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                                     "cvssV2Vector": "(AV:N/AC:M/Au:S/C:P/I:P/A:P)",
                                     "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
                                     "owaspRRVector": "(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)"
-                                  },
-                                  "vulnerabilityAnalysisLevel": "BOM_UPLOAD_ANALYSIS",
-                                  "affectedProjectsReference": {
-                                    "apiUri": "/api/v1/vulnerability/source/NVD/vuln/CVE-100/projects",
-                                    "frontendUri": "/vulnerabilities/NVD/CVE-100/affectedProjects"
                                   }
                                 }
                                 """));
@@ -235,8 +231,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         qm.persist(analysis);
 
         final List<NewVulnerabilitySubject> subjects = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
-                .getForNewVulnerabilities(component.getUuid(), List.of(vuln.getUuid()),
-                        VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
+                .getForNewVulnerabilities(component.getUuid(), List.of(vuln.getUuid())));
 
         assertThat(subjects).hasSize(1);
         assertThatJson(JsonFormat.printer().print(subjects.getFirst()))
@@ -262,18 +257,13 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                             "severity": "CRITICAL",
                             "cvssV3Vector": "cvssV3VectorOverwrite"
                           },
-                          "vulnerabilityAnalysisLevel": "BOM_UPLOAD_ANALYSIS",
                           "affectedProjects": [
                             {
                               "uuid": "${json-unit.matches:projectUuid}",
                               "name": "projectName",
                               "isActive":true
                             }
-                          ],
-                          "affectedProjectsReference": {
-                            "apiUri": "/api/v1/vulnerability/source/NVD/vuln/CVE-100/projects",
-                            "frontendUri": "/vulnerabilities/NVD/CVE-100/affectedProjects"
-                          }
+                          ]
                         }
                         """);
     }
@@ -336,8 +326,10 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         qm.addVulnerability(vulnB, component, AnalyzerIdentity.INTERNAL_ANALYZER);
 
         // Suppress vulnB, it should not appear in the query results.
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), component.getId(), vulnB.getId(), AnalysisState.FALSE_POSITIVE, null, null, null, true));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(component, vulnB)
+                        .withState(AnalysisState.FALSE_POSITIVE)
+                        .withSuppress(true));
 
         final Optional<NewVulnerableDependencySubject> optionalSubject = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
                 .getForNewVulnerableDependency(component.getUuid()));
@@ -534,8 +526,9 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         qm.addVulnerability(vulnA, component, AnalyzerIdentity.INTERNAL_ANALYZER);
 
         // Suppress vulnB, it should not appear in the query results.
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), component.getId(), vulnA.getId(), AnalysisState.NOT_AFFECTED, null, null, null, false));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(component, vulnA)
+                        .withState(AnalysisState.NOT_AFFECTED));
 
         var policyAnalysis = qm.getAnalysis(component, vulnA);
 
