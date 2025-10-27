@@ -250,4 +250,36 @@
             $$;
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-12" author="nscuro">
+        <createTable tableName="NOTIFICATION_OUTBOX">
+            <column name="ID" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="NOTIFICATION_OUTBOX_PK"/>
+            </column>
+            <column name="TIMESTAMP" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SCOPE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="GROUP" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LEVEL" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PAYLOAD" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!--
+            Allow autovacuum to be triggered more frequently on the outbox table
+            since it is subject to frequent deletions. The default scale factor
+            of 20% would allow too much bloat to be accumulated.
+        -->
+        <sql>
+            ALTER TABLE "NOTIFICATION_OUTBOX" SET (autovacuum_vacuum_scale_factor = 0.1)
+        </sql>
+    </changeSet>
 </databaseChangeLog>

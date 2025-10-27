@@ -39,7 +39,6 @@ import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
-import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -70,8 +69,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.MetricsTestDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
@@ -108,13 +106,11 @@ import java.util.stream.Stream;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_CREATED;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
-import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 
@@ -255,7 +251,7 @@ public class ProjectResourceTest extends ResourceTest {
     public void getProjectsPaginationTest() {
         for (int i = 0; i < 3; i++) {
             final var project = new Project();
-            project.setName("acme-app-" + (i+1));
+            project.setName("acme-app-" + (i + 1));
             qm.persist(project);
         }
 
@@ -749,7 +745,7 @@ public class ProjectResourceTest extends ResourceTest {
     public void getProjectsConcisePaginationTest() {
         for (int i = 0; i < 3; i++) {
             final var project = new Project();
-            project.setName("acme-app-" + (i+1));
+            project.setName("acme-app-" + (i + 1));
             qm.persist(project);
         }
 
@@ -938,7 +934,7 @@ public class ProjectResourceTest extends ResourceTest {
     public void getProjectsConciseFilterByTeamTest() {
         enablePortfolioAccessControl();
         // Create project and give access to current principal's team.
-        final var projectB= new Project();
+        final var projectB = new Project();
         projectB.setName("acme-app-b");
         qm.persist(projectB);
 
@@ -1134,7 +1130,7 @@ public class ProjectResourceTest extends ResourceTest {
         final Instant projectMetricsOldOccurrence = now.minus(1, ChronoUnit.HOURS);
         final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
 
-        useJdbiHandle(handle ->  {
+        useJdbiHandle(handle -> {
             var dao = handle.attach(MetricsTestDao.class);
             final var projectMetricsOld = new ProjectMetrics();
             projectMetricsOld.setProjectId(project.getId());
@@ -1396,7 +1392,7 @@ public class ProjectResourceTest extends ResourceTest {
         for (int i = 0; i < 3; i++) {
             final var childProject = new Project();
             childProject.setParent(parentProject);
-            childProject.setName("acme-child-app-" + (i+1));
+            childProject.setName("acme-child-app-" + (i + 1));
             qm.persist(childProject);
         }
 
@@ -1670,7 +1666,7 @@ public class ProjectResourceTest extends ResourceTest {
         final Instant projectMetricsOldOccurrence = now.minus(1, ChronoUnit.HOURS);
         final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
 
-        useJdbiHandle(handle ->  {
+        useJdbiHandle(handle -> {
             var dao = handle.attach(MetricsTestDao.class);
             final var projectMetricsOld = new ProjectMetrics();
             projectMetricsOld.setProjectId(childProject.getId());
@@ -1958,13 +1954,13 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals("Test project", json.getString("description"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
-        assertThat(projectNotification).isNotNull();
-        assertThat(projectNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(projectNotification.getGroup()).isEqualTo(GROUP_PROJECT_CREATED);
-        assertThat(projectNotification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(projectNotification.getTitle()).isEqualTo(NotificationConstants.Title.PROJECT_CREATED);
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification).isNotNull();
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_CREATED);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo("Project Added");
+        });
     }
 
     @Test
@@ -2879,11 +2875,14 @@ public class ProjectResourceTest extends ResourceTest {
 
         qm.addVulnerability(vuln, componentA, AnalyzerIdentity.INTERNAL_ANALYZER);
 
-        final var analysis = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), componentA.getId(), vuln.getId(), AnalysisState.NOT_AFFECTED,
-                        AnalysisJustification.REQUIRES_ENVIRONMENT, AnalysisResponse.WILL_NOT_FIX, "details", false));
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysisComment(analysis.getId(), "comment", "commenter"));
+        final long analysisId = qm.makeAnalysis(
+                new MakeAnalysisCommand(componentA, vuln)
+                        .withState(AnalysisState.NOT_AFFECTED)
+                        .withJustification(AnalysisJustification.REQUIRES_ENVIRONMENT)
+                        .withResponse(AnalysisResponse.WILL_NOT_FIX)
+                        .withDetails("details")
+                        .withCommenter("commenter")
+                        .withComment("comment"));
 
         final VulnerabilityPolicy vulnPolicy = withJdbiHandle(handle -> {
             final var policyAnalysis = new VulnerabilityPolicyAnalysis();
@@ -2906,7 +2905,7 @@ public class ProjectResourceTest extends ResourceTest {
                          WHERE "ID" = :analysisId
                         """)
                 .bind("policyName", vulnPolicy.getName())
-                .bind("analysisId", analysis.getId())
+                .bind("analysisId", analysisId)
                 .execute());
 
         final var policy = new Policy();
@@ -3063,7 +3062,7 @@ public class ProjectResourceTest extends ResourceTest {
                     assertThat(qm.getAllVulnerabilities(clonedComponent)).containsOnly(vuln);
 
                     assertThat(qm.getAnalysis(clonedComponent, vuln)).satisfies(clonedAnalysis -> {
-                        assertThat(clonedAnalysis.getId()).isNotEqualTo(analysis.getId());
+                        assertThat(clonedAnalysis.getId()).isNotEqualTo(analysisId);
                         assertThat(clonedAnalysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
                         assertThat(clonedAnalysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.REQUIRES_ENVIRONMENT);
                         assertThat(clonedAnalysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
@@ -3091,9 +3090,9 @@ public class ProjectResourceTest extends ResourceTest {
                         assertThat(clonedViolationAnalysis.getAnalysisState()).isEqualTo(ViolationAnalysisState.APPROVED);
                         assertThat(clonedViolationAnalysis.isSuppressed()).isTrue();
                         assertThat(clonedViolationAnalysis.getAnalysisComments()).satisfiesExactly(clonedComment -> {
-                           assertThat(clonedComment.getComment()).isEqualTo("comment");
-                           assertThat(clonedComment.getCommenter()).isEqualTo("commenter");
-                           assertThat(clonedComment.getTimestamp()).isNotNull();
+                            assertThat(clonedComment.getComment()).isEqualTo("comment");
+                            assertThat(clonedComment.getCommenter()).isEqualTo("commenter");
+                            assertThat(clonedComment.getTimestamp()).isNotNull();
                         });
                     });
                 });

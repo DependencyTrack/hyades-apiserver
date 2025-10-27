@@ -19,15 +19,20 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.util.UuidUtil;
-import alpine.notification.NotificationLevel;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
@@ -37,11 +42,6 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -343,7 +343,7 @@ public class NotificationPublisherResourceTest extends ResourceTest {
                 .post(Entity.entity("", MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 
         Assert.assertEquals(200, response.getStatus());
-        assertThat(kafkaMockProducer.history().size()).isEqualTo(11);
+        assertThat(qm.getNotificationOutbox()).hasSize(11);
     }
 
     @Test

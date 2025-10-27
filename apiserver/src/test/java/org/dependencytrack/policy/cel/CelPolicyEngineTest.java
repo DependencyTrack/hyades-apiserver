@@ -48,6 +48,7 @@ import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
+import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
@@ -1826,7 +1827,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
         CelPolicyEngine policyEngine = new CelPolicyEngine();
         policyEngine.evaluateProject(project.getUuid());
-        final List<PolicyViolation> violations = qm.getAllPolicyViolations();
+        final List<PolicyViolation> violations = qm.getAllPolicyViolations(project);
         // NOTE: This behavior changed in CelPolicyEngine over the legacy PolicyEngine.
         // A matched PolicyCondition can now only yield a single PolicyViolation, whereas
         // with the legacy PolicyEngine, multiple PolicyViolations could be raised.
@@ -1899,7 +1900,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
 
         CelPolicyEngine policyEngine = new CelPolicyEngine();
         policyEngine.evaluateProject(project.getUuid());
-        final List<PolicyViolation> violations = qm.getAllPolicyViolations();
+        final List<PolicyViolation> violations = qm.getAllPolicyViolations(project);
         Assert.assertEquals(2, violations.size());
         PolicyViolation policyViolation = violations.get(0);
         Assert.assertEquals("Log4J", policyViolation.getComponent().getName());
@@ -1940,8 +1941,11 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         violationB.setTimestamp(Date.from(Instant.EPOCH));
         violationB.setType(PolicyViolation.Type.OPERATIONAL);
         qm.persist(violationB);
-        final var violationAnalysisB = qm.makeViolationAnalysis(component, violationB, ViolationAnalysisState.REJECTED, false);
-        qm.makeViolationAnalysisComment(violationAnalysisB, "comment", "commenter");
+        qm.makeViolationAnalysis(
+                new MakeViolationAnalysisCommand(component, violationB)
+                        .withState(ViolationAnalysisState.REJECTED)
+                        .withCommenter("commenter")
+                        .withComment("comment"));
 
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(project)).satisfiesExactly(violation ->

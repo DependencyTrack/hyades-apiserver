@@ -31,7 +31,6 @@ import net.jcip.annotations.NotThreadSafe;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -41,27 +40,22 @@ import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.PolicyViolation.Type;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ViolationAnalysis;
+import org.dependencytrack.model.ViolationAnalysisComment;
 import org.dependencytrack.model.ViolationAnalysisState;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.resources.v1.vo.ViolationAnalysisRequest;
-import org.dependencytrack.util.NotificationUtil;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import java.time.Duration;
 import java.util.Date;
 import java.util.UUID;
 import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
-import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
 @NotThreadSafe
 public class ViolationAnalysisResourceTest extends ResourceTest {
@@ -100,7 +94,13 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         violationAnalysis.setPolicyViolation(violation);
         violationAnalysis.setViolationAnalysisState(ViolationAnalysisState.APPROVED);
         violationAnalysis = qm.persist(violationAnalysis);
-        qm.makeViolationAnalysisComment(violationAnalysis, "Analysis comment here", "Jane Doe");
+
+        var violationAnalysisComment = new ViolationAnalysisComment();
+        violationAnalysisComment.setViolationAnalysis(violationAnalysis);
+        violationAnalysisComment.setCommenter("Jane Doe");
+        violationAnalysisComment.setComment("Analysis comment here");
+        violationAnalysisComment.setTimestamp(new Date());
+        qm.persist(violationAnalysisComment);
 
         final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .queryParam("component", component.getUuid())
@@ -248,27 +248,24 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
         assertThat(jsonObject.getJsonArray("analysisComments")).hasSize(2);
         assertThat(jsonObject.getJsonArray("analysisComments")).satisfiesExactlyInAnyOrder(
-                obj1 -> {
-                    assertThat(obj1.asJsonObject()).hasFieldOrPropertyWithValue("comment", Json.createValue("NOT_SET → APPROVED"))
-                    .doesNotContainKey("commenter"); // Not set when authenticating via API key
-                },
-                obj2 -> {
-                    assertThat(obj2.asJsonObject()).hasFieldOrPropertyWithValue("comment", Json.createValue("Some comment"))
-                            .doesNotContainKey("commenter"); // Not set when authenticating via API key;
-                }
-        );
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().getFirst());
-        assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
-        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_APPROVED, project));
-        assertThat(notification.getContent()).isEqualTo("An violation analysis decision was made to a policy violation affecting a project");
+                obj1 -> assertThat(obj1.asJsonObject())
+                        .hasFieldOrPropertyWithValue("comment", Json.createValue("NOT_SET → APPROVED"))
+                        .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users")),
+                obj2 -> assertThat(obj2.asJsonObject())
+                        .hasFieldOrPropertyWithValue("comment", Json.createValue("Some comment"))
+                        .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users")));
+
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo("Violation Analysis Decision: APPROVED on Project: [Acme Example : 1.0]");
+            assertThat(notification.getContent()).isEqualTo("An violation analysis decision was made to a policy violation affecting a project");
+        });
     }
 
     @Test
-    public void updateAnalysisCreateNewWithEmptyRequestTest() throws Exception {
+    public void updateAnalysisCreateNewWithEmptyRequestTest() {
         initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -305,18 +302,11 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         assertThat(jsonObject.getBoolean("isSuppressed")).isFalse();
         assertThat(jsonObject.getJsonArray("analysisComments")).isEmpty();
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().getFirst());
-        assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
-        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_NOT_SET, project));
-        assertThat(notification.getContent()).isEqualTo("An violation analysis decision was made to a policy violation affecting a project");
+        assertThat(qm.getNotificationOutbox()).isEmpty();
     }
 
     @Test
-    public void updateAnalysisUpdateExistingTest() throws Exception {
+    public void updateAnalysisUpdateExistingTest() {
         initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -363,22 +353,21 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         assertThat(comments).hasSize(3);
         assertThat(comments.getJsonObject(0))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("APPROVED → REJECTED"))
-                .doesNotContainKey("commenter"); // Not set when authenticating via API key
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
         assertThat(comments.getJsonObject(1))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Unsuppressed"))
-                .doesNotContainKey("commenter"); // Not set when authenticating via API key
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
         assertThat(comments.getJsonObject(2))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Some comment"))
-                .doesNotContainKey("commenter"); // Not set when authenticating via API key
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().getFirst());
-        assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
-        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_REJECTED, project));
-        assertThat(notification.getContent()).isEqualTo("An violation analysis decision was made to a policy violation affecting a project");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo("Violation Analysis Decision: REJECTED on Project: [Acme Example : 1.0]");
+            assertThat(notification.getContent()).isEqualTo("An violation analysis decision was made to a policy violation affecting a project");
+        });
     }
 
     @Test
@@ -475,16 +464,15 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         assertThat(jsonObject.getJsonArray("analysisComments")).hasSize(1);
         assertThat(jsonObject.getJsonArray("analysisComments").getJsonObject(0))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("APPROVED → NOT_SET"))
-                .doesNotContainKey("commenter"); // Not set when authenticating via API key
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_AUDIT_CHANGE, kafkaMockProducer.history().getFirst());
-        assertThat(notification).isNotNull();
-        assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
-        assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(notification.getTitle()).isEqualTo(NotificationUtil.generateNotificationTitle(NotificationConstants.Title.VIOLATIONANALYSIS_DECISION_NOT_SET, project));
-        assertThat(notification.getContent()).isEqualTo("An violation analysis decision was made to a policy violation affecting a project");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo("Violation Analysis Decision: NOT_SET on Project: [Acme Example : 1.0]");
+            assertThat(notification.getContent()).isEqualTo("An violation analysis decision was made to a policy violation affecting a project");
+        });
     }
 
     @Test

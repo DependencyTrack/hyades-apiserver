@@ -31,8 +31,6 @@ import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -107,11 +105,6 @@ public class RowMapperUtil {
     public static Timestamp nullableTimestamp(final ResultSet rs, final String columnName) throws SQLException {
         final Date timestamp = rs.getTimestamp(columnName);
         return timestamp != null ? Timestamps.fromDate(timestamp) : null;
-    }
-
-    public static ZonedDateTime nullableZonedDateTime(final ResultSet rs, final String columnName) throws SQLException {
-        final Date timestamp = rs.getTimestamp(columnName);
-        return timestamp != null ? ZonedDateTime.ofInstant(timestamp.toInstant(), ZoneOffset.UTC) : null;
     }
 
     public static List<String> stringArray(final ResultSet rs, final String columnName) throws SQLException {

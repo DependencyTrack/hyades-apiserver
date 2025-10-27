@@ -1,5 +1,5 @@
 /*
- * This file is part of Alpine.
+ * This file is part of Dependency-Track.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,16 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package alpine.notification;
+package org.dependencytrack.notification;
 
-/**
- * All subscribers need to implement this interface. Subscribers are informed
- * of events they are subscribed to via the inform method.
- *
- * @author Steve Springett
- * @since 1.3.0
- */
-public interface Subscriber {
+public enum NotificationLevel {
 
-    /**
-     * Defines a method to inform subscribers who implement this interface.
-     * @param notification the Event to subscribe to
-     * @since 1.3.0
-     */
-    void inform(Notification notification);
+    INFORMATIONAL,
+
+    WARNING,
+
+    ERROR
 
 }

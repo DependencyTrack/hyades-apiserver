@@ -126,7 +126,6 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
             Assertions.assertThat(analysis.getVulnerability().getVulnId()).isNotEqualTo("CVE-2020-25649");
             Assertions.assertThat(analysis.getVulnerability().getVulnId()).isNotEqualTo("CVE-2020-25650");
             Assertions.assertThat(analysis.isSuppressed()).isTrue();
-            Assertions.assertThat(analysis.getAnalysisComments().size()).isEqualTo(3);
             Assertions.assertThat(analysis.getAnalysisComments()).satisfiesExactlyInAnyOrder(comment -> {
                 Assertions.assertThat(comment.getCommenter()).isEqualTo("CycloneDX VEX");
                 Assertions.assertThat(comment.getComment()).isEqualTo(String.format("Analysis: %s → %s", AnalysisState.NOT_SET, AnalysisState.FALSE_POSITIVE));
@@ -136,6 +135,9 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
             }, comment -> {
                 Assertions.assertThat(comment.getCommenter()).isEqualTo("CycloneDX VEX");
                 Assertions.assertThat(comment.getComment()).isEqualTo(String.format("Justification: %s → %s", AnalysisJustification.NOT_SET, AnalysisJustification.PROTECTED_BY_MITIGATING_CONTROL));
+            }, comment -> {
+                Assertions.assertThat(comment.getCommenter()).isEqualTo("CycloneDX VEX");
+                Assertions.assertThat(comment.getComment()).isEqualTo("Suppressed");
             });
             Assertions.assertThat(analysis.getAnalysisDetails()).isEqualTo("Unit test");
         });

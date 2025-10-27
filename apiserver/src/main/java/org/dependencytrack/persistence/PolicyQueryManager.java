@@ -18,10 +18,11 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.model.ApiKey;
+import alpine.model.User;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -31,6 +32,8 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisComment;
 import org.dependencytrack.model.ViolationAnalysisState;
+import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.util.DateUtil;
 
 import javax.jdo.PersistenceManager;
@@ -46,6 +49,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.dependencytrack.notification.NotificationFactory.createPolicyViolationAnalysisDecisionChangeNotification;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistentAll;
 
@@ -83,19 +87,6 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
             return execute(query, filterString);
         }
         return execute(query);
-    }
-
-    /**
-     * Returns a List of all Policy objects.
-     * This method if designed NOT to provide paginated results.
-     * @return a List of all Policy objects
-     */
-    public List<Policy> getAllPolicies() {
-        final Query<Policy> query = pm.newQuery(Policy.class);
-        if (orderBy == null) {
-            query.setOrdering("name asc");
-        }
-        return query.executeList();
     }
 
     /**
@@ -177,19 +168,6 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
      * This method if designed NOT to provide paginated results.
      * @return a List of all Policy objects
      */
-    public List<PolicyViolation> getAllPolicyViolations() {
-        final Query<PolicyViolation> query = pm.newQuery(PolicyViolation.class);
-        if (orderBy == null) {
-            query.setOrdering("timestamp desc, project.name, project.version, component.name, component.version");
-        }
-        return query.executeList();
-    }
-
-    /**
-     * Returns a List of all Policy objects.
-     * This method if designed NOT to provide paginated results.
-     * @return a List of all Policy objects
-     */
     @SuppressWarnings("unchecked")
     public List<PolicyViolation> getAllPolicyViolations(final PolicyCondition policyCondition) {
         final Query<PolicyViolation> query = pm.newQuery(PolicyViolation.class, "policyCondition.id == :pid");
@@ -236,32 +214,6 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
         return query.executeList();
     }
 
-    /**
-     * clones a policy violation
-     * @param sourcePolicyViolation the policy violation to clone
-     * @param destinationComponent the corresponding component
-     */
-    public PolicyViolation clonePolicyViolation(PolicyViolation sourcePolicyViolation, Component destinationComponent){
-        //cloning PolicyViolation
-        final PolicyViolation policyViolation = new PolicyViolation();
-        policyViolation.setType(sourcePolicyViolation.getType());
-        policyViolation.setComponent(destinationComponent);
-        policyViolation.setPolicyCondition(sourcePolicyViolation.getPolicyCondition());
-        policyViolation.setTimestamp(sourcePolicyViolation.getTimestamp());
-        policyViolation.setText(sourcePolicyViolation.getText());
-        policyViolation.setType(sourcePolicyViolation.getType());
-        //cloning ViolatioAnalysis
-        ViolationAnalysis violationAnalysis = cloneViolationAnalysis(destinationComponent, sourcePolicyViolation);
-        //cloning ViolationAnalysisComments
-        List<ViolationAnalysisComment> comments = cloneViolationAnalysisComments(sourcePolicyViolation, violationAnalysis);
-        if(comments != null){
-            violationAnalysis.setAnalysisComments(comments);
-        }
-        policyViolation.setAnalysis(violationAnalysis); 
-        policyViolation.getAnalysis().setPolicyViolation(policyViolation);
-        policyViolation.setUuid(sourcePolicyViolation.getUuid());
-        return policyViolation;
-}
     /**
      * Returns a List of all Policy objects for a specific component.
      * This method if designed NOT to provide paginated results.
@@ -362,24 +314,6 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * clones a ViolationAnalysis
-     * @param destinationComponent the destinationComponent
-     * @param sourcePolicyViolation the PolicyViolation to clone from
-     * @return the cloned violationAnalysis
-     */
-    public ViolationAnalysis cloneViolationAnalysis(Component destinationComponent, PolicyViolation sourcePolicyViolation){
-        ViolationAnalysis violationAnalysis = new ViolationAnalysis();
-        violationAnalysis.setComponent(destinationComponent);
-        if(sourcePolicyViolation.getAnalysis() != null){
-            violationAnalysis.setSuppressed(sourcePolicyViolation.getAnalysis().isSuppressed());
-            violationAnalysis.setViolationAnalysisState(sourcePolicyViolation.getAnalysis().getAnalysisState());
-        } else {
-            violationAnalysis.setViolationAnalysisState(ViolationAnalysisState.NOT_SET);
-        }
-        return violationAnalysis;
-    }
-
-    /**
      * Returns a ViolationAnalysis for the specified Component and PolicyViolation.
      * @param component the Component
      * @param policyViolation the PolicyViolation
@@ -392,100 +326,104 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * Documents a new violation analysis. Creates a new ViolationAnalysis object if one doesn't already exists and appends
-     * the specified comment along with a timestamp in the ViolationAnalysisComment trail.
-     * @param component the Component
-     * @param policyViolation the PolicyViolation
-     * @return a ViolationAnalysis object
+     * @since 5.7.0
      */
-    public ViolationAnalysis makeViolationAnalysis(Component component, PolicyViolation policyViolation,
-                                                   ViolationAnalysisState violationAnalysisState, Boolean isSuppressed) {
-        if (violationAnalysisState == null) {
-            violationAnalysisState = ViolationAnalysisState.NOT_SET;
-        }
-        ViolationAnalysis violationAnalysis = getViolationAnalysis(component, policyViolation);
-        if (violationAnalysis == null) {
-            violationAnalysis = new ViolationAnalysis();
-            violationAnalysis.setComponent(component);
-            violationAnalysis.setPolicyViolation(policyViolation);
-        }
-        if (isSuppressed != null) {
-            violationAnalysis.setSuppressed(isSuppressed);
-        }
-        violationAnalysis.setViolationAnalysisState(violationAnalysisState);
-        violationAnalysis = persist(violationAnalysis);
-        return getViolationAnalysis(violationAnalysis.getComponent(), violationAnalysis.getPolicyViolation());
-    }
+    public long makeViolationAnalysis(final MakeViolationAnalysisCommand command) {
+        assertPersistent(command.component(), "component must be persistent");
+        assertPersistent(command.violation(), "violation must be persistent");
 
-
-    /**
-     * clones ViolationAnalysisComments
-     * @param sourcePolicyViolation the source PolicyViolation
-     * @param violationAnalysis the ViolationAnalysis to clone from
-     * @return the cloned ViolationAnalysisComments
-     */
-    public List<ViolationAnalysisComment> cloneViolationAnalysisComments(PolicyViolation sourcePolicyViolation, ViolationAnalysis violationAnalysis){
-        List<ViolationAnalysisComment> comments = new ArrayList<ViolationAnalysisComment>();
-        if(sourcePolicyViolation.getAnalysis() != null && sourcePolicyViolation.getAnalysis().getAnalysisComments() != null){
-            for(ViolationAnalysisComment c : sourcePolicyViolation.getAnalysis().getAnalysisComments()){
-                ViolationAnalysisComment comment = new ViolationAnalysisComment();
-                comment.setViolationAnalysis(violationAnalysis);
-                comment.setComment(c.getComment());
-                comment.setCommenter(c.getCommenter());
-                comment.setTimestamp(c.getTimestamp());
-                comments.add(comment);
+        return callInTransaction(() -> {
+            ViolationAnalysis analysis = getViolationAnalysis(command.component(), command.violation());
+            if (analysis == null) {
+                analysis = new ViolationAnalysis();
+                analysis.setComponent(command.component());
+                analysis.setPolicyViolation(command.violation());
+                analysis.setViolationAnalysisState(ViolationAnalysisState.NOT_SET);
+                analysis.setSuppressed(false);
+                persist(analysis);
             }
+
+            boolean stateChanged = false;
+            boolean suppressionChanged = false;
+            final var auditTrailComments = new ArrayList<String>();
+
+            if (command.state() != null && command.state() != analysis.getAnalysisState()) {
+                auditTrailComments.add("%s → %s".formatted(analysis.getAnalysisState(), command.state()));
+                analysis.setViolationAnalysisState(command.state());
+                stateChanged = true;
+            }
+            if (command.suppress() != null && command.suppress() != analysis.isSuppressed()) {
+                auditTrailComments.add(command.suppress() ? "Suppressed" : "Unsuppressed");
+                analysis.setSuppressed(command.suppress());
+                suppressionChanged = true;
+            }
+
+            final List<String> comments =
+                    !command.options().contains(MakeViolationAnalysisCommand.Option.OMIT_AUDIT_TRAIL)
+                            ? auditTrailComments
+                            : new ArrayList<>();
+            if (command.comment() != null) {
+                comments.add(command.comment());
+            }
+
+            createViolationAnalysisComments(analysis, command.commenter(), comments);
+
+            if (!command.options().contains(MakeViolationAnalysisCommand.Option.OMIT_NOTIFICATION)
+                    && (stateChanged || suppressionChanged)) {
+                NotificationEmitter.using(this).emit(
+                        createPolicyViolationAnalysisDecisionChangeNotification(
+                                analysis, stateChanged, suppressionChanged));
+            }
+
+            return analysis.getId();
+        });
+    }
+
+    private void createViolationAnalysisComments(
+            final ViolationAnalysis analysis,
+            final String commenter,
+            final List<String> comments) {
+        assertPersistent(analysis, "analysis must be persistent");
+
+        if (comments == null || comments.isEmpty()) {
+            return;
         }
 
-        return comments;
-    }
+        final var now = new Date();
 
-
-
-    /**
-     * Adds a new violation analysis comment to the specified violation analysis.
-     * @param violationAnalysis the violation analysis object to add a comment to
-     * @param comment the comment to make
-     * @param commenter the name of the principal who wrote the comment
-     * @return a new ViolationAnalysisComment object
-     */
-    public ViolationAnalysisComment makeViolationAnalysisComment(ViolationAnalysis violationAnalysis, String comment, String commenter) {
-        if (violationAnalysis == null || comment == null) {
-            return null;
+        final String commenterToUse;
+        if (commenter == null) {
+            commenterToUse = switch (principal) {
+                case User user -> user.getUsername();
+                case ApiKey apiKey -> apiKey.getTeams().get(0).getName();
+                case null -> null;
+                default -> throw new IllegalStateException(
+                        "Unexpected principal type: " + principal.getClass().getName());
+            };
+        } else {
+            commenterToUse = commenter;
         }
-        final ViolationAnalysisComment violationAnalysisComment = new ViolationAnalysisComment();
-        violationAnalysisComment.setViolationAnalysis(violationAnalysis);
-        violationAnalysisComment.setTimestamp(new Date());
-        violationAnalysisComment.setComment(comment);
-        violationAnalysisComment.setCommenter(commenter);
-        return persist(violationAnalysisComment);
-    }
 
-    /**
-     * Deleted all violation analysis and comments associated for the specified Component.
-     * @param component the Component to delete violation analysis for
-     */
-    void deleteViolationAnalysisTrail(Component component) {
-        final Query<ViolationAnalysis> query = pm.newQuery(ViolationAnalysis.class, "component == :component");
-        query.deletePersistentAll(component);
-    }
+        runInTransaction(() -> {
+            final var analysisComments = new ArrayList<ViolationAnalysisComment>(comments.size());
 
-    /**
-     * Deleted all violation analysis and comments associated for the specified Project.
-     * @param project the Project to delete violation analysis for
-     */
-    void deleteViolationAnalysisTrail(Project project) {
-        final Query<ViolationAnalysis> query = pm.newQuery(ViolationAnalysis.class, "project == :project");
-        query.deletePersistentAll(project);
-    }
+            for (final String comment : comments) {
+                final var analysisComment = new ViolationAnalysisComment();
+                analysisComment.setViolationAnalysis(analysis);
+                analysisComment.setCommenter(commenterToUse);
+                analysisComment.setComment(comment);
+                analysisComment.setTimestamp(now);
+                analysisComments.add(analysisComment);
+            }
 
-    /**
-     * Deleted all violation analysis and comments associated for the specified Policy Condition.
-     * @param policyViolation policy violation to delete violation analysis for
-     */
-    private void deleteViolationAnalysisTrail(PolicyViolation policyViolation) {
-        final Query<ViolationAnalysis> query = pm.newQuery(ViolationAnalysis.class, "policyViolation.id == :pid");
-        query.deletePersistentAll(policyViolation.getId());
+            persist(analysisComments);
+
+            if (analysis.getAnalysisComments() != null) {
+                analysis.getAnalysisComments().addAll(analysisComments);
+            } else {
+                analysis.setAnalysisComments(analysisComments);
+            }
+        });
     }
 
     /**
@@ -525,105 +463,6 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
         final LicenseGroup licenseGroup = new LicenseGroup();
         licenseGroup.setName(name);
         return persist(licenseGroup);
-    }
-
-    /**
-     * Determines if the specified LicenseGroup contains the specified License.
-     * @param lg the LicenseGroup to query
-     * @param license the License to query for
-     * @return true if License is part of LicenseGroup, false if not
-     */
-    public boolean doesLicenseGroupContainLicense(final LicenseGroup lg, final License license) {
-        final License l = getObjectById(License.class, license.getId());
-        final Query<LicenseGroup> query = pm.newQuery(LicenseGroup.class, "id == :id && licenses.contains(:license)");
-        query.setRange(0, 1);
-        return singleResult(query.execute(lg.getId(), l)) != null;
-    }
-
-    /**
-     * Deletes a {@link Policy}, including all related {@link PolicyViolation}s and {@link PolicyCondition}s.
-     * @param policy the {@link Policy} to delete
-     */
-    public void deletePolicy(final Policy policy) {
-        for (final PolicyCondition condition : policy.getPolicyConditions()) {
-            deletePolicyCondition(condition);
-        }
-        delete(policy);
-    }
-
-    /**
-     * Deleted all PolicyViolation associated for the specified Component.
-     * @param component the Component to delete PolicyViolation for
-     */
-    void deletePolicyViolations(Component component) {
-        final Query<PolicyViolation> query = pm.newQuery(PolicyViolation.class, "component == :component");
-        query.deletePersistentAll(component);
-    }
-
-    /**
-     * Deleted all PolicyViolation associated for the specified Project.
-     * @param project the Project to delete PolicyViolation for
-     */
-    public void deletePolicyViolations(final Project project) {
-        final Query<PolicyViolation> query = pm.newQuery(PolicyViolation.class, "project == :project");
-        query.deletePersistentAll(project);
-    }
-
-    /**
-     * Deleted all {@link PolicyViolation}s associated with the specified {@link Component}.
-     *
-     * @param component The {@link Component} to delete {@link PolicyViolation}s for
-     * @since 5.0.0
-     */
-    public void deletePolicyViolationsOfComponent(final Component component) {
-        final Query<PolicyViolation> query = pm.newQuery(PolicyViolation.class, "component == :component");
-        query.deletePersistentAll(component);
-    }
-
-    /**
-     * Deleted all PolicyViolation associated for the specified PolicyCondition.
-     * @param policyCondition the PolicyCondition to delete PolicyViolation for
-     */
-    public void deletePolicyCondition(PolicyCondition policyCondition) {
-        final List<PolicyViolation> violations = getAllPolicyViolations(policyCondition);
-        for (PolicyViolation violation: violations) {
-            deleteViolationAnalysisTrail(violation);
-        }
-        delete(violations);
-        delete(policyCondition);
-    }
-
-    /**
-     * Removes all associations with a given {@link Project} from all {@link Policy}s.
-     * @param project The {@link Project} to remove from policies
-     */
-    public void removeProjectFromPolicies(final Project project) {
-        final Query<Policy> query = pm.newQuery(Policy.class, "projects.contains(:project)");
-        try {
-            query.setParameters(project);
-
-            for (final Policy policy : query.executeList()) {
-                policy.getProjects().remove(project);
-
-                if (!pm.currentTransaction().isActive()) {
-                    persist(policy);
-                }
-            }
-        } finally {
-            query.closeAll();
-        }
-    }
-
-    /**
-     * Returns the number of audited policy violations of a given type for a component.
-     * @param component The {@link Component} to retrieve audit counts for
-     * @param type The {@link PolicyViolation.Type} to retrieve audit counts for
-     * @return The total number of audited {@link PolicyViolation}s for the {@link Component}
-     */
-    public long getAuditedCount(final Component component, final PolicyViolation.Type type) {
-        final Query<ViolationAnalysis> query = pm.newQuery(ViolationAnalysis.class);
-        query.setFilter("component == :component && policyViolation.type == :type && analysisState != null && analysisState != :notSet");
-        return getCount(query, component, type, ViolationAnalysisState.NOT_SET);
     }
 
     /**
