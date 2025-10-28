@@ -48,6 +48,7 @@ public final class NotificationSubsystemInitializer implements ServletContextLis
         relay = new NotificationOutboxRelay(
                 new KafkaEventDispatcher(),
                 Metrics.getRegistry(),
+                config.getValue("notification.router.enabled", boolean.class),
                 config.getValue("notification.outbox-relay.poll-interval-ms", long.class),
                 config.getValue("notification.outbox-relay.batch-size", int.class));
         relay.start();
