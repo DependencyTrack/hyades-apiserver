@@ -26,6 +26,7 @@ import org.dependencytrack.proto.notification.v1.Policy;
 import org.dependencytrack.proto.notification.v1.PolicyCondition;
 import org.dependencytrack.proto.notification.v1.PolicyViolation;
 import org.dependencytrack.proto.notification.v1.Project;
+import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.dependencytrack.proto.notification.v1.Vulnerability;
 import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysis;
 
@@ -34,31 +35,40 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.notification.NotificationFactory.createAnalyzerErrorNotification;
 import static org.dependencytrack.notification.NotificationFactory.createBomConsumedNotification;
 import static org.dependencytrack.notification.NotificationFactory.createBomProcessedNotification;
 import static org.dependencytrack.notification.NotificationFactory.createBomProcessingFailedNotification;
 import static org.dependencytrack.notification.NotificationFactory.createBomValidationFailedNotification;
+import static org.dependencytrack.notification.NotificationFactory.createIntegrationErrorNotification;
 import static org.dependencytrack.notification.NotificationFactory.createNewVulnerabilityNotification;
 import static org.dependencytrack.notification.NotificationFactory.createNewVulnerableDependencyNotification;
 import static org.dependencytrack.notification.NotificationFactory.createPolicyViolationNotification;
 import static org.dependencytrack.notification.NotificationFactory.createProjectCreatedNotification;
+import static org.dependencytrack.notification.NotificationFactory.createUserCreatedNotification;
+import static org.dependencytrack.notification.NotificationFactory.createUserDeletedNotification;
 import static org.dependencytrack.notification.NotificationFactory.createVexConsumedNotification;
 import static org.dependencytrack.notification.NotificationFactory.createVexProcessedNotification;
 import static org.dependencytrack.notification.NotificationFactory.createVulnerabilityAnalysisDecisionChangeNotification;
+import static org.dependencytrack.notification.NotificationGroup.ANALYZER;
 import static org.dependencytrack.notification.NotificationGroup.BOM_CONSUMED;
 import static org.dependencytrack.notification.NotificationGroup.BOM_PROCESSED;
 import static org.dependencytrack.notification.NotificationGroup.BOM_PROCESSING_FAILED;
 import static org.dependencytrack.notification.NotificationGroup.BOM_VALIDATION_FAILED;
+import static org.dependencytrack.notification.NotificationGroup.INTEGRATION;
 import static org.dependencytrack.notification.NotificationGroup.NEW_VULNERABILITY;
 import static org.dependencytrack.notification.NotificationGroup.NEW_VULNERABLE_DEPENDENCY;
 import static org.dependencytrack.notification.NotificationGroup.POLICY_VIOLATION;
 import static org.dependencytrack.notification.NotificationGroup.PROJECT_AUDIT_CHANGE;
 import static org.dependencytrack.notification.NotificationGroup.PROJECT_CREATED;
+import static org.dependencytrack.notification.NotificationGroup.USER_CREATED;
+import static org.dependencytrack.notification.NotificationGroup.USER_DELETED;
 import static org.dependencytrack.notification.NotificationGroup.VEX_CONSUMED;
 import static org.dependencytrack.notification.NotificationGroup.VEX_PROCESSED;
 import static org.dependencytrack.notification.NotificationLevel.ERROR;
 import static org.dependencytrack.notification.NotificationLevel.INFORMATIONAL;
 import static org.dependencytrack.notification.NotificationScope.PORTFOLIO;
+import static org.dependencytrack.notification.NotificationScope.SYSTEM;
 
 /**
  * Factory for test notifications.
@@ -117,7 +127,19 @@ public final class TestNotificationFactory {
                             TestNotificationFactory::createVexConsumedTestNotification),
                     Map.entry(
                             new SupplierMatrixKey(PORTFOLIO, VEX_PROCESSED, INFORMATIONAL),
-                            TestNotificationFactory::createVexProcessedTestNotification));
+                            TestNotificationFactory::createVexProcessedTestNotification),
+                    Map.entry(
+                            new SupplierMatrixKey(SYSTEM, ANALYZER, ERROR),
+                            TestNotificationFactory::createAnalyzerErrorTestNotification),
+                    Map.entry(
+                            new SupplierMatrixKey(SYSTEM, INTEGRATION, ERROR),
+                            TestNotificationFactory::createIntegrationErrorTestNotification),
+                    Map.entry(
+                            new SupplierMatrixKey(SYSTEM, USER_CREATED, INFORMATIONAL),
+                            TestNotificationFactory::createUserCreatedTestNotification),
+                    Map.entry(
+                            new SupplierMatrixKey(SYSTEM, USER_DELETED, INFORMATIONAL),
+                            TestNotificationFactory::createUserDeletedTestNotification));
 
     private TestNotificationFactory() {
     }
@@ -133,6 +155,10 @@ public final class TestNotificationFactory {
         }
 
         return null;
+    }
+
+    public static Notification createAnalyzerErrorTestNotification() {
+        return createAnalyzerErrorNotification("failure");
     }
 
     public static Notification createBomConsumedTestNotification() {
@@ -161,6 +187,10 @@ public final class TestNotificationFactory {
         return createBomValidationFailedNotification(
                 createProject(),
                 List.of("cause 1", "cause 2"));
+    }
+
+    public static Notification createIntegrationErrorTestNotification() {
+        return createIntegrationErrorNotification("failure");
     }
 
     public static Notification createNewVulnerabilityTestNotification() {
@@ -202,6 +232,14 @@ public final class TestNotificationFactory {
 
     public static Notification createProjectCreatedTestNotification() {
         return createProjectCreatedNotification(createProject());
+    }
+
+    public static Notification createUserCreatedTestNotification() {
+        return createUserCreatedNotification(createUser());
+    }
+
+    public static Notification createUserDeletedTestNotification() {
+        return createUserDeletedNotification(createUser());
     }
 
     public static Notification createVexConsumedTestNotification() {
@@ -264,6 +302,13 @@ public final class TestNotificationFactory {
                 .setPurl("pkg:maven/org.acme/projectName@projectVersion")
                 .addAllTags(List.of("tag1", "tag2"))
                 .setIsActive(true)
+                .build();
+    }
+
+    private static UserSubject createUser() {
+        return UserSubject.newBuilder()
+                .setUsername("username")
+                .setEmail("username@example.com")
                 .build();
     }
 

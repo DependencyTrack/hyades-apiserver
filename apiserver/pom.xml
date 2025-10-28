@@ -25,7 +25,7 @@
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
         <lib.kafka.version>3.9.1</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
-        <lib.kotlin-stdlib.version>2.2.20</lib.kotlin-stdlib.version>
+        <lib.kotlin-stdlib.version>2.2.21</lib.kotlin-stdlib.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.4</lib.pebble.version>
         <lib.swagger.version>2.2.39</lib.swagger.version>
