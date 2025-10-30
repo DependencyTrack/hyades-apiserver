@@ -25,6 +25,7 @@ import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSourceFactory;
+import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +39,6 @@ import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.C
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_DATA_URL;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ECOSYSTEMS;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ENABLED;
-import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_WATERMARKS;
 
 /**
  * @since 5.7.0
@@ -48,6 +48,7 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(OsvVulnDataSourceFactory.class);
 
     private ConfigRegistry configRegistry;
+    private ExtensionKVStore kvStore;
     private ObjectMapper objectMapper;
     private HttpClient httpClient;
 
@@ -72,13 +73,13 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
                 CONFIG_ENABLED,
                 CONFIG_DATA_URL,
                 CONFIG_ECOSYSTEMS,
-                CONFIG_WATERMARKS,
                 CONFIG_ALIAS_SYNC_ENABLED);
     }
 
     @Override
     public void init(ExtensionContext ctx) {
         this.configRegistry = ctx.configRegistry();
+        this.kvStore = ctx.kvStore();
         this.httpClient = HttpClient.newBuilder()
                 .proxy(ctx.proxySelector())
                 .build();
@@ -102,7 +103,7 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
         final List<String> ecosystems = configRegistry
                 .getOptionalValue(CONFIG_ECOSYSTEMS)
                 .orElseGet(Collections::emptyList);
-        final var watermarkManager = WatermarkManager.create(configRegistry, objectMapper);
+        final var watermarkManager = WatermarkManager.create(ecosystems, kvStore);
         final boolean isAliasSyncEnabled = this.configRegistry.getOptionalValue(CONFIG_ALIAS_SYNC_ENABLED).orElse(false);
 
         return new OsvVulnDataSource(watermarkManager, objectMapper, dataUrl, ecosystems, httpClient, isAliasSyncEnabled);
@@ -113,7 +114,6 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
         if (httpClient != null) {
             httpClient.close();
         }
-        VulnDataSourceFactory.super.close();
     }
 
 }
