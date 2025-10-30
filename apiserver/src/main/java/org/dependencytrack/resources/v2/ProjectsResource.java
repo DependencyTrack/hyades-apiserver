@@ -20,10 +20,10 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
 import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
-import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.ProjectsApi;
 import org.dependencytrack.api.v2.model.CloneProjectInclude;
 import org.dependencytrack.api.v2.model.CloneProjectRequest;
@@ -48,7 +48,7 @@ import static org.dependencytrack.persistence.pagination.PageUtil.createPaginati
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapHashes;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapLicense;
 
-@Provider
+@Path("/")
 public class ProjectsResource extends AbstractApiResource implements ProjectsApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProjectsResource.class);
