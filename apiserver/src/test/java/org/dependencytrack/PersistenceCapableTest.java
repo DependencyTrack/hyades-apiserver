@@ -104,6 +104,9 @@ public abstract class PersistenceCapableTest {
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_USER_NAME, postgresContainer.getUsername());
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_PASSWORD, postgresContainer.getPassword());
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_POOLINGTYPE, "HikariCP");
+        dnProps.put(PropertyNames.PROPERTY_METADATA_ALLOW_XML, "false");
+        dnProps.put(PropertyNames.PROPERTY_METADATA_SUPPORT_ORM, "false");
+        dnProps.put(PropertyNames.PROPERTY_METADATA_ALLOW_LOAD_AT_RUNTIME, "false");
         dnProps.putAll(Config.getInstance().getPassThroughProperties("datanucleus"));
 
         final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
