@@ -281,6 +281,8 @@
                     <systemPropertyVariables>
                         <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
                     </systemPropertyVariables>
+                    <!-- Some tests leave the JVM behind in a dirty state. -->
+                    <reuseForks>false</reuseForks>
                 </configuration>
             </plugin>
         </plugins>

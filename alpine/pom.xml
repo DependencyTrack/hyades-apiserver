@@ -269,8 +269,6 @@
                         --add-opens java.base/java.util=ALL-UNNAMED
                         --add-opens java.base/java.lang=ALL-UNNAMED
                     </argLine>
-                    <!-- Some Alpine tests leave the JVM behind in a dirty state. -->
-                    <reuseForks>false</reuseForks>
                 </configuration>
             </plugin>
 
