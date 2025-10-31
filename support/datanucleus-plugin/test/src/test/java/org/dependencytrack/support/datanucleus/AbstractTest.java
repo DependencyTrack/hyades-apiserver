@@ -43,7 +43,9 @@ public abstract class AbstractTest {
 
     @BeforeAll
     static void beforeAll() {
-        postgresContainer = new PostgreSQLContainer<>("postgres:13-alpine");
+        postgresContainer = new PostgreSQLContainer<>("postgres:13-alpine")
+                .withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off")
+                .withTmpFs(Map.of("/var/lib/postgresql/data", "rw"));
         postgresContainer.start();
     }
 

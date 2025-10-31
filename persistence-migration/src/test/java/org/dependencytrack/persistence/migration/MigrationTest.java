@@ -26,6 +26,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 @Testcontainers
@@ -33,7 +35,9 @@ class MigrationTest {
 
     @Container
     private final PostgreSQLContainer<?> postgresContainer =
-            new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"));
+            new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
+                    .withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off")
+                    .withTmpFs(Map.of("/var/lib/postgresql/data", "rw"));
 
     @Test
     void shouldExecuteMigration() {
