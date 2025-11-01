@@ -30,10 +30,10 @@ public class MeterRegistryCustomizer implements alpine.common.metrics.MeterRegis
 
     @Override
     public void accept(final MeterRegistry meterRegistry) {
+        meterRegistry.config().meterFilter(new PercentilesHistogramMeterFilter());
+
         new ProcessMemoryMetrics().bindTo(meterRegistry);
         new ProcessThreadMetrics().bindTo(meterRegistry);
-
-        meterRegistry.config().meterFilter(new PercentilesHistogramMeterFilter());
     }
 
     private static final class PercentilesHistogramMeterFilter implements MeterFilter {
