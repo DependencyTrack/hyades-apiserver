@@ -24,22 +24,7 @@ import org.junit.jupiter.api.Test;
 public class CacheManagerTest {
 
     @Test
-    public void putGetMaintTest() {
-        CacheManager cacheManager = CacheManager.getInstance();
-        for (int i = 1; i <= 1100; i++) {
-            cacheManager.put("key-" + i , "value-" + i);
-        }
-        cacheManager.maintenance(String.class);
-        for (int i = 1; i <= 100; i++) {
-            Assertions.assertNull(cacheManager.get(String.class, "key-" + i));
-        }
-        for (int i = 101; i <= 1100; i++) {
-            Assertions.assertEquals("value-" + i, cacheManager.get(String.class, "key-" + i));
-        }
-    }
-
-    @Test
-    public void removeTest() {
+    public void putGetRemoveTest() {
         CacheManager cacheManager = CacheManager.getInstance();
 
         cacheManager.put("CacheManagerTest.removeTest", "testValue");

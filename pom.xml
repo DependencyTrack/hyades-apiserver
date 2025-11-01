@@ -126,7 +126,7 @@
         <lib.micrometer.version>1.15.5</lib.micrometer.version>
         <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.20.0</lib.mockito.version>
-        <lib.okhttp.version>5.2.1</lib.okhttp.version>
+        <lib.okhttp.version>5.3.0</lib.okhttp.version>
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
@@ -139,7 +139,7 @@
         <lib.wiremock.version>3.13.1</lib.wiremock.version>
         <lib.zstd-jni.version>1.5.7-6</lib.zstd-jni.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
-        <unitTestForkCount>2</unitTestForkCount>
+        <unitTestForkCount>1</unitTestForkCount>
 
         <!-- Log level to use for unit tests -->
         <unitTestLogLevel>WARN</unitTestLogLevel>
@@ -411,7 +411,7 @@
             <extension>
                 <groupId>org.apache.maven.extensions</groupId>
                 <artifactId>maven-build-cache-extension</artifactId>
-                <version>1.2.0</version>
+                <version>1.2.1</version>
             </extension>
         </extensions>
 
@@ -484,7 +484,7 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.6.0</version>
                 <configuration>
-                    <configLocation>${project.parentBaseDir}/.checkstyle.xml</configLocation>
+                    <configLocation>${project.parentBaseDir}/support/checkstyle/config.xml</configLocation>
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <includeResources>false</includeResources>
                     <includeTestResources>false</includeTestResources>
@@ -547,7 +547,6 @@
                 </property>
             </activation>
             <properties>
-                <unitTestForkCount>1C</unitTestForkCount>
                 <unitTestLogLevel>OFF</unitTestLogLevel>
             </properties>
         </profile>

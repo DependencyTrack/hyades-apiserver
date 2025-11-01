@@ -18,7 +18,7 @@
         <maven.install.skip>true</maven.install.skip>
 
         <!-- Dependency Versions -->
-        <lib.cloud-sql-postgres-socket-factory.version>1.26.1</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.27.0</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.28.0</lib.commons-compress.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>11.0.0</lib.cyclonedx-java.version>
@@ -28,7 +28,7 @@
         <lib.kotlin-stdlib.version>2.2.21</lib.kotlin-stdlib.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.4</lib.pebble.version>
-        <lib.swagger.version>2.2.39</lib.swagger.version>
+        <lib.swagger.version>2.2.40</lib.swagger.version>
         <lib.swagger-parser.version>2.1.35</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.woodstox.version>7.1.1</lib.woodstox.version>
@@ -40,6 +40,8 @@
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
+
+        <unitTestForkCount>0.5C</unitTestForkCount>
     </properties>
 
     <dependencyManagement>
@@ -556,6 +558,14 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <argLine>
+                        @{argLine}
+                        -Xmx512m
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        -javaagent:${settings.localRepository}/org/mockito/mockito-core/${lib.mockito.version}/mockito-core-${lib.mockito.version}.jar
+                        -Xshare:off
+                    </argLine>
                     <systemPropertyVariables>
                         <dependencyTrack.logging.level>${unitTestLogLevel}</dependencyTrack.logging.level>
                         <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
@@ -701,7 +711,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
-                <version>3.4.0</version>
+                <version>3.5.0</version>
                 <configuration>
                     <warName>dependency-track-apiserver</warName>
                     <archive>

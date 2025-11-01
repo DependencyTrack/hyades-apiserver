@@ -80,7 +80,7 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
         qm.createConfigProperty(
                 /* groupName */ "foo",
                 /* propertyName */ "extension.bar.baz",
-                /* propertyValue */ DataEncryption.encryptAsString("qux"),
+                /* propertyValue */ new DataEncryption().encryptAsString("qux"),
                 PropertyType.ENCRYPTEDSTRING,
                 /* description */ null
         );

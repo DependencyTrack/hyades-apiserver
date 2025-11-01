@@ -21,11 +21,11 @@ package org.dependencytrack.resources.v2;
 import alpine.server.auth.AuthenticationNotRequired;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.ServerErrorException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
-import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.WorkflowsApi;
 import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponse;
@@ -43,7 +43,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.UUID;
 
-@Provider
+@Path("/")
 public class WorkflowsResource implements WorkflowsApi {
 
     @Context

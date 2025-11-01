@@ -21,8 +21,8 @@ package org.dependencytrack.resources.v2;
 import alpine.server.auth.PermissionRequired;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.ExtensionsApi;
 import org.dependencytrack.api.v2.model.ExtensionConfig;
 import org.dependencytrack.api.v2.model.ExtensionConfigType;
@@ -59,7 +59,7 @@ import java.util.stream.Collectors;
 /**
  * @since 5.7.0
  */
-@Provider
+@Path("/")
 public class ExtensionsResource implements ExtensionsApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ExtensionsResource.class);
