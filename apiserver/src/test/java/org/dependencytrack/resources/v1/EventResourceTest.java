@@ -20,15 +20,20 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
-import jakarta.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.workflow.engine.api.WorkflowEngine;
+import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.ws.rs.core.Response;
+import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
@@ -39,14 +44,25 @@ import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 public class EventResourceTest extends ResourceTest {
+
+    private static final WorkflowEngine WORKFLOW_ENGINE_MOCK = mock(WorkflowEngine.class);
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(EventResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bind(WORKFLOW_ENGINE_MOCK).to(WorkflowEngine.class);
+                        }
+                    }));
 
     @Test
     public void isTokenBeingProcessedTrueTest() {
@@ -120,6 +136,66 @@ public class EventResourceTest extends ResourceTest {
                             "processing": false
                         }
                         """);
+    }
+
+    @Test
+    public void isTokenBeingProcessedShouldReturnTrueWhenWorkflowRunExistsAndHasNonTerminalStatus() {
+        final var runMetadata = new WorkflowRunMetadata(
+                UUID.fromString("97282c4b-70fc-4169-be01-35e7bbe4c9e8"),
+                "dummy",
+                1,
+                WorkflowRunStatus.CREATED,
+                null,
+                null,
+                null,
+                null,
+                Instant.ofEpochMilli(666666),
+                null,
+                null,
+                null);
+
+        doReturn(runMetadata).when(WORKFLOW_ENGINE_MOCK).getRunMetadata(
+                eq(UUID.fromString("97282c4b-70fc-4169-be01-35e7bbe4c9e8")));
+
+        final Response response = jersey.target(V1_EVENT + "/token/97282c4b-70fc-4169-be01-35e7bbe4c9e8").request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "processing": true
+                }
+                """);
+    }
+
+    @Test
+    public void isTokenBeingProcessedShouldReturnFalseWhenWorkflowRunExistsAndHasTerminalStatus() {
+        final var runMetadata = new WorkflowRunMetadata(
+                UUID.fromString("97282c4b-70fc-4169-be01-35e7bbe4c9e8"),
+                "dummy",
+                1,
+                WorkflowRunStatus.COMPLETED,
+                null,
+                null,
+                null,
+                null,
+                Instant.ofEpochMilli(666666),
+                Instant.ofEpochMilli(888888),
+                Instant.ofEpochMilli(777777),
+                Instant.ofEpochMilli(888888));
+
+        doReturn(runMetadata).when(WORKFLOW_ENGINE_MOCK).getRunMetadata(
+                eq(UUID.fromString("97282c4b-70fc-4169-be01-35e7bbe4c9e8")));
+
+        final Response response = jersey.target(V1_EVENT + "/token/97282c4b-70fc-4169-be01-35e7bbe4c9e8").request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "processing": false
+                }
+                """);
     }
 
 }
