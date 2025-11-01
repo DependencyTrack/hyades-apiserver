@@ -540,7 +540,7 @@
                 </property>
             </activation>
             <properties>
-                <unitTestForkCount>1C</unitTestForkCount>
+                <unitTestForkCount>1.5C</unitTestForkCount>
                 <unitTestLogLevel>OFF</unitTestLogLevel>
             </properties>
         </profile>
