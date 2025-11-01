@@ -25,6 +25,7 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.Plugin;
+import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -137,6 +138,25 @@ public class PluginManagerTest extends PersistenceCapableTest {
         final SequencedCollection<ExtensionFactory<UnknownExtensionPoint>> factories =
                 PluginManager.getInstance().getFactories(UnknownExtensionPoint.class);
         assertThat(factories).isEmpty();
+    }
+
+    @Test
+    public void testGetKVStore() {
+        final ExtensionKVStore kvStore =
+                PluginManager.getInstance().getKVStore(TestExtensionPoint.class, "dummy");
+        assertThat(kvStore).isInstanceOf(DatabaseExtensionKVStore.class);
+    }
+
+    @Test
+    public void testGetKVStoreForUnknownExtensionPoint() {
+        assertThatExceptionOfType(NoSuchExtensionException.class)
+                .isThrownBy(() -> PluginManager.getInstance().getKVStore(UnknownExtensionPoint.class, "dummy"));
+    }
+
+    @Test
+    public void testGetKVStoreForUnknownExtension() {
+        assertThatExceptionOfType(NoSuchExtensionException.class)
+                .isThrownBy(() -> PluginManager.getInstance().getKVStore(TestExtensionPoint.class, "doesNotExist"));
     }
 
     @Test

@@ -29,6 +29,7 @@ import org.dependencytrack.plugin.api.Plugin;
 import org.dependencytrack.plugin.api.config.ConfigDefinition;
 import org.dependencytrack.plugin.api.config.ConfigTypes;
 import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
+import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.slf4j.MDC;
 
 import java.lang.reflect.Modifier;
@@ -175,6 +176,31 @@ public class PluginManager {
         return factories;
     }
 
+    /**
+     * Get an {@link ExtensionKVStore} for a given extension.
+     *
+     * @param extensionPointClass Class of the extension point.
+     * @param extensionName       Name of the extension.
+     * @param <T>                 Type of the extension point.
+     * @return An {@link ExtensionKVStore} for the extension.
+     * @throws NoSuchExtensionException When the extension point or the extension do not exist.
+     * @since 5.7.0
+     */
+    public <T extends ExtensionPoint> ExtensionKVStore getKVStore(
+            final Class<T> extensionPointClass,
+            final String extensionName) {
+        final var extensionIdentity = new ExtensionIdentity(extensionPointClass, extensionName);
+        if (!factoryByExtensionIdentity.containsKey(extensionIdentity)) {
+            throw new NoSuchExtensionException(
+                    "No extension named %s exists for the extension point %s".formatted(
+                            extensionName, extensionPointClass.getName()));
+        }
+
+        final ExtensionPointSpec<?> extensionPointSpec =
+                specByExtensionPointClass.get(extensionPointClass);
+        return new DatabaseExtensionKVStore(extensionPointSpec.name(), extensionName);
+    }
+
     void loadPlugins() {
         lock.lock();
         try {
@@ -251,7 +277,7 @@ public class PluginManager {
             // The purpose of tracking extension classes is to differentiate them from another,
             // which would be impossible if we allowed interfaces or abstract classes.
             if (extensionFactory.extensionClass().isInterface()
-                || Modifier.isAbstract(extensionFactory.extensionClass().getModifiers())) {
+                    || Modifier.isAbstract(extensionFactory.extensionClass().getModifiers())) {
                 throw new IllegalStateException("""
                         Class %s of extension %s from plugin %s is either abstract or an interface; \
                         Extension classes must be concrete""".formatted(extensionFactory.extensionClass().getName(),
@@ -306,9 +332,12 @@ public class PluginManager {
         LOGGER.debug("Creating runtime extension configs with defaults if necessary");
         configRegistry.createWithDefaultsIfNotExist(extensionFactory.runtimeConfigs());
 
+        final var keyValueStore = new DatabaseExtensionKVStore(
+                extensionPointSpec.name(), extensionIdentity.name());
+
         LOGGER.debug("Initializing extension");
         try {
-            extensionFactory.init(new ExtensionContext(configRegistry, new ProxySelector()));
+            extensionFactory.init(new ExtensionContext(configRegistry, keyValueStore, new ProxySelector()));
         } catch (RuntimeException e) {
             throw new IllegalStateException(
                     "Failed to initialize extension %s from plugin %s".formatted(

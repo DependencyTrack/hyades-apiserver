@@ -34,7 +34,6 @@ final class OsvVulnDataSourceConfigs {
     static final RuntimeConfigDefinition<Boolean> CONFIG_ENABLED;
     static final RuntimeConfigDefinition<URL> CONFIG_DATA_URL;
     static final RuntimeConfigDefinition<List<String>> CONFIG_ECOSYSTEMS;
-    static final RuntimeConfigDefinition<String> CONFIG_WATERMARKS;
     static final RuntimeConfigDefinition<Boolean> CONFIG_ALIAS_SYNC_ENABLED;
 
     static {
@@ -66,14 +65,7 @@ final class OsvVulnDataSourceConfigs {
                 List.of("Go", "Maven", "npm", "NuGet", "PyPI"),
                 false,
                 false);
-        CONFIG_WATERMARKS = new RuntimeConfigDefinition<>(
-                "watermarks",
-                "Serialised form of Highest observed modification timestamps of processed vulnerabilities for all ecosystems",
-                ConfigTypes.STRING,
-                null,
-                false,
-                false);
-        CONFIG_ALIAS_SYNC_ENABLED =  new RuntimeConfigDefinition<>(
+        CONFIG_ALIAS_SYNC_ENABLED = new RuntimeConfigDefinition<>(
                 "alias.sync.enabled",
                 "Whether to include alias information in vulnerability data",
                 ConfigTypes.BOOLEAN,

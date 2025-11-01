@@ -111,6 +111,7 @@ final class OsvVulnDataSource implements VulnDataSource {
             }
 
             successfullyCompletedEcosystems.add(currentEcosystem);
+            watermarkManager.maybeCommit(List.of(currentEcosystem));
             closeCurrentEcosystem();
             currentEcosystemIndex++;
         }
@@ -124,6 +125,7 @@ final class OsvVulnDataSource implements VulnDataSource {
                     return true;
                 }
                 successfullyCompletedEcosystems.add(currentEcosystem);
+                watermarkManager.maybeCommit(List.of(currentEcosystem));
                 closeCurrentEcosystem();
             }
             currentEcosystemIndex++;
@@ -176,7 +178,6 @@ final class OsvVulnDataSource implements VulnDataSource {
     public void close() {
         watermarkManager.maybeCommit(successfullyCompletedEcosystems);
         closeCurrentEcosystem();
-        httpClient.close();
     }
 
     private Bom readNextItem() {

@@ -24,7 +24,6 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.time.Instant;
 
 /**
  * @since 5.7.0
@@ -33,7 +32,6 @@ public final class NvdVulnDataSourceConfigs {
 
     public static final RuntimeConfigDefinition<Boolean> CONFIG_ENABLED;
     static final RuntimeConfigDefinition<URL> CONFIG_FEEDS_URL;
-    static final RuntimeConfigDefinition<Instant> CONFIG_WATERMARK;
 
     static {
         final URL defaultFeedsUrl;
@@ -56,13 +54,6 @@ public final class NvdVulnDataSourceConfigs {
                 ConfigTypes.URL,
                 /* defaultValue */ defaultFeedsUrl,
                 /* isRequired */ true,
-                /* isSecret */ false);
-        CONFIG_WATERMARK = new RuntimeConfigDefinition<>(
-                "watermark",
-                "Highest observed modification timestamp of processed vulnerabilities",
-                ConfigTypes.INSTANT,
-                /* defaultValue */ null,
-                /* isRequired */ false,
                 /* isSecret */ false);
     }
 

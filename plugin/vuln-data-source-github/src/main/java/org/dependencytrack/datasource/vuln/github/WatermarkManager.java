@@ -18,7 +18,8 @@
  */
 package org.dependencytrack.datasource.vuln.github;
 
-import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.storage.CompareAndPutResult;
+import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +28,6 @@ import java.time.Duration;
 import java.time.Instant;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_WATERMARK;
 
 /**
  * @since 5.7.0
@@ -38,29 +38,40 @@ final class WatermarkManager {
     private static final Duration MIN_COMMIT_INTERVAL = Duration.ofSeconds(3);
 
     private final Clock clock;
-    private final ConfigRegistry configRegistry;
+    private final ExtensionKVStore kvStore;
     private Instant committedWatermark;
+    private Long committedWatermarkVersion;
     private Instant pendingWatermark;
     private Instant lastCommittedAt;
 
     private WatermarkManager(
             final Clock clock,
-            final ConfigRegistry configRegistry,
-            final Instant committedWatermark) {
+            final ExtensionKVStore kvStore,
+            final Instant committedWatermark,
+            final Long committedWatermarkVersion) {
         this.clock = clock;
-        this.configRegistry = configRegistry;
+        this.kvStore = kvStore;
         this.committedWatermark = committedWatermark;
+        this.committedWatermarkVersion = committedWatermarkVersion;
         this.pendingWatermark = committedWatermark;
         this.lastCommittedAt = Instant.now(clock);
     }
 
-    static WatermarkManager create(final Clock clock, final ConfigRegistry configRegistry) {
+    static WatermarkManager create(final Clock clock, final ExtensionKVStore kvStore) {
         requireNonNull(clock, "clock must not be null");
-        requireNonNull(configRegistry, "configRegistry must not be null");
+        requireNonNull(kvStore, "kvStore must not be null");
 
-        final Instant committedWatermark =
-                configRegistry.getOptionalValue(CONFIG_WATERMARK).orElse(null);
-        return new WatermarkManager(clock, configRegistry, committedWatermark);
+        final ExtensionKVStore.Entry watermarkEntry = kvStore.get("watermark");
+        if (watermarkEntry != null) {
+            try {
+                final Instant committedWatermark = Instant.ofEpochMilli(Long.parseLong(watermarkEntry.value()));
+                return new WatermarkManager(clock, kvStore, committedWatermark, watermarkEntry.version());
+            } catch (NumberFormatException ex) {
+                LOGGER.warn("Encountered invalid watermark: {}; Ignoring", watermarkEntry, ex);
+            }
+        }
+
+        return new WatermarkManager(clock, kvStore, null, null);
     }
 
     Instant getWatermark() {
@@ -87,10 +98,22 @@ final class WatermarkManager {
             return;
         }
 
-        LOGGER.debug("Committing watermark {}", pendingWatermark);
-        configRegistry.setValue(CONFIG_WATERMARK, pendingWatermark);
-        committedWatermark = pendingWatermark;
-        lastCommittedAt = Instant.now(clock);
+        LOGGER.debug("Committing watermark {} to KV store", pendingWatermark);
+        final CompareAndPutResult capResult = kvStore.compareAndPut(
+                "watermark",
+                String.valueOf(pendingWatermark.toEpochMilli()),
+                committedWatermarkVersion);
+        switch (capResult) {
+            case CompareAndPutResult.Success(long newVersion) -> {
+                committedWatermark = pendingWatermark;
+                committedWatermarkVersion = newVersion;
+                lastCommittedAt = Instant.now(clock);
+            }
+            case CompareAndPutResult.Failure(CompareAndPutResult.Failure.Reason reason) ->
+                    throw new IllegalStateException(
+                            "Failed to commit watermark %s to KV store: %s".formatted(
+                                    pendingWatermark, reason));
+        }
     }
 
 }
