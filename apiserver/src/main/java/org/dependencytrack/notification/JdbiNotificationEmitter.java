@@ -18,7 +18,9 @@
  */
 package org.dependencytrack.notification;
 
+import alpine.common.metrics.Metrics;
 import io.micrometer.core.instrument.MeterRegistry;
+import org.dependencytrack.notification.api.NotificationEmitter;
 import org.jdbi.v3.core.Handle;
 
 import static java.util.Objects.requireNonNull;
@@ -28,10 +30,14 @@ import static java.util.Objects.requireNonNull;
  *
  * @since 5.7.0
  */
-final class JdbiNotificationEmitter extends JdbcNotificationEmitter {
+public final class JdbiNotificationEmitter extends JdbcNotificationEmitter {
 
     JdbiNotificationEmitter(final Handle jdbiHandle, final MeterRegistry meterRegistry) {
         super(requireNonNull(jdbiHandle, "jdbiHandle must not be null").getConnection(), meterRegistry);
+    }
+
+    public JdbiNotificationEmitter(final Handle jdbiHandle) {
+        this(jdbiHandle, Metrics.getRegistry());
     }
 
 }

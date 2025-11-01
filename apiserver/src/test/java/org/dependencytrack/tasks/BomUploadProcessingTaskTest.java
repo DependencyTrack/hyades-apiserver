@@ -50,6 +50,8 @@ import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
@@ -57,8 +59,6 @@ import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
-import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
-import org.dependencytrack.proto.notification.v1.Notification;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -102,13 +102,13 @@ import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 import static org.dependencytrack.model.WorkflowStep.POLICY_EVALUATION;
 import static org.dependencytrack.model.WorkflowStep.VULN_ANALYSIS;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_CONSUMED;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_PROCESSED;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_PROCESSING_FAILED;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_CONSUMED;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSED;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
-import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 
 public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 

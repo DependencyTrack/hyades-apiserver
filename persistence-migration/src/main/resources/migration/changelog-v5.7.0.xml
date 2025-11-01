@@ -292,4 +292,15 @@
               SET DATA TYPE notification_level USING "NOTIFICATION_LEVEL"::notification_level;
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-14" author="nscuro">
+        <sql splitStatements="true">
+            DELETE FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" IN ('notification', 'search-indexes', 'task-scheduler');
+
+            DELETE FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = 'scanner'
+               AND "PROPERTYNAME" = 'npmaudit.enabled';
+        </sql>
+    </changeSet>
 </databaseChangeLog>

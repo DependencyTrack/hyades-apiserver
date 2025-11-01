@@ -20,7 +20,6 @@ package org.dependencytrack.model;
 
 import alpine.model.IConfigProperty;
 import alpine.model.IConfigProperty.PropertyType;
-import org.apache.commons.lang3.SystemUtils;
 
 import java.util.Arrays;
 import java.util.UUID;
@@ -56,7 +55,6 @@ public enum ConfigPropertyConstants {
     SCANNER_INTERNAL_FUZZY_ENABLED("scanner", "internal.fuzzy.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable non-exact fuzzy matching using the internal analyzer", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_INTERNAL_FUZZY_EXCLUDE_PURL("scanner", "internal.fuzzy.exclude.purl", "true", PropertyType.BOOLEAN, "Flag to enable/disable fuzzy matching on components that have a Package URL (PURL) defined", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_INTERNAL_FUZZY_EXCLUDE_INTERNAL("scanner", "internal.fuzzy.exclude.internal", "true", PropertyType.BOOLEAN, "Flag to enable/disable fuzzy matching on components that are marked internal.", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_NPMAUDIT_ENABLED("scanner", "npmaudit.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable NPM Audit", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_OSSINDEX_ENABLED("scanner", "ossindex.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable Sonatype OSS Index", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_OSSINDEX_API_USERNAME("scanner", "ossindex.api.username", null, PropertyType.STRING, "The API username used for OSS Index authentication", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_OSSINDEX_API_TOKEN("scanner", "ossindex.api.token", null, PropertyType.ENCRYPTEDSTRING, "The API token used for OSS Index authentication", ConfigPropertyAccessMode.READ_WRITE),
@@ -93,20 +91,6 @@ public enum ConfigPropertyConstants {
     KENNA_TOKEN("integrations", "kenna.token", null, PropertyType.ENCRYPTEDSTRING, "The token to use when authenticating to Kenna Security", ConfigPropertyAccessMode.READ_WRITE),
     KENNA_CONNECTOR_ID("integrations", "kenna.connector.id", null, PropertyType.STRING, "The Kenna Security connector identifier to upload to", ConfigPropertyAccessMode.READ_WRITE),
     ACCESS_MANAGEMENT_ACL_ENABLED("access-management", "acl.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable access control to projects in the portfolio", ConfigPropertyAccessMode.READ_WRITE, true),
-    NOTIFICATION_TEMPLATE_BASE_DIR("notification", "template.baseDir", SystemUtils.getEnvironmentVariable("DEFAULT_TEMPLATES_OVERRIDE_BASE_DIRECTORY", System.getProperty("user.home")), PropertyType.STRING, "The base directory to use when searching for notification templates", ConfigPropertyAccessMode.READ_WRITE),
-    NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED("notification", "template.default.override.enabled", SystemUtils.getEnvironmentVariable("DEFAULT_TEMPLATES_OVERRIDE_ENABLED", "false"), PropertyType.BOOLEAN, "Flag to enable/disable override of default notification templates", ConfigPropertyAccessMode.READ_WRITE),
-    TASK_SCHEDULER_LDAP_SYNC_CADENCE("task-scheduler", "ldap.sync.cadence", "6", PropertyType.INTEGER, "Sync cadence (in hours) for LDAP", ConfigPropertyAccessMode.READ_WRITE),
-    TASK_SCHEDULER_GHSA_MIRROR_CADENCE("task-scheduler", "ghsa.mirror.cadence", "24", PropertyType.INTEGER, "Mirror cadence (in hours) for Github Security Advisories", ConfigPropertyAccessMode.READ_WRITE),
-    TASK_SCHEDULER_OSV_MIRROR_CADENCE("task-scheduler", "osv.mirror.cadence", "24", PropertyType.INTEGER, "Mirror cadence (in hours) for OSV database", ConfigPropertyAccessMode.READ_WRITE),
-    TASK_SCHEDULER_NIST_MIRROR_CADENCE("task-scheduler", "nist.mirror.cadence", "24", PropertyType.INTEGER, "Mirror cadence (in hours) for NVD database", ConfigPropertyAccessMode.READ_WRITE),
-    TASK_SCHEDULER_PORTFOLIO_METRICS_UPDATE_CADENCE("task-scheduler", "portfolio.metrics.update.cadence", "1", PropertyType.INTEGER, "Update cadence (in hours) for portfolio metrics", ConfigPropertyAccessMode.READ_WRITE),
-    TASK_SCHEDULER_VULNERABILITY_METRICS_UPDATE_CADENCE("task-scheduler", "vulnerability.metrics.update.cadence", "1", PropertyType.INTEGER, "Update cadence (in hours) for vulnerability metrics", ConfigPropertyAccessMode.READ_WRITE),
-    TASK_SCHEDULER_PORTFOLIO_VULNERABILITY_ANALYSIS_CADENCE("task-scheduler", "portfolio.vulnerability.analysis.cadence", "24", PropertyType.INTEGER, "Launch cadence (in hours) for portfolio vulnerability analysis", ConfigPropertyAccessMode.READ_WRITE),
-    TASK_SCHEDULER_REPOSITORY_METADATA_FETCH_CADENCE("task-scheduler", "repository.metadata.fetch.cadence", "24", PropertyType.INTEGER, "Metadada fetch cadence (in hours) for package repositories", ConfigPropertyAccessMode.READ_WRITE),
-    TASK_SCHEDULER_INTERNAL_COMPONENT_IDENTIFICATION_CADENCE("task-scheduler", "internal.components.identification.cadence", "6", PropertyType.INTEGER, "Internal component identification cadence (in hours)", ConfigPropertyAccessMode.READ_WRITE),
-    SEARCH_INDEXES_CONSISTENCY_CHECK_ENABLED("search-indexes", "consistency.check.enabled", "true", PropertyType.BOOLEAN, "Flag to enable lucene indexes periodic consistency check", ConfigPropertyAccessMode.READ_WRITE),
-    SEARCH_INDEXES_CONSISTENCY_CHECK_CADENCE("search-indexes", "consistency.check.cadence", "4320", PropertyType.INTEGER, "Lucene indexes consistency check cadence (in minutes)", ConfigPropertyAccessMode.READ_WRITE),
-    SEARCH_INDEXES_CONSISTENCY_CHECK_DELTA_THRESHOLD("search-indexes", "consistency.check.delta.threshold", "20", PropertyType.INTEGER, "Threshold used to trigger an index rebuild when comparing database table and corresponding lucene index (in percentage). It must be an integer between 1 and 100", ConfigPropertyAccessMode.READ_WRITE),
     CUSTOM_RISK_SCORE_HISTORY_ENABLED("risk-score", "weight.history.enabled", "true", PropertyType.BOOLEAN, "Flag to re-calculate risk score history", ConfigPropertyAccessMode.READ_WRITE),
     CUSTOM_RISK_SCORE_CRITICAL("risk-score", "weight.critical", "10", PropertyType.INTEGER, "Critical severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
     CUSTOM_RISK_SCORE_HIGH("risk-score", "weight.high", "5", PropertyType.INTEGER, "High severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
