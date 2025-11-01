@@ -32,6 +32,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -46,7 +47,9 @@ public class DatabaseMigrationInitTaskTest {
 
     @Before
     public void setUp() {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"));
+        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
+                .withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off")
+                .withTmpFs(Map.of("/var/lib/postgresql/data", "rw"));
         postgresContainer.start();
 
         dataSource = new PGSimpleDataSource();

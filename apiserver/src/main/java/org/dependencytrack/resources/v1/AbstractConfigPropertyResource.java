@@ -23,6 +23,11 @@ import alpine.common.util.BooleanUtil;
 import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
 import alpine.security.crypto.DataEncryption;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
+import jakarta.json.JsonString;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.ConfigPropertyAccessMode;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -30,11 +35,6 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.owasp.security.logging.SecurityMarkers;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonReader;
-import jakarta.json.JsonString;
-import jakarta.ws.rs.core.Response;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
@@ -137,7 +137,7 @@ abstract class AbstractConfigPropertyResource extends AbstractApiResource {
                     if (ENCRYPTED_PLACEHOLDER.equals(json.getPropertyValue())) {
                         return Response.notModified().build();
                     }
-                    property.setPropertyValue(DataEncryption.encryptAsString(json.getPropertyValue()));
+                    property.setPropertyValue(new DataEncryption().encryptAsString(json.getPropertyValue()));
                 } catch (Exception e) {
                     LOGGER.error("An error occurred while encrypting config property value", e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("An error occurred while encrypting property value. Check log for details.").build();

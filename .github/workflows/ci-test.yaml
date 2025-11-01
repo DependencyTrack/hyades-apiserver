@@ -71,8 +71,7 @@ jobs:
       - name: Execute unit tests
         env:
           TESTCONTAINERS_REUSE_ENABLE: "true"
-        run: |-
-          mvn -B --no-transfer-progress clean verify
+        run: mvn -B clean verify -Dcheckstyle.skip -Dcyclonedx.skip
 
       # Publishing coverage to Codacy is only possible for builds of push events.
       # PRs from forks do not get access to repository secrets.

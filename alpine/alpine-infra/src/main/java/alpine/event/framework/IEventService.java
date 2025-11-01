@@ -20,6 +20,7 @@ package alpine.event.framework;
 
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Defines an EventService. All event services must be singletons and implement a static
@@ -69,24 +70,15 @@ public interface IEventService {
     boolean hasSubscriptions(Event event);
 
     /**
-     * Shuts down the executioner. Once shut down, future work will not be performed. This should
-     * only be called prior to the application being shut down.
-     *
-     * @since 1.2.0
-     */
-    void shutdown();
-
-    /**
      * Shuts down this {@link IEventService}, and waits for already queued events to be processed
      * until a given {@code timeout} elapses.
      * <p>
      * Events enqueued during shutdown will not be processed.
      *
      * @param timeout The {@link Duration} to wait for event processing to complete
-     * @return {@code true} when all queued events were processed prior to {@code timeout} elapsing, otherwise {@code false}
      * @since 2.3.0
      */
-    boolean shutdown(final Duration timeout);
+    void shutdown(final Duration timeout) throws TimeoutException;
 
     /**
      * Determines if the specified event is currently being processed. Processing may indicate the

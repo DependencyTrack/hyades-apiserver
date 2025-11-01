@@ -40,6 +40,8 @@ import java.security.SecureRandom;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Class that manages Alpine-generated default secret key.
  *
@@ -57,14 +59,17 @@ public final class KeyManager {
 
     private static final Logger LOGGER = Logger.getLogger(KeyManager.class);
     private static final KeyManager INSTANCE = new KeyManager();
+    private final Config config;
     private final Lock lock = new ReentrantLock();
     private volatile SecretKey secretKey;
 
-    /**
-     * Private constructor.
-     */
-    private KeyManager() {
+    KeyManager(final Config config) {
+        this.config = requireNonNull(config, "config must not be null");
         initialize();
+    }
+
+    private KeyManager() {
+        this(Config.getInstance());
     }
 
     /**
@@ -142,12 +147,12 @@ public final class KeyManager {
      */
     private File getKeyPath(final KeyType keyType) {
         if (keyType == KeyType.SECRET) {
-            final String secretKeyPath = Config.getInstance().getProperty(Config.AlpineKey.SECRET_KEY_PATH);
+            final String secretKeyPath = config.getProperty(Config.AlpineKey.SECRET_KEY_PATH);
             if (secretKeyPath != null) {
                 return Paths.get(secretKeyPath).toFile();
             }
         }
-        return new File(Config.getInstance().getDataDirectorty()
+        return new File(config.getDataDirectorty()
                 + File.separator
                 + "keys" + File.separator
                 + keyType.name().toLowerCase() + ".key");

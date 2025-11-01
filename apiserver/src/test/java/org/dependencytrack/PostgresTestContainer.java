@@ -28,17 +28,20 @@ import org.testcontainers.utility.TestcontainersConfiguration;
 
 import java.lang.management.ManagementFactory;
 import java.sql.Connection;
+import java.util.Map;
 
 public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestContainer> {
 
     @SuppressWarnings("resource")
     public PostgresTestContainer() {
         super(DockerImageName.parse("postgres:13-alpine"));
+        withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off");
         withUsername("dtrack");
         withPassword("dtrack");
         withDatabaseName("dtrack");
         withLabel("owner", "hyades-apiserver-" + /* JVM name */ ManagementFactory.getRuntimeMXBean().getName());
         withUrlParam("reWriteBatchedInserts", "true");
+        withTmpFs(Map.of("/var/lib/postgresql/data", "rw"));
 
         // Uncomment this to see queries executed by Postgres:
         //   withLogConsumer(new Slf4jLogConsumer(LoggerFactory.getLogger(PostgresTestContainer.class)));

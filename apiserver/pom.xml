@@ -40,6 +40,8 @@
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
+
+        <unitTestForkCount>0.5C</unitTestForkCount>
     </properties>
 
     <dependencyManagement>
@@ -545,6 +547,14 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <argLine>
+                        @{argLine}
+                        -Xmx512m
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        -javaagent:${settings.localRepository}/org/mockito/mockito-core/${lib.mockito.version}/mockito-core-${lib.mockito.version}.jar
+                        -Xshare:off
+                    </argLine>
                     <systemPropertyVariables>
                         <dependencyTrack.logging.level>${unitTestLogLevel}</dependencyTrack.logging.level>
                         <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>

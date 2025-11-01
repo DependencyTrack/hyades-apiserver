@@ -137,7 +137,7 @@
         <lib.wiremock.version>3.13.1</lib.wiremock.version>
         <lib.zstd-jni.version>1.5.7-6</lib.zstd-jni.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
-        <unitTestForkCount>2</unitTestForkCount>
+        <unitTestForkCount>1</unitTestForkCount>
 
         <!-- Log level to use for unit tests -->
         <unitTestLogLevel>WARN</unitTestLogLevel>
@@ -477,7 +477,7 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.6.0</version>
                 <configuration>
-                    <configLocation>${project.parentBaseDir}/.checkstyle.xml</configLocation>
+                    <configLocation>${project.parentBaseDir}/support/checkstyle/config.xml</configLocation>
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <includeResources>false</includeResources>
                     <includeTestResources>false</includeTestResources>
@@ -540,7 +540,6 @@
                 </property>
             </activation>
             <properties>
-                <unitTestForkCount>1C</unitTestForkCount>
                 <unitTestLogLevel>OFF</unitTestLogLevel>
             </properties>
         </profile>
