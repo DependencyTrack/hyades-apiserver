@@ -24,7 +24,6 @@ import alpine.model.EventServiceLog;
 import alpine.persistence.AlpineQueryManager;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Timer;
-import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -33,10 +32,14 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static alpine.common.util.ExecutorUtil.getExecutorStats;
 
@@ -52,30 +55,34 @@ import static alpine.common.util.ExecutorUtil.getExecutorStats;
  */
 public abstract class BaseEventService implements IEventService {
 
-    private Logger logger = Logger.getLogger(BaseEventService.class);
-    private final Map<Class<? extends Event>, ArrayList<Class<? extends Subscriber>>> subscriptionMap = new ConcurrentHashMap<>();
-    private final Map<UUID, ArrayList<UUID>>chainTracker = new ConcurrentHashMap<>();
-    private ExecutorService executor = Executors.newFixedThreadPool(1, new BasicThreadFactory.Builder()
-            .namingPattern("Alpine-BaseEventService-%d")
-            .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-            .build()
-    );
-    private final ExecutorService dynamicExecutor = Executors.newWorkStealingPool();
+    public enum Status {
 
-    /**
-     * @param executor an ExecutorService instance
-     * @since 1.0.0
-     */
-    protected void setExecutorService(ExecutorService executor) {
-        this.executor = executor;
+        RUNNING(1, 2), // 0
+        PAUSED(0, 2),  // 1
+        STOPPING(3),   // 2
+        STOPPED;       // 3
+
+        private final Set<Integer> allowedTransitions;
+
+        Status(final Integer... allowedTransitions) {
+            this.allowedTransitions = Set.of(allowedTransitions);
+        }
+
+        private boolean canTransitionTo(final Status newStatus) {
+            return allowedTransitions.contains(newStatus.ordinal());
+        }
+
     }
 
-    /**
-     * @param logger the logger instance to use for the executed event
-     * @since 1.0.0
-     */
-    protected void setLogger(Logger logger) {
-        this.logger = logger;
+    private final Map<Class<? extends Event>, ArrayList<Class<? extends Subscriber>>> subscriptionMap = new ConcurrentHashMap<>();
+    private final Map<UUID, ArrayList<UUID>> chainTracker = new ConcurrentHashMap<>();
+    private final ExecutorService executor;
+    private final Logger logger = Logger.getLogger(getClass());
+    private final Lock statusLock = new ReentrantLock();
+    private Status status = Status.RUNNING;
+
+    BaseEventService(final ExecutorService executor) {
+        this.executor = executor;
     }
 
     /**
@@ -83,7 +90,13 @@ public abstract class BaseEventService implements IEventService {
      * @since 1.0.0
      */
     public void publish(Event event) {
-        logger.debug("Dispatching event: " + event.getClass().toString());
+        final Status currentStatus = status;
+        if (currentStatus != Status.RUNNING) {
+            logger.warn("Service is %s, not dispatching event: %s".formatted(currentStatus, event));
+            return;
+        }
+
+        logger.debug("Dispatching event: " + event.getClass());
         final ArrayList<Class<? extends Subscriber>> subscriberClasses = subscriptionMap.get(event.getClass());
         if (subscriberClasses == null) {
             logger.debug("No subscribers to inform from event: " + event.getClass().getName());
@@ -98,10 +111,7 @@ public abstract class BaseEventService implements IEventService {
                 }
             }
 
-            // Check to see if the Event is Unblocked. If so, use a separate executor pool from normal events
-            final ExecutorService executorService = event instanceof UnblockedEvent  ? dynamicExecutor : executor;
-
-            executorService.execute(() -> {
+            executor.execute(() -> {
                 try (AlpineQueryManager qm = new AlpineQueryManager()) {
                     final EventServiceLog eventServiceLog = qm.createEventServiceLog(clazz);
                     final Subscriber subscriber = clazz.getDeclaredConstructor().newInstance();
@@ -247,42 +257,81 @@ public abstract class BaseEventService implements IEventService {
         return subscriberClasses != null;
     }
 
-    /**
-     * {@inheritDoc}
-     * @since 1.0.0
-     */
-    public void shutdown() {
-        logger.info("Shutting down EventService");
-        executor.shutdown();
-        dynamicExecutor.shutdown();
+    public Status getStatus() {
+        return status;
+    }
+
+    @SuppressWarnings("BusyWait")
+    public void drain(final Duration timeout) throws TimeoutException {
+        if (!(executor instanceof final ThreadPoolExecutor threadPoolExecutor)) {
+            throw new IllegalStateException("Unexpected executor type: " + executor.getClass().getName());
+        }
+
+        final Instant deadline = Instant.now().plus(timeout);
+
+        setStatus(Status.PAUSED);
+        threadPoolExecutor.getQueue().clear();
+
+        while (threadPoolExecutor.getActiveCount() > 0) {
+            if (Instant.now().isAfter(deadline)) {
+                throw new TimeoutException("Timed out while waiting for processing of active tasks to complete");
+            }
+
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted while waiting for processing of active tasks to complete", e);
+            }
+        }
+
+        setStatus(Status.RUNNING);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean shutdown(final Duration timeout) {
-        shutdown();
+    public void shutdown(final Duration timeout) throws TimeoutException {
+        setStatus(Status.STOPPING);
+        executor.shutdown();
 
         final Instant waitTimeout = Instant.now().plus(timeout);
         Instant statsLastLoggedAt = null;
-        while (!executor.isTerminated() || !dynamicExecutor.isTerminated()) {
+        while (!executor.isTerminated()) {
             if (waitTimeout.isBefore(Instant.now())) {
-                logger.warn("Timeout exceeded while waiting for executors to finish: executor=%s, dynamicExecutor=%s"
-                        .formatted(getExecutorStats(executor), getExecutorStats(dynamicExecutor)));
-                return false;
+                throw new TimeoutException("Timeout exceeded while waiting for executors to finish: %s".formatted(getExecutorStats(executor)));
             }
 
             final Instant now = Instant.now();
             if (statsLastLoggedAt == null || now.minus(5, ChronoUnit.SECONDS).isAfter(statsLastLoggedAt)) {
-                logger.info("Waiting for executors to terminate: executor=%s, dynamicExecutor=%s"
-                        .formatted(getExecutorStats(executor), getExecutorStats(dynamicExecutor)));
+                logger.info("Waiting for executors to terminate: %s".formatted(getExecutorStats(executor)));
                 statsLastLoggedAt = now;
             }
         }
 
-        logger.info("Executors terminated successfully");
-        return true;
+        logger.info("Executor terminated successfully");
+        setStatus(Status.STOPPED);
+    }
+
+    private void setStatus(final Status newStatus) {
+        statusLock.lock();
+        try {
+            if (this.status == newStatus) {
+                return;
+            }
+
+            if (this.status.canTransitionTo(newStatus)) {
+                logger.info("Transitioning from status %s to %s".formatted(this.status, newStatus));
+                this.status = newStatus;
+                return;
+            }
+
+            throw new IllegalStateException(
+                    "Can not transition from status %s to %s".formatted(this.status, newStatus));
+        } finally {
+            statusLock.unlock();
+        }
     }
 
 }

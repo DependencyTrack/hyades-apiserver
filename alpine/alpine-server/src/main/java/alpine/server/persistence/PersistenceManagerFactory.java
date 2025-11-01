@@ -66,7 +66,6 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
         dnProps.put(PropertyNames.PROPERTY_RETAIN_VALUES, "true");
         dnProps.put(PropertyNames.PROPERTY_METADATA_ALLOW_XML, "false");
         dnProps.put(PropertyNames.PROPERTY_METADATA_SUPPORT_ORM, "false");
-        dnProps.put(PropertyNames.PROPERTY_METADATA_ALLOW_LOAD_AT_RUNTIME, "false");
 
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
             dnProps.put(PropertyNames.PROPERTY_ENABLE_STATISTICS, "true");

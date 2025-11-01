@@ -18,7 +18,6 @@
  */
 package alpine.event.framework;
 
-import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
 import alpine.common.util.ThreadUtil;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
@@ -43,28 +42,29 @@ import java.util.concurrent.TimeUnit;
  */
 public final class EventService extends BaseEventService {
 
-    private static final EventService INSTANCE = new EventService();
-    private static final Logger LOGGER = Logger.getLogger(EventService.class);
-    private static final ExecutorService EXECUTOR;
+    private static final EventService INSTANCE;
     private static final String EXECUTOR_NAME = "Alpine-EventService";
 
     static {
-        BasicThreadFactory factory = new BasicThreadFactory.Builder()
+        final var threadFactory = BasicThreadFactory.builder()
                 .namingPattern(EXECUTOR_NAME + "-%d")
                 .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
                 .build();
         final int threadPoolSize = ThreadUtil.determineNumberOfWorkerThreads();
-        EXECUTOR = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(), factory);
-        INSTANCE.setExecutorService(EXECUTOR);
-        INSTANCE.setLogger(LOGGER);
-        Metrics.registerExecutorService(EXECUTOR, EXECUTOR_NAME);
+        final var executor = new ThreadPoolExecutor(
+                threadPoolSize,
+                threadPoolSize,
+                0L,
+                TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(),
+                threadFactory);
+        INSTANCE = new EventService(executor);
+        Metrics.registerExecutorService(executor, EXECUTOR_NAME);
     }
 
-    /**
-     * Private constructor
-     */
-    private EventService() { }
+    private EventService(final ExecutorService executor) {
+        super(executor);
+    }
 
     public static EventService getInstance() {
         return INSTANCE;

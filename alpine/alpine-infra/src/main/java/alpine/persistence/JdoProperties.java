@@ -50,7 +50,6 @@ public final class JdoProperties {
         properties.put(PropertyNames.PROPERTY_RETAIN_VALUES, "true");
         properties.put(PropertyNames.PROPERTY_METADATA_ALLOW_XML, "false");
         properties.put(PropertyNames.PROPERTY_METADATA_SUPPORT_ORM, "false");
-        properties.put(PropertyNames.PROPERTY_METADATA_ALLOW_LOAD_AT_RUNTIME, "false");
         properties.putAll(Config.getInstance().getPassThroughProperties("datanucleus"));
         return properties;
     }

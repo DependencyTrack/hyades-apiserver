@@ -19,6 +19,8 @@
 package org.dependencytrack;
 
 import alpine.Config;
+import alpine.event.framework.EventService;
+import alpine.event.framework.SingleThreadedEventService;
 import alpine.server.auth.PasswordService;
 import alpine.server.persistence.PersistenceManagerFactory;
 import org.apache.kafka.clients.producer.MockProducer;
@@ -36,7 +38,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import javax.jdo.JDOHelper;
 import java.sql.Connection;
 import java.sql.Statement;
+import java.time.Duration;
 import java.util.Properties;
+import java.util.concurrent.TimeoutException;
 
 public abstract class PersistenceCapableTest {
 
@@ -68,6 +72,15 @@ public abstract class PersistenceCapableTest {
 
     @After
     public void after() {
+        // Ensure that any events dispatched during the test are drained
+        // to prevent them from impacting other tests.
+        try {
+            EventService.getInstance().drain(Duration.ofSeconds(5));
+            SingleThreadedEventService.getInstance().drain(Duration.ofSeconds(5));
+        } catch (TimeoutException e) {
+            throw new IllegalStateException("Failed to drain event services", e);
+        }
+
         PluginManagerTestUtil.unloadPlugins();
 
         // PersistenceManager will refuse to close when there's an active transaction
@@ -110,7 +123,6 @@ public abstract class PersistenceCapableTest {
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_POOLINGTYPE, "HikariCP");
         dnProps.put(PropertyNames.PROPERTY_METADATA_ALLOW_XML, "false");
         dnProps.put(PropertyNames.PROPERTY_METADATA_SUPPORT_ORM, "false");
-        dnProps.put(PropertyNames.PROPERTY_METADATA_ALLOW_LOAD_AT_RUNTIME, "false");
         dnProps.putAll(Config.getInstance().getPassThroughProperties("datanucleus"));
 
         final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
