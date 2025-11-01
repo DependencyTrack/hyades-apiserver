@@ -246,7 +246,7 @@ public class RepositoryResource extends AlpineResource {
                     try {
                         // The password is not passed to the front-end, so it should only be overwritten if it is not null.
                         final String updatedPassword = jsonRepository.getPassword() != null && !jsonRepository.getPassword().equals(ENCRYPTED_PLACEHOLDER)
-                                ? DataEncryption.encryptAsString(jsonRepository.getPassword())
+                                ? new DataEncryption().encryptAsString(jsonRepository.getPassword())
                                 : repository.getPassword();
 
                         repository = qm.updateRepository(jsonRepository.getUuid(), repository.getIdentifier(), url,

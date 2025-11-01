@@ -18,46 +18,67 @@
  */
 package alpine.security.crypto;
 
+import alpine.Config;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.crypto.SecretKey;
+import java.nio.file.Path;
 
-public class KeyManagerTest {
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+
+class KeyManagerTest {
+
+    @TempDir
+    private Path tempDir;
+    private KeyManager keyManager;
+
+    @BeforeEach
+    void beforeEach() {
+        final var configMock = mock(Config.class);
+        doReturn(tempDir.toFile()).when(configMock).getDataDirectorty();
+        doReturn(null).when(configMock).getProperty(eq(Config.AlpineKey.SECRET_KEY_PATH));
+
+        keyManager = new KeyManager(configMock);
+    }
 
     @Test
-    public void secretKeyTest() throws Exception {
-        SecretKey secretKey = KeyManager.getInstance().generateSecretKey();
+    void secretKeyTest() throws Exception {
+        SecretKey secretKey = keyManager.generateSecretKey();
         Assertions.assertEquals("AES", secretKey.getAlgorithm());
         Assertions.assertEquals("RAW", secretKey.getFormat());
-        KeyManager.getInstance().save(secretKey);
-        Assertions.assertTrue(KeyManager.getInstance().secretKeyExists());
-        Assertions.assertEquals(secretKey, KeyManager.getInstance().getSecretKey());
+        keyManager.save(secretKey);
+        Assertions.assertTrue(keyManager.secretKeyExists());
+        Assertions.assertEquals(secretKey, keyManager.getSecretKey());
     }
 
     @Test
-    public void saveAndLoadSecretKeyInLegacyFormatTest() throws Exception {
-        final SecretKey secretKey = KeyManager.getInstance().generateSecretKey();
-        KeyManager.getInstance().save(secretKey);
-        final SecretKey loadedKey = KeyManager.getInstance().loadSecretKey();
+    void saveAndLoadSecretKeyInLegacyFormatTest() throws Exception {
+        final SecretKey secretKey = keyManager.generateSecretKey();
+        keyManager.save(secretKey);
+        final SecretKey loadedKey = keyManager.loadSecretKey();
         Assertions.assertArrayEquals(secretKey.getEncoded(), loadedKey.getEncoded());
     }
 
     @Test
-    public void saveAndLoadSecretKeyInEncodedFormatTest() throws Exception {
-        final SecretKey secretKey = KeyManager.getInstance().generateSecretKey();
-        KeyManager.getInstance().saveEncoded(secretKey);
-        final SecretKey loadedKey = KeyManager.getInstance().loadEncodedSecretKey();
+    void saveAndLoadSecretKeyInEncodedFormatTest() throws Exception {
+        final SecretKey secretKey = keyManager.generateSecretKey();
+        keyManager.saveEncoded(secretKey);
+        final SecretKey loadedKey = keyManager.loadEncodedSecretKey();
         Assertions.assertArrayEquals(secretKey.getEncoded(), loadedKey.getEncoded());
     }
 
     @Test
-    public void secretKeyHasOldFormatTest() throws Exception {
-        final SecretKey secretKey = KeyManager.getInstance().generateSecretKey();
-        KeyManager.getInstance().save(secretKey);
-        Assertions.assertTrue(KeyManager.getInstance().secretKeyHasOldFormat());
-        KeyManager.getInstance().saveEncoded(secretKey);
-        Assertions.assertFalse(KeyManager.getInstance().secretKeyHasOldFormat());
+    void secretKeyHasOldFormatTest() throws Exception {
+        final SecretKey secretKey = keyManager.generateSecretKey();
+        keyManager.save(secretKey);
+        Assertions.assertTrue(keyManager.secretKeyHasOldFormat());
+        keyManager.saveEncoded(secretKey);
+        Assertions.assertFalse(keyManager.secretKeyHasOldFormat());
     }
 
 }
