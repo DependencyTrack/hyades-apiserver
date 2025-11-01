@@ -112,12 +112,13 @@ public abstract class ResourceTest {
 
         postgresContainer = new PostgresTestContainer();
         postgresContainer.start();
+
+        configurePmf(postgresContainer);
     }
 
     @Before
     public void before() throws Exception {
         truncateTables(postgresContainer);
-        configurePmf(postgresContainer);
 
         // Add a test user and team with API key. Optional if this is used, but its available to all tests.
         this.qm = new QueryManager();
@@ -139,12 +140,14 @@ public abstract class ResourceTest {
             qm.getPersistenceManager().currentTransaction().rollback();
         }
 
-        PersistenceManagerFactory.tearDown();
+        qm.close();
         KafkaProducerInitializer.tearDown();
     }
 
     @AfterClass
     public static void tearDownClass() {
+        PersistenceManagerFactory.tearDown();
+
         if (postgresContainer != null) {
             postgresContainer.stopWhenNotReusing();
         }

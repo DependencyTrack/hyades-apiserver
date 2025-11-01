@@ -53,12 +53,13 @@ public abstract class PersistenceCapableTest {
 
         postgresContainer = new PostgresTestContainer();
         postgresContainer.start();
+
+        configurePmf(postgresContainer);
     }
 
     @Before
     public void before() throws Exception {
         truncateTables(postgresContainer);
-        configurePmf(postgresContainer);
 
         qm = new QueryManager();
 
@@ -78,12 +79,15 @@ public abstract class PersistenceCapableTest {
             qm.getPersistenceManager().currentTransaction().rollback();
         }
 
-        PersistenceManagerFactory.tearDown();
+        qm.close();
+
         KafkaProducerInitializer.tearDown();
     }
 
     @AfterClass
     public static void tearDownClass() {
+        PersistenceManagerFactory.tearDown();
+
         if (postgresContainer != null) {
             postgresContainer.stopWhenNotReusing();
         }
