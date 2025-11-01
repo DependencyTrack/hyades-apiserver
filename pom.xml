@@ -477,7 +477,7 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.6.0</version>
                 <configuration>
-                    <configLocation>${project.parentBaseDir}/.checkstyle.xml</configLocation>
+                    <configLocation>${project.parentBaseDir}/support/checkstyle/config.xml</configLocation>
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <includeResources>false</includeResources>
                     <includeTestResources>false</includeTestResources>
