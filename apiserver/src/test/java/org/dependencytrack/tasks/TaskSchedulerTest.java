@@ -57,14 +57,14 @@ public class TaskSchedulerTest extends PersistenceCapableTest {
     public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
 
     @BeforeClass
-    public static void setUpClass() {
+    public static void setUpClass1() {
         Config.enableUnitTests();
 
         EventService.getInstance().subscribe(PortfolioMetricsUpdateEvent.class, TestSubscriber.class);
     }
 
     @AfterClass
-    public static void tearDownClass() {
+    public static void tearDownClass1() {
         EventService.getInstance().unsubscribe(TestSubscriber.class);
     }
 

@@ -56,13 +56,13 @@ import static org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask.parti
 public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
 
     @BeforeClass
-    public static void setUpClass() {
+    public static void setUpClass1() {
         EventService.getInstance().subscribe(ProjectMetricsUpdateEvent.class, ProjectMetricsUpdateTask.class);
         EventService.getInstance().subscribe(CallbackEvent.class, CallbackTask.class);
     }
 
     @AfterClass
-    public static void tearDownClass() {
+    public static void tearDownClass1() {
         EventService.getInstance().unsubscribe(ProjectMetricsUpdateTask.class);
         EventService.getInstance().unsubscribe(CallbackTask.class);
     }
