@@ -40,6 +40,8 @@
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
+
+        <unitTestForkCount>0.5C</unitTestForkCount>
     </properties>
 
     <dependencyManagement>

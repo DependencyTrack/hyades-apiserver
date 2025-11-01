@@ -137,7 +137,7 @@
         <lib.wiremock.version>3.13.1</lib.wiremock.version>
         <lib.zstd-jni.version>1.5.7-6</lib.zstd-jni.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
-        <unitTestForkCount>2</unitTestForkCount>
+        <unitTestForkCount>1</unitTestForkCount>
 
         <!-- Log level to use for unit tests -->
         <unitTestLogLevel>WARN</unitTestLogLevel>
@@ -540,7 +540,6 @@
                 </property>
             </activation>
             <properties>
-                <unitTestForkCount>1C</unitTestForkCount>
                 <unitTestLogLevel>OFF</unitTestLogLevel>
             </properties>
         </profile>
