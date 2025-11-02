@@ -19,7 +19,6 @@
 package org.dependencytrack.plugin;
 
 import alpine.common.logging.Logger;
-
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 
@@ -33,13 +32,13 @@ public class PluginInitializer implements ServletContextListener {
     private final PluginManager pluginManager = PluginManager.getInstance();
 
     @Override
-    public void contextInitialized(final ServletContextEvent event) {
+    public void contextInitialized(ServletContextEvent event) {
         LOGGER.info("Loading plugins");
         pluginManager.loadPlugins();
     }
 
     @Override
-    public void contextDestroyed(final ServletContextEvent event) {
+    public void contextDestroyed(ServletContextEvent event) {
         LOGGER.info("Unloading plugins");
         pluginManager.unloadPlugins();
     }

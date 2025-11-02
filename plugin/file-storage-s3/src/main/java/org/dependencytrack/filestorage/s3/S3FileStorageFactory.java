@@ -23,20 +23,12 @@ import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
 import okhttp3.OkHttpClient;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.config.DeploymentConfig;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Optional;
-
-import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_ACCESS_KEY;
-import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_BUCKET;
-import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_COMPRESSION_LEVEL;
-import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_COMPRESSION_LEVEL_DEFAULT;
-import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_ENDPOINT;
-import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_REGION;
-import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_SECRET_KEY;
 
 /**
  * @since 5.6.0
@@ -45,8 +37,8 @@ public final class S3FileStorageFactory implements FileStorageFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3FileStorageFactory.class);
 
-    private MinioClient s3Client;
-    private String bucketName;
+    private @Nullable MinioClient s3Client;
+    private @Nullable String bucketName;
     private int compressionLevel;
 
     @Override
@@ -66,11 +58,13 @@ public final class S3FileStorageFactory implements FileStorageFactory {
 
     @Override
     public void init(final ExtensionContext ctx) {
-        final String endpoint = ctx.configRegistry().getValue(CONFIG_ENDPOINT);
-        bucketName = ctx.configRegistry().getValue(CONFIG_BUCKET);
-        final Optional<String> optionalAccessKey = ctx.configRegistry().getOptionalValue(CONFIG_ACCESS_KEY);
-        final Optional<String> optionalSecretKey = ctx.configRegistry().getOptionalValue(CONFIG_SECRET_KEY);
-        final Optional<String> optionalRegion = ctx.configRegistry().getOptionalValue(CONFIG_REGION);
+        final DeploymentConfig deploymentConfig = ctx.configRegistry().getDeploymentConfig();
+
+        final String endpoint = deploymentConfig.getValue("endpoint", String.class);
+        bucketName = deploymentConfig.getValue("bucket", String.class);
+        final String accessKey = deploymentConfig.getOptionalValue("access.key", String.class).orElse(null);
+        final String secretKey = deploymentConfig.getOptionalValue("secret.key", String.class).orElse(null);
+        final String region = deploymentConfig.getOptionalValue("region", String.class).orElse(null);
 
         final var httpClient = new OkHttpClient.Builder()
                 .proxySelector(ctx.proxySelector())
@@ -79,18 +73,20 @@ public final class S3FileStorageFactory implements FileStorageFactory {
         final var clientBuilder = MinioClient.builder()
                 .httpClient(httpClient, /* close */ true)
                 .endpoint(endpoint);
-        if (optionalAccessKey.isPresent() && optionalSecretKey.isPresent()) {
-            clientBuilder.credentials(optionalAccessKey.get(), optionalSecretKey.get());
+        if (accessKey != null && secretKey != null) {
+            clientBuilder.credentials(accessKey, secretKey);
         }
-        optionalRegion.ifPresent(clientBuilder::region);
+        if (region != null) {
+            clientBuilder.region(region);
+        }
         s3Client = clientBuilder.build();
 
         LOGGER.debug("Verifying existence of bucket {}", bucketName);
         requireBucketExists(s3Client, bucketName);
 
-        compressionLevel = ctx.configRegistry()
-                .getOptionalValue(CONFIG_COMPRESSION_LEVEL)
-                .orElse(CONFIG_COMPRESSION_LEVEL_DEFAULT);
+        compressionLevel = deploymentConfig
+                .getOptionalValue("compression.level", int.class)
+                .orElse(5);
         if (compressionLevel < Zstd.minCompressionLevel() || compressionLevel > Zstd.maxCompressionLevel()) {
             throw new IllegalStateException(
                     "Invalid compression level: must be between %d and %d, but is %d".formatted(

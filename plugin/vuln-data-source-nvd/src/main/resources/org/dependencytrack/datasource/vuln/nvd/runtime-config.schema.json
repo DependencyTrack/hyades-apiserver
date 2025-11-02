@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "NVD Vuln Data Source Config",
+  "javaInterfaces" : ["org.dependencytrack.plugin.api.config.RuntimeConfig"],
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Enabled"
+    },
+    "feedsUrl": {
+      "type": "string",
+      "title": "Feeds URL",
+      "minLength": 1,
+      "format": "uri"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "enabled",
+    "feedsUrl"
+  ]
+}

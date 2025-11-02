@@ -31,6 +31,8 @@
     <artifactId>vuln-data-source-osv</artifactId>
     <packaging>jar</packaging>
 
+    <name>OSV Vulnerability Data Source</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
     </properties>
@@ -41,6 +43,17 @@
             <artifactId>plugin-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>plugin-testing</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>us.springett</groupId>
+            <artifactId>cvss-calculator</artifactId>
         </dependency>
 
         <dependency>
@@ -95,11 +108,6 @@
             <groupId>io.github.nscuro</groupId>
             <artifactId>versatile</artifactId>
         </dependency>
-
-        <dependency>
-            <groupId>us.springett</groupId>
-            <artifactId>cvss-calculator</artifactId>
-        </dependency>
     </dependencies>
 
     <build>
@@ -110,13 +118,25 @@
                 <version>1.2.2</version>
                 <executions>
                     <execution>
+                        <id>runtime-config-schema</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/datasource/vuln/osv</sourceDirectory>
+                            <targetPackage>org.dependencytrack.datasource.vuln.osv</targetPackage>
+                            <generateBuilders>true</generateBuilders>
+                            <useTitleAsClassname>true</useTitleAsClassname>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>osv-schema</id>
                         <phase>generate-sources</phase>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <annotationStyle>jackson2</annotationStyle>
                             <formatTypeMapping>
                                 <!-- Some advisories contain invalid URIs that can't be parsed as java.net.URI. -->
                                 <uri>java.lang.String</uri>

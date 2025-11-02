@@ -37,6 +37,8 @@
         <module>proto</module>
         <module>notification</module>
         <module>plugin/api</module>
+        <module>plugin/runtime</module>
+        <module>plugin/testing</module>
         <module>plugin/file-storage-local</module>
         <module>plugin/file-storage-memory</module>
         <module>plugin/file-storage-s3</module>
@@ -125,6 +127,7 @@
         <lib.jdbi.version>3.50.0</lib.jdbi.version>
         <lib.jersey.version>3.1.11</lib.jersey.version>
         <lib.jetty.version>12.1.5</lib.jetty.version>
+        <lib.json-schema-validator.version>1.5.9</lib.json-schema-validator.version>
         <lib.json-unit.version>5.1.0</lib.json-unit.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
@@ -138,12 +141,13 @@
         <lib.okhttp.version>5.3.2</lib.okhttp.version>
         <lib.open-vulnerability-clients.version>9.0.2</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
-        <lib.pebble.version>4.0.0</lib.pebble.version>
+        <lib.pebble.version>4.1.0</lib.pebble.version>
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
         <lib.protobuf-java.version>4.33.2</lib.protobuf-java.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
         <lib.smallrye-config.version>3.14.1</lib.smallrye-config.version>
+        <lib.swagger.version>2.2.41</lib.swagger.version>
         <lib.testcontainers.version>1.21.4</lib.testcontainers.version>
         <lib.tink.version>1.20.0</lib.tink.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
@@ -309,6 +313,12 @@
             </dependency>
 
             <dependency>
+                <groupId>com.networknt</groupId>
+                <artifactId>json-schema-validator</artifactId>
+                <version>${lib.json-schema-validator.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>net.javacrumbs.json-unit</groupId>
                 <artifactId>json-unit-assertj</artifactId>
                 <version>${lib.json-unit.version}</version>
@@ -440,6 +450,17 @@
             </dependency>
 
             <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations-jakarta</artifactId>
+                <version>${lib.swagger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-jaxrs2-jakarta</artifactId>
+                <version>${lib.swagger.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>
                 <version>${lib.testcontainers.version}</version>
@@ -545,6 +566,18 @@
                             <version>1.7.36</version>
                         </dependency>
                     </dependencies>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.jsonschema2pojo</groupId>
+                    <artifactId>jsonschema2pojo-maven-plugin</artifactId>
+                    <version>1.2.2</version>
+                    <configuration>
+                        <annotationStyle>jackson2</annotationStyle>
+                        <fileExtensions>
+                            <fileExtension>schema.json</fileExtension>
+                        </fileExtensions>
+                    </configuration>
                 </plugin>
 
                 <plugin>

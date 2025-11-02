@@ -19,109 +19,70 @@
 package org.dependencytrack.datasource.vuln.osv;
 
 import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.config.MockConfigRegistry;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
+import org.dependencytrack.plugin.testing.AbstractExtensionFactoryTest;
+import org.dependencytrack.plugin.testing.MockConfigRegistry;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.net.URI;
-import java.util.List;
-import java.util.NoSuchElementException;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_DATA_URL;
-import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ECOSYSTEMS;
-import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ENABLED;
 
-class OsvVulnDataSourceFactoryTest {
+class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull VulnDataSource, @NonNull OsvVulnDataSourceFactory> {
+
+    protected OsvVulnDataSourceFactoryTest() {
+        super(OsvVulnDataSourceFactory.class);
+    }
 
     @Test
     void extensionNameShouldBeOsv() {
-        try (final var datasourceFactory = new OsvVulnDataSourceFactory()) {
-            assertThat(datasourceFactory.extensionName()).isEqualTo("osv");
-        }
+        assertThat(factory.extensionName()).isEqualTo("osv");
     }
 
     @Test
     void extensionClassShouldBeOsvVulnDataSource() {
-        try (final var datasourceFactory = new OsvVulnDataSourceFactory()) {
-            assertThat(datasourceFactory.extensionClass()).isEqualTo(OsvVulnDataSource.class);
-        }
+        assertThat(factory.extensionClass()).isEqualTo(OsvVulnDataSource.class);
     }
 
     @Test
     void priorityShouldBeZero() {
-        try (final var datasourceFactory = new OsvVulnDataSourceFactory()) {
-            assertThat(datasourceFactory.priority()).isEqualTo(100);
-        }
-    }
-
-    @Test
-    void runtimeConfigsShouldHaveNameAndDescription() {
-        try (final var datasourceFactory = new OsvVulnDataSourceFactory()) {
-            assertThat(datasourceFactory.runtimeConfigs()).allSatisfy(config -> {
-                assertThat(config.name()).isNotBlank();
-                assertThat(config.description()).isNotBlank();
-            });
-        }
+        assertThat(factory.priority()).isEqualTo(100);
     }
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void isDataSourceEnabledShouldReturnTrueWhenEnabledAndFalseOtherwise(final boolean isEnabled) {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_ENABLED, isEnabled);
+        final var config = (OSVVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(isEnabled);
 
-        try (final var dataSourceFactory = new OsvVulnDataSourceFactory()) {
-            dataSourceFactory.init(new ExtensionContext(configRegistry));
-            assertThat(dataSourceFactory.isDataSourceEnabled()).isEqualTo(isEnabled);
-        }
+        factory.init(new ExtensionContext(new MockConfigRegistry(factory.runtimeConfigSpec(), config)));
+        assertThat(factory.isDataSourceEnabled()).isEqualTo(isEnabled);
     }
 
     @Test
-    void createShouldReturnNullWhenDisabled() throws Exception {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_ENABLED, false);
-        configRegistry.setValue(CONFIG_DATA_URL, null);
-        configRegistry.setValue(CONFIG_ECOSYSTEMS, List.of("Go", "Maven", "npm", "NuGet", "PyPI"));
+    void createShouldReturnNullWhenDisabled() {
+        final var config = (OSVVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(false);
 
-        try (final var dataSourceFactory = new OsvVulnDataSourceFactory()) {
-            dataSourceFactory.init(new ExtensionContext(configRegistry));
-            assertThat(dataSourceFactory.create()).isNull();
-        }
+        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
+
+        factory.init(new ExtensionContext(configRegistry));
+        assertThat(factory.create()).isNull();
     }
 
     @Test
-    void createShouldReturnDataSource() throws Exception {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_ENABLED, true);
-        configRegistry.setValue(CONFIG_DATA_URL, URI.create("http://localhost:6666").toURL());
-        configRegistry.setValue(CONFIG_ECOSYSTEMS, List.of("Go", "Maven", "npm", "NuGet", "PyPI"));
+    void createShouldReturnDataSource() {
+        final var config = (OSVVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(true);
 
-        try (final var dataSourceFactory = new OsvVulnDataSourceFactory()) {
-            dataSourceFactory.init(new ExtensionContext(configRegistry));
+        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
 
-            final VulnDataSource dataSource = dataSourceFactory.create();
-            assertThat(dataSource).isNotNull();
-            dataSource.close();
-        }
-    }
+        factory.init(new ExtensionContext(configRegistry));
 
-    @Test
-    void createShouldThrowWhenApiUrlIsNull() {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_ENABLED, true);
-        configRegistry.setValue(CONFIG_DATA_URL, null);
-        configRegistry.setValue(CONFIG_ECOSYSTEMS, List.of("Go", "Maven", "npm", "NuGet", "PyPI"));
-
-        try (final var dataSourceFactory = new OsvVulnDataSourceFactory()) {
-            dataSourceFactory.init(new ExtensionContext(configRegistry));
-
-            assertThatExceptionOfType(NoSuchElementException.class)
-                    .isThrownBy(dataSourceFactory::create);
-        }
+        final VulnDataSource dataSource = factory.create();
+        assertThat(dataSource).isNotNull();
+        dataSource.close();
     }
 
 }

@@ -25,7 +25,7 @@ import com.google.protobuf.util.JsonFormat;
 import net.javacrumbs.jsonunit.core.Option;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.dependencytrack.datasource.vuln.osv.schema.OsvSchema;
+import org.dependencytrack.datasource.vuln.osv.schema.Osv;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -46,7 +46,7 @@ public class ModelConverterTest {
     @Test
     void testParseOsvToBomWithAliasEnabled() throws IOException {
         //given
-        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-GHSA-77rv-6vfw-x4gc.json"), OsvSchema.class);
+        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-GHSA-77rv-6vfw-x4gc.json"), Osv.class);
 
         //when
         Bom bom = ModelConverter.convert(osvSchemaInput, true, "maven");
@@ -112,7 +112,7 @@ public class ModelConverterTest {
     @Test
     void testParseOsvToBomWithAliasDisabled() throws IOException {
         //given
-        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-GHSA-77rv-6vfw-x4gc.json"), OsvSchema.class);
+        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-GHSA-77rv-6vfw-x4gc.json"), Osv.class);
 
         //when
         Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
@@ -130,7 +130,7 @@ public class ModelConverterTest {
     @Test
     void testVulnerabilityRanges() throws IOException {
         //given
-        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-vulnerability-with-ranges.json"), OsvSchema.class);
+        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-vulnerability-with-ranges.json"), Osv.class);
 
         //when
         Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
@@ -216,7 +216,7 @@ public class ModelConverterTest {
     @Test
     void testVulnerabilityRangeWithNoRange() throws IOException {
         //given
-        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-vulnerability-no-range.json"), OsvSchema.class);
+        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-vulnerability-no-range.json"), Osv.class);
 
         //when
         Bom bom = ModelConverter.convert(osvSchemaInput, true, "maven");
@@ -274,7 +274,7 @@ public class ModelConverterTest {
     void testCommitHashRanges() throws IOException {
 
         //given
-        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-git-commit-hash-ranges.json"), OsvSchema.class);
+        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-git-commit-hash-ranges.json"), Osv.class);
 
         //when
         Bom bom = ModelConverter.convert(osvSchemaInput, true, "maven");
@@ -329,7 +329,7 @@ public class ModelConverterTest {
     void testParseWithTwoUpperBoundRangeConstraints() throws Exception {
 
         //given
-        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-git-upper-bound-range.json"), OsvSchema.class);
+        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-git-upper-bound-range.json"), Osv.class);
 
         //when
         Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
@@ -381,7 +381,7 @@ public class ModelConverterTest {
     @Test
     void testParseWithNoUpperBoundRangeConstraintsAndCallstack() throws Exception {
         //given
-        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-git-no-upper-bound-range.json"), OsvSchema.class);
+        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-git-no-upper-bound-range.json"), Osv.class);
 
         //when
         Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
@@ -433,7 +433,7 @@ public class ModelConverterTest {
     @Test
     void testParseWithNoUpperBoundRangeConstraintButExactVersion() throws Exception {
         //given
-        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-vulnerability-exact-version.json"), OsvSchema.class);
+        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-vulnerability-exact-version.json"), Osv.class);
 
         //when
         Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
@@ -485,7 +485,7 @@ public class ModelConverterTest {
     @Test
     void testParseWithConflictingUpperBoundRangeConstraints() throws Exception {
         //given
-        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-git-conflict-upper-bound-range.json"), OsvSchema.class);
+        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-git-conflict-upper-bound-range.json"), Osv.class);
 
         //when
         Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
@@ -537,7 +537,7 @@ public class ModelConverterTest {
     @Test
     void testParseWithInvalidCvssVectors() throws Exception {
         //given
-        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-vulnerability-invalid-cvss.json"), OsvSchema.class);
+        var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-vulnerability-invalid-cvss.json"), Osv.class);
 
         //when
         Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");

@@ -31,6 +31,8 @@
     <artifactId>vuln-data-source-github</artifactId>
     <packaging>jar</packaging>
 
+    <name>GitHub Vulnerability Data Source</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
     </properties>
@@ -42,6 +44,12 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>plugin-testing</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>us.springett</groupId>
@@ -51,6 +59,11 @@
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
         </dependency>
 
         <dependency>
@@ -97,5 +110,27 @@
             <artifactId>versatile</artifactId>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jsonschema2pojo</groupId>
+                <artifactId>jsonschema2pojo-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/datasource/vuln/github</sourceDirectory>
+                    <targetPackage>org.dependencytrack.datasource.vuln.github</targetPackage>
+                    <generateBuilders>true</generateBuilders>
+                    <useTitleAsClassname>true</useTitleAsClassname>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

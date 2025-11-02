@@ -23,7 +23,7 @@ import com.google.protobuf.util.Timestamps;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Property;
 import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.dependencytrack.datasource.vuln.osv.schema.OsvSchema;
+import org.dependencytrack.datasource.vuln.osv.schema.Osv;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +35,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -43,6 +42,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -66,7 +66,7 @@ final class OsvVulnDataSource implements VulnDataSource {
 
     private final WatermarkManager watermarkManager;
     private final ObjectMapper objectMapper;
-    private final URL dataUrl;
+    private final String dataUrl;
     private final List<String> ecosystems;
     private final Set<String> successfullyCompletedEcosystems;
     private final HttpClient httpClient;
@@ -82,14 +82,14 @@ final class OsvVulnDataSource implements VulnDataSource {
     OsvVulnDataSource(
             final WatermarkManager watermarkManager,
             final ObjectMapper objectMapper,
-            final URL dataUrl,
-            final List<String> ecosystems,
+            final String dataUrl,
+            final Collection<String> ecosystems,
             final HttpClient httpClient,
             final boolean isAliasSyncEnabled) {
         this.watermarkManager = watermarkManager;
         this.objectMapper = objectMapper;
         this.dataUrl = dataUrl;
-        this.ecosystems = ecosystems;
+        this.ecosystems = List.copyOf(ecosystems);
         this.isAliasSyncEnabled = isAliasSyncEnabled;
         this.successfullyCompletedEcosystems = new HashSet<>();
         this.httpClient = httpClient;
@@ -186,14 +186,14 @@ final class OsvVulnDataSource implements VulnDataSource {
         }
 
         final Path filePath = currentEcosystemFileIterator.next();
-        final OsvSchema schemaInput;
+        final Osv osv;
         try {
-            schemaInput = objectMapper.readValue(filePath.toFile(), OsvSchema.class);
+            osv = objectMapper.readValue(filePath.toFile(), Osv.class);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to read OSV advisory", e);
         }
 
-        return ModelConverter.convert(schemaInput, isAliasSyncEnabled, currentEcosystem);
+        return ModelConverter.convert(osv, isAliasSyncEnabled, currentEcosystem);
     }
 
     private boolean openNextEcosystem() {

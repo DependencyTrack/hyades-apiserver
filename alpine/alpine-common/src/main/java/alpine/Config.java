@@ -99,7 +99,7 @@ public class Config {
         // @formatter:off
         WORKER_THREADS                         ("alpine.worker.threads",             0),
         WORKER_THREAD_MULTIPLIER               ("alpine.worker.thread.multiplier",   4),
-        DATA_DIRECTORY                         ("alpine.data.directory",             "${user.home}/.alpine"),
+        DATA_DIRECTORY                         ("alpine.data.directory",             "~/.alpine"),
         SECRET_KEY_PATH                        ("alpine.secret.key.path",            null),
         DATABASE_URL                           ("alpine.database.url",               "jdbc:h2:mem:alpine"),
         DATABASE_USERNAME                      ("alpine.database.username",          "sa"),
@@ -326,7 +326,7 @@ public class Config {
      * @since 1.0.0
      */
     public File getDataDirectory() {
-        final String prop = getProperty(AlpineKey.DATA_DIRECTORY);
+        final String prop = PathUtil.resolve(getProperty(AlpineKey.DATA_DIRECTORY));
         return new File(prop).getAbsoluteFile();
     }
 

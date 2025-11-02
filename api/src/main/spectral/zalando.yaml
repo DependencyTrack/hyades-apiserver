@@ -56,7 +56,7 @@ rules:
     then:
       function: pattern
       functionOptions:
-        match: ^[a-z_][a-z_0-9]*$
+        match: ^\$*[a-z_][a-z_0-9]*$
 
   must-use-lowercase-with-hypens-for-path-segements:
     message: Path segments have to be lowercase separate words with hyphens

@@ -19,123 +19,67 @@
 package org.dependencytrack.datasource.vuln.github;
 
 import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.config.MockConfigRegistry;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
+import org.dependencytrack.plugin.testing.AbstractExtensionFactoryTest;
+import org.dependencytrack.plugin.testing.MockConfigRegistry;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.net.URI;
-import java.util.NoSuchElementException;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_API_TOKEN;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_API_URL;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_ENABLED;
 
-class GitHubVulnDataSourceFactoryTest {
+class GitHubVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull VulnDataSource, @NonNull GitHubVulnDataSourceFactory> {
+
+    protected GitHubVulnDataSourceFactoryTest() {
+        super(GitHubVulnDataSourceFactory.class);
+    }
 
     @Test
     void extensionNameShouldBeGitHub() {
-        try (final var datasourceFactory = new GitHubVulnDataSourceFactory()) {
-            assertThat(datasourceFactory.extensionName()).isEqualTo("github");
-        }
+        assertThat(factory.extensionName()).isEqualTo("github");
     }
 
     @Test
     void extensionClassShouldBeGitHubVulnDataSource() {
-        try (final var datasourceFactory = new GitHubVulnDataSourceFactory()) {
-            assertThat(datasourceFactory.extensionClass()).isEqualTo(GitHubVulnDataSource.class);
-        }
-    }
-
-    @Test
-    void priorityShouldBeZero() {
-        try (final var datasourceFactory = new GitHubVulnDataSourceFactory()) {
-            assertThat(datasourceFactory.priority()).isZero();
-        }
-    }
-
-    @Test
-    void runtimeConfigsShouldHaveNameAndDescription() {
-        try (final var datasourceFactory = new GitHubVulnDataSourceFactory()) {
-            assertThat(datasourceFactory.runtimeConfigs()).allSatisfy(config -> {
-                assertThat(config.name()).isNotBlank();
-                assertThat(config.description()).isNotBlank();
-            });
-        }
+        assertThat(factory.extensionClass()).isEqualTo(GitHubVulnDataSource.class);
     }
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void isDataSourceEnabledShouldReturnTrueWhenEnabledAndFalseOtherwise(final boolean isEnabled) {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_ENABLED, isEnabled);
+        final var config = (GitHubVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(isEnabled);
 
-        try (final var dataSourceFactory = new GitHubVulnDataSourceFactory()) {
-            dataSourceFactory.init(new ExtensionContext(configRegistry));
-            assertThat(dataSourceFactory.isDataSourceEnabled()).isEqualTo(isEnabled);
-        }
+        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
+
+        factory.init(new ExtensionContext(configRegistry));
+        assertThat(factory.isDataSourceEnabled()).isEqualTo(isEnabled);
     }
 
     @Test
-    void createShouldReturnNullWhenDisabled() throws Exception {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_ENABLED, false);
-        configRegistry.setValue(CONFIG_API_URL, URI.create("http://localhost:6666").toURL());
-        configRegistry.setValue(CONFIG_API_TOKEN, "apiToken");
+    void createShouldReturnNullWhenDisabled() {
+        final var config = (GitHubVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(false);
 
-        try (final var dataSourceFactory = new GitHubVulnDataSourceFactory()) {
-            dataSourceFactory.init(new ExtensionContext(configRegistry));
-            assertThat(dataSourceFactory.create()).isNull();
-        }
+        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
+
+        factory.init(new ExtensionContext(configRegistry));
+        assertThat(factory.create()).isNull();
     }
 
     @Test
-    void createShouldReturnDataSource() throws Exception {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_ENABLED, true);
-        configRegistry.setValue(CONFIG_API_URL, URI.create("http://localhost:6666").toURL());
-        configRegistry.setValue(CONFIG_API_TOKEN, "apiToken");
+    void createShouldReturnDataSource() {
+        final var config = (GitHubVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(true);
 
-        try (final var dataSourceFactory = new GitHubVulnDataSourceFactory()) {
-            dataSourceFactory.init(new ExtensionContext(configRegistry));
+        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
 
-            final VulnDataSource dataSource = dataSourceFactory.create();
-            assertThat(dataSource).isNotNull();
-            dataSource.close();
-        }
-    }
+        factory.init(new ExtensionContext(configRegistry));
 
-    @Test
-    void createShouldThrowWhenApiUrlIsNull() {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_ENABLED, true);
-        configRegistry.setValue(CONFIG_API_URL, null);
-        configRegistry.setValue(CONFIG_API_TOKEN, "apiToken");
-
-        try (final var dataSourceFactory = new GitHubVulnDataSourceFactory()) {
-            dataSourceFactory.init(new ExtensionContext(configRegistry));
-
-            assertThatExceptionOfType(NoSuchElementException.class)
-                    .isThrownBy(dataSourceFactory::create);
-        }
-    }
-
-    @Test
-    void createShouldThrowWhenApiTokenIsNull() throws Exception {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_ENABLED, true);
-        configRegistry.setValue(CONFIG_API_URL, URI.create("http://localhost:6666").toURL());
-        configRegistry.setValue(CONFIG_API_TOKEN, null);
-
-        try (final var dataSourceFactory = new GitHubVulnDataSourceFactory()) {
-            dataSourceFactory.init(new ExtensionContext(configRegistry));
-
-            assertThatExceptionOfType(NoSuchElementException.class)
-                    .isThrownBy(dataSourceFactory::create);
-        }
+        final VulnDataSource dataSource = factory.create();
+        assertThat(dataSource).isNotNull();
+        dataSource.close();
     }
 
 }
