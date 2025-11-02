@@ -27,6 +27,7 @@ import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSourceFactory;
+import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +43,6 @@ import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceCon
 import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_API_TOKEN;
 import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_API_URL;
 import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_ENABLED;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_WATERMARK;
 
 /**
  * @since 5.7.0
@@ -52,6 +52,7 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(GitHubVulnDataSourceFactory.class);
 
     private ConfigRegistry configRegistry;
+    private ExtensionKVStore kvStore;
     private HttpAsyncClientSupplier httpClientSupplier;
 
     @Override
@@ -75,13 +76,13 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
                 CONFIG_ENABLED,
                 CONFIG_ALIAS_SYNC_ENABLED,
                 CONFIG_API_URL,
-                CONFIG_API_TOKEN,
-                CONFIG_WATERMARK);
+                CONFIG_API_TOKEN);
     }
 
     @Override
     public void init(final ExtensionContext ctx) {
         this.configRegistry = ctx.configRegistry();
+        this.kvStore = ctx.kvStore();
         this.httpClientSupplier = () -> HttpAsyncClients.custom()
                 .setRetryStrategy(new GitHubHttpRequestRetryStrategy())
                 .setProxySelector(ctx.proxySelector())
@@ -102,7 +103,7 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
 
         final URL apiUrl = this.configRegistry.getValue(CONFIG_API_URL);
         final String apiToken = this.configRegistry.getValue(CONFIG_API_TOKEN);
-        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), this.configRegistry);
+        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), this.kvStore);
         final boolean isAliasSyncEnabled = this.configRegistry.getOptionalValue(CONFIG_ALIAS_SYNC_ENABLED).orElse(false);
 
         final GitHubSecurityAdvisoryClientBuilder clientBuilder = aGitHubSecurityAdvisoryClient()

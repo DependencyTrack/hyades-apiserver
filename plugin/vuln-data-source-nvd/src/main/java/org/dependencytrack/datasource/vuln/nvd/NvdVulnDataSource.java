@@ -162,7 +162,6 @@ final class NvdVulnDataSource implements VulnDataSource {
             // have been successfully processed.
             watermarkManager.maybeCommit();
         }
-        httpClient.close();
         closeCurrentFeed();
     }
 

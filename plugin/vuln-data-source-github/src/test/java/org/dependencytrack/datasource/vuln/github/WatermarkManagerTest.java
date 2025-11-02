@@ -18,7 +18,8 @@
  */
 package org.dependencytrack.datasource.vuln.github;
 
-import org.dependencytrack.plugin.api.config.MockConfigRegistry;
+import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -27,7 +28,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_WATERMARK;
 
 class WatermarkManagerTest {
 
@@ -35,44 +35,29 @@ class WatermarkManagerTest {
     void createShouldInitializeWatermarkWhenAvailable() {
         final var watermark = Instant.ofEpochSecond(666);
 
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_WATERMARK, watermark);
+        final var keyValueStore = new InMemoryExtensionKVStore();
+        putWatermark(keyValueStore, watermark);
 
-        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), configRegistry);
+        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), keyValueStore);
         assertThat(watermarkManager).isNotNull();
         assertThat(watermarkManager.getWatermark()).isEqualTo(watermark);
     }
 
     @Test
     void createShouldNotInitializeWatermarkWhenNotAvailable() {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_WATERMARK, null);
+        final var keyValueStore = new InMemoryExtensionKVStore();
 
-        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), configRegistry);
+        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), keyValueStore);
         assertThat(watermarkManager).isNotNull();
         assertThat(watermarkManager.getWatermark()).isNull();
     }
 
     @Test
-    void shouldAdvanceWatermarkWhenInitialWatermarkIsNull() {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_WATERMARK, null);
-
-        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), configRegistry);
-
-        watermarkManager.maybeAdvance(Instant.ofEpochSecond(666));
-        assertThat(watermarkManager.getWatermark()).isNull();
-
-        watermarkManager.maybeCommit(true);
-        assertThat(watermarkManager.getWatermark()).isEqualTo(Instant.ofEpochSecond(666));
-    }
-
-    @Test
     void shouldAdvanceWatermarkWhenInitialWatermarkIsEarlier() {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_WATERMARK, Instant.ofEpochSecond(666));
+        final var keyValueStore = new InMemoryExtensionKVStore();
+        putWatermark(keyValueStore, Instant.ofEpochSecond(666));
 
-        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), configRegistry);
+        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), keyValueStore);
 
         watermarkManager.maybeAdvance(Instant.ofEpochSecond(667));
         assertThat(watermarkManager.getWatermark()).isEqualTo(Instant.ofEpochSecond(666));
@@ -83,11 +68,11 @@ class WatermarkManagerTest {
 
     @Test
     void maybeCommitShouldNotCommitWhenLastCommitWasLessThanThreeSecondsBack() {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_WATERMARK, Instant.ofEpochSecond(111));
+        final var keyValueStore = new InMemoryExtensionKVStore();
+        putWatermark(keyValueStore, Instant.ofEpochSecond(111));
 
         final var clock = new MutableClock(Instant.ofEpochSecond(666));
-        final var watermarkManager = WatermarkManager.create(clock, configRegistry);
+        final var watermarkManager = WatermarkManager.create(clock, keyValueStore);
 
         watermarkManager.maybeAdvance(Instant.ofEpochSecond(222));
         assertThat(watermarkManager.getWatermark()).isEqualTo(Instant.ofEpochSecond(111));
@@ -98,6 +83,10 @@ class WatermarkManagerTest {
         clock.advance(Duration.ofSeconds(3));
         watermarkManager.maybeCommit(false);
         assertThat(watermarkManager.getWatermark()).isEqualTo(Instant.ofEpochSecond(222));
+    }
+
+    private void putWatermark(final ExtensionKVStore keyValueStore, final Instant instant) {
+        keyValueStore.put("watermark", String.valueOf(instant.toEpochMilli()));
     }
 
     private static class MutableClock extends Clock {
