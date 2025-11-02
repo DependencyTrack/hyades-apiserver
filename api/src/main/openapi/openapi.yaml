@@ -81,10 +81,10 @@ info:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
 security:
-  - apiKeyAuth: []
-  - bearerAuth: []
+- apiKeyAuth: [ ]
+- bearerAuth: [ ]
 servers:
-  - url: /api/v2
+- url: /api/v2
 tags:
 - name: Advisories
   description: Endpoints related to advisories
@@ -126,8 +126,10 @@ paths:
     $ref: "./paths/extension-points.yaml"
   /extension-points/{extensionPointName}/extensions:
     $ref: "./paths/extension-points__name__extensions.yaml"
-  /extension-points/{extensionPointName}/extensions/{extensionName}/configs:
-    $ref: "./paths/extension-points__name__extensions__name__configs.yaml"
+  /extension-points/{extensionPointName}/extensions/{extensionName}/config:
+    $ref: "./paths/extension-points__name__extensions__name__config.yaml"
+  /extension-points/{extensionPointName}/extensions/{extensionName}/config-schema:
+    $ref: "./paths/extension-points__name__extensions__name__config-schema.yaml"
   /metrics/portfolio/current:
     $ref: "./paths/metrics_portfolio_current.yaml"
   /metrics/vulnerabilities:

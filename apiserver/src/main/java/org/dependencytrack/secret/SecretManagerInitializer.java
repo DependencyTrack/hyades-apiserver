@@ -37,7 +37,7 @@ public final class SecretManagerInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SecretManagerInitializer.class);
 
-    static SecretManager INSTANCE;
+    public static SecretManager INSTANCE;
 
     private final Config config;
 

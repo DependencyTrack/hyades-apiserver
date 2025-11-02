@@ -19,15 +19,14 @@
 package org.dependencytrack.filestorage.memory;
 
 import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.config.MockConfigRegistry;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
+import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.file.NoSuchFileException;
-import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -52,7 +51,7 @@ class MemoryFileStorageTest {
     @SuppressWarnings("resource")
     void shouldStoreGetAndDeleteFile() throws Exception {
         final var storageFactory = new MemoryFileStorageFactory();
-        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Collections.emptyMap())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry()));
 
         final FileStorage storage = storageFactory.create();
 
@@ -75,7 +74,7 @@ class MemoryFileStorageTest {
     @SuppressWarnings("resource")
     void storeShouldOverwriteExistingFile() throws Exception {
         final var storageFactory = new MemoryFileStorageFactory();
-        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Collections.emptyMap())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry()));
 
         final FileStorage storage = storageFactory.create();
 
@@ -90,7 +89,7 @@ class MemoryFileStorageTest {
     @SuppressWarnings("resource")
     void storeShouldThrowWhenFileHasInvalidName() {
         final var storageFactory = new MemoryFileStorageFactory();
-        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Collections.emptyMap())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry()));
 
         final FileStorage storage = storageFactory.create();
 
@@ -103,7 +102,7 @@ class MemoryFileStorageTest {
     @SuppressWarnings("resource")
     void getShouldThrowWhenFileDoesNotExist() {
         final var storageFactory = new MemoryFileStorageFactory();
-        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Collections.emptyMap())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry()));
 
         final FileStorage storage = storageFactory.create();
 
@@ -119,7 +118,7 @@ class MemoryFileStorageTest {
     @SuppressWarnings("resource")
     void getShouldThrowWhenFileLocationHasInvalidScheme() {
         final var storageFactory = new MemoryFileStorageFactory();
-        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Collections.emptyMap())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry()));
 
         final FileStorage storage = storageFactory.create();
 
@@ -135,7 +134,7 @@ class MemoryFileStorageTest {
     @SuppressWarnings("resource")
     void deleteShouldReturnFalseWhenFileDoesNotExist() throws Exception {
         final var storageFactory = new MemoryFileStorageFactory();
-        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Collections.emptyMap())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry()));
 
         final FileStorage storage = storageFactory.create();
 
@@ -150,7 +149,7 @@ class MemoryFileStorageTest {
     @SuppressWarnings("resource")
     void deleteShouldThrowWhenFileLocationHasInvalidScheme() {
         final var storageFactory = new MemoryFileStorageFactory();
-        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Collections.emptyMap())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry()));
 
         final FileStorage storage = storageFactory.create();
 

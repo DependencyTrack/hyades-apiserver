@@ -21,9 +21,9 @@ package org.dependencytrack.datasource.vuln.nvd;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.config.MockConfigRegistry;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSourceFactory;
+import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,8 +32,6 @@ import java.net.URI;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.datasource.vuln.nvd.NvdVulnDataSourceConfigs.CONFIG_ENABLED;
-import static org.dependencytrack.datasource.vuln.nvd.NvdVulnDataSourceConfigs.CONFIG_FEEDS_URL;
 
 class NvdVulnDataSourceTest {
 
@@ -41,12 +39,15 @@ class NvdVulnDataSourceTest {
     private VulnDataSource dataSource;
 
     @BeforeEach
-    void beforeEach() throws Exception {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_ENABLED, true);
-        configRegistry.setValue(CONFIG_FEEDS_URL, URI.create("https://nvd.nist.gov/feeds").toURL());
+    void beforeEach() {
+        final var config = new NVDVulnDataSourceConfig();
+        config.setEnabled(true);
+        config.setCveFeedsUrl(URI.create("https://nvd.nist.gov/feeds"));
 
         dataSourceFactory = new NvdVulnDataSourceFactory();
+
+        final var configRegistry = new MockConfigRegistry(dataSourceFactory.runtimeConfigSpec(), config);
+
         dataSourceFactory.init(new ExtensionContext(configRegistry));
         dataSource = dataSourceFactory.create();
     }

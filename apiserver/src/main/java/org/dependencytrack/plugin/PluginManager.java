@@ -21,15 +21,21 @@ package org.dependencytrack.plugin;
 import alpine.common.logging.Logger;
 import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.common.ProxySelector;
+import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionPointSpec;
 import org.dependencytrack.plugin.api.Plugin;
-import org.dependencytrack.plugin.api.config.ConfigDefinition;
-import org.dependencytrack.plugin.api.config.ConfigTypes;
-import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.MutableConfigRegistry;
+import org.dependencytrack.plugin.api.config.RuntimeConfig;
+import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 
 import java.lang.reflect.Modifier;
@@ -42,7 +48,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.SequencedCollection;
 import java.util.SequencedMap;
 import java.util.ServiceLoader;
@@ -67,29 +72,33 @@ public class PluginManager {
     private static final Logger LOGGER = Logger.getLogger(PluginManager.class);
     private static final Pattern EXTENSION_POINT_NAME_PATTERN = Pattern.compile("^[a-z0-9.]+$");
     private static final Pattern EXTENSION_NAME_PATTERN = EXTENSION_POINT_NAME_PATTERN;
-    private static final ConfigDefinition<Boolean> CONFIG_EXTENSION_ENABLED =
-            new DeploymentConfigDefinition<>("enabled", ConfigTypes.BOOLEAN, /* isRequired */ false);
-    private static final ConfigDefinition<String> CONFIG_DEFAULT_EXTENSION =
-            new DeploymentConfigDefinition<>("default.extension", ConfigTypes.STRING, /* isRequired */ false);
     private static final PluginManager INSTANCE = new PluginManager();
 
+    private final Config config;
+    private final RuntimeConfigMapper runtimeConfigMapper;
+    private final ConfigTemplateRenderer configTemplateRenderer;
     private final SequencedMap<Class<? extends Plugin>, Plugin> loadedPluginByClass;
     private final Map<ExtensionIdentity, Plugin> pluginByExtensionIdentity;
     private final Map<Plugin, List<ExtensionFactory<?>>> factoriesByPlugin;
     private final Map<Class<? extends ExtensionPoint>, ExtensionPointSpec<?>> specByExtensionPointClass;
     private final Map<Class<? extends ExtensionPoint>, Set<String>> extensionNamesByExtensionPointClass;
     private final Map<ExtensionIdentity, ExtensionFactory<?>> factoryByExtensionIdentity;
+    private final Map<ExtensionIdentity, ConfigRegistry> configRegistryByExtensionIdentity;
     private final Map<Class<? extends ExtensionPoint>, ExtensionFactory<?>> defaultFactoryByExtensionPointClass;
     private final Comparator<ExtensionFactory<?>> factoryComparator;
     private final ReentrantLock lock;
 
     private PluginManager() {
+        this.config = ConfigProvider.getConfig();
+        this.runtimeConfigMapper = RuntimeConfigMapper.getInstance();
+        this.configTemplateRenderer = ConfigTemplateRenderer.getInstance();
         this.loadedPluginByClass = new LinkedHashMap<>();
         this.pluginByExtensionIdentity = new HashMap<>();
         this.factoriesByPlugin = new HashMap<>();
         this.specByExtensionPointClass = new HashMap<>();
         this.extensionNamesByExtensionPointClass = new HashMap<>();
         this.factoryByExtensionIdentity = new HashMap<>();
+        this.configRegistryByExtensionIdentity = new HashMap<>();
         this.defaultFactoryByExtensionPointClass = new HashMap<>();
         this.factoryComparator = Comparator
                 .<ExtensionFactory<?>>comparingInt(ExtensionFactory::priority)
@@ -110,7 +119,7 @@ public class PluginManager {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends ExtensionPoint> T getExtension(final Class<T> extensionPointClass) {
+    public <T extends ExtensionPoint> @Nullable T getExtension(Class<T> extensionPointClass) {
         final ExtensionFactory<?> factory = defaultFactoryByExtensionPointClass.get(extensionPointClass);
         if (factory == null) {
             throw new NoSuchExtensionException(
@@ -121,7 +130,7 @@ public class PluginManager {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends ExtensionPoint> T getExtension(final Class<T> extensionPointClass, final String name) {
+    public <T extends ExtensionPoint> @Nullable T getExtension(Class<T> extensionPointClass, String name) {
         final var extensionIdentity = new ExtensionIdentity(extensionPointClass, name);
         final ExtensionFactory<?> factory = factoryByExtensionIdentity.get(extensionIdentity);
         if (factory == null) {
@@ -134,7 +143,7 @@ public class PluginManager {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends ExtensionPoint, U extends ExtensionFactory<T>> U getFactory(final Class<T> extensionPointClass) {
+    public <T extends ExtensionPoint, U extends ExtensionFactory<T>> U getFactory(Class<T> extensionPointClass) {
         final ExtensionFactory<?> factory = defaultFactoryByExtensionPointClass.get(extensionPointClass);
         if (factory == null) {
             throw new NoSuchExtensionException(
@@ -145,7 +154,7 @@ public class PluginManager {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends ExtensionPoint, U extends ExtensionFactory<T>> U getFactory(final Class<T> extensionPointClass, final String name) {
+    public <T extends ExtensionPoint, U extends ExtensionFactory<T>> U getFactory(Class<T> extensionPointClass, String name) {
         final var extensionIdentity = new ExtensionIdentity(extensionPointClass, name);
         final ExtensionFactory<?> factory = factoryByExtensionIdentity.get(extensionIdentity);
         if (factory == null) {
@@ -158,7 +167,7 @@ public class PluginManager {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends ExtensionPoint, U extends ExtensionFactory<T>> SequencedCollection<U> getFactories(final Class<T> extensionPointClass) {
+    public <T extends ExtensionPoint, U extends ExtensionFactory<T>> SequencedCollection<U> getFactories(Class<T> extensionPointClass) {
         final Set<String> extensionNames = extensionNamesByExtensionPointClass.get(extensionPointClass);
         if (extensionNames == null) {
             return Collections.emptyList();
@@ -176,6 +185,33 @@ public class PluginManager {
         return factories;
     }
 
+    public <T extends ExtensionPoint> ConfigRegistry getConfigRegistry(
+            Class<T> extensionPointClass,
+            String extensionName) {
+        final var extensionIdentity = new ExtensionIdentity(extensionPointClass, extensionName);
+
+        final ConfigRegistry configRegistry =
+                configRegistryByExtensionIdentity.get(extensionIdentity);
+        if (configRegistry == null) {
+            throw new NoSuchExtensionException(
+                    "No extension named %s exists for the extension point %s".formatted(
+                            extensionName, extensionPointClass.getName()));
+        }
+
+        return configRegistry;
+    }
+
+    public <T extends ExtensionPoint> MutableConfigRegistry getMutableConfigRegistry(
+            Class<T> extensionPointClass,
+            String extensionName) {
+        final ConfigRegistry configRegistry = getConfigRegistry(extensionPointClass, extensionName);
+        if (configRegistry instanceof final MutableConfigRegistry mutableConfigRegistry) {
+            return mutableConfigRegistry;
+        }
+
+        throw new IllegalStateException("Config registry is immutable");
+    }
+
     /**
      * Get an {@link ExtensionKVStore} for a given extension.
      *
@@ -187,8 +223,8 @@ public class PluginManager {
      * @since 5.7.0
      */
     public <T extends ExtensionPoint> ExtensionKVStore getKVStore(
-            final Class<T> extensionPointClass,
-            final String extensionName) {
+            Class<T> extensionPointClass,
+            String extensionName) {
         final var extensionIdentity = new ExtensionIdentity(extensionPointClass, extensionName);
         if (!factoryByExtensionIdentity.containsKey(extensionIdentity)) {
             throw new NoSuchExtensionException(
@@ -249,7 +285,7 @@ public class PluginManager {
         assertRequiredExtensionPoints();
     }
 
-    private void loadExtensionsForPlugin(final Plugin plugin) {
+    private void loadExtensionsForPlugin(Plugin plugin) {
         final Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories = plugin.extensionFactories();
         if (extensionFactories == null || extensionFactories.isEmpty()) {
             LOGGER.debug("Plugin does not define any extensions; Skipping");
@@ -298,9 +334,9 @@ public class PluginManager {
     }
 
     private void loadExtension(
-            final Plugin plugin,
-            final ExtensionFactory<? extends ExtensionPoint> extensionFactory,
-            final ExtensionPointSpec<?> extensionPointSpec) {
+            Plugin plugin,
+            ExtensionFactory<? extends ExtensionPoint> extensionFactory,
+            ExtensionPointSpec<?> extensionPointSpec) {
         final var extensionIdentity = new ExtensionIdentity(
                 extensionPointSpec.extensionPointClass(),
                 extensionFactory.extensionName());
@@ -313,8 +349,20 @@ public class PluginManager {
                             conflictingPlugin.getClass().getName()));
         }
 
-        final var configRegistry = ConfigRegistryImpl.forExtension(extensionPointSpec.name(), extensionIdentity.name());
-        final boolean isEnabled = configRegistry.getOptionalValue(CONFIG_EXTENSION_ENABLED).orElse(true);
+        final var configRegistry = new ConfigRegistryImpl(
+                config,
+                extensionPointSpec.name(),
+                extensionIdentity.name(),
+                extensionFactory.runtimeConfigSpec(),
+                extensionFactory.runtimeConfigSpec() != null
+                        ? runtimeConfigMapper
+                        : null,
+                configTemplateRenderer);
+        configRegistryByExtensionIdentity.put(extensionIdentity, configRegistry);
+
+        final boolean isEnabled = configRegistry.getDeploymentConfig()
+                .getOptionalValue("enabled", boolean.class)
+                .orElse(true);
         if (!isEnabled) {
             LOGGER.debug("Extension is disabled; Skipping");
             return;
@@ -329,8 +377,24 @@ public class PluginManager {
             );
         }
 
-        LOGGER.debug("Creating runtime extension configs with defaults if necessary");
-        configRegistry.createWithDefaultsIfNotExist(extensionFactory.runtimeConfigs());
+        final RuntimeConfigSpec runtimeConfigSpec = extensionFactory.runtimeConfigSpec();
+        if (runtimeConfigSpec != null) {
+            final RuntimeConfig defaultRuntimeConfig = runtimeConfigSpec.defaultConfig();
+            if (defaultRuntimeConfig == null) {
+                throw new IllegalStateException("""
+                        Extension %s from plugin %s has defined a runtime config class, \
+                        but does not define a default config.\
+                        """.formatted(MDC.get(MDC_EXTENSION), MDC.get(MDC_PLUGIN)));
+            }
+
+            LOGGER.debug("Creating runtime extension configs with defaults if necessary");
+            if (configRegistry.getRuntimeConfig() == null) {
+                final boolean updated = configRegistry.setRuntimeConfig(defaultRuntimeConfig);
+                if (updated) {
+                    LOGGER.debug("Created default runtime config");
+                }
+            }
+        }
 
         final var keyValueStore = new DatabaseExtensionKVStore(
                 extensionPointSpec.name(), extensionIdentity.name());
@@ -376,11 +440,12 @@ public class PluginManager {
                     continue;
                 }
 
-                final var configRegistry = ConfigRegistryImpl.forExtensionPoint(extensionPointSpec.name());
-                final Optional<String> defaultExtensionName = configRegistry.getOptionalValue(CONFIG_DEFAULT_EXTENSION);
+                final String defaultExtensionName = config
+                        .getOptionalValue("%s.default.extension".formatted(extensionPointSpec.name()), String.class)
+                        .orElse(null);
 
                 final ExtensionFactory<?> extensionFactory;
-                if (defaultExtensionName.isEmpty()) {
+                if (defaultExtensionName == null) {
                     LOGGER.debug("No default extension configured; Choosing based on priority");
                     extensionFactory = factories.getFirst();
                     LOGGER.debug("Chose extension %s (%s) with priority %d as default".formatted(
@@ -389,11 +454,11 @@ public class PluginManager {
                             extensionFactory.priority()));
                 } else {
                     extensionFactory = factories.stream()
-                            .filter(factory -> factory.extensionName().equals(defaultExtensionName.get()))
+                            .filter(factory -> factory.extensionName().equals(defaultExtensionName))
                             .findFirst()
                             .orElseThrow(() -> new NoSuchExtensionException("""
                                     No extension named %s exists for extension point %s (%s)"""
-                                    .formatted(defaultExtensionName.get(), MDC.get(MDC_EXTENSION_POINT_NAME), MDC.get(MDC_EXTENSION_POINT))));
+                                    .formatted(defaultExtensionName, MDC.get(MDC_EXTENSION_POINT_NAME), MDC.get(MDC_EXTENSION_POINT))));
                     LOGGER.debug("Using extension %s (%s) as default".formatted(
                             extensionFactory.extensionName(), extensionFactory.extensionClass().getName()));
                 }
@@ -403,7 +468,7 @@ public class PluginManager {
         }
     }
 
-    private ExtensionPointSpec<?> requireKnownExtensionPoint(final Class<? extends ExtensionPoint> concreteExtensionClass) {
+    private ExtensionPointSpec<?> requireKnownExtensionPoint(Class<? extends ExtensionPoint> concreteExtensionClass) {
         for (final Class<? extends ExtensionPoint> extensionPointClass : specByExtensionPointClass.keySet()) {
             if (extensionPointClass.isAssignableFrom(concreteExtensionClass)) {
                 return specByExtensionPointClass.get(extensionPointClass);
@@ -459,7 +524,7 @@ public class PluginManager {
         }
     }
 
-    private void unloadPlugin(final Plugin plugin) {
+    private void unloadPlugin(Plugin plugin) {
         final List<ExtensionFactory<?>> factories = factoriesByPlugin.get(plugin);
         if (factories == null || factories.isEmpty()) {
             LOGGER.debug("No extensions were loaded; Skipping");

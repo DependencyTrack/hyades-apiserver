@@ -18,11 +18,10 @@
  */
 package org.dependencytrack.plugin.api;
 
-import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
+import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.jspecify.annotations.Nullable;
 
 import java.io.Closeable;
-import java.util.Collections;
-import java.util.SequencedCollection;
 
 /**
  * @since 5.6.0
@@ -48,12 +47,8 @@ public interface ExtensionFactory<T extends ExtensionPoint> extends Closeable {
      */
     int priority();
 
-    /**
-     * @return The supported runtime configuration definitions.
-     * @since 5.7.0
-     */
-    default SequencedCollection<RuntimeConfigDefinition<?>> runtimeConfigs() {
-        return Collections.emptyList();
+    default @Nullable RuntimeConfigSpec runtimeConfigSpec() {
+        return null;
     }
 
     /**
@@ -66,7 +61,7 @@ public interface ExtensionFactory<T extends ExtensionPoint> extends Closeable {
     /**
      * @return An extension instance.
      */
-    T create();
+    @Nullable T create();
 
     /**
      * {@inheritDoc}

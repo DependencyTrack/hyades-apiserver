@@ -44,7 +44,7 @@ import org.dependencytrack.datasource.vuln.osv.schema.Credit;
 import org.dependencytrack.datasource.vuln.osv.schema.DatabaseSpecific__1;
 import org.dependencytrack.datasource.vuln.osv.schema.EcosystemSpecific;
 import org.dependencytrack.datasource.vuln.osv.schema.Event;
-import org.dependencytrack.datasource.vuln.osv.schema.OsvSchema;
+import org.dependencytrack.datasource.vuln.osv.schema.Osv;
 import org.dependencytrack.datasource.vuln.osv.schema.Package;
 import org.dependencytrack.datasource.vuln.osv.schema.Range;
 import org.dependencytrack.datasource.vuln.osv.schema.Reference;
@@ -90,64 +90,64 @@ final class ModelConverter {
     private static final String TITLE_PROPERTY_NAME = "dependency-track:vuln:title";
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    static Bom convert(final OsvSchema schemaInput, final boolean isAliasSyncEnabled, final String currentEcosystem) {
-        if (schemaInput.getWithdrawn() != null) {
+    static Bom convert(final Osv osv, final boolean isAliasSyncEnabled, final String currentEcosystem) {
+        if (osv.getWithdrawn() != null) {
             return null;
         }
         Bom.Builder cyclonedxBom = Bom.newBuilder();
         return cyclonedxBom
-                .addVulnerabilities(extractVulnerability(schemaInput, isAliasSyncEnabled, cyclonedxBom, currentEcosystem))
+                .addVulnerabilities(extractVulnerability(osv, isAliasSyncEnabled, cyclonedxBom, currentEcosystem))
                 .build();
     }
 
-    private static Vulnerability extractVulnerability(final OsvSchema schemaInput, final boolean isAliasSyncEnabled, Bom.Builder cyclonedxBom, final String currentEcosystem) {
+    private static Vulnerability extractVulnerability(final Osv osv, final boolean isAliasSyncEnabled, Bom.Builder cyclonedxBom, final String currentEcosystem) {
         Vulnerability.Builder vulnerability = Vulnerability.newBuilder();
         var severity = SEVERITY_UNKNOWN;
 
-        Optional.ofNullable(schemaInput.getId()).ifPresent(vulnerability::setId);
-        vulnerability.setSource(extractSource(schemaInput.getId()));
+        Optional.ofNullable(osv.getId()).ifPresent(vulnerability::setId);
+        vulnerability.setSource(extractSource(osv.getId()));
         vulnerability.addProperties(Property.newBuilder()
                 .setName(CycloneDxPropertyNames.PROPERTY_OSV_ECOSYSTEM)
                 .setValue(currentEcosystem));
-        Optional.ofNullable(schemaInput.getSummary()).ifPresent(summary -> vulnerability.addProperties(
+        Optional.ofNullable(osv.getSummary()).ifPresent(summary -> vulnerability.addProperties(
                 Property.newBuilder().setName(TITLE_PROPERTY_NAME).setValue(trimSummary(summary)).build()));
-        Optional.ofNullable(schemaInput.getDetails()).ifPresent(vulnerability::setDescription);
+        Optional.ofNullable(osv.getDetails()).ifPresent(vulnerability::setDescription);
 
-        Optional.ofNullable(schemaInput.getPublished())
+        Optional.ofNullable(osv.getPublished())
                 .map(Date::toInstant)
                 .map(instant -> Timestamp.newBuilder().setSeconds(instant.getEpochSecond()))
                 .ifPresent(vulnerability::setPublished);
 
-        Optional.ofNullable(schemaInput.getModified())
+        Optional.ofNullable(osv.getModified())
                 .map(Date::toInstant)
                 .map(instant -> Timestamp.newBuilder().setSeconds(instant.getEpochSecond()))
                 .ifPresent(vulnerability::setUpdated);
 
-        if (schemaInput.getDatabaseSpecific() != null) {
-            if (schemaInput.getDatabaseSpecific().getAdditionalProperties().containsKey("cwe_ids")) {
+        if (osv.getDatabaseSpecific() != null) {
+            if (osv.getDatabaseSpecific().getAdditionalProperties().containsKey("cwe_ids")) {
                 @SuppressWarnings("unchecked")
-                List<String> cwes = (List<String>) schemaInput.getDatabaseSpecific()
+                List<String> cwes = (List<String>) osv.getDatabaseSpecific()
                         .getAdditionalProperties()
                         .get("cwe_ids");
                 vulnerability.addAllCwes(getCweIds(cwes));
             }
-            if (schemaInput.getDatabaseSpecific().getAdditionalProperties().containsKey("severity")) {
+            if (osv.getDatabaseSpecific().getAdditionalProperties().containsKey("severity")) {
                 //this severity is compared with affected package severities and highest set
-                String severityObj = (String) schemaInput.getDatabaseSpecific().getAdditionalProperties().get("severity");
+                String severityObj = (String) osv.getDatabaseSpecific().getAdditionalProperties().get("severity");
                 severity = mapSeverity(severityObj);
             }
         }
 
         if (isAliasSyncEnabled) {
-            vulnerability.addAllReferences(mapAliases(schemaInput.getAliases()));
+            vulnerability.addAllReferences(mapAliases(osv.getAliases()));
         }
 
-        Optional.ofNullable(mapCredits(schemaInput.getCredits())).ifPresent(vulnerability::setCredits);
-        Optional.ofNullable(mapReferences(schemaInput.getReferences()).get("ADVISORY")).ifPresent(vulnerability::addAllAdvisories);
-        Optional.ofNullable(mapReferences(schemaInput.getReferences()).get("EXTERNAL")).ifPresent(cyclonedxBom::addAllExternalReferences);
+        Optional.ofNullable(mapCredits(osv.getCredits())).ifPresent(vulnerability::setCredits);
+        Optional.ofNullable(mapReferences(osv.getReferences()).get("ADVISORY")).ifPresent(vulnerability::addAllAdvisories);
+        Optional.ofNullable(mapReferences(osv.getReferences()).get("EXTERNAL")).ifPresent(cyclonedxBom::addAllExternalReferences);
 
         //affected ranges
-        List<Affected> osvAffectedArray = schemaInput.getAffected();
+        List<Affected> osvAffectedArray = osv.getAffected();
         if (osvAffectedArray != null) {
             // affected packages and versions
             // low-priority severity assignment
@@ -156,7 +156,7 @@ final class ModelConverter {
         }
 
         // CVSS ratings
-        vulnerability.addAllRatings(parseCvssRatings(schemaInput, severity));
+        vulnerability.addAllRatings(parseCvssRatings(osv, severity));
 
         return vulnerability.build();
     }
@@ -181,7 +181,7 @@ final class ModelConverter {
 
     private static List<Integer> getCweIds(final List<String> cwes) {
         List<Integer> cweIds = new ArrayList<>();
-        if(cwes == null) {
+        if (cwes == null) {
             return cweIds;
         }
         cwes.forEach(cwe -> cweIds.add(parseCweString(cwe)));
@@ -451,6 +451,7 @@ final class ModelConverter {
 
     /**
      * Returns the severity based on the numerical CVSS score.
+     *
      * @return the severity of the vulnerability
      * @since 3.1.0
      */
@@ -480,9 +481,9 @@ final class ModelConverter {
         }
     }
 
-    private static List<VulnerabilityRating> parseCvssRatings(OsvSchema osvSchema, Severity severity) {
+    private static List<VulnerabilityRating> parseCvssRatings(Osv osv, Severity severity) {
         List<VulnerabilityRating> ratings = new ArrayList<>();
-        final List<org.dependencytrack.datasource.vuln.osv.schema.Severity> cvssList = osvSchema.getSeverity();
+        final List<org.dependencytrack.datasource.vuln.osv.schema.Severity> cvssList = osv.getSeverity();
 
         if (cvssList == null || cvssList.isEmpty()) {
             var rating = VulnerabilityRating.newBuilder()

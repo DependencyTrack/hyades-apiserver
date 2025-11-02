@@ -25,7 +25,7 @@ import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.PreparedBatch;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
-import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -48,15 +48,15 @@ final class DatabaseExtensionKVStore implements ExtensionKVStore {
     private final String extensionName;
 
     DatabaseExtensionKVStore(
-            final @NonNull String extensionPointName,
-            final @NonNull String extensionName) {
+            String extensionPointName,
+            String extensionName) {
         this.extensionPointName = requireNonNull(extensionPointName, "extensionPointName must not be null");
         this.extensionName = requireNonNull(extensionName, "extensionName must not be null");
 
     }
 
     @Override
-    public void putMany(final @NonNull Map<String, String> kvPairs) {
+    public void putMany(Map<String, String> kvPairs) {
         requireNonNull(kvPairs, "kvPairs must not be null");
         if (kvPairs.isEmpty()) {
             return;
@@ -89,10 +89,10 @@ final class DatabaseExtensionKVStore implements ExtensionKVStore {
     }
 
     @Override
-    public @NonNull CompareAndPutResult compareAndPut(
-            final @NonNull String key,
-            final @NonNull String value,
-            final Long expectedVersion) {
+    public CompareAndPutResult compareAndPut(
+            String key,
+            String value,
+            @Nullable Long expectedVersion) {
         if (expectedVersion == null) {
             return compareAndPutCreate(key, value);
         }
@@ -100,7 +100,7 @@ final class DatabaseExtensionKVStore implements ExtensionKVStore {
         return compareAndPutUpdate(key, value, expectedVersion);
     }
 
-    private @NonNull CompareAndPutResult compareAndPutCreate(final String key, final String value) {
+    private CompareAndPutResult compareAndPutCreate(String key, String value) {
         final Long newVersion = inJdbiTransaction(handle -> {
             final Update update = handle.createUpdate("""
                     INSERT INTO "EXTENSION_KV_STORE" ("EXTENSION_POINT", "EXTENSION", "KEY", "VALUE", "CREATED_AT", "VERSION")
@@ -126,10 +126,10 @@ final class DatabaseExtensionKVStore implements ExtensionKVStore {
                 : new CompareAndPutResult.Failure(CompareAndPutResult.Failure.Reason.ALREADY_EXISTS);
     }
 
-    private @NonNull CompareAndPutResult compareAndPutUpdate(
-            final String key,
-            final String value,
-            final long expectedVersion) {
+    private CompareAndPutResult compareAndPutUpdate(
+            String key,
+            String value,
+            long expectedVersion) {
         final Long newVersion = inJdbiTransaction(handle -> {
             final Update update = handle.createUpdate("""
                     UPDATE "EXTENSION_KV_STORE"
@@ -162,7 +162,7 @@ final class DatabaseExtensionKVStore implements ExtensionKVStore {
     }
 
     @Override
-    public @NonNull List<Entry> getAll() {
+    public List<Entry> getAll() {
         return withJdbiHandle(handle -> {
             final Query query = handle.createQuery("""
                     SELECT "KEY"
@@ -185,7 +185,7 @@ final class DatabaseExtensionKVStore implements ExtensionKVStore {
     }
 
     @Override
-    public @NonNull Map<String, Entry> getMany(final @NonNull Collection<String> keys) {
+    public Map<String, Entry> getMany(Collection<String> keys) {
         requireNonNull(keys, "keys must not be null");
         if (keys.isEmpty()) {
             return Collections.emptyMap();
@@ -215,7 +215,7 @@ final class DatabaseExtensionKVStore implements ExtensionKVStore {
     }
 
     @Override
-    public void deleteMany(final @NonNull Collection<String> keys) {
+    public void deleteMany(Collection<String> keys) {
         requireNonNull(keys, "keys must not be null");
         if (keys.isEmpty()) {
             return;
@@ -239,9 +239,9 @@ final class DatabaseExtensionKVStore implements ExtensionKVStore {
     }
 
     @Override
-    public @NonNull CompareAndDeleteResult compareAndDelete(
-            final @NonNull String key,
-            final long expectedVersion) {
+    public CompareAndDeleteResult compareAndDelete(
+            String key,
+            long expectedVersion) {
         requireNonNull(key, "key must not be null");
 
         final int modifiedRows = inJdbiTransaction(handle -> {

@@ -20,18 +20,16 @@ package org.dependencytrack.filestorage.local;
 
 import com.github.luben.zstd.Zstd;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.config.DeploymentConfig;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
-import static org.dependencytrack.filestorage.local.LocalFileStorageConfigs.CONFIG_COMPRESSION_LEVEL;
-import static org.dependencytrack.filestorage.local.LocalFileStorageConfigs.CONFIG_COMPRESSION_LEVEL_DEFAULT;
-import static org.dependencytrack.filestorage.local.LocalFileStorageConfigs.CONFIG_DIRECTORY;
 
 /**
  * @since 5.6.0
@@ -40,7 +38,7 @@ final class LocalFileStorageFactory implements FileStorageFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorageFactory.class);
 
-    private Path directoryPath;
+    private @Nullable Path directoryPath;
     private int compressionLevel;
 
     @Override
@@ -60,7 +58,9 @@ final class LocalFileStorageFactory implements FileStorageFactory {
 
     @Override
     public void init(final ExtensionContext ctx) {
-        directoryPath = ctx.configRegistry().getValue(CONFIG_DIRECTORY);
+        final DeploymentConfig deploymentConfig = ctx.configRegistry().getDeploymentConfig();
+
+        directoryPath = deploymentConfig.getValue("directory", Path.class);
 
         try {
             Files.createDirectories(directoryPath);
@@ -78,9 +78,9 @@ final class LocalFileStorageFactory implements FileStorageFactory {
                             directoryPath, canRead, canWrite));
         }
 
-        compressionLevel = ctx.configRegistry()
-                .getOptionalValue(CONFIG_COMPRESSION_LEVEL)
-                .orElse(CONFIG_COMPRESSION_LEVEL_DEFAULT);
+        compressionLevel = deploymentConfig
+                .getOptionalValue("compression.level", int.class)
+                .orElse(5);
         if (compressionLevel < Zstd.minCompressionLevel() || compressionLevel > Zstd.maxCompressionLevel()) {
             throw new IllegalStateException(
                     "Invalid compression level: must be between %d and %d, but is %d".formatted(

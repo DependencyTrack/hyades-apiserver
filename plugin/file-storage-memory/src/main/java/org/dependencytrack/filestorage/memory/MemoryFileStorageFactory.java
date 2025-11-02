@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 final class MemoryFileStorageFactory implements FileStorageFactory {
 
-    private Map<String, byte[]> fileContentByKey;
+    private final Map<String, byte[]> fileContentByKey = new ConcurrentHashMap<>();
 
     @Override
     public String extensionName() {
@@ -49,7 +49,6 @@ final class MemoryFileStorageFactory implements FileStorageFactory {
 
     @Override
     public void init(final ExtensionContext ctx) {
-        fileContentByKey = new ConcurrentHashMap<>();
     }
 
     @Override
