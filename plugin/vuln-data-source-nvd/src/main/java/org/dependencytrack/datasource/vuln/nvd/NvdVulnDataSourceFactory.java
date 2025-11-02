@@ -27,6 +27,7 @@ import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSourceFactory;
+import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +38,6 @@ import java.util.SequencedCollection;
 
 import static org.dependencytrack.datasource.vuln.nvd.NvdVulnDataSourceConfigs.CONFIG_ENABLED;
 import static org.dependencytrack.datasource.vuln.nvd.NvdVulnDataSourceConfigs.CONFIG_FEEDS_URL;
-import static org.dependencytrack.datasource.vuln.nvd.NvdVulnDataSourceConfigs.CONFIG_WATERMARK;
 
 /**
  * @since 5.7.0
@@ -47,6 +47,7 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(NvdVulnDataSourceFactory.class);
 
     private ConfigRegistry configRegistry;
+    private ExtensionKVStore kvStore;
     private ObjectMapper objectMapper;
     private HttpClient httpClient;
 
@@ -69,13 +70,13 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
     public SequencedCollection<RuntimeConfigDefinition<?>> runtimeConfigs() {
         return List.of(
                 CONFIG_ENABLED,
-                CONFIG_FEEDS_URL,
-                CONFIG_WATERMARK);
+                CONFIG_FEEDS_URL);
     }
 
     @Override
     public void init(final ExtensionContext ctx) {
         this.configRegistry = ctx.configRegistry();
+        this.kvStore = ctx.kvStore();
         this.httpClient = HttpClient.newBuilder()
                 .proxy(ctx.proxySelector())
                 .build();
@@ -98,7 +99,7 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
         }
 
         final URL feedsUrl = configRegistry.getValue(CONFIG_FEEDS_URL);
-        final var watermarkManager = WatermarkManager.create(configRegistry);
+        final var watermarkManager = WatermarkManager.create(kvStore);
 
         return new NvdVulnDataSource(watermarkManager, objectMapper, httpClient, feedsUrl);
     }

@@ -24,7 +24,6 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.time.Instant;
 
 /**
  * @since 5.7.0
@@ -35,7 +34,6 @@ public final class GitHubVulnDataSourceConfigs {
     static final RuntimeConfigDefinition<Boolean> CONFIG_ALIAS_SYNC_ENABLED;
     static final RuntimeConfigDefinition<URL> CONFIG_API_URL;
     static final RuntimeConfigDefinition<String> CONFIG_API_TOKEN;
-    static final RuntimeConfigDefinition<Instant> CONFIG_WATERMARK;
 
     static {
         final URL defaultApiUrl;
@@ -52,7 +50,7 @@ public final class GitHubVulnDataSourceConfigs {
                 /* defaultValue */ false,
                 /* isRequired */ false,
                 /* isSecret */ false);
-        CONFIG_ALIAS_SYNC_ENABLED =  new RuntimeConfigDefinition<>(
+        CONFIG_ALIAS_SYNC_ENABLED = new RuntimeConfigDefinition<>(
                 "alias.sync.enabled",
                 "Whether to include alias information in vulnerability data",
                 ConfigTypes.BOOLEAN,
@@ -73,13 +71,6 @@ public final class GitHubVulnDataSourceConfigs {
                 /* defaultValue */ null,
                 /* isRequired */ false,
                 /* isSecret */ true);
-        CONFIG_WATERMARK = new RuntimeConfigDefinition<>(
-                "watermark",
-                "Highest observed modification timestamp of processed vulnerabilities",
-                ConfigTypes.INSTANT,
-                /* defaultValue */ null,
-                /* isRequired */ false,
-                /* isSecret */ false);
     }
 
     private GitHubVulnDataSourceConfigs() {
