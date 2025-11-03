@@ -120,7 +120,7 @@
         <lib.json-unit.version>5.0.0</lib.json-unit.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
-        <lib.junit-jupiter.version>6.0.0</lib.junit-jupiter.version>
+        <lib.junit-jupiter.version>6.0.1</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.micrometer.version>1.15.5</lib.micrometer.version>
         <lib.minio.version>8.6.0</lib.minio.version>
