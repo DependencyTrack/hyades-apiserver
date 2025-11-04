@@ -32,22 +32,22 @@ security:
 servers:
   - url: /api/v2
 tags:
-  - name: Advisories
-    description: Endpoints related to advisories
-  - name: Components
-    description: Endpoints related to components
-  - name: CSAF
-    description: Endpoints related to CSAF sources and mirroring
-  - name: Extensions
-    description: Endpoints related to extensions
-  - name: Metrics
-    description: Endpoints related to metrics
-  - name: Projects
-    description: Endpoints related to projects
-  - name: Teams
-    description: Endpoints related to teams
-  - name: Workflows
-    description: Endpoints related to workflows
+- name: Advisories
+  description: Endpoints related to advisories
+- name: Components
+  description: Endpoints related to components
+- name: Extensions
+  description: Endpoints related to extensions
+- name: Metrics
+  description: Endpoints related to metrics
+- name: Projects
+  description: Endpoints related to projects
+- name: Secrets
+  description: Endpoints related to secrets
+- name: Teams
+  description: Endpoints related to teams
+- name: Workflows
+  description: Endpoints related to workflows
 
 paths:
   /advisories:
@@ -82,6 +82,10 @@ paths:
     $ref: "./paths/metrics_portfolio_current.yaml"
   /metrics/vulnerabilities:
     $ref: "./paths/metrics_vulnerabilities.yaml"
+  /secrets:
+    $ref: "./paths/secrets.yaml"
+  /secrets/{name}:
+    $ref: "./paths/secrets__name_.yaml"
   /teams:
     $ref: "./paths/teams.yaml"
   /teams/{name}:

@@ -30,6 +30,7 @@
         <module>common</module>
         <module>support/datanucleus-plugin</module>
         <module>support/liquibase</module>
+        <module>support/secret-management</module>
         <module>support/smallrye-config-source-memory</module>
         <module>api</module>
         <module>alpine</module>
@@ -105,6 +106,7 @@
         <lib.archunit.version>1.4.1</lib.archunit.version>
         <lib.assertj.version>3.27.6</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
+        <lib.caffeine.version>3.2.3</lib.caffeine.version>
         <lib.cel-java.version>0.5.3</lib.cel-java.version>
         <lib.cpe-parser.version>3.0.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
@@ -126,18 +128,21 @@
         <lib.junit-jupiter.version>6.0.1</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.micrometer.version>1.16.0</lib.micrometer.version>
+        <lib.microprofile-config.version>3.1</lib.microprofile-config.version>
         <lib.microprofile-health.version>4.0.1</lib.microprofile-health.version>
         <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.20.0</lib.mockito.version>
         <lib.okhttp.version>5.3.0</lib.okhttp.version>
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
+        <lib.pebble.version>3.2.4</lib.pebble.version>
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
         <lib.protobuf-java.version>4.33.0</lib.protobuf-java.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
         <lib.smallrye-config.version>3.14.1</lib.smallrye-config.version>
         <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
+        <lib.tink.version>1.19.0</lib.tink.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
         <lib.wiremock.version>3.13.1</lib.wiremock.version>
         <lib.zstd-jni.version>1.5.7-6</lib.zstd-jni.version>
@@ -166,6 +171,12 @@
                 <groupId>org.awaitility</groupId>
                 <artifactId>awaitility</artifactId>
                 <version>${lib.awaitility.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${lib.caffeine.version}</version>
             </dependency>
 
             <dependency>
@@ -315,6 +326,12 @@
             </dependency>
 
             <dependency>
+                <groupId>org.eclipse.microprofile.config</groupId>
+                <artifactId>microprofile-config-api</artifactId>
+                <version>${lib.microprofile-config.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.eclipse.microprofile.health</groupId>
                 <artifactId>microprofile-health-api</artifactId>
                 <version>${lib.microprofile-health.version}</version>
@@ -350,6 +367,12 @@
                 <groupId>com.github.package-url</groupId>
                 <artifactId>packageurl-java</artifactId>
                 <version>${lib.packageurl.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.pebbletemplates</groupId>
+                <artifactId>pebble</artifactId>
+                <version>${lib.pebble.version}</version>
             </dependency>
 
             <dependency>
@@ -399,6 +422,12 @@
                 <version>${lib.testcontainers.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.crypto.tink</groupId>
+                <artifactId>tink</artifactId>
+                <version>${lib.tink.version}</version>
             </dependency>
 
             <dependency>
