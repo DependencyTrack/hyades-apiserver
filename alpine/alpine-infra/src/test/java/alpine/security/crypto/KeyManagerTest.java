@@ -40,7 +40,7 @@ class KeyManagerTest {
     @BeforeEach
     void beforeEach() {
         final var configMock = mock(Config.class);
-        doReturn(tempDir.toFile()).when(configMock).getDataDirectorty();
+        doReturn(tempDir.toFile()).when(configMock).getDataDirectory();
         doReturn(null).when(configMock).getProperty(eq(Config.AlpineKey.SECRET_KEY_PATH));
 
         keyManager = new KeyManager(configMock);
