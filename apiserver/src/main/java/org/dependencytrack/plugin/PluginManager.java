@@ -32,7 +32,12 @@ import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.slf4j.MDC;
 
+import java.io.IOException;
 import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -50,6 +55,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION;
 import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION_NAME;
@@ -82,6 +88,9 @@ public class PluginManager {
     private final Map<Class<? extends ExtensionPoint>, ExtensionFactory<?>> defaultFactoryByExtensionPointClass;
     private final Comparator<ExtensionFactory<?>> factoryComparator;
     private final ReentrantLock lock;
+
+    private boolean externalPluginsEnabled = false;
+    private Path externalPluginDir;
 
     private PluginManager() {
         this.loadedPluginByClass = new LinkedHashMap<>();
@@ -244,9 +253,43 @@ public class PluginManager {
             }
         }
 
+        if (externalPluginsEnabled) {
+            LOGGER.info("Discovering external plugins in: %s".formatted(externalPluginDir));
+            loadExternalPlugins(externalPluginDir);
+        } else {
+            LOGGER.info("External plugin loading disabled — skipping external scan.");
+        }
+
         determineDefaultExtensions();
 
         assertRequiredExtensionPoints();
+    }
+
+    private void loadExternalPlugins(final Path externalPluginDir) {
+        try (Stream<Path> jars = Files.list(externalPluginDir)
+                .filter(path -> path.toString().endsWith(".jar"))) {
+            jars.forEach(this::loadExternalPluginJar);
+        } catch (IOException e) {
+            LOGGER.warn("Failed to scan external plugin directory: %s".formatted(externalPluginDir), e);
+        }
+    }
+
+    private void loadExternalPluginJar(final Path jarPath) {
+        try (var ignoredMdcPlugin = MDC.putCloseable(MDC_PLUGIN, jarPath.getFileName().toString())) {
+            URL jarUrl = jarPath.toUri().toURL();
+            PluginIsolatedClassLoader loader = new PluginIsolatedClassLoader(new URL[]{ jarUrl });
+            ServiceLoader<Plugin> serviceLoader = ServiceLoader.load(Plugin.class, loader);
+
+            for (Plugin plugin : serviceLoader) {
+                LOGGER.debug("Loading external plugin %s".formatted(plugin.getClass().getName()));
+                loadExtensionsForPlugin(plugin);
+                loadedPluginByClass.put(plugin.getClass(), plugin);
+                LOGGER.info("External plugin loaded successfully: %s".formatted(plugin.getClass().getName()));
+            }
+
+        } catch (Exception e) {
+            LOGGER.error("Failed to load external plugin from JAR %s".formatted(jarPath), e);
+        }
     }
 
     private void loadExtensionsForPlugin(final Plugin plugin) {
@@ -485,4 +528,8 @@ public class PluginManager {
         }
     }
 
+    public void setExternalPluginConfig(boolean enabled, String directory) {
+        this.externalPluginsEnabled = enabled;
+        this.externalPluginDir = Paths.get(directory);
+    }
 }
