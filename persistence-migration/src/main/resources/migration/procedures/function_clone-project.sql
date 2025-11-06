@@ -21,6 +21,11 @@ DECLARE
   source_project RECORD;
   target_project RECORD;
 BEGIN
+  -- Defer checking of FK constraints to commit time.
+  -- We want clones to be atomic, but due to the multiple tables
+  -- with FKs being involved, that has a potential for lock contention.
+  SET CONSTRAINTS ALL DEFERRED;
+
   -- Determine details of the project to be cloned.
   SELECT "ID" AS id
        , "UUID" AS uuid
@@ -37,15 +42,6 @@ BEGIN
     RAISE EXCEPTION 'Target project version already exists: %', target_project_version;
   END IF;
 
-  -- When the target project is supposed to be the latest version,
-  -- ensure the previous latest version is no longer marked as such.
-  IF target_project_version_is_latest THEN
-    UPDATE "PROJECT"
-       SET "IS_LATEST" = FALSE
-     WHERE "NAME" = source_project.name
-       AND "IS_LATEST";
-  END IF;
-
   -- Clone the project itself.
   WITH created_project AS (
     INSERT INTO "PROJECT" (
@@ -56,7 +52,6 @@ BEGIN
     , "GROUP"
     , "NAME"
     , "VERSION"
-    , "IS_LATEST"
     , "DESCRIPTION"
     , "CLASSIFIER"
     , "INACTIVE_SINCE"
@@ -74,7 +69,6 @@ BEGIN
          , "GROUP"
          , "NAME"
          , target_project_version
-         , target_project_version_is_latest
          , "DESCRIPTION"
          , "CLASSIFIER"
          , "INACTIVE_SINCE"
@@ -324,8 +318,8 @@ BEGIN
         FROM "COMPONENTS_VULNERABILITIES"
        INNER JOIN tmp_component_mapping
           ON tmp_component_mapping.source_id = "COMPONENT_ID"
-       ORDER BY tmp_component_mapping.target_id
-              , "VULNERABILITY_ID";
+       ORDER BY "VULNERABILITY_ID"
+              , tmp_component_mapping.target_id;
 
       INSERT INTO "FINDINGATTRIBUTION" (
         "PROJECT_ID"
@@ -349,8 +343,8 @@ BEGIN
        INNER JOIN tmp_component_mapping
           ON tmp_component_mapping.source_id = "COMPONENT_ID"
        WHERE "PROJECT_ID" = source_project.id
-       ORDER BY tmp_component_mapping.target_id
-              , "VULNERABILITY_ID";
+       ORDER BY "VULNERABILITY_ID"
+              , tmp_component_mapping.target_id;
 
       IF include_findings_audit_history THEN
         WITH
@@ -658,12 +652,30 @@ BEGIN
         FROM "SERVICECOMPONENTS_VULNERABILITIES"
        INNER JOIN tmp_service_mapping
           ON tmp_service_mapping.source_id = "SERVICECOMPONENT_ID"
-      ORDER BY tmp_service_mapping.target_id
-              , "VULNERABILITY_ID";
+      ORDER BY "VULNERABILITY_ID"
+             , tmp_service_mapping.target_id;
     END IF; -- include_findings
 
     DROP TABLE tmp_service_mapping;
   END IF; -- include_services
+
+  -- When the target project is supposed to be the latest version,
+  -- ensure the previous latest version is no longer marked as such.
+  --
+  -- This can acquire an exclusive lock on the project row that is currently
+  -- marked latest, potentially blocking other transactions that also want
+  -- to modify that row. To avoid long wait times, we perform this operation
+  -- at the very end, reducing the duration for which this lock may be held.
+  IF target_project_version_is_latest THEN
+    UPDATE "PROJECT"
+       SET "IS_LATEST" = FALSE
+     WHERE "NAME" = source_project.name
+       AND "IS_LATEST";
+
+    UPDATE "PROJECT"
+       SET "IS_LATEST" = TRUE
+     WHERE "ID" = target_project.id;
+  END IF;
 
   RETURN target_project.uuid;
 END;
