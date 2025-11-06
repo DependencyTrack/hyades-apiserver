@@ -19,13 +19,13 @@
 package org.dependencytrack.persistence.pagination;
 
 import alpine.security.crypto.DataEncryption;
+import jakarta.ws.rs.core.UriInfo;
 import org.dependencytrack.api.v2.model.PaginationLinks;
 import org.dependencytrack.api.v2.model.PaginationMetadata;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.json.JsonConfig;
 import org.jdbi.v3.json.JsonMapper;
 
-import jakarta.ws.rs.core.UriInfo;
 import java.util.Base64;
 
 /**
@@ -47,7 +47,7 @@ public final class PageUtil {
 
         try {
             final byte[] encryptedTokenBytes = Base64.getUrlDecoder().decode(encodedToken);
-            final byte[] decryptedToken = DataEncryption.decryptAsBytes(encryptedTokenBytes);
+            final byte[] decryptedToken = new DataEncryption().decryptAsBytes(encryptedTokenBytes);
             return (T) jsonMapper.fromJson(new String(decryptedToken), handle.getConfig());
         } catch (Exception e) {
             throw new InvalidPageTokenException(e);
@@ -66,7 +66,7 @@ public final class PageUtil {
 
         try {
             final String tokenJson = jsonMapper.toJson(pageToken, handle.getConfig());
-            final byte[] encryptedTokenBytes = DataEncryption.encryptAsBytes(tokenJson);
+            final byte[] encryptedTokenBytes = new DataEncryption().encryptAsBytes(tokenJson);
             return Base64.getUrlEncoder().encodeToString(encryptedTokenBytes);
         } catch (Exception e) {
             throw new InvalidPageTokenException(e);

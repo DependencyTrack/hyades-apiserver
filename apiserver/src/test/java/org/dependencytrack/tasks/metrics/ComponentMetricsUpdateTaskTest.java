@@ -31,7 +31,8 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
-import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.command.MakeAnalysisCommand;
+import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.junit.Test;
 
@@ -171,8 +172,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         vulnAudited.setSeverity(Severity.MEDIUM);
         qm.createVulnerability(vulnAudited, false);
         qm.addVulnerability(vulnAudited, component, AnalyzerIdentity.NONE);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), component.getId(), vulnAudited.getId(), AnalysisState.NOT_AFFECTED, null, null, null, false));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(component, vulnAudited)
+                        .withState(AnalysisState.NOT_AFFECTED));
 
         // Create a suppressed vulnerability.
         var vulnSuppressed = new Vulnerability();
@@ -181,8 +183,10 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         vulnSuppressed.setSeverity(Severity.MEDIUM);
         qm.createVulnerability(vulnSuppressed, false);
         qm.addVulnerability(vulnSuppressed, component, AnalyzerIdentity.NONE);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), component.getId(), vulnSuppressed.getId(), AnalysisState.FALSE_POSITIVE, null, null, null, true));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(component, vulnSuppressed)
+                        .withState(AnalysisState.FALSE_POSITIVE)
+                        .withSuppress(true));
 
         var componentMetricsUpdateEvent = new ComponentMetricsUpdateEvent(component.getUuid());
         qm.createWorkflowSteps(componentMetricsUpdateEvent.getChainIdentifier());
@@ -257,8 +261,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         vulnAudited.setSeverity(Severity.MEDIUM);
         qm.createVulnerability(vulnAudited, false);
         qm.addVulnerability(vulnAudited, component, AnalyzerIdentity.NONE);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), component.getId(), vulnAudited.getId(), AnalysisState.NOT_AFFECTED, null, null, null, false));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(component, vulnAudited)
+                        .withState(AnalysisState.NOT_AFFECTED));
 
         // Create an overridden vulnerability.
         var vulnSuppressed = new Vulnerability();
@@ -337,11 +342,16 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
         // Create an audited violation.
         final PolicyViolation auditedViolation = createPolicyViolation(component, Policy.ViolationState.WARN, PolicyViolation.Type.OPERATIONAL);
-        qm.makeViolationAnalysis(component, auditedViolation, ViolationAnalysisState.APPROVED, false);
+        qm.makeViolationAnalysis(
+                new MakeViolationAnalysisCommand(component, auditedViolation)
+                        .withState(ViolationAnalysisState.APPROVED));
 
         // Create a suppressed violation.
         final PolicyViolation suppressedViolation = createPolicyViolation(component, Policy.ViolationState.INFO, PolicyViolation.Type.SECURITY);
-        qm.makeViolationAnalysis(component, suppressedViolation, ViolationAnalysisState.REJECTED, true);
+        qm.makeViolationAnalysis(
+                new MakeViolationAnalysisCommand(component, suppressedViolation)
+                        .withState(ViolationAnalysisState.REJECTED)
+                        .withSuppress(true));
 
         new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
         final DependencyMetrics metrics = withJdbiHandle(handle ->

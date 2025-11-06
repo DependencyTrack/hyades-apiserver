@@ -228,7 +228,7 @@ public class PolicyResource extends AbstractApiResource {
             return qm.callInTransaction(() -> {
                 final Policy policy = qm.getObjectByUuid(Policy.class, uuid);
                 if (policy != null) {
-                    qm.deletePolicy(policy);
+                    qm.delete(policy);
                     return Response.status(Response.Status.NO_CONTENT).build();
                 } else {
                     return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the policy could not be found.").build();

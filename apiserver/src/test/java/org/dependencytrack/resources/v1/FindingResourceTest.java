@@ -44,7 +44,7 @@ import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -61,7 +61,6 @@ import java.util.function.Supplier;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.resources.v1.FindingResource.MEDIA_TYPE_SARIF_JSON;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertEquals;
@@ -218,7 +217,9 @@ public class FindingResourceTest extends ResourceTest {
         qm.addVulnerability(v1, c1, AnalyzerIdentity.NONE);
         qm.addVulnerability(v2, c2, AnalyzerIdentity.NONE);
 
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class).makeAnalysis(p1.getId(), c1.getId(), v1.getId(), AnalysisState.FALSE_POSITIVE, null, null, null, false));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(c1, v1)
+                        .withState(AnalysisState.FALSE_POSITIVE));
 
         // Should include all findings with or without analysis.
         Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()

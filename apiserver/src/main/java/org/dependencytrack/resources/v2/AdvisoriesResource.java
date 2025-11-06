@@ -24,6 +24,7 @@ import io.csaf.retrieval.RetrievedDocument;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
@@ -66,7 +67,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction
  * @author Christian Banse
  * @since 5.7.0
  */
-@Provider
+@Path("/")
 public class AdvisoriesResource extends AbstractApiResource implements AdvisoriesApi {
     private static final Logger LOGGER = Logger.getLogger(AdvisoriesResource.class);
 

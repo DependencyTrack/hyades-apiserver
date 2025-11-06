@@ -26,7 +26,6 @@ import org.dependencytrack.plugin.api.config.ConfigDefinition;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
-import org.dependencytrack.util.DebugDataEncryption;
 import org.eclipse.microprofile.config.ConfigProvider;
 
 import java.util.ArrayList;
@@ -92,7 +91,7 @@ public final class ConfigRegistryImpl implements ConfigRegistry {
 
             if (config.isSecret() && valueString != null) {
                 try {
-                    valueToStore = DataEncryption.encryptAsString(valueString);
+                    valueToStore = new DataEncryption().encryptAsString(valueString);
                 } catch (Exception e) {
                     throw new IllegalStateException(
                             "Failed to encrypt value of config %s".formatted(config.name()), e);
@@ -143,7 +142,7 @@ public final class ConfigRegistryImpl implements ConfigRegistry {
         final String valueToStore;
         if (config.isSecret() && value != null) {
             try {
-                valueToStore = DataEncryption.encryptAsString(valueString);
+                valueToStore = new DataEncryption().encryptAsString(valueString);
             } catch (Exception e) {
                 throw new IllegalStateException(
                         "Failed to encrypt value of config %s".formatted(config.name()), e);
@@ -208,7 +207,7 @@ public final class ConfigRegistryImpl implements ConfigRegistry {
         }
 
         try {
-            final String decryptedValue = DebugDataEncryption.decryptAsString(property.getPropertyValue());
+            final String decryptedValue = new DataEncryption().decryptAsString(property.getPropertyValue());
             final T value = config.type().fromString(decryptedValue);
             return Optional.of(value);
         } catch (Exception e) {

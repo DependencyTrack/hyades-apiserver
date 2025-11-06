@@ -23,10 +23,10 @@ import alpine.model.Team;
 import alpine.model.User;
 import alpine.server.auth.PermissionRequired;
 import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
-import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.TeamsApi;
 import org.dependencytrack.api.v2.model.CreateTeamMembershipRequest;
 import org.dependencytrack.api.v2.model.CreateTeamRequest;
@@ -52,7 +52,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction
 import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
-@Provider
+@Path("/")
 public class TeamsResource implements TeamsApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TeamsResource.class);

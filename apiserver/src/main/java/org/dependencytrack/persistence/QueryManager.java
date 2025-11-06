@@ -27,7 +27,6 @@ import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
-import alpine.notification.NotificationLevel;
 import alpine.persistence.AbstractAlpineQueryManager;
 import alpine.persistence.AlpineQueryManager;
 import alpine.persistence.NotSortableException;
@@ -76,8 +75,6 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.UserProjectRole;
 import org.dependencytrack.model.Vex;
 import org.dependencytrack.model.ViolationAnalysis;
-import org.dependencytrack.model.ViolationAnalysisComment;
-import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.VulnIdAndSource;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
@@ -88,10 +85,14 @@ import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
+import org.dependencytrack.persistence.command.MakeAnalysisCommand;
+import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.EffectivePermissionDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
+import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
@@ -684,10 +685,6 @@ public class QueryManager extends AlpineQueryManager {
         return getPolicyQueryManager().getPolicies();
     }
 
-    public List<Policy> getAllPolicies() {
-        return getPolicyQueryManager().getAllPolicies();
-    }
-
     public Policy getPolicy(final String name) {
         return getPolicyQueryManager().getPolicy(name);
     }
@@ -698,10 +695,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public Policy createPolicy(String name, Policy.Operator operator, Policy.ViolationState violationState, boolean onlyLatestProjectVersion) {
         return getPolicyQueryManager().createPolicy(name, operator, violationState, onlyLatestProjectVersion);
-    }
-
-    public void removeProjectFromPolicies(final Project project) {
-        getPolicyQueryManager().removeProjectFromPolicies(project);
     }
 
     public PolicyCondition createPolicyCondition(final Policy policy, final PolicyCondition.Subject subject,
@@ -717,18 +710,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public PolicyCondition updatePolicyCondition(final PolicyCondition policyCondition) {
         return getPolicyQueryManager().updatePolicyCondition(policyCondition);
-    }
-
-    public PolicyViolation clonePolicyViolation(PolicyViolation sourcePolicyViolation, Component destinationComponent){
-        return getPolicyQueryManager().clonePolicyViolation(sourcePolicyViolation, destinationComponent);
-    }
-
-    public List<PolicyViolation> getAllPolicyViolations() {
-        return getPolicyQueryManager().getAllPolicyViolations();
-    }
-
-    public List<PolicyViolation> getAllPolicyViolations(final PolicyCondition policyCondition) {
-        return getPolicyQueryManager().getAllPolicyViolations(policyCondition);
     }
 
     public List<PolicyViolation> getAllPolicyViolations(final Component component) {
@@ -759,21 +740,8 @@ public class QueryManager extends AlpineQueryManager {
         return getPolicyQueryManager().getViolationAnalysis(component, policyViolation);
     }
 
-    public ViolationAnalysis makeViolationAnalysis(Component component, PolicyViolation policyViolation,
-                                                   ViolationAnalysisState violationAnalysisState, Boolean isSuppressed) {
-        return getPolicyQueryManager().makeViolationAnalysis(component, policyViolation, violationAnalysisState, isSuppressed);
-    }
-
-    public ViolationAnalysisComment makeViolationAnalysisComment(ViolationAnalysis violationAnalysis, String comment, String commenter) {
-        return getPolicyQueryManager().makeViolationAnalysisComment(violationAnalysis, comment, commenter);
-    }
-
-    void deleteViolationAnalysisTrail(Component component) {
-        getPolicyQueryManager().deleteViolationAnalysisTrail(component);
-    }
-
-    void deleteViolationAnalysisTrail(Project project) {
-        getPolicyQueryManager().deleteViolationAnalysisTrail(project);
+    public long makeViolationAnalysis(final MakeViolationAnalysisCommand command) {
+        return getPolicyQueryManager().makeViolationAnalysis(command);
     }
 
     public PaginatedResult getLicenseGroups() {
@@ -786,34 +754,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public LicenseGroup createLicenseGroup(String name) {
         return getPolicyQueryManager().createLicenseGroup(name);
-    }
-
-    public boolean doesLicenseGroupContainLicense(final LicenseGroup lg, final License license) {
-        return getPolicyQueryManager().doesLicenseGroupContainLicense(lg, license);
-    }
-
-    public void deletePolicy(final Policy policy) {
-        getPolicyQueryManager().deletePolicy(policy);
-    }
-
-    void deletePolicyViolations(Component component) {
-        getPolicyQueryManager().deletePolicyViolations(component);
-    }
-
-    public void deletePolicyViolations(Project project) {
-        getPolicyQueryManager().deletePolicyViolations(project);
-    }
-
-    public void deletePolicyViolationsOfComponent(final Component component) {
-        getPolicyQueryManager().deletePolicyViolationsOfComponent(component);
-    }
-
-    public long getAuditedCount(final Component component, final PolicyViolation.Type type) {
-        return getPolicyQueryManager().getAuditedCount(component, type);
-    }
-
-    public void deletePolicyCondition(PolicyCondition policyCondition) {
-        getPolicyQueryManager().deletePolicyCondition(policyCondition);
     }
 
     public Role createRole(final String name, final List<Permission> permissions) {
@@ -1046,6 +986,10 @@ public class QueryManager extends AlpineQueryManager {
         return getAnalysisQueryManager().getAnalysis(component, vulnerability);
     }
 
+    public long makeAnalysis(final MakeAnalysisCommand command) {
+        return getAnalysisQueryManager().makeAnalysis(command);
+    }
+
     public List<VulnerabilityMetrics> getVulnerabilityMetrics() {
         return getMetricsQueryManager().getVulnerabilityMetrics();
     }
@@ -1218,6 +1162,14 @@ public class QueryManager extends AlpineQueryManager {
 
     public boolean bind(final NotificationRule notificationRule, final Collection<Tag> tags) {
         return getNotificationQueryManager().bind(notificationRule, tags);
+    }
+
+    public List<Notification> getNotificationOutbox() {
+        return getNotificationQueryManager().getNotificationOutbox();
+    }
+
+    public void truncateNotificationOutbox() {
+        getNotificationQueryManager().truncateNotificationOutbox();
     }
 
     /**

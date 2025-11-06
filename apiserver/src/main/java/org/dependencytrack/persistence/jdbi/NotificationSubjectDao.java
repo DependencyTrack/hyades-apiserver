@@ -19,7 +19,6 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationBomRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationComponentRowMapper;
@@ -135,10 +134,7 @@ public interface NotificationSubjectDao extends SqlObject {
               END                              AS "vulnOwaspRrVector",
               COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity",
               STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes",
-              JSONB_VULN_ALIASES("V"."SOURCE", "V"."VULNID") AS "vulnAliasesJson",
-              :vulnAnalysisLevel               AS "vulnAnalysisLevel",
-              '/api/v1/vulnerability/source/' || "V"."SOURCE" || '/vuln/' || "V"."VULNID" || '/projects' AS "affectedProjectsApiUrl",
-              '/vulnerabilities/' || "V"."SOURCE" || '/' || "V"."VULNID" || '/affectedProjects'          AS "affectedProjectsFrontendUrl"
+              JSONB_VULN_ALIASES("V"."SOURCE", "V"."VULNID") AS "vulnAliasesJson"
             FROM
               "COMPONENT" AS "C"
             INNER JOIN
@@ -151,11 +147,10 @@ public interface NotificationSubjectDao extends SqlObject {
               "ANALYSIS" AS "A" ON "A"."COMPONENT_ID" = "C"."ID" AND "A"."VULNERABILITY_ID" = "V"."ID"
             WHERE
               "C"."UUID" = :componentUuid AND "V"."UUID" = ANY(:vulnUuids)
-              AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
+              AND "A"."SUPPRESSED" IS DISTINCT FROM TRUE
             """)
     @RegisterRowMapper(NotificationSubjectNewVulnerabilityRowMapper.class)
-    List<NewVulnerabilitySubject> getForNewVulnerabilities(final UUID componentUuid, final Collection<UUID> vulnUuids,
-                                                           final VulnerabilityAnalysisLevel vulnAnalysisLevel);
+    List<NewVulnerabilitySubject> getForNewVulnerabilities(final UUID componentUuid, final Collection<UUID> vulnUuids);
 
     @SqlQuery("""
             SELECT
@@ -239,7 +234,7 @@ public interface NotificationSubjectDao extends SqlObject {
               "ANALYSIS" AS "A" ON "A"."COMPONENT_ID" = "C"."ID" AND "A"."VULNERABILITY_ID" = "V"."ID"
             WHERE
               "C"."UUID" = :componentUuid
-              AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
+              AND "A"."SUPPRESSED" IS DISTINCT FROM TRUE
             """)
     @UseRowReducer(NotificationSubjectNewVulnerableDependencyRowReducer.class)
     Optional<NewVulnerableDependencySubject> getForNewVulnerableDependency(final UUID componentUuid);
@@ -491,7 +486,7 @@ public interface NotificationSubjectDao extends SqlObject {
                         INNER JOIN "VULNERABILITY" AS "V" ON "V"."ID" = "CV"."VULNERABILITY_ID"
                          LEFT JOIN "ANALYSIS" AS "A" ON "A"."COMPONENT_ID" = "C"."ID" AND "A"."VULNERABILITY_ID" = "V"."ID"
                         WHERE "C"."PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
-                          AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
+                          AND "A"."SUPPRESSED" IS DISTINCT FROM TRUE
                         """)
                 .bind("projectUuid", UUID.fromString(optionalProject.get().getUuid()))
                 .registerRowMapper(Component.class, new NotificationComponentRowMapper())

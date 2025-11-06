@@ -24,6 +24,8 @@ import javax.crypto.spec.IvParameterSpec;
 import java.security.SecureRandom;
 import java.util.Base64;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * This class performs symmetric encryption of data using the system-defined
  * secret key. The encryption routines in this class require the use of the
@@ -36,10 +38,15 @@ import java.util.Base64;
  */
 public class DataEncryption {
 
-    /**
-     * Private constructor.
-     */
-    private DataEncryption() { }
+    private final KeyManager keyManager;
+
+    protected DataEncryption(final KeyManager keyManager) {
+        this.keyManager = requireNonNull(keyManager, "keyManager must not be null");
+    }
+
+    public DataEncryption() {
+        this(KeyManager.getInstance());
+    }
 
     /**
      * Encrypts the specified plainText using AES-256.
@@ -49,7 +56,7 @@ public class DataEncryption {
      * @throws Exception a number of exceptions may be thrown
      * @since 1.3.0
      */
-    public static byte[] encryptAsBytes(final SecretKey secretKey, final String plainText) throws Exception {
+    public byte[] encryptAsBytes(final SecretKey secretKey, final String plainText) throws Exception {
         final byte[] clean = plainText.getBytes();
 
         // Generating IV
@@ -79,8 +86,8 @@ public class DataEncryption {
      * @throws Exception a number of exceptions may be thrown
      * @since 1.3.0
      */
-    public static byte[] encryptAsBytes(final String plainText) throws Exception {
-        final SecretKey secretKey = KeyManager.getInstance().getSecretKey();
+    public byte[] encryptAsBytes(final String plainText) throws Exception {
+        final SecretKey secretKey = keyManager.getSecretKey();
         return encryptAsBytes(secretKey, plainText);
     }
 
@@ -93,7 +100,7 @@ public class DataEncryption {
      * @throws Exception a number of exceptions may be thrown
      * @since 1.3.0
      */
-    public static String encryptAsString(final SecretKey secretKey, final String plainText) throws Exception {
+    public String encryptAsString(final SecretKey secretKey, final String plainText) throws Exception {
         return Base64.getEncoder().encodeToString(encryptAsBytes(secretKey, plainText));
     }
 
@@ -105,7 +112,7 @@ public class DataEncryption {
      * @throws Exception a number of exceptions may be thrown
      * @since 1.3.0
      */
-    public static String encryptAsString(final String plainText) throws Exception {
+    public String encryptAsString(final String plainText) throws Exception {
         return Base64.getEncoder().encodeToString(encryptAsBytes(plainText));
     }
 
@@ -117,7 +124,7 @@ public class DataEncryption {
      * @throws Exception a number of exceptions may be thrown
      * @since 1.3.0
      */
-    public static byte[] decryptAsBytes(final SecretKey secretKey, final byte[] encryptedIvTextBytes) throws Exception {
+    public byte[] decryptAsBytes(final SecretKey secretKey, final byte[] encryptedIvTextBytes) throws Exception {
         int ivSize = 16;
 
         // Extract IV
@@ -143,8 +150,8 @@ public class DataEncryption {
      * @throws Exception a number of exceptions may be thrown
      * @since 1.3.0
      */
-    public static byte[] decryptAsBytes(final byte[] encryptedIvTextBytes) throws Exception {
-        final SecretKey secretKey = KeyManager.getInstance().getSecretKey();
+    public byte[] decryptAsBytes(final byte[] encryptedIvTextBytes) throws Exception {
+        final SecretKey secretKey = keyManager.getSecretKey();
         return decryptAsBytes(secretKey, encryptedIvTextBytes);
     }
 
@@ -159,7 +166,7 @@ public class DataEncryption {
      * @throws Exception a number of exceptions may be thrown
      * @since 1.3.0
      */
-    public static String decryptAsString(final SecretKey secretKey, final String encryptedText) throws Exception {
+    public String decryptAsString(final SecretKey secretKey, final String encryptedText) throws Exception {
         return new String(decryptAsBytes(secretKey, Base64.getDecoder().decode(encryptedText)));
     }
 
@@ -172,7 +179,7 @@ public class DataEncryption {
      * @throws Exception a number of exceptions may be thrown
      * @since 1.3.0
      */
-    public static String decryptAsString(final String encryptedText) throws Exception {
+    public String decryptAsString(final String encryptedText) throws Exception {
         return new String(decryptAsBytes(Base64.getDecoder().decode(encryptedText)));
     }
 

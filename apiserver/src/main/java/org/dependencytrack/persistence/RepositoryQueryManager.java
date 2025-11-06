@@ -171,7 +171,7 @@ public class RepositoryQueryManager extends QueryManager implements IQueryManage
             repo.setUsername(StringUtils.trimToNull(username));
             try {
                 if (password != null) {
-                    repo.setPassword(DataEncryption.encryptAsString(password));
+                    repo.setPassword(new DataEncryption().encryptAsString(password));
                 }
             } catch (Exception e) {
                 LOGGER.error("An error occurred while saving password in encrypted state", e);

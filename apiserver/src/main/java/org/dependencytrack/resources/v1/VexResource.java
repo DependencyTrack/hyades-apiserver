@@ -30,6 +30,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
@@ -50,21 +61,9 @@ import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -280,7 +279,10 @@ public class VexResource extends AbstractApiResource {
             BomResource.validate(decoded, project);
             final VexUploadEvent vexUploadEvent = new VexUploadEvent(project.getUuid(), decoded);
             Event.dispatch(vexUploadEvent);
-            return Response.ok(Collections.singletonMap("token", vexUploadEvent.getChainIdentifier())).build();
+
+            final var bomUploadResponse = new BomUploadResponse(
+                    vexUploadEvent.getChainIdentifier(), project.getUuid());
+            return Response.ok(bomUploadResponse).build();
         } else {
             return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
         }
@@ -299,7 +301,10 @@ public class VexResource extends AbstractApiResource {
                     BomResource.validate(content, project);
                     final VexUploadEvent vexUploadEvent = new VexUploadEvent(project.getUuid(), content);
                     Event.dispatch(vexUploadEvent);
-                    return Response.ok(Collections.singletonMap("token", vexUploadEvent.getChainIdentifier())).build();
+
+                    final var bomUploadResponse = new BomUploadResponse(
+                            vexUploadEvent.getChainIdentifier(), project.getUuid());
+                    return Response.ok(bomUploadResponse).build();
                 } catch (IOException e) {
                     return Response.status(Response.Status.BAD_REQUEST).build();
                 }

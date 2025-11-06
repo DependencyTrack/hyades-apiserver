@@ -34,7 +34,8 @@ import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.command.MakeAnalysisCommand;
+import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.MetricsTestDao;
 import org.dependencytrack.tasks.CallbackTask;
@@ -55,13 +56,13 @@ import static org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask.parti
 public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
 
     @BeforeClass
-    public static void setUpClass() {
+    public static void setUpClass1() {
         EventService.getInstance().subscribe(ProjectMetricsUpdateEvent.class, ProjectMetricsUpdateTask.class);
         EventService.getInstance().subscribe(CallbackEvent.class, CallbackTask.class);
     }
 
     @AfterClass
-    public static void tearDownClass() {
+    public static void tearDownClass1() {
         EventService.getInstance().unsubscribe(ProjectMetricsUpdateTask.class);
         EventService.getInstance().unsubscribe(CallbackTask.class);
     }
@@ -137,8 +138,9 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         componentAudited.setName("acme-lib-b");
         qm.createComponent(componentAudited, false);
         qm.addVulnerability(vuln, componentAudited, AnalyzerIdentity.NONE);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(projectAudited.getId(), componentAudited.getId(), vuln.getId(), AnalysisState.NOT_AFFECTED, null, null, null, false));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(componentAudited, vuln)
+                        .withState(AnalysisState.NOT_AFFECTED));
 
         // Create a project with a suppressed vulnerability.
         var projectSuppressed = new Project();
@@ -150,8 +152,10 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         componentSuppressed.setName("acme-lib-c");
         qm.createComponent(componentSuppressed, false);
         qm.addVulnerability(vuln, componentSuppressed, AnalyzerIdentity.NONE);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(projectSuppressed.getId(), componentSuppressed.getId(), vuln.getId(), AnalysisState.FALSE_POSITIVE, null, null, null, true));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(componentSuppressed, vuln)
+                        .withState(AnalysisState.FALSE_POSITIVE)
+                        .withSuppress(true));
 
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
 
@@ -223,7 +227,9 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         componentAudited.setName("acme-lib-b");
         qm.createComponent(componentAudited, false);
         final var violationAudited = createPolicyViolation(componentAudited, Policy.ViolationState.WARN, PolicyViolation.Type.OPERATIONAL);
-        qm.makeViolationAnalysis(componentAudited, violationAudited, ViolationAnalysisState.APPROVED, false);
+        qm.makeViolationAnalysis(
+                new MakeViolationAnalysisCommand(componentAudited, violationAudited)
+                        .withState(ViolationAnalysisState.APPROVED));
 
         // Create a project with a suppressed violation.
         var projectSuppressed = new Project();
@@ -235,7 +241,10 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         componentSuppressed.setName("acme-lib-c");
         qm.createComponent(componentSuppressed, false);
         final var violationSuppressed = createPolicyViolation(componentSuppressed, Policy.ViolationState.INFO, PolicyViolation.Type.SECURITY);
-        qm.makeViolationAnalysis(componentSuppressed, violationSuppressed, ViolationAnalysisState.REJECTED, true);
+        qm.makeViolationAnalysis(
+                new MakeViolationAnalysisCommand(componentSuppressed, violationSuppressed)
+                        .withState(ViolationAnalysisState.REJECTED)
+                        .withSuppress(true));
 
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
 

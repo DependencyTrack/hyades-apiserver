@@ -19,50 +19,57 @@
 package alpine.security.crypto;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import java.security.SecureRandom;
+import javax.crypto.spec.SecretKeySpec;
+import java.util.Base64;
 
-public class DataEncryptionTest {
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
-    private static SecretKey secretKey;
+class DataEncryptionTest {
 
-    @BeforeAll
-    public static void beforeClass() throws Exception {
-        final KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-        final SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
-        keyGen.init(256, random);
-        secretKey = keyGen.generateKey();
+    private DataEncryption dataEncryption;
+
+    @BeforeEach
+    void beforeEach() {
+        // Use a hardcoded key for testing to avoid expensive generation.
+        final SecretKey secretKey = new SecretKeySpec(
+                Base64.getDecoder().decode("ACIUJnGyVVvaEIwcW58aTcqholameAxDkYOps+M6tcY="), 0, 32, "AES");
+
+        final var keyManagerMock = mock(KeyManager.class);
+        doReturn(secretKey).when(keyManagerMock).getSecretKey();
+
+        dataEncryption = new DataEncryption(keyManagerMock);
     }
 
     @Test
-    public void encryptAndDecryptAsBytes1Test() throws Exception {
-        byte[] bytes = DataEncryption.encryptAsBytes(secretKey, "This is encrypted text");
+    void encryptAndDecryptAsBytes1Test() throws Exception {
+        byte[] bytes = dataEncryption.encryptAsBytes("This is encrypted text");
         Assertions.assertTrue(bytes.length > 0);
-        Assertions.assertEquals("This is encrypted text", new String(DataEncryption.decryptAsBytes(secretKey, bytes)));
+        Assertions.assertEquals("This is encrypted text", new String(dataEncryption.decryptAsBytes(bytes)));
     }
 
     @Test
-    public void encryptAndDecryptAsBytes2Test() throws Exception {
-        byte[] bytes = DataEncryption.encryptAsBytes("This is encrypted text");
+    void encryptAndDecryptAsBytes2Test() throws Exception {
+        byte[] bytes = dataEncryption.encryptAsBytes("This is encrypted text");
         Assertions.assertTrue(bytes.length > 0);
-        Assertions.assertEquals("This is encrypted text", new String(DataEncryption.decryptAsBytes(bytes)));
+        Assertions.assertEquals("This is encrypted text", new String(dataEncryption.decryptAsBytes(bytes)));
     }
 
     @Test
-    public void encryptAndDecryptAsString1Test() throws Exception {
-        String enc = DataEncryption.encryptAsString(secretKey, "This is encrypted text");
+    void encryptAndDecryptAsString1Test() throws Exception {
+        String enc = dataEncryption.encryptAsString("This is encrypted text");
         Assertions.assertTrue(enc.length() > 0);
-        Assertions.assertEquals("This is encrypted text", DataEncryption.decryptAsString(secretKey, enc));
+        Assertions.assertEquals("This is encrypted text", dataEncryption.decryptAsString(enc));
     }
 
     @Test
-    public void encryptAndDecryptAsString2Test() throws Exception {
-        String enc = DataEncryption.encryptAsString("This is encrypted text");
+    void encryptAndDecryptAsString2Test() throws Exception {
+        String enc = dataEncryption.encryptAsString("This is encrypted text");
         Assertions.assertTrue(enc.length() > 0);
-        Assertions.assertEquals("This is encrypted text", DataEncryption.decryptAsString(enc));
+        Assertions.assertEquals("This is encrypted text", dataEncryption.decryptAsString(enc));
     }
 }

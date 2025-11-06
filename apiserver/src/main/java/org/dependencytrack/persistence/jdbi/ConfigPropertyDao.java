@@ -67,7 +67,7 @@ public interface ConfigPropertyDao extends SqlObject {
         }
 
         try {
-            final String decryptedValue = DataEncryption.decryptAsString(optionalRawValue.get());
+            final String decryptedValue = new DataEncryption().decryptAsString(optionalRawValue.get());
             return Optional.of(decryptedValue);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to decrypt value", e);

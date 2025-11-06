@@ -101,6 +101,7 @@
         <project.parentBaseDir>.</project.parentBaseDir>
 
         <!-- Dependency versions -->
+        <lib.archunit.version>1.4.1</lib.archunit.version>
         <lib.assertj.version>3.27.6</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.cel-java.version>0.5.3</lib.cel-java.version>
@@ -113,18 +114,19 @@
         <lib.httpclient5.version>5.5.1</lib.httpclient5.version>
         <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.1.1</lib.java-uuid-generator.version>
-        <lib.jackson.version>2.20.0</lib.jackson.version>
-        <lib.jdbi.version>3.49.6</lib.jdbi.version>
+        <lib.jackson.version>2.20.1</lib.jackson.version>
+        <lib.jdbi.version>3.50.0</lib.jdbi.version>
         <lib.jersey.version>3.1.11</lib.jersey.version>
         <lib.jetty.version>12.1.3</lib.jetty.version>
         <lib.json-unit.version>5.0.0</lib.json-unit.version>
+        <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
-        <lib.junit-jupiter.version>6.0.0</lib.junit-jupiter.version>
+        <lib.junit-jupiter.version>6.0.1</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.micrometer.version>1.15.5</lib.micrometer.version>
         <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.20.0</lib.mockito.version>
-        <lib.okhttp.version>5.2.1</lib.okhttp.version>
+        <lib.okhttp.version>5.3.0</lib.okhttp.version>
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
@@ -137,7 +139,7 @@
         <lib.wiremock.version>3.13.1</lib.wiremock.version>
         <lib.zstd-jni.version>1.5.7-6</lib.zstd-jni.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
-        <unitTestForkCount>2</unitTestForkCount>
+        <unitTestForkCount>1</unitTestForkCount>
 
         <!-- Log level to use for unit tests -->
         <unitTestLogLevel>WARN</unitTestLogLevel>
@@ -145,6 +147,12 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit-junit4</artifactId>
+                <version>${lib.archunit.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
@@ -261,6 +269,12 @@
                 <groupId>net.javacrumbs.json-unit</groupId>
                 <artifactId>json-unit-assertj</artifactId>
                 <version>${lib.json-unit.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jspecify</groupId>
+                <artifactId>jspecify</artifactId>
+                <version>${lib.jspecify.version}</version>
             </dependency>
 
             <dependency>
@@ -397,7 +411,7 @@
             <extension>
                 <groupId>org.apache.maven.extensions</groupId>
                 <artifactId>maven-build-cache-extension</artifactId>
-                <version>1.2.0</version>
+                <version>1.2.1</version>
             </extension>
         </extensions>
 
@@ -471,7 +485,7 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.6.0</version>
                 <configuration>
-                    <configLocation>${project.parentBaseDir}/.checkstyle.xml</configLocation>
+                    <configLocation>${project.parentBaseDir}/support/checkstyle/config.xml</configLocation>
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <includeResources>false</includeResources>
                     <includeTestResources>false</includeTestResources>
@@ -491,7 +505,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>12.1.0</version>
+                        <version>12.1.1</version>
                     </dependency>
                 </dependencies>
             </plugin>
@@ -534,7 +548,6 @@
                 </property>
             </activation>
             <properties>
-                <unitTestForkCount>1C</unitTestForkCount>
                 <unitTestLogLevel>OFF</unitTestLogLevel>
             </properties>
         </profile>

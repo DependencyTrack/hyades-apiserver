@@ -18,15 +18,28 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.model.ApiKey;
+import alpine.model.User;
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.model.Analysis;
+import org.dependencytrack.model.AnalysisComment;
+import org.dependencytrack.model.AnalysisJustification;
+import org.dependencytrack.model.AnalysisResponse;
+import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+
+import static org.dependencytrack.notification.NotificationFactory.createVulnerabilityAnalysisDecisionChangeNotification;
+import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 
 public class AnalysisQueryManager extends QueryManager implements IQueryManager {
 
@@ -74,4 +87,122 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
         query.setRange(0, 1);
         return singleResult(query.execute(component, vulnerability));
     }
+
+    /**
+     * @since 5.7.0
+     */
+    @Override
+    public long makeAnalysis(final MakeAnalysisCommand command) {
+        assertPersistent(command.component(), "component must be persistent");
+        assertPersistent(command.vulnerability(), "vulnerability must be persistent");
+
+        return callInTransaction(() -> {
+            final var auditTrailComments = new ArrayList<String>();
+
+            Analysis analysis = getAnalysis(command.component(), command.vulnerability());
+            if (analysis == null) {
+                analysis = new Analysis();
+                analysis.setComponent(command.component());
+                analysis.setVulnerability(command.vulnerability());
+                analysis.setAnalysisState(AnalysisState.NOT_SET);
+                analysis.setAnalysisJustification(AnalysisJustification.NOT_SET);
+                analysis.setAnalysisResponse(AnalysisResponse.NOT_SET);
+                analysis.setSuppressed(false);
+                persist(analysis);
+            }
+
+            boolean stateChanged = false;
+            boolean suppressionChanged = false;
+
+            if (command.state() != null && command.state() != analysis.getAnalysisState()) {
+                auditTrailComments.add("Analysis: %s → %s".formatted(analysis.getAnalysisState(), command.state()));
+                analysis.setAnalysisState(command.state());
+                stateChanged = true;
+            }
+            if (command.justification() != null && command.justification() != analysis.getAnalysisJustification()) {
+                auditTrailComments.add("Justification: %s → %s".formatted(analysis.getAnalysisJustification(), command.justification()));
+                analysis.setAnalysisJustification(command.justification());
+            }
+            if (command.response() != null && command.response() != analysis.getAnalysisResponse()) {
+                auditTrailComments.add("Vendor Response: %s → %s".formatted(analysis.getAnalysisResponse(), command.response()));
+                analysis.setAnalysisResponse(command.response());
+            }
+            if (command.details() != null && !command.details().equals(analysis.getAnalysisDetails())) {
+                auditTrailComments.add("Details: %s".formatted(command.details()));
+                analysis.setAnalysisDetails(command.details());
+            }
+            if (command.suppress() != null && command.suppress() != analysis.isSuppressed()) {
+                auditTrailComments.add(command.suppress() ? "Suppressed" : "Unsuppressed");
+                analysis.setSuppressed(command.suppress());
+                suppressionChanged = true;
+            }
+
+            final List<String> comments =
+                    !command.options().contains(MakeAnalysisCommand.Option.OMIT_AUDIT_TRAIL)
+                            ? auditTrailComments
+                            : new ArrayList<>();
+            if (command.comment() != null) {
+                comments.add(command.comment());
+            }
+
+            createAnalysisComments(analysis, command.commenter(), comments);
+
+            if (!command.options().contains(MakeAnalysisCommand.Option.OMIT_NOTIFICATION)
+                    && (stateChanged || suppressionChanged)) {
+                NotificationEmitter.using(this).emit(
+                        createVulnerabilityAnalysisDecisionChangeNotification(
+                                analysis, stateChanged, suppressionChanged));
+            }
+
+            return analysis.getId();
+        });
+    }
+
+    private void createAnalysisComments(
+            final Analysis analysis,
+            final String commenter,
+            final List<String> comments) {
+        assertPersistent(analysis, "analysis must be persistent");
+
+        if (comments == null || comments.isEmpty()) {
+            return;
+        }
+
+        final var now = new Date();
+
+        final String commenterToUse;
+        if (commenter == null) {
+            commenterToUse = switch (principal) {
+                case User user -> user.getUsername();
+                case ApiKey apiKey -> apiKey.getTeams().get(0).getName();
+                case null -> null;
+                default -> throw new IllegalStateException(
+                        "Unexpected principal type: " + principal.getClass().getName());
+            };
+        } else {
+            commenterToUse = commenter;
+        }
+
+        runInTransaction(() -> {
+            final var analysisComments = new ArrayList<AnalysisComment>(comments.size());
+
+            for (final String comment : comments) {
+                final var analysisComment = new AnalysisComment();
+                analysisComment.setAnalysis(analysis);
+                analysisComment.setCommenter(commenterToUse);
+                analysisComment.setComment(comment);
+                analysisComment.setTimestamp(now);
+                analysisComments.add(analysisComment);
+            }
+
+            persist(analysisComments);
+
+            if (analysis.getAnalysisComments() != null) {
+                analysis.getAnalysisComments().addAll(analysisComments);
+            } else {
+                analysis.setAnalysisComments(analysisComments);
+            }
+        });
+    }
+
 }

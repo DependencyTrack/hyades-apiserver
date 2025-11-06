@@ -32,6 +32,7 @@ import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,6 +43,8 @@ class ApiKeyMigrationChangeTest {
     @SuppressWarnings("resource")
     private final PostgreSQLContainer<?> postgresContainer =
             new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
+                    .withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off")
+                    .withTmpFs(Map.of("/var/lib/postgresql/data", "rw"))
                     .withInitScript("org/dependencytrack/persistence/migration/change/ApiKeyMigrationChangeTest-schema.sql");
 
     @Test

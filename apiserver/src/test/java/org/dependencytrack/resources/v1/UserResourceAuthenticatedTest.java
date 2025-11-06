@@ -26,13 +26,17 @@ import alpine.model.User;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
-import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.resources.v1.vo.ModifyUserProjectRoleRequest;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -41,24 +45,17 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_USER_CREATED;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_USER_DELETED;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_SYSTEM;
-import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
 public class UserResourceAuthenticatedTest extends ResourceTest {
 
@@ -235,14 +232,13 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals("blackbeard", json.getString("username"));
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
-        assertThat(userNotification).isNotNull();
-        assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
-        assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_CREATED);
-        assertThat(userNotification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(userNotification.getTitle()).isEqualTo(NotificationConstants.Title.USER_CREATED);
-        assertThat(userNotification.getContent()).isEqualTo("LDAP user created");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_SYSTEM);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_USER_CREATED);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo("User Created");
+            assertThat(notification.getContent()).isEqualTo("User blackbeard was created");
+        });
     }
 
     @Test
@@ -272,7 +268,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void deleteLdapUserTest() throws InterruptedException {
+    public void deleteLdapUserTest() {
         qm.createLdapUser("blackbeard");
         LdapUser user = new LdapUser();
         user.setUsername("blackbeard");
@@ -283,14 +279,13 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
         Assert.assertEquals(204, response.getStatus(), 0);
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
-        assertThat(userNotification).isNotNull();
-        assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
-        assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_DELETED);
-        assertThat(userNotification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(userNotification.getTitle()).isEqualTo(NotificationConstants.Title.USER_DELETED);
-        assertThat(userNotification.getContent()).isEqualTo("LDAP user deleted");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_SYSTEM);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_USER_DELETED);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo("User Deleted");
+            assertThat(notification.getContent()).isEqualTo("User blackbeard was deleted");
+        });
     }
 
     @Test
@@ -312,14 +307,13 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertEquals("blackbeard@example.com", json.getString("email"));
         Assert.assertEquals("blackbeard", json.getString("username"));
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
-        assertThat(userNotification).isNotNull();
-        assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
-        assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_CREATED);
-        assertThat(userNotification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(userNotification.getTitle()).isEqualTo(NotificationConstants.Title.USER_CREATED);
-        assertThat(userNotification.getContent()).isEqualTo("Managed user created");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_SYSTEM);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_USER_CREATED);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo("User Created");
+            assertThat(notification.getContent()).isEqualTo("User blackbeard was created");
+        });
     }
 
     @Test
@@ -518,14 +512,13 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
         Assert.assertEquals(204, response.getStatus(), 0);
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
-        assertThat(userNotification).isNotNull();
-        assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
-        assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_DELETED);
-        assertThat(userNotification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(userNotification.getTitle()).isEqualTo(NotificationConstants.Title.USER_DELETED);
-        assertThat(userNotification.getContent()).isEqualTo("Managed user deleted");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_SYSTEM);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_USER_DELETED);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo("User Deleted");
+            assertThat(notification.getContent()).isEqualTo("User blackbeard was deleted");
+        });
     }
 
     @Test
@@ -541,14 +534,13 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals("blackbeard", json.getString("username"));
 
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
-        assertThat(userNotification).isNotNull();
-        assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
-        assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_CREATED);
-        assertThat(userNotification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-        assertThat(userNotification.getTitle()).isEqualTo(NotificationConstants.Title.USER_CREATED);
-        assertThat(userNotification.getContent()).isEqualTo("OpenID Connect user created");
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_SYSTEM);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_USER_CREATED);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+            assertThat(notification.getTitle()).isEqualTo("User Created");
+            assertThat(notification.getContent()).isEqualTo("User blackbeard was created");
+        });
     }
 
     @Test

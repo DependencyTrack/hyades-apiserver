@@ -27,6 +27,11 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
 import com.fasterxml.jackson.core.StreamReadConstraints;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.javacrumbs.jsonunit.core.Option;
@@ -37,7 +42,6 @@ import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -56,9 +60,8 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
-import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
@@ -75,11 +78,6 @@ import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runner.RunWith;
 
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -110,11 +108,9 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_VALIDATION_FAILED;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
-import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 @RunWith(JUnitParamsRunner.class)
@@ -329,8 +325,11 @@ public class BomResourceTest extends ResourceTest {
         componentWithVulnAndAnalysis.setDirectDependencies("[]");
         qm.createComponent(componentWithVulnAndAnalysis, false);
         qm.addVulnerability(vulnerability, componentWithVulnAndAnalysis, AnalyzerIdentity.INTERNAL_ANALYZER);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), componentWithVulnAndAnalysis.getId(), vulnerability.getId(), AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(componentWithVulnAndAnalysis, vulnerability)
+                        .withState(AnalysisState.RESOLVED)
+                        .withResponse(AnalysisResponse.UPDATE)
+                        .withSuppress(true));
 
         // Make componentWithoutVuln (acme-lib-a) depend on componentWithVuln (acme-lib-b)
         componentWithoutVuln.setDirectDependencies("""
@@ -503,54 +502,54 @@ public class BomResourceTest extends ResourceTest {
                 .withMatcher("component", equalTo(component.getUuid().toString()))
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
                 .isEqualTo(json("""
-                {
-                    "bomFormat": "CycloneDX",
-                    "specVersion": "1.5",
-                    "serialNumber": "${json-unit.ignore}",
-                    "version": 1,
-                    "metadata": {
-                        "timestamp": "${json-unit.any-string}",
-                        "tools": [
-                            {
-                                "vendor": "OWASP",
-                                "name": "Dependency-Track",
-                                "version": "${json-unit.any-string}"
-                            }
-                        ],
-                        "component": {
-                            "type": "library",
-                            "bom-ref": "${json-unit.matches:projectUuid}",
-                            "name": "Acme Example",
-                            "version": "1.0"
-                        }
-                    },
-                    "components": [
                         {
-                            "type": "library",
-                            "bom-ref": "${json-unit.matches:component}",
-                            "name": "sample-component",
-                            "version": "1.0",
-                            "licenses": [
-                                {
-                                    "license": {
-                                        "name": "CustomName"
+                            "bomFormat": "CycloneDX",
+                            "specVersion": "1.5",
+                            "serialNumber": "${json-unit.ignore}",
+                            "version": 1,
+                            "metadata": {
+                                "timestamp": "${json-unit.any-string}",
+                                "tools": [
+                                    {
+                                        "vendor": "OWASP",
+                                        "name": "Dependency-Track",
+                                        "version": "${json-unit.any-string}"
                                     }
+                                ],
+                                "component": {
+                                    "type": "library",
+                                    "bom-ref": "${json-unit.matches:projectUuid}",
+                                    "name": "Acme Example",
+                                    "version": "1.0"
+                                }
+                            },
+                            "components": [
+                                {
+                                    "type": "library",
+                                    "bom-ref": "${json-unit.matches:component}",
+                                    "name": "sample-component",
+                                    "version": "1.0",
+                                    "licenses": [
+                                        {
+                                            "license": {
+                                                "name": "CustomName"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            "dependencies": [
+                                {
+                                    "ref": "${json-unit.matches:projectUuid}",
+                                    "dependsOn": []
+                                },
+                                {
+                                    "ref": "${json-unit.matches:component}",
+                                    "dependsOn": []
                                 }
                             ]
                         }
-                    ],
-                    "dependencies": [
-                        {
-                            "ref": "${json-unit.matches:projectUuid}",
-                            "dependsOn": []
-                        },
-                        {
-                            "ref": "${json-unit.matches:component}",
-                            "dependsOn": []
-                        }
-                    ]
-                }
-                """));
+                        """));
     }
 
     @Test
@@ -590,8 +589,11 @@ public class BomResourceTest extends ResourceTest {
         componentWithVulnAndAnalysis.setDirectDependencies("[]");
         qm.createComponent(componentWithVulnAndAnalysis, false);
         qm.addVulnerability(vulnerability, componentWithVulnAndAnalysis, AnalyzerIdentity.INTERNAL_ANALYZER);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), componentWithVulnAndAnalysis.getId(), vulnerability.getId(), AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(componentWithVulnAndAnalysis, vulnerability)
+                        .withState(AnalysisState.RESOLVED)
+                        .withResponse(AnalysisResponse.UPDATE)
+                        .withSuppress(true));
 
         // Make componentWithoutVuln (acme-lib-a) depend on componentWithVuln (acme-lib-b)
         componentWithoutVuln.setDirectDependencies("""
@@ -631,116 +633,116 @@ public class BomResourceTest extends ResourceTest {
                 .withMatcher("componentWithVulnUuid", equalTo(componentWithVuln.getUuid().toString()))
                 .withMatcher("componentWithVulnAndAnalysisUuid", equalTo(componentWithVulnAndAnalysis.getUuid().toString()))
                 .isEqualTo(json("""
-                {
-                    "bomFormat": "CycloneDX",
-                    "specVersion": "1.5",
-                    "serialNumber": "${json-unit.ignore}",
-                    "version": 1,
-                    "metadata": {
-                        "timestamp": "${json-unit.any-string}",
-                        "component": {
-                            "type": "application",
-                            "bom-ref": "${json-unit.matches:projectUuid}",
-                            "name": "acme-app",
-                            "version": "SNAPSHOT"
-                        },
-                        "tools": [
-                            {
-                                "vendor": "OWASP",
-                                "name": "Dependency-Track",
-                                "version": "${json-unit.any-string}"
-                            }
-                        ]
-                    },
-                    "components": [
                         {
-                            "type": "library",
-                            "bom-ref": "${json-unit.matches:componentWithoutVulnUuid}",
-                            "name": "acme-lib-a",
-                            "version": "1.0.0"
-                        },
-                        {
-                            "type": "library",
-                            "bom-ref": "${json-unit.matches:componentWithVulnUuid}",
-                            "name": "acme-lib-b",
-                            "version": "1.0.0"
-                        },
-                        {
-                            "type": "library",
-                            "bom-ref": "${json-unit.matches:componentWithVulnAndAnalysisUuid}",
-                            "name": "acme-lib-c",
-                            "version": "1.0.0"
-                        }
-                    ],
-                    "dependencies": [
-                        {
-                            "ref": "${json-unit.matches:projectUuid}",
-                            "dependsOn": [
-                                "${json-unit.matches:componentWithoutVulnUuid}",
-                                "${json-unit.matches:componentWithVulnAndAnalysisUuid}"
-                            ]
-                        },
-                        {
-                            "ref": "${json-unit.matches:componentWithoutVulnUuid}",
-                            "dependsOn": [
-                                "${json-unit.matches:componentWithVulnUuid}"
-                            ]
-                        },
-                        {
-                            "ref": "${json-unit.matches:componentWithVulnUuid}",
-                            "dependsOn": []
-                        },
-                        {
-                            "ref": "${json-unit.matches:componentWithVulnAndAnalysisUuid}",
-                            "dependsOn": []
-                        }
-                    ],
-                    "vulnerabilities": [
-                        {
-                            "bom-ref": "${json-unit.matches:vulnUuid}",
-                            "id": "INT-001",
-                            "source": {
-                                "name": "INTERNAL"
+                            "bomFormat": "CycloneDX",
+                            "specVersion": "1.5",
+                            "serialNumber": "${json-unit.ignore}",
+                            "version": 1,
+                            "metadata": {
+                                "timestamp": "${json-unit.any-string}",
+                                "component": {
+                                    "type": "application",
+                                    "bom-ref": "${json-unit.matches:projectUuid}",
+                                    "name": "acme-app",
+                                    "version": "SNAPSHOT"
+                                },
+                                "tools": [
+                                    {
+                                        "vendor": "OWASP",
+                                        "name": "Dependency-Track",
+                                        "version": "${json-unit.any-string}"
+                                    }
+                                ]
                             },
-                            "ratings": [
+                            "components": [
                                 {
+                                    "type": "library",
+                                    "bom-ref": "${json-unit.matches:componentWithoutVulnUuid}",
+                                    "name": "acme-lib-a",
+                                    "version": "1.0.0"
+                                },
+                                {
+                                    "type": "library",
+                                    "bom-ref": "${json-unit.matches:componentWithVulnUuid}",
+                                    "name": "acme-lib-b",
+                                    "version": "1.0.0"
+                                },
+                                {
+                                    "type": "library",
+                                    "bom-ref": "${json-unit.matches:componentWithVulnAndAnalysisUuid}",
+                                    "name": "acme-lib-c",
+                                    "version": "1.0.0"
+                                }
+                            ],
+                            "dependencies": [
+                                {
+                                    "ref": "${json-unit.matches:projectUuid}",
+                                    "dependsOn": [
+                                        "${json-unit.matches:componentWithoutVulnUuid}",
+                                        "${json-unit.matches:componentWithVulnAndAnalysisUuid}"
+                                    ]
+                                },
+                                {
+                                    "ref": "${json-unit.matches:componentWithoutVulnUuid}",
+                                    "dependsOn": [
+                                        "${json-unit.matches:componentWithVulnUuid}"
+                                    ]
+                                },
+                                {
+                                    "ref": "${json-unit.matches:componentWithVulnUuid}",
+                                    "dependsOn": []
+                                },
+                                {
+                                    "ref": "${json-unit.matches:componentWithVulnAndAnalysisUuid}",
+                                    "dependsOn": []
+                                }
+                            ],
+                            "vulnerabilities": [
+                                {
+                                    "bom-ref": "${json-unit.matches:vulnUuid}",
+                                    "id": "INT-001",
                                     "source": {
                                         "name": "INTERNAL"
                                     },
-                                    "severity": "high",
-                                    "method": "other"
-                                }
-                            ],
-                            "affects": [
+                                    "ratings": [
+                                        {
+                                            "source": {
+                                                "name": "INTERNAL"
+                                            },
+                                            "severity": "high",
+                                            "method": "other"
+                                        }
+                                    ],
+                                    "affects": [
+                                        {
+                                            "ref": "${json-unit.matches:componentWithVulnUuid}"
+                                        }
+                                    ]
+                                },
                                 {
-                                    "ref": "${json-unit.matches:componentWithVulnUuid}"
-                                }
-                            ]
-                        },
-                        {
-                            "bom-ref": "${json-unit.matches:vulnUuid}",
-                            "id": "INT-001",
-                            "source": {
-                                "name": "INTERNAL"
-                            },
-                            "ratings": [
-                                {
+                                    "bom-ref": "${json-unit.matches:vulnUuid}",
+                                    "id": "INT-001",
                                     "source": {
                                         "name": "INTERNAL"
                                     },
-                                    "severity": "high",
-                                    "method": "other"
-                                }
-                            ],
-                            "affects": [
-                                {
-                                    "ref": "${json-unit.matches:componentWithVulnAndAnalysisUuid}"
+                                    "ratings": [
+                                        {
+                                            "source": {
+                                                "name": "INTERNAL"
+                                            },
+                                            "severity": "high",
+                                            "method": "other"
+                                        }
+                                    ],
+                                    "affects": [
+                                        {
+                                            "ref": "${json-unit.matches:componentWithVulnAndAnalysisUuid}"
+                                        }
+                                    ]
                                 }
                             ]
                         }
-                    ]
-                }
-                """));
+                        """));
 
         // Ensure the dependency graph did not get deleted during export.
         // https://github.com/DependencyTrack/dependency-track/issues/2494
@@ -805,8 +807,11 @@ public class BomResourceTest extends ResourceTest {
         componentWithVulnAndAnalysis.setDirectDependencies("[]");
         qm.createComponent(componentWithVulnAndAnalysis, false);
         qm.addVulnerability(vulnerability, componentWithVulnAndAnalysis, AnalyzerIdentity.INTERNAL_ANALYZER);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), componentWithVulnAndAnalysis.getId(), vulnerability.getId(), AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(componentWithVulnAndAnalysis, vulnerability)
+                        .withState(AnalysisState.RESOLVED)
+                        .withResponse(AnalysisResponse.UPDATE)
+                        .withSuppress(true));
 
         // Make componentWithoutVuln (acme-lib-a) depend on componentWithVuln (acme-lib-b)
         componentWithoutVuln.setDirectDependencies("""
@@ -846,109 +851,109 @@ public class BomResourceTest extends ResourceTest {
                 .withMatcher("componentWithVulnUuid", equalTo(componentWithVuln.getUuid().toString()))
                 .withMatcher("componentWithVulnAndAnalysisUuid", equalTo(componentWithVulnAndAnalysis.getUuid().toString()))
                 .isEqualTo(json("""
-                {
-                    "bomFormat": "CycloneDX",
-                    "specVersion": "1.5",
-                    "serialNumber": "${json-unit.ignore}",
-                    "version": 1,
-                    "metadata": {
-                        "timestamp": "${json-unit.any-string}",
-                        "component": {
-                            "type": "application",
-                            "bom-ref": "${json-unit.matches:projectUuid}",
-                            "name": "acme-app",
-                            "version": "SNAPSHOT"
-                        },
-                        "tools": [
-                            {
-                                "vendor": "OWASP",
-                                "name": "Dependency-Track",
-                                "version": "${json-unit.any-string}"
-                            }
-                        ]
-                    },
-                    "components": [
                         {
-                            "type": "library",
-                            "bom-ref": "${json-unit.matches:componentWithVulnUuid}",
-                            "name": "acme-lib-b",
-                            "version": "1.0.0"
-                        },
-                        {
-                            "type": "library",
-                            "bom-ref": "${json-unit.matches:componentWithVulnAndAnalysisUuid}",
-                            "name": "acme-lib-c",
-                            "version": "1.0.0"
-                        }
-                    ],
-                    "dependencies": [
-                        {
-                            "ref": "${json-unit.matches:projectUuid}",
-                            "dependsOn": [
-                                "${json-unit.matches:componentWithVulnAndAnalysisUuid}"
-                            ]
-                        },
-                        {
-                            "ref": "${json-unit.matches:componentWithVulnUuid}",
-                            "dependsOn": []
-                        },
-                        {
-                            "ref": "${json-unit.matches:componentWithVulnAndAnalysisUuid}",
-                            "dependsOn": []
-                        }
-                    ],
-                    "vulnerabilities": [
-                        {
-                            "bom-ref": "${json-unit.matches:vulnUuid}",
-                            "id": "INT-001",
-                            "source": {
-                                "name": "INTERNAL"
-                            },
-                            "ratings": [
-                                {
-                                    "source": {
-                                        "name": "INTERNAL"
-                                    },
-                                    "severity": "high",
-                                    "method": "other"
-                                }
-                            ],
-                            "affects": [
-                                {
-                                    "ref": "${json-unit.matches:componentWithVulnUuid}"
-                                }
-                            ]
-                        },
-                        {
-                            "bom-ref": "${json-unit.matches:vulnUuid}",
-                            "id": "INT-001",
-                            "source": {
-                                "name": "INTERNAL"
-                            },
-                            "ratings": [
-                                {
-                                    "source": {
-                                        "name": "INTERNAL"
-                                    },
-                                    "severity": "high",
-                                    "method": "other"
-                                }
-                            ],
-                            "affects": [
-                                {
-                                    "ref": "${json-unit.matches:componentWithVulnAndAnalysisUuid}"
-                                }
-                            ],
-                            "analysis": {
-                                "state": "resolved",
-                                "response": [
-                                    "update"
+                            "bomFormat": "CycloneDX",
+                            "specVersion": "1.5",
+                            "serialNumber": "${json-unit.ignore}",
+                            "version": 1,
+                            "metadata": {
+                                "timestamp": "${json-unit.any-string}",
+                                "component": {
+                                    "type": "application",
+                                    "bom-ref": "${json-unit.matches:projectUuid}",
+                                    "name": "acme-app",
+                                    "version": "SNAPSHOT"
+                                },
+                                "tools": [
+                                    {
+                                        "vendor": "OWASP",
+                                        "name": "Dependency-Track",
+                                        "version": "${json-unit.any-string}"
+                                    }
                                 ]
-                            }
+                            },
+                            "components": [
+                                {
+                                    "type": "library",
+                                    "bom-ref": "${json-unit.matches:componentWithVulnUuid}",
+                                    "name": "acme-lib-b",
+                                    "version": "1.0.0"
+                                },
+                                {
+                                    "type": "library",
+                                    "bom-ref": "${json-unit.matches:componentWithVulnAndAnalysisUuid}",
+                                    "name": "acme-lib-c",
+                                    "version": "1.0.0"
+                                }
+                            ],
+                            "dependencies": [
+                                {
+                                    "ref": "${json-unit.matches:projectUuid}",
+                                    "dependsOn": [
+                                        "${json-unit.matches:componentWithVulnAndAnalysisUuid}"
+                                    ]
+                                },
+                                {
+                                    "ref": "${json-unit.matches:componentWithVulnUuid}",
+                                    "dependsOn": []
+                                },
+                                {
+                                    "ref": "${json-unit.matches:componentWithVulnAndAnalysisUuid}",
+                                    "dependsOn": []
+                                }
+                            ],
+                            "vulnerabilities": [
+                                {
+                                    "bom-ref": "${json-unit.matches:vulnUuid}",
+                                    "id": "INT-001",
+                                    "source": {
+                                        "name": "INTERNAL"
+                                    },
+                                    "ratings": [
+                                        {
+                                            "source": {
+                                                "name": "INTERNAL"
+                                            },
+                                            "severity": "high",
+                                            "method": "other"
+                                        }
+                                    ],
+                                    "affects": [
+                                        {
+                                            "ref": "${json-unit.matches:componentWithVulnUuid}"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "bom-ref": "${json-unit.matches:vulnUuid}",
+                                    "id": "INT-001",
+                                    "source": {
+                                        "name": "INTERNAL"
+                                    },
+                                    "ratings": [
+                                        {
+                                            "source": {
+                                                "name": "INTERNAL"
+                                            },
+                                            "severity": "high",
+                                            "method": "other"
+                                        }
+                                    ],
+                                    "affects": [
+                                        {
+                                            "ref": "${json-unit.matches:componentWithVulnAndAnalysisUuid}"
+                                        }
+                                    ],
+                                    "analysis": {
+                                        "state": "resolved",
+                                        "response": [
+                                            "update"
+                                        ]
+                                    }
+                                }
+                            ]
                         }
-                    ]
-                }
-                """));
+                        """));
 
         // Ensure the dependency graph did not get deleted during export.
         // https://github.com/DependencyTrack/dependency-track/issues/2494
@@ -1056,18 +1061,23 @@ public class BomResourceTest extends ResourceTest {
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertNotNull(json.getString("token"));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
+        assertThatJson(json.toString())
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "token": "${json-unit.any-string}",
+                          "projectUuid": "${json-unit.matches:projectUuid}"
+                        }
+                        """);
         UUID uuid = UUID.fromString(json.getString("token"));
         assertThat(qm.getAllWorkflowStatesForAToken(uuid)).satisfiesExactlyInAnyOrder(
-               workflowState -> {
-                   assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.BOM_CONSUMPTION);
-                   assertThat(workflowState.getToken()).isEqualTo(uuid);
-                   assertThat(workflowState.getParent()).isNull();
-                   assertThat(workflowState.getStartedAt()).isNull();
-                   assertThat(workflowState.getUpdatedAt()).isNotNull();
-               },
+                workflowState -> {
+                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.BOM_CONSUMPTION);
+                    assertThat(workflowState.getToken()).isEqualTo(uuid);
+                    assertThat(workflowState.getParent()).isNull();
+                    assertThat(workflowState.getStartedAt()).isNull();
+                    assertThat(workflowState.getUpdatedAt()).isNotNull();
+                },
                 workflowState -> {
                     assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.BOM_PROCESSING);
                     assertThat(workflowState.getToken()).isEqualTo(uuid);
@@ -1391,25 +1401,23 @@ public class BomResourceTest extends ResourceTest {
                 }
                 """);
 
-        assertThat(kafkaMockProducer.history()).hasSize(1);
-        final org.dependencytrack.proto.notification.v1.Notification validationFailureNotification =
-                deserializeValue(KafkaTopics.NOTIFICATION_BOM, kafkaMockProducer.history().getFirst());
-        assertThat(validationFailureNotification).isNotNull();
-        assertThat(validationFailureNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(validationFailureNotification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
-        assertThat(validationFailureNotification.getLevel()).isEqualTo(LEVEL_ERROR);
-        assertThat(validationFailureNotification.getTitle()).isEqualTo(NotificationConstants.Title.BOM_VALIDATION_FAILED);
-        assertThat(validationFailureNotification.getContent()).isEqualTo("An error occurred while validating a BOM");
-        assertThat(validationFailureNotification.getSubject().is(BomValidationFailedSubject.class)).isTrue();
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_ERROR);
+            assertThat(notification.getTitle()).isEqualTo("Bill of Materials Validation Failed");
+            assertThat(notification.getContent()).isEqualTo("An error occurred while validating a BOM");
+            assertThat(notification.getSubject().is(BomValidationFailedSubject.class)).isTrue();
 
-        final var subject = validationFailureNotification.getSubject().unpack(BomValidationFailedSubject.class);
-        assertThat(subject.getBom().getFormat()).isEmpty();
-        assertThat(subject.getBom().getSpecVersion()).isEmpty();
-        assertThat(subject.getBom().getContent()).isEqualTo("(Omitted)");
-        assertThat(subject.getErrorsList()).containsOnly("""
-                $.components[0].type: does not have a value in the enumeration \
-                ["application", "framework", "library", "container", "operating-system", \
-                "device", "firmware", "file"]""");
+            final var subject = notification.getSubject().unpack(BomValidationFailedSubject.class);
+            assertThat(subject.getBom().getFormat()).isEmpty();
+            assertThat(subject.getBom().getSpecVersion()).isEmpty();
+            assertThat(subject.getBom().getContent()).isEqualTo("(Omitted)");
+            assertThat(subject.getErrorsList()).containsOnly("""
+                    $.components[0].type: does not have a value in the enumeration \
+                    ["application", "framework", "library", "container", "operating-system", \
+                    "device", "firmware", "file"]""");
+        });
     }
 
     @Test
@@ -1456,24 +1464,22 @@ public class BomResourceTest extends ResourceTest {
                 }
                 """);
 
-        assertThat(kafkaMockProducer.history()).hasSize(1);
-        final org.dependencytrack.proto.notification.v1.Notification validationFailureNotification =
-                deserializeValue(KafkaTopics.NOTIFICATION_BOM, kafkaMockProducer.history().getFirst());
-        assertThat(validationFailureNotification).isNotNull();
-        assertThat(validationFailureNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        assertThat(validationFailureNotification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
-        assertThat(validationFailureNotification.getLevel()).isEqualTo(LEVEL_ERROR);
-        assertThat(validationFailureNotification.getTitle()).isEqualTo(NotificationConstants.Title.BOM_VALIDATION_FAILED);
-        assertThat(validationFailureNotification.getContent()).isEqualTo("An error occurred while validating a BOM");
-        assertThat(validationFailureNotification.getSubject().is(BomValidationFailedSubject.class)).isTrue();
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_ERROR);
+            assertThat(notification.getTitle()).isEqualTo("Bill of Materials Validation Failed");
+            assertThat(notification.getContent()).isEqualTo("An error occurred while validating a BOM");
+            assertThat(notification.getSubject().is(BomValidationFailedSubject.class)).isTrue();
 
-        final var subject = validationFailureNotification.getSubject().unpack(BomValidationFailedSubject.class);
-        assertThat(subject.getBom().getFormat()).isEmpty();
-        assertThat(subject.getBom().getSpecVersion()).isEmpty();
-        assertThat(subject.getBom().getContent()).isEqualTo("(Omitted)");
-        assertThat(subject.getErrorsList()).containsExactlyInAnyOrder(
-                "cvc-enumeration-valid: Value 'foo' is not facet-valid with respect to enumeration '[application, framework, library, container, operating-system, device, firmware, file]'. It must be a value from the enumeration.",
-                "cvc-attribute.3: The value 'foo' of attribute 'type' on element 'component' is not valid with respect to its type, 'classification'.");
+            final var subject = notification.getSubject().unpack(BomValidationFailedSubject.class);
+            assertThat(subject.getBom().getFormat()).isEmpty();
+            assertThat(subject.getBom().getSpecVersion()).isEmpty();
+            assertThat(subject.getBom().getContent()).isEqualTo("(Omitted)");
+            assertThat(subject.getErrorsList()).containsExactlyInAnyOrder(
+                    "cvc-enumeration-valid: Value 'foo' is not facet-valid with respect to enumeration '[application, framework, library, container, operating-system, device, firmware, file]'. It must be a value from the enumeration.",
+                    "cvc-attribute.3: The value 'foo' of attribute 'type' on element 'component' is not valid with respect to its type, 'classification'.");
+        });
     }
 
     @Test
@@ -1527,9 +1533,10 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(multiPart, multiPart.getMediaType()));
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "token": "${json-unit.any-string}"
+                  "token": "${json-unit.any-string}",
+                  "projectUuid": "${json-unit.any-string}"
                 }
                 """);
 
@@ -1560,11 +1567,14 @@ public class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(multiPart, multiPart.getMediaType()));
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
-                {
-                  "token": "${json-unit.any-string}"
-                }
-                """);
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "token": "${json-unit.any-string}",
+                          "projectUuid": "${json-unit.matches:projectUuid}"
+                        }
+                        """);
 
         final var projectResponse = qm.getProject("Acme Example", "1.0");
         assertThat(projectResponse).isNotNull();

@@ -66,6 +66,7 @@ import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 
 import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Initializes the event subsystem and configures event subscribers.
@@ -164,7 +165,11 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(IntegrityMetaInitializerTask.class);
         EVENT_SERVICE.unsubscribe(IntegrityAnalysisTask.class);
         EVENT_SERVICE.unsubscribe(VulnerabilityPolicyFetchTask.class);
-        EVENT_SERVICE.shutdown(DRAIN_TIMEOUT_DURATION);
+        try {
+            EVENT_SERVICE.shutdown(DRAIN_TIMEOUT_DURATION);
+        } catch (TimeoutException e) {
+            LOGGER.warn("Failed to shut down event service", e);
+        }
 
         EVENT_SERVICE_ST.unsubscribe(ComponentMetadataMaintenanceTask.class);
         EVENT_SERVICE_ST.unsubscribe(MetricsMaintenanceTask.class);
@@ -173,6 +178,10 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE_ST.unsubscribe(VulnerabilityScanMaintenanceTask.class);
         EVENT_SERVICE_ST.unsubscribe(WorkflowMaintenanceTask.class);
         EVENT_SERVICE_ST.unsubscribe(ProjectMaintenanceTask.class);
-        EVENT_SERVICE_ST.shutdown(DRAIN_TIMEOUT_DURATION);
+        try {
+            EVENT_SERVICE_ST.shutdown(DRAIN_TIMEOUT_DURATION);
+        } catch (TimeoutException e) {
+            LOGGER.warn("Failed to shut down single-threaded event service", e);
+        }
     }
 }

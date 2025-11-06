@@ -20,23 +20,24 @@ package org.dependencytrack.model;
 
 import alpine.common.validation.RegexSequence;
 import alpine.model.Team;
-import alpine.notification.NotificationLevel;
 import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import org.apache.commons.collections4.CollectionUtils;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import org.apache.commons.collections4.CollectionUtils;
+import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.NotificationLevel;
+import org.dependencytrack.notification.NotificationScope;
+
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.Extensions;
 import javax.jdo.annotations.ForeignKey;
 import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
@@ -110,6 +111,10 @@ public class NotificationRule implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "NOTIFICATION_LEVEL", jdbcType = "VARCHAR")
+    @Extensions(value = {
+            @Extension(vendorName = "datanucleus", key = "insert-function", value = "CAST(? AS notification_level)"),
+            @Extension(vendorName = "datanucleus", key = "update-function", value = "CAST(? AS notification_level)")
+    })
     private NotificationLevel notificationLevel;
 
     @Persistent(table = "NOTIFICATIONRULE_PROJECTS", defaultFetchGroup = "true")

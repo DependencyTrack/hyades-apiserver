@@ -38,7 +38,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
-import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Before;
@@ -56,7 +56,6 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 public class VexResourceTest extends ResourceTest {
@@ -116,8 +115,11 @@ public class VexResourceTest extends ResourceTest {
         componentWithVulnAndAnalysis.setDirectDependencies("[]");
         qm.createComponent(componentWithVulnAndAnalysis, false);
         qm.addVulnerability(vulnB, componentWithVulnAndAnalysis, AnalyzerIdentity.INTERNAL_ANALYZER);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), componentWithVulnAndAnalysis.getId(), vulnB.getId(), AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(componentWithVulnAndAnalysis, vulnB)
+                        .withState(AnalysisState.RESOLVED)
+                        .withResponse(AnalysisResponse.UPDATE)
+                        .withSuppress(true));
 
         // Make componentWithoutVuln (acme-lib-a) depend on componentWithVuln (acme-lib-b)
         componentWithoutVuln.setDirectDependencies("""
@@ -421,6 +423,14 @@ public class VexResourceTest extends ResourceTest {
 
         response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "token": "${json-unit.any-string}",
+                          "projectUuid": "${json-unit.matches:projectUuid}"
+                        }
+                        """);
     }
 
     @Test
@@ -449,12 +459,18 @@ public class VexResourceTest extends ResourceTest {
         vuln.setSeverity(Severity.HIGH);
         qm.createVulnerability(vuln, false);
         qm.addVulnerability(vuln, componentAWithVuln, AnalyzerIdentity.NONE);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), componentAWithVuln.getId(), vuln.getId(), AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(componentAWithVuln, vuln)
+                        .withState(AnalysisState.RESOLVED)
+                        .withResponse(AnalysisResponse.UPDATE)
+                        .withSuppress(true));
 
         qm.addVulnerability(vuln, componentBWithVuln, AnalyzerIdentity.NONE);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), componentBWithVuln.getId(), vuln.getId(), AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(componentBWithVuln, vuln)
+                        .withState(AnalysisState.RESOLVED)
+                        .withResponse(AnalysisResponse.UPDATE)
+                        .withSuppress(true));
 
         qm.persist(project);
 
@@ -550,12 +566,18 @@ public class VexResourceTest extends ResourceTest {
         vuln.setSeverity(Severity.HIGH);
         qm.createVulnerability(vuln, false);
         qm.addVulnerability(vuln, componentAWithVuln, AnalyzerIdentity.NONE);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), componentAWithVuln.getId(), vuln.getId(), AnalysisState.IN_TRIAGE, null, AnalysisResponse.UPDATE, null, true));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(componentAWithVuln, vuln)
+                        .withState(AnalysisState.IN_TRIAGE)
+                        .withResponse(AnalysisResponse.UPDATE)
+                        .withSuppress(true));
 
         qm.addVulnerability(vuln, componentBWithVuln, AnalyzerIdentity.NONE);
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), componentBWithVuln.getId(), vuln.getId(), AnalysisState.EXPLOITABLE, null, AnalysisResponse.UPDATE, null, true));
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(componentBWithVuln, vuln)
+                        .withState(AnalysisState.EXPLOITABLE)
+                        .withResponse(AnalysisResponse.UPDATE)
+                        .withSuppress(true));
 
         qm.persist(project);
 

@@ -24,7 +24,6 @@ import com.google.protobuf.Message;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
-import org.dependencytrack.parser.dependencytrack.NotificationModelConverter;
 import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
 import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
@@ -53,8 +52,7 @@ import java.util.UUID;
 import static org.apache.commons.lang3.ObjectUtils.requireNonEmpty;
 
 /**
- * Utility class to convert {@link Event}s and {@link alpine.notification.Notification}s
- * to {@link KafkaEvent}s.
+ * Utility class to convert {@link Event}s to {@link KafkaEvent}s.
  */
 public final class KafkaEventConverter {
 
@@ -67,11 +65,6 @@ public final class KafkaEventConverter {
             case ComponentVulnerabilityAnalysisEvent e -> convert(e);
             default -> throw new IllegalArgumentException("Unable to convert event " + event);
         };
-    }
-
-    public static KafkaEvent<?, ?> convert(final alpine.notification.Notification notification) {
-        final Notification protoNotification = NotificationModelConverter.convert(notification);
-        return convert(protoNotification);
     }
 
     public static KafkaEvent<?, ?> convert(final Notification notification) {

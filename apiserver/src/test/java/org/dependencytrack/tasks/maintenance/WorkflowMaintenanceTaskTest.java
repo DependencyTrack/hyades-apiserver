@@ -20,7 +20,6 @@ package org.dependencytrack.tasks.maintenance;
 
 import alpine.test.config.ConfigPropertyRule;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
@@ -28,7 +27,6 @@ import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
-import org.dependencytrack.proto.notification.v1.Notification;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -44,10 +42,8 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_RETENTION_HOURS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
-import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
-import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
-import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
 public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
 
@@ -220,25 +216,17 @@ public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
         assertThat(state.getStatus()).isEqualTo(WorkflowStatus.FAILED);
         assertThat(state.getFailureReason()).isEqualTo("Timed out");
 
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
+            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+            assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
+            assertThat(notification.getLevel()).isEqualTo(LEVEL_ERROR);
+            assertThat(notification.getSubject().is(BomProcessingFailedSubject.class)).isTrue();
 
-                    final String recordKey = deserializeKey(KafkaTopics.NOTIFICATION_BOM, record);
-                    assertThat(recordKey).isEqualTo(project.getUuid().toString());
-
-                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
-                    assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-                    assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
-                    assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
-                    assertThat(notification.getSubject().is(BomProcessingFailedSubject.class)).isTrue();
-
-                    final var subject = notification.getSubject().unpack(BomProcessingFailedSubject.class);
-                    assertThat(subject.getToken()).isEqualTo(token.toString());
-                    assertThat(subject.getCause()).isEqualTo("Timed out");
-                    assertThat(subject.getProject().getUuid()).isEqualTo(project.getUuid().toString());
-                }
-        );
+            final var subject = notification.getSubject().unpack(BomProcessingFailedSubject.class);
+            assertThat(subject.getToken()).isEqualTo(token.toString());
+            assertThat(subject.getCause()).isEqualTo("Timed out");
+            assertThat(subject.getProject().getUuid()).isEqualTo(project.getUuid().toString());
+        });
     }
 
     @Test

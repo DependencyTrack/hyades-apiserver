@@ -48,6 +48,8 @@ public final class JdoProperties {
         properties.put(PropertyNames.PROPERTY_QUERY_JDOQL_ALLOWALL, "true");
         properties.put(PropertyNames.PROPERTY_CACHE_L2_TYPE, "none");
         properties.put(PropertyNames.PROPERTY_RETAIN_VALUES, "true");
+        properties.put(PropertyNames.PROPERTY_METADATA_ALLOW_XML, "false");
+        properties.put(PropertyNames.PROPERTY_METADATA_SUPPORT_ORM, "false");
         properties.putAll(Config.getInstance().getPassThroughProperties("datanucleus"));
         return properties;
     }

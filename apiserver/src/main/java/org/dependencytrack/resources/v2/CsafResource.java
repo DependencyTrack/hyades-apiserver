@@ -23,8 +23,8 @@ import alpine.server.auth.PermissionRequired;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.CsafApi;
 import org.dependencytrack.api.v2.model.CsafSourceUpdateRequest;
 import org.dependencytrack.api.v2.model.ListCsafSourcesResponse;
@@ -50,7 +50,7 @@ import java.util.function.Predicate;
 /**
  * Resource for CSAF data source management.
  */
-@Provider
+@Path("/")
 public class CsafResource extends AbstractApiResource implements CsafApi {
     private static final Logger LOGGER = Logger.getLogger(CsafResource.class);
 
