@@ -27,7 +27,6 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.AdvisoriesApi;
 import org.dependencytrack.api.v2.model.AdvisoryProject;
 import org.dependencytrack.api.v2.model.AdvisoryVulnerability;
