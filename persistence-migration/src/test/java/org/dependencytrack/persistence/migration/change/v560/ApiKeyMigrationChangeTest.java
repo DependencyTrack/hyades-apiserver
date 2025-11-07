@@ -42,7 +42,7 @@ class ApiKeyMigrationChangeTest {
     @Container
     @SuppressWarnings("resource")
     private final PostgreSQLContainer<?> postgresContainer =
-            new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
+            new PostgreSQLContainer<>(DockerImageName.parse("postgres:14-alpine"))
                     .withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off")
                     .withTmpFs(Map.of("/var/lib/postgresql/data", "rw"))
                     .withInitScript("org/dependencytrack/persistence/migration/change/ApiKeyMigrationChangeTest-schema.sql");
