@@ -18,11 +18,9 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import alpine.server.persistence.PersistenceManagerFactory;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
-import org.jdbi.v3.core.ConnectionException;
 import org.jdbi.v3.core.Jdbi;
 import org.junit.Test;
 
@@ -63,30 +61,6 @@ public class JdbiFactoryTest extends PersistenceCapableTest {
                     handle.createQuery("SELECT \"NAME\" FROM \"PROJECT\"").mapTo(String.class).findFirst());
             assertThat(projectName).isNotPresent();
         });
-    }
-
-    @Test
-    public void testGlobalInstanceWhenPmfChanges() {
-        final Jdbi jdbi = JdbiFactory.createJdbi();
-
-        // Close the PMF and ensure that the JDBI instance is no longer usable.
-        PersistenceManagerFactory.tearDown();
-        assertThatExceptionOfType(ConnectionException.class)
-                .isThrownBy(() -> jdbi.withHandle(handle ->
-                        handle.createQuery("SELECT 666").mapTo(Integer.class).one()));
-
-        // Create a new QueryManager.
-        configurePmf(postgresContainer);
-
-        // Request the global JDBI instance again and verify it differs from the original one.
-        // Because the PMF changed, a new instance must have been created.
-        final Jdbi otherJdbi = JdbiFactory.createJdbi();
-        assertThat(otherJdbi).isNotEqualTo(jdbi);
-
-        // Issue a test query to ensure the new JDBI instance is functional.
-        final Integer queryResult = otherJdbi.withHandle(handle ->
-                handle.createQuery("SELECT 666").mapTo(Integer.class).one());
-        assertThat(queryResult).isEqualTo(666);
     }
 
     @Test

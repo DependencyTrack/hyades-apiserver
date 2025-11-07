@@ -26,6 +26,10 @@
         <property name="charset" value="UTF-8"/>
         <property name="headerFile" value="${parentBaseDir}/support/checkstyle/header.txt"/>
     </module>
+    <module name="BeforeExecutionExclusionFileFilter">
+        <!-- https://github.com/checkstyle/checkstyle/issues/3059 -->
+        <property name="fileNamePattern" value="module\-info\.java$"/>
+    </module>
     <module name="SuppressionFilter">
         <property name="file" value="${parentBaseDir}/support/checkstyle/suppressions.xml"/>
         <property name="optional" value="false"/>
