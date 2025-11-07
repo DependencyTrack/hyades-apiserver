@@ -35,6 +35,7 @@ import org.slf4j.MDC;
 import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -53,6 +54,7 @@ import java.util.SequencedMap;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -88,6 +90,7 @@ public class PluginManager {
     private final Map<Class<? extends ExtensionPoint>, ExtensionFactory<?>> defaultFactoryByExtensionPointClass;
     private final Comparator<ExtensionFactory<?>> factoryComparator;
     private final ReentrantLock lock;
+    private final Map<ClassLoader, Path> externalPluginLoaders = new ConcurrentHashMap<>();
 
     private boolean externalPluginsEnabled = false;
     private Path externalPluginDir;
@@ -276,15 +279,28 @@ public class PluginManager {
 
     private void loadExternalPluginJar(final Path jarPath) {
         try (var ignoredMdcPlugin = MDC.putCloseable(MDC_PLUGIN, jarPath.getFileName().toString())) {
+
             URL jarUrl = jarPath.toUri().toURL();
             PluginIsolatedClassLoader loader = new PluginIsolatedClassLoader(new URL[]{ jarUrl });
-            ServiceLoader<Plugin> serviceLoader = ServiceLoader.load(Plugin.class, loader);
 
-            for (Plugin plugin : serviceLoader) {
-                LOGGER.debug("Loading external plugin %s".formatted(plugin.getClass().getName()));
-                loadExtensionsForPlugin(plugin);
-                loadedPluginByClass.put(plugin.getClass(), plugin);
-                LOGGER.info("External plugin loaded successfully: %s".formatted(plugin.getClass().getName()));
+            externalPluginLoaders.put(loader, jarPath);
+
+            final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+            try {
+                Thread.currentThread().setContextClassLoader(loader);
+
+                final ServiceLoader<Plugin> pluginServiceLoader = ServiceLoader.load(Plugin.class, loader);
+                for (final Plugin plugin : pluginServiceLoader) {
+                    try (var ignored = MDC.putCloseable(MDC_PLUGIN, plugin.getClass().getName())) {
+
+                        LOGGER.debug("Loading external plugin %s".formatted(plugin.getClass().getName()));
+                        loadExtensionsForPlugin(plugin);
+                        loadedPluginByClass.put(plugin.getClass(), plugin);
+                        LOGGER.info("External plugin loaded successfully: %s".formatted(plugin.getClass().getName()));
+                    }
+                }
+            } finally {
+                Thread.currentThread().setContextClassLoader(contextClassLoader);
             }
 
         } catch (Exception e) {
@@ -476,6 +492,7 @@ public class PluginManager {
         lock.lock();
         try {
             unloadPluginsLocked();
+            closeExternalPluginLoaders();
             defaultFactoryByExtensionPointClass.clear();
             factoryByExtensionIdentity.clear();
             extensionNamesByExtensionPointClass.clear();
@@ -524,6 +541,23 @@ public class PluginManager {
                 LOGGER.debug("Extension closed successfully");
             } catch (RuntimeException e) {
                 LOGGER.warn("Failed to close extension", e);
+            }
+        }
+    }
+
+    private void closeExternalPluginLoaders() {
+        // Close all external loaders if any
+        for (ClassLoader loader : new ArrayList<>(externalPluginLoaders.keySet())) {
+            try {
+                if (loader instanceof PluginIsolatedClassLoader) {
+                    ((PluginIsolatedClassLoader) loader).close();
+                } else if (loader instanceof URLClassLoader) {
+                    ((URLClassLoader) loader).close();
+                }
+            } catch (IOException e) {
+                LOGGER.warn("Failed to close plugin classloader for %s: %s".formatted(externalPluginLoaders.get(loader), e.getMessage()));
+            } finally {
+                externalPluginLoaders.remove(loader);
             }
         }
     }
