@@ -122,7 +122,7 @@
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>6.0.1</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
-        <lib.micrometer.version>1.15.5</lib.micrometer.version>
+        <lib.micrometer.version>1.16.0</lib.micrometer.version>
         <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.20.0</lib.mockito.version>
         <lib.okhttp.version>5.3.0</lib.okhttp.version>
