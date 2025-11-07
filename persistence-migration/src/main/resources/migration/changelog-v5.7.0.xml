@@ -327,4 +327,16 @@
                    );
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-16" author="nscuro">
+        <!--
+            Required to support the COMPONENT_PURL_SEARCH_IDX index,
+            as Postgres doesn't collect statistics on expressions used
+            in indexes by default.
+        -->
+        <sql>
+            CREATE STATISTICS "COMPONENT_PURL_LOWER_STATS"
+                ON LOWER("PURL") FROM "COMPONENT";
+        </sql>
+    </changeSet>
 </databaseChangeLog>
