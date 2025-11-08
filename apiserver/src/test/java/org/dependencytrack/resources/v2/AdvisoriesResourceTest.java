@@ -85,10 +85,10 @@ public class AdvisoriesResourceTest extends ResourceTest {
         JsonObject json = parseJsonObject(response);
         JsonArray advisories = json.getJsonArray("advisories");
         assertThat(advisories).hasSize(2);
-        assertThatJson(advisories.getJsonObject(0))
-                .node("title").isEqualTo("Test Advisory 1");
-        assertThatJson(advisories.getJsonObject(1))
-                .node("title").isEqualTo("Test Advisory 2");
+        assertThatJson(advisories.getJsonObject(0).getString("title"))
+                .isEqualTo("Test Advisory 1");
+        assertThatJson(advisories.getJsonObject(1).getString("title"))
+                .isEqualTo("Test Advisory 2");
     }
 
     @Test
@@ -133,10 +133,10 @@ public class AdvisoriesResourceTest extends ResourceTest {
         JsonObject json = parseJsonObject(response);
         JsonArray advisories = json.getJsonArray("advisories");
         assertThat(advisories).hasSize(1);
-        assertThatJson(advisories.getJsonObject(0))
-                .node("title").isEqualTo("CSAF Advisory");
-        assertThatJson(advisories.getJsonObject(0))
-                .node("format").isEqualTo("CSAF");
+        assertThatJson(advisories.getJsonObject(0).getString("title"))
+                .isEqualTo("CSAF Advisory");
+        assertThatJson(advisories.getJsonObject(0).getString("format"))
+                .isEqualTo("CSAF");
     }
 
     @Test
@@ -159,7 +159,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         final long advisoryId = advisory.getId();
 
         // Mark as seen
-        Response response = jersey.target("/advisories/" + advisoryId + "/seen")
+        Response response = jersey.target("/advisories/seen" + advisoryId)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(null);
@@ -167,10 +167,8 @@ public class AdvisoriesResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
 
         JsonObject json = parseJsonObject(response);
-        assertThatJson(json)
-                .node("title").isEqualTo("Unseen Advisory");
-        assertThatJson(json)
-                .node("seen").isEqualTo(true);
+        assertThat(json.getString("title")).isEqualTo("Unseen Advisory");
+        assertThat(json.getBoolean("seen")).isTrue();
     }
 
     @Test
