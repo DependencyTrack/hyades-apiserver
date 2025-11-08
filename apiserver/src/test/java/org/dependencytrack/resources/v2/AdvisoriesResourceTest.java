@@ -30,7 +30,6 @@ import org.junit.Test;
 
 import java.time.Instant;
 
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -85,9 +84,9 @@ public class AdvisoriesResourceTest extends ResourceTest {
         JsonObject json = parseJsonObject(response);
         JsonArray advisories = json.getJsonArray("advisories");
         assertThat(advisories).hasSize(2);
-        assertThatJson(advisories.getJsonObject(0).getString("title"))
+        assertThat(advisories.getJsonObject(0).getString("title"))
                 .isEqualTo("Test Advisory 1");
-        assertThatJson(advisories.getJsonObject(1).getString("title"))
+        assertThat(advisories.getJsonObject(1).getString("title"))
                 .isEqualTo("Test Advisory 2");
     }
 
@@ -133,9 +132,9 @@ public class AdvisoriesResourceTest extends ResourceTest {
         JsonObject json = parseJsonObject(response);
         JsonArray advisories = json.getJsonArray("advisories");
         assertThat(advisories).hasSize(1);
-        assertThatJson(advisories.getJsonObject(0).getString("title"))
+        assertThat(advisories.getJsonObject(0).getString("title"))
                 .isEqualTo("CSAF Advisory");
-        assertThatJson(advisories.getJsonObject(0).getString("format"))
+        assertThat(advisories.getJsonObject(0).getString("format"))
                 .isEqualTo("CSAF");
     }
 
@@ -159,7 +158,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         final long advisoryId = advisory.getId();
 
         // Mark as seen
-        Response response = jersey.target("/advisories/seen" + advisoryId)
+        Response response = jersey.target("/advisories/seen/" + advisoryId)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(null);
