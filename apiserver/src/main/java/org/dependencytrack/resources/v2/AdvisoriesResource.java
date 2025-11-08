@@ -31,6 +31,7 @@ import org.dependencytrack.api.v2.AdvisoriesApi;
 import org.dependencytrack.api.v2.model.AdvisoryProject;
 import org.dependencytrack.api.v2.model.AdvisoryVulnerability;
 import org.dependencytrack.api.v2.model.GetAdvisoryResponse;
+import org.dependencytrack.api.v2.model.ListAdvisoriesResponse;
 import org.dependencytrack.api.v2.model.ListAdvisoriesResponseItem;
 import org.dependencytrack.api.v2.model.ListProjectAdvisoriesResponseItem;
 import org.dependencytrack.api.v2.model.ListProjectAdvisoryFindingsResponseItem;
@@ -44,6 +45,7 @@ import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.persistence.pagination.Page;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
@@ -58,6 +60,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
 
 /**
  * API resources for advisories.
@@ -73,7 +76,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
     @Override
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
     public Response listAdvisories(String format, String searchText) {
-        return inJdbiTransaction(handle -> {
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
             // Normalize parameters: trim and treat empty as null so DAO SQL conditional
             // behaves predictably
             final String searchParam = (searchText == null || searchText.trim().isEmpty()) ? null
@@ -101,7 +104,15 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
                             .build())
                     .toList();
 
-            return Response.ok(responseItems).header(TOTAL_COUNT_HEADER, totalCount).build();
+            // Create a Page object for pagination metadata (no next page token at the moment)
+            final Page<ListAdvisoriesResponseItem> advisoriesPage = new Page<>(responseItems, null);
+
+            final ListAdvisoriesResponse response = ListAdvisoriesResponse.builder()
+                    .advisories(responseItems)
+                    .pagination(createPaginationMetadata(getUriInfo(), advisoriesPage))
+                    .build();
+
+            return Response.ok(response).header(TOTAL_COUNT_HEADER, totalCount).build();
         });
     }
 
@@ -196,11 +207,16 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
     public Response deleteAdvisory(String advisoryId) {
         try (final var qm = new QueryManager()) {
             return qm.callInTransaction(() -> {
-                final Advisory entity = qm.getObjectById(Advisory.class, advisoryId);
-                if (entity != null) {
-                    qm.delete(entity);
-                    return Response.status(Response.Status.NO_CONTENT).build();
-                } else {
+                try {
+                    final Advisory entity = qm.getObjectById(Advisory.class, advisoryId);
+                    if (entity != null) {
+                        qm.delete(entity);
+                        return Response.status(Response.Status.NO_CONTENT).build();
+                    } else {
+                        throw new NotFoundException();
+                    }
+                } catch (javax.jdo.JDOObjectNotFoundException e) {
+                    // Handle the case where the object doesn't exist
                     throw new NotFoundException();
                 }
             });

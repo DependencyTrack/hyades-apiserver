@@ -82,11 +82,12 @@ public class AdvisoriesResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
 
-        JsonArray json = parseJsonArray(response);
-        assertThat(json).hasSize(2);
-        assertThatJson(json.getJsonObject(0))
+        JsonObject json = parseJsonObject(response);
+        JsonArray advisories = json.getJsonArray("advisories");
+        assertThat(advisories).hasSize(2);
+        assertThatJson(advisories.getJsonObject(0))
                 .node("title").isEqualTo("Test Advisory 1");
-        assertThatJson(json.getJsonObject(1))
+        assertThatJson(advisories.getJsonObject(1))
                 .node("title").isEqualTo("Test Advisory 2");
     }
 
@@ -129,11 +130,12 @@ public class AdvisoriesResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
 
-        JsonArray json = parseJsonArray(response);
-        assertThat(json).hasSize(1);
-        assertThatJson(json.getJsonObject(0))
+        JsonObject json = parseJsonObject(response);
+        JsonArray advisories = json.getJsonArray("advisories");
+        assertThat(advisories).hasSize(1);
+        assertThatJson(advisories.getJsonObject(0))
                 .node("title").isEqualTo("CSAF Advisory");
-        assertThatJson(json.getJsonObject(0))
+        assertThatJson(advisories.getJsonObject(0))
                 .node("format").isEqualTo("CSAF");
     }
 
@@ -188,7 +190,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         advisory.setSeen(false);
         qm.persist(advisory);
 
-        final String advisoryId = String.valueOf(advisory.getId());
+        final long advisoryId = advisory.getId();
 
         // Delete the advisory
         Response response = jersey.target("/advisories/" + advisoryId)
@@ -198,9 +200,12 @@ public class AdvisoriesResourceTest extends ResourceTest {
 
         assertThat(response.getStatus()).isEqualTo(204);
 
-        // Verify it's deleted
-        Advisory deletedAdvisory = qm.getObjectById(Advisory.class, advisoryId);
-        assertThat(deletedAdvisory).isNull();
+        // Verify it's deleted by checking the count instead of querying the object directly
+        // to avoid JDOObjectNotFoundException
+        long count = (Long) qm.getPersistenceManager()
+                .newQuery("SELECT count(id) FROM " + Advisory.class.getName() + " WHERE id == :id")
+                .execute(advisoryId);
+        assertThat(count).isEqualTo(0);
     }
 
     @Test

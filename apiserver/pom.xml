@@ -559,6 +559,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <!-- Do not fail the build if -Dtest specifies tests that don't match any classes -->
+                    <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
                     <argLine>
                         @{argLine}
                         -Xmx512m
