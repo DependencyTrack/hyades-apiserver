@@ -60,3 +60,4 @@ public final class ResourceConfig extends org.glassfish.jersey.server.ResourceCo
     }
 
 }
+

@@ -41,7 +41,7 @@ import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.tasks.CsafMirrorTask;
 import org.jetbrains.annotations.Nullable;
 
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -169,7 +169,7 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
         
         // Update lastFetched - convert from OffsetDateTime to Instant (allows null for reset)
         existingSource.setLastFetched(apiSource.getLastFetched() != null 
-                ? apiSource.getLastFetched().toInstant() 
+                ? Instant.ofEpochMilli(apiSource.getLastFetched())
                 : null);
 
         // Update config
@@ -212,7 +212,7 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
                 .enabled(pluginSource.isEnabled())
                 .domain(pluginSource.isDomain())
                 .lastFetched(pluginSource.getLastFetched() != null 
-                        ? pluginSource.getLastFetched().atOffset(ZoneOffset.UTC) 
+                        ? pluginSource.getLastFetched().toEpochMilli()
                         : null)
                 .build();
     }
@@ -232,7 +232,7 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
         pluginSource.setEnabled(apiSource.getEnabled() != null && apiSource.getEnabled());
         pluginSource.setDomain(apiSource.getDomain() != null && apiSource.getDomain());
         if (apiSource.getLastFetched() != null) {
-            pluginSource.setLastFetched(apiSource.getLastFetched().toInstant());
+            pluginSource.setLastFetched(Instant.ofEpochMilli(apiSource.getLastFetched()));
         }
         return pluginSource;
     }

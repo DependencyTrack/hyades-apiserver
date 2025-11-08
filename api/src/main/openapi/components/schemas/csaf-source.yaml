@@ -40,11 +40,8 @@ properties:
     type: boolean
     description: Whether the URL is a domain (true) or full URL (false)
   last_fetched:
-    type: string
-    format: date-time
-    nullable: true
+    $ref: "./timestamp.yaml"
     description: Timestamp of last successful fetch from this source
-    example: "2024-01-15T10:30:00Z"
 required:
   - name
   - url

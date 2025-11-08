@@ -30,10 +30,8 @@ properties:
     type: boolean
     description: Whether the advisory has been marked as seen
   last_fetched:
-    type: string
-    format: date-time
+    $ref: "./timestamp.yaml"
     description: The timestamp when the advisory was last fetched
-    example: "2024-01-15T10:30:00Z"
   publisher:
     type: string
     description: The publisher of the advisory
