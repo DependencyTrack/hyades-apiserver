@@ -34,7 +34,7 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
 
     @SuppressWarnings("resource")
     public PostgresTestContainer() {
-        super(DockerImageName.parse("postgres:13-alpine"));
+        super(DockerImageName.parse("postgres:14-alpine"));
         withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off");
         withUsername("dtrack");
         withPassword("dtrack");

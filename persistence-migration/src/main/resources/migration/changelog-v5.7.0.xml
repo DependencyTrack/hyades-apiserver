@@ -251,7 +251,134 @@
         </sql>
     </changeSet>
 
-    <changeSet id="v5.7.0-12" author="oxisto">
+    <changeSet id="v5.7.0-12" author="nscuro">
+        <createTable tableName="NOTIFICATION_OUTBOX">
+            <column name="ID" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="NOTIFICATION_OUTBOX_PK"/>
+            </column>
+            <column name="TIMESTAMP" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SCOPE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="GROUP" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LEVEL" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PAYLOAD" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!--
+            Allow autovacuum to be triggered more frequently on the outbox table
+            since it is subject to frequent deletions. The default scale factor
+            of 20% would allow too much bloat to be accumulated.
+        -->
+        <sql>
+            ALTER TABLE "NOTIFICATION_OUTBOX" SET (autovacuum_vacuum_scale_factor = 0.1)
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-13" author="nscuro">
+        <sql splitStatements="true">
+            CREATE TYPE notification_level AS ENUM ('INFORMATIONAL', 'WARNING', 'ERROR');
+
+            ALTER TABLE "NOTIFICATIONRULE"
+            ALTER COLUMN "NOTIFICATION_LEVEL"
+            SET DATA TYPE notification_level USING "NOTIFICATION_LEVEL"::notification_level;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-14" author="nscuro">
+        <createTable tableName="EXTENSION_KV_STORE">
+            <column name="EXTENSION_POINT" type="TEXT"/>
+            <column name="EXTENSION" type="TEXT"/>
+            <column name="KEY" type="TEXT"/>
+            <column name="VALUE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="VERSION" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey
+                tableName="EXTENSION_KV_STORE"
+                columnNames="EXTENSION_POINT, EXTENSION, KEY"
+                constraintName="EXTENSION_KV_STORE_PK"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-15" author="nscuro">
+        <sql>
+            DELETE
+            FROM "CONFIGPROPERTY"
+            WHERE "GROUPNAME" = 'vuln.datasource'
+            AND "PROPERTYNAME" IN (
+            'extension.github.watermark'
+            , 'extension.nvd.watermark'
+            , 'extension.osv.watermarks'
+            );
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-16" author="nscuro">
+        <!--
+            Required to support the COMPONENT_PURL_SEARCH_IDX index,
+            as Postgres doesn't collect statistics on expressions used
+            in indexes by default.
+        -->
+        <sql>
+            CREATE STATISTICS "COMPONENT_PURL_LOWER_STATS"
+            ON LOWER("PURL") FROM "COMPONENT";
+        </sql>
+    </changeSet>
+
+
+    <changeSet id="v5.7.0-17" author="oxisto">
+        <sql splitStatements="false">
+            DO $$
+            DECLARE
+            mat_view_def TEXT;
+            index_defs TEXT[];
+            index_def TEXT;
+            BEGIN
+            SELECT pg_get_viewdef('"PORTFOLIOMETRICS_GLOBAL"', true)
+            INTO mat_view_def;
+
+            SELECT array_agg(indexdef)
+            INTO index_defs
+            FROM pg_indexes
+            WHERE tablename = 'PORTFOLIOMETRICS_GLOBAL';
+
+            DROP MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL";
+
+            ALTER TABLE "CONFIGPROPERTY"
+            ALTER COLUMN "PROPERTYVALUE" TYPE TEXT;
+
+            EXECUTE format(
+            'CREATE MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL" AS %s WITH DATA'
+            , TRIM(TRAILING ';' FROM mat_view_def)
+            );
+
+            IF index_defs IS NOT NULL THEN
+            FOREACH index_def IN ARRAY index_defs
+            LOOP
+            EXECUTE index_def;
+            END LOOP;
+            END IF;
+            END
+            $$;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-18" author="oxisto">
         <createTable tableName="ADVISORY">
             <column name="ID" autoIncrement="true" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="ADVISORY_PK"/>
@@ -278,7 +405,7 @@
         </createTable>
     </changeSet>
 
-    <changeSet id="v5.7.0-13" author="oxisto">
+    <changeSet id="v5.7.0-19" author="oxisto">
         <sql>
             ALTER TABLE "ADVISORY"
             ADD COLUMN "SEARCHVECTOR" tsvector
@@ -290,7 +417,7 @@
         </sql>
     </changeSet>
 
-    <changeSet id="v5.7.0-14" author="oxisto">
+    <changeSet id="v5.7.0-20" author="oxisto">
         <addColumn tableName="VULNERABILITYALIAS">
             <column name="CSAF_ID" type="VARCHAR(255)"/>
         </addColumn>
@@ -298,7 +425,7 @@
             <column name="CSAF_ID"/>
         </createIndex>
     </changeSet>
-    <changeSet id="v5.7.0-15" author="oxisto">
+    <changeSet id="v5.7.0-21" author="oxisto">
         <addColumn tableName="FINDINGATTRIBUTION">
             <column name="MATCHING_PERCENTAGE" type="SMALLINT"/>
         </addColumn>

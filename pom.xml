@@ -27,6 +27,7 @@
     <version>5.7.0-SNAPSHOT</version>
 
     <modules>
+        <module>common</module>
         <module>support/datanucleus-plugin</module>
         <module>support/liquibase</module>
         <module>support/smallrye-config-source-memory</module>
@@ -111,6 +112,7 @@
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
+        <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
         <lib.httpclient5.version>5.5.1</lib.httpclient5.version>
         <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.1.1</lib.java-uuid-generator.version>
@@ -123,7 +125,8 @@
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>6.0.1</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
-        <lib.micrometer.version>1.15.5</lib.micrometer.version>
+        <lib.micrometer.version>1.16.0</lib.micrometer.version>
+        <lib.microprofile-health.version>4.0.1</lib.microprofile-health.version>
         <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.20.0</lib.mockito.version>
         <lib.okhttp.version>5.3.0</lib.okhttp.version>
@@ -204,6 +207,12 @@
                 <groupId>org.datanucleus</groupId>
                 <artifactId>datanucleus-rdbms</artifactId>
                 <version>${lib.datanucleus-rdbms.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.zaxxer</groupId>
+                <artifactId>HikariCP</artifactId>
+                <version>${lib.hikaricp.version}</version>
             </dependency>
 
             <dependency>
@@ -303,6 +312,12 @@
                 <version>${lib.micrometer.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>org.eclipse.microprofile.health</groupId>
+                <artifactId>microprofile-health-api</artifactId>
+                <version>${lib.microprofile-health.version}</version>
             </dependency>
 
             <dependency>

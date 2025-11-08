@@ -24,22 +24,20 @@ import alpine.event.framework.SingleThreadedEventService;
 import alpine.server.auth.PasswordService;
 import alpine.server.persistence.PersistenceManagerFactory;
 import org.apache.kafka.clients.producer.MockProducer;
-import org.datanucleus.PropertyNames;
-import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManagerTestUtil;
+import org.dependencytrack.support.config.source.memory.MemoryConfigSource;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-import javax.jdo.JDOHelper;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.time.Duration;
-import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 
 public abstract class PersistenceCapableTest {
@@ -58,7 +56,11 @@ public abstract class PersistenceCapableTest {
         postgresContainer = new PostgresTestContainer();
         postgresContainer.start();
 
-        configurePmf(postgresContainer);
+        MemoryConfigSource.setProperty("dt.datasource.url", postgresContainer.getJdbcUrl());
+        MemoryConfigSource.setProperty("dt.datasource.username", postgresContainer.getUsername());
+        MemoryConfigSource.setProperty("dt.datasource.password", postgresContainer.getPassword());
+
+        new PersistenceManagerFactory().contextInitialized(null);
     }
 
     @Before
@@ -100,33 +102,11 @@ public abstract class PersistenceCapableTest {
     @AfterClass
     public static void tearDownClass() {
         PersistenceManagerFactory.tearDown();
+        DataSourceRegistry.getInstance().closeAll();
 
         if (postgresContainer != null) {
             postgresContainer.stopWhenNotReusing();
         }
-    }
-
-    protected static void configurePmf(final PostgreSQLContainer<?> postgresContainer) {
-        final var dnProps = new Properties();
-        dnProps.put(PropertyNames.PROPERTY_PERSISTENCE_UNIT_NAME, "Alpine");
-        dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_DATABASE, "false");
-        dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_TABLES, "false");
-        dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_COLUMNS, "false");
-        dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_CONSTRAINTS, "false");
-        dnProps.put(PropertyNames.PROPERTY_SCHEMA_GENERATE_DATABASE_MODE, "none");
-        dnProps.put(PropertyNames.PROPERTY_QUERY_JDOQL_ALLOWALL, "true");
-        dnProps.put(PropertyNames.PROPERTY_RETAIN_VALUES, "true");
-        dnProps.put(PropertyNames.PROPERTY_CONNECTION_URL, postgresContainer.getJdbcUrl());
-        dnProps.put(PropertyNames.PROPERTY_CONNECTION_DRIVER_NAME, postgresContainer.getDriverClassName());
-        dnProps.put(PropertyNames.PROPERTY_CONNECTION_USER_NAME, postgresContainer.getUsername());
-        dnProps.put(PropertyNames.PROPERTY_CONNECTION_PASSWORD, postgresContainer.getPassword());
-        dnProps.put(PropertyNames.PROPERTY_CONNECTION_POOLINGTYPE, "HikariCP");
-        dnProps.put(PropertyNames.PROPERTY_METADATA_ALLOW_XML, "false");
-        dnProps.put(PropertyNames.PROPERTY_METADATA_SUPPORT_ORM, "false");
-        dnProps.putAll(Config.getInstance().getPassThroughProperties("datanucleus"));
-
-        final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
-        PersistenceManagerFactory.setJdoPersistenceManagerFactory(pmf);
     }
 
     protected static void truncateTables(final PostgreSQLContainer<?> postgresContainer) throws Exception {

@@ -29,6 +29,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -37,18 +38,12 @@ import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import static alpine.Config.AlpineKey.BCRYPT_ROUNDS;
-import static alpine.Config.AlpineKey.DATABASE_PASSWORD;
-import static alpine.Config.AlpineKey.DATABASE_URL;
-import static alpine.Config.AlpineKey.DATABASE_USERNAME;
 import static org.apache.kafka.clients.admin.AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG;
-import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_ENABLED;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_FRONTEND;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_KAFKA;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_POSTGRES;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_PORT_FRONTEND;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_PORT_KAFKA;
-import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_PORT_POSTGRES;
 import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
 
 /**
@@ -65,7 +60,7 @@ public class DevServicesInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (!config.getValue(DEV_SERVICES_ENABLED.getPropertyName(), Boolean.class)) {
+        if (!config.getValue("dev.services.enabled", boolean.class)) {
             return;
         }
 
@@ -77,11 +72,15 @@ public class DevServicesInitializer implements ServletContextListener {
             throw new IllegalStateException("Dev services are not available for production builds");
         }
 
-        final String postgresJdbcUrl;
-        final String postgresUsername;
-        final String postgresPassword;
+        // Infer database port and name from the JDBC URL of the primary data source.
+        final URI defaultDataSourceUri = URI.create(
+                config.getValue("dt.datasource.default.url", String.class).replaceFirst("^jdbc:", "").split("\\?", 2)[0]);
+        final String postgresDatabase = defaultDataSourceUri.getPath().replaceFirst("^/", "");
+        final int postgresPort = defaultDataSourceUri.getPort();
+        final String postgresUsername = config.getValue("dt.datasource.default.username", String.class);
+        final String postgresPassword = config.getValue("dt.datasource.default.password", String.class);
+
         final String kafkaBootstrapServers;
-        final Integer postgresPort = config.getValue(DEV_SERVICES_PORT_POSTGRES.getPropertyName(), Integer.class);
         final Integer kafkaPort = config.getValue(DEV_SERVICES_PORT_KAFKA.getPropertyName(), Integer.class);
         final Integer frontendPort = config.getValue(DEV_SERVICES_PORT_FRONTEND.getPropertyName(), Integer.class);
         try {
@@ -100,9 +99,9 @@ public class DevServicesInitializer implements ServletContextListener {
             final Class<?> postgresContainerClass = Class.forName("org.testcontainers.containers.PostgreSQLContainer");
             final Constructor<?> postgresContainerConstructor = postgresContainerClass.getDeclaredConstructor(String.class);
             postgresContainer = (AutoCloseable) postgresContainerConstructor.newInstance(config.getValue(DEV_SERVICES_IMAGE_POSTGRES.getPropertyName(), String.class));
-            postgresContainerClass.getMethod("withUsername", String.class).invoke(postgresContainer, "dtrack");
-            postgresContainerClass.getMethod("withPassword", String.class).invoke(postgresContainer, "dtrack");
-            postgresContainerClass.getMethod("withDatabaseName", String.class).invoke(postgresContainer, "dtrack");
+            postgresContainerClass.getMethod("withUsername", String.class).invoke(postgresContainer, postgresUsername);
+            postgresContainerClass.getMethod("withPassword", String.class).invoke(postgresContainer, postgresPassword);
+            postgresContainerClass.getMethod("withDatabaseName", String.class).invoke(postgresContainer, postgresDatabase);
             postgresContainerClass.getMethod("withUrlParam", String.class, String.class).invoke(postgresContainer, "reWriteBatchedInserts", "true");
             addFixedExposedPortMethod.invoke(postgresContainer, /* hostPort */ postgresPort, /* containerPort */  5432);
 
@@ -130,9 +129,6 @@ public class DevServicesInitializer implements ServletContextListener {
             final var deepStartFuture = (CompletableFuture<?>) deepStartMethod.invoke(null, List.of(postgresContainer, kafkaContainer, frontendContainer));
             deepStartFuture.join();
 
-            postgresJdbcUrl = (String) postgresContainerClass.getDeclaredMethod("getJdbcUrl").invoke(postgresContainer);
-            postgresUsername = (String) postgresContainerClass.getDeclaredMethod("getUsername").invoke(postgresContainer);
-            postgresPassword = (String) postgresContainerClass.getDeclaredMethod("getPassword").invoke(postgresContainer);
             kafkaBootstrapServers = (String) kafkaContainerClass.getDeclaredMethod("getBootstrapServers").invoke(kafkaContainer);
         } catch (Exception e) {
             throw new RuntimeException("Failed to launch containers", e);
@@ -146,12 +142,6 @@ public class DevServicesInitializer implements ServletContextListener {
                 """);
 
         final var configOverrides = new Properties();
-        // Set bcrypt rounds to 4 to reduce computational overhead during development and testing.
-        // This configuration is not suitable for production environments, where higher rounds are required for security.
-        configOverrides.put(BCRYPT_ROUNDS.getPropertyName(), "4");
-        configOverrides.put(DATABASE_URL.getPropertyName(), postgresJdbcUrl);
-        configOverrides.put(DATABASE_USERNAME.getPropertyName(), postgresUsername);
-        configOverrides.put(DATABASE_PASSWORD.getPropertyName(), postgresPassword);
         configOverrides.put(KAFKA_BOOTSTRAP_SERVERS.getPropertyName(), kafkaBootstrapServers);
 
         try {
