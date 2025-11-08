@@ -430,7 +430,7 @@
             <column name="MATCHING_PERCENTAGE" type="SMALLINT"/>
         </addColumn>
     </changeSet>
-    <changeSet id="v5.7.0-16" author="oxisto">
+    <changeSet id="v5.7.0-22" author="oxisto">
         <createTable tableName="ADVISORIES_VULNERABILITIES">
             <column name="ADVISORY_ID" type="BIGINT">
                 <constraints nullable="false"/>
