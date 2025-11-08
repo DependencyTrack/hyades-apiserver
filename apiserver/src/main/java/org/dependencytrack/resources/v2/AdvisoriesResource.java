@@ -98,6 +98,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
                             .publisher(row.publisher())
                             .name(row.name())
                             .version(row.version())
+                            .format(row.format())
                             .affectedComponents(row.affectedComponents())
                             .affectedProjects(row.affectedProjects())
                             .content(row.content())

@@ -143,6 +143,7 @@ public interface AdvisoryDao {
             String publisher,
             String name,
             String version,
+            String format,
             int affectedComponents,
             int affectedProjects,
             @Nullable String content) {
@@ -161,6 +162,7 @@ public interface AdvisoryDao {
                    "ADVISORY"."PUBLISHER" AS "publisher",
                    "ADVISORY"."NAME" AS "name",
                    "ADVISORY"."VERSION" AS "version",
+                   "ADVISORY"."FORMAT" as "format",
                    COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID") AS "affectedComponents",
                    COUNT(DISTINCT "FINDINGATTRIBUTION"."PROJECT_ID") AS "affectedProjects"
             FROM "ADVISORY"

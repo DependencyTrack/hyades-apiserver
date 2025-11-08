@@ -41,6 +41,9 @@ properties:
   version:
     type: string
     description: The version of the advisory
+  format:
+    type: string
+    description: The format of the advisory (e.g., CSAF)
   affected_components:
     type: integer
     format: int32
