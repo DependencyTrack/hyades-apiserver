@@ -19,25 +19,25 @@
 package alpine.server.servlets;
 
 import alpine.common.logging.Logger;
-import alpine.server.health.HealthCheckRegistry;
-import alpine.server.health.HealthCheckType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import org.eclipse.microprofile.health.HealthCheck;
-import org.eclipse.microprofile.health.HealthCheckResponse;
-import org.eclipse.microprofile.health.Liveness;
-import org.eclipse.microprofile.health.Readiness;
-import org.eclipse.microprofile.health.Startup;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
+import org.dependencytrack.common.health.HealthCheckRegistry;
+import org.dependencytrack.common.health.HealthCheckType;
+import org.eclipse.microprofile.health.HealthCheck;
+import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.Liveness;
+import org.eclipse.microprofile.health.Readiness;
+import org.eclipse.microprofile.health.Startup;
+
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -83,7 +83,7 @@ public class HealthServlet extends HttpServlet {
 
         final var checkResponses = new ArrayList<HealthCheckResponse>();
         try {
-            for (final HealthCheck healthCheck : checkRegistry.getChecks().values()) {
+            for (final HealthCheck healthCheck : checkRegistry.getChecks()) {
                 if (matchesCheckType(healthCheck, requestedCheckType)) {
                     LOGGER.debug("Calling health check: " + healthCheck.getClass().getName());
                     checkResponses.add(healthCheck.call());

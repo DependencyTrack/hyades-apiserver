@@ -23,16 +23,14 @@ import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
 import alpine.persistence.IPersistenceManagerFactory;
 import alpine.persistence.JdoProperties;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory;
 import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.Gauge;
-import org.datanucleus.PropertyNames;
-import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
-
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.datanucleus.PropertyNames;
+import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
+
 import javax.jdo.JDOHelper;
 import javax.jdo.PersistenceManager;
 import javax.sql.DataSource;
@@ -71,32 +69,9 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
             dnProps.put(PropertyNames.PROPERTY_ENABLE_STATISTICS, "true");
         }
 
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.DATABASE_POOL_ENABLED)) {
-            // DataNucleus per default creates two connection factories.
-            //  - Primary: Used for operations in transactional context
-            //  - Secondary: Used for operations in non-transactional context, schema generation and value generation
-            //
-            // When using pooling, DN will thus create two connection pools of equal size.
-            //
-            // See also:
-            //  - https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#datastore_connection
-            //  - https://datanucleus.groups.io/g/main/topic/95191894#490
-            //
-            // We don't need this separation, and have observed the non-transactional pool
-            // to remain mostly idle. Thus, we explicitly only create one pool.
-            // https://groups.io/g/datanucleus/topic/side_effects_of_setting/108286305
-
-            LOGGER.info("Creating connection pool");
-            final DataSource pooledDataSource = createPooledDataSource();
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY, pooledDataSource);
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY2, pooledDataSource);
-        } else {
-            // No connection pooling; Let DataNucleus handle the datasource setup
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_URL, Config.getInstance().getProperty(Config.AlpineKey.DATABASE_URL));
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_DRIVER_NAME, Config.getInstance().getProperty(Config.AlpineKey.DATABASE_DRIVER));
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_USER_NAME, Config.getInstance().getProperty(Config.AlpineKey.DATABASE_USERNAME));
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_PASSWORD, Config.getInstance().getPropertyOrFile(Config.AlpineKey.DATABASE_PASSWORD));
-        }
+        final DataSource dataSource = DataSourceRegistry.getInstance().getDefault();
+        dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY, dataSource);
+        dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY2, dataSource);
 
         pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
 
@@ -270,26 +245,6 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
                         p -> p.getQueryCache().getQueryCache().size())
                 .description("Number of entries in the query result cache")
                 .register(Metrics.getRegistry());
-    }
-
-    private DataSource createPooledDataSource() {
-        final var hikariConfig = new HikariConfig();
-        hikariConfig.setPoolName("Alpine");
-        hikariConfig.setJdbcUrl(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_URL));
-        hikariConfig.setDriverClassName(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_DRIVER));
-        hikariConfig.setUsername(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_USERNAME));
-        hikariConfig.setPassword(Config.getInstance().getPropertyOrFile(Config.AlpineKey.DATABASE_PASSWORD));
-
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            hikariConfig.setMetricsTrackerFactory(new MicrometerMetricsTrackerFactory(Metrics.getRegistry()));
-        }
-
-        hikariConfig.setMaximumPoolSize(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_MAX_SIZE));
-        hikariConfig.setMinimumIdle(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_MIN_IDLE));
-        hikariConfig.setMaxLifetime(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_MAX_LIFETIME));
-        hikariConfig.setIdleTimeout(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_IDLE_TIMEOUT));
-        hikariConfig.setKeepaliveTime(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_KEEPALIVE_INTERVAL));
-        return new HikariDataSource(hikariConfig);
     }
 
 }
