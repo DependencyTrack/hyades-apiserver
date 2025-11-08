@@ -60,7 +60,7 @@ public class WorkflowEngineInitializerTest {
     }
 
     @Test
-    @WithConfigProperty("workflow-engine.enabled=false")
+    @WithConfigProperty("dt.workflow-engine.enabled=false")
     public void shouldDoNothingWhenEngineIsDisabled() {
         initializer = new WorkflowEngineInitializer();
         initializer.contextInitialized(null);
@@ -71,10 +71,10 @@ public class WorkflowEngineInitializerTest {
 
     @Test
     @WithConfigProperty(value = {
-            "workflow-engine.enabled=true",
-            "workflow-engine.database.url=${testcontainers.postgresql.jdbc-url}",
-            "workflow-engine.database.username=${testcontainers.postgresql.username}",
-            "workflow-engine.database.password=${testcontainers.postgresql.password}"
+            "dt.workflow-engine.enabled=true",
+            "dt.workflow-engine.database.url=${testcontainers.postgresql.jdbc-url}",
+            "dt.workflow-engine.database.username=${testcontainers.postgresql.username}",
+            "dt.workflow-engine.database.password=${testcontainers.postgresql.password}"
     })
     public void shouldStartEngine() {
         initializer = new WorkflowEngineInitializer();

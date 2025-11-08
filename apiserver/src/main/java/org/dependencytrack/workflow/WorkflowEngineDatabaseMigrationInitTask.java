@@ -46,12 +46,12 @@ public final class WorkflowEngineDatabaseMigrationInitTask implements InitTask {
 
     @Override
     public void execute(final InitTaskContext ctx) {
-        if (!ctx.config().getOptionalValue("workflow-engine.enabled", boolean.class).orElse(false)) {
+        if (!ctx.config().getOptionalValue("dt.workflow-engine.enabled", boolean.class).orElse(false)) {
             LOGGER.info("Skipping execution because workflow engine is disabled");
             return;
         }
 
-        final String dataSourceName = ctx.config().getValue("workflow-engine.migration.datasource.name", String.class);
+        final String dataSourceName = ctx.config().getValue("dt.workflow-engine.migration.datasource.name", String.class);
         final DataSource dataSource = DataSourceRegistry.getInstance().get(dataSourceName);
 
         new MigrationExecutor(dataSource).execute();
