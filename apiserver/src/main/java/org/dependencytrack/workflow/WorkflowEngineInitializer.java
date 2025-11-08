@@ -19,20 +19,17 @@
 package org.dependencytrack.workflow;
 
 import alpine.common.metrics.Metrics;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineFactory;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
-import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.time.Duration;
@@ -93,7 +90,10 @@ public final class WorkflowEngineInitializer implements ServletContextListener {
     }
 
     private static WorkflowEngineConfig createEngineConfig(final Config config) {
-        final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), createDataSource(config));
+        final String dataSourceName = config.getValue("workflow-engine.datasource.name", String.class);
+        final DataSource dataSource = DataSourceRegistry.getInstance().get(dataSourceName);
+
+        final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
 
         config.getOptionalValue("workflow-engine.cache.run-history.max-size", int.class)
                 .ifPresent(engineConfig.runHistoryCache()::setMaxSize);
@@ -136,41 +136,6 @@ public final class WorkflowEngineInitializer implements ServletContextListener {
         }
 
         return engineConfig;
-    }
-
-    private static DataSource createDataSource(final Config config) {
-        final String url = config.getOptionalValue("workflow-engine.database.url", String.class)
-                .orElseGet(() -> config.getValue("alpine.database.url", String.class));
-        final String username = config.getOptionalValue("workflow-engine.database.username", String.class)
-                .or(() -> config.getOptionalValue("alpine.database.username", String.class))
-                .orElse(null);
-        final String password = config.getOptionalValue("workflow-engine.database.password", String.class)
-                .or(() -> config.getOptionalValue("alpine.database.password", String.class))
-                .orElse(null);
-
-        if (config.getOptionalValue("workflow-engine.database.pool.enabled", boolean.class).orElse(true)) {
-            final var hikariConfig = new HikariConfig();
-            hikariConfig.setPoolName("workflow-engine");
-            hikariConfig.setJdbcUrl(url);
-            hikariConfig.setDriverClassName(org.postgresql.Driver.class.getName());
-            hikariConfig.setUsername(username);
-            hikariConfig.setPassword(password);
-            hikariConfig.setMaximumPoolSize(config.getOptionalValue("workflow-engine.database.pool.max-size", int.class).orElse(10));
-            hikariConfig.setMinimumIdle(config.getOptionalValue("workflow-engine.database.pool.min-idle", int.class).orElse(3));
-
-            if (config.getOptionalValue("alpine.metrics.enabled", boolean.class).orElse(false)) {
-                hikariConfig.setMetricsTrackerFactory(
-                        new MicrometerMetricsTrackerFactory(Metrics.getRegistry()));
-            }
-
-            return new HikariDataSource(hikariConfig);
-        }
-
-        final var dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(url);
-        dataSource.setUser(username);
-        dataSource.setPassword(password);
-        return dataSource;
     }
 
 }

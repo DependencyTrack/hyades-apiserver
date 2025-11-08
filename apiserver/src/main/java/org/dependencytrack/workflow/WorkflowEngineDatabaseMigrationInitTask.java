@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.workflow;
 
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.init.InitTask;
 import org.dependencytrack.init.InitTaskContext;
 import org.dependencytrack.workflow.engine.migration.MigrationExecutor;
-import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,29 +51,10 @@ public final class WorkflowEngineDatabaseMigrationInitTask implements InitTask {
             return;
         }
 
-        new MigrationExecutor(getDataSource(ctx)).execute();
-    }
+        final String dataSourceName = ctx.config().getValue("workflow-engine.migration.datasource.name", String.class);
+        final DataSource dataSource = DataSourceRegistry.getInstance().get(dataSourceName);
 
-    private DataSource getDataSource(final InitTaskContext ctx) {
-        String engineDbUrl = ctx.config().getOptionalValue("workflow-engine.database.migration-url", String.class).orElse(null);
-        if (engineDbUrl != null) {
-            final var dataSource = new PGSimpleDataSource();
-            dataSource.setUrl(engineDbUrl);
-            dataSource.setUser(ctx.config().getOptionalValue("workflow-engine.database.migration-username", String.class).orElse(null));
-            dataSource.setPassword(ctx.config().getOptionalValue("workflow-engine.database.migration-password", String.class).orElse(null));
-            return dataSource;
-        }
-
-        engineDbUrl = ctx.config().getOptionalValue("workflow-engine.database.url", String.class).orElse(null);
-        if (engineDbUrl != null) {
-            final var dataSource = new PGSimpleDataSource();
-            dataSource.setUrl(engineDbUrl);
-            dataSource.setUser(ctx.config().getOptionalValue("workflow-engine.database.username", String.class).orElse(null));
-            dataSource.setPassword(ctx.config().getOptionalValue("workflow-engine.database.password", String.class).orElse(null));
-            return dataSource;
-        }
-
-        return ctx.dataSource();
+        new MigrationExecutor(dataSource).execute();
     }
 
 }
