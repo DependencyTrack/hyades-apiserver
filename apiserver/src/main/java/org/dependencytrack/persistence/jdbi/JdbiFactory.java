@@ -24,8 +24,8 @@ import alpine.resources.AlpineRequest;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.PersistenceUtil;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.HandleCallback;
 import org.jdbi.v3.core.HandleConsumer;
@@ -107,24 +107,16 @@ public class JdbiFactory {
      * @return The global {@link Jdbi} instance
      */
     static Jdbi createJdbi() {
-        // NB: The PersistenceManager is only required to gain access to the underlying
-        // datasource. It must be closed to avoid resource leakage, but the JDBI instance
-        // will continue to work.
-        try (final PersistenceManager pm = alpine.server.persistence.PersistenceManagerFactory.createPersistenceManager()) {
-            return createJdbi(pm);
-        }
-    }
-
-    private static Jdbi createJdbi(final PersistenceManager pm) {
         return GLOBAL_INSTANCE_HOLDER
                 .updateAndGet(previous -> {
-                    if (previous == null || previous.pmf != pm.getPersistenceManagerFactory()) {
+                    final DataSource dataSource = DataSourceRegistry.getInstance().getDefault();
+                    if (previous == null || previous.dataSource() != dataSource) {
                         // The PMF reference does not usually change, unless it has been recreated,
                         // or multiple PMFs exist in the same application. The latter is not the case
                         // for Dependency-Track, and the former only happens during test execution,
                         // where each test (re-)creates the PMF.
-                        final Jdbi jdbi = createFromPmf(pm.getPersistenceManagerFactory());
-                        return new GlobalInstanceHolder(jdbi, pm.getPersistenceManagerFactory());
+                        final Jdbi jdbi = customizeJdbi(Jdbi.create(dataSource));
+                        return new GlobalInstanceHolder(jdbi, dataSource);
                     }
 
                     return previous;
@@ -168,11 +160,7 @@ public class JdbiFactory {
         return customizeJdbi(Jdbi.create(new JdoConnectionFactory(pm)));
     }
 
-    private record GlobalInstanceHolder(Jdbi jdbi, PersistenceManagerFactory pmf) {
-    }
-
-    private static Jdbi createFromPmf(final PersistenceManagerFactory pmf) {
-        return customizeJdbi(Jdbi.create(PersistenceUtil.getDataSource(pmf)));
+    private record GlobalInstanceHolder(Jdbi jdbi, DataSource dataSource) {
     }
 
     private static Jdbi customizeJdbi(final Jdbi jdbi) {

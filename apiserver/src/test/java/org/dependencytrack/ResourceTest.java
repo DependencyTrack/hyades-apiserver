@@ -25,29 +25,30 @@ import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.auth.PasswordService;
 import alpine.server.persistence.PersistenceManagerFactory;
-import org.apache.kafka.clients.producer.MockProducer;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaProducerInitializer;
-import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.plugin.PluginManagerTestUtil;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
 import jakarta.ws.rs.core.Response;
+import org.apache.kafka.clients.producer.MockProducer;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.dependencytrack.event.kafka.KafkaProducerInitializer;
+import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.plugin.PluginManagerTestUtil;
+import org.dependencytrack.support.config.source.memory.MemoryConfigSource;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+
 import java.io.StringReader;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import static org.dependencytrack.PersistenceCapableTest.configurePmf;
 import static org.dependencytrack.PersistenceCapableTest.truncateTables;
 
 public abstract class ResourceTest {
@@ -117,7 +118,11 @@ public abstract class ResourceTest {
         postgresContainer = new PostgresTestContainer();
         postgresContainer.start();
 
-        configurePmf(postgresContainer);
+        MemoryConfigSource.setProperty("dt.datasource.url", postgresContainer.getJdbcUrl());
+        MemoryConfigSource.setProperty("dt.datasource.username", postgresContainer.getUsername());
+        MemoryConfigSource.setProperty("dt.datasource.password", postgresContainer.getPassword());
+
+        new PersistenceManagerFactory().contextInitialized(null);
     }
 
     @Before
@@ -160,6 +165,7 @@ public abstract class ResourceTest {
     @AfterClass
     public static void tearDownClass() {
         PersistenceManagerFactory.tearDown();
+        DataSourceRegistry.getInstance().closeAll();
 
         if (postgresContainer != null) {
             postgresContainer.stopWhenNotReusing();

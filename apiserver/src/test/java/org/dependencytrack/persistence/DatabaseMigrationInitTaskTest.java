@@ -47,7 +47,7 @@ public class DatabaseMigrationInitTaskTest {
 
     @Before
     public void setUp() {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
+        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:14-alpine"))
                 .withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off")
                 .withTmpFs(Map.of("/var/lib/postgresql/data", "rw"));
         postgresContainer.start();

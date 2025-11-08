@@ -1,7 +1,9 @@
 package alpine.server.servlets;
 
-import alpine.server.health.HealthCheckRegistry;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import net.javacrumbs.jsonunit.core.Option;
+import org.dependencytrack.common.health.HealthCheckRegistry;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.Liveness;
@@ -10,11 +12,11 @@ import org.eclipse.microprofile.health.Startup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -44,7 +46,7 @@ public class HealthServletTest {
 
     @Test
     public void shouldReportStatusUpWhenNoChecksAreRegistered() throws Exception {
-        final var servlet = new HealthServlet();
+        final var servlet = new HealthServlet(new HealthCheckRegistry(Collections.emptyList()));
         servlet.init();
         servlet.doGet(requestMock, responseMock);
 
@@ -61,12 +63,9 @@ public class HealthServletTest {
 
     @Test
     public void shouldReportStatusUpWhenAllChecksAreUp() throws Exception {
-        final var checkA = new MockReadinessCheck(() -> HealthCheckResponse.up("foo"));
-        final var checkB = new MockReadinessCheck(() -> HealthCheckResponse.up("bar"));
-
-        final var checkRegistry = new HealthCheckRegistry();
-        checkRegistry.register("foo", checkA);
-        checkRegistry.register("bar", checkB);
+        final var checkRegistry = new HealthCheckRegistry(List.of(
+                new MockReadinessCheck(() -> HealthCheckResponse.up("foo")),
+                new MockReadinessCheck(() -> HealthCheckResponse.up("bar"))));
 
         final var servlet = new HealthServlet(checkRegistry);
         servlet.init();
@@ -97,12 +96,9 @@ public class HealthServletTest {
 
     @Test
     public void shouldReportStatusDownWhenAtLeastOneCheckIsDown() throws Exception {
-        final var checkUp = new MockReadinessCheck(() -> HealthCheckResponse.up("foo"));
-        final var checkDown = new MockReadinessCheck(() -> HealthCheckResponse.down("bar"));
-
-        final var checkRegistry = new HealthCheckRegistry();
-        checkRegistry.register("foo", checkUp);
-        checkRegistry.register("bar", checkDown);
+        final var checkRegistry = new HealthCheckRegistry(List.of(
+                new MockReadinessCheck(() -> HealthCheckResponse.up("foo")),
+                new MockReadinessCheck(() -> HealthCheckResponse.down("bar"))));
 
         final var servlet = new HealthServlet(checkRegistry);
         servlet.init();
@@ -138,9 +134,12 @@ public class HealthServletTest {
             throw new IllegalStateException("Simulated check exception");
         });
 
-        final var checkRegistry = new HealthCheckRegistry();
-        checkRegistry.register("foo", checkUp);
-        checkRegistry.register("bar", checkFail);
+        final var checkRegistry = new HealthCheckRegistry(List.of(
+                new MockReadinessCheck(() -> HealthCheckResponse.up("foo")),
+                new MockReadinessCheck(() -> {
+                    throw new IllegalStateException("Simulated check exception");
+                })
+        ));
 
         final var servlet = new HealthServlet(checkRegistry);
         servlet.init();
@@ -153,16 +152,11 @@ public class HealthServletTest {
 
     @Test
     public void shouldIncludeLivenessCheckWhenLivenessIsRequested() throws Exception {
-        final var livenessCheck = new MockLivenessCheck(() -> HealthCheckResponse.up("live"));
-        final var readinessCheck = new MockReadinessCheck(() -> HealthCheckResponse.up("ready"));
-        final var startupCheck = new MockStartupCheck(() -> HealthCheckResponse.up("start"));
-        final var allTypesCheck = new MockAllTypesCheck(() -> HealthCheckResponse.up("all"));
-
-        final var checkRegistry = new HealthCheckRegistry();
-        checkRegistry.register("foo", livenessCheck);
-        checkRegistry.register("bar", readinessCheck);
-        checkRegistry.register("baz", startupCheck);
-        checkRegistry.register("qux", allTypesCheck);
+        final var checkRegistry = new HealthCheckRegistry(List.of(
+                new MockLivenessCheck(() -> HealthCheckResponse.up("live")),
+                new MockReadinessCheck(() -> HealthCheckResponse.up("ready")),
+                new MockStartupCheck(() -> HealthCheckResponse.up("start")),
+                new MockAllTypesCheck(() -> HealthCheckResponse.up("all"))));
 
         when(requestMock.getPathInfo()).thenReturn("/live");
 
@@ -195,16 +189,11 @@ public class HealthServletTest {
 
     @Test
     public void shouldIncludeReadinessCheckWhenReadinessIsRequested() throws Exception {
-        final var livenessCheck = new MockLivenessCheck(() -> HealthCheckResponse.up("live"));
-        final var readinessCheck = new MockReadinessCheck(() -> HealthCheckResponse.up("ready"));
-        final var startupCheck = new MockStartupCheck(() -> HealthCheckResponse.up("start"));
-        final var allTypesCheck = new MockAllTypesCheck(() -> HealthCheckResponse.up("all"));
-
-        final var checkRegistry = new HealthCheckRegistry();
-        checkRegistry.register("foo", livenessCheck);
-        checkRegistry.register("bar", readinessCheck);
-        checkRegistry.register("baz", startupCheck);
-        checkRegistry.register("qux", allTypesCheck);
+        final var checkRegistry = new HealthCheckRegistry(List.of(
+                new MockLivenessCheck(() -> HealthCheckResponse.up("live")),
+                new MockReadinessCheck(() -> HealthCheckResponse.up("ready")),
+                new MockStartupCheck(() -> HealthCheckResponse.up("start")),
+                new MockAllTypesCheck(() -> HealthCheckResponse.up("all"))));
 
         when(requestMock.getPathInfo()).thenReturn("/ready");
 
@@ -237,16 +226,11 @@ public class HealthServletTest {
 
     @Test
     public void shouldIncludeStartupCheckWhenStartupIsRequested() throws Exception {
-        final var livenessCheck = new MockLivenessCheck(() -> HealthCheckResponse.up("live"));
-        final var readinessCheck = new MockReadinessCheck(() -> HealthCheckResponse.up("ready"));
-        final var startupCheck = new MockStartupCheck(() -> HealthCheckResponse.up("start"));
-        final var allTypesCheck = new MockAllTypesCheck(() -> HealthCheckResponse.up("all"));
-
-        final var checkRegistry = new HealthCheckRegistry();
-        checkRegistry.register("foo", livenessCheck);
-        checkRegistry.register("bar", readinessCheck);
-        checkRegistry.register("baz", startupCheck);
-        checkRegistry.register("qux", allTypesCheck);
+        final var checkRegistry = new HealthCheckRegistry(List.of(
+                new MockLivenessCheck(() -> HealthCheckResponse.up("live")),
+                new MockReadinessCheck(() -> HealthCheckResponse.up("ready")),
+                new MockStartupCheck(() -> HealthCheckResponse.up("start")),
+                new MockAllTypesCheck(() -> HealthCheckResponse.up("all"))));
 
         when(requestMock.getPathInfo()).thenReturn("/started");
 
@@ -279,16 +263,11 @@ public class HealthServletTest {
 
     @Test
     public void shouldIncludeAllChecksWhenAllAreRequested() throws Exception {
-        final var livenessCheck = new MockLivenessCheck(() -> HealthCheckResponse.up("live"));
-        final var readinessCheck = new MockReadinessCheck(() -> HealthCheckResponse.up("ready"));
-        final var startupCheck = new MockStartupCheck(() -> HealthCheckResponse.up("start"));
-        final var allTypesCheck = new MockAllTypesCheck(() -> HealthCheckResponse.up("all"));
-
-        final var checkRegistry = new HealthCheckRegistry();
-        checkRegistry.register("foo", livenessCheck);
-        checkRegistry.register("bar", readinessCheck);
-        checkRegistry.register("baz", startupCheck);
-        checkRegistry.register("qux", allTypesCheck);
+        final var checkRegistry = new HealthCheckRegistry(List.of(
+                new MockLivenessCheck(() -> HealthCheckResponse.up("live")),
+                new MockReadinessCheck(() -> HealthCheckResponse.up("ready")),
+                new MockStartupCheck(() -> HealthCheckResponse.up("start")),
+                new MockAllTypesCheck(() -> HealthCheckResponse.up("all"))));
 
         when(requestMock.getPathInfo()).thenReturn("/");
 
