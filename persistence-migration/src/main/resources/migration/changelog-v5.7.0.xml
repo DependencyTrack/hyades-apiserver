@@ -27,108 +27,108 @@
     <changeSet id="v5.7.0-5" author="nscuro">
         <sql>
             CREATE MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL" AS
-            WITH
-            retention AS(
-            SELECT COALESCE(
-            (
-            SELECT CAST("PROPERTYVALUE" AS INT)
-            FROM "CONFIGPROPERTY"
-            WHERE "GROUPNAME" = 'maintenance'
-            AND "PROPERTYNAME" = 'metrics.retention.days'
-            )
-            , 90) AS days
-            ),
-            date_range AS(
-            SELECT DATE_TRUNC('day', CURRENT_DATE - (INTERVAL '1 day' * day)) AS metrics_date
-            FROM GENERATE_SERIES(0, GREATEST((SELECT days FROM retention) - 1, 0)) day
-            ),
-            latest_daily_project_metrics AS(
-            SELECT date_range.metrics_date
-            , latest_metrics.*
-            FROM date_range
-            LEFT JOIN LATERAL (
-            SELECT DISTINCT ON (pm."PROJECT_ID")
-            pm.*
-            FROM "PROJECT" AS p
-            INNER JOIN "PROJECTMETRICS" AS pm
-            ON pm."PROJECT_ID" = p."ID"
-            AND p."INACTIVE_SINCE" IS NULL
-            WHERE pm."LAST_OCCURRENCE" &lt; date_range.metrics_date + INTERVAL '1 day'
-            -- Consider data from previous day in case we don't have any for today.
-            AND pm."LAST_OCCURRENCE" &gt;= date_range.metrics_date - INTERVAL '1 day'
-            ORDER BY pm."PROJECT_ID", pm."LAST_OCCURRENCE" DESC
-            ) AS latest_metrics ON TRUE
-            ),
-            daily_metrics AS(
-            SELECT COUNT(DISTINCT "PROJECT_ID") AS projects
-            , SUM("COMPONENTS") AS components
-            , SUM("CRITICAL") AS critical
-            , metrics_date
-            , SUM("FINDINGS_AUDITED") AS findings_audited
-            , SUM("FINDINGS_TOTAL") AS findings_total
-            , SUM("FINDINGS_UNAUDITED") AS findings_unaudited
-            , SUM("HIGH") AS high
-            , SUM("RISKSCORE") as inherited_risk_score
-            , SUM("LOW") AS low
-            , SUM("MEDIUM") AS medium
-            , SUM("POLICYVIOLATIONS_AUDITED") AS policy_violations_audited
-            , SUM("POLICYVIOLATIONS_FAIL") AS policy_violations_fail
-            , SUM("POLICYVIOLATIONS_INFO") AS policy_violations_info
-            , SUM("POLICYVIOLATIONS_LICENSE_AUDITED") AS policy_violations_license_audited
-            , SUM("POLICYVIOLATIONS_LICENSE_TOTAL") AS policy_violations_license_total
-            , SUM("POLICYVIOLATIONS_LICENSE_UNAUDITED") AS policy_violations_license_unaudited
-            , SUM("POLICYVIOLATIONS_OPERATIONAL_AUDITED") AS policy_violations_operational_audited
-            , SUM("POLICYVIOLATIONS_OPERATIONAL_TOTAL") AS policy_violations_operational_total
-            , SUM("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED") AS policy_violations_operational_unaudited
-            , SUM("POLICYVIOLATIONS_SECURITY_AUDITED") AS policy_violations_security_audited
-            , SUM("POLICYVIOLATIONS_SECURITY_TOTAL") AS policy_violations_security_total
-            , SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED") AS policy_violations_security_unaudited
-            , SUM("POLICYVIOLATIONS_TOTAL") AS policy_violations_total
-            , SUM("POLICYVIOLATIONS_UNAUDITED") AS policy_violations_unaudited
-            , SUM("POLICYVIOLATIONS_WARN") AS policy_violations_warn
-            , SUM("SUPPRESSED") AS suppressed
-            , SUM("UNASSIGNED_SEVERITY") AS unassigned
-            , SUM("VULNERABILITIES") AS vulnerabilities
-            , SUM("VULNERABLECOMPONENTS") AS vulnerable_components
-            , SUM(CASE WHEN "VULNERABLECOMPONENTS" &gt; 0 THEN 1 ELSE 0 END) AS vulnerable_projects
-            FROM latest_daily_project_metrics
-            GROUP BY metrics_date
-            )
-            SELECT COALESCE(dm.components, 0) AS "COMPONENTS"
-            , COALESCE(dm.critical, 0) AS "CRITICAL"
-            , COALESCE(dm.findings_audited, 0) AS "FINDINGS_AUDITED"
-            , COALESCE(dm.findings_total, 0) AS "FINDINGS_TOTAL"
-            , COALESCE(dm.findings_unaudited, 0) AS "FINDINGS_UNAUDITED"
-            , date_range.metrics_date AS "FIRST_OCCURRENCE"
-            , COALESCE(dm.high, 0) AS "HIGH"
-            , COALESCE(dm.inherited_risk_score, 0) AS "INHERITED_RISK_SCORE"
-            , date_range.metrics_date AS "LAST_OCCURRENCE"
-            , COALESCE(dm.low, 0) AS "LOW"
-            , COALESCE(dm.medium, 0) AS "MEDIUM"
-            , COALESCE(dm.policy_violations_audited, 0) AS "POLICY_VIOLATIONS_AUDITED"
-            , COALESCE(dm.policy_violations_fail, 0) AS "POLICY_VIOLATIONS_FAIL"
-            , COALESCE(dm.policy_violations_info, 0) AS "POLICY_VIOLATIONS_INFO"
-            , COALESCE(dm.policy_violations_license_audited, 0) AS "POLICY_VIOLATIONS_LICENSE_AUDITED"
-            , COALESCE(dm.policy_violations_license_total, 0) AS "POLICY_VIOLATIONS_LICENSE_TOTAL"
-            , COALESCE(dm.policy_violations_license_unaudited, 0) AS "POLICY_VIOLATIONS_LICENSE_UNAUDITED"
-            , COALESCE(dm.policy_violations_operational_audited, 0) AS "POLICY_VIOLATIONS_OPERATIONAL_AUDITED"
-            , COALESCE(dm.policy_violations_operational_total, 0) AS "POLICY_VIOLATIONS_OPERATIONAL_TOTAL"
-            , COALESCE(dm.policy_violations_operational_unaudited, 0) AS "POLICY_VIOLATIONS_OPERATIONAL_UNAUDITED"
-            , COALESCE(dm.policy_violations_security_audited, 0) AS "POLICY_VIOLATIONS_SECURITY_AUDITED"
-            , COALESCE(dm.policy_violations_security_total, 0) AS "POLICY_VIOLATIONS_SECURITY_TOTAL"
-            , COALESCE(dm.policy_violations_security_unaudited, 0) AS "POLICY_VIOLATIONS_SECURITY_UNAUDITED"
-            , COALESCE(dm.policy_violations_total, 0) AS "POLICY_VIOLATIONS_TOTAL"
-            , COALESCE(dm.policy_violations_unaudited, 0) AS "POLICY_VIOLATIONS_UNAUDITED"
-            , COALESCE(dm.policy_violations_warn, 0) AS "POLICY_VIOLATIONS_WARN"
-            , COALESCE(dm.projects, 0) AS "PROJECTS"
-            , COALESCE(dm.suppressed, 0) AS "SUPPRESSED"
-            , COALESCE(dm.unassigned, 0) AS "UNASSIGNED"
-            , COALESCE(dm.vulnerabilities, 0) AS "VULNERABILITIES"
-            , COALESCE(dm.vulnerable_components, 0) AS "VULNERABLE_COMPONENTS"
-            , COALESCE(dm.vulnerable_projects, 0) AS "VULNERABLE_PROJECTS"
-            FROM date_range
-            LEFT JOIN daily_metrics AS dm
-            ON date_range.metrics_date = dm.metrics_date
+                WITH
+                retention AS(
+                   SELECT COALESCE(
+                     (
+                       SELECT CAST("PROPERTYVALUE" AS INT)
+                         FROM "CONFIGPROPERTY"
+                        WHERE "GROUPNAME" = 'maintenance'
+                          AND "PROPERTYNAME" = 'metrics.retention.days'
+                     )
+                   , 90) AS days
+                ),
+                date_range AS(
+                  SELECT DATE_TRUNC('day', CURRENT_DATE - (INTERVAL '1 day' * day)) AS metrics_date
+                    FROM GENERATE_SERIES(0, GREATEST((SELECT days FROM retention) - 1, 0)) day
+                ),
+                latest_daily_project_metrics AS(
+                  SELECT date_range.metrics_date
+                       , latest_metrics.*
+                    FROM date_range
+                    LEFT JOIN LATERAL (
+                      SELECT DISTINCT ON (pm."PROJECT_ID")
+                             pm.*
+                        FROM "PROJECT" AS p
+                       INNER JOIN "PROJECTMETRICS" AS pm
+                          ON pm."PROJECT_ID" = p."ID"
+                         AND p."INACTIVE_SINCE" IS NULL
+                       WHERE pm."LAST_OCCURRENCE" &lt; date_range.metrics_date + INTERVAL '1 day'
+                         -- Consider data from previous day in case we don't have any for today.
+                         AND pm."LAST_OCCURRENCE" &gt;= date_range.metrics_date - INTERVAL '1 day'
+                       ORDER BY pm."PROJECT_ID", pm."LAST_OCCURRENCE" DESC
+                    ) AS latest_metrics ON TRUE
+                ),
+                daily_metrics AS(
+                  SELECT COUNT(DISTINCT "PROJECT_ID") AS projects
+                       , SUM("COMPONENTS") AS components
+                       , SUM("CRITICAL") AS critical
+                       , metrics_date
+                       , SUM("FINDINGS_AUDITED") AS findings_audited
+                       , SUM("FINDINGS_TOTAL") AS findings_total
+                       , SUM("FINDINGS_UNAUDITED") AS findings_unaudited
+                       , SUM("HIGH") AS high
+                       , SUM("RISKSCORE") as inherited_risk_score
+                       , SUM("LOW") AS low
+                       , SUM("MEDIUM") AS medium
+                       , SUM("POLICYVIOLATIONS_AUDITED") AS policy_violations_audited
+                       , SUM("POLICYVIOLATIONS_FAIL") AS policy_violations_fail
+                       , SUM("POLICYVIOLATIONS_INFO") AS policy_violations_info
+                       , SUM("POLICYVIOLATIONS_LICENSE_AUDITED") AS policy_violations_license_audited
+                       , SUM("POLICYVIOLATIONS_LICENSE_TOTAL") AS policy_violations_license_total
+                       , SUM("POLICYVIOLATIONS_LICENSE_UNAUDITED") AS policy_violations_license_unaudited
+                       , SUM("POLICYVIOLATIONS_OPERATIONAL_AUDITED") AS policy_violations_operational_audited
+                       , SUM("POLICYVIOLATIONS_OPERATIONAL_TOTAL") AS policy_violations_operational_total
+                       , SUM("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED") AS policy_violations_operational_unaudited
+                       , SUM("POLICYVIOLATIONS_SECURITY_AUDITED") AS policy_violations_security_audited
+                       , SUM("POLICYVIOLATIONS_SECURITY_TOTAL") AS policy_violations_security_total
+                       , SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED") AS policy_violations_security_unaudited
+                       , SUM("POLICYVIOLATIONS_TOTAL") AS policy_violations_total
+                       , SUM("POLICYVIOLATIONS_UNAUDITED") AS policy_violations_unaudited
+                       , SUM("POLICYVIOLATIONS_WARN") AS policy_violations_warn
+                       , SUM("SUPPRESSED") AS suppressed
+                       , SUM("UNASSIGNED_SEVERITY") AS unassigned
+                       , SUM("VULNERABILITIES") AS vulnerabilities
+                       , SUM("VULNERABLECOMPONENTS") AS vulnerable_components
+                       , SUM(CASE WHEN "VULNERABLECOMPONENTS" &gt; 0 THEN 1 ELSE 0 END) AS vulnerable_projects
+                    FROM latest_daily_project_metrics
+                   GROUP BY metrics_date
+                )
+                SELECT COALESCE(dm.components, 0) AS "COMPONENTS"
+                     , COALESCE(dm.critical, 0) AS "CRITICAL"
+                     , COALESCE(dm.findings_audited, 0) AS "FINDINGS_AUDITED"
+                     , COALESCE(dm.findings_total, 0) AS "FINDINGS_TOTAL"
+                     , COALESCE(dm.findings_unaudited, 0) AS "FINDINGS_UNAUDITED"
+                     , date_range.metrics_date AS "FIRST_OCCURRENCE"
+                     , COALESCE(dm.high, 0) AS "HIGH"
+                     , COALESCE(dm.inherited_risk_score, 0) AS "INHERITED_RISK_SCORE"
+                     , date_range.metrics_date AS "LAST_OCCURRENCE"
+                     , COALESCE(dm.low, 0) AS "LOW"
+                     , COALESCE(dm.medium, 0) AS "MEDIUM"
+                     , COALESCE(dm.policy_violations_audited, 0) AS "POLICY_VIOLATIONS_AUDITED"
+                     , COALESCE(dm.policy_violations_fail, 0) AS "POLICY_VIOLATIONS_FAIL"
+                     , COALESCE(dm.policy_violations_info, 0) AS "POLICY_VIOLATIONS_INFO"
+                     , COALESCE(dm.policy_violations_license_audited, 0) AS "POLICY_VIOLATIONS_LICENSE_AUDITED"
+                     , COALESCE(dm.policy_violations_license_total, 0) AS "POLICY_VIOLATIONS_LICENSE_TOTAL"
+                     , COALESCE(dm.policy_violations_license_unaudited, 0) AS "POLICY_VIOLATIONS_LICENSE_UNAUDITED"
+                     , COALESCE(dm.policy_violations_operational_audited, 0) AS "POLICY_VIOLATIONS_OPERATIONAL_AUDITED"
+                     , COALESCE(dm.policy_violations_operational_total, 0) AS "POLICY_VIOLATIONS_OPERATIONAL_TOTAL"
+                     , COALESCE(dm.policy_violations_operational_unaudited, 0) AS "POLICY_VIOLATIONS_OPERATIONAL_UNAUDITED"
+                     , COALESCE(dm.policy_violations_security_audited, 0) AS "POLICY_VIOLATIONS_SECURITY_AUDITED"
+                     , COALESCE(dm.policy_violations_security_total, 0) AS "POLICY_VIOLATIONS_SECURITY_TOTAL"
+                     , COALESCE(dm.policy_violations_security_unaudited, 0) AS "POLICY_VIOLATIONS_SECURITY_UNAUDITED"
+                     , COALESCE(dm.policy_violations_total, 0) AS "POLICY_VIOLATIONS_TOTAL"
+                     , COALESCE(dm.policy_violations_unaudited, 0) AS "POLICY_VIOLATIONS_UNAUDITED"
+                     , COALESCE(dm.policy_violations_warn, 0) AS "POLICY_VIOLATIONS_WARN"
+                     , COALESCE(dm.projects, 0) AS "PROJECTS"
+                     , COALESCE(dm.suppressed, 0) AS "SUPPRESSED"
+                     , COALESCE(dm.unassigned, 0) AS "UNASSIGNED"
+                     , COALESCE(dm.vulnerabilities, 0) AS "VULNERABILITIES"
+                     , COALESCE(dm.vulnerable_components, 0) AS "VULNERABLE_COMPONENTS"
+                     , COALESCE(dm.vulnerable_projects, 0) AS "VULNERABLE_PROJECTS"
+                  FROM date_range
+                  LEFT JOIN daily_metrics AS dm
+                    ON date_range.metrics_date = dm.metrics_date
             WITH DATA
         </sql>
 
@@ -156,7 +156,7 @@
         -->
         <sql>
             CREATE INDEX "COMPONENT_COORDINATES_SEARCH_IDX"
-            ON "COMPONENT" USING gin (LOWER("NAME") gin_trgm_ops, LOWER("VERSION") gin_trgm_ops, LOWER("GROUP") gin_trgm_ops);
+                ON "COMPONENT" USING gin (LOWER("NAME") gin_trgm_ops, LOWER("VERSION") gin_trgm_ops, LOWER("GROUP") gin_trgm_ops);
         </sql>
     </changeSet>
 
@@ -168,8 +168,8 @@
         -->
         <sql>
             CREATE INDEX "COMPONENT_PURL_SEARCH_IDX"
-            ON "COMPONENT" (LOWER("PURL") text_pattern_ops)
-            WHERE "PURL" IS NOT NULL;
+                ON "COMPONENT" (LOWER("PURL") text_pattern_ops)
+             WHERE "PURL" IS NOT NULL;
         </sql>
     </changeSet>
 
@@ -177,11 +177,11 @@
         <sql splitStatements="true">
             ALTER TABLE "COMPONENT" DROP CONSTRAINT IF EXISTS "COMPONENT_CLASSIFIER_check";
             ALTER TABLE "COMPONENT" ADD CONSTRAINT "COMPONENT_CLASSIFIER_check"
-            CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'DATA', 'DEVICE', 'DEVICE_DRIVER', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'MACHINE_LEARNING_MODEL', 'OPERATING_SYSTEM', 'PLATFORM']));
+                CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'DATA', 'DEVICE', 'DEVICE_DRIVER', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'MACHINE_LEARNING_MODEL', 'OPERATING_SYSTEM', 'PLATFORM']));
 
             ALTER TABLE "PROJECT" DROP CONSTRAINT IF EXISTS "PROJECT_CLASSIFIER_check";
             ALTER TABLE "PROJECT" ADD CONSTRAINT "PROJECT_CLASSIFIER_check"
-            CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'DATA', 'DEVICE', 'DEVICE_DRIVER', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'MACHINE_LEARNING_MODEL', 'OPERATING_SYSTEM', 'PLATFORM']));
+                CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'DATA', 'DEVICE', 'DEVICE_DRIVER', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'MACHINE_LEARNING_MODEL', 'OPERATING_SYSTEM', 'PLATFORM']));
         </sql>
     </changeSet>
 
@@ -194,23 +194,23 @@
         -->
         <sql>
             WITH dupe_latest_project AS (
-            SELECT "ID" AS id
-            , ROW_NUMBER() OVER(PARTITION BY "NAME" ORDER BY "LAST_BOM_IMPORTED" DESC) AS rn
-            FROM "PROJECT"
-            WHERE "IS_LATEST"
+              SELECT "ID" AS id
+                   , ROW_NUMBER() OVER(PARTITION BY "NAME" ORDER BY "LAST_BOM_IMPORTED" DESC) AS rn
+                FROM "PROJECT"
+               WHERE "IS_LATEST"
             )
             UPDATE "PROJECT"
-            SET "IS_LATEST" = FALSE
-            FROM dupe_latest_project
-            WHERE "ID" = dupe_latest_project.id
-            AND dupe_latest_project.rn > 1
+               SET "IS_LATEST" = FALSE
+              FROM dupe_latest_project
+             WHERE "ID" = dupe_latest_project.id
+               AND dupe_latest_project.rn > 1
         </sql>
 
         <!-- Enforce that only a single version can be marked as latest. -->
         <sql>
             CREATE UNIQUE INDEX "PROJECT_IS_LATEST_IDX"
-            ON "PROJECT" ("NAME", "IS_LATEST")
-            WHERE "IS_LATEST"
+                ON "PROJECT" ("NAME", "IS_LATEST")
+             WHERE "IS_LATEST"
         </sql>
     </changeSet>
 
@@ -218,17 +218,17 @@
         <sql splitStatements="false">
             DO $$
             DECLARE
-            mat_view_def TEXT;
-            index_defs TEXT[];
-            index_def TEXT;
+                mat_view_def TEXT;
+                index_defs TEXT[];
+                index_def TEXT;
             BEGIN
-            SELECT pg_get_viewdef('"PORTFOLIOMETRICS_GLOBAL"', true)
-            INTO mat_view_def;
+                SELECT pg_get_viewdef('"PORTFOLIOMETRICS_GLOBAL"', true)
+                    INTO mat_view_def;
 
             SELECT array_agg(indexdef)
-            INTO index_defs
-            FROM pg_indexes
-            WHERE tablename = 'PORTFOLIOMETRICS_GLOBAL';
+                INTO index_defs
+                FROM pg_indexes
+                WHERE tablename = 'PORTFOLIOMETRICS_GLOBAL';
 
             DROP MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL";
 
@@ -236,16 +236,16 @@
             ALTER COLUMN "PROPERTYVALUE" TYPE TEXT;
 
             EXECUTE format(
-            'CREATE MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL" AS %s WITH DATA'
-            , TRIM(TRAILING ';' FROM mat_view_def)
+                'CREATE MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL" AS %s WITH DATA'
+                , TRIM(TRAILING ';' FROM mat_view_def)
             );
 
             IF index_defs IS NOT NULL THEN
-            FOREACH index_def IN ARRAY index_defs
-            LOOP
-            EXECUTE index_def;
-            END LOOP;
-            END IF;
+                FOREACH index_def IN ARRAY index_defs
+                LOOP
+                    EXECUTE index_def;
+                END LOOP;
+                END IF;
             END
             $$;
         </sql>
@@ -289,7 +289,7 @@
 
             ALTER TABLE "NOTIFICATIONRULE"
             ALTER COLUMN "NOTIFICATION_LEVEL"
-            SET DATA TYPE notification_level USING "NOTIFICATION_LEVEL"::notification_level;
+              SET DATA TYPE notification_level USING "NOTIFICATION_LEVEL"::notification_level;
         </sql>
     </changeSet>
 
@@ -318,13 +318,13 @@
     <changeSet id="v5.7.0-15" author="nscuro">
         <sql>
             DELETE
-            FROM "CONFIGPROPERTY"
-            WHERE "GROUPNAME" = 'vuln.datasource'
-            AND "PROPERTYNAME" IN (
-            'extension.github.watermark'
-            , 'extension.nvd.watermark'
-            , 'extension.osv.watermarks'
-            );
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = 'vuln.datasource'
+               AND "PROPERTYNAME" IN (
+                     'extension.github.watermark'
+                   , 'extension.nvd.watermark'
+                   , 'extension.osv.watermarks'
+                   );
         </sql>
     </changeSet>
 
@@ -336,7 +336,7 @@
         -->
         <sql>
             CREATE STATISTICS "COMPONENT_PURL_LOWER_STATS"
-            ON LOWER("PURL") FROM "COMPONENT";
+                ON LOWER("PURL") FROM "COMPONENT";
         </sql>
     </changeSet>
 
