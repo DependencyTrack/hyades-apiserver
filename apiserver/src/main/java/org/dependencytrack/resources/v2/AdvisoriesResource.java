@@ -229,35 +229,32 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
     public Response markAdvisoryAsSeen(String advisoryId) {
         return inJdbiTransaction(handle -> {
             final var advisoryDao = handle.attach(AdvisoryDao.class);
-
-            // First mark as seen using QueryManager
-            try (final var qm = new QueryManager()) {
-                final Advisory entity = qm.getObjectById(Advisory.class, advisoryId);
-                if (entity == null) {
-                    throw new NotFoundException();
-                }
-                entity.setSeen(true);
-                qm.persist(entity);
+            final long id;
+            try {
+                id = Long.parseLong(advisoryId);
+            } catch (NumberFormatException e) {
+                throw new NotFoundException();
             }
 
-            // Then fetch the updated advisory to return
-            final var advisory = advisoryDao.getAdvisoryById(Long.parseLong(advisoryId));
-            if (advisory == null) {
+            // Ensure advisory exists
+            // Atomically mark as seen and return the updated advisory row to avoid separate update/select
+            var advisoryRow = advisoryDao.markAdvisoryAsSeenAndGet(id);
+            if (advisoryRow == null) {
                 throw new NotFoundException();
             }
 
             final ListAdvisoriesResponseItem response = ListAdvisoriesResponseItem.builder()
-                    .id(advisory.id())
-                    .title(advisory.title())
-                    .url(advisory.url())
-                    .seen(advisory.seen())
-                    .lastFetched(advisory.lastFetched().atOffset(ZoneOffset.UTC).toEpochSecond()*1000)
-                    .publisher(advisory.publisher())
-                    .name(advisory.name())
-                    .version(advisory.version())
-                    .affectedComponents(advisory.affectedComponents())
-                    .affectedProjects(advisory.affectedProjects())
-                    .content(advisory.content())
+                    .id(advisoryRow.id())
+                    .title(advisoryRow.title())
+                    .url(advisoryRow.url())
+                    .seen(advisoryRow.seen())
+                    .lastFetched(advisoryRow.lastFetched().atOffset(ZoneOffset.UTC).toEpochSecond()*1000)
+                    .publisher(advisoryRow.publisher())
+                    .name(advisoryRow.name())
+                    .version(advisoryRow.version())
+                    .affectedComponents(advisoryRow.affectedComponents())
+                    .affectedProjects(advisoryRow.affectedProjects())
+                    .content(advisoryRow.content())
                     .build();
 
             return Response.ok(response).build();

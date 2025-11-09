@@ -212,6 +212,34 @@ public interface AdvisoryDao {
     @RegisterConstructorMapper(AdvisoryDao.AdvisoryDetailRow.class)
     AdvisoryDetailRow getAdvisoryById(@Bind("id") long id);
 
+    @SqlQuery(/* language=SQL */ """
+            WITH updated AS (
+                UPDATE "ADVISORY"
+                SET "SEEN" = TRUE
+                WHERE "ID" = :id
+                RETURNING "ID", "TITLE", "URL", "SEEN", "LASTFETCHED", "PUBLISHER", "NAME", "VERSION", "FORMAT", "CONTENT"
+            )
+            SELECT
+                   updated."ID" AS "id",
+                   updated."TITLE" AS "title",
+                   updated."URL" AS "url",
+                   updated."SEEN" AS "seen",
+                   updated."LASTFETCHED" AS "lastFetched",
+                   updated."PUBLISHER" AS "publisher",
+                   updated."NAME" AS "name",
+                   updated."VERSION" AS "version",
+                   updated."FORMAT" as "format",
+                   COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID") AS "affectedComponents",
+                   COUNT(DISTINCT "FINDINGATTRIBUTION"."PROJECT_ID") AS "affectedProjects",
+                   updated."CONTENT" AS "content"
+            FROM updated
+            LEFT JOIN "ADVISORIES_VULNERABILITIES" ON "ADVISORIES_VULNERABILITIES"."ADVISORY_ID" = updated."ID"
+            LEFT JOIN "FINDINGATTRIBUTION" ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
+            GROUP BY updated."ID", updated."TITLE", updated."URL", updated."SEEN", updated."LASTFETCHED", updated."PUBLISHER", updated."NAME", updated."VERSION", updated."FORMAT", updated."CONTENT"
+            """)
+    @RegisterConstructorMapper(AdvisoryDetailRow.class)
+    AdvisoryDetailRow markAdvisoryAsSeenAndGet(@Bind("id") long id);
+
     @AllowUnusedBindings
     @SqlQuery(/* language=InjectedFreeMarker */ """
             SELECT COUNT(DISTINCT "ADVISORY"."ID") AS "totalCount"
