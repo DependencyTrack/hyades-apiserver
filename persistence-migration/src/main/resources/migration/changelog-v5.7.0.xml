@@ -339,4 +339,23 @@
                 ON LOWER("PURL") FROM "COMPONENT";
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-17" author="nscuro">
+        <createTable tableName="SECRET">
+            <column name="NAME" type="TEXT">
+                <constraints primaryKey="true" primaryKeyName="SECRET_PK"/>
+            </column>
+            <column name="DESCRIPTION" type="TEXT"/>
+            <column name="VALUE" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DEK" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+        </createTable>
+    </changeSet>
 </databaseChangeLog>

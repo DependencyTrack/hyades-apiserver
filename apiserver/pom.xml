@@ -27,7 +27,6 @@
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.kotlin-stdlib.version>2.2.21</lib.kotlin-stdlib.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
-        <lib.pebble.version>3.2.4</lib.pebble.version>
         <lib.swagger.version>2.2.40</lib.swagger.version>
         <lib.swagger-parser.version>2.1.35</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
@@ -92,6 +91,11 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>proto</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>secret-management</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -318,7 +322,6 @@
         <dependency>
             <groupId>io.pebbletemplates</groupId>
             <artifactId>pebble</artifactId>
-            <version>${lib.pebble.version}</version>
         </dependency>
         <!-- Protobuf -->
         <dependency>

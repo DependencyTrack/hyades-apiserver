@@ -45,7 +45,7 @@ public class MetricsInitializer implements ServletContextListener {
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
             LOGGER.info("Registering system metrics");
             new ClassLoaderMetrics().bindTo(Metrics.getRegistry());
-            new DiskSpaceMetrics(Config.getInstance().getDataDirectorty()).bindTo(Metrics.getRegistry());
+            new DiskSpaceMetrics(Config.getInstance().getDataDirectory()).bindTo(Metrics.getRegistry());
             new JvmGcMetrics().bindTo(Metrics.getRegistry());
             new JvmInfoMetrics().bindTo(Metrics.getRegistry());
             new JvmMemoryMetrics().bindTo(Metrics.getRegistry());
