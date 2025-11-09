@@ -200,6 +200,7 @@ public interface AdvisoryDao {
                    "ADVISORY"."PUBLISHER" AS "publisher",
                    "ADVISORY"."NAME" AS "name",
                    "ADVISORY"."VERSION" AS "version",
+                   "ADVISORY"."FORMAT" AS "format",
                    COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID") AS "affectedComponents",
                    COUNT(DISTINCT "FINDINGATTRIBUTION"."PROJECT_ID") AS "affectedProjects",
                    "ADVISORY"."CONTENT" AS "content"

@@ -42,6 +42,7 @@ import org.apache.commons.lang3.ClassUtils;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Advisory;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -52,7 +53,6 @@ import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.Advisory;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.IntegrityAnalysis;
@@ -96,7 +96,6 @@ import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
-import javax.annotation.Nullable;
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -1000,18 +999,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public Advisory synchronizeAdvisory(Advisory advisory) {
         return getAdvisoryQueryManager().synchronizeAdvisory(advisory);
-    }
-
-    public Advisory updateAdvisory(Advisory advisory) {
-        return getAdvisoryQueryManager().updateAdvisory(advisory);
-    }
-
-    public void toggleAdvisorySeen(Advisory advisory) {
-        getAdvisoryQueryManager().toggleAdvisorySeen(advisory);
-    }
-
-    public @Nullable Advisory getAdvisoryByPublisherAndName(String publisher, String name) {
-        return getAdvisoryQueryManager().getAdvisoryByPublisherAndName(publisher, name);
     }
 
     public PaginatedResult getRepositories() {

@@ -78,7 +78,6 @@ public class AdvisoryQueryManager extends QueryManager implements IQueryManager 
      * @param name         the name
      * @return the advisory entity (or null if it does not exist)
      */
-    @Override
     public @Nullable Advisory getAdvisoryByPublisherAndName(String publisher, String name) {
         final Query<Advisory> query = pm.newQuery(Advisory.class, "publisher == :publisher && name == :name");
         query.setRange(0, 1);
@@ -92,7 +91,6 @@ public class AdvisoryQueryManager extends QueryManager implements IQueryManager 
      * @param advisory The advisory entity to update
      * @return the updated advisory entity
      */
-    @Override
     public Advisory updateAdvisory(Advisory advisory) {
         final Advisory existing = getAdvisoryByPublisherAndName(advisory.getPublisher(), advisory.getName());
         if (existing != null) {
@@ -109,12 +107,6 @@ public class AdvisoryQueryManager extends QueryManager implements IQueryManager 
         }
 
         return null;
-    }
-
-    @Override
-    public void toggleAdvisorySeen(Advisory advisory) {
-        advisory.setSeen(!advisory.isSeen());
-        pm.makePersistent(advisory);
     }
 
 }

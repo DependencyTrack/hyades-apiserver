@@ -267,7 +267,6 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
         return inJdbiTransaction(handle -> {
             final var advisoryDao = handle.attach(AdvisoryDao.class);
             final var advisory = advisoryDao.getAdvisoryById(advisoryId);
-
             if (advisory == null) {
                 throw new NotFoundException();
             }
@@ -286,6 +285,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
                             .publisher(advisory.publisher())
                             .name(advisory.name())
                             .version(advisory.version())
+                            .format(advisory.format())
                             .affectedComponents(advisory.affectedComponents())
                             .affectedProjects(advisory.affectedProjects())
                             .content(advisory.content())

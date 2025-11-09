@@ -58,7 +58,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         advisory1.setVersion("1.0");
         advisory1.setFormat("CSAF");
         advisory1.setSeen(true);
-        qm.persist(advisory1);
+        qm.synchronizeAdvisory(advisory1);
 
         final Advisory advisory2 = new Advisory();
         advisory2.setTitle("Test Advisory 2");
@@ -70,7 +70,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         advisory2.setVersion("2.0");
         advisory2.setFormat("CSAF");
         advisory2.setSeen(false);
-        qm.persist(advisory2);
+        qm.synchronizeAdvisory(advisory2);
 
         // Test listing all advisories
         Response response = jersey.target("/advisories")
@@ -105,7 +105,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         csafAdvisory.setVersion("1.0");
         csafAdvisory.setFormat("CSAF");
         csafAdvisory.setSeen(true);
-        qm.persist(csafAdvisory);
+        qm.synchronizeAdvisory(csafAdvisory);
 
         final Advisory vexAdvisory = new Advisory();
         vexAdvisory.setTitle("VEX Advisory");
@@ -117,7 +117,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         vexAdvisory.setVersion("1.0");
         vexAdvisory.setFormat("VEX");
         vexAdvisory.setSeen(false);
-        qm.persist(vexAdvisory);
+        qm.synchronizeAdvisory(vexAdvisory);
 
         // Test filtering by CSAF format
         Response response = jersey.target("/advisories")
@@ -153,7 +153,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         advisory.setVersion("1.0");
         advisory.setFormat("CSAF");
         advisory.setSeen(false);
-        qm.persist(advisory);
+        qm.synchronizeAdvisory(advisory);
 
         final long advisoryId = advisory.getId();
 
@@ -171,6 +171,55 @@ public class AdvisoriesResourceTest extends ResourceTest {
     }
 
     @Test
+    public void testGetAdvisoryById() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
+
+        // Create an advisory
+        final Advisory advisory = new Advisory();
+        advisory.setTitle("Single Advisory");
+        advisory.setUrl("https://example.com/single");
+        advisory.setContent("{\"test\":\"single\"}");
+        advisory.setLastFetched(Instant.now());
+        advisory.setPublisher("publisher");
+        advisory.setName("ADV-SINGLE");
+        advisory.setVersion("1.0");
+        advisory.setFormat("CSAF");
+        advisory.setSeen(true);
+        qm.synchronizeAdvisory(advisory);
+
+        final long advisoryId = advisory.getId();
+
+        // Retrieve the advisory by id
+        Response response = jersey.target("/advisories/" + advisoryId)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        JsonObject json = parseJsonObject(response);
+        // The API wraps the advisory under 'entity' in GetAdvisoryResponse
+        JsonObject entity = json.getJsonObject("entity");
+        assertThat(entity.getString("title")).isEqualTo("Single Advisory");
+        assertThat(entity.getString("name")).isEqualTo("ADV-SINGLE");
+        assertThat(entity.getString("format")).isEqualTo("CSAF");
+        assertThat(entity.getBoolean("seen")).isTrue();
+    }
+
+    @Test
+    public void testGetAdvisoryNotFound() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
+
+        // Try to retrieve a non-existent advisory
+        try (Response response = jersey.target("/advisories/999999")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get()) {
+            assertThat(response.getStatus()).isEqualTo(404);
+        }
+    }
+
+    @Test
     public void testDeleteAdvisory() {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
@@ -185,7 +234,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         advisory.setVersion("1.0");
         advisory.setFormat("CSAF");
         advisory.setSeen(false);
-        qm.persist(advisory);
+        qm.synchronizeAdvisory(advisory);
 
         final long advisoryId = advisory.getId();
 
