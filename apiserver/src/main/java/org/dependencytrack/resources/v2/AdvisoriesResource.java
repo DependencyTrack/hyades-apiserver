@@ -23,7 +23,6 @@ import alpine.server.auth.PermissionRequired;
 import io.csaf.retrieval.RetrievedDocument;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
@@ -117,7 +116,6 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
         });
     }
 
-    @POST
     @Override
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_CREATE)
     public Response uploadAdvisory(

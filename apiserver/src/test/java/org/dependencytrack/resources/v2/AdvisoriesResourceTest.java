@@ -20,17 +20,21 @@ package org.dependencytrack.resources.v2;
 
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Advisory;
+import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.resources.v2.OpenApiValidationClientResponseFilter.DISABLE_OPENAPI_VALIDATION;
 
 /**
  * Tests for {@link AdvisoriesResource}.
@@ -265,5 +269,24 @@ public class AdvisoriesResourceTest extends ResourceTest {
                 .delete();
 
         assertThat(response.getStatus()).isEqualTo(404);
+    }
+
+    @Test
+    public void testUploadAdvisoryCsafInvalid_returns400() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_CREATE);
+
+        // Create a multipart form with an invalid CSAF payload and POST it
+        try (FormDataMultiPart multiPart = new FormDataMultiPart().field("file", "this is not valid csaf json");
+             Response response = jersey.target("/advisories")
+                     .queryParam("format", "CSAF")
+                     .request()
+                     .property(DISABLE_OPENAPI_VALIDATION, "true")
+                     .header(X_API_KEY, apiKey)
+                     .post(Entity.entity(multiPart, multiPart.getMediaType()))) {
+            // OpenAPI validation is disabled so we can assert the real response from the server
+            assertThat(response.getStatus()).isEqualTo(400);
+        } catch (IOException e) {
+            assertThat(true).withFailMessage("IOException during test execution: " + e.getMessage()).isFalse();
+        }
     }
 }
