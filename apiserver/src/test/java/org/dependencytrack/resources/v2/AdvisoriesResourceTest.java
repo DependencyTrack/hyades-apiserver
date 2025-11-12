@@ -289,4 +289,34 @@ public class AdvisoriesResourceTest extends ResourceTest {
             assertThat(true).withFailMessage("IOException during test execution: " + e.getMessage()).isFalse();
         }
     }
+
+    @Test
+    public void testUploadAdvisoryCsafValid_returns200() throws Exception {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_CREATE);
+
+        // Load a valid CSAF document from test resources
+        String csafContent = new String(
+                getClass().getResourceAsStream("/csaf/oasis_csaf_tc-csaf_2_0-2021-6-1-04-11.json").readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8
+        );
+
+        // Create a multipart form with a valid CSAF payload and POST it
+        try (FormDataMultiPart multiPart = new FormDataMultiPart().field("file", csafContent);
+             Response response = jersey.target("/advisories")
+                     .queryParam("format", "CSAF")
+                     .request()
+                     .property(DISABLE_OPENAPI_VALIDATION, "true")
+                     .header(X_API_KEY, apiKey)
+                     .post(Entity.entity(multiPart, multiPart.getMediaType()))) {
+            
+            // If not 200, print the error for debugging
+            if (response.getStatus() != 200) {
+                String errorBody = response.readEntity(String.class);
+                System.out.println("Error response: " + errorBody);
+            }
+            
+            // Assert successful upload
+            assertThat(response.getStatus()).isEqualTo(200);
+        }
+    }
 }

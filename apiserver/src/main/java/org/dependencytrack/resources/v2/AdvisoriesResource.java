@@ -21,10 +21,8 @@ package org.dependencytrack.resources.v2;
 import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
 import io.csaf.retrieval.RetrievedDocument;
-import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
-import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.api.v2.AdvisoriesApi;
 import org.dependencytrack.api.v2.model.AdvisoryProject;
@@ -46,7 +44,6 @@ import org.dependencytrack.persistence.jdbi.AdvisoryDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.pagination.Page;
 import org.dependencytrack.resources.AbstractApiResource;
-import org.glassfish.jersey.media.multipart.FormDataParam;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -54,7 +51,6 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -93,7 +89,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
                             .title(row.title())
                             .url(row.url())
                             .seen(row.seen())
-                            .lastFetched(row.lastFetched().atOffset(ZoneOffset.UTC).toEpochSecond()*1000)
+                            .lastFetched(row.lastFetched().toEpochMilli())
                             .publisher(row.publisher())
                             .name(row.name())
                             .version(row.version())
@@ -119,8 +115,8 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
     @Override
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_CREATE)
     public Response uploadAdvisory(
-            @QueryParam("format") @NotNull String format,
-            @FormDataParam("file") InputStream _fileInputStream) {
+            String format,
+            InputStream _fileInputStream) {
         try (var qm = new QueryManager(); var uploadBuffer = new ByteArrayOutputStream()) {
             _fileInputStream.transferTo(uploadBuffer);
             String content = uploadBuffer.toString();
@@ -246,7 +242,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
                     .title(advisoryRow.title())
                     .url(advisoryRow.url())
                     .seen(advisoryRow.seen())
-                    .lastFetched(advisoryRow.lastFetched().atOffset(ZoneOffset.UTC).toEpochSecond()*1000)
+                    .lastFetched(advisoryRow.lastFetched().toEpochMilli())
                     .publisher(advisoryRow.publisher())
                     .name(advisoryRow.name())
                     .version(advisoryRow.version())
@@ -279,7 +275,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
                             .title(advisory.title())
                             .url(advisory.url())
                             .seen(advisory.seen())
-                            .lastFetched(advisory.lastFetched().atOffset(ZoneOffset.UTC).toEpochSecond()*1000)
+                            .lastFetched(advisory.lastFetched().toEpochMilli())
                             .publisher(advisory.publisher())
                             .name(advisory.name())
                             .version(advisory.version())
