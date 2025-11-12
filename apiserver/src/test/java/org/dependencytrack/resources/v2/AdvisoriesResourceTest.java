@@ -20,13 +20,17 @@ package org.dependencytrack.resources.v2;
 
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Advisory;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
+import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -302,7 +306,11 @@ public class AdvisoriesResourceTest extends ResourceTest {
 
         // Create a multipart form with a valid CSAF payload and POST it
         try (FormDataMultiPart multiPart = new FormDataMultiPart().field("file", csafContent);
-             Response response = jersey.target("/advisories")
+             final var client = ClientBuilder.newClient(new ClientConfig()
+                     .register(MultiPartFeature.class)
+                     .connectorProvider(new HttpUrlConnectorProvider()));
+
+             var response = client.target(jersey.target("/advisories").getUri())
                      .queryParam("format", "CSAF")
                      .request()
                      .property(DISABLE_OPENAPI_VALIDATION, "true")
