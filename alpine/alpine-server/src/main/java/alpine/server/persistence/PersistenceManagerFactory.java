@@ -20,11 +20,11 @@ package alpine.server.persistence;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
 import alpine.persistence.IPersistenceManagerFactory;
 import alpine.persistence.JdoProperties;
 import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Metrics;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.datanucleus.PropertyNames;
@@ -145,77 +145,77 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "datastore_reads_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getNumberOfDatastoreReads())
                 .description("Total number of read operations from the datastore")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "datastore_writes_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getNumberOfDatastoreWrites())
                 .description("Total number of write operations to the datastore")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "object_fetches_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getNumberOfObjectFetches())
                 .description("Total number of objects fetched from the datastore")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "object_inserts_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getNumberOfObjectInserts())
                 .description("Total number of objects inserted into the datastore")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "object_updates_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getNumberOfObjectUpdates())
                 .description("Total number of objects updated in the datastore")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "object_deletes_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getNumberOfObjectDeletes())
                 .description("Total number of objects deleted from the datastore")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "query_execution_time_ms_avg", pmf,
                         p -> p.getNucleusContext().getStatistics().getQueryExecutionTimeAverage())
                 .description("Average query execution time in milliseconds")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "queries_active", pmf,
                         p -> p.getNucleusContext().getStatistics().getQueryActiveTotalCount())
                 .description("Number of currently active queries")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "queries_executed_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getQueryExecutionTotalCount())
                 .description("Total number of executed queries")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "queries_failed_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getQueryErrorTotalCount())
                 .description("Total number of queries that completed with an error")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "transaction_execution_time_ms_avg", pmf,
                         p -> p.getNucleusContext().getStatistics().getTransactionExecutionTimeAverage())
                 .description("Average transaction execution time in milliseconds")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "transactions_active", pmf,
                         p -> p.getNucleusContext().getStatistics().getTransactionActiveTotalCount())
                 .description("Number of currently active transactions")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "transactions_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getTransactionTotalCount())
                 .description("Total number of transactions")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "transactions_committed_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getTransactionCommittedTotalCount())
                 .description("Total number of committed transactions")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "transactions_rolledback_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getTransactionRolledBackTotalCount())
                 .description("Total number of rolled-back transactions")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         // This number does not necessarily equate the number of physical connections.
         // It resembles the number of active connections MANAGED BY DATANUCLEUS.
@@ -223,28 +223,28 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "connections_active", pmf,
                         p -> p.getNucleusContext().getStatistics().getConnectionActiveCurrent())
                 .description("Number of currently active managed datastore connections")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "cache_second_level_entries", pmf,
                         p -> p.getNucleusContext().getLevel2Cache().getSize())
                 .description("Number of entries in the second level cache")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "cache_query_generic_compilation_entries", pmf,
                         p -> p.getQueryGenericCompilationCache().size())
                 .description("Number of entries in the generic query compilation cache")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "cache_query_datastore_compilation_entries", pmf,
                         p -> p.getQueryDatastoreCompilationCache().size())
                 .description("Number of entries in the datastore query compilation cache")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         // Note: The query results cache is disabled per default.
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "cache_query_result_entries", pmf,
                         p -> p.getQueryCache().getQueryCache().size())
                 .description("Number of entries in the query result cache")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
     }
 
 }

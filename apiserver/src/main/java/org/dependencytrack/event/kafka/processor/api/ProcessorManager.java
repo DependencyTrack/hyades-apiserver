@@ -20,12 +20,12 @@ package org.dependencytrack.event.kafka.processor.api;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
 import io.confluent.parallelconsumer.ParallelConsumerOptions;
 import io.confluent.parallelconsumer.ParallelConsumerOptions.ProcessingOrder;
 import io.confluent.parallelconsumer.ParallelEoSStreamProcessor;
 import io.confluent.parallelconsumer.ParallelStreamProcessor;
 import io.github.resilience4j.core.IntervalFunction;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.DescribeTopicsOptions;
@@ -296,7 +296,7 @@ public class ProcessorManager implements AutoCloseable {
 
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
             optionsBuilder
-                    .meterRegistry(Metrics.getRegistry())
+                    .meterRegistry(Metrics.globalRegistry)
                     .pcInstanceTag(processorName);
         }
 
@@ -334,7 +334,7 @@ public class ProcessorManager implements AutoCloseable {
         final var consumer = new KafkaConsumer<byte[], byte[]>(consumerConfig);
 
         if (config.getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            new KafkaClientMetrics(consumer).bindTo(Metrics.getRegistry());
+            new KafkaClientMetrics(consumer).bindTo(Metrics.globalRegistry);
         }
 
         return consumer;

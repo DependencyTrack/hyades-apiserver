@@ -19,11 +19,11 @@
 package org.dependencytrack.persistence.jdbi;
 
 import alpine.Config;
-import alpine.common.metrics.Metrics;
 import alpine.resources.AlpineRequest;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.micrometer.core.instrument.Metrics;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.persistence.QueryManager;
 import org.jdbi.v3.core.Handle;
@@ -171,7 +171,7 @@ public class JdbiFactory {
                 .setTemplateEngine(FreemarkerEngine.instance());
 
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            preparedJdbi.setSqlLogger(new QueryTimingSqlLogger(Metrics.getRegistry()));
+            preparedJdbi.setSqlLogger(new QueryTimingSqlLogger(Metrics.globalRegistry));
         }
 
         preparedJdbi.getConfig(Jackson2Config.class).setMapper(createJsonMapper());

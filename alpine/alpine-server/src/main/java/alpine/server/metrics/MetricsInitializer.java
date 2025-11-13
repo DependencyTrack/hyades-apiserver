@@ -20,7 +20,7 @@ package alpine.server.metrics;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmInfoMetrics;
@@ -29,7 +29,6 @@ import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
 import io.micrometer.core.instrument.binder.system.DiskSpaceMetrics;
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.micrometer.core.instrument.binder.system.UptimeMetrics;
-
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 
@@ -44,14 +43,14 @@ public class MetricsInitializer implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent event) {
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
             LOGGER.info("Registering system metrics");
-            new ClassLoaderMetrics().bindTo(Metrics.getRegistry());
-            new DiskSpaceMetrics(Config.getInstance().getDataDirectory()).bindTo(Metrics.getRegistry());
-            new JvmGcMetrics().bindTo(Metrics.getRegistry());
-            new JvmInfoMetrics().bindTo(Metrics.getRegistry());
-            new JvmMemoryMetrics().bindTo(Metrics.getRegistry());
-            new JvmThreadMetrics().bindTo(Metrics.getRegistry());
-            new ProcessorMetrics().bindTo(Metrics.getRegistry());
-            new UptimeMetrics().bindTo(Metrics.getRegistry());
+            new ClassLoaderMetrics().bindTo(Metrics.globalRegistry);
+            new DiskSpaceMetrics(Config.getInstance().getDataDirectory()).bindTo(Metrics.globalRegistry);
+            new JvmGcMetrics().bindTo(Metrics.globalRegistry);
+            new JvmInfoMetrics().bindTo(Metrics.globalRegistry);
+            new JvmMemoryMetrics().bindTo(Metrics.globalRegistry);
+            new JvmThreadMetrics().bindTo(Metrics.globalRegistry);
+            new ProcessorMetrics().bindTo(Metrics.globalRegistry);
+            new UptimeMetrics().bindTo(Metrics.globalRegistry);
         }
     }
 
