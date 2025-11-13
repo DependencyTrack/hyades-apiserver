@@ -146,50 +146,6 @@ public class WorkflowEngineConfig {
 
     }
 
-    public static class SchedulerConfig {
-
-        private boolean enabled = true;
-        private Duration initialDelay = Duration.ofSeconds(15);
-        private Duration pollInterval = Duration.ofSeconds(15);
-
-        private SchedulerConfig() {
-        }
-
-        /**
-         * @return Whether the scheduler shall be enabled in this instance.
-         */
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(final boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        /**
-         * @return Initial delay before due schedules will be polled.
-         */
-        public Duration initialDelay() {
-            return initialDelay;
-        }
-
-        public void setInitialDelay(final Duration initialDelay) {
-            this.initialDelay = initialDelay;
-        }
-
-        /**
-         * @return Interval at which due schedules are being polled.
-         */
-        public Duration pollInterval() {
-            return pollInterval;
-        }
-
-        public void setPollInterval(final Duration pollInterval) {
-            this.pollInterval = pollInterval;
-        }
-
-    }
-
     public static class TaskDispatcherConfig {
 
         private Duration minPollInterval = Duration.ofMillis(5);
@@ -232,7 +188,6 @@ public class WorkflowEngineConfig {
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
     private final BufferConfig taskCommandBufferConfig = new BufferConfig();
     private final RetentionConfig retentionConfig = new RetentionConfig();
-    private final SchedulerConfig schedulerConfig = new SchedulerConfig();
     private final TaskDispatcherConfig workflowTaskDispatcherConfig = new TaskDispatcherConfig();
     private final TaskDispatcherConfig activityTaskDispatcherConfig = new TaskDispatcherConfig();
 
@@ -280,13 +235,6 @@ public class WorkflowEngineConfig {
      */
     public RetentionConfig retention() {
         return retentionConfig;
-    }
-
-    /**
-     * @return Config for scheduled workflows.
-     */
-    public SchedulerConfig scheduler() {
-        return schedulerConfig;
     }
 
     /**

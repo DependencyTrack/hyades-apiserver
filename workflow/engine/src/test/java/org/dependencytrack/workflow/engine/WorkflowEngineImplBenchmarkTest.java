@@ -134,7 +134,6 @@ public class WorkflowEngineImplBenchmarkTest {
 
         final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
         engineConfig.retention().setWorkerEnabled(false);
-        engineConfig.scheduler().setEnabled(false);
         engineConfig.runHistoryCache().setEvictAfterAccess(Duration.ofMinutes(1));
         engineConfig.runHistoryCache().setMaxSize(10_000);
         engineConfig.taskCommandBuffer().setFlushInterval(Duration.ofMillis(3));

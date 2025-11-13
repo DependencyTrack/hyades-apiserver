@@ -32,14 +32,11 @@ import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
-import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.event.WorkflowRunsCompletedEventListener;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
-import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.proto.event.v1.Event;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -89,8 +86,6 @@ class WorkflowEngineImplTest {
         dataSource.setDatabaseName(postgresContainer.getDatabaseName());
 
         final var config = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
-        config.scheduler().setInitialDelay(Duration.ofMillis(250));
-        config.scheduler().setPollInterval(Duration.ofMillis(250));
 
         // Ensure code paths to register metrics etc. are executed.
         config.setMeterRegistry(new SimpleMeterRegistry());
@@ -1114,63 +1109,6 @@ class WorkflowEngineImplTest {
     }
 
     @Test
-    void shouldScheduleRuns() {
-        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
-
-        final List<WorkflowSchedule> createdSchedules = engine.createSchedules(List.of(
-                new CreateWorkflowScheduleRequest("foo-schedule", "* * * * *", "foo", 1)
-                        .withConcurrencyGroupId("concurrencyGroupId")
-                        .withPriority(666)
-                        .withLabels(Map.of("label", "123"))
-                        .withInitialDelay(Duration.ZERO)));
-        engine.start();
-
-        assertThat(createdSchedules).satisfiesExactly(schedule -> {
-            assertThat(schedule.name()).isEqualTo("foo-schedule");
-            assertThat(schedule.cron()).isEqualTo("* * * * *");
-            assertThat(schedule.workflowName()).isEqualTo("foo");
-            assertThat(schedule.workflowVersion()).isEqualTo(1);
-            assertThat(schedule.concurrencyGroupId()).isEqualTo("concurrencyGroupId");
-            assertThat(schedule.priority()).isEqualTo(666);
-            assertThat(schedule.labels()).containsOnlyKeys("label");
-            assertThat(schedule.argument()).isNull();
-            assertThat(schedule.createdAt()).isNotNull();
-            assertThat(schedule.updatedAt()).isNull();
-            assertThat(schedule.lastFiredAt()).isNull();
-            assertThat(schedule.nextFireAt()).isNotNull();
-        });
-
-        final Page<WorkflowRunMetadata> runsPage = await("Workflow Run to be scheduled")
-                .atMost(Duration.ofSeconds(5))
-                .until(() -> engine.listRuns(new ListWorkflowRunsRequest()), page -> !page.items().isEmpty());
-
-        assertThat(runsPage.items()).satisfiesExactly(run -> {
-            assertThat(run.workflowName()).isEqualTo("foo");
-            assertThat(run.workflowVersion()).isEqualTo(1);
-            assertThat(run.status()).isEqualTo(WorkflowRunStatus.CREATED);
-            assertThat(run.concurrencyGroupId()).isEqualTo("concurrencyGroupId");
-            assertThat(run.priority()).isEqualTo(666);
-            assertThat(run.labels()).containsExactlyInAnyOrderEntriesOf(Map.ofEntries(
-                    Map.entry("label", "123"),
-                    Map.entry("schedule", "foo-schedule")));
-        });
-    }
-
-    @Test
-    void shouldNotCreateSchedulesWhenAlreadyExist() {
-        engine.createSchedules(List.of(
-                new CreateWorkflowScheduleRequest("foo-schedule", "* * * * *", "foo", 1)));
-
-        final List<WorkflowSchedule> createdSchedules = engine.createSchedules(List.of(
-                new CreateWorkflowScheduleRequest("foo-schedule", "1 1 1 1 1", "oof", 9),
-                new CreateWorkflowScheduleRequest("bar-schedule", "* * * * *", "bar", 1)));
-
-        assertThat(createdSchedules).satisfiesExactly(schedule -> {
-            assertThat(schedule.name()).isEqualTo("bar-schedule");
-        });
-    }
-
-    @Test
     void shouldListRuns() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
 
@@ -1190,28 +1128,6 @@ class WorkflowEngineImplTest {
                         .withLimit(5));
         assertThat(runsPage.items()).hasSize(5);
         assertThat(runsPage.nextPageToken()).isNull();
-    }
-
-    @Test
-    void shouldListSchedules() {
-        for (int i = 0; i < 10; i++) {
-            engine.createSchedule(
-                    new CreateWorkflowScheduleRequest(
-                            "schedule-" + i, "* * * * *", "workflow-foo", 1));
-        }
-
-        Page<WorkflowSchedule> schedulesPage = engine.listSchedules(
-                new ListWorkflowSchedulesRequest()
-                        .withLimit(5));
-        assertThat(schedulesPage.items()).hasSize(5);
-        assertThat(schedulesPage.nextPageToken()).isNotNull();
-
-        schedulesPage = engine.listSchedules(
-                new ListWorkflowSchedulesRequest()
-                        .withPageToken(schedulesPage.nextPageToken())
-                        .withLimit(5));
-        assertThat(schedulesPage.items()).hasSize(5);
-        assertThat(schedulesPage.nextPageToken()).isNull();
     }
 
     @Test

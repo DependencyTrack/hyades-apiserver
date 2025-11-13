@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import com.asahaf.javacron.InvalidExpressionException;
-import com.asahaf.javacron.Schedule;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.protobuf.util.Timestamps;
@@ -47,28 +45,23 @@ import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
-import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEvent;
 import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEventListener;
 import org.dependencytrack.workflow.engine.api.event.WorkflowRunsCompletedEvent;
 import org.dependencytrack.workflow.engine.api.event.WorkflowRunsCompletedEventListener;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
-import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
 import org.dependencytrack.workflow.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.persistence.JdbiFactory;
 import org.dependencytrack.workflow.engine.persistence.WorkflowActivityDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowRunDao;
-import org.dependencytrack.workflow.engine.persistence.WorkflowScheduleDao;
 import org.dependencytrack.workflow.engine.persistence.command.CreateActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunInboxEntryCommand;
-import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowScheduleCommand;
 import org.dependencytrack.workflow.engine.persistence.command.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.command.PollWorkflowTaskCommand;
@@ -103,7 +96,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -173,7 +165,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     private Status status = Status.CREATED;
     private @Nullable ExecutorService taskDispatcherExecutor;
     private @Nullable Map<String, ExecutorService> executorServiceByName;
-    private @Nullable ScheduledExecutorService schedulerExecutor;
     private @Nullable ScheduledExecutorService retentionExecutor;
     private @Nullable ExecutorService eventListenerExecutor;
     private @Nullable Buffer<ExternalEvent> externalEventBuffer;
@@ -252,23 +243,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     .bindTo(config.meterRegistry());
         }
 
-        if (config.scheduler().isEnabled()) {
-            LOGGER.debug("Starting scheduler");
-            schedulerExecutor = Executors.newSingleThreadScheduledExecutor(
-                    new DefaultThreadFactory("WorkflowEngine-Scheduler"));
-            if (config.meterRegistry() != null) {
-                new ExecutorServiceMetrics(schedulerExecutor, "WorkflowEngine-Scheduler", null)
-                        .bindTo(config.meterRegistry());
-            }
-            schedulerExecutor.scheduleAtFixedRate(
-                    new WorkflowScheduler(this, jdbi),
-                    config.scheduler().initialDelay().toMillis(),
-                    config.scheduler().pollInterval().toMillis(),
-                    TimeUnit.MILLISECONDS);
-        } else {
-            LOGGER.debug("Scheduler is disabled");
-        }
-
         if (config.retention().isWorkerEnabled()) {
             LOGGER.debug("Starting retention worker");
             retentionExecutor = Executors.newSingleThreadScheduledExecutor(
@@ -309,12 +283,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             LOGGER.debug("Waiting for retention worker to stop");
             retentionExecutor.close();
             retentionExecutor = null;
-        }
-
-        if (schedulerExecutor != null) {
-            LOGGER.debug("Waiting for scheduler to stop");
-            schedulerExecutor.close();
-            schedulerExecutor = null;
         }
 
         if (taskDispatcherExecutor != null) {
@@ -704,52 +672,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         } catch (InterruptedException | TimeoutException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    @Override
-    public List<WorkflowSchedule> createSchedules(final Collection<CreateWorkflowScheduleRequest> requests) {
-        return jdbi.inTransaction(handle -> {
-            final var dao = new WorkflowScheduleDao(handle);
-
-            final var now = Instant.now();
-            final var createScheduleCommands = new ArrayList<CreateWorkflowScheduleCommand>(requests.size());
-
-            for (final CreateWorkflowScheduleRequest request : requests) {
-                final Schedule cronSchedule;
-                try {
-                    cronSchedule = Schedule.create(request.cron());
-                } catch (InvalidExpressionException e) {
-                    throw new IllegalArgumentException("Cron expression %s of schedule %s is invalid".formatted(
-                            request.cron(), request.name()), e);
-                }
-
-                final Instant nextFireAt;
-                if (request.initialDelay() == null) {
-                    nextFireAt = cronSchedule.next(Date.from(now)).toInstant();
-                } else {
-                    nextFireAt = now.plus(request.initialDelay());
-                }
-
-                createScheduleCommands.add(
-                        new CreateWorkflowScheduleCommand(
-                                request.name(),
-                                request.cron(),
-                                request.workflowName(),
-                                request.workflowVersion(),
-                                request.concurrencyGroupId(),
-                                request.priority(),
-                                request.labels(),
-                                request.argument(),
-                                nextFireAt));
-            }
-
-            return dao.createSchedules(createScheduleCommands);
-        });
-    }
-
-    @Override
-    public Page<WorkflowSchedule> listSchedules(final ListWorkflowSchedulesRequest request) {
-        return jdbi.withHandle(handle -> new WorkflowScheduleDao(handle).listSchedules(request));
     }
 
     @Override

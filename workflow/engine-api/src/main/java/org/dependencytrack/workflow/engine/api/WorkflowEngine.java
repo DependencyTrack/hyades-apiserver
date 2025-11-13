@@ -27,11 +27,9 @@ import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEvent;
 import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEventListener;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
-import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
 import org.dependencytrack.workflow.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.proto.event.v1.Event;
 import org.jspecify.annotations.Nullable;
 
@@ -229,19 +227,6 @@ public interface WorkflowEngine extends Closeable {
      * @throws IllegalStateException When the engine is not running.
      */
     CompletableFuture<Void> sendExternalEvent(ExternalEvent externalEvent);
-
-    List<WorkflowSchedule> createSchedules(Collection<CreateWorkflowScheduleRequest> requests);
-
-    default WorkflowSchedule createSchedule(final CreateWorkflowScheduleRequest request) {
-        final List<WorkflowSchedule> results = createSchedules(List.of(request));
-        if (results.isEmpty()) {
-            throw new IllegalStateException("createSchedules returned no results");
-        }
-
-        return results.getFirst();
-    }
-
-    Page<WorkflowSchedule> listSchedules(ListWorkflowSchedulesRequest request);
 
     /**
      * List all activity task queues known to the engine.

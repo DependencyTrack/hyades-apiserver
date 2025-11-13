@@ -82,22 +82,6 @@ create table workflow_activity_task (
 , constraint workflow_activity_task_queue_fk foreign key (queue_name) references workflow_activity_task_queue (name)
 ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
-create table workflow_schedule (
-  name text not null
-, cron text not null
-, workflow_name text not null
-, workflow_version smallint not null
-, concurrency_group_id text
-, priority smallint
-, labels jsonb
-, argument bytea
-, created_at timestamptz(3) not null default now()
-, updated_at timestamptz(3)
-, last_fired_at timestamptz(3)
-, next_fire_at timestamptz(3) not null
-, constraint workflow_schedule_pk primary key (name)
-);
-
 create index workflow_run_poll_idx
     on workflow_run (priority desc nulls last, id, workflow_name)
  where status = any(cast('{CREATED, RUNNING, SUSPENDED}' as workflow_run_status[]));
