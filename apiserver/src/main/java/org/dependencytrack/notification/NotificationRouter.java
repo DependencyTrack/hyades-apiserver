@@ -74,15 +74,15 @@ final class NotificationRouter {
         this.jdbiHandle = requireNonNull(jdbiHandle, "jdbiHandle must not be null");
         requireNonNull(meterRegistry, "meterRegistry must not be null");
         this.ruleQueryLatency = Timer
-                .builder("dtrack.notification.router.rule.query.latency")
+                .builder("dt.notification.router.rule.query.latency")
                 .description("Latency of applicable notification rule queries")
                 .register(meterRegistry);
         this.ruleFilterLatency = Timer
-                .builder("dtrack.notification.router.rule.filter.latency")
+                .builder("dt.notification.router.rule.filter.latency")
                 .description("Latency of applicable notification rule filtering")
                 .register(meterRegistry);
         this.rulesMatchedCounter = Counter
-                .builder("dtrack.notification.router.rules.matched")
+                .builder("dt.notification.router.rules.matched")
                 .description("Number of matched notification rules")
                 .withRegistry(meterRegistry);
     }

@@ -65,10 +65,10 @@ class JdbcNotificationEmitter implements NotificationEmitter {
         this.connection = connection;
         requireNonNull(meterRegistry, "meterRegistry must not be null");
         this.emitLatencyTimer = Timer
-                .builder("dtrack.notifications.emit.latency")
+                .builder("dt.notifications.emit.latency")
                 .register(meterRegistry);
         this.emittedDistribution = DistributionSummary
-                .builder("dtrack.notifications.emitted")
+                .builder("dt.notifications.emitted")
                 .withRegistry(meterRegistry);
 
     }

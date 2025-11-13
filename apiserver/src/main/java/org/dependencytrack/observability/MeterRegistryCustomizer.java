@@ -26,7 +26,20 @@ import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import jakarta.validation.constraints.NotNull;
 
+import java.util.Set;
+
 public class MeterRegistryCustomizer implements alpine.common.metrics.MeterRegistryCustomizer {
+
+    private static final Set<String> HISTOGRAM_METER_NAMES = Set.of(
+            "alpine_event_processing",
+            "dt.notification.router.rule.query.latency",
+            "dt.notification.router.rule.filter.latency",
+            "dt.notifications.emit.latency",
+            "dt.outbox.relay.cycle.latency",
+            "dt.outbox.relay.poll.latency",
+            "dt.outbox.relay.send.latency",
+            "pc.user.function.processing.time",
+            "http.server.requests");
 
     @Override
     public void accept(final MeterRegistry meterRegistry) {
@@ -41,9 +54,7 @@ public class MeterRegistryCustomizer implements alpine.common.metrics.MeterRegis
         @Override
         public DistributionStatisticConfig configure(@NotNull final Meter.Id id,
                                                      @NotNull final DistributionStatisticConfig config) {
-            if ("alpine_event_processing".equals(id.getName())
-                    || "pc.user.function.processing.time".equals(id.getName())
-                    || "http.server.requests".equals(id.getName())) {
+            if (HISTOGRAM_METER_NAMES.contains(id.getName())) {
                 return DistributionStatisticConfig.builder()
                         .percentiles(/* none */) // Disable client-side calculation of percentiles.
                         .percentilesHistogram(true) // Publish histogram instead.

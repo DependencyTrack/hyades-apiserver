@@ -121,31 +121,31 @@ final class NotificationOutboxRelay implements Closeable {
                 .bindTo(meterRegistry);
 
         cycleLatencyTimer = Timer
-                .builder("dtrack.outbox.relay.cycle.latency")
+                .builder("dt.outbox.relay.cycle.latency")
                 .tags(COMMON_METER_TAGS)
                 .description("Latency of a relay cycle")
                 .withRegistry(meterRegistry);
 
         cycleCounter = Counter
-                .builder("dtrack.outbox.relay.cycles")
+                .builder("dt.outbox.relay.cycles")
                 .tags(COMMON_METER_TAGS)
                 .description("Number of relay cycles")
                 .withRegistry(meterRegistry);
 
         pollLatencyTimer = Timer
-                .builder("dtrack.outbox.relay.poll.latency")
+                .builder("dt.outbox.relay.poll.latency")
                 .tags(COMMON_METER_TAGS)
                 .description("Latency of polls from the outbox table")
                 .register(meterRegistry);
 
         sendLatencyTimer = Timer
-                .builder("dtrack.outbox.relay.send.latency")
+                .builder("dt.outbox.relay.send.latency")
                 .tags(COMMON_METER_TAGS)
                 .description("Latency of messages being sent")
                 .register(meterRegistry);
 
         sentDistribution = DistributionSummary
-                .builder("dtrack.outbox.relay.messages.sent")
+                .builder("dt.outbox.relay.messages.sent")
                 .tags(COMMON_METER_TAGS)
                 .description("Number of messages sent")
                 .withRegistry(meterRegistry);
