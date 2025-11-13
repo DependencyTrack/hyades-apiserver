@@ -21,8 +21,9 @@ public class MetricsTest {
     }
 
     @Test
-    public void testCustomized() {
-        var registry = Metrics.customized(new SimpleMeterRegistry());
+    public void testCustomize() {
+        final var registry = new SimpleMeterRegistry();
+        Metrics.customize(registry);
        
         Gauge.builder("foo", () -> 123)
                 .tag("foo", "bar")

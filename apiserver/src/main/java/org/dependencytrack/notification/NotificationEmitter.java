@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.notification;
 
-import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.Metrics;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.notification.v1.Notification;
 import org.jdbi.v3.core.Handle;
@@ -48,11 +48,11 @@ public interface NotificationEmitter {
     }
 
     static NotificationEmitter using(final QueryManager qm) {
-        return new JdoNotificationEmitter(qm, Metrics.getRegistry());
+        return new JdoNotificationEmitter(qm, Metrics.globalRegistry);
     }
 
     static NotificationEmitter using(final Handle jdbiHandle) {
-        return new JdbiNotificationEmitter(jdbiHandle, Metrics.getRegistry());
+        return new JdbiNotificationEmitter(jdbiHandle, Metrics.globalRegistry);
     }
 
 }

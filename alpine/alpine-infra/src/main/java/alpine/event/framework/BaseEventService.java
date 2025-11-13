@@ -19,10 +19,10 @@
 package alpine.event.framework;
 
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
 import alpine.model.EventServiceLog;
 import alpine.persistence.AlpineQueryManager;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 
 import java.lang.reflect.InvocationTargetException;
@@ -122,7 +122,7 @@ public abstract class BaseEventService implements IEventService {
                         timerSample.stop(Timer.builder("alpine_event_processing")
                                 .tag("event", event.getClass().getSimpleName())
                                 .tag("subscriber", clazz.getSimpleName())
-                                .register(Metrics.getRegistry()));
+                                .register(Metrics.globalRegistry));
                     }
                     qm.updateEventServiceLog(eventServiceLog);
                     if (event instanceof ChainableEvent) {
@@ -220,7 +220,7 @@ public abstract class BaseEventService implements IEventService {
         Counter.builder("alpine_events_published_total")
                 .description("Total number of published events")
                 .tags("event", event.getClass().getName(), "publisher", this.getClass().getName())
-                .register(Metrics.getRegistry())
+                .register(Metrics.globalRegistry)
                 .increment();
     }
 

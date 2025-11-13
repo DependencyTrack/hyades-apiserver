@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.notification;
 
-import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.Metrics;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
@@ -47,7 +47,7 @@ public final class NotificationSubsystemInitializer implements ServletContextLis
         LOGGER.info("Starting outbox relay");
         relay = new NotificationOutboxRelay(
                 new KafkaEventDispatcher(),
-                Metrics.getRegistry(),
+                Metrics.globalRegistry,
                 config.getValue("notification.router.enabled", boolean.class),
                 config.getValue("notification.outbox-relay.poll-interval-ms", long.class),
                 config.getValue("notification.outbox-relay.batch-size", int.class));

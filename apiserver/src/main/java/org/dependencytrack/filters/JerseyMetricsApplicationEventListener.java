@@ -19,7 +19,7 @@
 package org.dependencytrack.filters;
 
 import alpine.Config;
-import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.Metrics;
 import org.glassfish.jersey.micrometer.server.DefaultJerseyTagsProvider;
 import org.glassfish.jersey.micrometer.server.MetricsApplicationEventListener;
 
@@ -30,7 +30,7 @@ public class JerseyMetricsApplicationEventListener extends MetricsApplicationEve
 
     public JerseyMetricsApplicationEventListener() {
         super(
-                Metrics.getRegistry(),
+                Metrics.globalRegistry,
                 new DefaultJerseyTagsProvider(),
                 /* metricName */ "http.server.requests",
                 /* autoTimeRequests */ Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)
