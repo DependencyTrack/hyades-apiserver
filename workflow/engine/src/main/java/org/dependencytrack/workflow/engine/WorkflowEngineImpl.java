@@ -1428,7 +1428,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     Tag.of("workflowVersion", String.valueOf(completedRun.workflowVersion())),
                     Tag.of("status", completedRun.status().toString()));
 
-            meterRegistry.counter("dtrack.workflow.engine.runs.completed", tags).increment();
+            meterRegistry.counter("dt.workflow.engine.runs.completed", tags).increment();
         }
     }
 

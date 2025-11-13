@@ -252,15 +252,15 @@ public class WorkflowEngineImplBenchmarkTest {
                 System.out.printf("Statuses: %s\n".formatted(countByStatus));
 
                 final Collection<Timer> taskDispatcherPollLatencies = meterRegistry.get(
-                        "dtrack.workflow.engine.task.dispatcher.poll.latency").timers();
+                        "dt.workflow.engine.task.dispatcher.poll.latency").timers();
                 final Collection<DistributionSummary> taskDispatcherPollTasks = meterRegistry.get(
-                        "dtrack.workflow.engine.task.dispatcher.poll.tasks").summaries();
+                        "dt.workflow.engine.task.dispatcher.poll.tasks").summaries();
                 final Collection<Timer> taskProcessLatencies = meterRegistry.get(
-                        "dtrack.workflow.engine.task.process.latency").timers();
+                        "dt.workflow.engine.task.process.latency").timers();
                 final Collection<Timer> bufferFlushLatencies = meterRegistry.get(
-                        "dtrack.workflow.engine.buffer.flush.latency").timers();
+                        "dt.workflow.engine.buffer.flush.latency").timers();
                 final Collection<DistributionSummary> bufferBatchSizes = meterRegistry.get(
-                        "dtrack.workflow.engine.buffer.flush.batch.size").summaries();
+                        "dt.workflow.engine.buffer.flush.batch.size").summaries();
                 final Collection<FunctionCounter> historyCacheGets = meterRegistry.get(
                         "cache.gets").tag("cache", "WorkflowEngine-RunHistoryCache").functionCounters();
 

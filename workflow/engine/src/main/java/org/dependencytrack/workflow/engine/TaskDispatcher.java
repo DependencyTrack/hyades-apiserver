@@ -226,27 +226,27 @@ final class TaskDispatcher<T extends Task> implements Runnable {
                 }));
 
         taskPollsCounter = Counter
-                .builder("dtrack.workflow.engine.task.polls")
+                .builder("dt.workflow.engine.task.polls")
                 .tags(commonTags)
                 .register(meterRegistry);
 
         taskPollLatencyTimer = Timer
-                .builder("dtrack.workflow.engine.task.dispatcher.poll.latency")
+                .builder("dt.workflow.engine.task.dispatcher.poll.latency")
                 .tags(commonTags)
                 .register(meterRegistry);
 
         taskPollDistributionProvider = DistributionSummary
-                .builder("dtrack.workflow.engine.task.dispatcher.poll.tasks")
+                .builder("dt.workflow.engine.task.dispatcher.poll.tasks")
                 .tags(commonTags)
                 .withRegistry(meterRegistry);
 
         tasksProcessedCounterProvider = Counter
-                .builder("dtrack.workflow.engine.tasks.processed")
+                .builder("dt.workflow.engine.tasks.processed")
                 .tags(commonTags)
                 .withRegistry(meterRegistry);
 
         taskProcessLatencyTimerProvider = Timer
-                .builder("dtrack.workflow.engine.task.process.latency")
+                .builder("dt.workflow.engine.task.process.latency")
                 .tags(commonTags)
                 .withRegistry(meterRegistry);
     }

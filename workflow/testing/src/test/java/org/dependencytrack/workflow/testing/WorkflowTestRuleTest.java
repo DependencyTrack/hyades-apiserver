@@ -53,7 +53,7 @@ public class WorkflowTestRuleTest {
 
     @ClassRule
     public static final PostgreSQLContainer<?> POSTGRES_CONTAINER =
-            new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"));
+            new PostgreSQLContainer<>(DockerImageName.parse("postgres:14-alpine"));
 
     @Rule
     public final WorkflowTestRule workflowTestRule = new WorkflowTestRule(POSTGRES_CONTAINER);

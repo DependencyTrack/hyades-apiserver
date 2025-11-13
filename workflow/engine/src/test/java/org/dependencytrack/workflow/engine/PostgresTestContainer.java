@@ -34,7 +34,7 @@ public final class PostgresTestContainer extends PostgreSQLContainer<PostgresTes
 
     @SuppressWarnings("resource")
     public PostgresTestContainer() {
-        super(DockerImageName.parse("postgres:13-alpine"));
+        super(DockerImageName.parse("postgres:14-alpine"));
         withUsername("workflow");
         withPassword("workflow");
         withDatabaseName("workflow");
