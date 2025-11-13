@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow;
 
-import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.Metrics;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
@@ -132,7 +132,7 @@ public final class WorkflowEngineInitializer implements ServletContextListener {
                 config.getOptionalValue("dt.workflow-engine.task-dispatcher.workflow.poll-backoff.max-delay", Duration.class).orElseGet(() -> Duration.ofSeconds(3))));
 
         if (config.getOptionalValue("alpine.metrics.enabled", boolean.class).orElse(false)) {
-            engineConfig.setMeterRegistry(Metrics.getRegistry());
+            engineConfig.setMeterRegistry(Metrics.globalRegistry);
         }
 
         return engineConfig;
