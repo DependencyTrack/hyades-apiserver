@@ -21,15 +21,16 @@ package alpine.server.servlets;
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.prometheus.client.exporter.common.TextFormat;
-import org.apache.commons.lang3.StringUtils;
-import org.owasp.security.logging.SecurityMarkers;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.core.HttpHeaders;
+import org.apache.commons.lang3.StringUtils;
+import org.owasp.security.logging.SecurityMarkers;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -42,17 +43,21 @@ public class MetricsServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(MetricsServlet.class);
 
     private final Config config;
+    private final PrometheusMeterRegistry meterRegistry;
     private boolean metricsEnabled;
     private String basicAuthUsername;
     private String basicAuthPassword;
 
     @SuppressWarnings("unused")
     public MetricsServlet() {
-        this(Config.getInstance());
+        this(Config.getInstance(), Metrics.getPrometheusMeterRegistry());
     }
 
-    MetricsServlet(final Config config) {
+    MetricsServlet(
+            final Config config,
+            final PrometheusMeterRegistry meterRegistry) {
         this.config = config;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -75,7 +80,7 @@ public class MetricsServlet extends HttpServlet {
         if (metricsEnabled) {
             resp.setStatus(HttpServletResponse.SC_OK);
             resp.setHeader(HttpHeaders.CONTENT_TYPE, TextFormat.CONTENT_TYPE_004);
-            Metrics.getRegistry().scrape(resp.getOutputStream());
+            meterRegistry.scrape(resp.getOutputStream());
         } else {
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }

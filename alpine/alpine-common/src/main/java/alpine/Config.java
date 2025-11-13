@@ -99,7 +99,7 @@ public class Config {
         // @formatter:off
         WORKER_THREADS                         ("alpine.worker.threads",             0),
         WORKER_THREAD_MULTIPLIER               ("alpine.worker.thread.multiplier",   4),
-        DATA_DIRECTORY                         ("alpine.data.directory",             "~/.alpine"),
+        DATA_DIRECTORY                         ("alpine.data.directory",             "${user.home}/.alpine"),
         SECRET_KEY_PATH                        ("alpine.secret.key.path",            null),
         DATABASE_URL                           ("alpine.database.url",               "jdbc:h2:mem:alpine"),
         DATABASE_USERNAME                      ("alpine.database.username",          "sa"),
@@ -190,7 +190,7 @@ public class Config {
         // Force initialization of MicroProfile config.
         org.eclipse.microprofile.config.Config ignored = ConfigProvider.getConfig();
 
-        final File dataDirectory = getDataDirectorty();
+        final File dataDirectory = getDataDirectory();
         if (!dataDirectory.exists()) {
             if (!dataDirectory.mkdirs()) {
                 LOGGER.warn("""
@@ -233,7 +233,7 @@ public class Config {
      * @since 1.8.0
      */
     private File getSystemIdFilePath() {
-        return new File(Config.getInstance().getDataDirectorty() + File.separator + "id.system");
+        return new File(Config.getInstance().getDataDirectory() + File.separator + "id.system");
     }
 
     /**
@@ -325,8 +325,8 @@ public class Config {
      * @return a File object of the data directory
      * @since 1.0.0
      */
-    public File getDataDirectorty() {
-        final String prop = PathUtil.resolve(getProperty(AlpineKey.DATA_DIRECTORY));
+    public File getDataDirectory() {
+        final String prop = getProperty(AlpineKey.DATA_DIRECTORY);
         return new File(prop).getAbsoluteFile();
     }
 

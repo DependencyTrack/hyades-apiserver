@@ -19,19 +19,17 @@
 package alpine.server.servlets;
 
 import alpine.Config;
-import alpine.common.metrics.Metrics;
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.prometheusmetrics.PrometheusConfig;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.prometheus.client.exporter.common.TextFormat;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.core.HttpHeaders;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,29 +42,21 @@ import static org.mockito.Mockito.when;
 
 public class MetricsServletTest {
 
-    private static Gauge gauge;
-
     private Config configMock;
+    private PrometheusMeterRegistry meterRegistry;
     private HttpServletRequest requestMock;
     private HttpServletResponse responseMock;
     private ServletOutputStream responseOutputStreamMock;
 
-    @BeforeAll
-    public static void setUpClass() {
-        gauge = Gauge.builder("alpine.foo.bar", () -> 666).register(Metrics.getRegistry());
-    }
-
     @BeforeEach
     public void setUp() {
         configMock = mock(Config.class);
+        meterRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         requestMock = mock(HttpServletRequest.class);
         responseMock = mock(HttpServletResponse.class);
         responseOutputStreamMock = mock(ServletOutputStream.class);
-    }
 
-    @AfterAll
-    public static void tearDownClass() {
-        Metrics.getRegistry().remove(gauge);
+        Gauge.builder("alpine.foo.bar", () -> 666).register(meterRegistry);
     }
 
     @Test
@@ -75,7 +65,7 @@ public class MetricsServletTest {
 
         when(responseMock.getOutputStream()).thenReturn(responseOutputStreamMock);
 
-        final var servlet = new MetricsServlet(configMock);
+        final var servlet = new MetricsServlet(configMock, meterRegistry);
         servlet.init();
         servlet.doGet(requestMock, responseMock);
 
@@ -95,7 +85,7 @@ public class MetricsServletTest {
     public void shouldRespondWithNotFoundWhenNotEnabled() throws Exception {
         when(responseMock.getOutputStream()).thenReturn(responseOutputStreamMock);
 
-        final var servlet = new MetricsServlet(configMock);
+        final var servlet = new MetricsServlet(configMock, meterRegistry);
         servlet.init();
         servlet.doGet(requestMock, responseMock);
 
@@ -113,7 +103,7 @@ public class MetricsServletTest {
 
         when(responseMock.getOutputStream()).thenReturn(responseOutputStreamMock);
 
-        final var servlet = new MetricsServlet(configMock);
+        final var servlet = new MetricsServlet(configMock, meterRegistry);
         servlet.init();
         servlet.doGet(requestMock, responseMock);
 
@@ -139,7 +129,7 @@ public class MetricsServletTest {
 
         when(responseMock.getOutputStream()).thenReturn(responseOutputStreamMock);
 
-        final var servlet = new MetricsServlet(configMock);
+        final var servlet = new MetricsServlet(configMock, meterRegistry);
         servlet.init();
         servlet.doGet(requestMock, responseMock);
 

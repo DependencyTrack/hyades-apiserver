@@ -45,7 +45,7 @@ public final class DataSourceRegistry {
         this(ConfigProvider.getConfig());
     }
 
-    DataSourceRegistry(final Config config) {
+    public DataSourceRegistry(final Config config) {
         this.config = config;
         this.dataSourceByName = new ConcurrentHashMap<>();
     }

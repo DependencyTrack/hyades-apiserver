@@ -40,6 +40,8 @@ tags:
   description: Endpoints related to metrics
 - name: Projects
   description: Endpoints related to projects
+- name: Secrets
+  description: Endpoints related to secrets
 - name: Teams
   description: Endpoints related to teams
 - name: Workflows
@@ -62,6 +64,10 @@ paths:
     $ref: "./paths/metrics_portfolio_current.yaml"
   /metrics/vulnerabilities:
     $ref: "./paths/metrics_vulnerabilities.yaml"
+  /secrets:
+    $ref: "./paths/secrets.yaml"
+  /secrets/{name}:
+    $ref: "./paths/secrets__name_.yaml"
   /teams:
     $ref: "./paths/teams.yaml"
   /teams/{name}:

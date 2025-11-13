@@ -152,7 +152,7 @@ public final class KeyManager {
                 return Paths.get(secretKeyPath).toFile();
             }
         }
-        return new File(config.getDataDirectorty()
+        return new File(config.getDataDirectory()
                 + File.separator
                 + "keys" + File.separator
                 + keyType.name().toLowerCase() + ".key");
