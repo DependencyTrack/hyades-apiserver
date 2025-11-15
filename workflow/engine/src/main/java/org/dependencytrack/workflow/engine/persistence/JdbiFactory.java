@@ -19,7 +19,6 @@
 package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
-import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.persistence.mapping.PolledActivityTaskRowMapper;
 import org.dependencytrack.workflow.engine.persistence.mapping.PolledWorkflowEventRowMapper;
 import org.dependencytrack.workflow.engine.persistence.mapping.PolledWorkflowRunRowMapper;
@@ -27,7 +26,6 @@ import org.dependencytrack.workflow.engine.persistence.mapping.ProtobufColumnMap
 import org.dependencytrack.workflow.engine.persistence.mapping.WorkflowEventArgumentFactory;
 import org.dependencytrack.workflow.engine.persistence.mapping.WorkflowEventSqlArrayType;
 import org.dependencytrack.workflow.engine.persistence.mapping.WorkflowPayloadSqlArrayType;
-import org.dependencytrack.workflow.engine.persistence.mapping.WorkflowScheduleRowMapper;
 import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTask;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRun;
@@ -92,10 +90,7 @@ public final class JdbiFactory {
                         new PolledWorkflowRunRowMapper())
                 .registerRowMapper(
                         WorkflowRunHistoryEntry.class,
-                        ConstructorMapper.of(WorkflowRunHistoryEntry.class))
-                .registerRowMapper(
-                        WorkflowSchedule.class,
-                        new WorkflowScheduleRowMapper());
+                        ConstructorMapper.of(WorkflowRunHistoryEntry.class));
     }
 
 }
