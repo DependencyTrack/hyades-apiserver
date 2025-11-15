@@ -442,12 +442,10 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
             final var runCreatedBuilder = RunCreated.newBuilder()
                     .setWorkflowName(option.workflowName())
-                    .setWorkflowVersion(option.workflowVersion());
+                    .setWorkflowVersion(option.workflowVersion())
+                    .setPriority(option.priority());
             if (option.concurrencyGroupId() != null) {
                 runCreatedBuilder.setConcurrencyGroupId(option.concurrencyGroupId());
-            }
-            if (option.priority() != null) {
-                runCreatedBuilder.setPriority(option.priority());
             }
             if (option.labels() != null) {
                 runCreatedBuilder.putAllLabels(option.labels());
@@ -996,9 +994,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                                     message.event().getRunCreated().hasConcurrencyGroupId()
                                             ? message.event().getRunCreated().getConcurrencyGroupId()
                                             : null,
-                                    message.event().getRunCreated().hasPriority()
-                                            ? message.event().getRunCreated().getPriority()
-                                            : null,
+                                    message.event().getRunCreated().getPriority(),
                                     message.event().getRunCreated().getLabelsCount() > 0
                                             ? Map.copyOf(message.event().getRunCreated().getLabelsMap())
                                             : null,
@@ -1036,9 +1032,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                                 newEvent.getId(),
                                 newEvent.getActivityTaskCreated().getName(),
                                 newEvent.getActivityTaskCreated().getQueueName(),
-                                newEvent.getActivityTaskCreated().hasPriority()
-                                        ? newEvent.getActivityTaskCreated().getPriority()
-                                        : null,
+                                newEvent.getActivityTaskCreated().getPriority(),
                                 newEvent.getActivityTaskCreated().hasArgument()
                                         ? newEvent.getActivityTaskCreated().getArgument()
                                         : null,

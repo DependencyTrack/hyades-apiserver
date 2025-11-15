@@ -30,7 +30,7 @@ public record CreateWorkflowRunCommand(
         String workflowName,
         int workflowVersion,
         @Nullable String concurrencyGroupId,
-        @Nullable Integer priority,
+        int priority,
         @Nullable Map<String, String> labels,
         Instant createdAt) {
 }

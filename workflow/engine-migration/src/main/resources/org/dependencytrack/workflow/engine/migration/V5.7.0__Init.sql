@@ -15,7 +15,7 @@ create table workflow_run (
 , status workflow_run_status not null default 'CREATED'
 , custom_status text
 , concurrency_group_id text
-, priority smallint
+, priority smallint not null
 , labels jsonb
 , locked_by text
 , locked_until timestamptz(3)
@@ -70,7 +70,7 @@ create table workflow_activity_task (
 , created_event_id int
 , activity_name text not null
 , queue_name text not null
-, priority smallint
+, priority smallint not null
 , argument bytea
 , visible_from timestamptz(3)
 , locked_by text
@@ -83,11 +83,11 @@ create table workflow_activity_task (
 ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
 create index workflow_run_poll_idx
-    on workflow_run (priority desc nulls last, id, workflow_name)
+    on workflow_run (priority desc, id, workflow_name)
  where status = any(cast('{CREATED, RUNNING, SUSPENDED}' as workflow_run_status[]));
 
 create index workflow_run_concurrency_group_update_idx
-    on workflow_run (concurrency_group_id, priority desc nulls last, id)
+    on workflow_run (concurrency_group_id, priority desc, id)
  where status = cast('CREATED' as workflow_run_status)
    and concurrency_group_id is not null;
 
@@ -106,7 +106,7 @@ create index workflow_run_inbox_workflow_run_id_idx
     on workflow_run_inbox (workflow_run_id);
 
 create index workflow_activity_task_poll_idx
-    on workflow_activity_task (priority desc nulls last, created_at, activity_name, queue_name);
+    on workflow_activity_task (priority desc, created_at, activity_name, queue_name);
 
 create function create_workflow_run_concurrency_groups_on_run_creation()
 returns trigger
@@ -119,7 +119,7 @@ begin
     from new_table
    where concurrency_group_id is not null
    order by concurrency_group_id
-          , priority desc nulls last
+          , priority desc
           , id
   on conflict (id) do nothing;
   return null;
@@ -158,7 +158,7 @@ begin
      where concurrency_group_id = any(group_ids)
        and status = cast('CREATED' as workflow_run_status)
      order by concurrency_group_id
-            , priority desc nulls last
+            , priority desc
             , id
   ),
   cte_updated_group as (

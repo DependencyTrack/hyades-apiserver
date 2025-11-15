@@ -72,7 +72,7 @@ message RunCreated {
   int32 workflow_version = 2;
   optional org.dependencytrack.workflow.payload.v1.Payload argument = 3;
   optional string concurrency_group_id = 4;
-  optional int32 priority = 5;
+  int32 priority = 5;
   map<string, string> labels = 6;
   optional ParentRun parent_run = 7;
 
@@ -107,7 +107,7 @@ message RunCompleted {
 message ActivityTaskCreated {
   string name = 1;
   string queue_name = 2;
-  optional int32 priority = 3;
+  int32 priority = 3;
   optional org.dependencytrack.workflow.payload.v1.Payload argument = 4;
   optional google.protobuf.Timestamp scheduled_for = 5;
 }
@@ -127,7 +127,7 @@ message ChildRunCreated {
   string workflow_name = 2;
   int32 workflow_version = 3;
   optional string concurrency_group_id = 4;
-  optional int32 priority = 5;
+  int32 priority = 5;
   map<string, string> labels = 6;
   optional org.dependencytrack.workflow.payload.v1.Payload argument = 7;
 }

@@ -90,7 +90,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     private final UUID runId;
     private final String workflowName;
     private final int workflowVersion;
-    private final @Nullable Integer priority;
+    private final int priority;
     private final @Nullable Map<String, String> labels;
     private final MetadataRegistry metadataRegistry;
     private final WorkflowExecutor<A, R> workflowExecutor;
@@ -118,7 +118,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             final UUID runId,
             final String workflowName,
             final int workflowVersion,
-            final @Nullable Integer priority,
+            final int priority,
             final @Nullable Map<String, String> labels,
             final MetadataRegistry metadataRegistry,
             final WorkflowExecutor<A, R> workflowExecutor,
@@ -595,8 +595,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                     command.getClass().getSimpleName(),
                     CreateActivityTaskCommand.class.getSimpleName()));
         } else if (!Objects.equals(eventSubject.getName(), concreteCommand.name())
-                || (eventSubject.hasPriority()
-                && !Objects.equals(eventSubject.getPriority(), concreteCommand.priority()))
+                || !Objects.equals(eventSubject.getPriority(), concreteCommand.priority())
                 || (eventSubject.hasArgument()
                 && !Objects.equals(eventSubject.getArgument(), concreteCommand.argument()))) {
             throw new WorkflowRunDeterminismError("""
@@ -695,8 +694,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                     CreateChildRunCommand.class.getSimpleName()));
         } else if (!Objects.equals(eventSubject.getWorkflowName(), concreteCommand.workflowName())
                 || !Objects.equals(eventSubject.getWorkflowVersion(), concreteCommand.workflowVersion())
-                || (eventSubject.hasPriority()
-                && !Objects.equals(eventSubject.getPriority(), concreteCommand.priority()))
+                || !Objects.equals(eventSubject.getPriority(), concreteCommand.priority())
                 || (eventSubject.hasConcurrencyGroupId()
                 && !Objects.equals(eventSubject.getConcurrencyGroupId(), concreteCommand.concurrencyGroupId()))
                 || (eventSubject.getLabelsCount() > 0

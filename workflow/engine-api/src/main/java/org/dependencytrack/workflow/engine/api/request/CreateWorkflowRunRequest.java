@@ -41,7 +41,7 @@ public record CreateWorkflowRunRequest<A>(
         String workflowName,
         int workflowVersion,
         @Nullable String concurrencyGroupId,
-        @Nullable Integer priority,
+        int priority,
         @Nullable Map<String, String> labels,
         @Nullable A argument) {
 
@@ -50,7 +50,7 @@ public record CreateWorkflowRunRequest<A>(
     }
 
     public CreateWorkflowRunRequest(final String workflowName, final int workflowVersion) {
-        this(workflowName, workflowVersion, null, null, null, null);
+        this(workflowName, workflowVersion, null, 0, null, null);
     }
 
     public CreateWorkflowRunRequest(final Class<? extends WorkflowExecutor<A, ?>> executorClass) {
@@ -62,7 +62,7 @@ public record CreateWorkflowRunRequest<A>(
                 concurrencyGroupId, this.priority, this.labels, this.argument);
     }
 
-    public CreateWorkflowRunRequest<A> withPriority(final @Nullable Integer priority) {
+    public CreateWorkflowRunRequest<A> withPriority(final int priority) {
         return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, priority, this.labels, this.argument);
     }

@@ -33,7 +33,7 @@ public record WorkflowRunMetadataRow(
         WorkflowRunStatus status,
         @Nullable String customStatus,
         @Nullable String concurrencyGroupId,
-        @Nullable Integer priority,
+        int priority,
         @Nullable @Json Map<String, String> labels,
         @Nullable String lockedBy,
         @Nullable Instant lockedUntil,

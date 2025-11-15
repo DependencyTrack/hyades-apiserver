@@ -189,7 +189,7 @@ class WorkflowEngineImplTest {
 
         assertThat(failedRun.customStatus()).isNull();
         assertThat(failedRun.concurrencyGroupId()).isNull();
-        assertThat(failedRun.priority()).isNull();
+        assertThat(failedRun.priority()).isZero();
         assertThat(failedRun.labels()).isNull();
         assertThat(failedRun.createdAt()).isNotNull();
         assertThat(failedRun.updatedAt()).isNotNull();
@@ -269,7 +269,7 @@ class WorkflowEngineImplTest {
 
         assertThat(canceledRun.customStatus()).isNull();
         assertThat(canceledRun.concurrencyGroupId()).isNull();
-        assertThat(canceledRun.priority()).isNull();
+        assertThat(canceledRun.priority()).isZero();
         assertThat(canceledRun.labels()).isNull();
         assertThat(canceledRun.createdAt()).isNotNull();
         assertThat(canceledRun.updatedAt()).isNotNull();

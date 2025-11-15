@@ -230,9 +230,7 @@ final class WorkflowRunState {
                 argument = event.getRunCreated().hasArgument()
                         ? event.getRunCreated().getArgument()
                         : null;
-                priority = event.getRunCreated().hasPriority()
-                        ? event.getRunCreated().getPriority()
-                        : null;
+                priority = event.getRunCreated().getPriority();
                 labels = event.getRunCreated().getLabelsCount() > 0
                         ? event.getRunCreated().getLabelsMap()
                         : null;
@@ -358,15 +356,13 @@ final class WorkflowRunState {
     private void processContinueAsNewCommand(final ContinueRunAsNewCommand command) {
         final var newRunCreatedBuilder = RunCreated.newBuilder()
                 .setWorkflowName(this.workflowName)
-                .setWorkflowVersion(this.workflowVersion);
+                .setWorkflowVersion(this.workflowVersion)
+                .setPriority(this.priority);
         if (command.argument() != null) {
             newRunCreatedBuilder.setArgument(command.argument());
         }
         if (this.concurrencyGroupId != null) {
             newRunCreatedBuilder.setConcurrencyGroupId(this.concurrencyGroupId);
-        }
-        if (this.priority != null) {
-            newRunCreatedBuilder.setPriority(this.priority);
         }
         if (this.labels != null && !this.labels.isEmpty()) {
             newRunCreatedBuilder.putAllLabels(this.labels);
@@ -408,10 +404,8 @@ final class WorkflowRunState {
     private void processCreateActivityTaskCommand(final CreateActivityTaskCommand command) {
         final var subjectBuilder = ActivityTaskCreated.newBuilder()
                 .setName(command.name())
-                .setQueueName(command.queueName());
-        if (command.priority() != null) {
-            subjectBuilder.setPriority(command.priority());
-        }
+                .setQueueName(command.queueName())
+                .setPriority(command.priority());
         if (command.argument() != null) {
             subjectBuilder.setArgument(command.argument());
         }
@@ -434,10 +428,12 @@ final class WorkflowRunState {
         final var childRunCreatedBuilder = ChildRunCreated.newBuilder()
                 .setRunId(childRunId.toString())
                 .setWorkflowName(command.workflowName())
-                .setWorkflowVersion(command.workflowVersion());
+                .setWorkflowVersion(command.workflowVersion())
+                .setPriority(command.priority());
         final var runCreatedBuilder = RunCreated.newBuilder()
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion())
+                .setPriority(command.priority())
                 .setParentRun(RunCreated.ParentRun.newBuilder()
                         .setChildRunCreatedEventId(command.eventId())
                         .setRunId(this.id.toString())
@@ -447,10 +443,6 @@ final class WorkflowRunState {
         if (command.concurrencyGroupId() != null) {
             childRunCreatedBuilder.setConcurrencyGroupId(command.concurrencyGroupId());
             runCreatedBuilder.setConcurrencyGroupId(command.concurrencyGroupId());
-        }
-        if (command.priority() != null) {
-            childRunCreatedBuilder.setPriority(command.priority());
-            runCreatedBuilder.setPriority(command.priority());
         }
         if (command.labels() != null && !command.labels().isEmpty()) {
             childRunCreatedBuilder.putAllLabels(command.labels());

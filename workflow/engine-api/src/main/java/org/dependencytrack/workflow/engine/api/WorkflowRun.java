@@ -34,7 +34,7 @@ public record WorkflowRun(
         int workflowVersion,
         WorkflowRunStatus status,
         @Nullable String customStatus,
-        @Nullable Integer priority,
+        int priority,
         @Nullable String concurrencyGroupId,
         @Nullable Map<String, String> labels,
         Instant createdAt,
