@@ -174,8 +174,8 @@ final class FailureConverter {
         for (final StackTraceElement element : stackTrace) {
             // Cut the stack trace off before it enters engine internals.
             // These are not necessary for communicating failures in user code.
-            if (element.getClassName().equals(ActivityTaskManager.class.getName())
-                    || element.getClassName().equals(WorkflowTaskManager.class.getName())) {
+            if (element.getClassName().equals(ActivityTaskWorker.class.getName())
+                    || element.getClassName().equals(WorkflowTaskWorker.class.getName())) {
                 break;
             }
 

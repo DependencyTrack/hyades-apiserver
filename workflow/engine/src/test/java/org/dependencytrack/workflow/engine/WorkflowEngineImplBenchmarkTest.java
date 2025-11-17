@@ -32,10 +32,11 @@ import org.dependencytrack.workflow.api.WorkflowContext;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.annotation.Activity;
 import org.dependencytrack.workflow.api.annotation.Workflow;
-import org.dependencytrack.workflow.engine.api.ActivityGroup;
+import org.dependencytrack.workflow.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
-import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
+import org.dependencytrack.workflow.engine.api.WorkflowTaskWorkerOptions;
+import org.dependencytrack.workflow.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.jspecify.annotations.NonNull;
@@ -138,10 +139,11 @@ public class WorkflowEngineImplBenchmarkTest {
         engineConfig.runHistoryCache().setMaxSize(10_000);
         engineConfig.taskCommandBuffer().setFlushInterval(Duration.ofMillis(3));
         engineConfig.taskCommandBuffer().setMaxBatchSize(250);
-        engineConfig.workflowTaskDispatcher().setMinPollInterval(Duration.ofMillis(5));
-        engineConfig.workflowTaskDispatcher().setPollBackoffIntervalFunction(IntervalFunction.of(Duration.ofMillis(50)));
-        engineConfig.activityTaskDispatcher().setMinPollInterval(Duration.ofMillis(5));
-        engineConfig.activityTaskDispatcher().setPollBackoffIntervalFunction(IntervalFunction.of(Duration.ofMillis(50)));
+        engineConfig.workflowTaskWorker().setMinPollInterval(Duration.ofMillis(5));
+        engineConfig.workflowTaskWorker().setPollBackoffIntervalFunction(IntervalFunction.of(Duration.ofMillis(50)));
+        engineConfig.activityTaskWorker().setMinPollInterval(Duration.ofMillis(5));
+        engineConfig.activityTaskWorker().setPollBackoffIntervalFunction(IntervalFunction.of(Duration.ofMillis(50)));
+        engineConfig.activityTaskScheduler().setPollInterval(Duration.ofMillis(100));
         engineConfig.setMeterRegistry(meterRegistry);
 
         engine = new WorkflowEngineImpl(engineConfig);
@@ -150,14 +152,11 @@ public class WorkflowEngineImplBenchmarkTest {
         engine.registerActivity(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5), false);
         engine.registerActivity(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5), false);
 
-        engine.mountWorkflows(new WorkflowGroup("test")
-                .withWorkflow(TestWorkflow.class)
-                .withMaxConcurrency(100));
-        engine.mountActivities(new ActivityGroup("test")
-                .withActivity(TestActivityFoo.class)
-                .withActivity(TestActivityBar.class)
-                .withActivity(TestActivityBaz.class)
-                .withMaxConcurrency(150));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 100));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", "default", 150));
+
+        engine.createActivityTaskQueue(
+                new CreateActivityTaskQueueRequest("default", 1000));
     }
 
     @AfterEach
@@ -250,12 +249,14 @@ public class WorkflowEngineImplBenchmarkTest {
                                 WorkflowRunCountByNameAndStatusRow::count));
                 System.out.printf("Statuses: %s\n".formatted(countByStatus));
 
+                final Collection<Timer> activityTaskSchedulingLatencies = meterRegistry.get(
+                        "dt.workflow.engine.activity.task.scheduling.latency").timers();
                 final Collection<Timer> taskDispatcherPollLatencies = meterRegistry.get(
-                        "dt.workflow.engine.task.dispatcher.poll.latency").timers();
+                        "dt.workflow.engine.task.worker.poll.latency").timers();
                 final Collection<DistributionSummary> taskDispatcherPollTasks = meterRegistry.get(
-                        "dt.workflow.engine.task.dispatcher.poll.tasks").summaries();
+                        "dt.workflow.engine.task.worker.tasks.polled").summaries();
                 final Collection<Timer> taskProcessLatencies = meterRegistry.get(
-                        "dt.workflow.engine.task.process.latency").timers();
+                        "dt.workflow.engine.task.worker.process.latency").timers();
                 final Collection<Timer> bufferFlushLatencies = meterRegistry.get(
                         "dt.workflow.engine.buffer.flush.latency").timers();
                 final Collection<DistributionSummary> bufferBatchSizes = meterRegistry.get(
@@ -263,29 +264,31 @@ public class WorkflowEngineImplBenchmarkTest {
                 final Collection<FunctionCounter> historyCacheGets = meterRegistry.get(
                         "cache.gets").tag("cache", "WorkflowEngine-RunHistoryCache").functionCounters();
 
+                for (final Timer timer : activityTaskSchedulingLatencies) {
+                    System.out.printf(
+                            "Activity Task Scheduling Latency: queueName=%s, mean=%.2fms, max=%.2fms\n",
+                            timer.getId().getTag("queueName"),
+                            timer.mean(TimeUnit.MILLISECONDS),
+                            timer.max(TimeUnit.MILLISECONDS));
+                }
                 for (final Timer timer : taskDispatcherPollLatencies) {
                     System.out.printf(
-                            "Dispatcher Poll Latency: taskType=%s, taskManager=%s, mean=%.2fms, max=%.2fms\n",
-                            timer.getId().getTag("taskType"),
-                            timer.getId().getTag("taskManager"),
+                            "Worker Poll Latency: workerType=%s, mean=%.2fms, max=%.2fms\n",
+                            timer.getId().getTag("workerType"),
                             timer.mean(TimeUnit.MILLISECONDS),
                             timer.max(TimeUnit.MILLISECONDS));
                 }
                 for (final DistributionSummary summary : taskDispatcherPollTasks) {
                     System.out.printf(
-                            "Dispatcher Poll Tasks: taskType=%s, taskManager=%s, taskName=%s, mean=%.2f, max=%.2f\n",
-                            summary.getId().getTag("taskType"),
-                            summary.getId().getTag("taskManager"),
-                            summary.getId().getTag("taskName"),
+                            "Worker Poll Tasks: workerType=%s, mean=%.2f, max=%.2f\n",
+                            summary.getId().getTag("workerType"),
                             summary.mean(),
                             summary.max());
                 }
                 for (final Timer timer : taskProcessLatencies) {
                     System.out.printf(
-                            "Task Process Latency: taskType=%s, taskManager=%s, taskName=%s, mean=%.2fms, max=%.2fms\n",
-                            timer.getId().getTag("taskType"),
-                            timer.getId().getTag("taskManager"),
-                            timer.getId().getTag("taskName"),
+                            "Worker Task Process Latency: workerType=%s, mean=%.2fms, max=%.2fms\n",
+                            timer.getId().getTag("workerType"),
                             timer.mean(TimeUnit.MILLISECONDS),
                             timer.max(TimeUnit.MILLISECONDS));
                 }

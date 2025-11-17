@@ -27,7 +27,6 @@ import java.sql.SQLException;
 import java.util.UUID;
 
 import static org.dependencytrack.workflow.engine.persistence.mapping.MappingUtil.mapJsonEncodedMap;
-import static org.dependencytrack.workflow.engine.persistence.mapping.MappingUtil.mapNullableInteger;
 
 public final class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRun> {
 
@@ -38,7 +37,7 @@ public final class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflo
                 rs.getString("workflow_name"),
                 rs.getInt("workflow_version"),
                 rs.getString("concurrency_group_id"),
-                mapNullableInteger(rs, "priority"),
+                rs.getInt("priority"),
                 mapJsonEncodedMap(rs, ctx, "labels", String.class, String.class));
     }
 

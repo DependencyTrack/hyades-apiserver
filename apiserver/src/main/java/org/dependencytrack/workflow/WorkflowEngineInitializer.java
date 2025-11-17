@@ -25,6 +25,7 @@ import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineFactory;
+import org.dependencytrack.workflow.engine.api.request.CreateActivityTaskQueueRequest;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
@@ -66,6 +67,10 @@ public final class WorkflowEngineInitializer implements ServletContextListener {
         final var engineFactory = ServiceLoader.load(WorkflowEngineFactory.class).findFirst().orElseThrow();
         engine = engineFactory.create(engineConfig);
         WorkflowEngineHolder.set(engine);
+
+        // Register workflows and activities here.
+        
+        engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("default", 25));
 
         LOGGER.info("Starting workflow engine");
         engine.start();
@@ -115,21 +120,21 @@ public final class WorkflowEngineInitializer implements ServletContextListener {
         config.getOptionalValue("dt.workflow-engine.retention.days", int.class)
                 .ifPresent(engineConfig.retention()::setDays);
 
-        config.getOptionalValue("dt.workflow-engine.task-dispatcher.activity.min-poll-interval", Duration.class)
-                .ifPresent(engineConfig.activityTaskDispatcher()::setMinPollInterval);
-        engineConfig.activityTaskDispatcher().setPollBackoffIntervalFunction(ofExponentialRandomBackoff(
-                config.getOptionalValue("dt.workflow-engine.task-dispatcher.activity.poll-backoff.initial-delay", Duration.class).orElseGet(() -> Duration.ofMillis(100)),
-                config.getOptionalValue("dt.workflow-engine.task-dispatcher.activity.poll-backoff.multiplier", double.class).orElse(1.5),
-                config.getOptionalValue("dt.workflow-engine.task-dispatcher.activity.poll-backoff.randomization-factor", double.class).orElse(0.3),
-                config.getOptionalValue("dt.workflow-engine.task-dispatcher.activity.poll-backoff.max-delay", Duration.class).orElseGet(() -> Duration.ofSeconds(3))));
+        config.getOptionalValue("dt.workflow-engine.task-worker.activity.min-poll-interval", Duration.class)
+                .ifPresent(engineConfig.activityTaskWorker()::setMinPollInterval);
+        engineConfig.activityTaskWorker().setPollBackoffIntervalFunction(ofExponentialRandomBackoff(
+                config.getOptionalValue("dt.workflow-engine.task-worker.activity.poll-backoff.initial-delay", Duration.class).orElseGet(() -> Duration.ofMillis(100)),
+                config.getOptionalValue("dt.workflow-engine.task-worker.activity.poll-backoff.multiplier", double.class).orElse(1.5),
+                config.getOptionalValue("dt.workflow-engine.task-worker.activity.poll-backoff.randomization-factor", double.class).orElse(0.3),
+                config.getOptionalValue("dt.workflow-engine.task-worker.activity.poll-backoff.max-delay", Duration.class).orElseGet(() -> Duration.ofSeconds(3))));
 
-        config.getOptionalValue("dt.workflow-engine.task-dispatcher.workflow.min-poll-interval", Duration.class)
-                .ifPresent(engineConfig.workflowTaskDispatcher()::setMinPollInterval);
-        engineConfig.workflowTaskDispatcher().setPollBackoffIntervalFunction(ofExponentialRandomBackoff(
-                config.getOptionalValue("dt.workflow-engine.task-dispatcher.workflow.poll-backoff.initial-delay", Duration.class).orElseGet(() -> Duration.ofMillis(100)),
-                config.getOptionalValue("dt.workflow-engine.task-dispatcher.workflow.poll-backoff.multiplier", double.class).orElse(1.5),
-                config.getOptionalValue("dt.workflow-engine.task-dispatcher.workflow.poll-backoff.randomization-factor", double.class).orElse(0.3),
-                config.getOptionalValue("dt.workflow-engine.task-dispatcher.workflow.poll-backoff.max-delay", Duration.class).orElseGet(() -> Duration.ofSeconds(3))));
+        config.getOptionalValue("dt.workflow-engine.task-worker.workflow.min-poll-interval", Duration.class)
+                .ifPresent(engineConfig.workflowTaskWorker()::setMinPollInterval);
+        engineConfig.workflowTaskWorker().setPollBackoffIntervalFunction(ofExponentialRandomBackoff(
+                config.getOptionalValue("dt.workflow-engine.task-worker.workflow.poll-backoff.initial-delay", Duration.class).orElseGet(() -> Duration.ofMillis(100)),
+                config.getOptionalValue("dt.workflow-engine.task-worker.workflow.poll-backoff.multiplier", double.class).orElse(1.5),
+                config.getOptionalValue("dt.workflow-engine.task-worker.workflow.poll-backoff.randomization-factor", double.class).orElse(0.3),
+                config.getOptionalValue("dt.workflow-engine.task-worker.workflow.poll-backoff.max-delay", Duration.class).orElseGet(() -> Duration.ofSeconds(3))));
 
         if (config.getOptionalValue("alpine.metrics.enabled", boolean.class).orElse(false)) {
             engineConfig.setMeterRegistry(Metrics.globalRegistry);

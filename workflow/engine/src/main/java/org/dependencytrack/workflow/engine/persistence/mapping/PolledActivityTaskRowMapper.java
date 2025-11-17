@@ -28,8 +28,6 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.UUID;
 
-import static org.dependencytrack.workflow.engine.persistence.mapping.MappingUtil.mapNullableInteger;
-
 public final class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTask> {
 
     @Override
@@ -39,7 +37,7 @@ public final class PolledActivityTaskRowMapper implements RowMapper<PolledActivi
                 rs.getInt("created_event_id"),
                 rs.getString("activity_name"),
                 rs.getString("queue_name"),
-                mapNullableInteger(rs, "priority"),
+                rs.getInt("priority"),
                 ctx.findColumnMapperFor(Payload.class).orElseThrow().map(rs, "argument", ctx),
                 ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "locked_until", ctx));
     }

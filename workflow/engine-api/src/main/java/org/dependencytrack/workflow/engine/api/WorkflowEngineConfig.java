@@ -146,7 +146,33 @@ public class WorkflowEngineConfig {
 
     }
 
-    public static class TaskDispatcherConfig {
+    public static class TaskSchedulerConfig {
+
+        private boolean enabled = true;
+        private Duration pollInterval = Duration.ofMillis(100);
+
+        private TaskSchedulerConfig() {
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(final boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public Duration pollInterval() {
+            return pollInterval;
+        }
+
+        public void setPollInterval(final Duration pollInterval) {
+            this.pollInterval = pollInterval;
+        }
+
+    }
+
+    public static class TaskWorkerConfig {
 
         private Duration minPollInterval = Duration.ofMillis(5);
         private IntervalFunction pollBackoffIntervalFunction = ofExponentialRandomBackoff(
@@ -155,7 +181,7 @@ public class WorkflowEngineConfig {
                 /* randomizationFactor */ 0.3,
                 /* maxIntervalMillis */ TimeUnit.SECONDS.toMillis(3));
 
-        private TaskDispatcherConfig() {
+        private TaskWorkerConfig() {
         }
 
         /**
@@ -188,8 +214,8 @@ public class WorkflowEngineConfig {
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
     private final BufferConfig taskCommandBufferConfig = new BufferConfig();
     private final RetentionConfig retentionConfig = new RetentionConfig();
-    private final TaskDispatcherConfig workflowTaskDispatcherConfig = new TaskDispatcherConfig();
-    private final TaskDispatcherConfig activityTaskDispatcherConfig = new TaskDispatcherConfig();
+    private final TaskSchedulerConfig activityTaskSchedulerConfig = new TaskSchedulerConfig();
+    private final TaskWorkerConfig activityTaskWorkerConfig = new TaskWorkerConfig();
 
     private @Nullable MeterRegistry meterRegistry;
 
@@ -237,18 +263,16 @@ public class WorkflowEngineConfig {
         return retentionConfig;
     }
 
-    /**
-     * @return Config for the dispatcher of workflow tasks.
-     */
-    public TaskDispatcherConfig workflowTaskDispatcher() {
-        return workflowTaskDispatcherConfig;
+    public TaskSchedulerConfig activityTaskScheduler() {
+        return activityTaskSchedulerConfig;
     }
 
-    /**
-     * @return Config for the dispatcher of activity tasks.
-     */
-    public TaskDispatcherConfig activityTaskDispatcher() {
-        return activityTaskDispatcherConfig;
+    public TaskWorkerConfig activityTaskWorker() {
+        return activityTaskWorkerConfig;
+    }
+
+    public TaskWorkerConfig workflowTaskWorker() {
+        return activityTaskWorkerConfig;
     }
 
     /**

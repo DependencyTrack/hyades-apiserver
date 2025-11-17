@@ -18,21 +18,17 @@
  */
 package org.dependencytrack.workflow.engine.api;
 
-import org.jspecify.annotations.Nullable;
+import static java.util.Objects.requireNonNull;
 
-import java.time.Instant;
-
-/**
- * @param name      Name of the queue.
- * @param status    Status of the queue.
- * @param depth     Number of items in the queue.
- * @param createdAt When the queue was created.
- * @param updatedAt When the queue was last updated.
- */
-public record ActivityTaskQueue(
+public record WorkflowTaskWorkerOptions(
         String name,
-        TaskQueueStatus status,
-        int depth,
-        Instant createdAt,
-        @Nullable Instant updatedAt) {
+        int maxConcurrency) {
+
+    public WorkflowTaskWorkerOptions {
+        requireNonNull(name, "name must not be null");
+        if (maxConcurrency <= 0) {
+            throw new IllegalArgumentException("maxConcurrency must not be negative or zero");
+        }
+    }
+
 }

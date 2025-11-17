@@ -18,83 +18,59 @@
  */
 package org.dependencytrack.workflow.engine;
 
+import io.github.resilience4j.core.IntervalFunction;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.dependencytrack.workflow.engine.MetadataRegistry.ActivityMetadata;
-import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.workflow.proto.payload.v1.Payload;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeoutException;
 
-final class ActivityTaskManager implements TaskManager<ActivityTask> {
+import static java.util.Objects.requireNonNull;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ActivityTaskManager.class);
+final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
 
     private final WorkflowEngineImpl engine;
-    private final ActivityGroup activityGroup;
     private final MetadataRegistry metadataRegistry;
+    private final String queueName;
     private final List<PollActivityTaskCommand> pollCommands;
 
-    ActivityTaskManager(
+    ActivityTaskWorker(
             final WorkflowEngineImpl engine,
-            final ActivityGroup activityGroup,
-            final MetadataRegistry metadataRegistry) {
-        this.engine = engine;
-        this.activityGroup = activityGroup;
-        this.metadataRegistry = metadataRegistry;
-        this.pollCommands = activityGroup.activityNames().stream()
-                .map(metadataRegistry::getActivityMetadata)
+            final Duration minPollInterval,
+            final IntervalFunction pollBackoffIntervalFunction,
+            final MetadataRegistry metadataRegistry,
+            final String queueName,
+            final int maxConcurrency,
+            final MeterRegistry meterRegistry) {
+        super(minPollInterval, pollBackoffIntervalFunction, maxConcurrency, meterRegistry);
+        this.engine = requireNonNull(engine, "engine must not be null");
+        this.metadataRegistry = requireNonNull(metadataRegistry, "metadataRegistry must not be null");
+        this.queueName = requireNonNull(queueName, "queueName must not be null");
+        this.pollCommands = metadataRegistry.getAllActivityMetadata().stream()
                 .map(metadata -> new PollActivityTaskCommand(metadata.name(), metadata.lockTimeout()))
                 .toList();
     }
 
     @Override
-    public String name() {
-        return activityGroup.name();
+    List<ActivityTask> poll(final int limit) {
+        return engine.pollActivityTasks(queueName, pollCommands, limit);
     }
 
     @Override
-    public List<ActivityTask> poll(final int limit) {
-        return engine.pollActivityTasks(activityGroup.queueName(), pollCommands, limit);
-    }
-
-    @Override
-    public void process(final ActivityTask task) {
-        try (var ignoredMdcRunId = MDC.putCloseable("workflowRunId", task.workflowRunId().toString());
-             var ignoredMdcActivityName = MDC.putCloseable("workflowActivityName", task.activityName());
-             var ignoredMdcActivityQueueName = MDC.putCloseable("workflowActivityQueueName", task.queueName())) {
-            processInternal(task);
-        } catch (RuntimeException e) {
-            LOGGER.error("Failed to process task; Abandoning it", e);
-            abandon(task);
-        }
-    }
-
-    @Override
-    public void abandon(final ActivityTask task) {
-        try {
-            // TODO: Retry on TimeoutException
-            engine.abandonActivityTask(task).join();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            LOGGER.warn("Interrupted while waiting for task abandonment to be acknowledged", e);
-        } catch (TimeoutException e) {
-            throw new RuntimeException("Timed out while waiting for task abandonment to be acknowledged", e);
-        }
-    }
-
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private void processInternal(final ActivityTask task) {
-        if (!activityGroup.activityNames().contains(task.activityName())) {
-            throw new IllegalStateException(
-                    "Received task for activity %s which is not part of the configured activity group %s".formatted(
-                            task.activityName(), activityGroup.name()));
+    void process(final ActivityTask task) {
+        final ActivityMetadata activityMetadata;
+        try {
+            activityMetadata = metadataRegistry.getActivityMetadata(task.activityName());
+        } catch (NoSuchElementException e) {
+            logger.warn("Activity {} does not exist", task.activityName());
+            abandon(task);
+            return;
         }
-
-        final ActivityMetadata activityMetadata = metadataRegistry.getActivityMetadata(task.activityName());
 
         final var ctx = new ActivityContextImpl<>(
                 engine,
@@ -118,7 +94,7 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
                 engine.completeActivityTask(task, result).join();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                LOGGER.warn("Interrupted while waiting for task completion to be acknowledged", e);
+                logger.warn("Interrupted while waiting for task completion to be acknowledged", e);
             } catch (TimeoutException e) {
                 throw new RuntimeException("Timed out while waiting for task completion to be acknowledged", e);
             }
@@ -128,10 +104,23 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
                 engine.failActivityTask(task, e).join();
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
-                LOGGER.warn("Interrupted while waiting for task failure to be acknowledged", ex);
+                logger.warn("Interrupted while waiting for task failure to be acknowledged", ex);
             } catch (TimeoutException ex) {
                 throw new RuntimeException("Timed out while waiting for task failure to be acknowledged", ex);
             }
+        }
+    }
+
+    @Override
+    void abandon(final ActivityTask task) {
+        try {
+            // TODO: Retry on TimeoutException
+            engine.abandonActivityTask(task).join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.warn("Interrupted while waiting for task abandonment to be acknowledged", e);
+        } catch (TimeoutException e) {
+            throw new RuntimeException("Timed out while waiting for task abandonment to be acknowledged", e);
         }
     }
 

@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.workflow.engine.api.ActivityTaskQueue;
+import org.dependencytrack.workflow.engine.api.TaskQueueStatus;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.workflow.engine.persistence.command.CreateActivityTaskCommand;
@@ -60,6 +61,7 @@ public final class WorkflowActivityDao extends AbstractDao {
                          select count(*)
                            from workflow_activity_task
                           where queue_name = workflow_activity_task_queue.name
+                            and status = cast('QUEUED' as workflow_activity_task_status)
                        ) as depth
                      , created_at
                      , updated_at
@@ -96,7 +98,7 @@ public final class WorkflowActivityDao extends AbstractDao {
         return new Page<>(resultItems, encodePageToken(nextPageToken));
     }
 
-    public boolean setActivityTaskQueueStatus(final String queueName, final ActivityTaskQueue.Status status) {
+    public boolean setActivityTaskQueueStatus(final String queueName, final TaskQueueStatus status) {
         requireNonNull(queueName, "queueName must not be null");
 
         final Update update = jdbiHandle.createUpdate("""
@@ -115,13 +117,6 @@ public final class WorkflowActivityDao extends AbstractDao {
 
     public int createActivityTasks(final Collection<CreateActivityTaskCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
-                with cte_created_queue as (
-                  insert into workflow_activity_task_queue (name)
-                  select distinct(queue_name)
-                    from unnest(:queueNames) as t(queue_name)
-                  on conflict (name) do nothing
-                  returning name
-                )
                 insert into workflow_activity_task (
                   workflow_run_id
                 , created_event_id
@@ -141,10 +136,8 @@ public final class WorkflowActivityDao extends AbstractDao {
                        , :queueNames
                        , :priorities
                        , :arguments
-                       , :visibleFroms)
-                  -- Force CTE evaluation.
-                  where exists(select 1 from cte_created_queue)
-                     or not exists(select 1 from cte_created_queue)
+                       , :visibleFroms
+                       )
                 """);
 
         final var runIds = new ArrayList<UUID>(commands.size());
@@ -181,37 +174,38 @@ public final class WorkflowActivityDao extends AbstractDao {
             final String queueName,
             final Collection<PollActivityTaskCommand> commands,
             final int limit) {
-        final Update update = jdbiHandle.createUpdate("""
+        final Query query = jdbiHandle.createQuery("""
                 with
                 cte_poll_req as (
-                    select *
-                      from unnest(:activityNames, :lockTimeouts) as t(activity_name, lock_timeout)
+                  select *
+                    from unnest(:activityNames, :lockTimeouts)
+                      as t(activity_name, lock_timeout)
                 ),
                 cte_poll as (
-                    select wat.workflow_run_id
-                         , wat.created_event_id
-                      from workflow_activity_task as wat
-                     inner join workflow_activity_task_queue as watq
-                        on watq.name = wat.queue_name
-                     where wat.queue_name = :queueName
-                       and watq.status = cast('ACTIVE' as workflow_queue_status)
-                       and wat.activity_name = any(:activityNames)
-                       and (wat.visible_from is null or wat.visible_from <= now())
-                       and (wat.locked_until is null or wat.locked_until <= now())
-                     order by wat.priority desc nulls last
-                            , wat.created_at
-                       for no key update of wat
-                      skip locked
-                     limit :limit)
+                  select workflow_run_id
+                       , created_event_id
+                       , activity_name
+                    from workflow_activity_task as wat
+                   inner join workflow_activity_task_queue as queue
+                      on queue.name = wat.queue_name
+                   where wat.queue_name = :queueName
+                     and queue.status = cast('ACTIVE' as workflow_queue_status)
+                     and wat.status = cast('QUEUED' as workflow_activity_task_status)
+                     and (wat.locked_until is null or wat.locked_until <= now())
+                   order by wat.priority desc
+                          , wat.created_at
+                     for no key update skip locked
+                   limit :limit
+                )
                 update workflow_activity_task as wat
                    set locked_by = :workerInstanceId
                      , locked_until = now() + cte_poll_req.lock_timeout
                      , updated_at = now()
                   from cte_poll
-                     , cte_poll_req
-                 where cte_poll.workflow_run_id = wat.workflow_run_id
-                   and cte_poll.created_event_id = wat.created_event_id
-                   and cte_poll_req.activity_name = wat.activity_name
+                 inner join cte_poll_req
+                    on cte_poll_req.activity_name = cte_poll.activity_name
+                 where wat.workflow_run_id = cte_poll.workflow_run_id
+                   and wat.created_event_id = cte_poll.created_event_id
                 returning wat.workflow_run_id
                         , wat.created_event_id
                         , wat.activity_name
@@ -229,13 +223,12 @@ public final class WorkflowActivityDao extends AbstractDao {
             lockTimeouts.add(command.lockTimeout());
         }
 
-        return update
+        return query
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bind("queueName", queueName)
                 .bindArray("activityNames", String.class, activityNames)
                 .bindArray("lockTimeouts", Duration.class, lockTimeouts)
                 .bind("limit", limit)
-                .executeAndReturnGeneratedKeys()
                 .mapTo(PolledActivityTask.class)
                 .list();
     }
@@ -276,11 +269,14 @@ public final class WorkflowActivityDao extends AbstractDao {
 
         final Update update = jdbiHandle.createUpdate("""
                 with cte as (
-                    select *
-                      from unnest(:workflowRunIds, :createdEventIds) as t(workflow_run_id, created_event_id))
+                  select *
+                    from unnest(:workflowRunIds, :createdEventIds)
+                      as t(workflow_run_id, created_event_id)
+                )
                 update workflow_activity_task
                    set locked_by = null
                      , locked_until = null
+                     , updated_at = now()
                   from cte
                  where cte.workflow_run_id = workflow_activity_task.workflow_run_id
                    and cte.created_event_id = workflow_activity_task.created_event_id
@@ -304,14 +300,17 @@ public final class WorkflowActivityDao extends AbstractDao {
         }
 
         final Update update = jdbiHandle.createUpdate("""
-                with cte as (
-                    select *
-                      from unnest(:workflowRunIds, :createdEventIds) as t(workflow_run_id, created_event_id))
+                with
+                cte_req as (
+                  select *
+                    from unnest(:workflowRunIds, :createdEventIds)
+                      as t(workflow_run_id, created_event_id)
+                )
                 delete
                   from workflow_activity_task as wat
-                 using cte
-                 where cte.workflow_run_id = wat.workflow_run_id
-                   and cte.created_event_id = wat.created_event_id
+                 using cte_req
+                 where cte_req.workflow_run_id = wat.workflow_run_id
+                   and cte_req.created_event_id = wat.created_event_id
                    and wat.locked_by = :workerInstanceId
                 """);
 

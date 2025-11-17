@@ -26,14 +26,15 @@ import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.ChildWorkflowFailureException;
 import org.dependencytrack.workflow.api.failure.FailureException;
 import org.dependencytrack.workflow.api.failure.TerminalApplicationFailureException;
-import org.dependencytrack.workflow.engine.api.ActivityGroup;
+import org.dependencytrack.workflow.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.workflow.engine.api.ExternalEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
-import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
+import org.dependencytrack.workflow.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.workflow.engine.api.event.WorkflowRunsCompletedEventListener;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
+import org.dependencytrack.workflow.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
@@ -91,6 +92,8 @@ class WorkflowEngineImplTest {
         config.setMeterRegistry(new SimpleMeterRegistry());
 
         engine = new WorkflowEngineImpl(config);
+        engine.createActivityTaskQueue(
+                new CreateActivityTaskQueueRequest("default", 10));
     }
 
     @AfterEach
@@ -110,7 +113,7 @@ class WorkflowEngineImplTest {
             ctx.setStatus("someCustomStatus");
             return "someResult";
         });
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new  WorkflowTaskWorkerOptions("workflow-worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(
@@ -180,7 +183,7 @@ class WorkflowEngineImplTest {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             throw new IllegalStateException("Ouch!");
         });
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -222,10 +225,10 @@ class WorkflowEngineImplTest {
             }
             return null;
         });
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
         engine.registerActivityInternal("abc", voidConverter(), voidConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> null);
         engine.registerActivityInternal("def", voidConverter(), voidConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> null);
-        engine.mountActivities(new ActivityGroup("test-group").withActivity("abc").withActivity("def"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_QUEUE_NAME, 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -256,7 +259,7 @@ class WorkflowEngineImplTest {
             ctx.createTimer("sleep", Duration.ofSeconds(5)).await();
             return null;
         });
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -300,7 +303,7 @@ class WorkflowEngineImplTest {
             ctx.createTimer("Sleep for 3 seconds", Duration.ofSeconds(5)).await();
             return null;
         });
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -336,7 +339,7 @@ class WorkflowEngineImplTest {
 
             return null;
         });
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -371,10 +374,7 @@ class WorkflowEngineImplTest {
         engine.registerWorkflowInternal("bar", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5),
                 (ctx, arg) -> arg + "-outputValue");
 
-        engine.mountWorkflows(new WorkflowGroup("test-group")
-                .withWorkflow("foo")
-                .withWorkflow("bar")
-                .withMaxConcurrency(2));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 2));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1));
@@ -404,10 +404,7 @@ class WorkflowEngineImplTest {
             throw new IllegalStateException("Oh no!");
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group")
-                .withWorkflow("foo")
-                .withWorkflow("bar")
-                .withMaxConcurrency(2));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 2));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1));
@@ -456,11 +453,7 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group")
-                .withWorkflow("parent")
-                .withWorkflow("child")
-                .withWorkflow("grand-child")
-                .withMaxConcurrency(3));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 3));
         engine.start();
 
         final UUID parentRunId = engine.createRun(new CreateWorkflowRunRequest<>("parent", 1));
@@ -479,7 +472,7 @@ class WorkflowEngineImplTest {
     @Test
     void shouldThrowWhenCancellingRunInTerminalState() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -499,7 +492,7 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -521,7 +514,7 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -538,7 +531,7 @@ class WorkflowEngineImplTest {
     @Test
     void shouldThrowWhenSuspendingRunInTerminalState() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -558,7 +551,7 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -580,7 +573,7 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -595,7 +588,7 @@ class WorkflowEngineImplTest {
     @Test
     void shouldThrowWhenResumingRunInTerminalState() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -614,7 +607,7 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -649,7 +642,7 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -686,7 +679,7 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -722,7 +715,7 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -753,8 +746,8 @@ class WorkflowEngineImplTest {
 
         engine.registerActivityInternal("abc", voidConverter(), stringConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> "123");
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
-        engine.mountActivities(new ActivityGroup("test-group").withActivity("abc"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_QUEUE_NAME, 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -787,8 +780,8 @@ class WorkflowEngineImplTest {
 
         engine.registerActivityInternal("abc", stringConverter(), stringConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> arg);
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
-        engine.mountActivities(new ActivityGroup("test-group").withActivity("abc").withMaxConcurrency(2));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_QUEUE_NAME, 2));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -825,8 +818,8 @@ class WorkflowEngineImplTest {
             throw new IllegalStateException();
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
-        engine.mountActivities(new ActivityGroup("test-group").withActivity("abc"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_QUEUE_NAME, 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -865,8 +858,8 @@ class WorkflowEngineImplTest {
             throw new TerminalApplicationFailureException("Ouch!", null);
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
-        engine.mountActivities(new ActivityGroup("test-group").withActivity("abc"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_QUEUE_NAME, 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -919,12 +912,8 @@ class WorkflowEngineImplTest {
             throw new TerminalApplicationFailureException("Ouch!", null);
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group")
-                .withWorkflow("foo")
-                .withWorkflow("bar")
-                .withWorkflow("baz")
-                .withMaxConcurrency(3));
-        engine.mountActivities(new ActivityGroup("test-group").withActivity("qux"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 3));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_QUEUE_NAME, 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1)
@@ -995,10 +984,7 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group")
-                .withWorkflow("foo")
-                .withWorkflow("bar")
-                .withMaxConcurrency(2));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 2));
         engine.start();
 
         final UUID runId = engine.createRun(
@@ -1038,7 +1024,7 @@ class WorkflowEngineImplTest {
             return String.valueOf(iteration);
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("foo"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(
@@ -1079,7 +1065,7 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("foo"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
         engine.start();
 
         final UUID succeedingRunId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1).withArgument("false"));
@@ -1138,7 +1124,7 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.mountWorkflows(new WorkflowGroup("test").withWorkflow("foo"));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1));

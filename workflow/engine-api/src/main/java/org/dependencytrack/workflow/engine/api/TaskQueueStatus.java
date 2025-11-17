@@ -16,18 +16,21 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine;
+package org.dependencytrack.workflow.engine.api;
 
-import java.util.List;
+public enum TaskQueueStatus {
 
-sealed interface TaskManager<T extends Task> permits ActivityTaskManager, WorkflowTaskManager {
+    /**
+     * The queue is active.
+     */
+    ACTIVE,
 
-    String name();
-
-    List<T> poll(final int limit);
-
-    void process(final T task);
-
-    void abandon(final T task);
+    /**
+     * The queue is paused.
+     * <p>
+     * Paused queues still accept new items, and workers will complete any in-progress tasks.
+     * Workers will not dequeue any more tasks until the queue transitions back to the {@link #ACTIVE} status.
+     */
+    PAUSED
 
 }

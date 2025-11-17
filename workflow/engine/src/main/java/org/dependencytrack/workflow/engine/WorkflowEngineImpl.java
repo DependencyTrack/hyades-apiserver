@@ -35,21 +35,23 @@ import org.dependencytrack.workflow.engine.TaskCommand.AbandonWorkflowTaskComman
 import org.dependencytrack.workflow.engine.TaskCommand.CompleteActivityTaskCommand;
 import org.dependencytrack.workflow.engine.TaskCommand.CompleteWorkflowTaskCommand;
 import org.dependencytrack.workflow.engine.TaskCommand.FailActivityTaskCommand;
-import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.api.ActivityTaskQueue;
+import org.dependencytrack.workflow.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.workflow.engine.api.ExternalEvent;
+import org.dependencytrack.workflow.engine.api.TaskQueueStatus;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineHealthProbeResult;
-import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
+import org.dependencytrack.workflow.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEvent;
 import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEventListener;
 import org.dependencytrack.workflow.engine.api.event.WorkflowRunsCompletedEvent;
 import org.dependencytrack.workflow.engine.api.event.WorkflowRunsCompletedEventListener;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
+import org.dependencytrack.workflow.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
@@ -75,7 +77,6 @@ import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunMetadata
 import org.dependencytrack.workflow.engine.persistence.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.support.Buffer;
 import org.dependencytrack.workflow.engine.support.DefaultThreadFactory;
-import org.dependencytrack.workflow.engine.support.LoggingUncaughtExceptionHandler;
 import org.dependencytrack.workflow.proto.event.v1.ActivityTaskCompleted;
 import org.dependencytrack.workflow.proto.event.v1.ActivityTaskFailed;
 import org.dependencytrack.workflow.proto.event.v1.Event;
@@ -86,6 +87,7 @@ import org.dependencytrack.workflow.proto.event.v1.RunResumed;
 import org.dependencytrack.workflow.proto.event.v1.RunSuspended;
 import org.dependencytrack.workflow.proto.payload.v1.Payload;
 import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.statement.Update;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,7 +99,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -146,10 +147,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             return equals(STOPPING) || equals(STOPPED);
         }
 
-        boolean isNotStoppingOrStopped() {
-            return !isStoppingOrStopped();
-        }
-
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngineImpl.class);
@@ -158,13 +155,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     private final Jdbi jdbi;
     private final ReentrantLock statusLock = new ReentrantLock();
     private final MetadataRegistry metadataRegistry = new MetadataRegistry();
-    private final Set<WorkflowGroup> workflowGroups = new HashSet<>();
-    private final Set<ActivityGroup> activityGroups = new HashSet<>();
+    private final Map<String, TaskWorker> taskWorkerByName = new HashMap<>();
     private final List<WorkflowRunsCompletedEventListener> runsCompletedEventListeners = new ArrayList<>();
 
     private Status status = Status.CREATED;
-    private @Nullable ExecutorService taskDispatcherExecutor;
-    private @Nullable Map<String, ExecutorService> executorServiceByName;
+    private @Nullable ActivityTaskScheduler activityTaskScheduler;
     private @Nullable ScheduledExecutorService retentionExecutor;
     private @Nullable ExecutorService eventListenerExecutor;
     private @Nullable Buffer<ExternalEvent> externalEventBuffer;
@@ -210,6 +205,15 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     .bindTo(config.meterRegistry());
         }
 
+        if (config.activityTaskScheduler().isEnabled()) {
+            LOGGER.debug("Starting activity task scheduler");
+            activityTaskScheduler = new ActivityTaskScheduler(
+                    jdbi,
+                    config.meterRegistry(),
+                    config.activityTaskScheduler().pollInterval());
+            activityTaskScheduler.start();
+        }
+
         LOGGER.debug("Starting external event buffer");
         externalEventBuffer = new Buffer<>(
                 "workflow-external-event",
@@ -234,15 +238,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 config.meterRegistry());
         taskCommandBuffer.start();
 
-        executorServiceByName = new HashMap<>();
-
-        taskDispatcherExecutor = Executors.newThreadPerTaskExecutor(
-                new DefaultThreadFactory("WorkflowEngine-TaskDispatcher"));
-        if (config.meterRegistry() != null) {
-            new ExecutorServiceMetrics(taskDispatcherExecutor, "WorkflowEngine-TaskDispatcher", null)
-                    .bindTo(config.meterRegistry());
-        }
-
         if (config.retention().isWorkerEnabled()) {
             LOGGER.debug("Starting retention worker");
             retentionExecutor = Executors.newSingleThreadScheduledExecutor(
@@ -260,14 +255,9 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             LOGGER.debug("Retention worker is disabled");
         }
 
-        for (final WorkflowGroup group : workflowGroups) {
-            LOGGER.debug("Starting workflow group {}", group.name());
-            startWorkflowGroup(group);
-        }
-
-        for (final ActivityGroup group : activityGroups) {
-            LOGGER.debug("Starting activity group {}", group.name());
-            startActivityGroup(group);
+        for (final Map.Entry<String, TaskWorker> entry : taskWorkerByName.entrySet()) {
+            LOGGER.debug("Starting task worker {}", entry.getKey());
+            entry.getValue().start();
         }
 
         setStatus(Status.RUNNING);
@@ -285,18 +275,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             retentionExecutor = null;
         }
 
-        if (taskDispatcherExecutor != null) {
-            LOGGER.debug("Waiting for task dispatcher to stop");
-            taskDispatcherExecutor.close();
-            taskDispatcherExecutor = null;
-        }
-
-        if (executorServiceByName != null) {
-            LOGGER.debug("Waiting for task executors to stop");
-            executorServiceByName.values().forEach(ExecutorService::close);
-            executorServiceByName = null;
-        }
-
         if (externalEventBuffer != null) {
             LOGGER.debug("Waiting for external event buffer to stop");
             externalEventBuffer.close();
@@ -307,6 +285,20 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             LOGGER.debug("Waiting for task command buffer to stop");
             taskCommandBuffer.close();
             taskCommandBuffer = null;
+        }
+
+        if (activityTaskScheduler != null) {
+            LOGGER.debug("Waiting for activity task scheduler to stop");
+            activityTaskScheduler.close();
+            activityTaskScheduler = null;
+        }
+
+        if (taskWorkerByName != null) {
+            for (final Map.Entry<String, TaskWorker> entry : taskWorkerByName.entrySet()) {
+                LOGGER.debug("Waiting for task worker {} to stop", entry.getKey());
+                entry.getValue().close();
+            }
+            taskWorkerByName.clear();
         }
 
         if (eventListenerExecutor != null) {
@@ -326,10 +318,17 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
     @Override
     public WorkflowEngineHealthProbeResult probeHealth() {
-        // TODO: Check database, buffers, task dispatchers.
-        return new WorkflowEngineHealthProbeResult(
-                this.status == Status.RUNNING,
-                Map.of("internalStatus", this.status.name()));
+        boolean isUp = this.status == Status.RUNNING;
+
+        final var data = new HashMap<String, String>();
+        data.put("internalStatus", this.status.name());
+
+        for (final Map.Entry<String, TaskWorker> entry : taskWorkerByName.entrySet()) {
+            isUp &= entry.getValue().status() == TaskWorker.Status.RUNNING;
+            data.put("taskWorker:" + entry.getKey(), entry.getValue().status().name());
+        }
+
+        return new WorkflowEngineHealthProbeResult(isUp, data);
     }
 
     @Override
@@ -376,35 +375,38 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public void mountWorkflows(final WorkflowGroup group) {
+    public void registerActivityWorker(final ActivityTaskWorkerOptions options) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        requireNonNull(group, "group must not be null");
 
-        for (final String workflowName : group.workflowNames()) {
-            try {
-                metadataRegistry.getWorkflowMetadata(workflowName);
-            } catch (NoSuchElementException e) {
-                throw new IllegalStateException("Workflow %s is not registered".formatted(workflowName), e);
-            }
+        final var worker = new ActivityTaskWorker(
+                this,
+                config.activityTaskWorker().minPollInterval(),
+                config.activityTaskWorker().pollBackoffIntervalFunction(),
+                metadataRegistry,
+                options.queueName(),
+                options.maxConcurrency(),
+                config.meterRegistry());
+
+        if (taskWorkerByName.putIfAbsent(options.name(), worker) != null) {
+            throw new IllegalStateException("A task worker with name %s was already registered".formatted(options.name()));
         }
-
-        workflowGroups.add(group);
     }
 
     @Override
-    public void mountActivities(final ActivityGroup group) {
+    public void registerWorkflowWorker(final WorkflowTaskWorkerOptions options) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        requireNonNull(group, "group must not be null");
 
-        for (final String activityName : group.activityNames()) {
-            try {
-                metadataRegistry.getActivityMetadata(activityName);
-            } catch (NoSuchElementException e) {
-                throw new IllegalStateException("Activity %s is not registered".formatted(activityName), e);
-            }
+        final var worker = new WorkflowTaskWorker(
+                this,
+                metadataRegistry,
+                config.workflowTaskWorker().minPollInterval(),
+                config.workflowTaskWorker().pollBackoffIntervalFunction(),
+                options.maxConcurrency(),
+                config.meterRegistry());
+
+        if (taskWorkerByName.putIfAbsent(options.name(), worker) != null) {
+            throw new IllegalStateException("A task worker with name %s was already registered".formatted(options.name()));
         }
-
-        activityGroups.add(group);
     }
 
     @Override
@@ -673,6 +675,20 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
+    public void createActivityTaskQueue(final CreateActivityTaskQueueRequest request) {
+        jdbi.useTransaction(handle -> {
+            final Update update = handle.createUpdate("""
+                    insert into workflow_activity_task_queue (name, max_concurrency)
+                    values (:name, :maxConcurrency)
+                    """);
+
+            update
+                    .bindMethods(request)
+                    .execute();
+        });
+    }
+
+    @Override
     public Page<ActivityTaskQueue> listActivityTaskQueues(final ListActivityTaskQueuesRequest request) {
         return jdbi.withHandle(handle -> new WorkflowActivityDao(handle).listActivityTaskQueues(request));
     }
@@ -681,80 +697,14 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     public boolean pauseActivityTaskQueue(final String queueName) {
         return jdbi.inTransaction(
                 handle -> new WorkflowActivityDao(handle).setActivityTaskQueueStatus(
-                        queueName, ActivityTaskQueue.Status.PAUSED));
+                        queueName, TaskQueueStatus.PAUSED));
     }
 
     @Override
     public boolean resumeActivityTaskQueue(final String queueName) {
         return jdbi.inTransaction(
                 handle -> new WorkflowActivityDao(handle).setActivityTaskQueueStatus(
-                        queueName, ActivityTaskQueue.Status.ACTIVE));
-    }
-
-    private void startWorkflowGroup(final WorkflowGroup group) {
-        requireStatusAnyOf(Status.STARTING);
-        requireNonNull(group, "group must not be null");
-
-        final String executorName = "WorkflowEngine-WorkflowGroup-%s".formatted(group.name());
-        if (executorServiceByName.containsKey(executorName)) {
-            throw new IllegalStateException("Workflow group %s is already registered".formatted(group.name()));
-        }
-
-        final ExecutorService executorService =
-                Executors.newThreadPerTaskExecutor(
-                        Thread.ofVirtual()
-                                .uncaughtExceptionHandler(new LoggingUncaughtExceptionHandler())
-                                .name(executorName, 0)
-                                .factory());
-        if (config.meterRegistry() != null) {
-            new ExecutorServiceMetrics(executorService, executorName, null)
-                    .bindTo(config.meterRegistry());
-        }
-        executorServiceByName.put(executorName, executorService);
-
-        final var taskDispatcher = new TaskDispatcher<>(
-                this,
-                executorService,
-                new WorkflowTaskManager(this, group, metadataRegistry),
-                group.maxConcurrency(),
-                config.workflowTaskDispatcher().minPollInterval(),
-                config.workflowTaskDispatcher().pollBackoffIntervalFunction(),
-                config.meterRegistry());
-
-        taskDispatcherExecutor.execute(taskDispatcher);
-    }
-
-    private void startActivityGroup(final ActivityGroup group) {
-        requireStatusAnyOf(Status.STARTING);
-        requireNonNull(group, "group must not be null");
-
-        final String executorName = "WorkflowEngine-ActivityGroup-%s".formatted(group.name());
-        if (executorServiceByName.containsKey(executorName)) {
-            throw new IllegalStateException("Activity group %s is already mounted".formatted(group.name()));
-        }
-
-        final ExecutorService executorService =
-                Executors.newThreadPerTaskExecutor(
-                        Thread.ofVirtual()
-                                .uncaughtExceptionHandler(new LoggingUncaughtExceptionHandler())
-                                .name(executorName, 0)
-                                .factory());
-        if (config.meterRegistry() != null) {
-            new ExecutorServiceMetrics(executorService, executorName, null)
-                    .bindTo(config.meterRegistry());
-        }
-        executorServiceByName.put(executorName, executorService);
-
-        final var taskDispatcher = new TaskDispatcher<>(
-                this,
-                executorService,
-                new ActivityTaskManager(this, group, metadataRegistry),
-                group.maxConcurrency(),
-                config.activityTaskDispatcher().minPollInterval(),
-                config.activityTaskDispatcher().pollBackoffIntervalFunction(),
-                config.meterRegistry());
-
-        taskDispatcherExecutor.execute(taskDispatcher);
+                        queueName, TaskQueueStatus.ACTIVE));
     }
 
     private void flushExternalEvents(final List<ExternalEvent> externalEvents) {
@@ -835,8 +785,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                         }
                         history.addAll(polledEvents.history());
 
-                        runHistoryCache.put(polledRun.id(), new CachedWorkflowRunHistory(
-                                history, polledEvents.maxHistoryEventSequenceNumber()));
+                        runHistoryCache.put(
+                                polledRun.id(),
+                                new CachedWorkflowRunHistory(
+                                        history,
+                                        polledEvents.maxHistoryEventSequenceNumber()));
 
                         return new WorkflowTask(
                                 polledRun.id(),

@@ -26,6 +26,7 @@ import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEvent;
 import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEventListener;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
+import org.dependencytrack.workflow.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
@@ -88,31 +89,9 @@ public interface WorkflowEngine extends Closeable {
             Duration lockTimeout,
             boolean heartbeatEnabled);
 
-    /**
-     * Mount a {@link WorkflowGroup}.
-     * <p>
-     * All workflows in the provided group <strong>must</strong> have been registered with the engine before.
-     *
-     * @param group The {@link WorkflowGroup} to mount.
-     * @throws IllegalStateException When any of the workflows within the group have not been registered,
-     *                               or another group with the same name is already mounted.
-     * @throws IllegalStateException When the engine was already started.
-     * @see #registerWorkflow(WorkflowExecutor, PayloadConverter, PayloadConverter, Duration)
-     */
-    void mountWorkflows(WorkflowGroup group);
+    void registerActivityWorker(ActivityTaskWorkerOptions options);
 
-    /**
-     * Mount an {@link ActivityGroup}.
-     * <p>
-     * All activities in the provided group <strong>must</strong> have been registered with the engine before.
-     *
-     * @param group The {@link ActivityGroup} to mount.
-     * @throws IllegalStateException When any of the activities within the group have not been registered,
-     *                               or another group with the same name is already mounted.
-     * @throws IllegalStateException When the engine was already started.
-     * @see #registerActivity(ActivityExecutor, PayloadConverter, PayloadConverter, Duration, boolean)
-     */
-    void mountActivities(ActivityGroup group);
+    void registerWorkflowWorker(WorkflowTaskWorkerOptions options);
 
     /**
      * Add a listener for {@link WorkflowEngineEvent}s.
@@ -227,6 +206,8 @@ public interface WorkflowEngine extends Closeable {
      * @throws IllegalStateException When the engine is not running.
      */
     CompletableFuture<Void> sendExternalEvent(ExternalEvent externalEvent);
+
+    void createActivityTaskQueue(CreateActivityTaskQueueRequest request);
 
     /**
      * List all activity task queues known to the engine.

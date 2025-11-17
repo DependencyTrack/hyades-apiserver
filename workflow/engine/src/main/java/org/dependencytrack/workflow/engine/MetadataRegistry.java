@@ -26,6 +26,7 @@ import org.dependencytrack.workflow.api.payload.PayloadConverter;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -177,6 +178,11 @@ final class MetadataRegistry {
         activityMetadataByName.put(name, metadata);
     }
 
+    @SuppressWarnings("rawtypes")
+    List<WorkflowMetadata> getAllWorkflowMetadata() {
+        return List.copyOf(workflowMetadataByName.values());
+    }
+
     @SuppressWarnings("unchecked")
     <A, R> WorkflowMetadata<A, R> getWorkflowMetadata(final Class<? extends WorkflowExecutor<A, R>> executorClass) {
         requireNonNull(executorClass, "executorClass must not be null");
@@ -196,6 +202,11 @@ final class MetadataRegistry {
         }
 
         return metadata;
+    }
+
+    @SuppressWarnings("rawtypes")
+    List<ActivityMetadata> getAllActivityMetadata() {
+        return List.copyOf(activityMetadataByName.values());
     }
 
     @SuppressWarnings("unchecked")

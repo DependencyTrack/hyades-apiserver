@@ -19,91 +19,64 @@
 package org.dependencytrack.workflow.engine;
 
 import com.google.protobuf.util.Timestamps;
+import io.github.resilience4j.core.IntervalFunction;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.dependencytrack.workflow.engine.MetadataRegistry.WorkflowMetadata;
-import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.persistence.command.PollWorkflowTaskCommand;
 import org.dependencytrack.workflow.proto.event.v1.Event;
 import org.dependencytrack.workflow.proto.event.v1.ExecutionCompleted;
 import org.dependencytrack.workflow.proto.event.v1.ExecutionStarted;
 import org.dependencytrack.workflow.proto.event.v1.RunStarted;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeoutException;
 
-final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
+import static java.util.Objects.requireNonNull;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowTaskManager.class);
+final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
 
     private final WorkflowEngineImpl engine;
-    private final WorkflowGroup workflowGroup;
     private final MetadataRegistry metadataRegistry;
     private final List<PollWorkflowTaskCommand> pollCommands;
 
-    WorkflowTaskManager(
+    WorkflowTaskWorker(
             final WorkflowEngineImpl engine,
-            final WorkflowGroup workflowGroup,
-            final MetadataRegistry metadataRegistry) {
-        this.engine = engine;
-        this.workflowGroup = workflowGroup;
-        this.metadataRegistry = metadataRegistry;
-        this.pollCommands = workflowGroup.workflowNames().stream()
-                .map(metadataRegistry::getWorkflowMetadata)
+            final MetadataRegistry metadataRegistry,
+            final Duration minPollInterval,
+            final IntervalFunction pollBackoffIntervalFunction,
+            final int maxConcurrency,
+            final MeterRegistry meterRegistry) {
+        super(minPollInterval, pollBackoffIntervalFunction, maxConcurrency, meterRegistry);
+        this.engine = requireNonNull(engine, "engine must not be null");
+        this.metadataRegistry = requireNonNull(metadataRegistry, "metadataRegistry must not be null");
+        this.pollCommands = metadataRegistry.getAllWorkflowMetadata().stream()
                 .map(metadata -> new PollWorkflowTaskCommand(metadata.name(), metadata.lockTimeout()))
                 .toList();
     }
 
     @Override
-    public String name() {
-        return workflowGroup.name();
-    }
-
-    @Override
-    public List<WorkflowTask> poll(final int limit) {
+    List<WorkflowTask> poll(final int limit) {
         return engine.pollWorkflowTasks(pollCommands, limit);
     }
 
     @Override
-    public void process(final WorkflowTask task) {
-        try (var ignoredMdcWorkflowRunId = MDC.putCloseable("workflowRunId", task.workflowRunId().toString());
-             var ignoredMdcWorkflowName = MDC.putCloseable("workflowName", task.workflowName());
-             var ignoredMdcWorkflowVersion = MDC.putCloseable("workflowVersion", String.valueOf(task.workflowVersion()))) {
-            processInternal(task);
-        } catch (RuntimeException e) {
-            LOGGER.error("Failed to process task; Abandoning it", e);
-            abandon(task);
-        }
-    }
-
-    @Override
-    public void abandon(final WorkflowTask task) {
-        try {
-            // TODO: Retry on TimeoutException
-            engine.abandonWorkflowTask(task).join();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            LOGGER.warn("Interrupted while waiting for task abandonment to be acknowledged", e);
-        } catch (TimeoutException e) {
-            throw new RuntimeException("Timed out while waiting for task abandonment to be acknowledged", e);
-        }
-    }
-
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private void processInternal(final WorkflowTask task) {
-        if (!workflowGroup.workflowNames().contains(task.workflowName())) {
-            throw new IllegalStateException(
-                    "Received task for workflow %s which is not part of the configured workflow group %s".formatted(
-                            task.workflowName(), workflowGroup.name()));
+    void process(final WorkflowTask task) {
+        final WorkflowMetadata workflowMetadata;
+        try {
+            workflowMetadata = metadataRegistry.getWorkflowMetadata(task.workflowName());
+        } catch (NoSuchElementException e) {
+            logger.warn("Workflow {} does not exist", task.workflowName());
+            abandon(task);
+            return;
         }
-
-        final WorkflowMetadata workflowMetadata = metadataRegistry.getWorkflowMetadata(task.workflowName());
 
         // Hydrate workflow run state from the history.
         final var workflowRunState = new WorkflowRunState(task.workflowRunId(), task.history());
         if (workflowRunState.status() != null && workflowRunState.status().isTerminal()) {
-            LOGGER.warn("""
+            logger.warn("""
                     Task was scheduled despite the workflow run already being in terminal state {}. \
                     Discarding {} events in the run's inbox.""", workflowRunState.status(), task.inbox().size());
 
@@ -143,7 +116,7 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
         }
 
         if (eventsAdded == 0) {
-            LOGGER.warn("No new events");
+            logger.warn("No new events");
             return;
         }
 
@@ -175,9 +148,22 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
             engine.completeWorkflowTask(workflowRunState).join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            LOGGER.warn("Interrupted while waiting for task completion to be acknowledged", e);
+            logger.warn("Interrupted while waiting for task completion to be acknowledged", e);
         } catch (TimeoutException e) {
             throw new RuntimeException("Timed out while waiting for task completion to be acknowledged", e);
+        }
+    }
+
+    @Override
+    void abandon(final WorkflowTask task) {
+        try {
+            // TODO: Retry on TimeoutException
+            engine.abandonWorkflowTask(task).join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.warn("Interrupted while waiting for task abandonment to be acknowledged", e);
+        } catch (TimeoutException e) {
+            throw new RuntimeException("Timed out while waiting for task abandonment to be acknowledged", e);
         }
     }
 

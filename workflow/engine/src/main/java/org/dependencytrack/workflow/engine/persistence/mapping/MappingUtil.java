@@ -21,7 +21,6 @@ package org.dependencytrack.workflow.engine.persistence.mapping;
 import org.jdbi.v3.core.statement.StatementContext;
 import org.jdbi.v3.json.JsonConfig;
 import org.jdbi.v3.json.JsonMapper;
-import org.jspecify.annotations.Nullable;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -33,15 +32,6 @@ import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
 final class MappingUtil {
 
     private MappingUtil() {
-    }
-
-    static @Nullable Integer mapNullableInteger(final ResultSet rs, final String columnName) throws SQLException {
-        final int priority = rs.getInt(columnName);
-        if (rs.wasNull()) {
-            return null;
-        }
-
-        return priority;
     }
 
     @SuppressWarnings("unchecked")
