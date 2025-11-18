@@ -25,7 +25,7 @@ create table workflow_run (
 , completed_at timestamptz(3)
 , constraint workflow_run_pk primary key (id)
 , constraint workflow_run_parent_fk foreign key (parent_id) references workflow_run (id) on delete cascade
-) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
+) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 80);
 
 create table workflow_run_concurrency_group (
   id text
@@ -59,7 +59,7 @@ create table workflow_run_inbox (
 , dequeue_count smallint
 , event bytea not null
 , constraint workflow_run_inbox_pk primary key (id)
-) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
+) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 80);
 
 create table workflow_activity_task_queue (
   name text
@@ -73,10 +73,10 @@ create table workflow_activity_task_queue (
 );
 
 create table workflow_activity_task (
-  workflow_run_id uuid
+  queue_name text not null
+, workflow_run_id uuid
 , created_event_id int
 , activity_name text not null
-, queue_name text not null
 , priority smallint not null default 0
 , status text not null default 'CREATED'
 , argument bytea
@@ -85,7 +85,7 @@ create table workflow_activity_task (
 , locked_until timestamptz(3)
 , created_at timestamptz(3) not null default now()
 , updated_at timestamptz(3)
-, constraint workflow_activity_task_pk primary key (workflow_run_id, created_event_id, queue_name)
+, constraint workflow_activity_task_pk primary key (queue_name, workflow_run_id, created_event_id)
 , constraint workflow_activity_task_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
 , constraint workflow_activity_task_queue_fk foreign key (queue_name) references workflow_activity_task_queue (name)
 , constraint workflow_activity_task_status_check check (status in ('CREATED', 'QUEUED'))
@@ -115,7 +115,7 @@ create index workflow_run_inbox_workflow_run_id_idx
     on workflow_run_inbox (workflow_run_id);
 
 create index workflow_activity_task_poll_idx
-    on workflow_activity_task (priority desc, created_at, activity_name)
+    on workflow_activity_task (priority desc, created_at)
  where status = 'QUEUED';
 
 create function create_workflow_activity_task_queue(queue_name text, max_queue_concurrency smallint)
@@ -134,7 +134,7 @@ begin
 
   execute format($q$
     create table %I partition of workflow_activity_task for values in (%L)
-      with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
+      with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 85);
   $q$, partition_name, queue_name);
 
   insert into workflow_activity_task_queue (name, partition_name, max_concurrency)

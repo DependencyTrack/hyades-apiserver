@@ -194,7 +194,7 @@ public final class WorkflowActivityDao extends AbstractDao {
                      and (wat.locked_until is null or wat.locked_until <= now())
                    order by wat.priority desc
                           , wat.created_at
-                     for no key update skip locked
+                     for no key update of wat skip locked
                    limit :limit
                 )
                 update workflow_activity_task as wat
