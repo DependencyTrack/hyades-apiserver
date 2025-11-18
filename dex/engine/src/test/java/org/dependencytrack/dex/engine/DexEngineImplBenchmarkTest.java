@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.dex.engine;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.FunctionCounter;
@@ -44,7 +46,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -123,10 +124,13 @@ public class DexEngineImplBenchmarkTest {
 
     @BeforeEach
     void beforeEach() {
-        final var dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(postgresContainer.getJdbcUrl());
-        dataSource.setUser(postgresContainer.getUsername());
-        dataSource.setPassword(postgresContainer.getPassword());
+        final var hikariConfig = new HikariConfig();
+        hikariConfig.setJdbcUrl(postgresContainer.getJdbcUrl());
+        hikariConfig.setUsername(postgresContainer.getUsername());
+        hikariConfig.setPassword(postgresContainer.getPassword());
+        hikariConfig.setMaximumPoolSize(5);
+        hikariConfig.setMinimumIdle(5);
+        final var dataSource = new HikariDataSource(hikariConfig);
 
         final var meterRegistry = new SimpleMeterRegistry();
 

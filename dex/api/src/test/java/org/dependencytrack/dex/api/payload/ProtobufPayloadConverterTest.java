@@ -87,7 +87,7 @@ class ProtobufPayloadConverterTest {
                 .isThrownBy(() -> converter.convertFromPayload(payload))
                 .withMessage("""
                         Expected Protobuf payload to be of type org.dependencytrack.dex.proto.event.v1.Event, \
-                        but was type.googleapis.com/org.dependencytrack.workflow.failure.v1.Failure""");
+                        but was type.googleapis.com/org.dependencytrack.dex.failure.v1.Failure""");
     }
 
 }
