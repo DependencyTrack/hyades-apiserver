@@ -90,8 +90,10 @@ public class PluginManager {
     private final Map<Class<? extends ExtensionPoint>, ExtensionFactory<?>> defaultFactoryByExtensionPointClass;
     private final Comparator<ExtensionFactory<?>> factoryComparator;
     private final ReentrantLock lock;
-    private final Map<ClassLoader, Path> externalPluginLoaders = new ConcurrentHashMap<>();
 
+    // Map of each plugin class to its ClassLoader
+    private final Map<Class<?>, ClassLoader> pluginClassToClassLoader = new ConcurrentHashMap<>();
+    private final Map<ClassLoader, Path> externalPluginLoaders = new ConcurrentHashMap<>();
     private boolean externalPluginsEnabled = false;
     private Path externalPluginDir;
 
@@ -280,22 +282,35 @@ public class PluginManager {
     private void loadExternalPluginJar(final Path jarPath) {
         try (var ignoredMdcPlugin = MDC.putCloseable(MDC_PLUGIN, jarPath.getFileName().toString())) {
 
-            URL jarUrl = jarPath.toUri().toURL();
-            PluginIsolatedClassLoader loader = new PluginIsolatedClassLoader(new URL[]{ jarUrl });
+            final URL jarUrl = jarPath.toUri().toURL();
+
+            // Host classloader to load the Plugin API
+            final ClassLoader hostClassLoader = Plugin.class.getClassLoader();
+
+            // Shared package prefixes
+            final List<String> sharedPackages = List.of(
+                    "org.dependencytrack.plugin.api.",
+                    "org.dependencytrack.plugin."
+            );
+
+            final PluginIsolatedClassLoader loader = new PluginIsolatedClassLoader(
+                    new URL[]{ jarUrl }, hostClassLoader, sharedPackages);
 
             externalPluginLoaders.put(loader, jarPath);
-
             final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+
             try {
                 Thread.currentThread().setContextClassLoader(loader);
 
                 final ServiceLoader<Plugin> pluginServiceLoader = ServiceLoader.load(Plugin.class, loader);
                 for (final Plugin plugin : pluginServiceLoader) {
                     try (var ignored = MDC.putCloseable(MDC_PLUGIN, plugin.getClass().getName())) {
-
                         LOGGER.debug("Loading external plugin %s".formatted(plugin.getClass().getName()));
                         loadExtensionsForPlugin(plugin);
                         loadedPluginByClass.put(plugin.getClass(), plugin);
+
+                        // Map the plugin class to its loader for unloading
+                        pluginClassToClassLoader.put(plugin.getClass(), loader);
                         LOGGER.info("External plugin loaded successfully: %s".formatted(plugin.getClass().getName()));
                     }
                 }
@@ -500,6 +515,7 @@ public class PluginManager {
             factoriesByPlugin.clear();
             pluginByExtensionIdentity.clear();
             loadedPluginByClass.clear();
+            pluginClassToClassLoader.clear();
         } finally {
             lock.unlock();
         }

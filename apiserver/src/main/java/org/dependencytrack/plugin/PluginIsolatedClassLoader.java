@@ -18,70 +18,95 @@
  */
 package org.dependencytrack.plugin;
 
-import alpine.common.logging.Logger;
-
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Objects;
 
-public class PluginIsolatedClassLoader extends URLClassLoader {
+/**
+ * Child-first classloader with configurable shared package prefixes.
+ */
+public final class PluginIsolatedClassLoader extends URLClassLoader {
 
-    private static final Logger LOGGER = Logger.getLogger(PluginIsolatedClassLoader.class);
+    private final ClassLoader hostClassLoader;
+    private final List<String> sharedPackagePrefixes;
 
-    public PluginIsolatedClassLoader(URL[] urls, ClassLoader parent) {
-        super(urls, Objects.requireNonNull(parent));
-    }
-
-    public PluginIsolatedClassLoader(URL[] urls) {
+    /**
+     * @param urls URLs pointing to plugin JAR(s).
+     * @param hostClassLoader classloader to supply shared API classes.
+     * @param sharedPackagePrefixes list of package prefixes that must be loaded from host.
+     */
+    public PluginIsolatedClassLoader(final URL[] urls, final ClassLoader hostClassLoader, final List<String> sharedPackagePrefixes) {
         super(urls, null);
+        this.hostClassLoader = Objects.requireNonNull(hostClassLoader, "hostClassLoader");
+        this.sharedPackagePrefixes = List.copyOf(Objects.requireNonNull(sharedPackagePrefixes, "sharedPackagePrefixes"));
+    }
+
+    private boolean isShared(final String className) {
+        for (final String prefix : sharedPackagePrefixes) {
+            if (className.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
-    protected synchronized Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-        Class<?> loadedClass = findLoadedClass(name);
-        if (loadedClass != null) {
-            if (resolve) {
-                resolveClass(loadedClass);
-            }
-            return loadedClass;
+    protected synchronized Class<?> loadClass(final String name, final boolean resolve) throws ClassNotFoundException {
+        // delegate to host
+        if (isShared(name)) {
+            return hostClassLoader.loadClass(name);
         }
 
-        // Load the class from the classloader (plugin JARs)
+        Class<?> loaded = findLoadedClass(name);
+        if (loaded != null) {
+            if (resolve) {
+                resolveClass(loaded);
+            }
+            return loaded;
+        }
+
+        // Try to load from plugin JAR
         try {
-            loadedClass = findClass(name);
+            Class<?> clazz = findClass(name);
             if (resolve) {
-                resolveClass(loadedClass);
+                resolveClass(clazz);
             }
-            return loadedClass;
+            return clazz;
         } catch (ClassNotFoundException ignored) {
-            LOGGER.debug("Plugin not found: %s".formatted(name));
         }
-        return super.loadClass(name, resolve);
+
+        // Fallback to host classloader
+        return hostClassLoader.loadClass(name);
     }
 
     @Override
-    public URL getResource(String name) {
-        // Look for plugin local resource first
-        URL url = findResource(name);
+    public URL getResource(final String name) {
+        final String dotted = name.replace('/', '.');
+        for (final String prefix : sharedPackagePrefixes) {
+            if (dotted.startsWith(prefix)) {
+                return hostClassLoader.getResource(name);
+            }
+        }
+
+        final URL url = findResource(name);
         if (url != null) {
             return url;
         }
-        return super.getResource(name);
+        return hostClassLoader.getResource(name);
     }
 
     @Override
-    public Enumeration<URL> getResources(String name) throws IOException {
-
-        // First priority to plugin resources over parent resources
-        Enumeration<URL> pluginResources = findResources(name);
-        Enumeration<URL> parentResources = getParent().getResources(name);
+    public Enumeration<URL> getResources(final String name) throws IOException {
+        final Enumeration<URL> pluginResources = findResources(name);
+        final Enumeration<URL> hostResources = hostClassLoader.getResources(name);
 
         return new Enumeration<>() {
             @Override
             public boolean hasMoreElements() {
-                return pluginResources.hasMoreElements() || parentResources.hasMoreElements();
+                return pluginResources.hasMoreElements() || hostResources.hasMoreElements();
             }
 
             @Override
@@ -89,7 +114,7 @@ public class PluginIsolatedClassLoader extends URLClassLoader {
                 if (pluginResources.hasMoreElements()) {
                     return pluginResources.nextElement();
                 }
-                return parentResources.nextElement();
+                return hostResources.nextElement();
             }
         };
     }
