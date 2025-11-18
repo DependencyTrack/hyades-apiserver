@@ -57,7 +57,7 @@ final class WorkflowRetentionWorker implements Runnable {
                        limit 100 -- TODO: Make configurable.
                          for no key update
                     )
-                    delete from workflow_run
+                    delete from dex_workflow_run
                      where id in (select id from cte_candidates)
                     """);
 
