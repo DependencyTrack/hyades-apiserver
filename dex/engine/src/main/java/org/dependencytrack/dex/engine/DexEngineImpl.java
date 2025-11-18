@@ -22,7 +22,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
@@ -177,32 +176,24 @@ final class DexEngineImpl implements DexEngine {
 
         LOGGER.debug("Initializing history cache");
         final var runHistoryCacheBuilder = Caffeine.newBuilder()
-                .maximumSize(config.runHistoryCache().maxSize());
+                .maximumSize(config.runHistoryCache().maxSize())
+                .recordStats();
         if (config.runHistoryCache().evictAfterAccess() != null) {
             runHistoryCacheBuilder.expireAfterAccess(config.runHistoryCache().evictAfterAccess());
         }
-        if (config.meterRegistry() != null) {
-            runHistoryCacheBuilder.recordStats();
-        }
         runHistoryCache = runHistoryCacheBuilder.build();
-        if (config.meterRegistry() != null) {
-            new CaffeineCacheMetrics<>(runHistoryCache, "DexEngine-RunHistoryCache", null)
-                    .bindTo(config.meterRegistry());
-        }
+        new CaffeineCacheMetrics<>(runHistoryCache, "DexEngine-RunHistoryCache", null)
+                .bindTo(config.meterRegistry());
 
         LOGGER.debug("Registering default event listeners");
         runsCompletedEventListeners.add(this::invalidateCompletedRunsHistoryCache);
-        if (config.meterRegistry() != null) {
-            runsCompletedEventListeners.add(this::recordCompletedRunsMetrics);
-        }
+        runsCompletedEventListeners.add(this::recordCompletedRunsMetrics);
 
         LOGGER.debug("Starting event listener executor");
         eventListenerExecutor = Executors.newSingleThreadExecutor(
                 new DefaultThreadFactory("DexEngine-EventListener"));
-        if (config.meterRegistry() != null) {
-            new ExecutorServiceMetrics(eventListenerExecutor, "DexEngine-EventListener", null)
-                    .bindTo(config.meterRegistry());
-        }
+        new ExecutorServiceMetrics(eventListenerExecutor, "DexEngine-EventListener", null)
+                .bindTo(config.meterRegistry());
 
         if (config.activityTaskScheduler().isEnabled()) {
             LOGGER.debug("Starting activity task scheduler");
@@ -241,10 +232,8 @@ final class DexEngineImpl implements DexEngine {
             LOGGER.debug("Starting retention worker");
             retentionExecutor = Executors.newSingleThreadScheduledExecutor(
                     new DefaultThreadFactory("DexEngine-RetentionWorker"));
-            if (config.meterRegistry() != null) {
-                new ExecutorServiceMetrics(retentionExecutor, "DexEngine-RetentionWorker", null)
-                        .bindTo(config.meterRegistry());
-            }
+            new ExecutorServiceMetrics(retentionExecutor, "DexEngine-RetentionWorker", null)
+                    .bindTo(config.meterRegistry());
             retentionExecutor.scheduleAtFixedRate(
                     new WorkflowRetentionWorker(jdbi, config.retention().days()),
                     config.retention().workerInitialDelay().toMillis(),
@@ -1291,18 +1280,13 @@ final class DexEngineImpl implements DexEngine {
     }
 
     private void recordCompletedRunsMetrics(final DexRunsCompletedEvent event) {
-        final MeterRegistry meterRegistry = config.meterRegistry();
-        if (meterRegistry == null) {
-            return;
-        }
-
         for (final WorkflowRunMetadata completedRun : event.completedRuns()) {
             final var tags = List.of(
                     Tag.of("workflowName", completedRun.workflowName()),
                     Tag.of("workflowVersion", String.valueOf(completedRun.workflowVersion())),
                     Tag.of("status", completedRun.status().toString()));
 
-            meterRegistry.counter("dt.dex.engine.runs.completed", tags).increment();
+            config.meterRegistry().counter("dt.dex.engine.runs.completed", tags).increment();
         }
     }
 

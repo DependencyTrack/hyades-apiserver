@@ -70,7 +70,7 @@ public final class Buffer<T> implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Buffer.class);
 
-    private record BufferedItem<I>(I item, CompletableFuture<Void> future) {
+    private record BufferedItem<I>(I item, CompletableFuture<@Nullable Void> future) {
     }
 
     private final String name;
@@ -83,8 +83,8 @@ public final class Buffer<T> implements Closeable {
     private final Duration flushInterval;
     private final ReentrantLock flushLock;
     private final ReentrantLock statusLock;
+    private final MeterRegistry meterRegistry;
     private Status status = Status.CREATED;
-    private final @Nullable MeterRegistry meterRegistry;
     private @Nullable DistributionSummary batchSizeDistribution;
     private @Nullable Timer flushLatencyTimer;
 
@@ -93,7 +93,7 @@ public final class Buffer<T> implements Closeable {
             final Consumer<List<T>> batchConsumer,
             final Duration flushInterval,
             final int maxBatchSize,
-            final @Nullable MeterRegistry meterRegistry) {
+            final MeterRegistry meterRegistry) {
         this(name, batchConsumer, flushInterval, maxBatchSize, Duration.ofSeconds(5), meterRegistry);
     }
 
@@ -103,7 +103,7 @@ public final class Buffer<T> implements Closeable {
             final Duration flushInterval,
             final int maxBatchSize,
             final Duration itemsQueueTimeout,
-            final @Nullable MeterRegistry meterRegistry) {
+            final MeterRegistry meterRegistry) {
         this.name = name;
         this.batchConsumer = batchConsumer;
         this.maxBatchSize = maxBatchSize;
@@ -119,7 +119,17 @@ public final class Buffer<T> implements Closeable {
     }
 
     public void start() {
-        maybeInitializeMeters();
+        final List<Tag> commonMeterTags = List.of(Tag.of("buffer", name));
+        batchSizeDistribution = DistributionSummary
+                .builder("dt.dex.engine.buffer.flush.batch.size")
+                .tags(commonMeterTags)
+                .register(meterRegistry);
+        flushLatencyTimer = Timer
+                .builder("dt.dex.engine.buffer.flush.latency")
+                .tags(commonMeterTags)
+                .register(meterRegistry);
+        new ExecutorServiceMetrics(flushExecutor, "dt.dex.engine.buffer.%s".formatted(name), null)
+                .bindTo(meterRegistry);
 
         flushExecutor.scheduleAtFixedRate(
                 this::maybeFlush,
@@ -206,27 +216,6 @@ public final class Buffer<T> implements Closeable {
         } finally {
             flushLock.unlock();
         }
-    }
-
-    private void maybeInitializeMeters() {
-        if (meterRegistry == null) {
-            return;
-        }
-
-        final List<Tag> commonTags = List.of(Tag.of("buffer", name));
-
-        batchSizeDistribution = DistributionSummary
-                .builder("dt.dex.engine.buffer.flush.batch.size")
-                .tags(commonTags)
-                .register(meterRegistry);
-
-        flushLatencyTimer = Timer
-                .builder("dt.dex.engine.buffer.flush.latency")
-                .tags(commonTags)
-                .register(meterRegistry);
-
-        new ExecutorServiceMetrics(flushExecutor, "dt.dex.engine.buffer.%s".formatted(name), null)
-                .bindTo(meterRegistry);
     }
 
     private void setStatus(final Status newStatus) {

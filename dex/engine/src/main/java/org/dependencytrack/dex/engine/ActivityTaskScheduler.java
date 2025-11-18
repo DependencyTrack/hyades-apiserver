@@ -26,9 +26,8 @@ import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.dependencytrack.dex.engine.support.DefaultThreadFactory;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.core.mapper.RowMapper;
-import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
+import org.jdbi.v3.core.statement.StatementContext;
 import org.jdbi.v3.core.statement.Update;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -36,11 +35,15 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import java.io.Closeable;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import static org.dependencytrack.dex.engine.support.LockSupport.tryAcquireAdvisoryLock;
 
 final class ActivityTaskScheduler implements Closeable {
 
@@ -93,7 +96,7 @@ final class ActivityTaskScheduler implements Closeable {
 
     private void scheduleActivities() {
         jdbi.useTransaction(handle -> {
-            if (!tryAcquireAdvisoryLock(handle)) {
+            if (!tryAcquireAdvisoryLock(handle, ADVISORY_LOCK_ID)) {
                 logger.debug("Lock is held by another instance");
                 return;
             }
@@ -117,9 +120,16 @@ final class ActivityTaskScheduler implements Closeable {
         });
     }
 
-    public record Queue(String name, int maxConcurrency) {
+    private record Queue(String name, int maxConcurrency) {
 
-        private static final RowMapper<Queue> ROW_MAPPER = ConstructorMapper.of(Queue.class);
+        private static class RowMapper implements org.jdbi.v3.core.mapper.RowMapper<Queue> {
+
+            @Override
+            public Queue map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+                return new Queue(rs.getString("name"), rs.getInt("max_concurrency"));
+            }
+
+        }
 
     }
 
@@ -147,7 +157,7 @@ final class ActivityTaskScheduler implements Closeable {
                 """);
 
         return query
-                .map(Queue.ROW_MAPPER)
+                .map(new Queue.RowMapper())
                 .list();
     }
 
@@ -176,6 +186,7 @@ final class ActivityTaskScheduler implements Closeable {
                 )
                 update dex_activity_task as wat
                    set status = 'QUEUED'
+                     , updated_at = now()
                   from cte_eligible_task
                  where wat.queue_name = :queueName
                    and wat.workflow_run_id = cte_eligible_task.workflow_run_id
@@ -194,17 +205,6 @@ final class ActivityTaskScheduler implements Closeable {
                     .withTag("activityName", activityName)
                     .increment();
         }
-    }
-
-    private boolean tryAcquireAdvisoryLock(final Handle handle) {
-        final Query query = handle.createQuery("""
-                select pg_try_advisory_xact_lock(:lockId)
-                """);
-
-        return query
-                .bind("lockId", ADVISORY_LOCK_ID)
-                .mapTo(boolean.class)
-                .one();
     }
 
 }

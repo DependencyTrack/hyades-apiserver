@@ -19,7 +19,6 @@
 package org.dependencytrack.dex.testing;
 
 import com.google.protobuf.DebugFormat;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.DexEngineFactory;
@@ -71,7 +70,6 @@ public final class WorkflowTestRule implements TestRule {
                 new MigrationExecutor(dataSource).execute();
 
                 final var engineConfig = new DexEngineConfig(UUID.randomUUID(), dataSource);
-                engineConfig.setMeterRegistry(new SimpleMeterRegistry());
                 if (configCustomizer != null) {
                     configCustomizer.accept(engineConfig);
                 }

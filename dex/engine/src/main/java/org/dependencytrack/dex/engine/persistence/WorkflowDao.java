@@ -549,19 +549,4 @@ public final class WorkflowDao extends AbstractDao {
                 .execute();
     }
 
-    public boolean tryAcquireAdvisoryLock(final String lockName) {
-        if (!jdbiHandle.isInTransaction()) {
-            throw new IllegalStateException("Must be in transaction to acquire advisory lock");
-        }
-
-        final Query query = jdbiHandle.createQuery("""
-                select pg_try_advisory_xact_lock(:lockId)
-                """);
-
-        return query
-                .bind("lockId", lockName.hashCode())
-                .mapTo(Boolean.class)
-                .one();
-    }
-
 }

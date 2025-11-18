@@ -20,7 +20,7 @@ package org.dependencytrack.dex.engine.api;
 
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.jspecify.annotations.Nullable;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import javax.sql.DataSource;
 import java.time.Duration;
@@ -217,7 +217,7 @@ public class DexEngineConfig {
     private final TaskSchedulerConfig activityTaskSchedulerConfig = new TaskSchedulerConfig();
     private final TaskWorkerConfig activityTaskWorkerConfig = new TaskWorkerConfig();
 
-    private @Nullable MeterRegistry meterRegistry;
+    private MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     public DexEngineConfig(final UUID instanceId, final DataSource dataSource) {
         this.instanceId = requireNonNull(instanceId, "instanceId must not be null");
@@ -278,12 +278,12 @@ public class DexEngineConfig {
     /**
      * @return {@link MeterRegistry} to bind metrics to.
      */
-    public @Nullable MeterRegistry meterRegistry() {
+    public MeterRegistry meterRegistry() {
         return meterRegistry;
     }
 
     public void setMeterRegistry(final MeterRegistry meterRegistry) {
-        this.meterRegistry = meterRegistry;
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry must not be null");
     }
 
 }

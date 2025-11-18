@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.dex.engine.support;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -36,7 +37,7 @@ class BufferTest {
     void shouldFlushAtInterval() throws Exception {
         final var flushedItems = new ArrayList<String>();
 
-        try (final var buffer = new Buffer<String>("test", flushedItems::addAll, Duration.ofMillis(100), 10, null)) {
+        try (final var buffer = new Buffer<String>("test", flushedItems::addAll, Duration.ofMillis(100), 10, new SimpleMeterRegistry())) {
             buffer.start();
 
             final CompletableFuture<Void> future = buffer.add("foo");
@@ -51,7 +52,7 @@ class BufferTest {
         final Consumer<List<String>> batchConsumer = ignored -> {
         };
 
-        try (final var buffer = new Buffer<>("test", batchConsumer, Duration.ZERO, 10, null)) {
+        try (final var buffer = new Buffer<>("test", batchConsumer, Duration.ZERO, 10, new SimpleMeterRegistry())) {
             assertThatExceptionOfType(IllegalStateException.class)
                     .isThrownBy(() -> buffer.add("foo"))
                     .withMessage("Cannot accept new items in current status: CREATED");
@@ -63,7 +64,7 @@ class BufferTest {
         final Consumer<List<String>> batchConsumer = ignored -> {
         };
 
-        try (final var buffer = new Buffer<>("test", batchConsumer, Duration.ofSeconds(5), 1, Duration.ofMillis(10), null)) {
+        try (final var buffer = new Buffer<>("test", batchConsumer, Duration.ofSeconds(5), 1, Duration.ofMillis(10), new SimpleMeterRegistry())) {
             buffer.start();
 
             buffer.add("foo");

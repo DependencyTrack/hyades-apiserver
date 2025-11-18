@@ -18,11 +18,12 @@
  */
 package org.dependencytrack.dex.engine;
 
-import org.dependencytrack.dex.engine.persistence.WorkflowDao;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.statement.Update;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.dependencytrack.dex.engine.support.LockSupport.tryAcquireAdvisoryLock;
 
 final class WorkflowRetentionWorker implements Runnable {
 
@@ -40,9 +41,7 @@ final class WorkflowRetentionWorker implements Runnable {
     @Override
     public void run() {
         jdbi.useTransaction(handle -> {
-            final var dao = new WorkflowDao(handle);
-
-            final boolean lockAcquired = dao.tryAcquireAdvisoryLock(LOCK_NAME);
+            final boolean lockAcquired = tryAcquireAdvisoryLock(handle, LOCK_NAME.hashCode());
             if (!lockAcquired) {
                 LOGGER.debug("Lock {} already held by another instance", LOCK_NAME);
                 return;

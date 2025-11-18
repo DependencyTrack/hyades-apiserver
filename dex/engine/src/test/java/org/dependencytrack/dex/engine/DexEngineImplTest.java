@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.dex.engine;
 
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.dependencytrack.dex.api.Awaitable;
 import org.dependencytrack.dex.api.ContinueAsNewOptions;
 import org.dependencytrack.dex.api.failure.ActivityFailureException;
@@ -88,12 +87,8 @@ class DexEngineImplTest {
 
         final var config = new DexEngineConfig(UUID.randomUUID(), dataSource);
 
-        // Ensure code paths to register metrics etc. are executed.
-        config.setMeterRegistry(new SimpleMeterRegistry());
-
         engine = new DexEngineImpl(config);
-        engine.createActivityTaskQueue(
-                new CreateActivityTaskQueueRequest("default", 10));
+        engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("default", 10));
     }
 
     @AfterEach
