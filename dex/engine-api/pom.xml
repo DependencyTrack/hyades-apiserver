@@ -30,16 +30,13 @@
     <artifactId>dex-engine-api</artifactId>
     <packaging>jar</packaging>
 
+    <name>Durable Execution Engine API</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>dex-proto</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>dex-api</artifactId>

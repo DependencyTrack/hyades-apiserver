@@ -30,20 +30,15 @@
     <artifactId>dex-engine</artifactId>
     <packaging>jar</packaging>
 
+    <name>Durable Execution Engine</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
 
-        <lib.caffeine.version>3.2.0</lib.caffeine.version>
-        <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>dex-proto</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>dex-api</artifactId>
@@ -76,7 +71,6 @@
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
-            <version>${lib.caffeine.version}</version>
         </dependency>
 
         <dependency>
