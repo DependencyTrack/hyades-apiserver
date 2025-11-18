@@ -29,7 +29,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -37,11 +36,11 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
-import org.dependencytrack.workflow.engine.api.WorkflowEngine;
-import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 
 import java.util.UUID;
 
@@ -62,7 +61,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 public class EventResource extends AlpineResource {
 
     @Inject
-    private WorkflowEngine workflowEngine;
+    private DexEngine dexEngine;
 
     @GET
     @Path("/token/{uuid}")
@@ -98,9 +97,9 @@ public class EventResource extends AlpineResource {
         if (Event.isEventBeingProcessed(token)) {
             isProcessing = true;
         } else {
-            if (workflowEngine != null) {
+            if (dexEngine != null) {
                 final WorkflowRunMetadata runMetadata =
-                        workflowEngine.getRunMetadata(token);
+                        dexEngine.getRunMetadata(token);
                 if (runMetadata != null) {
                     isProcessing = !runMetadata.status().isTerminal();
                 }

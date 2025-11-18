@@ -22,14 +22,14 @@ import com.google.protobuf.util.Timestamps;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.workflow.engine.api.WorkflowEngine;
-import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
-import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
-import org.dependencytrack.workflow.engine.api.pagination.Page;
-import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
-import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.workflow.proto.event.v1.Event;
-import org.dependencytrack.workflow.proto.event.v1.RunCreated;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.pagination.Page;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.RunCreated;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.junit.After;
 import org.junit.ClassRule;
@@ -42,7 +42,7 @@ import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.workflow.api.payload.PayloadConverters.stringConverter;
+import static org.dependencytrack.dex.api.payload.PayloadConverters.stringConverter;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -51,7 +51,7 @@ import static org.mockito.Mockito.reset;
 
 public class WorkflowsResourceTest extends ResourceTest {
 
-    private static final WorkflowEngine WORKFLOW_ENGINE_MOCK = mock(WorkflowEngine.class);
+    private static final DexEngine WORKFLOW_ENGINE_MOCK = mock(DexEngine.class);
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
@@ -59,7 +59,7 @@ public class WorkflowsResourceTest extends ResourceTest {
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
-                            bind(WORKFLOW_ENGINE_MOCK).to(WorkflowEngine.class);
+                            bind(WORKFLOW_ENGINE_MOCK).to(DexEngine.class);
                         }
                     }));
 

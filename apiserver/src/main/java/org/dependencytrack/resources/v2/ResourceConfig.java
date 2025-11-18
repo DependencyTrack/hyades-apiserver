@@ -25,10 +25,10 @@ import alpine.server.filters.GZipInterceptor;
 import alpine.server.filters.HeaderFilter;
 import alpine.server.filters.RequestIdFilter;
 import alpine.server.filters.RequestMdcEnrichmentFilter;
+import org.dependencytrack.dex.DexEngineBinder;
 import org.dependencytrack.filters.JerseyMetricsFeature;
 import org.dependencytrack.plugin.PluginManagerBinder;
 import org.dependencytrack.secret.SecretManagerBinder;
-import org.dependencytrack.workflow.WorkflowEngineBinder;
 import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 
@@ -60,7 +60,7 @@ public final class ResourceConfig extends org.glassfish.jersey.server.ResourceCo
 
         register(PluginManagerBinder.class);
         register(SecretManagerBinder.class);
-        register(WorkflowEngineBinder.class);
+        register(DexEngineBinder.class);
     }
 
 }

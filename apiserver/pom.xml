@@ -100,12 +100,12 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>workflow-engine</artifactId>
+            <artifactId>dex-engine</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>workflow-testing</artifactId>
+            <artifactId>dex-testing</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>

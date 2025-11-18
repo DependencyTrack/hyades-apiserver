@@ -162,31 +162,31 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>workflow-api</artifactId>
+            <artifactId>dex-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>workflow-engine-api</artifactId>
+            <artifactId>dex-engine-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>workflow-engine</artifactId>
+            <artifactId>dex-engine</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>workflow-engine-migration</artifactId>
+            <artifactId>dex-engine-migration</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>workflow-testing</artifactId>
+            <artifactId>dex-testing</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>

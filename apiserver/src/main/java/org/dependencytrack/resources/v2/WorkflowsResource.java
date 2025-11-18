@@ -33,12 +33,12 @@ import org.dependencytrack.api.v2.model.ListWorkflowRunsResponseItem;
 import org.dependencytrack.api.v2.model.PaginationLinks;
 import org.dependencytrack.api.v2.model.PaginationMetadata;
 import org.dependencytrack.api.v2.model.WorkflowRunStatus;
-import org.dependencytrack.workflow.engine.api.WorkflowEngine;
-import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
-import org.dependencytrack.workflow.engine.api.pagination.Page;
-import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
-import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.workflow.proto.event.v1.Event;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.pagination.Page;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.dex.proto.event.v1.Event;
 import org.jspecify.annotations.NonNull;
 
 import java.util.UUID;
@@ -50,7 +50,7 @@ public class WorkflowsResource implements WorkflowsApi {
     private UriInfo uriInfo;
 
     @Inject
-    private WorkflowEngine workflowEngine;
+    private DexEngine dexEngine;
 
     @Override
     @AuthenticationNotRequired // TODO
@@ -60,21 +60,21 @@ public class WorkflowsResource implements WorkflowsApi {
             final WorkflowRunStatus status,
             final Integer limit,
             final String pageToken) {
-        if (workflowEngine == null) {
+        if (dexEngine == null) {
             throw new ServerErrorException(Response.Status.SERVICE_UNAVAILABLE);
         }
 
-        final Page<@NonNull WorkflowRunMetadata> runsPage = workflowEngine.listRuns(
+        final Page<@NonNull WorkflowRunMetadata> runsPage = dexEngine.listRuns(
                 new ListWorkflowRunsRequest()
                         .withWorkflowName(workflowName)
                         .withWorkflowVersion(workflowVersion)
                         .withStatus(switch (status) {
-                            case CANCELLED -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.CANCELED;
-                            case COMPLETED -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.COMPLETED;
-                            case FAILED -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.FAILED;
-                            case CREATED -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.CREATED;
-                            case RUNNING -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.RUNNING;
-                            case SUSPENDED -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.SUSPENDED;
+                            case CANCELLED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CANCELED;
+                            case COMPLETED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.COMPLETED;
+                            case FAILED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.FAILED;
+                            case CREATED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CREATED;
+                            case RUNNING -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.RUNNING;
+                            case SUSPENDED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.SUSPENDED;
                             case null -> null;
                         })
                         .withLimit(limit)
@@ -127,16 +127,16 @@ public class WorkflowsResource implements WorkflowsApi {
 
     @Override
     public Response listWorkflowRunEvents(final UUID runId, final Integer limit, final String pageToken) {
-        if (workflowEngine == null) {
+        if (dexEngine == null) {
             throw new ServerErrorException(Response.Status.SERVICE_UNAVAILABLE);
         }
 
-        final WorkflowRunMetadata runMetadata = workflowEngine.getRunMetadata(runId);
+        final WorkflowRunMetadata runMetadata = dexEngine.getRunMetadata(runId);
         if (runMetadata == null) {
             throw new NotFoundException();
         }
 
-        final Page<@NonNull Event> eventsPage = workflowEngine.listRunEvents(
+        final Page<@NonNull Event> eventsPage = dexEngine.listRunEvents(
                 new ListWorkflowRunEventsRequest(runId)
                         .withLimit(limit)
                         .withPageToken(pageToken));

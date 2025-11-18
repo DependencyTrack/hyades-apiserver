@@ -25,10 +25,10 @@ import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.workflow.engine.api.WorkflowEngine;
-import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
-import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
@@ -56,7 +56,7 @@ import static org.mockito.Mockito.reset;
 
 public class WorkflowResourceTest extends ResourceTest {
 
-    private static final WorkflowEngine WORKFLOW_ENGINE_MOCK = mock(WorkflowEngine.class);
+    private static final DexEngine WORKFLOW_ENGINE_MOCK = mock(DexEngine.class);
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
@@ -67,7 +67,7 @@ public class WorkflowResourceTest extends ResourceTest {
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
-                            bind(WORKFLOW_ENGINE_MOCK).to(WorkflowEngine.class);
+                            bind(WORKFLOW_ENGINE_MOCK).to(DexEngine.class);
                         }
                     }));
 

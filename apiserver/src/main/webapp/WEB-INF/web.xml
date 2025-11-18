@@ -54,7 +54,7 @@
         <listener-class>org.dependencytrack.event.kafka.processor.ProcessorInitializer</listener-class>
     </listener>
     <listener>
-        <listener-class>org.dependencytrack.workflow.WorkflowEngineInitializer</listener-class>
+        <listener-class>org.dependencytrack.dex.DexEngineInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.event.PurlMigrator</listener-class>
@@ -126,7 +126,7 @@
         <init-param>
             <param-name>jersey.config.server.provider.classnames</param-name>
             <param-value>
-                org.dependencytrack.workflow.WorkflowEngineBinder,
+                org.dependencytrack.dex.DexEngineBinder,
                 org.glassfish.jersey.media.multipart.MultiPartFeature
             </param-value>
         </init-param>

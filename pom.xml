@@ -34,7 +34,7 @@
         <module>support/smallrye-config-source-memory</module>
         <module>api</module>
         <module>alpine</module>
-        <module>workflow</module>
+        <module>dex</module>
         <module>proto</module>
         <module>plugin/api</module>
         <module>plugin/file-storage-local</module>
