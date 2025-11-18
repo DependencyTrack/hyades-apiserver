@@ -1,13 +1,3 @@
-create type workflow_activity_task_status as enum (
-  'CREATED'
-, 'QUEUED'
-);
-
-create type workflow_queue_status as enum (
-  'ACTIVE'
-, 'PAUSED'
-);
-
 create type workflow_run_status as enum (
   'CREATED'
 , 'RUNNING'
@@ -73,11 +63,13 @@ create table workflow_run_inbox (
 
 create table workflow_activity_task_queue (
   name text
-, status workflow_queue_status not null default 'ACTIVE'
+, partition_name text not null
+, status text not null default 'ACTIVE'
 , max_concurrency smallint not null default 100
 , created_at timestamptz(3) not null default now()
 , updated_at timestamptz(3)
 , constraint workflow_activity_task_queue_pk primary key (name)
+, constraint workflow_activity_task_queue_status_check CHECK (status in ('ACTIVE', 'PAUSED'))
 );
 
 create table workflow_activity_task (
@@ -86,29 +78,18 @@ create table workflow_activity_task (
 , activity_name text not null
 , queue_name text not null
 , priority smallint not null
-, status workflow_activity_task_status not null default 'CREATED'
+, status text not null default 'CREATED'
 , argument bytea
 , visible_from timestamptz(3)
 , locked_by text
 , locked_until timestamptz(3)
 , created_at timestamptz(3) not null default now()
 , updated_at timestamptz(3)
-, constraint workflow_activity_task_pk primary key (workflow_run_id, created_event_id)
+, constraint workflow_activity_task_pk primary key (workflow_run_id, created_event_id, queue_name)
 , constraint workflow_activity_task_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
 , constraint workflow_activity_task_queue_fk foreign key (queue_name) references workflow_activity_task_queue (name)
-) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
-
--- Events informing the activity task scheduler that a queue was updated.
--- Limited to one event per queue to avoid excessive writes.
--- The scheduler only needs to know *that* a queue was updated,
--- but not *what exactly* happened in full detail.
-create table workflow_activity_scheduling_event (
-  queue_name text not null
-, event_type text not null
-, created_at timestamptz(3) not null default now()
-, constraint workflow_activity_scheduling_event_pk primary key (queue_name)
-, constraint workflow_activity_scheduling_event_queue_fk foreign key (queue_name) references workflow_activity_task_queue (name) on delete cascade
-);
+, constraint workflow_activity_task_status_check check (status in ('CREATED', 'QUEUED'))
+) partition by list (queue_name);
 
 create index workflow_run_poll_idx
     on workflow_run (priority desc, id, workflow_name)
@@ -134,8 +115,34 @@ create index workflow_run_inbox_workflow_run_id_idx
     on workflow_run_inbox (workflow_run_id);
 
 create index workflow_activity_task_poll_idx
-    on workflow_activity_task (priority desc, created_at, activity_name, queue_name)
- where status = cast('QUEUED' as workflow_activity_task_status);
+    on workflow_activity_task (priority desc, created_at, activity_name)
+ where status = 'QUEUED';
+
+create function create_workflow_activity_task_queue(queue_name text, max_queue_concurrency smallint)
+returns bool as $$
+declare
+  normalized_queue_name text;
+  partition_name text;
+begin
+  -- Ensure the name is OK to use for identifiers.
+  select lower(regexp_replace(queue_name, '[^A-Za-z0-9_]', '_', 'g'))
+    into normalized_queue_name;
+
+  -- Ensure the partition name doesn't exceed the 63 characters limit.
+  select format('workflow_activity_task_q_%s', left(normalized_queue_name, 38))
+    into partition_name;
+
+  execute format($q$
+    create table %I partition of workflow_activity_task for values in (%L)
+      with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
+  $q$, partition_name, queue_name);
+
+  insert into workflow_activity_task_queue (name, partition_name, max_concurrency)
+  values (queue_name, partition_name, max_queue_concurrency);
+
+  return true;
+end;
+$$ language plpgsql;
 
 create function create_workflow_run_concurrency_groups_on_run_creation()
 returns trigger
@@ -226,62 +233,3 @@ after update on workflow_run
 referencing old table as old_table new table as new_table
 for each statement
 execute function update_workflow_run_concurrency_groups_on_run_completion();
-
-create or replace function generate_activity_scheduling_events_insert()
-returns trigger as $$
-begin
-  insert into workflow_activity_scheduling_event (queue_name, event_type)
-  select distinct queue_name
-                , 'TASK_CREATED'
-    from new_table
-  on conflict (queue_name) do nothing;
-
-  return null;
-end;
-$$ language plpgsql;
-
-create or replace function generate_activity_scheduling_events_delete()
-returns trigger as $$
-begin
-  insert into workflow_activity_scheduling_event (queue_name, event_type)
-  select distinct queue_name
-                , 'TASK_COMPLETED'
-    from old_table
-  on conflict (queue_name) do nothing;
-
-  return null;
-end;
-$$ language plpgsql;
-
-create trigger trigger_generate_activity_scheduling_events_insert
-  after insert on workflow_activity_task
-  referencing new table as new_table
-  for each statement
-  execute function generate_activity_scheduling_events_insert();
-
-create trigger trigger_generate_activity_scheduling_events_delete
-  after delete on workflow_activity_task
-  referencing old table as old_table
-  for each statement
-  execute function generate_activity_scheduling_events_delete();
-
-create or replace function generate_activity_queue_events()
-returns trigger as $$
-begin
-  insert into workflow_activity_scheduling_event (queue_name, event_type)
-  select new_table.name, 'QUEUE_RESUMED'
-    from new_table
-    join old_table on old_table.name = new_table.name
-   where old_table.status = cast('PAUSED' as workflow_queue_status)
-     and new_table.status = cast('ACTIVE' as workflow_queue_status)
-  on conflict (queue_name) do nothing;
-
-  return null;
-end;
-$$ language plpgsql;
-
-create trigger trigger_generate_activity_queue_events
-  after update on workflow_activity_task_queue
-  referencing new table as new_table old table as old_table
-  for each statement
-  execute function generate_activity_queue_events();

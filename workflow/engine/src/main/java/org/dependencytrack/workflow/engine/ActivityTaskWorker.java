@@ -74,6 +74,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
 
         final var ctx = new ActivityContextImpl<>(
                 engine,
+                task.queueName(),
                 task.workflowRunId(),
                 task.createdEventId(),
                 activityMetadata.executor(),

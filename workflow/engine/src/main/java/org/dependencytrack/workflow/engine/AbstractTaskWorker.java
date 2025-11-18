@@ -168,26 +168,34 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
         int pollsWithoutResults = 0;
 
         while (!status.isStoppingOrStopped() && !Thread.currentThread().isInterrupted()) {
-            if (pollsWithoutResults == 0) {
+            // Start backing off after 2 poll attempts that did not yield any results.
+            // It doesn't make sense to keep polling at high frequency if the system sits idle.
+            if (pollsWithoutResults < 3) {
                 nowMillis = System.currentTimeMillis();
                 nextPollAtMillis = lastPolledAtMillis + minPollIntervalMillis;
                 nextPollDueInMillis = nextPollAtMillis > nowMillis
                         ? nextPollAtMillis - nowMillis
                         : 0;
             } else {
-                nextPollDueInMillis = pollBackoffIntervalFunction.apply(pollsWithoutResults);
+                nextPollDueInMillis = Math.max(
+                        pollBackoffIntervalFunction.apply(pollsWithoutResults - 2),
+                        minPollIntervalMillis);
             }
 
-            try {
-                Thread.sleep(nextPollDueInMillis);
-            } catch (InterruptedException e) {
-                logger.info("Interrupted while waiting for next poll to be due", e);
-                Thread.currentThread().interrupt();
-                break;
+            if (nextPollDueInMillis > 0) {
+                logger.debug("Waiting for next poll to be due in {}ms", nextPollDueInMillis);
+                try {
+                    Thread.sleep(nextPollDueInMillis);
+                } catch (InterruptedException e) {
+                    logger.info("Interrupted while waiting for next poll to be due", e);
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
 
+            logger.debug("Waiting for at least one executor to be available");
             try {
-                final boolean acquired = semaphore.tryAcquire(5, TimeUnit.SECONDS);
+                final boolean acquired = semaphore.tryAcquire(100, TimeUnit.MILLISECONDS);
                 if (!acquired) {
                     logger.debug("All task executors busy, nothing to poll");
                     continue;
@@ -201,7 +209,11 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
             }
 
             final int tasksToPoll = semaphore.availablePermits();
-            assert tasksToPoll > 0;
+            if (tasksToPoll == 0) {
+                // VERY unlikely to happen.
+                logger.warn("Semaphore permits exhausted between check and poll");
+                continue;
+            }
 
             logger.debug("Polling for up to {} tasks", tasksToPoll);
             pollsCounter.increment();

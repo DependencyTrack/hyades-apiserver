@@ -87,7 +87,6 @@ import org.dependencytrack.workflow.proto.event.v1.RunResumed;
 import org.dependencytrack.workflow.proto.event.v1.RunSuspended;
 import org.dependencytrack.workflow.proto.payload.v1.Payload;
 import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.core.statement.Update;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -677,14 +676,13 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     @Override
     public void createActivityTaskQueue(final CreateActivityTaskQueueRequest request) {
         jdbi.useTransaction(handle -> {
-            final Update update = handle.createUpdate("""
-                    insert into workflow_activity_task_queue (name, max_concurrency)
-                    values (:name, :maxConcurrency)
-                    """);
-
-            update
+            handle
+                    .createQuery("""
+                            select create_workflow_activity_task_queue(:name, cast(:maxConcurrency as smallint))
+                            """)
                     .bindMethods(request)
-                    .execute();
+                    .mapTo(boolean.class)
+                    .one();
         });
     }
 
@@ -1082,6 +1080,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 this.config.instanceId(),
                 commands.stream()
                         .map(command -> new ActivityTaskId(
+                                command.task().queueName(),
                                 command.task().workflowRunId(),
                                 command.task().createdEventId()))
                         .toList());
@@ -1107,7 +1106,10 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(commands.size());
 
         for (final CompleteActivityTaskCommand command : commands) {
-            tasksToDelete.add(new ActivityTaskId(command.task().workflowRunId(), command.task().createdEventId()));
+            tasksToDelete.add(new ActivityTaskId(
+                    command.task().queueName(),
+                    command.task().workflowRunId(),
+                    command.task().createdEventId()));
 
             final var taskCompletedBuilder = ActivityTaskCompleted.newBuilder()
                     .setActivityTaskCreatedEventId(command.task().createdEventId());
@@ -1144,7 +1146,10 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(commands.size());
 
         for (final FailActivityTaskCommand command : commands) {
-            tasksToDelete.add(new ActivityTaskId(command.task().workflowRunId(), command.task().createdEventId()));
+            tasksToDelete.add(new ActivityTaskId(
+                    command.task().queueName(),
+                    command.task().workflowRunId(),
+                    command.task().createdEventId()));
 
             inboxEventsToCreate.add(
                     new CreateWorkflowRunInboxEntryCommand(

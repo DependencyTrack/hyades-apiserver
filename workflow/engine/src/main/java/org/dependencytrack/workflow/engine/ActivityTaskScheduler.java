@@ -23,7 +23,6 @@ import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
-import org.dependencytrack.workflow.engine.api.TaskQueueStatus;
 import org.dependencytrack.workflow.engine.support.DefaultThreadFactory;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
@@ -45,7 +44,7 @@ import java.util.concurrent.TimeUnit;
 
 final class ActivityTaskScheduler implements Closeable {
 
-    private static final int ADVISORY_LOCK_ID = ActivityTaskScheduler.class.getName().hashCode();
+    private static final long ADVISORY_LOCK_ID = 2299953353083674283L;
     private static final String EXECUTOR_NAME = ActivityTaskScheduler.class.getSimpleName();
 
     private final Jdbi jdbi;
@@ -99,7 +98,7 @@ final class ActivityTaskScheduler implements Closeable {
                 return;
             }
 
-            final List<Queue> queues = getQueuesWithUpdates(handle);
+            final List<Queue> queues = getActiveQueuesWithCapacity(handle);
             if (queues.isEmpty()) {
                 logger.debug("No updated queues");
                 return;
@@ -118,34 +117,33 @@ final class ActivityTaskScheduler implements Closeable {
         });
     }
 
-    public record Queue(
-            String name,
-            TaskQueueStatus status,
-            int maxConcurrency,
-            int depth) {
+    public record Queue(String name, int maxConcurrency) {
 
         private static final RowMapper<Queue> ROW_MAPPER = ConstructorMapper.of(Queue.class);
 
     }
 
-    private List<Queue> getQueuesWithUpdates(final Handle handle) {
+    private List<Queue> getActiveQueuesWithCapacity(final Handle handle) {
         final Query query = handle.createQuery("""
-                with cte_polled_event as (
-                  delete
-                    from workflow_activity_scheduling_event as event
-                  returning event.queue_name
+                with cte_candidate as (
+                  select name
+                       , max_concurrency
+                    from workflow_activity_task_queue
+                   where status = 'ACTIVE'
                 )
-                select name
-                     , status
-                     , max_concurrency
-                     , (
+                select queue.name
+                     , queue.max_concurrency
+                  from workflow_activity_task_queue as queue
+                 inner join cte_candidate
+                    on cte_candidate.name = queue.name
+                 where status = 'ACTIVE'
+                   and queue.max_concurrency - (
                          select count(*)
                            from workflow_activity_task
                           where queue_name = queue.name
-                            and status = cast('QUEUED' as workflow_activity_task_status)
-                       ) as depth
-                  from workflow_activity_task_queue as queue
-                 where name in (select queue_name from cte_polled_event)
+                            and status = 'QUEUED'
+                          limit cte_candidate.max_concurrency
+                       ) > 0
                 """);
 
         return query
@@ -154,45 +152,40 @@ final class ActivityTaskScheduler implements Closeable {
     }
 
     private void processQueue(final Handle handle, final Queue queue) {
-        if (!TaskQueueStatus.ACTIVE.equals(queue.status())) {
-            logger.debug("Queue has non-active status: {}", queue.status());
-            return;
-        }
-
-        final int remainingCapacity = queue.maxConcurrency() - queue.depth();
-        logger.debug("Remaining capacity: {}", remainingCapacity);
-        assert queue.depth <= queue.maxConcurrency();
-
-        if (remainingCapacity <= 0) {
-            logger.debug("Queue is already at capacity");
-            return;
-        }
-
         final Update update = handle.createUpdate("""
-                with cte_eligible_task as (
+                with
+                cte_queue_depth as (
+                  select count(*) as depth
+                    from workflow_activity_task
+                   where queue_name = :queueName
+                     and status = 'QUEUED'
+                   limit :maxConcurrency
+                ),
+                cte_eligible_task as (
                   select workflow_run_id
                        , created_event_id
                     from workflow_activity_task
                    where queue_name = :queueName
                      -- Only consider tasks that are not already queued.
-                     and status != cast('QUEUED' as workflow_activity_task_status)
+                     and status != 'QUEUED'
                      -- Only consider tasks that are visible.
                      and (visible_from is null or visible_from <= now())
                    order by priority desc
                           , created_at
-                   limit :limit
+                   limit greatest(0, :maxConcurrency - (select depth from cte_queue_depth))
                 )
                 update workflow_activity_task as wat
-                   set status = cast('QUEUED' as workflow_activity_task_status)
+                   set status = 'QUEUED'
                   from cte_eligible_task
-                 where wat.workflow_run_id = cte_eligible_task.workflow_run_id
+                 where wat.queue_name = :queueName
+                   and wat.workflow_run_id = cte_eligible_task.workflow_run_id
                    and wat.created_event_id = cte_eligible_task.created_event_id
                 returning activity_name
                 """);
 
         final List<String> scheduledActivityNames = update
                 .bind("queueName", queue.name())
-                .bind("limit", remainingCapacity)
+                .bind("maxConcurrency", queue.maxConcurrency())
                 .executeAndReturnGeneratedKeys()
                 .mapTo(String.class)
                 .list();

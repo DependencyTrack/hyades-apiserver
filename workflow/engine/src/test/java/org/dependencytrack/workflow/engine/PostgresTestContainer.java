@@ -87,6 +87,21 @@ public final class PostgresTestContainer extends PostgreSQLContainer<PostgresTes
                         END LOOP;
                     END $$;
                     """);
+
+            statement.execute("""
+                    DO $$
+                    DECLARE
+                      partition_name TEXT;
+                    BEGIN
+                      FOR partition_name IN
+                        SELECT tablename
+                          FROM pg_tables
+                         WHERE tablename ~ '^workflow_activity_task_q_.+$'
+                      LOOP
+                        EXECUTE format('DROP TABLE "%s"', partition_name);
+                      END LOOP;
+                    END $$;
+                    """);
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to truncate tables", e);
         }
