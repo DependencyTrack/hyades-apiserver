@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.plugin;
 
+import alpine.Config;
+import org.dependencytrack.PersistenceCapableTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,20 +29,30 @@ import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class PluginManagerExternalPluginTest {
+public class PluginManagerExternalPluginTest extends PersistenceCapableTest {
 
     private PluginManager pluginManager;
 
     private static final String TEST_PLUGIN_SOURCE = """
         package org.dependencytrack.plugin;
+        
+        import org.dependencytrack.plugin.api.ExtensionFactory;
+        import org.dependencytrack.plugin.api.ExtensionPoint;
+        import org.dependencytrack.plugin.api.Plugin;
+        import java.util.Collection;
+        import java.util.List;
+        
         public class MyExternalPlugin implements Plugin {
             @Override
-            public String name() { return "External Test Plugin"; }
+            public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
+                return java.util.Collections.emptyList();
+            }
         }
         """;
 
     @BeforeEach
     void setUp() {
+        Config.enableUnitTests();
         pluginManager = PluginManager.getInstance();
         pluginManager.unloadPlugins();
     }
@@ -52,7 +64,6 @@ public class PluginManagerExternalPluginTest {
 
     @Test
     void shouldNotLoadExternalPluginsWhenDisabled() throws Exception {
-
         Path tempDir = Files.createTempDirectory("plugins");
         TestPluginJarBuilder.buildTestPluginJar(tempDir, "MyExternalPlugin", TEST_PLUGIN_SOURCE);
 
