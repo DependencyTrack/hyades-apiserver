@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
@@ -36,7 +37,6 @@ import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
@@ -157,7 +157,7 @@ public class WorkflowResourceTest extends ResourceTest {
                 1,
                 WorkflowRunStatus.RUNNING,
                 null,
-                null,
+                0,
                 null,
                 null,
                 Instant.ofEpochMilli(666666),

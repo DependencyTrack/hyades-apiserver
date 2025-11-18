@@ -32,6 +32,7 @@ import org.dependencytrack.workflow.engine.api.request.ListActivityTaskQueuesReq
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.proto.event.v1.Event;
+import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.jspecify.annotations.Nullable;
 
 import java.io.Closeable;
@@ -46,7 +47,7 @@ public interface WorkflowEngine extends Closeable {
 
     void start();
 
-    WorkflowEngineHealthProbeResult probeHealth();
+    HealthCheckResponse probeHealth();
 
     /**
      * Register a workflow.

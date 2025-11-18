@@ -20,6 +20,7 @@ package org.dependencytrack.workflow;
 
 import alpine.test.config.ConfigPropertyRule;
 import alpine.test.config.WithConfigProperty;
+import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -82,7 +83,7 @@ public class WorkflowEngineInitializerTest {
 
         assertThat(WorkflowEngineHolder.get()).isNotNull();
         assertThat(initializer.getEngine()).isNotNull();
-        assertThat(initializer.getEngine().probeHealth().isUp()).isTrue();
+        assertThat(initializer.getEngine().probeHealth().getStatus()).isEqualTo(HealthCheckResponse.Status.UP);
     }
 
 }

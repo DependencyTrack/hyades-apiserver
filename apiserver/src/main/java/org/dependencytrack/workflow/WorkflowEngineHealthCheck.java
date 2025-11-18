@@ -19,19 +19,17 @@
 package org.dependencytrack.workflow;
 
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
-import org.dependencytrack.workflow.engine.api.WorkflowEngineHealthProbeResult;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.HealthCheckResponseBuilder;
-import org.eclipse.microprofile.health.Readiness;
+import org.eclipse.microprofile.health.Liveness;
 
-import java.util.Map;
 import java.util.function.Supplier;
 
 /**
  * @since 5.7.0
  */
-@Readiness
+@Liveness
 public final class WorkflowEngineHealthCheck implements HealthCheck {
 
     private final Supplier<WorkflowEngine> engineSupplier;
@@ -54,15 +52,7 @@ public final class WorkflowEngineHealthCheck implements HealthCheck {
             return responseBuilder.down().build();
         }
 
-        final WorkflowEngineHealthProbeResult probeResult = engine.probeHealth();
-
-        for (final Map.Entry<String, String> dataEntry : probeResult.data().entrySet()) {
-            responseBuilder.withData(dataEntry.getKey(), dataEntry.getValue());
-        }
-
-        return responseBuilder
-                .status(probeResult.isUp())
-                .build();
+        return engine.probeHealth();
     }
 
 }

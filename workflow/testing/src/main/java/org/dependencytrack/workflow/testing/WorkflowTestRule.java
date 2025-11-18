@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow.testing;
 
 import com.google.protobuf.DebugFormat;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineFactory;
@@ -33,6 +34,8 @@ import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.ServiceLoader;
 import java.util.UUID;
@@ -68,6 +71,7 @@ public final class WorkflowTestRule implements TestRule {
                 new MigrationExecutor(dataSource).execute();
 
                 final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
+                engineConfig.setMeterRegistry(new SimpleMeterRegistry());
                 if (configCustomizer != null) {
                     configCustomizer.accept(engineConfig);
                 }
@@ -77,6 +81,7 @@ public final class WorkflowTestRule implements TestRule {
                     statement.evaluate();
                 } finally {
                     engine.close();
+                    truncateTables(dataSource);
                 }
             }
         };
@@ -131,6 +136,44 @@ public final class WorkflowTestRule implements TestRule {
 
     public @Nullable WorkflowRun awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
         return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(5));
+    }
+
+    private static void truncateTables(final DataSource dataSource) {
+        try (final Connection connection = dataSource.getConnection();
+             final java.sql.Statement statement = connection.createStatement()) {
+            statement.execute("""
+                    DO $$ DECLARE
+                        r RECORD;
+                    BEGIN
+                        FOR r IN (
+                          SELECT tablename
+                            FROM pg_tables
+                           WHERE schemaname = CURRENT_SCHEMA()
+                             AND tablename LIKE 'workflow_%'
+                             AND tablename NOT LIKE 'workflow_engine_flyway_%'
+                        ) LOOP
+                            EXECUTE 'TRUNCATE TABLE ' || QUOTE_IDENT(r.tablename) || ' CASCADE';
+                        END LOOP;
+                    END $$;
+                    """);
+
+            statement.execute("""
+                    DO $$
+                    DECLARE
+                      partition_name TEXT;
+                    BEGIN
+                      FOR partition_name IN
+                        SELECT tablename
+                          FROM pg_tables
+                         WHERE tablename ~ '^workflow_activity_task_q_.+$'
+                      LOOP
+                        EXECUTE format('DROP TABLE "%s"', partition_name);
+                      END LOOP;
+                    END $$;
+                    """);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to truncate tables", e);
+        }
     }
 
     private static DataSource createDataSource(final PostgreSQLContainer<?> postgresContainer) {

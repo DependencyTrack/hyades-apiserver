@@ -18,13 +18,9 @@
  */
 package org.dependencytrack.workflow;
 
-import org.assertj.core.api.InstanceOfAssertFactories;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
-import org.dependencytrack.workflow.engine.api.WorkflowEngineHealthProbeResult;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.junit.Test;
-
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doReturn;
@@ -43,35 +39,19 @@ public class WorkflowEngineHealthCheckTest {
     }
 
     @Test
-    public void shouldReportUpWhenEngineIsUp() {
+    public void shouldForwardEngineResponse() {
+        final var response = HealthCheckResponse
+                .named("workflow-engine")
+                .status(true)
+                .withData("foo", "bar")
+                .build();
+
         final var engineMock = mock(WorkflowEngine.class);
-        doReturn(new WorkflowEngineHealthProbeResult(true, Map.of("foo", "bar")))
-                .when(engineMock).probeHealth();
+        doReturn(response).when(engineMock).probeHealth();
 
         final var healthCheck = new WorkflowEngineHealthCheck(() -> engineMock);
 
-        final HealthCheckResponse response = healthCheck.call();
-        assertThat(response).isNotNull();
-        assertThat(response.getStatus()).isEqualTo(HealthCheckResponse.Status.UP);
-        assertThat(response.getData())
-                .get(InstanceOfAssertFactories.MAP)
-                .containsOnly(Map.entry("foo", "bar"));
-    }
-
-    @Test
-    public void shouldReportDownWhenEngineIsDown() {
-        final var engineMock = mock(WorkflowEngine.class);
-        doReturn(new WorkflowEngineHealthProbeResult(false, Map.of("foo", "bar")))
-                .when(engineMock).probeHealth();
-
-        final var healthCheck = new WorkflowEngineHealthCheck(() -> engineMock);
-
-        final HealthCheckResponse response = healthCheck.call();
-        assertThat(response).isNotNull();
-        assertThat(response.getStatus()).isEqualTo(HealthCheckResponse.Status.DOWN);
-        assertThat(response.getData())
-                .get(InstanceOfAssertFactories.MAP)
-                .containsOnly(Map.entry("foo", "bar"));
+        assertThat(healthCheck.call()).isEqualTo(response);
     }
 
 }

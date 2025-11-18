@@ -41,7 +41,6 @@ import org.dependencytrack.workflow.engine.api.ExternalEvent;
 import org.dependencytrack.workflow.engine.api.TaskQueueStatus;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
-import org.dependencytrack.workflow.engine.api.WorkflowEngineHealthProbeResult;
 import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
@@ -86,6 +85,7 @@ import org.dependencytrack.workflow.proto.event.v1.RunCreated;
 import org.dependencytrack.workflow.proto.event.v1.RunResumed;
 import org.dependencytrack.workflow.proto.event.v1.RunSuspended;
 import org.dependencytrack.workflow.proto.payload.v1.Payload;
+import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.jdbi.v3.core.Jdbi;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -316,18 +316,18 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public WorkflowEngineHealthProbeResult probeHealth() {
+    public HealthCheckResponse probeHealth() {
+        final var responseBuilder = HealthCheckResponse.named("workflow-engine");
         boolean isUp = this.status == Status.RUNNING;
 
-        final var data = new HashMap<String, String>();
-        data.put("internalStatus", this.status.name());
+        responseBuilder.withData("internalStatus", this.status.name());
 
         for (final Map.Entry<String, TaskWorker> entry : taskWorkerByName.entrySet()) {
             isUp &= entry.getValue().status() == TaskWorker.Status.RUNNING;
-            data.put("taskWorker:" + entry.getKey(), entry.getValue().status().name());
+            responseBuilder.withData("taskWorker:" + entry.getKey(), entry.getValue().status().name());
         }
 
-        return new WorkflowEngineHealthProbeResult(isUp, data);
+        return responseBuilder.status(isUp).build();
     }
 
     @Override

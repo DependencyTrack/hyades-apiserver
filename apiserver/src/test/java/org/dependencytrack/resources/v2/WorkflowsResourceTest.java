@@ -131,7 +131,7 @@ public class WorkflowsResourceTest extends ResourceTest {
                 666,
                 WorkflowRunStatus.CREATED,
                 null,
-                null,
+                0,
                 null,
                 null,
                 Instant.ofEpochMilli(666666),
