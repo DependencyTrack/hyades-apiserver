@@ -15,7 +15,7 @@ create table workflow_run (
 , status workflow_run_status not null default 'CREATED'
 , custom_status text
 , concurrency_group_id text
-, priority smallint not null
+, priority smallint not null default 0
 , labels jsonb
 , locked_by text
 , locked_until timestamptz(3)
@@ -77,7 +77,7 @@ create table workflow_activity_task (
 , created_event_id int
 , activity_name text not null
 , queue_name text not null
-, priority smallint not null
+, priority smallint not null default 0
 , status text not null default 'CREATED'
 , argument bytea
 , visible_from timestamptz(3)
