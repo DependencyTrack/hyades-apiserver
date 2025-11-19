@@ -1032,7 +1032,7 @@ public class FindingResourceTest extends ResourceTest {
                             "cwes": [
                                 {
                                     "cweId": "80",
-                                    "name": "Improper Neutralization of Script-Related HTML Tags in a Web pagination.api.org.dependencytrack.dex.engine.Page (Basic XSS)"
+                                    "name": "Improper Neutralization of Script-Related HTML Tags in a Web Page (Basic XSS)"
                                 }
                             ],
                             "cvssV3BaseScore": "",
