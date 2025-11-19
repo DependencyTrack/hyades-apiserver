@@ -18,40 +18,46 @@
  */
 package org.dependencytrack.dex;
 
-import alpine.test.config.ConfigPropertyRule;
-import alpine.test.config.WithConfigProperty;
+import io.smallrye.config.SmallRyeConfigBuilder;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.dependencytrack.dex.engine.migration.MigrationExecutor;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
+import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
+
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class DexEngineInitializerTest {
 
-    @Rule
-    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
-
     private PostgreSQLContainer<?> postgresContainer;
+    private DataSourceRegistry dataSourceRegistry;
     private DexEngineInitializer initializer;
 
     @Before
     public void setUp() {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"));
+        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:14-alpine"));
         postgresContainer.start();
 
-        configPropertyRule.setProperty("testcontainers.postgresql.jdbc-url", postgresContainer.getJdbcUrl());
-        configPropertyRule.setProperty("testcontainers.postgresql.username", postgresContainer.getUsername());
-        configPropertyRule.setProperty("testcontainers.postgresql.password", postgresContainer.getPassword());
+        final var dataSource = new PGSimpleDataSource();
+        dataSource.setUrl(postgresContainer.getJdbcUrl());
+        dataSource.setUser(postgresContainer.getUsername());
+        dataSource.setPassword(postgresContainer.getPassword());
+        new MigrationExecutor(dataSource).execute();
     }
 
     @After
     public void afterEach() {
         if (initializer != null) {
             initializer.contextDestroyed(null);
+        }
+        if (dataSourceRegistry != null) {
+            dataSourceRegistry.closeAll();
         }
         if (postgresContainer != null) {
             postgresContainer.stop();
@@ -61,29 +67,38 @@ public class DexEngineInitializerTest {
     }
 
     @Test
-    @WithConfigProperty("dt.dex-engine.enabled=false")
     public void shouldDoNothingWhenEngineIsDisabled() {
-        initializer = new DexEngineInitializer();
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValue("dt.dex-engine.enabled", "false")
+                .build();
+
+        dataSourceRegistry = new DataSourceRegistry(config);
+
+        initializer = new DexEngineInitializer(config, dataSourceRegistry);
         initializer.contextInitialized(null);
 
         assertThat(DexEngineHolder.get()).isNull();
-        assertThat(initializer.getEngine()).isNull();
     }
 
     @Test
-    @WithConfigProperty(value = {
-            "dt.dex-engine.enabled=true",
-            "dt.dex-engine.database.url=${testcontainers.postgresql.jdbc-url}",
-            "dt.dex-engine.database.username=${testcontainers.postgresql.username}",
-            "dt.dex-engine.database.password=${testcontainers.postgresql.password}"
-    })
     public void shouldStartEngine() {
-        initializer = new DexEngineInitializer();
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValues(Map.ofEntries(
+                        Map.entry("dt.dex-engine.enabled", "true"),
+                        Map.entry("dt.dex-engine.datasource.name", "foo"),
+                        Map.entry("dt.datasource.foo.url", postgresContainer.getJdbcUrl()),
+                        Map.entry("dt.datasource.foo.username", postgresContainer.getUsername()),
+                        Map.entry("dt.datasource.foo.password", postgresContainer.getPassword())))
+                .build();
+
+        dataSourceRegistry = new DataSourceRegistry(config);
+
+        initializer = new DexEngineInitializer(config, dataSourceRegistry);
         initializer.contextInitialized(null);
 
         assertThat(DexEngineHolder.get()).isNotNull();
-        assertThat(initializer.getEngine()).isNotNull();
-        assertThat(initializer.getEngine().probeHealth().getStatus()).isEqualTo(HealthCheckResponse.Status.UP);
+        assertThat(DexEngineHolder.get()).isNotNull();
+        assertThat(DexEngineHolder.get().probeHealth().getStatus()).isEqualTo(HealthCheckResponse.Status.UP);
     }
 
 }

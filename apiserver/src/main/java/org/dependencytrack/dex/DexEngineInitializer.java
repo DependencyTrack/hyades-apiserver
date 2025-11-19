@@ -47,10 +47,19 @@ public final class DexEngineInitializer implements ServletContextListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(DexEngineInitializer.class);
 
     private final Config config;
+    private final DataSourceRegistry dataSourceRegistry;
     private DexEngine engine;
 
+    DexEngineInitializer(
+            final Config config,
+            final DataSourceRegistry dataSourceRegistry) {
+        this.config = config;
+        this.dataSourceRegistry = dataSourceRegistry;
+    }
+
+    @SuppressWarnings("unused") // Used by servlet container.
     public DexEngineInitializer() {
-        this.config = ConfigProvider.getConfig();
+        this(ConfigProvider.getConfig(), DataSourceRegistry.getInstance());
     }
 
     @Override
@@ -59,7 +68,7 @@ public final class DexEngineInitializer implements ServletContextListener {
             return;
         }
 
-        final DexEngineConfig engineConfig = createEngineConfig(config);
+        final DexEngineConfig engineConfig = createEngineConfig();
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Effective configuration: {}", engineConfig);
         }
@@ -68,9 +77,11 @@ public final class DexEngineInitializer implements ServletContextListener {
         engine = engineFactory.create(engineConfig);
         DexEngineHolder.set(engine);
 
-        // Register workflows and activities here.
-        
+        // TODO: Register workflows and activities here.
+
         engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("default", 25));
+
+        // TODO: Register workers based on configuration.
 
         LOGGER.info("Starting dex engine");
         engine.start();
@@ -90,13 +101,9 @@ public final class DexEngineInitializer implements ServletContextListener {
         }
     }
 
-    DexEngine getEngine() {
-        return engine;
-    }
-
-    private static DexEngineConfig createEngineConfig(final Config config) {
+    private DexEngineConfig createEngineConfig() {
         final String dataSourceName = config.getValue("dt.dex-engine.datasource.name", String.class);
-        final DataSource dataSource = DataSourceRegistry.getInstance().get(dataSourceName);
+        final DataSource dataSource = dataSourceRegistry.get(dataSourceName);
 
         final var engineConfig = new DexEngineConfig(UUID.randomUUID(), dataSource);
 

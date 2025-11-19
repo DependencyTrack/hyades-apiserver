@@ -55,11 +55,11 @@ public class DexEngineDatabaseMigrationInitTaskTest {
 
     @After
     public void afterEach() {
-        if (postgresContainer != null) {
-            postgresContainer.stop();
-        }
         if (dataSourceRegistry != null) {
             dataSourceRegistry.closeAll();
+        }
+        if (postgresContainer != null) {
+            postgresContainer.stop();
         }
     }
 
