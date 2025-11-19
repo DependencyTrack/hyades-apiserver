@@ -18,13 +18,11 @@
  */
 package org.dependencytrack.dex;
 
-import alpine.test.config.ConfigPropertyRule;
-import alpine.test.config.WithConfigProperty;
+import io.smallrye.config.SmallRyeConfigBuilder;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.init.InitTaskContext;
-import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -34,32 +32,25 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class DexEngineDatabaseMigrationInitTaskTest {
 
-    @Rule
-    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule()
-            .withProperty("dt.dex-engine.datasource.name", "")
-            .withProperty("dt.dex-engine.migration.datasource.name", "");
-
     private PostgreSQLContainer<?> postgresContainer;
-    private PGSimpleDataSource dataSource;
+    private PGSimpleDataSource initTaskDataSource;
+    private DataSourceRegistry dataSourceRegistry;
 
     @Before
     public void beforeEach() {
         postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:14-alpine"));
         postgresContainer.start();
 
-        dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(postgresContainer.getJdbcUrl());
-        dataSource.setUser(postgresContainer.getUsername());
-        dataSource.setPassword(postgresContainer.getPassword());
-
-        configPropertyRule.setProperty("testcontainers.postgresql.jdbc-url", postgresContainer.getJdbcUrl());
-        configPropertyRule.setProperty("testcontainers.postgresql.username", postgresContainer.getUsername());
-        configPropertyRule.setProperty("testcontainers.postgresql.password", postgresContainer.getPassword());
+        initTaskDataSource = new PGSimpleDataSource();
+        initTaskDataSource.setUrl(postgresContainer.getJdbcUrl());
+        initTaskDataSource.setUser(postgresContainer.getUsername());
+        initTaskDataSource.setPassword(postgresContainer.getPassword());
     }
 
     @After
@@ -67,52 +58,71 @@ public class DexEngineDatabaseMigrationInitTaskTest {
         if (postgresContainer != null) {
             postgresContainer.stop();
         }
+        if (dataSourceRegistry != null) {
+            dataSourceRegistry.closeAll();
+        }
     }
 
     @Test
-    @WithConfigProperty("dt.dex-engine.enabled=false")
     public void shouldNotExecuteWhenEngineIsDisabled() throws Exception {
-        new DexEngineDatabaseMigrationInitTask().execute(
-                new InitTaskContext(ConfigProvider.getConfig(), dataSource));
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValue("dt.dex-engine.enabled", "false")
+                .build();
+
+        dataSourceRegistry = new DataSourceRegistry(config);
+
+        new DexEngineDatabaseMigrationInitTask(dataSourceRegistry)
+                .execute(new InitTaskContext(config, initTaskDataSource));
 
         assertMigrationExecuted(false);
     }
 
     @Test
-    @WithConfigProperty({
-            "dt.datasource.foo.url=${testcontainers.postgresql.jdbc-url}",
-            "dt.datasource.foo.username=${testcontainers.postgresql.username}",
-            "dt.datasource.foo.password=${testcontainers.postgresql.password}",
-            "dt.dex-engine.enabled=true",
-            "dt.dex-engine.migration.datasource.name=foo"
-    })
     public void shouldUseEngineMigrationDataSourceWhenConfigured() throws Exception {
-        new DexEngineDatabaseMigrationInitTask().execute(
-                new InitTaskContext(ConfigProvider.getConfig(), null));
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValues(Map.ofEntries(
+                        Map.entry("dt.datasource.foo.url", postgresContainer.getJdbcUrl()),
+                        Map.entry("dt.datasource.foo.username", postgresContainer.getUsername()),
+                        Map.entry("dt.datasource.foo.password", postgresContainer.getPassword()),
+                        Map.entry("dt.dex-engine.enabled", "true"),
+                        Map.entry("dt.dex-engine.migration.datasource.name", "foo")))
+                .build();
+
+        dataSourceRegistry = new DataSourceRegistry(config);
+
+        new DexEngineDatabaseMigrationInitTask(dataSourceRegistry)
+                .execute(new InitTaskContext(config, null));
 
         assertMigrationExecuted(true);
     }
 
     @Test
-    @WithConfigProperty({
-            "dt.datasource.foo.url=${testcontainers.postgresql.jdbc-url}",
-            "dt.datasource.foo.username=${testcontainers.postgresql.username}",
-            "dt.datasource.foo.password=${testcontainers.postgresql.password}",
-            "dt.dex-engine.enabled=true",
-            "dt.dex-engine.datasource.name=foo"
-    })
     public void shouldUseEngineDataSourceWhenConfigured() throws Exception {
-        new DexEngineDatabaseMigrationInitTask().execute(
-                new InitTaskContext(ConfigProvider.getConfig(), null));
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValues(Map.ofEntries(
+                        Map.entry("dt.datasource.foo.url", postgresContainer.getJdbcUrl()),
+                        Map.entry("dt.datasource.foo.username", postgresContainer.getUsername()),
+                        Map.entry("dt.datasource.foo.password", postgresContainer.getPassword()),
+                        Map.entry("dt.dex-engine.enabled", "true"),
+                        Map.entry("dt.dex-engine.datasource.name", "foo")))
+                .build();
+
+        dataSourceRegistry = new DataSourceRegistry(config);
+
+        new DexEngineDatabaseMigrationInitTask(dataSourceRegistry)
+                .execute(new InitTaskContext(config, null));
 
         assertMigrationExecuted(true);
     }
 
     @Test
-    @WithConfigProperty("dt.dex-engine.enabled=true")
     public void shouldUseInitTaskDataSourceAsFallback() throws Exception {
-        new DexEngineDatabaseMigrationInitTask().execute(
-                new InitTaskContext(ConfigProvider.getConfig(), dataSource));
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValues(Map.of("dt.dex-engine.enabled", "true"))
+                .build();
+
+        new DexEngineDatabaseMigrationInitTask(null)
+                .execute(new InitTaskContext(config, initTaskDataSource));
 
         assertMigrationExecuted(true);
     }

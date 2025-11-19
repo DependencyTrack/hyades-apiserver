@@ -38,6 +38,7 @@ public final class DexEngineHealthCheck implements HealthCheck {
         this.engineSupplier = engineSupplier;
     }
 
+    @SuppressWarnings("unused") // Used by ServiceLoader.
     public DexEngineHealthCheck() {
         this(DexEngineHolder::get);
     }

@@ -34,6 +34,17 @@ public final class DexEngineDatabaseMigrationInitTask implements InitTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DexEngineDatabaseMigrationInitTask.class);
 
+    private final DataSourceRegistry dataSourceRegistry;
+
+    DexEngineDatabaseMigrationInitTask(DataSourceRegistry dataSourceRegistry) {
+        this.dataSourceRegistry = dataSourceRegistry;
+    }
+
+    @SuppressWarnings("unused") // Used by ServiceLoader.
+    public DexEngineDatabaseMigrationInitTask() {
+        this(DataSourceRegistry.getInstance());
+    }
+
     @Override
     public int priority() {
         return PRIORITY_HIGHEST - 5;
@@ -57,7 +68,7 @@ public final class DexEngineDatabaseMigrationInitTask implements InitTask {
                 .orElse(null);
 
         final DataSource dataSource = dataSourceName != null
-                ? DataSourceRegistry.getInstance().get(dataSourceName)
+                ? dataSourceRegistry.get(dataSourceName)
                 : ctx.dataSource();
 
         new MigrationExecutor(dataSource).execute();
