@@ -111,7 +111,7 @@ public final class Buffer<T> implements Closeable {
         this.itemsQueueTimeout = itemsQueueTimeout;
         this.currentBatch = new ArrayList<>(maxBatchSize);
         this.flushExecutor = Executors.newSingleThreadScheduledExecutor(
-                Thread.ofVirtual().name("DexEngine-Buffer-" + name).factory());
+                Thread.ofPlatform().name("DexEngine-Buffer-" + name).factory());
         this.flushInterval = flushInterval;
         this.flushLock = new ReentrantLock();
         this.statusLock = new ReentrantLock();

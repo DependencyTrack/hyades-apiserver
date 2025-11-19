@@ -107,8 +107,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -157,10 +155,10 @@ final class DexEngineImpl implements DexEngine {
     private Status status = Status.CREATED;
     private @Nullable WorkflowTaskScheduler workflowTaskScheduler;
     private @Nullable ActivityTaskScheduler activityTaskScheduler;
-    private @Nullable ScheduledExecutorService retentionExecutor;
     private @Nullable ExecutorService eventListenerExecutor;
     private @Nullable Buffer<ExternalEvent> externalEventBuffer;
     private @Nullable Buffer<TaskCommand> taskCommandBuffer;
+    private @Nullable RetentionWorker retentionWorker;
     private @Nullable Cache<UUID, CachedWorkflowRunHistory> runHistoryCache;
 
     DexEngineImpl(final DexEngineConfig config) {
@@ -238,15 +236,12 @@ final class DexEngineImpl implements DexEngine {
 
         if (config.retention().isWorkerEnabled()) {
             LOGGER.debug("Starting retention worker");
-            retentionExecutor = Executors.newSingleThreadScheduledExecutor(
-                    Thread.ofVirtual().name("DexEngine-RetentionWorker").factory());
-            new ExecutorServiceMetrics(retentionExecutor, "DexEngine-RetentionWorker", null)
-                    .bindTo(config.meterRegistry());
-            retentionExecutor.scheduleAtFixedRate(
-                    new WorkflowRetentionWorker(jdbi, config.retention().days()),
-                    config.retention().workerInitialDelay().toMillis(),
-                    config.retention().workerInterval().toMillis(),
-                    TimeUnit.MILLISECONDS);
+            retentionWorker = new RetentionWorker(
+                    jdbi,
+                    config.retention().days(),
+                    config.retention().workerInitialDelay(),
+                    config.retention().workerInterval());
+            retentionWorker.start();
         } else {
             LOGGER.debug("Retention worker is disabled");
         }
@@ -265,10 +260,10 @@ final class DexEngineImpl implements DexEngine {
         setStatus(Status.STOPPING);
         LOGGER.debug("Stopping");
 
-        if (retentionExecutor != null) {
+        if (retentionWorker != null) {
             LOGGER.debug("Waiting for retention worker to stop");
-            retentionExecutor.close();
-            retentionExecutor = null;
+            retentionWorker.close();
+            retentionWorker = null;
         }
 
         if (externalEventBuffer != null) {

@@ -22,7 +22,6 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.statement.Query;
@@ -47,7 +46,6 @@ import static org.dependencytrack.dex.engine.support.LockSupport.tryAcquireAdvis
 final class WorkflowTaskScheduler implements Closeable {
 
     private static final long ADVISORY_LOCK_ID = 936942697589618032L;
-    private static final String EXECUTOR_NAME = WorkflowTaskScheduler.class.getSimpleName();
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowTaskScheduler.class);
 
     private final Jdbi jdbi;
@@ -75,9 +73,9 @@ final class WorkflowTaskScheduler implements Closeable {
                 .withRegistry(meterRegistry);
 
         executor = Executors.newSingleThreadScheduledExecutor(
-                Thread.ofVirtual().name(EXECUTOR_NAME).factory());
-        new ExecutorServiceMetrics(executor, EXECUTOR_NAME, null)
-                .bindTo(meterRegistry);
+                Thread.ofPlatform()
+                        .name(WorkflowTaskScheduler.class.getSimpleName())
+                        .factory());
         executor.scheduleWithFixedDelay(
                 () -> {
                     try {

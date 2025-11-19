@@ -22,7 +22,6 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.statement.Query;
@@ -47,13 +46,12 @@ import static org.dependencytrack.dex.engine.support.LockSupport.tryAcquireAdvis
 final class ActivityTaskScheduler implements Closeable {
 
     private static final long ADVISORY_LOCK_ID = 2299953353083674283L;
-    private static final String EXECUTOR_NAME = ActivityTaskScheduler.class.getSimpleName();
-    private static final Logger LOGGER = LoggerFactory.getLogger(EXECUTOR_NAME);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ActivityTaskScheduler.class);
 
     private final Jdbi jdbi;
     private final MeterRegistry meterRegistry;
     private final Duration pollInterval;
-    private @Nullable ScheduledExecutorService executorService;
+    private @Nullable ScheduledExecutorService executor;
     private @Nullable MeterProvider<Timer> taskSchedulingLatencyTimer;
     private @Nullable MeterProvider<Counter> tasksScheduledCounter;
 
@@ -74,11 +72,11 @@ final class ActivityTaskScheduler implements Closeable {
                 .builder("dt.dex.engine.activity.tasks.scheduled")
                 .withRegistry(meterRegistry);
 
-        executorService = Executors.newSingleThreadScheduledExecutor(
-                Thread.ofVirtual().name(EXECUTOR_NAME).factory());
-        new ExecutorServiceMetrics(executorService, EXECUTOR_NAME, null)
-                .bindTo(meterRegistry);
-        executorService.scheduleWithFixedDelay(
+        executor = Executors.newSingleThreadScheduledExecutor(
+                Thread.ofPlatform()
+                        .name(ActivityTaskScheduler.class.getSimpleName())
+                        .factory());
+        executor.scheduleWithFixedDelay(
                 () -> {
                     try {
                         scheduleActivities();
@@ -93,8 +91,8 @@ final class ActivityTaskScheduler implements Closeable {
 
     @Override
     public void close() {
-        if (executorService != null) {
-            executorService.close();
+        if (executor != null) {
+            executor.close();
         }
     }
 

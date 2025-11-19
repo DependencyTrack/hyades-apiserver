@@ -20,30 +20,70 @@ package org.dependencytrack.dex.engine;
 
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.statement.Update;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
+import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import static org.dependencytrack.dex.engine.support.LockSupport.tryAcquireAdvisoryLock;
 
-final class WorkflowRetentionWorker implements Runnable {
+final class RetentionWorker implements Closeable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowRetentionWorker.class);
-    private static final String LOCK_NAME = "workflow-retention";
+    private static final long ADVISORY_LOCK_ID = 3218488535236088498L;
+    private static final Logger LOGGER = LoggerFactory.getLogger(RetentionWorker.class);
 
     private final Jdbi jdbi;
     private final int retentionDays;
+    private final Duration initialDelay;
+    private final Duration interval;
+    private @Nullable ScheduledExecutorService executor;
 
-    WorkflowRetentionWorker(final Jdbi jdbi, final int retentionDays) {
+    RetentionWorker(
+            final Jdbi jdbi,
+            final int retentionDays,
+            final Duration initialDelay,
+            final Duration interval) {
         this.jdbi = jdbi;
         this.retentionDays = retentionDays;
+        this.initialDelay = initialDelay;
+        this.interval = interval;
+    }
+
+    void start() {
+        executor = Executors.newSingleThreadScheduledExecutor(
+                Thread.ofPlatform()
+                        .name(RetentionWorker.class.getSimpleName())
+                        .factory());
+        executor.scheduleAtFixedRate(
+                () -> {
+                    try {
+                        enforceRetention();
+                    } catch (RuntimeException e) {
+                        LOGGER.error("Failed to enforce retention", e);
+                    }
+                },
+                initialDelay.toMillis(),
+                interval.toMillis(),
+                TimeUnit.MILLISECONDS);
     }
 
     @Override
-    public void run() {
+    public void close() {
+        if (executor != null) {
+            executor.close();
+        }
+    }
+
+    private void enforceRetention() {
         jdbi.useTransaction(handle -> {
-            final boolean lockAcquired = tryAcquireAdvisoryLock(handle, LOCK_NAME.hashCode());
+            final boolean lockAcquired = tryAcquireAdvisoryLock(handle, ADVISORY_LOCK_ID);
             if (!lockAcquired) {
-                LOGGER.debug("Lock {} already held by another instance", LOCK_NAME);
+                LOGGER.debug("Lock is held by another instance");
                 return;
             }
 
@@ -63,7 +103,7 @@ final class WorkflowRetentionWorker implements Runnable {
             final int runsDeleted = update
                     .bind("retentionDays", retentionDays)
                     .execute();
-            LOGGER.info("Deleted {} workflow run(s)", runsDeleted);
+            LOGGER.debug("Deleted {} workflow run(s)", runsDeleted);
         });
     }
 
