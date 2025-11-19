@@ -163,7 +163,8 @@ public final class WorkflowTestRule implements TestRule {
                       FOR partition_name IN
                         SELECT tablename
                           FROM pg_tables
-                         WHERE tablename ~ '^dex_activity_task_q_.+$'
+                         WHERE tablename ~ '^dex_workflow_task_q_.+$'
+                            OR tablename ~ '^dex_activity_task_q_.+$'
                       LOOP
                         EXECUTE format('DROP TABLE "%s"', partition_name);
                       END LOOP;

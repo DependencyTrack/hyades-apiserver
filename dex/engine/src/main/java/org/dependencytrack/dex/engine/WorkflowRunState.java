@@ -65,7 +65,8 @@ final class WorkflowRunState {
 
     private final UUID id;
     private @Nullable String workflowName;
-    @Nullable Integer workflowVersion;
+    private @Nullable Integer workflowVersion;
+    private @Nullable String queueName;
     private @Nullable String concurrencyGroupId;
     private final List<Event> eventHistory;
     private final List<Event> newEvents;
@@ -115,6 +116,11 @@ final class WorkflowRunState {
     @Nullable
     Integer workflowVersion() {
         return workflowVersion;
+    }
+
+    @Nullable
+    String queueName() {
+        return queueName;
     }
 
     @Nullable
@@ -222,6 +228,7 @@ final class WorkflowRunState {
                 }
                 workflowName = event.getRunCreated().getWorkflowName();
                 workflowVersion = event.getRunCreated().getWorkflowVersion();
+                queueName = event.getRunCreated().getQueueName();
                 concurrencyGroupId = event.getRunCreated().hasConcurrencyGroupId()
                         ? event.getRunCreated().getConcurrencyGroupId()
                         : null;
@@ -357,6 +364,7 @@ final class WorkflowRunState {
         final var newRunCreatedBuilder = RunCreated.newBuilder()
                 .setWorkflowName(this.workflowName)
                 .setWorkflowVersion(this.workflowVersion)
+                .setQueueName(this.queueName)
                 .setPriority(this.priority);
         if (command.argument() != null) {
             newRunCreatedBuilder.setArgument(command.argument());
@@ -429,10 +437,12 @@ final class WorkflowRunState {
                 .setRunId(childRunId.toString())
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion())
+                .setQueueName(command.queueName())
                 .setPriority(command.priority());
         final var runCreatedBuilder = RunCreated.newBuilder()
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion())
+                .setQueueName(command.queueName())
                 .setPriority(command.priority())
                 .setParentRun(RunCreated.ParentRun.newBuilder()
                         .setChildRunCreatedEventId(command.eventId())

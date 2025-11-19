@@ -16,22 +16,19 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence.command;
+package org.dependencytrack.dex.engine.api.request;
 
-import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
-import org.jspecify.annotations.Nullable;
+import static java.util.Objects.requireNonNull;
 
-import java.time.Instant;
-import java.util.UUID;
+public record CreateWorkflowTaskQueueRequest(
+        String name,
+        int maxConcurrency) {
 
-public record UpdateAndUnlockRunCommand(
-        UUID id,
-        String queueName,
-        WorkflowRunStatus status,
-        @Nullable String customStatus,
-        @Nullable Instant createdAt,
-        @Nullable Instant updatedAt,
-        @Nullable Instant startedAt,
-        @Nullable Instant completedAt) {
+    public CreateWorkflowTaskQueueRequest {
+        requireNonNull(name, "name must not be null");
+        if (maxConcurrency <= 0) {
+            throw new IllegalArgumentException("maxConcurrency must not be negative or zero");
+        }
+    }
 
 }

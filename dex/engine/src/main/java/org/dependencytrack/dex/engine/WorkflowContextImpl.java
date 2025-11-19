@@ -301,6 +301,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     <WA, WR> Awaitable<WR> callChildWorkflow(
             final String name,
             final int version,
+            final String queueName,
             final @Nullable String concurrencyGroupId,
             final @Nullable WA argument,
             final PayloadConverter<WA> argumentConverter,
@@ -311,7 +312,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId, new CreateChildRunCommand(
-                eventId, name, version, concurrencyGroupId, this.priority, this.labels, convertedArgument));
+                eventId, name, version, queueName, concurrencyGroupId, this.priority, this.labels, convertedArgument));
 
         final var awaitable = new AwaitableImpl<>(this, resultConverter);
         pendingAwaitableByEventId.put(eventId, awaitable);

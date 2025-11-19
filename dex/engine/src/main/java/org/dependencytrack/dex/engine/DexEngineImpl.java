@@ -51,6 +51,7 @@ import org.dependencytrack.dex.engine.api.event.DexRunsCompletedEventListener;
 import org.dependencytrack.dex.engine.api.pagination.Page;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
@@ -66,10 +67,11 @@ import org.dependencytrack.dex.engine.persistence.command.DeleteInboxEventsComma
 import org.dependencytrack.dex.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowRunInboxEventsCommand;
+import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunCommand;
 import org.dependencytrack.dex.engine.persistence.model.ActivityTaskId;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
-import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowRun;
+import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.engine.persistence.request.GetWorkflowRunHistoryRequest;
@@ -141,10 +143,6 @@ final class DexEngineImpl implements DexEngine {
             return allowedTransitions.contains(newStatus.ordinal());
         }
 
-        boolean isStoppingOrStopped() {
-            return equals(STOPPING) || equals(STOPPED);
-        }
-
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DexEngineImpl.class);
@@ -157,6 +155,7 @@ final class DexEngineImpl implements DexEngine {
     private final List<DexRunsCompletedEventListener> runsCompletedEventListeners = new ArrayList<>();
 
     private Status status = Status.CREATED;
+    private @Nullable WorkflowTaskScheduler workflowTaskScheduler;
     private @Nullable ActivityTaskScheduler activityTaskScheduler;
     private @Nullable ScheduledExecutorService retentionExecutor;
     private @Nullable ExecutorService eventListenerExecutor;
@@ -194,6 +193,15 @@ final class DexEngineImpl implements DexEngine {
                 new DefaultThreadFactory("DexEngine-EventListener"));
         new ExecutorServiceMetrics(eventListenerExecutor, "DexEngine-EventListener", null)
                 .bindTo(config.meterRegistry());
+
+        if (config.workflowTaskScheduler().isEnabled()) {
+            LOGGER.debug("Starting workflow task scheduler");
+            workflowTaskScheduler = new WorkflowTaskScheduler(
+                    jdbi,
+                    config.meterRegistry(),
+                    config.workflowTaskScheduler().pollInterval());
+            workflowTaskScheduler.start();
+        }
 
         if (config.activityTaskScheduler().isEnabled()) {
             LOGGER.debug("Starting activity task scheduler");
@@ -279,6 +287,12 @@ final class DexEngineImpl implements DexEngine {
             LOGGER.debug("Waiting for activity task scheduler to stop");
             activityTaskScheduler.close();
             activityTaskScheduler = null;
+        }
+
+        if (workflowTaskScheduler != null) {
+            LOGGER.debug("Waiting for workflow task scheduler to stop");
+            workflowTaskScheduler.close();
+            workflowTaskScheduler = null;
         }
 
         if (taskWorkerByName != null) {
@@ -387,6 +401,7 @@ final class DexEngineImpl implements DexEngine {
         final var worker = new WorkflowTaskWorker(
                 this,
                 metadataRegistry,
+                options.queueName(),
                 config.workflowTaskWorker().minPollInterval(),
                 config.workflowTaskWorker().pollBackoffIntervalFunction(),
                 options.maxConcurrency(),
@@ -425,6 +440,7 @@ final class DexEngineImpl implements DexEngine {
                             /* parentId */ null,
                             option.workflowName(),
                             option.workflowVersion(),
+                            option.queueName(),
                             option.concurrencyGroupId(),
                             option.priority(),
                             option.labels(),
@@ -433,6 +449,7 @@ final class DexEngineImpl implements DexEngine {
             final var runCreatedBuilder = RunCreated.newBuilder()
                     .setWorkflowName(option.workflowName())
                     .setWorkflowVersion(option.workflowVersion())
+                    .setQueueName(option.queueName())
                     .setPriority(option.priority());
             if (option.concurrencyGroupId() != null) {
                 runCreatedBuilder.setConcurrencyGroupId(option.concurrencyGroupId());
@@ -663,6 +680,19 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
+    public void createWorkflowTaskQueue(CreateWorkflowTaskQueueRequest request) {
+        jdbi.useTransaction(handle -> {
+            handle
+                    .createQuery("""
+                            select dex_create_workflow_task_queue(:name, cast(:maxConcurrency as smallint))
+                            """)
+                    .bindMethods(request)
+                    .mapTo(boolean.class)
+                    .one();
+        });
+    }
+
+    @Override
     public void createActivityTaskQueue(final CreateActivityTaskQueueRequest request) {
         jdbi.useTransaction(handle -> {
             handle
@@ -722,7 +752,10 @@ final class DexEngineImpl implements DexEngine {
         });
     }
 
-    List<WorkflowTask> pollWorkflowTasks(final Collection<PollWorkflowTaskCommand> commands, final int limit) {
+    List<WorkflowTask> pollWorkflowTasks(
+            final String queueName,
+            final Collection<PollWorkflowTaskCommand> commands,
+            final int limit) {
         return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
@@ -731,17 +764,17 @@ final class DexEngineImpl implements DexEngine {
             //  This would makes caches more efficient. Currently each instance collaborating on processing
             //  a given workflow run will maintain its own cache.
 
-            final Map<UUID, PolledWorkflowRun> polledRunById =
-                    dao.pollAndLockRuns(this.config.instanceId(), commands, limit);
-            if (polledRunById.isEmpty()) {
+            final Map<UUID, PolledWorkflowTask> polledTaskByRunId =
+                    dao.pollAndLockWorkflowTasks(this.config.instanceId(), queueName, commands, limit);
+            if (polledTaskByRunId.isEmpty()) {
                 return Collections.emptyList();
             }
 
-            final var historyRequests = new ArrayList<GetWorkflowRunHistoryRequest>(polledRunById.size());
-            final var cachedHistoryByRunId = new HashMap<UUID, List<Event>>(polledRunById.size());
+            final var historyRequests = new ArrayList<GetWorkflowRunHistoryRequest>(polledTaskByRunId.size());
+            final var cachedHistoryByRunId = new HashMap<UUID, List<Event>>(polledTaskByRunId.size());
 
             // Try to populate event histories from cache first.
-            for (final UUID runId : polledRunById.keySet()) {
+            for (final UUID runId : polledTaskByRunId.keySet()) {
                 final CachedWorkflowRunHistory cachedHistory = runHistoryCache.getIfPresent(runId);
                 if (cachedHistory == null) {
                     // Cache miss; Load the entire history.
@@ -756,10 +789,10 @@ final class DexEngineImpl implements DexEngine {
             final Map<UUID, PolledWorkflowEvents> polledEventsByRunId =
                     dao.pollRunEvents(config.instanceId(), historyRequests);
 
-            return polledRunById.values().stream()
-                    .map(polledRun -> {
-                        final PolledWorkflowEvents polledEvents = polledEventsByRunId.get(polledRun.id());
-                        final List<Event> cachedHistoryEvents = cachedHistoryByRunId.get(polledRun.id());
+            return polledTaskByRunId.values().stream()
+                    .map(polledTask -> {
+                        final PolledWorkflowEvents polledEvents = polledEventsByRunId.get(polledTask.runId());
+                        final List<Event> cachedHistoryEvents = cachedHistoryByRunId.get(polledTask.runId());
 
                         var historySize = polledEvents.history().size();
                         if (cachedHistoryEvents != null) {
@@ -773,18 +806,19 @@ final class DexEngineImpl implements DexEngine {
                         history.addAll(polledEvents.history());
 
                         runHistoryCache.put(
-                                polledRun.id(),
+                                polledTask.runId(),
                                 new CachedWorkflowRunHistory(
                                         history,
                                         polledEvents.maxHistoryEventSequenceNumber()));
 
                         return new WorkflowTask(
-                                polledRun.id(),
-                                polledRun.workflowName(),
-                                polledRun.workflowVersion(),
-                                polledRun.concurrencyGroupId(),
-                                polledRun.priority(),
-                                polledRun.labels(),
+                                polledTask.runId(),
+                                polledTask.workflowName(),
+                                polledTask.workflowVersion(),
+                                polledTask.queueName(),
+                                polledTask.concurrencyGroupId(),
+                                polledTask.priority(),
+                                polledTask.labels(),
                                 polledEvents.maxInboxEventDequeueCount(),
                                 history,
                                 polledEvents.inbox());
@@ -818,10 +852,12 @@ final class DexEngineImpl implements DexEngine {
         final int unlockedEvents = dao.unlockRunInboxEvents(this.config.instanceId(), unlockCommands);
         assert unlockedEvents > 1;
 
-        final int unlockedWorkflowRuns = dao.unlockRuns(
+        final int unlockedWorkflowRuns = dao.unlockWorkflowTasks(
                 this.config.instanceId(),
                 abandonCommands.stream()
-                        .map(abandonCommand -> abandonCommand.task().workflowRunId())
+                        .map(abandonCommand -> new UnlockWorkflowTaskCommand(
+                                abandonCommand.task().queueName(),
+                                abandonCommand.task().workflowRunId()))
                         .toList());
         assert unlockedWorkflowRuns == abandonCommands.size();
     }
@@ -845,6 +881,7 @@ final class DexEngineImpl implements DexEngine {
                 actionableRuns.stream()
                         .map(run -> new UpdateAndUnlockRunCommand(
                                 run.id(),
+                                run.queueName(),
                                 run.status(),
                                 run.customStatus(),
                                 run.createdAt(),
@@ -931,6 +968,7 @@ final class DexEngineImpl implements DexEngine {
                                     /* parentId */ run.id(),
                                     message.event().getRunCreated().getWorkflowName(),
                                     message.event().getRunCreated().getWorkflowVersion(),
+                                    message.event().getRunCreated().getQueueName(),
                                     message.event().getRunCreated().hasConcurrencyGroupId()
                                             ? message.event().getRunCreated().getConcurrencyGroupId()
                                             : null,

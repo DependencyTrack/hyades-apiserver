@@ -35,6 +35,7 @@ import org.dependencytrack.dex.engine.api.event.DexRunsCompletedEventListener;
 import org.dependencytrack.dex.engine.api.pagination.Page;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.proto.event.v1.Event;
@@ -71,7 +72,8 @@ class DexEngineImplTest {
 
     @Container
     private static final PostgresTestContainer postgresContainer = new PostgresTestContainer();
-    private static final String DEFAULT_ACTIVITY_QUEUE_NAME = "default";
+    private static final String DEFAULT_WORKFLOW_TASK_QUEUE_NAME = "default";
+    private static final String DEFAULT_ACTIVITY_TASK_QUEUE_NAME = "default";
 
     private DexEngineImpl engine;
 
@@ -88,6 +90,7 @@ class DexEngineImplTest {
         final var config = new DexEngineConfig(UUID.randomUUID(), dataSource);
 
         engine = new DexEngineImpl(config);
+        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("default", 10));
         engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("default", 10));
     }
 
@@ -108,11 +111,11 @@ class DexEngineImplTest {
             ctx.setStatus("someCustomStatus");
             return "someResult";
         });
-        engine.registerWorkflowWorker(new  WorkflowTaskWorkerOptions("workflow-worker", 1));
+        engine.registerWorkflowWorker(new  WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
         final UUID runId = engine.createRun(
-                new CreateWorkflowRunRequest<>("test", 1)
+                new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME)
                         .withConcurrencyGroupId("someConcurrencyGroupId")
                         .withPriority(6)
                         .withLabels(Map.of("label-a", "123", "label-b", "321"))
@@ -178,10 +181,10 @@ class DexEngineImplTest {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             throw new IllegalStateException("Ouch!");
         });
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         final WorkflowRunMetadata failedRun = awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -213,20 +216,20 @@ class DexEngineImplTest {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             if (executionCounter.incrementAndGet() == 1) {
                 ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                        "abc", DEFAULT_ACTIVITY_QUEUE_NAME, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+                        "abc", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
             } else {
                 ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                        "def", DEFAULT_ACTIVITY_QUEUE_NAME, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+                        "def", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
             }
             return null;
         });
         engine.registerActivityInternal("abc", voidConverter(), voidConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> null);
         engine.registerActivityInternal("def", voidConverter(), voidConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> null);
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
-        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_QUEUE_NAME, 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -254,10 +257,10 @@ class DexEngineImplTest {
             ctx.createTimer("sleep", Duration.ofSeconds(5)).await();
             return null;
         });
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.RUNNING);
 
@@ -298,10 +301,10 @@ class DexEngineImplTest {
             ctx.createTimer("Sleep for 3 seconds", Duration.ofSeconds(5)).await();
             return null;
         });
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED, Duration.ofSeconds(10));
 
@@ -334,10 +337,10 @@ class DexEngineImplTest {
 
             return null;
         });
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED, Duration.ofSeconds(10));
 
@@ -361,7 +364,7 @@ class DexEngineImplTest {
     void shouldWaitForChildRun() {
         engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             final String childWorkflowResult = ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow(
-                    "bar", 1, null, "inputValue", stringConverter(), stringConverter()).await();
+                    "bar", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME, null, "inputValue", stringConverter(), stringConverter()).await();
             assertThat(childWorkflowResult).contains("inputValue-outputValue");
             return null;
         });
@@ -369,10 +372,10 @@ class DexEngineImplTest {
         engine.registerWorkflowInternal("bar", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5),
                 (ctx, arg) -> arg + "-outputValue");
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 2));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 2));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -391,7 +394,7 @@ class DexEngineImplTest {
     @Test
     void shouldFailWhenChildRunFails() {
         engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
-            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
+            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
@@ -399,10 +402,10 @@ class DexEngineImplTest {
             throw new IllegalStateException("Oh no!");
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 2));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 2));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -432,13 +435,13 @@ class DexEngineImplTest {
         final var grandChildRunIdReference = new AtomicReference<UUID>();
 
         engine.registerWorkflowInternal("parent", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
-            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("child", 1, null, null, voidConverter(), voidConverter()).await();
+            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("child", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
         engine.registerWorkflowInternal("child", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             childRunIdReference.set(ctx.runId());
-            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("grand-child", 1, null, null, voidConverter(), voidConverter()).await();
+            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("grand-child", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
@@ -448,10 +451,10 @@ class DexEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 3));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 3));
         engine.start();
 
-        final UUID parentRunId = engine.createRun(new CreateWorkflowRunRequest<>("parent", 1));
+        final UUID parentRunId = engine.createRun(new CreateWorkflowRunRequest<>("parent", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         await("Grand Child Workflow Run Start")
                 .atMost(Duration.ofSeconds(5))
@@ -467,10 +470,10 @@ class DexEngineImplTest {
     @Test
     void shouldThrowWhenCancellingRunInTerminalState() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -487,10 +490,10 @@ class DexEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         engine.requestRunSuspension(runId);
 
@@ -509,10 +512,10 @@ class DexEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         engine.requestRunSuspension(runId);
 
@@ -526,10 +529,10 @@ class DexEngineImplTest {
     @Test
     void shouldThrowWhenSuspendingRunInTerminalState() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -546,10 +549,10 @@ class DexEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         engine.requestRunSuspension(runId);
 
@@ -568,10 +571,10 @@ class DexEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.RUNNING);
 
@@ -583,10 +586,10 @@ class DexEngineImplTest {
     @Test
     void shouldThrowWhenResumingRunInTerminalState() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -602,10 +605,10 @@ class DexEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         await("Update")
                 .atMost(Duration.ofSeconds(5))
@@ -637,10 +640,10 @@ class DexEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -674,10 +677,10 @@ class DexEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -710,10 +713,10 @@ class DexEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -735,17 +738,17 @@ class DexEngineImplTest {
     void shouldCallActivity() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                    "abc", DEFAULT_ACTIVITY_QUEUE_NAME, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+                    "abc", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
             return null;
         });
 
         engine.registerActivityInternal("abc", voidConverter(), stringConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> "123");
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
-        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_QUEUE_NAME, 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -765,8 +768,8 @@ class DexEngineImplTest {
     void shouldCreateMultipleActivitiesConcurrently() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             final List<Awaitable<String>> awaitables = List.of(
-                    ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", DEFAULT_ACTIVITY_QUEUE_NAME, "first", stringConverter(), stringConverter(), defaultRetryPolicy()),
-                    ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", DEFAULT_ACTIVITY_QUEUE_NAME, "second", stringConverter(), stringConverter(), defaultRetryPolicy()));
+                    ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, "first", stringConverter(), stringConverter(), defaultRetryPolicy()),
+                    ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, "second", stringConverter(), stringConverter(), defaultRetryPolicy()));
 
             return awaitables.stream()
                     .map(Awaitable::await)
@@ -775,11 +778,11 @@ class DexEngineImplTest {
 
         engine.registerActivityInternal("abc", stringConverter(), stringConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> arg);
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
-        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_QUEUE_NAME, 2));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, 2));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -805,7 +808,7 @@ class DexEngineImplTest {
 
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                    "abc", DEFAULT_ACTIVITY_QUEUE_NAME, null, voidConverter(), stringConverter(), retryPolicy).await();
+                    "abc", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, null, voidConverter(), stringConverter(), retryPolicy).await();
             return null;
         });
 
@@ -813,11 +816,11 @@ class DexEngineImplTest {
             throw new IllegalStateException();
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
-        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_QUEUE_NAME, 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -845,7 +848,7 @@ class DexEngineImplTest {
     void shouldNotRetryActivityFailingWithTerminalException() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                    "abc", DEFAULT_ACTIVITY_QUEUE_NAME, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+                    "abc", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
             return null;
         });
 
@@ -853,11 +856,11 @@ class DexEngineImplTest {
             throw new TerminalApplicationFailureException("Ouch!", null);
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
-        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_QUEUE_NAME, 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -884,7 +887,7 @@ class DexEngineImplTest {
 
         engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             try {
-                ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
+                ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME, null, null, voidConverter(), voidConverter()).await();
             } catch (FailureException e) {
                 exceptionReference.set(e);
                 throw e;
@@ -894,12 +897,12 @@ class DexEngineImplTest {
         });
 
         engine.registerWorkflowInternal("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
-            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("baz", 1, null, null, voidConverter(), voidConverter()).await();
+            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("baz", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
         engine.registerWorkflowInternal("baz", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
-            ((WorkflowContextImpl<?, ?>) ctx).callActivity("qux", DEFAULT_ACTIVITY_QUEUE_NAME, null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
+            ((WorkflowContextImpl<?, ?>) ctx).callActivity("qux", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             return null;
         });
 
@@ -907,11 +910,11 @@ class DexEngineImplTest {
             throw new TerminalApplicationFailureException("Ouch!", null);
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 3));
-        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_QUEUE_NAME, 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 3));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", DEFAULT_ACTIVITY_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1)
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME)
                 .withLabels(Map.of("oof", "rab")));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED, Duration.ofSeconds(15));
@@ -970,7 +973,7 @@ class DexEngineImplTest {
     void shouldPropagateLabels() {
         engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             assertThat(ctx.labels()).containsOnlyKeys("oof", "rab");
-            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
+            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
@@ -979,11 +982,11 @@ class DexEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 2));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 2));
         engine.start();
 
         final UUID runId = engine.createRun(
-                new CreateWorkflowRunRequest<>("foo", 1)
+                new CreateWorkflowRunRequest<>("foo", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME)
                         .withLabels(Map.of("oof", "123", "rab", "321")));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
@@ -1019,11 +1022,11 @@ class DexEngineImplTest {
             return String.valueOf(iteration);
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
         final UUID runId = engine.createRun(
-                new CreateWorkflowRunRequest<>("foo", 1)
+                new CreateWorkflowRunRequest<>("foo", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME)
                         .withArgument("0"));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
@@ -1060,11 +1063,11 @@ class DexEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID succeedingRunId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1).withArgument("false"));
-        final UUID failingRunId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1).withArgument("true"));
+        final UUID succeedingRunId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME).withArgument("false"));
+        final UUID failingRunId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME).withArgument("true"));
 
         awaitRunStatus(succeedingRunId, WorkflowRunStatus.COMPLETED);
         awaitRunStatus(failingRunId, WorkflowRunStatus.FAILED);
@@ -1094,7 +1097,7 @@ class DexEngineImplTest {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
 
         for (int i = 0; i < 10; i++) {
-            engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+            engine.createRun(new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
         }
 
         Page<WorkflowRunMetadata> runsPage = engine.listRuns(
@@ -1119,10 +1122,10 @@ class DexEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 

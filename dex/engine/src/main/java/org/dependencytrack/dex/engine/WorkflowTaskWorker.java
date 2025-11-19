@@ -39,11 +39,13 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
 
     private final DexEngineImpl engine;
     private final MetadataRegistry metadataRegistry;
+    private final String queueName;
     private final List<PollWorkflowTaskCommand> pollCommands;
 
     WorkflowTaskWorker(
             final DexEngineImpl engine,
             final MetadataRegistry metadataRegistry,
+            final String queueName,
             final Duration minPollInterval,
             final IntervalFunction pollBackoffIntervalFunction,
             final int maxConcurrency,
@@ -51,6 +53,7 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
         super(minPollInterval, pollBackoffIntervalFunction, maxConcurrency, meterRegistry);
         this.engine = requireNonNull(engine, "engine must not be null");
         this.metadataRegistry = requireNonNull(metadataRegistry, "metadataRegistry must not be null");
+        this.queueName = requireNonNull(queueName, "queueName must not be null");
         this.pollCommands = metadataRegistry.getAllWorkflowMetadata().stream()
                 .map(metadata -> new PollWorkflowTaskCommand(metadata.name(), metadata.lockTimeout()))
                 .toList();
@@ -58,7 +61,7 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
 
     @Override
     List<WorkflowTask> poll(final int limit) {
-        return engine.pollWorkflowTasks(pollCommands, limit);
+        return engine.pollWorkflowTasks(queueName, pollCommands, limit);
     }
 
     @Override

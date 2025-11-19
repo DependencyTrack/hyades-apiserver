@@ -23,10 +23,11 @@ import org.jspecify.annotations.Nullable;
 import java.util.Map;
 import java.util.UUID;
 
-public record PolledWorkflowRun(
-        UUID id,
+public record PolledWorkflowTask(
+        UUID runId,
         String workflowName,
         int workflowVersion,
+        String queueName,
         @Nullable String concurrencyGroupId,
         int priority,
         @Nullable Map<String, String> labels) {

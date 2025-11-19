@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.dex.engine.persistence.mapping;
 
-import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowRun;
+import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
@@ -28,14 +28,15 @@ import java.util.UUID;
 
 import static org.dependencytrack.dex.engine.persistence.mapping.MappingUtil.mapJsonEncodedMap;
 
-public final class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRun> {
+public final class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowTask> {
 
     @Override
-    public PolledWorkflowRun map(final ResultSet rs, final StatementContext ctx) throws SQLException {
-        return new PolledWorkflowRun(
+    public PolledWorkflowTask map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        return new PolledWorkflowTask(
                 rs.getObject("id", UUID.class),
                 rs.getString("workflow_name"),
                 rs.getInt("workflow_version"),
+                rs.getString("queue_name"),
                 rs.getString("concurrency_group_id"),
                 rs.getInt("priority"),
                 mapJsonEncodedMap(rs, ctx, "labels", String.class, String.class));

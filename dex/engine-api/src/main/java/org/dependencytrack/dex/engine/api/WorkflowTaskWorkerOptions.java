@@ -22,10 +22,12 @@ import static java.util.Objects.requireNonNull;
 
 public record WorkflowTaskWorkerOptions(
         String name,
+        String queueName,
         int maxConcurrency) {
 
     public WorkflowTaskWorkerOptions {
         requireNonNull(name, "name must not be null");
+        requireNonNull(queueName, "queueName must not be null");
         if (maxConcurrency <= 0) {
             throw new IllegalArgumentException("maxConcurrency must not be negative or zero");
         }

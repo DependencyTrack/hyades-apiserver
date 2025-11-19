@@ -72,9 +72,10 @@ message RunCreated {
   int32 workflow_version = 2;
   optional org.dependencytrack.dex.payload.v1.Payload argument = 3;
   optional string concurrency_group_id = 4;
-  int32 priority = 5;
-  map<string, string> labels = 6;
-  optional ParentRun parent_run = 7;
+  string queue_name = 5;
+  int32 priority = 6;
+  map<string, string> labels = 7;
+  optional ParentRun parent_run = 8;
 
   message ParentRun {
     int32 child_run_created_event_id = 1;
@@ -126,10 +127,11 @@ message ChildRunCreated {
   string run_id = 1;
   string workflow_name = 2;
   int32 workflow_version = 3;
-  optional string concurrency_group_id = 4;
-  int32 priority = 5;
-  map<string, string> labels = 6;
-  optional org.dependencytrack.dex.payload.v1.Payload argument = 7;
+  string queue_name = 4;
+  optional string concurrency_group_id = 5;
+  int32 priority = 6;
+  map<string, string> labels = 7;
+  optional org.dependencytrack.dex.payload.v1.Payload argument = 8;
 }
 
 message ChildRunCompleted {

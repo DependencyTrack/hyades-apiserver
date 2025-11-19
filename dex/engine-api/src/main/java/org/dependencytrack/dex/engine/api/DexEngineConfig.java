@@ -214,6 +214,7 @@ public class DexEngineConfig {
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
     private final BufferConfig taskCommandBufferConfig = new BufferConfig();
     private final RetentionConfig retentionConfig = new RetentionConfig();
+    private final TaskSchedulerConfig workflowTaskSchedulerConfig = new TaskSchedulerConfig();
     private final TaskSchedulerConfig activityTaskSchedulerConfig = new TaskSchedulerConfig();
     private final TaskWorkerConfig activityTaskWorkerConfig = new TaskWorkerConfig();
 
@@ -261,6 +262,10 @@ public class DexEngineConfig {
      */
     public RetentionConfig retention() {
         return retentionConfig;
+    }
+
+    public TaskSchedulerConfig workflowTaskScheduler() {
+        return workflowTaskSchedulerConfig;
     }
 
     public TaskSchedulerConfig activityTaskScheduler() {

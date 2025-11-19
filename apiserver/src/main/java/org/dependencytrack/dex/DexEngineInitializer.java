@@ -26,6 +26,7 @@ import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.DexEngineFactory;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
@@ -79,6 +80,7 @@ public final class DexEngineInitializer implements ServletContextListener {
 
         // TODO: Register workflows and activities here.
 
+        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("default", 100));
         engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("default", 25));
 
         // TODO: Register workers based on configuration.
@@ -126,6 +128,16 @@ public final class DexEngineInitializer implements ServletContextListener {
                 .ifPresent(engineConfig.retention()::setWorkerEnabled);
         config.getOptionalValue("dt.dex-engine.retention.days", int.class)
                 .ifPresent(engineConfig.retention()::setDays);
+
+        config.getOptionalValue("dt.dex-engine.task-scheduler.activity.enabled", boolean.class)
+                .ifPresent(engineConfig.activityTaskScheduler()::setEnabled);
+        config.getOptionalValue("dt.dex-engine.task-scheduler.activity.poll-interval", Duration.class)
+                .ifPresent(engineConfig.activityTaskScheduler()::setPollInterval);
+
+        config.getOptionalValue("dt.dex-engine.task-scheduler.workflow.enabled", boolean.class)
+                .ifPresent(engineConfig.workflowTaskScheduler()::setEnabled);
+        config.getOptionalValue("dt.dex-engine.task-scheduler.workflow.poll-interval", Duration.class)
+                .ifPresent(engineConfig.workflowTaskScheduler()::setPollInterval);
 
         config.getOptionalValue("dt.dex-engine.task-worker.activity.min-poll-interval", Duration.class)
                 .ifPresent(engineConfig.activityTaskWorker()::setMinPollInterval);

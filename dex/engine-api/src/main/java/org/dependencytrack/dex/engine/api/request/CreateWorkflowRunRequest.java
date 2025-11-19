@@ -40,6 +40,7 @@ import static java.util.Objects.requireNonNull;
 public record CreateWorkflowRunRequest<A>(
         String workflowName,
         int workflowVersion,
+        String queueName,
         @Nullable String concurrencyGroupId,
         int priority,
         @Nullable Map<String, String> labels,
@@ -47,33 +48,34 @@ public record CreateWorkflowRunRequest<A>(
 
     public CreateWorkflowRunRequest {
         requireNonNull(workflowName, "workflowName must not be null");
+        requireNonNull(queueName, "queueName must not be null");
     }
 
-    public CreateWorkflowRunRequest(final String workflowName, final int workflowVersion) {
-        this(workflowName, workflowVersion, null, 0, null, null);
+    public CreateWorkflowRunRequest(final String workflowName, final int workflowVersion, final String queueName) {
+        this(workflowName, workflowVersion, queueName, null, 0, null, null);
     }
 
-    public CreateWorkflowRunRequest(final Class<? extends WorkflowExecutor<A, ?>> executorClass) {
-        this(getWorkflowName(executorClass), getWorkflowVersion(executorClass));
+    public CreateWorkflowRunRequest(final Class<? extends WorkflowExecutor<A, ?>> executorClass, final String queueName) {
+        this(getWorkflowName(executorClass), getWorkflowVersion(executorClass), queueName);
     }
 
     public CreateWorkflowRunRequest<A> withConcurrencyGroupId(final @Nullable String concurrencyGroupId) {
-        return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion,
+        return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion, this.queueName,
                 concurrencyGroupId, this.priority, this.labels, this.argument);
     }
 
     public CreateWorkflowRunRequest<A> withPriority(final int priority) {
-        return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion,
+        return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion, this.queueName,
                 this.concurrencyGroupId, priority, this.labels, this.argument);
     }
 
     public CreateWorkflowRunRequest<A> withLabels(final @Nullable Map<String, String> labels) {
-        return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion,
+        return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion, this.queueName,
                 this.concurrencyGroupId, this.priority, labels, this.argument);
     }
 
     public CreateWorkflowRunRequest<A> withArgument(final @Nullable A argument) {
-        return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion,
+        return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion, this.queueName,
                 this.concurrencyGroupId, this.priority, this.labels, argument);
     }
 

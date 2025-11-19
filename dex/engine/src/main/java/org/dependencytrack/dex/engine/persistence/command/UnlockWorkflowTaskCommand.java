@@ -18,20 +18,7 @@
  */
 package org.dependencytrack.dex.engine.persistence.command;
 
-import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
-import org.jspecify.annotations.Nullable;
-
-import java.time.Instant;
 import java.util.UUID;
 
-public record UpdateAndUnlockRunCommand(
-        UUID id,
-        String queueName,
-        WorkflowRunStatus status,
-        @Nullable String customStatus,
-        @Nullable Instant createdAt,
-        @Nullable Instant updatedAt,
-        @Nullable Instant startedAt,
-        @Nullable Instant completedAt) {
-
+public record UnlockWorkflowTaskCommand(String queueName, UUID runId) {
 }

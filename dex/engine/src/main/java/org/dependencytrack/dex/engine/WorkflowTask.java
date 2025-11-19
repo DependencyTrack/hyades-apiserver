@@ -31,6 +31,7 @@ record WorkflowTask(
         UUID workflowRunId,
         String workflowName,
         int workflowVersion,
+        String queueName,
         @Nullable String concurrencyGroupId,
         int priority,
         @Nullable Map<String, String> labels,

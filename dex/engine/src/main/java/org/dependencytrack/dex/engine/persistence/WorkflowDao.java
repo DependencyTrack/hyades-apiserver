@@ -25,10 +25,11 @@ import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunInbox
 import org.dependencytrack.dex.engine.persistence.command.DeleteInboxEventsCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowRunInboxEventsCommand;
+import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunCommand;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
-import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowRun;
+import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.engine.persistence.request.GetWorkflowRunHistoryRequest;
@@ -66,6 +67,7 @@ public final class WorkflowDao extends AbstractDao {
                 , parent_id
                 , workflow_name
                 , workflow_version
+                , queue_name
                 , concurrency_group_id
                 , priority
                 , labels
@@ -77,6 +79,7 @@ public final class WorkflowDao extends AbstractDao {
                        , :parentIds
                        , :workflowNames
                        , :workflowVersions
+                       , :queueNames
                        , :concurrencyGroupIds
                        , :priorities
                        , cast(:labelsJsons as jsonb[])
@@ -89,6 +92,7 @@ public final class WorkflowDao extends AbstractDao {
         final var parentIds = new ArrayList<@Nullable UUID>(commands.size());
         final var workflowNames = new ArrayList<String>(commands.size());
         final var workflowVersions = new ArrayList<Integer>(commands.size());
+        final var queueNames = new ArrayList<String>(commands.size());
         final var concurrencyGroupIds = new ArrayList<@Nullable String>(commands.size());
         final var priorities = new ArrayList<@Nullable Integer>(commands.size());
         final var labelsJsons = new ArrayList<@Nullable String>(commands.size());
@@ -111,6 +115,7 @@ public final class WorkflowDao extends AbstractDao {
             parentIds.add(command.parentId());
             workflowNames.add(command.workflowName());
             workflowVersions.add(command.workflowVersion());
+            queueNames.add(command.queueName());
             concurrencyGroupIds.add(command.concurrencyGroupId());
             priorities.add(command.priority());
             labelsJsons.add(labelsJson);
@@ -122,6 +127,7 @@ public final class WorkflowDao extends AbstractDao {
                 .bindArray("parentIds", UUID.class, parentIds)
                 .bindArray("workflowNames", String.class, workflowNames)
                 .bindArray("workflowVersions", Integer.class, workflowVersions)
+                .bindArray("queueNames", String.class, queueNames)
                 .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
                 .bindArray("priorities", Integer.class, priorities)
                 .bindArray("labelsJsons", String.class, labelsJsons)
@@ -150,35 +156,37 @@ public final class WorkflowDao extends AbstractDao {
             final UUID workerInstanceId,
             final Collection<UpdateAndUnlockRunCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
-                update dex_workflow_run
-                   set status = coalesce(run_update.status, dex_workflow_run.status)
-                     , custom_status = coalesce(run_update.custom_status, dex_workflow_run.custom_status)
-                     , locked_by = null
-                     , locked_until = null
-                     , updated_at = coalesce(run_update.updated_at, dex_workflow_run.updated_at)
-                     , started_at = coalesce(run_update.started_at, dex_workflow_run.started_at)
-                     , completed_at = coalesce(run_update.completed_at, dex_workflow_run.completed_at)
-                  from unnest (
-                         :ids
-                       , :statuses
-                       , :customStatuses
-                       , :updatedAts
-                       , :startedAts
-                       , :completedAts
-                       ) as run_update (
-                         id
-                       , status
-                       , custom_status
-                       , updated_at
-                       , started_at
-                       , completed_at
-                       )
-                 where dex_workflow_run.id = run_update.id
-                   and dex_workflow_run.locked_by = :workerInstanceId
-                returning dex_workflow_run.id
+                with
+                cte_command as (
+                  select *
+                    from unnest (:ids, :queueNames, :statuses, :customStatuses, :updatedAts, :startedAts, :completedAts)
+                      as t(id, queue_name, status, custom_status, updated_at, started_at, completed_at)
+                ),
+                cte_deleted_task as (
+                  delete
+                    from dex_workflow_task as task
+                   using cte_command
+                   where task.queue_name = cte_command.queue_name
+                     and task.workflow_run_id = cte_command.id
+                     and task.locked_by = :workerInstanceId
+                  returning task.workflow_run_id
+                          , task.queue_name
+                )
+                update dex_workflow_run as run
+                   set status = coalesce(cte_command.status, run.status)
+                     , custom_status = coalesce(cte_command.custom_status, run.custom_status)
+                     , updated_at = coalesce(cte_command.updated_at, run.updated_at)
+                     , started_at = coalesce(cte_command.started_at, run.started_at)
+                     , completed_at = coalesce(cte_command.completed_at, run.completed_at)
+                  from cte_deleted_task
+                 inner join cte_command
+                    on cte_command.id = cte_deleted_task.workflow_run_id
+                 where run.id = cte_deleted_task.workflow_run_id
+                returning run.id
                 """);
 
         final var ids = new ArrayList<UUID>(commands.size());
+        final var queueNames = new ArrayList<String>(commands.size());
         final var statuses = new ArrayList<WorkflowRunStatus>(commands.size());
         final var customStatuses = new ArrayList<@Nullable String>(commands.size());
         final var updatedAts = new ArrayList<@Nullable Instant>(commands.size());
@@ -187,6 +195,7 @@ public final class WorkflowDao extends AbstractDao {
 
         for (final UpdateAndUnlockRunCommand command : commands) {
             ids.add(command.id());
+            queueNames.add(command.queueName());
             statuses.add(command.status());
             customStatuses.add(command.customStatus());
             updatedAts.add(command.updatedAt());
@@ -197,6 +206,7 @@ public final class WorkflowDao extends AbstractDao {
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bindArray("ids", UUID.class, ids)
+                .bindArray("queueNames", String.class, queueNames)
                 .bindArray("statuses", WorkflowRunStatus.class, statuses)
                 .bindArray("customStatuses", String.class, customStatuses)
                 .bindArray("updatedAts", Instant.class, updatedAts)
@@ -221,53 +231,53 @@ public final class WorkflowDao extends AbstractDao {
                 .orElse(null);
     }
 
-    public Map<UUID, PolledWorkflowRun> pollAndLockRuns(
+    public Map<UUID, PolledWorkflowTask> pollAndLockWorkflowTasks(
             final UUID workerInstanceId,
+            final String queueName,
             final Collection<PollWorkflowTaskCommand> commands,
             final int limit) {
-        final Update update = jdbiHandle.createUpdate("""
-                with cte_poll as (
-                  select id
-                    from dex_workflow_run
-                   where workflow_name = any(:workflowNames)
-                     and status = any(cast('{CREATED, RUNNING, SUSPENDED}' as dex_workflow_run_status[]))
-                     and (concurrency_group_id is null
-                          or exists (
-                               select 1
-                                 from dex_workflow_run_concurrency_group as wrcg
-                                where wrcg.id = dex_workflow_run.concurrency_group_id
-                                  and wrcg.next_run_id = dex_workflow_run.id
-                             )
-                         )
-                     and (locked_until is null or locked_until <= now())
-                     and exists (
-                           select 1
-                             from dex_workflow_run_inbox
-                            where workflow_run_id = dex_workflow_run.id
-                              and (visible_from is null or visible_from <= now())
-                         )
-                   order by priority desc nulls last
-                          , id
-                     for no key update of dex_workflow_run
+        final Query query = jdbiHandle.createQuery("""
+                with
+                cte_poll as (
+                  select workflow_run_id
+                    from dex_workflow_task as task
+                   inner join dex_workflow_task_queue as queue
+                      on queue.name = task.queue_name
+                   where task.queue_name = :queueName
+                     and queue.status = 'ACTIVE'
+                     and (task.locked_until is null or task.locked_until <= now())
+                   order by task.priority desc
+                          , task.workflow_run_id
+                     for no key update of task
                     skip locked
                    limit :limit
+                ),
+                cte_locked as (
+                  update dex_workflow_task as task
+                     set locked_by = :workerInstanceId
+                       , locked_until = now() + (
+                           select t.lock_timeout
+                             from unnest(:workflowNames, :lockTimeouts) as t(workflow_name, lock_timeout)
+                            where t.workflow_name = task.workflow_name
+                            limit 1
+                         )
+                   from cte_poll
+                  where task.queue_name = :queueName
+                    and task.workflow_run_id = cte_poll.workflow_run_id
+                  returning task.queue_name
+                          , task.workflow_run_id
                 )
-                update dex_workflow_run
-                   set locked_by = :workerInstanceId
-                     , locked_until = now() + (
-                         select t.lock_timeout
-                           from unnest(:workflowNames, :lockTimeouts) as t(workflow_name, lock_timeout)
-                          where t.workflow_name = dex_workflow_run.workflow_name
-                          limit 1
-                       )
-                  from cte_poll
-                 where cte_poll.id = dex_workflow_run.id
-                returning dex_workflow_run.id
-                        , dex_workflow_run.workflow_name
-                        , dex_workflow_run.workflow_version
-                        , dex_workflow_run.concurrency_group_id
-                        , dex_workflow_run.priority
-                        , dex_workflow_run.labels
+                select run.id
+                     , run.workflow_name
+                     , run.workflow_version
+                     , run.queue_name
+                     , run.concurrency_group_id
+                     , run.priority
+                     , run.labels
+                  from dex_workflow_run as run
+                 inner join cte_locked
+                    on cte_locked.queue_name = run.queue_name
+                   and cte_locked.workflow_run_id = run.id
                 """);
 
         final var workflowNames = new ArrayList<String>(commands.size());
@@ -278,33 +288,39 @@ public final class WorkflowDao extends AbstractDao {
             lockTimeouts.add(command.lockTimeout());
         }
 
-        return update
+        return query
                 .bind("workerInstanceId", workerInstanceId.toString())
+                .bind("queueName", queueName)
                 .bindArray("workflowNames", String.class, workflowNames)
                 .bindArray("lockTimeouts", Duration.class, lockTimeouts)
                 .bind("limit", limit)
-                .executeAndReturnGeneratedKeys(
-                        "id",
-                        "workflow_name",
-                        "workflow_version",
-                        "concurrency_group_id",
-                        "priority",
-                        "labels")
-                .mapTo(PolledWorkflowRun.class)
-                .collectToMap(PolledWorkflowRun::id, Function.identity());
+                .mapTo(PolledWorkflowTask.class)
+                .collectToMap(PolledWorkflowTask::runId, Function.identity());
     }
 
-    public int unlockRuns(final UUID workerInstanceId, final Collection<UUID> runIds) {
+    public int unlockWorkflowTasks(final UUID workerInstanceId, final Collection<UnlockWorkflowTaskCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
-                update dex_workflow_run
+                update dex_workflow_task as task
                    set locked_by = null
                      , locked_until = null
-                 where id = any(:runIds)
-                   and locked_by = :workerInstanceId
+                  from unnest(:queueNames, :runIds)
+                    as t(queue_name, run_id)
+                 where task.queue_name = t.queue_name
+                   and task.workflow_run_id = t.run_id
+                   and task.locked_by = :workerInstanceId
                 """);
+
+        final var queueNames = new ArrayList<String>(commands.size());
+        final var runIds = new ArrayList<UUID>(commands.size());
+
+        for (final UnlockWorkflowTaskCommand command : commands) {
+            queueNames.add(command.queueName());
+            runIds.add(command.runId());
+        }
 
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
+                .bindArray("queueNames", String.class, queueNames)
                 .bindArray("runIds", UUID.class, runIds)
                 .execute();
     }

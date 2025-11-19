@@ -28,7 +28,7 @@ import org.dependencytrack.dex.engine.persistence.mapping.WorkflowEventSqlArrayT
 import org.dependencytrack.dex.engine.persistence.mapping.WorkflowPayloadSqlArrayType;
 import org.dependencytrack.dex.engine.persistence.model.PolledActivityTask;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
-import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowRun;
+import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunHistoryEntry;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
@@ -86,7 +86,7 @@ public final class JdbiFactory {
                         PolledWorkflowEvent.class,
                         new PolledWorkflowEventRowMapper())
                 .registerRowMapper(
-                        PolledWorkflowRun.class,
+                        PolledWorkflowTask.class,
                         new PolledWorkflowRunRowMapper())
                 .registerRowMapper(
                         WorkflowRunHistoryEntry.class,

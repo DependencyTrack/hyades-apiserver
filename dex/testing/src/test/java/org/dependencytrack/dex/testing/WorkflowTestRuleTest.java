@@ -32,6 +32,7 @@ import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
 import org.jspecify.annotations.Nullable;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -76,14 +77,15 @@ public class WorkflowTestRuleTest {
                 Duration.ofSeconds(3),
                 false);
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", "default", 1));
         engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", "default", 1));
 
+        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("default", 10));
         engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("default", 10));
 
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>(TestWorkflow.class));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>(TestWorkflow.class, "default"));
 
         final WorkflowRun run = workflowTestRule.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
         assertThat(run).isNotNull();
@@ -100,7 +102,9 @@ public class WorkflowTestRuleTest {
                 voidConverter(),
                 stringConverter(),
                 Duration.ofSeconds(3));
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", "default", 1));
+
+        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("default", 10));
 
         final var activityMock = mock(TestActivity.class);
         doReturn("mocked").when(activityMock).execute(any(ActivityContext.class), isNull());
@@ -117,7 +121,7 @@ public class WorkflowTestRuleTest {
 
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>(TestWorkflow.class));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>(TestWorkflow.class, "default"));
 
         final WorkflowRun run = workflowTestRule.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
         assertThat(run).isNotNull();

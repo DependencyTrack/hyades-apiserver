@@ -28,6 +28,7 @@ import org.dependencytrack.dex.engine.api.event.DexEngineEventListener;
 import org.dependencytrack.dex.engine.api.pagination.Page;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
@@ -207,6 +208,8 @@ public interface DexEngine extends Closeable {
      * @throws IllegalStateException When the engine is not running.
      */
     CompletableFuture<Void> sendExternalEvent(ExternalEvent externalEvent);
+
+    void createWorkflowTaskQueue(CreateWorkflowTaskQueueRequest request);
 
     void createActivityTaskQueue(CreateActivityTaskQueueRequest request);
 

@@ -40,6 +40,7 @@ import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
@@ -156,11 +157,11 @@ public class DexEngineImplBenchmarkTest {
         engine.registerActivity(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5), false);
         engine.registerActivity(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5), false);
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", 100));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", "default", 100));
         engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", "default", 150));
 
-        engine.createActivityTaskQueue(
-                new CreateActivityTaskQueueRequest("default", 1000));
+        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("default", 1000));
+        engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("default", 1000));
     }
 
     @AfterEach
@@ -197,7 +198,7 @@ public class DexEngineImplBenchmarkTest {
             final Map<String, String> labels = (i % 5 == 0) ? Map.of("foo", "test-" + i) : null;
 
             scheduleOptions.add(
-                    new CreateWorkflowRunRequest<>("test", 1)
+                    new CreateWorkflowRunRequest<>("test", 1, "default")
                             .withConcurrencyGroupId(concurrencyGroupId)
                             .withLabels(labels));
         }
@@ -253,11 +254,13 @@ public class DexEngineImplBenchmarkTest {
                                 WorkflowRunCountByNameAndStatusRow::count));
                 System.out.printf("Statuses: %s\n".formatted(countByStatus));
 
+                final Collection<Timer> workflowTaskSchedulingLatencies = meterRegistry.get(
+                        "dt.dex.engine.workflow.task.scheduling.latency").timers();
                 final Collection<Timer> activityTaskSchedulingLatencies = meterRegistry.get(
                         "dt.dex.engine.activity.task.scheduling.latency").timers();
-                final Collection<Timer> taskDispatcherPollLatencies = meterRegistry.get(
+                final Collection<Timer> taskWorkerPollLatencies = meterRegistry.get(
                         "dt.dex.engine.task.worker.poll.latency").timers();
-                final Collection<DistributionSummary> taskDispatcherPollTasks = meterRegistry.get(
+                final Collection<DistributionSummary> taskWorkerPollTasks = meterRegistry.get(
                         "dt.dex.engine.task.worker.tasks.polled").summaries();
                 final Collection<Timer> taskProcessLatencies = meterRegistry.get(
                         "dt.dex.engine.task.worker.process.latency").timers();
@@ -268,6 +271,13 @@ public class DexEngineImplBenchmarkTest {
                 final Collection<FunctionCounter> historyCacheGets = meterRegistry.get(
                         "cache.gets").tag("cache", "DexEngine-RunHistoryCache").functionCounters();
 
+                for (final Timer timer : workflowTaskSchedulingLatencies) {
+                    System.out.printf(
+                            "Workflow Task Scheduling Latency: queueName=%s, mean=%.2fms, max=%.2fms\n",
+                            timer.getId().getTag("queueName"),
+                            timer.mean(TimeUnit.MILLISECONDS),
+                            timer.max(TimeUnit.MILLISECONDS));
+                }
                 for (final Timer timer : activityTaskSchedulingLatencies) {
                     System.out.printf(
                             "Activity Task Scheduling Latency: queueName=%s, mean=%.2fms, max=%.2fms\n",
@@ -275,14 +285,14 @@ public class DexEngineImplBenchmarkTest {
                             timer.mean(TimeUnit.MILLISECONDS),
                             timer.max(TimeUnit.MILLISECONDS));
                 }
-                for (final Timer timer : taskDispatcherPollLatencies) {
+                for (final Timer timer : taskWorkerPollLatencies) {
                     System.out.printf(
                             "Worker Poll Latency: workerType=%s, mean=%.2fms, max=%.2fms\n",
                             timer.getId().getTag("workerType"),
                             timer.mean(TimeUnit.MILLISECONDS),
                             timer.max(TimeUnit.MILLISECONDS));
                 }
-                for (final DistributionSummary summary : taskDispatcherPollTasks) {
+                for (final DistributionSummary summary : taskWorkerPollTasks) {
                     System.out.printf(
                             "Worker Poll Tasks: workerType=%s, mean=%.2f, max=%.2f\n",
                             summary.getId().getTag("workerType"),
@@ -329,7 +339,7 @@ public class DexEngineImplBenchmarkTest {
                              , n_tup_hot_upd as hot_updates
                              , (n_tup_hot_upd::real / nullif(n_tup_upd, 0)::real)::real as hot_update_ratio
                           from pg_stat_user_tables
-                         where relname like 'workflow_%'
+                         where relname like 'dex_%'
                            and n_tup_upd > 0
                          order by hot_update_ratio desc
                         """);
