@@ -111,7 +111,7 @@ public final class Buffer<T> implements Closeable {
         this.itemsQueueTimeout = itemsQueueTimeout;
         this.currentBatch = new ArrayList<>(maxBatchSize);
         this.flushExecutor = Executors.newSingleThreadScheduledExecutor(
-                new DefaultThreadFactory("DexEngine-Buffer-" + name));
+                Thread.ofVirtual().name("DexEngine-Buffer-" + name).factory());
         this.flushInterval = flushInterval;
         this.flushLock = new ReentrantLock();
         this.statusLock = new ReentrantLock();
@@ -132,7 +132,13 @@ public final class Buffer<T> implements Closeable {
                 .bindTo(meterRegistry);
 
         flushExecutor.scheduleAtFixedRate(
-                this::maybeFlush,
+                () -> {
+                    try {
+                        maybeFlush();
+                    } catch (RuntimeException e) {
+                        LOGGER.error("Failed to flush buffer", e);
+                    }
+                },
                 flushInterval.toMillis(),
                 flushInterval.toMillis(),
                 TimeUnit.MILLISECONDS);

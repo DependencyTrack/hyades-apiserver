@@ -51,13 +51,6 @@ create table dex_workflow_task (
 , constraint dex_workflow_task_workflow_run_fk foreign key (workflow_run_id) references dex_workflow_run (id) on delete cascade
 ) partition by list (queue_name);
 
-create table dex_workflow_run_concurrency_group (
-  id text
-, next_run_id uuid not null
-, constraint dex_workflow_run_concurrency_group_pk primary key (id)
-, constraint dex_workflow_run_concurrency_group_next_run_fk foreign key (next_run_id) references dex_workflow_run (id) on delete cascade
-) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
-
 create table dex_workflow_run_history (
   workflow_run_id uuid
 , sequence_number int
@@ -201,93 +194,3 @@ begin
   return true;
 end;
 $$ language plpgsql;
-
-create function dex_create_workflow_run_concurrency_groups_on_run_creation()
-returns trigger
-as $$
-begin
-  insert into dex_workflow_run_concurrency_group (id, next_run_id)
-  select distinct on (concurrency_group_id)
-         concurrency_group_id
-       , id
-    from new_table
-   where concurrency_group_id is not null
-   order by concurrency_group_id
-          , priority desc
-          , id
-  on conflict (id) do nothing;
-  return null;
-end;
-$$ language plpgsql;
-
-create function dex_update_workflow_run_concurrency_groups_on_run_completion()
-returns trigger
-as $$
-declare
-  group_ids text[];
-  updated_group_ids text[];
-begin
-  -- Identify concurrency group IDs for which runs have transitioned
-  -- from a non-terminal to a terminal status.
-  select array_agg(distinct new_table.concurrency_group_id)
-    into group_ids
-    from new_table
-   inner join old_table
-      on old_table.id = new_table.id
-   where old_table.status = any(cast('{CREATED, RUNNING, SUSPENDED}' as dex_workflow_run_status[]))
-     and new_table.status = any(cast('{CANCELED, COMPLETED, FAILED}' as dex_workflow_run_status[]))
-     and new_table.concurrency_group_id is not null;
-
-  if coalesce(array_length(group_ids, 1), 0) = 0 then
-    return null;
-  end if;
-
-  -- Identify and set the next run to execute for each concurrency group ID.
-  with
-  cte_next_run as (
-    select distinct on (concurrency_group_id)
-           concurrency_group_id
-         , id
-      from dex_workflow_run
-     where concurrency_group_id = any(group_ids)
-       and status = cast('CREATED' as dex_workflow_run_status)
-     order by concurrency_group_id
-            , priority desc
-            , id
-  ),
-  cte_updated_group as (
-    update dex_workflow_run_concurrency_group
-       set next_run_id = cte_next_run.id
-      from cte_next_run
-     where dex_workflow_run_concurrency_group.id = cte_next_run.concurrency_group_id
-    returning dex_workflow_run_concurrency_group.id
-  )
-  select array_agg(id)
-    into updated_group_ids
-    from cte_updated_group;
-
-  if coalesce(array_length(updated_group_ids, 1), 0) = array_length(group_ids, 1) then
-    return null;
-  end if;
-
-  -- Delete concurrency groups for which no next run could be determined.
-  delete
-    from dex_workflow_run_concurrency_group
-   where id = any(group_ids)
-     and id != all(updated_group_ids);
-
-  return null;
-end;
-$$ language plpgsql;
-
-create trigger trigger_dex_workflow_run_concurrency_groups_on_run_creation
-after insert on dex_workflow_run
-referencing new table as new_table
-for each statement
-execute function dex_create_workflow_run_concurrency_groups_on_run_creation();
-
-create trigger trigger_dex_workflow_run_concurrency_groups_on_run_completion
-after update on dex_workflow_run
-referencing old table as old_table new table as new_table
-for each statement
-execute function dex_update_workflow_run_concurrency_groups_on_run_completion();

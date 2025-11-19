@@ -23,7 +23,6 @@ import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
-import org.dependencytrack.dex.engine.support.DefaultThreadFactory;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.statement.Query;
@@ -76,11 +75,17 @@ final class WorkflowTaskScheduler implements Closeable {
                 .withRegistry(meterRegistry);
 
         executor = Executors.newSingleThreadScheduledExecutor(
-                new DefaultThreadFactory(EXECUTOR_NAME));
+                Thread.ofVirtual().name(EXECUTOR_NAME).factory());
         new ExecutorServiceMetrics(executor, EXECUTOR_NAME, null)
                 .bindTo(meterRegistry);
         executor.scheduleWithFixedDelay(
-                this::scheduleWorkflowTasks,
+                () -> {
+                    try {
+                        scheduleWorkflowTasks();
+                    } catch (RuntimeException e) {
+                        LOGGER.error("Failed to schedule workflow tasks", e);
+                    }
+                },
                 100,
                 pollInterval.toMillis(),
                 TimeUnit.MILLISECONDS);

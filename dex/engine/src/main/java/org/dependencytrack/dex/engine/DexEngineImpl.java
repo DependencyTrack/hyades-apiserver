@@ -239,7 +239,7 @@ final class DexEngineImpl implements DexEngine {
         if (config.retention().isWorkerEnabled()) {
             LOGGER.debug("Starting retention worker");
             retentionExecutor = Executors.newSingleThreadScheduledExecutor(
-                    new DefaultThreadFactory("DexEngine-RetentionWorker"));
+                    Thread.ofVirtual().name("DexEngine-RetentionWorker").factory());
             new ExecutorServiceMetrics(retentionExecutor, "DexEngine-RetentionWorker", null)
                     .bindTo(config.meterRegistry());
             retentionExecutor.scheduleAtFixedRate(
