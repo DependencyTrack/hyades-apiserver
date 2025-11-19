@@ -359,44 +359,8 @@
         </createTable>
     </changeSet>
 
+
     <changeSet id="v5.7.0-18" author="oxisto">
-        <sql splitStatements="false">
-            DO $$
-            DECLARE
-            mat_view_def TEXT;
-            index_defs TEXT[];
-            index_def TEXT;
-            BEGIN
-            SELECT pg_get_viewdef('"PORTFOLIOMETRICS_GLOBAL"', true)
-            INTO mat_view_def;
-
-            SELECT array_agg(indexdef)
-            INTO index_defs
-            FROM pg_indexes
-            WHERE tablename = 'PORTFOLIOMETRICS_GLOBAL';
-
-            DROP MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL";
-
-            ALTER TABLE "CONFIGPROPERTY"
-            ALTER COLUMN "PROPERTYVALUE" TYPE TEXT;
-
-            EXECUTE format(
-            'CREATE MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL" AS %s WITH DATA'
-            , TRIM(TRAILING ';' FROM mat_view_def)
-            );
-
-            IF index_defs IS NOT NULL THEN
-            FOREACH index_def IN ARRAY index_defs
-            LOOP
-            EXECUTE index_def;
-            END LOOP;
-            END IF;
-            END
-            $$;
-        </sql>
-    </changeSet>
-
-    <changeSet id="v5.7.0-19" author="oxisto">
         <createTable tableName="ADVISORY">
             <column name="ID" autoIncrement="true" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="ADVISORY_PK"/>
@@ -423,7 +387,7 @@
         </createTable>
     </changeSet>
 
-    <changeSet id="v5.7.0-20" author="oxisto">
+    <changeSet id="v5.7.0-19" author="oxisto">
         <sql>
             ALTER TABLE "ADVISORY"
             ADD COLUMN "SEARCHVECTOR" tsvector
@@ -435,7 +399,7 @@
         </sql>
     </changeSet>
 
-    <changeSet id="v5.7.0-21" author="oxisto">
+    <changeSet id="v5.7.0-20" author="oxisto">
         <addColumn tableName="VULNERABILITYALIAS">
             <column name="CSAF_ID" type="VARCHAR(255)"/>
         </addColumn>
@@ -443,12 +407,12 @@
             <column name="CSAF_ID"/>
         </createIndex>
     </changeSet>
-    <changeSet id="v5.7.0-22" author="oxisto">
+    <changeSet id="v5.7.0-21" author="oxisto">
         <addColumn tableName="FINDINGATTRIBUTION">
             <column name="MATCHING_PERCENTAGE" type="SMALLINT"/>
         </addColumn>
     </changeSet>
-    <changeSet id="v5.7.0-23" author="oxisto">
+    <changeSet id="v5.7.0-22" author="oxisto">
         <createTable tableName="ADVISORIES_VULNERABILITIES">
             <column name="ADVISORY_ID" type="BIGINT">
                 <constraints nullable="false"/>
