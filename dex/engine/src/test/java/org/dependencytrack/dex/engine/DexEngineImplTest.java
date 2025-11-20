@@ -41,6 +41,7 @@ import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.proto.event.v1.Event;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.junit.jupiter.Container;
@@ -52,10 +53,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -111,13 +114,13 @@ class DexEngineImplTest {
             ctx.setStatus("someCustomStatus");
             return "someResult";
         });
-        engine.registerWorkflowWorker(new  WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 1));
         engine.start();
 
         final UUID runId = engine.createRun(
                 new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME)
                         .withConcurrencyGroupId("someConcurrencyGroupId")
-                        .withPriority(6)
+                        .withPriority((short) 6)
                         .withLabels(Map.of("label-a", "123", "label-b", "321"))
                         .withArgument("someArgument"));
 
@@ -125,7 +128,7 @@ class DexEngineImplTest {
 
         assertThat(completedRun.customStatus()).isEqualTo("someCustomStatus");
         assertThat(completedRun.concurrencyGroupId()).isEqualTo("someConcurrencyGroupId");
-        assertThat(completedRun.priority()).isEqualTo(6);
+        assertThat(completedRun.priority()).isEqualTo((short) 6);
         assertThat(completedRun.labels()).containsOnlyKeys("label-a", "label-b");
         assertThat(completedRun.createdAt()).isNotNull();
         assertThat(completedRun.updatedAt()).isNotNull();
@@ -596,6 +599,40 @@ class DexEngineImplTest {
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> engine.requestRunResumption(runId))
                 .withMessageMatching("Workflow run .+ is already in terminal status");
+    }
+
+    @Nested
+    class ConcurrencyGroupTest {
+
+        @Test
+        void shouldExecuteRunsWithSameConcurrencyGroupInPriorityOrder() {
+            final var executionQueue = new ArrayBlockingQueue<String>(5);
+
+            engine.registerWorkflowInternal("test", 1, stringConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
+                executionQueue.add(arg);
+                return null;
+            });
+            engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("worker", DEFAULT_WORKFLOW_TASK_QUEUE_NAME, 5));
+            engine.start();
+
+            final var concurrencyGroupId = "concurrencyGroup";
+
+            final List<UUID> runIds = engine.createRuns(
+                    Stream.of("a", "b", "c", "d", "e")
+                            .<CreateWorkflowRunRequest<?>>map(
+                                    character -> new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME)
+                                            .withConcurrencyGroupId(concurrencyGroupId)
+                                            .withPriority((short) character.codePointAt(0))
+                                            .withArgument(character))
+                            .toList());
+
+            for (final var runId : runIds) {
+                awaitRunStatus(runId, WorkflowRunStatus.COMPLETED, Duration.ofSeconds(5));
+            }
+
+            assertThat(executionQueue).containsExactly("e", "d", "c", "b", "a");
+        }
+
     }
 
     @Test

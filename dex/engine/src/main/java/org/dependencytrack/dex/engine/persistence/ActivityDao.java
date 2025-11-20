@@ -144,7 +144,7 @@ public final class ActivityDao extends AbstractDao {
         final var createdEventIds = new ArrayList<Integer>(commands.size());
         final var activityNames = new ArrayList<String>(commands.size());
         final var queueNames = new ArrayList<String>(commands.size());
-        final var priorities = new ArrayList<@Nullable Integer>(commands.size());
+        final var priorities = new ArrayList<Short>(commands.size());
         final var arguments = new ArrayList<@Nullable Payload>(commands.size());
         final var visibleFroms = new ArrayList<@Nullable Instant>(commands.size());
 
@@ -163,7 +163,7 @@ public final class ActivityDao extends AbstractDao {
                 .bindArray("createdEventIds", Integer.class, createdEventIds)
                 .bindArray("activityNames", String.class, activityNames)
                 .bindArray("queueNames", String.class, queueNames)
-                .bindArray("priorities", Integer.class, priorities)
+                .bindArray("priorities", Short.class, priorities)
                 .bindArray("arguments", Payload.class, arguments)
                 .bindArray("visibleFroms", Instant.class, visibleFroms)
                 .execute();

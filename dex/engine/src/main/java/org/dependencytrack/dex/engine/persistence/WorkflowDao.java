@@ -94,7 +94,7 @@ public final class WorkflowDao extends AbstractDao {
         final var workflowVersions = new ArrayList<Integer>(commands.size());
         final var queueNames = new ArrayList<String>(commands.size());
         final var concurrencyGroupIds = new ArrayList<@Nullable String>(commands.size());
-        final var priorities = new ArrayList<@Nullable Integer>(commands.size());
+        final var priorities = new ArrayList<Short>(commands.size());
         final var labelsJsons = new ArrayList<@Nullable String>(commands.size());
         final var createdAts = new ArrayList<Instant>(commands.size());
 
@@ -129,7 +129,7 @@ public final class WorkflowDao extends AbstractDao {
                 .bindArray("workflowVersions", Integer.class, workflowVersions)
                 .bindArray("queueNames", String.class, queueNames)
                 .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
-                .bindArray("priorities", Integer.class, priorities)
+                .bindArray("priorities", Short.class, priorities)
                 .bindArray("labelsJsons", String.class, labelsJsons)
                 .bindArray("createdAts", Instant.class, createdAts)
                 .executeAndReturnGeneratedKeys("id")

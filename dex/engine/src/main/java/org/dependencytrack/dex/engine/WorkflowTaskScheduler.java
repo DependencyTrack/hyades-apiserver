@@ -191,6 +191,29 @@ final class WorkflowTaskScheduler implements Closeable {
                         where task.queue_name = :queueName
                           and task.workflow_run_id = run.id
                      )
+                     and (
+                       run.concurrency_group_id is null
+                       or run.status != cast('CREATED' as dex_workflow_run_status)
+                       or (
+                         -- This run is the highest priority CREATED run in its concurrency group.
+                         not exists(
+                           select 1
+                             from dex_workflow_run as other
+                            where other.queue_name = run.queue_name
+                              and other.concurrency_group_id = run.concurrency_group_id
+                              and other.status = cast('CREATED' as dex_workflow_run_status)
+                              and (other.priority, other.id) > (run.priority, run.id)
+                         )
+                         -- No other run in the same concurrency group is currently executing.
+                         and not exists(
+                           select 1
+                             from dex_workflow_run as executing
+                            where executing.queue_name = run.queue_name
+                              and executing.concurrency_group_id = run.concurrency_group_id
+                              and executing.status = any(cast('{RUNNING, SUSPENDED}' as dex_workflow_run_status[]))
+                         )
+                       )
+                     )
                    order by priority desc
                           , id
                    limit greatest(0, :maxConcurrency - (select depth from cte_queue_depth))

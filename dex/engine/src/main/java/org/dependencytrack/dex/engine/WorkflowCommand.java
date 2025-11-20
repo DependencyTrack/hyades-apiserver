@@ -65,7 +65,7 @@ sealed interface WorkflowCommand {
             int eventId,
             String name,
             String queueName,
-            int priority,
+            short priority,
             @Nullable Payload argument,
             @Nullable Instant scheduleFor) implements WorkflowCommand {
 
@@ -82,7 +82,7 @@ sealed interface WorkflowCommand {
             int workflowVersion,
             String queueName,
             @Nullable String concurrencyGroupId,
-            int priority,
+            short priority,
             @Nullable Map<String, String> labels,
             @Nullable Payload argument) implements WorkflowCommand {
 

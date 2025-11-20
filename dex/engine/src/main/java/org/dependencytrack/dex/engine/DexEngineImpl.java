@@ -967,7 +967,7 @@ final class DexEngineImpl implements DexEngine {
                                     message.event().getRunCreated().hasConcurrencyGroupId()
                                             ? message.event().getRunCreated().getConcurrencyGroupId()
                                             : null,
-                                    message.event().getRunCreated().getPriority(),
+                                    (short) message.event().getRunCreated().getPriority(),
                                     message.event().getRunCreated().getLabelsCount() > 0
                                             ? Map.copyOf(message.event().getRunCreated().getLabelsMap())
                                             : null,
@@ -1005,7 +1005,7 @@ final class DexEngineImpl implements DexEngine {
                                 newEvent.getId(),
                                 newEvent.getActivityTaskCreated().getName(),
                                 newEvent.getActivityTaskCreated().getQueueName(),
-                                newEvent.getActivityTaskCreated().getPriority(),
+                                (short) newEvent.getActivityTaskCreated().getPriority(),
                                 newEvent.getActivityTaskCreated().hasArgument()
                                         ? newEvent.getActivityTaskCreated().getArgument()
                                         : null,

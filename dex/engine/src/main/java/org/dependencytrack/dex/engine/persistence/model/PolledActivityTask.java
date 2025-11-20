@@ -29,7 +29,7 @@ public record PolledActivityTask(
         int createdEventId,
         String activityName,
         String queueName,
-        int priority,
+        short priority,
         @Nullable Payload argument,
         Instant lockedUntil) {
 }

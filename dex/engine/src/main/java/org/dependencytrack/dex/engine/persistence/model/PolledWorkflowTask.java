@@ -29,6 +29,6 @@ public record PolledWorkflowTask(
         int workflowVersion,
         String queueName,
         @Nullable String concurrencyGroupId,
-        int priority,
+        short priority,
         @Nullable Map<String, String> labels) {
 }

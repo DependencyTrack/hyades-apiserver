@@ -81,7 +81,7 @@ final class WorkflowRunState {
     private @Nullable Failure failure;
     private @Nullable WorkflowRunStatus status;
     private @Nullable String customStatus;
-    private @Nullable Integer priority;
+    private @Nullable Short priority;
     private @Nullable Map<String, String> labels;
     private @Nullable Instant createdAt;
     private @Nullable Instant updatedAt;
@@ -163,7 +163,7 @@ final class WorkflowRunState {
     }
 
     @Nullable
-    Integer priority() {
+    Short priority() {
         return priority;
     }
 
@@ -237,7 +237,7 @@ final class WorkflowRunState {
                 argument = event.getRunCreated().hasArgument()
                         ? event.getRunCreated().getArgument()
                         : null;
-                priority = event.getRunCreated().getPriority();
+                priority = (short) event.getRunCreated().getPriority();
                 labels = event.getRunCreated().getLabelsCount() > 0
                         ? event.getRunCreated().getLabelsMap()
                         : null;

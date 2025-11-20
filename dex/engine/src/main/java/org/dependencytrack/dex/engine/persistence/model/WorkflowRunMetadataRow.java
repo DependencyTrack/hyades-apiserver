@@ -34,7 +34,7 @@ public record WorkflowRunMetadataRow(
         WorkflowRunStatus status,
         @Nullable String customStatus,
         @Nullable String concurrencyGroupId,
-        int priority,
+        short priority,
         @Nullable @Json Map<String, String> labels,
         Instant createdAt,
         @Nullable Instant updatedAt,

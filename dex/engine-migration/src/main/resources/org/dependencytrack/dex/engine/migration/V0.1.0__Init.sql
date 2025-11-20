@@ -117,10 +117,17 @@ create index dex_workflow_run_task_scheduler_poll_idx
 create index dex_workflow_task_poll_idx
     on dex_workflow_task (priority desc, workflow_run_id);
 
-create index dex_workflow_run_concurrency_group_update_idx
-    on dex_workflow_run (concurrency_group_id, priority desc, id)
- where status = cast('CREATED' as dex_workflow_run_status)
-   and concurrency_group_id is not null;
+-- Index to support identification of executing runs for a concurrency group.
+create unique index dex_workflow_run_concurrency_group_executing_idx
+    on dex_workflow_run (queue_name, concurrency_group_id)
+ where concurrency_group_id is not null
+   and status = any(cast('{RUNNING, SUSPENDED}' as dex_workflow_run_status[]));
+
+-- Index to support identification of the next run to execute for a concurrency group.
+create index dex_workflow_run_concurrency_group_next_idx
+    on dex_workflow_run (queue_name, concurrency_group_id, priority desc, id)
+ where concurrency_group_id is not null
+   and status = cast('CREATED' as dex_workflow_run_status);
 
 -- Index to support searching of workflow runs by label.
 create index dex_workflow_run_labels_idx
