@@ -27,11 +27,13 @@ info:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
 security:
-- apiKeyAuth: [ ]
-- bearerAuth: [ ]
+  - apiKeyAuth: []
+  - bearerAuth: []
 servers:
-- url: /api/v2
+  - url: /api/v2
 tags:
+- name: Advisories
+  description: Endpoints related to advisories
 - name: Components
   description: Endpoints related to components
 - name: Extensions
@@ -48,6 +50,16 @@ tags:
   description: Endpoints related to workflows
 
 paths:
+  /advisories:
+    $ref: "./paths/advisories.yaml"
+  /advisories/{advisoryId}:
+    $ref: "./paths/advisories__advisoryid_.yaml"
+  /advisories/seen/{advisoryId}:
+    $ref: "./paths/advisories_seen__advisoryid_.yaml"
+  /advisories/project/{uuid}:
+    $ref: "./paths/advisories_project__uuid_.yaml"
+  /advisories/project/{uuid}/advisory/{advisoryId}:
+    $ref: "./paths/advisories_project__uuid__advisory__advisoryid_.yaml"
   /components:
     $ref: "./paths/components.yaml"
   /extension-points:
@@ -56,6 +68,12 @@ paths:
     $ref: "./paths/extension-points__name__extensions.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/configs:
     $ref: "./paths/extension-points__name__extensions__name__configs.yaml"
+  /extension-points/vuln.datasource/extensions/csaf/trigger-mirror:
+    $ref: "./paths/extension-points__vuln-datasource__extensions__csaf__trigger-mirror.yaml"
+  /extension-points/vuln.datasource/extensions/csaf/sources:
+    $ref: "./paths/extension-points__vuln-datasource__extensions__csaf__sources.yaml"
+  /extension-points/vuln.datasource/extensions/csaf/sources/{csafSourceId}:
+    $ref: "./paths/extension-points__vuln-datasource__extensions__csaf__sources__csafSourceId_.yaml"
   /projects/{uuid}/clone:
     $ref: "./paths/projects__uuid__clone.yaml"
   /projects/{uuid}/components:

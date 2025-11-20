@@ -42,6 +42,7 @@ import org.apache.commons.lang3.ClassUtils;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Advisory;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -151,6 +152,7 @@ public class QueryManager extends AlpineQueryManager {
     private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
+    private AdvisoryQueryManager advisoryQueryManager;
 
     /**
      * Default constructor.
@@ -406,6 +408,17 @@ public class QueryManager extends AlpineQueryManager {
             metricsQueryManager = (request == null) ? new MetricsQueryManager(getPersistenceManager()) : new MetricsQueryManager(getPersistenceManager(), request);
         }
         return metricsQueryManager;
+    }
+
+    /**
+     * Lazy instantiation of AdvisoryQueryManager.
+     * @return an AdvisoryQueryManager object
+     */
+    private AdvisoryQueryManager getAdvisoryQueryManager() {
+        if (advisoryQueryManager == null) {
+            advisoryQueryManager = (request == null) ? new AdvisoryQueryManager(getPersistenceManager()) : new AdvisoryQueryManager(getPersistenceManager(), request);
+        }
+        return advisoryQueryManager;
     }
 
     /**
@@ -982,6 +995,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public void synchronizeVulnerabilityMetrics(List<VulnerabilityMetrics> metrics) {
         getMetricsQueryManager().synchronizeVulnerabilityMetrics(metrics);
+    }
+
+    public Advisory synchronizeAdvisory(Advisory advisory) {
+        return getAdvisoryQueryManager().synchronizeAdvisory(advisory);
     }
 
     public PaginatedResult getRepositories() {

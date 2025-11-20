@@ -128,6 +128,17 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>vuln-data-source-csaf</artifactId>
+            <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-jdk14</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>vuln-data-source-github</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -389,6 +400,7 @@
             <artifactId>commons-compress</artifactId>
             <version>${lib.commons-compress.version}</version>
         </dependency>
+
         <!-- Resilience4J -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>
@@ -561,6 +573,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <!-- Do not fail the build if -Dtest specifies tests that don't match any classes -->
+                    <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
                     <argLine>
                         @{argLine}
                         -Xmx512m
