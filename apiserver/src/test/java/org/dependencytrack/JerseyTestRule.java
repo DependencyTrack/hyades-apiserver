@@ -22,6 +22,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.dependencytrack.resources.v2.OpenApiValidationClientResponseFilter;
 import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.grizzly.connector.GrizzlyConnectorProvider;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
@@ -63,6 +64,8 @@ public class JerseyTestRule extends ExternalResource {
 
                 if (isV2) {
                     config.register(OpenApiValidationClientResponseFilter.class);
+                    // Ensure multipart support is available on the client for v2 multipart endpoints
+                    config.register(MultiPartFeature.class);
                 }
             }
 
