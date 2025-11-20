@@ -176,7 +176,7 @@ final class WorkflowTaskScheduler implements Closeable {
                        , priority
                     from dex_workflow_run as run
                    where queue_name = :queueName
-                     and status = any(cast('{CREATED, RUNNING, SUSPENDED}' as dex_workflow_run_status[]))
+                     and status in ('CREATED', 'RUNNING', 'SUSPENDED')
                      -- Only consider runs with visible messages in their inbox.
                      and exists(
                        select 1
@@ -193,7 +193,7 @@ final class WorkflowTaskScheduler implements Closeable {
                      )
                      and (
                        run.concurrency_group_id is null
-                       or run.status != cast('CREATED' as dex_workflow_run_status)
+                       or run.status != 'CREATED'
                        or (
                          -- This run is the highest priority CREATED run in its concurrency group.
                          not exists(
@@ -201,7 +201,7 @@ final class WorkflowTaskScheduler implements Closeable {
                              from dex_workflow_run as other
                             where other.queue_name = run.queue_name
                               and other.concurrency_group_id = run.concurrency_group_id
-                              and other.status = cast('CREATED' as dex_workflow_run_status)
+                              and other.status = 'CREATED'
                               and (other.priority, other.id) > (run.priority, run.id)
                          )
                          -- No other run in the same concurrency group is currently executing.
@@ -210,7 +210,7 @@ final class WorkflowTaskScheduler implements Closeable {
                              from dex_workflow_run as executing
                             where executing.queue_name = run.queue_name
                               and executing.concurrency_group_id = run.concurrency_group_id
-                              and executing.status = any(cast('{RUNNING, SUSPENDED}' as dex_workflow_run_status[]))
+                              and executing.status in ('RUNNING', 'SUSPENDED')
                          )
                        )
                      )

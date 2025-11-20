@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.dex.engine.persistence;
 
-import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.persistence.mapping.PolledActivityTaskRowMapper;
 import org.dependencytrack.dex.engine.persistence.mapping.PolledWorkflowEventRowMapper;
 import org.dependencytrack.dex.engine.persistence.mapping.PolledWorkflowRunRowMapper;
@@ -64,7 +63,6 @@ public final class JdbiFactory {
                 .registerArgument(new WorkflowEventArgumentFactory())
                 .registerArrayType(Duration.class, "interval")
                 .registerArrayType(Instant.class, "timestamptz")
-                .registerArrayType(WorkflowRunStatus.class, "dex_workflow_run_status")
                 .registerArrayType(new WorkflowEventSqlArrayType())
                 .registerArrayType(new WorkflowPayloadSqlArrayType())
                 .registerColumnMapper(

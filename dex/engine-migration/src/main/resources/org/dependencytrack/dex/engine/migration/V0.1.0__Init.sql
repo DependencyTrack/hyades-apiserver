@@ -1,12 +1,3 @@
-create type dex_workflow_run_status as enum (
-  'CREATED'
-, 'RUNNING'
-, 'SUSPENDED'
-, 'CANCELED'
-, 'COMPLETED'
-, 'FAILED'
-);
-
 create table dex_workflow_task_queue (
   name text
 , partition_name text not null
@@ -24,7 +15,7 @@ create table dex_workflow_run (
 , workflow_name text not null
 , workflow_version smallint not null
 , queue_name text not null
-, status dex_workflow_run_status not null default 'CREATED'
+, status text not null default 'CREATED'
 , custom_status text
 , concurrency_group_id text
 , priority smallint not null default 0
@@ -36,6 +27,7 @@ create table dex_workflow_run (
 , constraint dex_workflow_run_pk primary key (id)
 , constraint dex_workflow_run_parent_fk foreign key (parent_id) references dex_workflow_run (id) on delete cascade
 , constraint dex_workflow_run_queue_fk foreign key (queue_name) references dex_workflow_task_queue (name) on delete cascade
+, constraint dex_workflow_run_status_check check (status in ('CREATED', 'RUNNING', 'SUSPENDED', 'CANCELED', 'COMPLETED', 'FAILED'))
 ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 80);
 
 create table dex_workflow_task (
@@ -111,7 +103,7 @@ create table dex_activity_task (
 -- Index to support polling of the workflow task scheduler.
 create index dex_workflow_run_task_scheduler_poll_idx
     on dex_workflow_run (priority desc, id)
- where status = any(cast('{CREATED, RUNNING, SUSPENDED}' as dex_workflow_run_status[]));
+ where status in ('CREATED', 'RUNNING', 'SUSPENDED');
 
 -- Index to support polling of workflow task workers.
 create index dex_workflow_task_poll_idx
@@ -121,13 +113,13 @@ create index dex_workflow_task_poll_idx
 create unique index dex_workflow_run_concurrency_group_executing_idx
     on dex_workflow_run (queue_name, concurrency_group_id)
  where concurrency_group_id is not null
-   and status = any(cast('{RUNNING, SUSPENDED}' as dex_workflow_run_status[]));
+   and status in ('RUNNING', 'SUSPENDED');
 
 -- Index to support identification of the next run to execute for a concurrency group.
 create index dex_workflow_run_concurrency_group_next_idx
     on dex_workflow_run (queue_name, concurrency_group_id, priority desc, id)
  where concurrency_group_id is not null
-   and status = cast('CREATED' as dex_workflow_run_status);
+   and status = 'CREATED';
 
 -- Index to support searching of workflow runs by label.
 create index dex_workflow_run_labels_idx
