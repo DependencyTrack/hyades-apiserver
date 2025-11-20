@@ -19,10 +19,10 @@ properties:
   name:
     type: string
     description: The name/title of the advisory
-  project_id:
-    type: integer
-    format: int32
-    description: The project ID
+  project_uuid:
+    type: string
+    format: uuid
+    description: The project UUID
   url:
     type: string
     description: The URL of the advisory
@@ -36,7 +36,7 @@ properties:
     description: The number of findings for this advisory in the project
 required:
   - name
-  - project_id
+  - project_uuid
   - url
   - document_id
   - findings_per_doc

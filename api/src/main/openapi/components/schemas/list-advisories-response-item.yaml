@@ -31,7 +31,6 @@ properties:
     description: Whether the advisory has been marked as seen
   last_fetched:
     $ref: "./timestamp.yaml"
-    description: The timestamp when the advisory was last fetched
   publisher:
     type: string
     description: The publisher of the advisory

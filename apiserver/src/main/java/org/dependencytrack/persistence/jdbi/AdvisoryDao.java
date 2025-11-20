@@ -26,6 +26,7 @@ import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * JDBI Data Access Object for performing operations on {@link Advisory}
@@ -35,23 +36,16 @@ public interface AdvisoryDao {
 
     /**
      * A row representing an advisory with findings in a specific project.
-     *
-     * @param name
-     * @param projectId
-     * @param url
-     * @param documentId
-     * @param findingsPerDoc
      */
     record AdvisoryInProjectRow(
             String name,
-            int projectId,
+            UUID projectUuid,
             String url,
             int documentId,
             int findingsPerDoc) {
     }
 
     record VulnerabilityRow(
-            String id,
             String source,
             String vulnId,
             String title,
@@ -62,7 +56,7 @@ public interface AdvisoryDao {
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
 
             SELECT "TITLE" AS "name"
-                 , "PROJECT_ID" AS "projectId"
+                 , "PROJECT"."UUID" AS "projectUuid"
                  , "URL" AS "url"
                  , "ADVISORY_ID" AS "documentId"
                  , COUNT("FINDINGATTRIBUTION"."ID") AS "findingsPerDoc"
@@ -70,23 +64,16 @@ public interface AdvisoryDao {
             INNER JOIN "ADVISORIES_VULNERABILITIES"
                ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
             INNER JOIN "ADVISORY" ON "ADVISORIES_VULNERABILITIES"."ADVISORY_ID" = "ADVISORY"."ID"
+            INNER JOIN "PROJECT" ON "PROJECT"."ID" = "FINDINGATTRIBUTION"."PROJECT_ID"
             WHERE "PROJECT_ID" = :projectId
-            GROUP BY "ADVISORY_ID", "TITLE", "URL", "PROJECT_ID"
+            GROUP BY "ADVISORY_ID", "TITLE", "URL", "PROJECT"."UUID"
 
              ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(AdvisoryInProjectRow.class)
     List<AdvisoryInProjectRow> getAdvisoriesWithFindingsByProject(@Bind long projectId);
 
-    record AdvisoryResult(
-            AdvisoryDetailRow entity,
-            List<ProjectRow> affectedProjects,
-            long numAffectedComponents,
-            List<AdvisoryDao.VulnerabilityRow> vulnerabilities) {
-    }
-
     record ProjectRow(
-            int id,
             String name,
             String uuid,
             String desc,
@@ -96,7 +83,7 @@ public interface AdvisoryDao {
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
 
-            SELECT DISTINCT "PROJECT_ID" AS "id",
+            SELECT DISTINCT "PROJECT_ID",
             "PROJECT"."NAME" AS "name",
             "PROJECT"."UUID" AS "uuid",
             "PROJECT"."DESCRIPTION" AS "desc",
@@ -118,7 +105,7 @@ public interface AdvisoryDao {
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
 
-            SELECT DISTINCT "VULNERABILITY"."ID" AS "id",
+            SELECT DISTINCT "VULNERABILITY"."ID",
             "VULNERABILITY"."SOURCE" AS "source",
             "VULNERABILITY"."VULNID" AS "vulnId",
             "VULNERABILITY"."TITLE" AS "title",
