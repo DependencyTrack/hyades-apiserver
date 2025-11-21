@@ -31,7 +31,7 @@ public record CreateWorkflowRunCommand(
         int workflowVersion,
         String queueName,
         @Nullable String concurrencyGroupId,
-        short priority,
+        int priority,
         @Nullable Map<String, String> labels,
         Instant createdAt) {
 }

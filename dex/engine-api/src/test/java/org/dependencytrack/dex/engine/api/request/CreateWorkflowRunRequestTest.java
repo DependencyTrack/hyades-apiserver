@@ -20,6 +20,8 @@ package org.dependencytrack.dex.engine.api.request;
 
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Map;
 
@@ -35,6 +37,14 @@ class CreateWorkflowRunRequestTest {
                 .withMessage("workflowName must not be null");
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {-1, 0, 101})
+    void shouldThrowWhenWorkflowVersionIsInvalid(final int workflowVersion) {
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> new CreateWorkflowRunRequest<>("workflowName", workflowVersion, "queueName"))
+                .withMessage("workflowVersion must be between 1 and 100, but is " + workflowVersion);
+    }
+
     @Test
     void shouldThrowWhenQueueNameIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
@@ -42,10 +52,19 @@ class CreateWorkflowRunRequestTest {
                 .withMessage("queueName must not be null");
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {-1, 101})
+    void shouldThrowWhenPriorityIsInvalid(final int priority) {
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> new CreateWorkflowRunRequest<>("workflowName", 1, "queueName")
+                        .withPriority(priority))
+                .withMessage("priority must be between 0 and 100, but is " + priority);
+    }
+
     @Test
     void shouldPopulateFieldsUsingWithers() {
         final var request = new CreateWorkflowRunRequest<>("workflowName", 1, "queueName")
-                .withPriority(666)
+                .withPriority(66)
                 .withConcurrencyGroupId("concurrencyGroupId")
                 .withLabels(Map.of("foo", "bar"))
                 .withArgument(Payload.getDefaultInstance());
@@ -53,7 +72,7 @@ class CreateWorkflowRunRequestTest {
         assertThat(request.workflowName()).isEqualTo("workflowName");
         assertThat(request.workflowVersion()).isEqualTo(1);
         assertThat(request.queueName()).isEqualTo("queueName");
-        assertThat(request.priority()).isEqualTo(666);
+        assertThat(request.priority()).isEqualTo(66);
         assertThat(request.concurrencyGroupId()).isEqualTo("concurrencyGroupId");
         assertThat(request.labels()).containsEntry("foo", "bar");
         assertThat(request.argument()).isEqualTo(Payload.getDefaultInstance());

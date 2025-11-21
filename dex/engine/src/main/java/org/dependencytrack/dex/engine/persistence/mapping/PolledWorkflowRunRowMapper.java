@@ -38,7 +38,7 @@ public final class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflo
                 rs.getInt("workflow_version"),
                 rs.getString("queue_name"),
                 rs.getString("concurrency_group_id"),
-                rs.getShort("priority"),
+                rs.getInt("priority"),
                 mapJsonEncodedMap(rs, ctx, "labels", String.class, String.class));
     }
 

@@ -19,6 +19,11 @@
 package org.dependencytrack.dex.engine.persistence;
 
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
+import org.dependencytrack.dex.engine.api.pagination.Page;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
+import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
 import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunCommand;
 import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
 import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunInboxEntryCommand;
@@ -50,14 +55,113 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.SequencedCollection;
 import java.util.UUID;
 import java.util.function.Function;
+
+import static java.util.Objects.requireNonNull;
 
 public final class WorkflowDao extends AbstractDao {
 
     public WorkflowDao(final Handle jdbiHandle) {
         super(jdbiHandle);
+    }
+
+    public boolean createWorkflowTaskQueue(final CreateWorkflowTaskQueueRequest request) {
+        return jdbiHandle
+                .createQuery("""
+                        select dex_create_workflow_task_queue(:name, cast(:maxConcurrency as smallint))
+                        """)
+                .bindMethods(request)
+                .mapTo(boolean.class)
+                .one();
+    }
+
+    public boolean updateWorkflowTaskQueue(final UpdateWorkflowTaskQueueRequest request) {
+        final Query query = jdbiHandle.createQuery("""
+                with
+                cte_queue as (
+                  select name
+                    from dex_workflow_task_queue
+                   where name = :name
+                ),
+                cte_updated_queue as (
+                  update dex_workflow_task_queue as queue
+                     set status = coalesce(:status, queue.status)
+                       , max_concurrency = coalesce(:maxConcurrency, queue.max_concurrency)
+                   where queue.name = :name
+                     and (queue.status != :status or queue.max_concurrency != :maxConcurrency)
+                   returning 1
+                )
+                select exists(select 1 from cte_queue) as exists
+                     , exists(select 1 from cte_updated_queue) as updated
+                """);
+
+        final Map.Entry<Boolean, Boolean> existsAndUpdated = query
+                .bindMethods(request)
+                .map((rs, ctx) -> Map.entry(rs.getBoolean(1), rs.getBoolean(2)))
+                .one();
+
+        final boolean exists = existsAndUpdated.getKey();
+        final boolean updated = existsAndUpdated.getValue();
+
+        if (!exists) {
+            throw new NoSuchElementException();
+        }
+
+        return updated;
+    }
+
+    record ListWorkflowTaskQueuesPageToken(String lastName) {
+    }
+
+    public Page<WorkflowTaskQueue> listWorkflowTaskQueues(final ListWorkflowTaskQueuesRequest request) {
+        requireNonNull(request, "request must not be null");
+
+        final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
+                <#-- @ftlvariable name="lastName" type="boolean" -->
+                select name
+                     , status
+                     , max_concurrency
+                     , (
+                         select count(*)
+                           from dex_workflow_task as task
+                          where task.queue_name = queue.name
+                       ) as depth
+                     , created_at
+                     , updated_at
+                  from dex_workflow_task_queue as queue
+                 where true
+                <#if lastName>
+                   and name > :lastName
+                </#if>
+                 order by name
+                 limit :limit
+                """);
+
+        final var pageTokenValue = decodePageToken(request.pageToken(), ListWorkflowTaskQueuesPageToken.class);
+
+        // Query for one additional row to determine if there are more results.
+        final int limit = request.limit() > 0 ? request.limit() : 100;
+        final int limitWithNext = limit + 1;
+
+        final List<WorkflowTaskQueue> rows = query
+                .bind("limit", limitWithNext)
+                .bind("lastName", pageTokenValue != null ? pageTokenValue.lastName() : null)
+                .defineNamedBindings()
+                .mapTo(WorkflowTaskQueue.class)
+                .list();
+
+        final List<WorkflowTaskQueue> resultItems = rows.size() > 1
+                ? rows.subList(0, Math.min(rows.size(), limit))
+                : rows;
+
+        final ListWorkflowTaskQueuesPageToken nextPageToken = rows.size() == limitWithNext
+                ? new ListWorkflowTaskQueuesPageToken(resultItems.getLast().name())
+                : null;
+
+        return new Page<>(resultItems, encodePageToken(nextPageToken));
     }
 
     public List<UUID> createRuns(final Collection<CreateWorkflowRunCommand> commands) {
@@ -94,7 +198,7 @@ public final class WorkflowDao extends AbstractDao {
         final var workflowVersions = new ArrayList<Integer>(commands.size());
         final var queueNames = new ArrayList<String>(commands.size());
         final var concurrencyGroupIds = new ArrayList<@Nullable String>(commands.size());
-        final var priorities = new ArrayList<Short>(commands.size());
+        final var priorities = new ArrayList<Integer>(commands.size());
         final var labelsJsons = new ArrayList<@Nullable String>(commands.size());
         final var createdAts = new ArrayList<Instant>(commands.size());
 
@@ -129,7 +233,7 @@ public final class WorkflowDao extends AbstractDao {
                 .bindArray("workflowVersions", Integer.class, workflowVersions)
                 .bindArray("queueNames", String.class, queueNames)
                 .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
-                .bindArray("priorities", Short.class, priorities)
+                .bindArray("priorities", Integer.class, priorities)
                 .bindArray("labelsJsons", String.class, labelsJsons)
                 .bindArray("createdAts", Instant.class, createdAts)
                 .executeAndReturnGeneratedKeys("id")

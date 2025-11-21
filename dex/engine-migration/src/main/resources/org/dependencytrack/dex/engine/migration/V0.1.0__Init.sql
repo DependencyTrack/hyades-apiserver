@@ -6,7 +6,8 @@ create table dex_workflow_task_queue (
 , created_at timestamptz(3) not null default now()
 , updated_at timestamptz(3)
 , constraint dex_workflow_task_queue_pk primary key (name)
-, constraint dex_activity_task_queue_status_check CHECK (status in ('ACTIVE', 'PAUSED'))
+, constraint dex_activity_task_queue_status_check check (status in ('ACTIVE', 'PAUSED'))
+, constraint dex_activity_task_queue_max_concurrency_check check (max_concurrency > 0)
 );
 
 create table dex_workflow_run (
@@ -25,9 +26,11 @@ create table dex_workflow_run (
 , started_at timestamptz(3)
 , completed_at timestamptz(3)
 , constraint dex_workflow_run_pk primary key (id)
-, constraint dex_workflow_run_parent_fk foreign key (parent_id) references dex_workflow_run (id) on delete cascade
-, constraint dex_workflow_run_queue_fk foreign key (queue_name) references dex_workflow_task_queue (name) on delete cascade
+, constraint dex_workflow_run_parent_fk foreign key (parent_id) references dex_workflow_run (id) on delete cascade deferrable initially deferred
+, constraint dex_workflow_run_queue_fk foreign key (queue_name) references dex_workflow_task_queue (name) on delete cascade deferrable initially deferred
+, constraint dex_workflow_run_workflow_version check (workflow_version > 0 and workflow_version <= 100)
 , constraint dex_workflow_run_status_check check (status in ('CREATED', 'RUNNING', 'SUSPENDED', 'CANCELED', 'COMPLETED', 'FAILED'))
+, constraint dex_workflow_run_priority_check check (priority >= 0 and priority <= 100)
 ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 80);
 
 create table dex_workflow_task (
@@ -39,8 +42,9 @@ create table dex_workflow_task (
 , locked_until timestamptz(3)
 , created_at timestamptz(3) not null default now()
 , constraint dex_workflow_task_pk primary key (queue_name, workflow_run_id)
-, constraint dex_workflow_task_queue_fk foreign key (queue_name) references dex_workflow_task_queue (name) on delete cascade
-, constraint dex_workflow_task_workflow_run_fk foreign key (workflow_run_id) references dex_workflow_run (id) on delete cascade
+, constraint dex_workflow_task_queue_fk foreign key (queue_name) references dex_workflow_task_queue (name) on delete cascade deferrable initially deferred
+, constraint dex_workflow_task_workflow_run_fk foreign key (workflow_run_id) references dex_workflow_run (id) on delete cascade deferrable initially deferred
+, constraint dex_workflow_task_priority_check check (priority >= 0 and priority <= 100)
 ) partition by list (queue_name);
 
 create table dex_workflow_run_history (
@@ -48,7 +52,7 @@ create table dex_workflow_run_history (
 , sequence_number int
 , event bytea not null
 , constraint dex_workflow_run_history_pk primary key (workflow_run_id, sequence_number)
-, constraint dex_workflow_run_history_workflow_run_fk foreign key (workflow_run_id) references dex_workflow_run (id) on delete cascade
+, constraint dex_workflow_run_history_workflow_run_fk foreign key (workflow_run_id) references dex_workflow_run (id) on delete cascade deferrable initially deferred
 ) partition by hash (workflow_run_id);
 
 create table dex_workflow_run_history_p00 partition of dex_workflow_run_history for values with (modulus 8, remainder 0);
@@ -78,7 +82,8 @@ create table dex_activity_task_queue (
 , created_at timestamptz(3) not null default now()
 , updated_at timestamptz(3)
 , constraint dex_activity_task_queue_pk primary key (name)
-, constraint dex_activity_task_queue_status_check CHECK (status in ('ACTIVE', 'PAUSED'))
+, constraint dex_activity_task_queue_status_check check (status in ('ACTIVE', 'PAUSED'))
+, constraint dex_activity_task_queue_max_concurrency_check check (max_concurrency > 0)
 );
 
 create table dex_activity_task (
@@ -95,9 +100,10 @@ create table dex_activity_task (
 , created_at timestamptz(3) not null default now()
 , updated_at timestamptz(3)
 , constraint dex_activity_task_pk primary key (queue_name, workflow_run_id, created_event_id)
-, constraint dex_activity_task_workflow_run_fk foreign key (workflow_run_id) references dex_workflow_run (id) on delete cascade
+, constraint dex_activity_task_workflow_run_fk foreign key (workflow_run_id) references dex_workflow_run (id) on delete cascade deferrable initially deferred
 , constraint dex_activity_task_queue_fk foreign key (queue_name) references dex_activity_task_queue (name)
 , constraint dex_activity_task_status_check check (status in ('CREATED', 'QUEUED'))
+, constraint dex_activity_task_priority_check check (priority >= 0 and priority <= 100)
 ) partition by list (queue_name);
 
 -- Index to support polling of the workflow task scheduler.
@@ -147,6 +153,7 @@ returns bool as $$
 declare
   normalized_queue_name text;
   partition_name text;
+  queue_created bool;
 begin
   -- Ensure the name is OK to use for identifiers.
   select lower(regexp_replace(queue_name, '[^A-Za-z0-9_]', '_', 'g'))
@@ -156,13 +163,23 @@ begin
   select format('dex_workflow_task_q_%s', left(normalized_queue_name, 43))
     into partition_name;
 
+  with cte_created_queue as (
+    insert into dex_workflow_task_queue (name, partition_name, max_concurrency)
+    values (queue_name, partition_name, max_queue_concurrency)
+    on conflict (name) do nothing
+    returning 1
+  )
+  select exists(select 1 from cte_created_queue)
+    into queue_created;
+
+  if not queue_created then
+    return false;
+  end if;
+
   execute format($q$
     create table %I partition of dex_workflow_task for values in (%L)
       with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 85);
   $q$, partition_name, queue_name);
-
-  insert into dex_workflow_task_queue (name, partition_name, max_concurrency)
-  values (queue_name, partition_name, max_queue_concurrency);
 
   return true;
 end;
@@ -173,6 +190,7 @@ returns bool as $$
 declare
   normalized_queue_name text;
   partition_name text;
+  queue_created bool;
 begin
   -- Ensure the name is OK to use for identifiers.
   select lower(regexp_replace(queue_name, '[^A-Za-z0-9_]', '_', 'g'))
@@ -182,13 +200,23 @@ begin
   select format('dex_activity_task_q_%s', left(normalized_queue_name, 43))
     into partition_name;
 
+  with cte_created_queue as (
+    insert into dex_activity_task_queue (name, partition_name, max_concurrency)
+    values (queue_name, partition_name, max_queue_concurrency)
+    on conflict (name) do nothing
+    returning 1
+  )
+  select exists(select 1 from cte_created_queue)
+    into queue_created;
+
+  if not queue_created then
+    return false;
+  end if;
+
   execute format($q$
     create table %I partition of dex_activity_task for values in (%L)
       with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 85);
   $q$, partition_name, queue_name);
-
-  insert into dex_activity_task_queue (name, partition_name, max_concurrency)
-  values (queue_name, partition_name, max_queue_concurrency);
 
   return true;
 end;

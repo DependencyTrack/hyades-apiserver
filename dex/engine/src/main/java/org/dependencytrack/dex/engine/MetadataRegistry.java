@@ -101,6 +101,7 @@ final class MetadataRegistry {
             final Duration lockTimeout,
             final WorkflowExecutor<A, R> executor) {
         requireValidWorkflowName(name);
+        requireValidWorkflowVersion(version);
 
         if (workflowNameByExecutorClass.containsKey(executor.getClass())) {
             throw new IllegalArgumentException(
@@ -257,6 +258,12 @@ final class MetadataRegistry {
     private static void requireValidWorkflowName(final String workflowName) {
         if (!WORKFLOW_NAME_PATTERN.matcher(workflowName).matches()) {
             throw new IllegalArgumentException("workflowName must match " + WORKFLOW_NAME_PATTERN.pattern());
+        }
+    }
+
+    private static void requireValidWorkflowVersion(final int workflowVersion) {
+        if (workflowVersion < 1 || workflowVersion > 100) {
+            throw new IllegalArgumentException("workflowVersion must be between 1 and 100, but is " + workflowVersion);
         }
     }
 

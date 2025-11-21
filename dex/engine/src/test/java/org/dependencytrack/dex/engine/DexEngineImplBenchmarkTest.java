@@ -187,7 +187,7 @@ public class DexEngineImplBenchmarkTest {
         // Disabling this will significantly improve throughput.
         // Note that realistic workloads will have a balance between
         // runs that use concurrency groups, and runs that don't.
-        final boolean withConcurrencyGroups = true;
+        final boolean withConcurrencyGroups = false;
 
         final var scheduleOptions = new ArrayList<CreateWorkflowRunRequest<?>>(numRuns);
         for (int i = 0; i < numRuns; i++) {

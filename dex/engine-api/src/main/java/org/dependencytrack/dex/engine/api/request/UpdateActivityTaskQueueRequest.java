@@ -16,16 +16,20 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.api.event;
+package org.dependencytrack.dex.engine.api.request;
 
-import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.TaskQueueStatus;
+import org.jspecify.annotations.Nullable;
 
-import java.util.List;
+import static java.util.Objects.requireNonNull;
 
-/**
- * A {@link DexEngineEvent} that informs about one or more workflow runs having completed.
- *
- * @param completedRuns Metadata of the completed runs.
- */
-public record DexRunsCompletedEvent(List<WorkflowRunMetadata> completedRuns) implements DexEngineEvent {
+public record UpdateActivityTaskQueueRequest(
+        String name,
+        @Nullable TaskQueueStatus status,
+        @Nullable Integer maxConcurrency) {
+
+    public UpdateActivityTaskQueueRequest {
+        requireNonNull(name, "name must not be null");
+    }
+
 }

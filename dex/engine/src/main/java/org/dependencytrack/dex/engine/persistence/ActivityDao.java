@@ -19,9 +19,10 @@
 package org.dependencytrack.dex.engine.persistence;
 
 import org.dependencytrack.dex.engine.api.ActivityTaskQueue;
-import org.dependencytrack.dex.engine.api.TaskQueueStatus;
 import org.dependencytrack.dex.engine.api.pagination.Page;
+import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
+import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.persistence.command.CreateActivityTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.dex.engine.persistence.model.ActivityTaskId;
@@ -37,6 +38,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
@@ -45,6 +48,51 @@ public final class ActivityDao extends AbstractDao {
 
     public ActivityDao(final Handle jdbiHandle) {
         super(jdbiHandle);
+    }
+
+    public boolean createActivityTaskQueue(final CreateActivityTaskQueueRequest request) {
+        return jdbiHandle
+                .createQuery("""
+                        select dex_create_activity_task_queue(:name, cast(:maxConcurrency as smallint))
+                        """)
+                .bindMethods(request)
+                .mapTo(boolean.class)
+                .one();
+    }
+
+    public boolean updateActivityTaskQueue(final UpdateActivityTaskQueueRequest request) {
+        final Query query = jdbiHandle.createQuery("""
+                with
+                cte_queue as (
+                  select name
+                    from dex_activity_task_queue
+                   where name = :name
+                ),
+                cte_updated_queue as (
+                  update dex_activity_task_queue as queue
+                     set status = coalesce(:status, queue.status)
+                       , max_concurrency = coalesce(:maxConcurrency, queue.max_concurrency)
+                   where queue.name = :name
+                     and (queue.status != :status or queue.max_concurrency != :maxConcurrency)
+                   returning 1
+                )
+                select exists(select 1 from cte_queue) as exists
+                     , exists(select 1 from cte_updated_queue) as updated
+                """);
+
+        final Map.Entry<Boolean, Boolean> existsAndUpdated = query
+                .bindMethods(request)
+                .map((rs, ctx) -> Map.entry(rs.getBoolean(1), rs.getBoolean(2)))
+                .one();
+
+        final boolean exists = existsAndUpdated.getKey();
+        final boolean updated = existsAndUpdated.getValue();
+
+        if (!exists) {
+            throw new NoSuchElementException();
+        }
+
+        return updated;
     }
 
     record ListActivityTaskQueuesPageToken(String lastName) {
@@ -57,15 +105,16 @@ public final class ActivityDao extends AbstractDao {
                 <#-- @ftlvariable name="lastName" type="boolean" -->
                 select name
                      , status
+                     , max_concurrency
                      , (
                          select count(*)
-                           from dex_activity_task
-                          where queue_name = dex_activity_task_queue.name
-                            and status = 'QUEUED'
+                           from dex_activity_task as task
+                          where task.queue_name = queue.name
+                            and task.status = 'QUEUED'
                        ) as depth
                      , created_at
                      , updated_at
-                  from dex_activity_task_queue
+                  from dex_activity_task_queue as queue
                  where true
                 <#if lastName>
                    and name > :lastName
@@ -98,23 +147,6 @@ public final class ActivityDao extends AbstractDao {
         return new Page<>(resultItems, encodePageToken(nextPageToken));
     }
 
-    public boolean setActivityTaskQueueStatus(final String queueName, final TaskQueueStatus status) {
-        requireNonNull(queueName, "queueName must not be null");
-
-        final Update update = jdbiHandle.createUpdate("""
-                update dex_activity_task_queue
-                   set status = :newStatus
-                     , updated_at = now()
-                 where name = :queueName
-                   and status != :newStatus
-                """);
-
-        return update
-                .bind("queueName", queueName)
-                .bind("newStatus", status)
-                .execute() > 0;
-    }
-
     public int createActivityTasks(final Collection<CreateActivityTaskCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 insert into dex_activity_task (
@@ -144,7 +176,7 @@ public final class ActivityDao extends AbstractDao {
         final var createdEventIds = new ArrayList<Integer>(commands.size());
         final var activityNames = new ArrayList<String>(commands.size());
         final var queueNames = new ArrayList<String>(commands.size());
-        final var priorities = new ArrayList<Short>(commands.size());
+        final var priorities = new ArrayList<Integer>(commands.size());
         final var arguments = new ArrayList<@Nullable Payload>(commands.size());
         final var visibleFroms = new ArrayList<@Nullable Instant>(commands.size());
 
@@ -163,7 +195,7 @@ public final class ActivityDao extends AbstractDao {
                 .bindArray("createdEventIds", Integer.class, createdEventIds)
                 .bindArray("activityNames", String.class, activityNames)
                 .bindArray("queueNames", String.class, queueNames)
-                .bindArray("priorities", Short.class, priorities)
+                .bindArray("priorities", Integer.class, priorities)
                 .bindArray("arguments", Payload.class, arguments)
                 .bindArray("visibleFroms", Instant.class, visibleFroms)
                 .execute();

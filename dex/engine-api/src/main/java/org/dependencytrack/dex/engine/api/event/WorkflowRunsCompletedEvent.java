@@ -16,20 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence.model;
+package org.dependencytrack.dex.engine.api.event;
 
-import org.dependencytrack.dex.proto.payload.v1.Payload;
-import org.jspecify.annotations.Nullable;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 
-import java.time.Instant;
-import java.util.UUID;
+import java.util.List;
 
-public record PolledActivityTask(
-        UUID workflowRunId,
-        int createdEventId,
-        String activityName,
-        String queueName,
-        int priority,
-        @Nullable Payload argument,
-        Instant lockedUntil) {
+/**
+ * A {@link DexEngineEvent} that informs about one or more workflow runs having completed.
+ *
+ * @param completedRuns Metadata of the completed runs.
+ */
+public record WorkflowRunsCompletedEvent(List<WorkflowRunMetadata> completedRuns) implements DexEngineEvent {
 }

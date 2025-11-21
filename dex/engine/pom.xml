@@ -34,8 +34,6 @@
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
-
-        <lib.javacron.version>1.4.0</lib.javacron.version>
     </properties>
 
     <dependencies>
@@ -64,7 +62,6 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>${lib.awaitility.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -82,12 +79,6 @@
         <dependency>
             <groupId>com.fasterxml.uuid</groupId>
             <artifactId>java-uuid-generator</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.asahaf.javacron</groupId>
-            <artifactId>javacron</artifactId>
-            <version>${lib.javacron.version}</version>
         </dependency>
 
         <dependency>

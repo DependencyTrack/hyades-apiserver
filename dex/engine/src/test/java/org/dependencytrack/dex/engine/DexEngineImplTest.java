@@ -25,20 +25,28 @@ import org.dependencytrack.dex.api.failure.ApplicationFailureException;
 import org.dependencytrack.dex.api.failure.ChildWorkflowFailureException;
 import org.dependencytrack.dex.api.failure.FailureException;
 import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
+import org.dependencytrack.dex.engine.api.ActivityTaskQueue;
 import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.ExternalEvent;
+import org.dependencytrack.dex.engine.api.TaskQueueStatus;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
 import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
-import org.dependencytrack.dex.engine.api.event.DexRunsCompletedEventListener;
+import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEventListener;
 import org.dependencytrack.dex.engine.api.pagination.Page;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
+import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
 import org.dependencytrack.dex.proto.event.v1.Event;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -52,6 +60,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -120,7 +129,7 @@ class DexEngineImplTest {
         final UUID runId = engine.createRun(
                 new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME)
                         .withConcurrencyGroupId("someConcurrencyGroupId")
-                        .withPriority((short) 6)
+                        .withPriority(6)
                         .withLabels(Map.of("label-a", "123", "label-b", "321"))
                         .withArgument("someArgument"));
 
@@ -128,7 +137,7 @@ class DexEngineImplTest {
 
         assertThat(completedRun.customStatus()).isEqualTo("someCustomStatus");
         assertThat(completedRun.concurrencyGroupId()).isEqualTo("someConcurrencyGroupId");
-        assertThat(completedRun.priority()).isEqualTo((short) 6);
+        assertThat(completedRun.priority()).isEqualTo(6);
         assertThat(completedRun.labels()).containsOnlyKeys("label-a", "label-b");
         assertThat(completedRun.createdAt()).isNotNull();
         assertThat(completedRun.updatedAt()).isNotNull();
@@ -618,19 +627,19 @@ class DexEngineImplTest {
             final var concurrencyGroupId = "concurrencyGroup";
 
             final List<UUID> runIds = engine.createRuns(
-                    Stream.of("a", "b", "c", "d", "e")
+                    Stream.of(1, 2, 3, 4, 5)
                             .<CreateWorkflowRunRequest<?>>map(
-                                    character -> new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME)
+                                    number -> new CreateWorkflowRunRequest<>("test", 1, DEFAULT_WORKFLOW_TASK_QUEUE_NAME)
                                             .withConcurrencyGroupId(concurrencyGroupId)
-                                            .withPriority((short) character.codePointAt(0))
-                                            .withArgument(character))
+                                            .withPriority(number)
+                                            .withArgument(String.valueOf(number)))
                             .toList());
 
             for (final var runId : runIds) {
                 awaitRunStatus(runId, WorkflowRunStatus.COMPLETED, Duration.ofSeconds(5));
             }
 
-            assertThat(executionQueue).containsExactly("e", "d", "c", "b", "a");
+            assertThat(executionQueue).containsExactly("5", "4", "3", "2", "1");
         }
 
     }
@@ -1087,7 +1096,7 @@ class DexEngineImplTest {
     @Test
     void shouldInformEventListenersAboutCompletedRuns() {
         final var completedRuns = new ArrayList<WorkflowRunMetadata>();
-        engine.addEventListener((DexRunsCompletedEventListener) event -> {
+        engine.addEventListener((WorkflowRunsCompletedEventListener) event -> {
             completedRuns.addAll(event.completedRuns());
         });
 
@@ -1183,6 +1192,166 @@ class DexEngineImplTest {
                 event -> assertThat(event.hasSideEffectExecuted()).isTrue(),
                 event -> assertThat(event.hasSideEffectExecuted()).isTrue());
         assertThat(historyPage.nextPageToken()).isNotNull();
+    }
+
+    @Nested
+    class WorkflowTaskQueueTest {
+
+        @Test
+        void createShouldReturnTrueWhenCreatedAndFalseWhenNot() {
+            boolean created = engine.createWorkflowTaskQueue(
+                    new CreateWorkflowTaskQueueRequest("foo", 1));
+            assertThat(created).isTrue();
+
+            created = engine.createWorkflowTaskQueue(
+                    new CreateWorkflowTaskQueueRequest("foo", 2));
+            assertThat(created).isFalse();
+        }
+
+        @Test
+        void updateShouldReturnTrueWhenUpdated() {
+            engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("foo", 1));
+
+            final boolean updated = engine.updateWorkflowTaskQueue(
+                    new UpdateWorkflowTaskQueueRequest("foo", TaskQueueStatus.PAUSED, null));
+            assertThat(updated).isTrue();
+        }
+
+        @Test
+        void updateShouldReturnFalseWhenUnchanged() {
+            engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("foo", 1));
+
+            final boolean updated = engine.updateWorkflowTaskQueue(
+                    new UpdateWorkflowTaskQueueRequest("foo", null, null));
+            assertThat(updated).isFalse();
+        }
+
+        @Test
+        void updateShouldThrowWhenQueueDoesNotExist() {
+            assertThatExceptionOfType(NoSuchElementException.class)
+                    .isThrownBy(() -> engine.updateWorkflowTaskQueue(
+                            new UpdateWorkflowTaskQueueRequest("does-not-exist", null, null)));
+        }
+
+        @Test
+        void listShouldSupportPagination() {
+            engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("foo-1", 1));
+            engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("foo-2", 2));
+
+            Page<@NonNull WorkflowTaskQueue> queuesPage = engine.listWorkflowTaskQueues(
+                    new ListWorkflowTaskQueuesRequest().withLimit(2));
+            assertThat(queuesPage.items()).satisfiesExactly(
+                    queue -> {
+                        assertThat(queue.name()).isEqualTo("default");
+                        assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
+                        assertThat(queue.maxConcurrency()).isEqualTo(10);
+                        assertThat(queue.depth()).isEqualTo(0);
+                        assertThat(queue.createdAt()).isNotNull();
+                        assertThat(queue.updatedAt()).isNull();
+                    },
+                    queue -> {
+                        assertThat(queue.name()).isEqualTo("foo-1");
+                        assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
+                        assertThat(queue.maxConcurrency()).isEqualTo(1);
+                        assertThat(queue.depth()).isEqualTo(0);
+                        assertThat(queue.createdAt()).isNotNull();
+                        assertThat(queue.updatedAt()).isNull();
+                    });
+            assertThat(queuesPage.nextPageToken()).isNotNull();
+
+            queuesPage = engine.listWorkflowTaskQueues(
+                    new ListWorkflowTaskQueuesRequest().withPageToken(queuesPage.nextPageToken()));
+            assertThat(queuesPage.items()).satisfiesExactly(queue -> {
+                assertThat(queue.name()).isEqualTo("foo-2");
+                assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
+                assertThat(queue.maxConcurrency()).isEqualTo(2);
+                assertThat(queue.depth()).isEqualTo(0);
+                assertThat(queue.createdAt()).isNotNull();
+                assertThat(queue.updatedAt()).isNull();
+            });
+            assertThat(queuesPage.nextPageToken()).isNull();
+        }
+
+    }
+
+    @Nested
+    class ActivityTaskQueueTest {
+
+        @Test
+        void createShouldReturnTrueWhenCreatedAndFalseWhenNot() {
+            boolean created = engine.createActivityTaskQueue(
+                    new CreateActivityTaskQueueRequest("foo", 1));
+            assertThat(created).isTrue();
+
+            created = engine.createActivityTaskQueue(
+                    new CreateActivityTaskQueueRequest("foo", 2));
+            assertThat(created).isFalse();
+        }
+
+        @Test
+        void updateShouldReturnTrueWhenUpdated() {
+            engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("foo", 1));
+
+            final boolean updated = engine.updateActivityTaskQueue(
+                    new UpdateActivityTaskQueueRequest("foo", TaskQueueStatus.PAUSED, null));
+            assertThat(updated).isTrue();
+        }
+
+        @Test
+        void updateShouldReturnFalseWhenUnchanged() {
+            engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("foo", 1));
+
+            final boolean updated = engine.updateActivityTaskQueue(
+                    new UpdateActivityTaskQueueRequest("foo", null, null));
+            assertThat(updated).isFalse();
+        }
+
+        @Test
+        void updateShouldThrowWhenQueueDoesNotExist() {
+            assertThatExceptionOfType(NoSuchElementException.class)
+                    .isThrownBy(() -> engine.updateActivityTaskQueue(
+                            new UpdateActivityTaskQueueRequest("does-not-exist", null, null)));
+        }
+
+        @Test
+        void listShouldSupportPagination() {
+            engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("foo-1", 1));
+            engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("foo-2", 2));
+
+            Page<@NonNull ActivityTaskQueue> queuesPage = engine.listActivityTaskQueues(
+                    new ListActivityTaskQueuesRequest().withLimit(2));
+            assertThat(queuesPage.items()).satisfiesExactly(
+                    queue -> {
+                        assertThat(queue.name()).isEqualTo("default");
+                        assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
+                        assertThat(queue.maxConcurrency()).isEqualTo(10);
+                        assertThat(queue.depth()).isEqualTo(0);
+                        assertThat(queue.createdAt()).isNotNull();
+                        assertThat(queue.updatedAt()).isNull();
+                    },
+                    queue -> {
+                        assertThat(queue.name()).isEqualTo("foo-1");
+                        assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
+                        assertThat(queue.maxConcurrency()).isEqualTo(1);
+                        assertThat(queue.depth()).isEqualTo(0);
+                        assertThat(queue.createdAt()).isNotNull();
+                        assertThat(queue.updatedAt()).isNull();
+                    });
+            assertThat(queuesPage.nextPageToken()).isNotNull();
+
+            queuesPage = engine.listActivityTaskQueues(
+                    new ListActivityTaskQueuesRequest().withPageToken(queuesPage.nextPageToken()));
+            assertThat(queuesPage.items()).satisfiesExactly(queue -> {
+                assertThat(queue.name()).isEqualTo("foo-2");
+                assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
+                assertThat(queue.maxConcurrency()).isEqualTo(2);
+                assertThat(queue.depth()).isEqualTo(0);
+                assertThat(queue.createdAt()).isNotNull();
+                assertThat(queue.updatedAt()).isNull();
+            });
+            assertThat(queuesPage.nextPageToken()).isNull();
+        }
+
     }
 
     private WorkflowRunMetadata awaitRunStatus(

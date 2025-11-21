@@ -33,7 +33,7 @@ record WorkflowTask(
         int workflowVersion,
         String queueName,
         @Nullable String concurrencyGroupId,
-        short priority,
+        int priority,
         @Nullable Map<String, String> labels,
         int attempt,
         List<Event> history,

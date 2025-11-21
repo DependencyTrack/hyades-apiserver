@@ -29,7 +29,7 @@ public record CreateActivityTaskCommand(
         int createdEventId,
         String activityName,
         String queueName,
-        short priority,
+        int priority,
         @Nullable Payload argument,
         @Nullable Instant visibleFrom) {
 }

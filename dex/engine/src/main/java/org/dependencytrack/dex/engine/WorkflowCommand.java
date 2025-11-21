@@ -65,13 +65,16 @@ sealed interface WorkflowCommand {
             int eventId,
             String name,
             String queueName,
-            short priority,
+            int priority,
             @Nullable Payload argument,
             @Nullable Instant scheduleFor) implements WorkflowCommand {
 
         public CreateActivityTaskCommand {
             requireNonNull(name, "name must not be null");
             requireNonNull(queueName, "queueName must not be null");
+            if (priority < 0 || priority > 100) {
+                throw new IllegalArgumentException("priority must be between 0 and 100, but is " + priority);
+            }
         }
 
     }
@@ -82,12 +85,18 @@ sealed interface WorkflowCommand {
             int workflowVersion,
             String queueName,
             @Nullable String concurrencyGroupId,
-            short priority,
+            int priority,
             @Nullable Map<String, String> labels,
             @Nullable Payload argument) implements WorkflowCommand {
 
         public CreateChildRunCommand {
             requireNonNull(workflowName, "workflowName must not be null");
+            if (workflowVersion < 1 || workflowVersion > 100) {
+                throw new IllegalArgumentException("workflowVersion must be between 1 and 100, but is " + workflowVersion);
+            }
+            if (priority < 0 || priority > 100) {
+                throw new IllegalArgumentException("priority must be between 0 and 100, but is " + priority);
+            }
         }
 
     }

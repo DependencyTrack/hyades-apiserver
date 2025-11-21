@@ -39,15 +39,15 @@ import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.ExternalEvent;
-import org.dependencytrack.dex.engine.api.TaskQueueStatus;
 import org.dependencytrack.dex.engine.api.WorkflowRun;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
 import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.event.DexEngineEvent;
 import org.dependencytrack.dex.engine.api.event.DexEngineEventListener;
-import org.dependencytrack.dex.engine.api.event.DexRunsCompletedEvent;
-import org.dependencytrack.dex.engine.api.event.DexRunsCompletedEventListener;
+import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEvent;
+import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEventListener;
 import org.dependencytrack.dex.engine.api.pagination.Page;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
@@ -55,6 +55,9 @@ import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest
 import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
+import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
 import org.dependencytrack.dex.engine.persistence.ActivityDao;
 import org.dependencytrack.dex.engine.persistence.JdbiFactory;
 import org.dependencytrack.dex.engine.persistence.WorkflowDao;
@@ -150,7 +153,7 @@ final class DexEngineImpl implements DexEngine {
     private final ReentrantLock statusLock = new ReentrantLock();
     private final MetadataRegistry metadataRegistry = new MetadataRegistry();
     private final Map<String, TaskWorker> taskWorkerByName = new HashMap<>();
-    private final List<DexRunsCompletedEventListener> runsCompletedEventListeners = new ArrayList<>();
+    private final List<WorkflowRunsCompletedEventListener> runsCompletedEventListeners = new ArrayList<>();
 
     private Status status = Status.CREATED;
     private @Nullable WorkflowTaskScheduler workflowTaskScheduler;
@@ -412,7 +415,7 @@ final class DexEngineImpl implements DexEngine {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         requireNonNull(listener, "listener must not be null");
         switch (listener) {
-            case DexRunsCompletedEventListener it -> runsCompletedEventListeners.add(it);
+            case WorkflowRunsCompletedEventListener it -> runsCompletedEventListeners.add(it);
         }
     }
 
@@ -675,48 +678,33 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public void createWorkflowTaskQueue(CreateWorkflowTaskQueueRequest request) {
-        jdbi.useTransaction(handle -> {
-            handle
-                    .createQuery("""
-                            select dex_create_workflow_task_queue(:name, cast(:maxConcurrency as smallint))
-                            """)
-                    .bindMethods(request)
-                    .mapTo(boolean.class)
-                    .one();
-        });
+    public boolean createWorkflowTaskQueue(CreateWorkflowTaskQueueRequest request) {
+        return jdbi.inTransaction(handle -> new WorkflowDao(handle).createWorkflowTaskQueue(request));
     }
 
     @Override
-    public void createActivityTaskQueue(final CreateActivityTaskQueueRequest request) {
-        jdbi.useTransaction(handle -> {
-            handle
-                    .createQuery("""
-                            select dex_create_activity_task_queue(:name, cast(:maxConcurrency as smallint))
-                            """)
-                    .bindMethods(request)
-                    .mapTo(boolean.class)
-                    .one();
-        });
+    public boolean updateWorkflowTaskQueue(final UpdateWorkflowTaskQueueRequest request) {
+        return jdbi.inTransaction(handle -> new WorkflowDao(handle).updateWorkflowTaskQueue(request));
+    }
+
+    @Override
+    public Page<WorkflowTaskQueue> listWorkflowTaskQueues(final ListWorkflowTaskQueuesRequest request) {
+        return jdbi.withHandle(handle -> new WorkflowDao(handle).listWorkflowTaskQueues(request));
+    }
+
+    @Override
+    public boolean createActivityTaskQueue(final CreateActivityTaskQueueRequest request) {
+        return jdbi.inTransaction(handle -> new ActivityDao(handle).createActivityTaskQueue(request));
+    }
+
+    @Override
+    public boolean updateActivityTaskQueue(final UpdateActivityTaskQueueRequest request) {
+        return jdbi.inTransaction(handle -> new ActivityDao(handle).updateActivityTaskQueue(request));
     }
 
     @Override
     public Page<ActivityTaskQueue> listActivityTaskQueues(final ListActivityTaskQueuesRequest request) {
         return jdbi.withHandle(handle -> new ActivityDao(handle).listActivityTaskQueues(request));
-    }
-
-    @Override
-    public boolean pauseActivityTaskQueue(final String queueName) {
-        return jdbi.inTransaction(
-                handle -> new ActivityDao(handle).setActivityTaskQueueStatus(
-                        queueName, TaskQueueStatus.PAUSED));
-    }
-
-    @Override
-    public boolean resumeActivityTaskQueue(final String queueName) {
-        return jdbi.inTransaction(
-                handle -> new ActivityDao(handle).setActivityTaskQueueStatus(
-                        queueName, TaskQueueStatus.ACTIVE));
     }
 
     private void flushExternalEvents(final List<ExternalEvent> externalEvents) {
@@ -967,7 +955,7 @@ final class DexEngineImpl implements DexEngine {
                                     message.event().getRunCreated().hasConcurrencyGroupId()
                                             ? message.event().getRunCreated().getConcurrencyGroupId()
                                             : null,
-                                    (short) message.event().getRunCreated().getPriority(),
+                                    message.event().getRunCreated().getPriority(),
                                     message.event().getRunCreated().getLabelsCount() > 0
                                             ? Map.copyOf(message.event().getRunCreated().getLabelsMap())
                                             : null,
@@ -1005,7 +993,7 @@ final class DexEngineImpl implements DexEngine {
                                 newEvent.getId(),
                                 newEvent.getActivityTaskCreated().getName(),
                                 newEvent.getActivityTaskCreated().getQueueName(),
-                                (short) newEvent.getActivityTaskCreated().getPriority(),
+                                newEvent.getActivityTaskCreated().getPriority(),
                                 newEvent.getActivityTaskCreated().hasArgument()
                                         ? newEvent.getActivityTaskCreated().getArgument()
                                         : null,
@@ -1063,7 +1051,7 @@ final class DexEngineImpl implements DexEngine {
                 deletedInboxEvents, updatedRunIds.size());
 
         if (!completedRuns.isEmpty()) {
-            engineEvents.add(new DexRunsCompletedEvent(completedRuns));
+            engineEvents.add(new WorkflowRunsCompletedEvent(completedRuns));
         }
     }
 
@@ -1261,8 +1249,8 @@ final class DexEngineImpl implements DexEngine {
 
         for (final DexEngineEvent event : events) {
             switch (event) {
-                case DexRunsCompletedEvent it -> {
-                    for (final DexRunsCompletedEventListener listener : runsCompletedEventListeners) {
+                case WorkflowRunsCompletedEvent it -> {
+                    for (final WorkflowRunsCompletedEventListener listener : runsCompletedEventListeners) {
                         eventListenerExecutor.execute(() -> listener.onEvent(it));
                     }
                 }
@@ -1301,7 +1289,7 @@ final class DexEngineImpl implements DexEngine {
         return Set.copyOf(runIdByEventId.values());
     }
 
-    private void invalidateCompletedRunsHistoryCache(final DexRunsCompletedEvent event) {
+    private void invalidateCompletedRunsHistoryCache(final WorkflowRunsCompletedEvent event) {
         if (runHistoryCache == null) {
             return;
         }
@@ -1312,7 +1300,7 @@ final class DexEngineImpl implements DexEngine {
                         .collect(Collectors.toSet()));
     }
 
-    private void recordCompletedRunsMetrics(final DexRunsCompletedEvent event) {
+    private void recordCompletedRunsMetrics(final WorkflowRunsCompletedEvent event) {
         for (final WorkflowRunMetadata completedRun : event.completedRuns()) {
             final var tags = List.of(
                     Tag.of("workflowName", completedRun.workflowName()),

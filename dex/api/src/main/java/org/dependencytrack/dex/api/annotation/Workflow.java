@@ -29,8 +29,14 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface Workflow {
 
+    /**
+     * @return Name of the workflow. May contain letters, numbers, and hyphens.
+     */
     String name();
 
+    /**
+     * @return Version of the workflow. Must be between 1 and 100.
+     */
     int version() default 1;
 
 }

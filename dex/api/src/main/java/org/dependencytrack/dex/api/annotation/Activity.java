@@ -30,7 +30,7 @@ import java.lang.annotation.Target;
 public @interface Activity {
 
     /**
-     * @return Name of the activity.
+     * @return Name of the activity. May contain letters, numbers, and hyphens.
      */
     String name();
 

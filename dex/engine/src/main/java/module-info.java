@@ -32,7 +32,6 @@ module org.dependencytrack.dex.engine {
     requires com.google.protobuf;
     requires io.github.resilience4j.core;
     requires java.sql;
-    requires javacron;
     requires micrometer.core;
     requires org.jdbi.v3.core;
     requires org.jdbi.v3.freemarker;

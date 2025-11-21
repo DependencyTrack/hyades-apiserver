@@ -16,20 +16,17 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence.model;
+package org.dependencytrack.dex.engine.api;
 
-import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
-import java.util.UUID;
 
-public record PolledActivityTask(
-        UUID workflowRunId,
-        int createdEventId,
-        String activityName,
-        String queueName,
-        int priority,
-        @Nullable Payload argument,
-        Instant lockedUntil) {
+public record WorkflowTaskQueue(
+        String name,
+        TaskQueueStatus status,
+        int maxConcurrency,
+        int depth,
+        Instant createdAt,
+        @Nullable Instant updatedAt) {
 }

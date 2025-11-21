@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.dex.engine.api.event;
 
-public sealed interface DexEngineEventListener<E extends DexEngineEvent> permits DexRunsCompletedEventListener {
+public sealed interface DexEngineEventListener<E extends DexEngineEvent> permits WorkflowRunsCompletedEventListener {
 
     void onEvent(E event);
 

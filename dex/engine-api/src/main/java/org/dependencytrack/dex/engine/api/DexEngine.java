@@ -32,6 +32,9 @@ import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest
 import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
+import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
 import org.dependencytrack.dex.proto.event.v1.Event;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.jspecify.annotations.Nullable;
@@ -91,8 +94,20 @@ public interface DexEngine extends Closeable {
             Duration lockTimeout,
             boolean heartbeatEnabled);
 
+    /**
+     * Register a worker for activity tasks.
+     *
+     * @param options Options of the worker.
+     * @throws IllegalStateException When the engine was already started.
+     */
     void registerActivityWorker(ActivityTaskWorkerOptions options);
 
+    /**
+     * Register a worker for workflow tasks.
+     *
+     * @param options Options of the worker.
+     * @throws IllegalStateException When the engine was already started.
+     */
     void registerWorkflowWorker(WorkflowTaskWorkerOptions options);
 
     /**
@@ -209,9 +224,51 @@ public interface DexEngine extends Closeable {
      */
     CompletableFuture<Void> sendExternalEvent(ExternalEvent externalEvent);
 
-    void createWorkflowTaskQueue(CreateWorkflowTaskQueueRequest request);
+    /**
+     * Create a queue for workflow tasks.
+     *
+     * @param request The request.
+     * @return {@code true} when the queue was created, {@code false} otherwise.
+     * If a queue with the same name already exists, it will not be updated
+     * and this method will return {@code false}.
+     */
+    boolean createWorkflowTaskQueue(CreateWorkflowTaskQueueRequest request);
 
-    void createActivityTaskQueue(CreateActivityTaskQueueRequest request);
+    /**
+     * Update a workflow task queue.
+     *
+     * @param request The request.
+     * @return {@code true} when the queue was updated, {@code false} otherwise.
+     * @throws NoSuchElementException When no queue with the given name exist.
+     */
+    boolean updateWorkflowTaskQueue(UpdateWorkflowTaskQueueRequest request);
+
+    /**
+     * List all workflow task queues known to the engine.
+     *
+     * @param request The request.
+     * @return A {@link Page} containing {@link WorkflowTaskQueue}s.
+     */
+    Page<WorkflowTaskQueue> listWorkflowTaskQueues(ListWorkflowTaskQueuesRequest request);
+
+    /**
+     * Create a queue for activity tasks.
+     *
+     * @param request The request.
+     * @return {@code true} when the queue was created, {@code false} otherwise.
+     * If a queue with the same name already exists, it will not be updated
+     * and this method will return {@code false}.
+     */
+    boolean createActivityTaskQueue(CreateActivityTaskQueueRequest request);
+
+    /**
+     * Update an activity task queue.
+     *
+     * @param request The request.
+     * @return {@code true} when the queue was updated, {@code false} otherwise.
+     * @throws NoSuchElementException When no queue with the given name exist.
+     */
+    boolean updateActivityTaskQueue(UpdateActivityTaskQueueRequest request);
 
     /**
      * List all activity task queues known to the engine.
@@ -220,21 +277,5 @@ public interface DexEngine extends Closeable {
      * @return A {@link Page} containing {@link ActivityTaskQueue}s.
      */
     Page<ActivityTaskQueue> listActivityTaskQueues(ListActivityTaskQueuesRequest request);
-
-    /**
-     * Pause a given activity task queue.
-     *
-     * @param queueName Name of the queue to pause.
-     * @return {@code true} when the queue was paused, otherwise {@code false}.
-     */
-    boolean pauseActivityTaskQueue(String queueName);
-
-    /**
-     * Resume a given activity task queue.
-     *
-     * @param queueName Name of the queue to resume.
-     * @return {@code true} when the queue was resumed, otherwise {@code false}.
-     */
-    boolean resumeActivityTaskQueue(String queueName);
 
 }

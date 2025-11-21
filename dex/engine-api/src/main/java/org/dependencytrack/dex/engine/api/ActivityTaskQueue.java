@@ -22,16 +22,10 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 
-/**
- * @param name      Name of the queue.
- * @param status    Status of the queue.
- * @param depth     Number of items in the queue.
- * @param createdAt When the queue was created.
- * @param updatedAt When the queue was last updated.
- */
 public record ActivityTaskQueue(
         String name,
         TaskQueueStatus status,
+        int maxConcurrency,
         int depth,
         Instant createdAt,
         @Nullable Instant updatedAt) {

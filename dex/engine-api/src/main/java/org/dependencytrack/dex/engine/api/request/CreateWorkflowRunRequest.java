@@ -30,9 +30,10 @@ import static java.util.Objects.requireNonNull;
  * Request for creating a workflow run.
  *
  * @param workflowName       Name of the workflow. Must be known to the engine.
- * @param workflowVersion    Version of the workflow.
+ * @param workflowVersion    Version of the workflow. Must be between 1 and 100.
+ * @param queueName          Name of the queue to schedule tasks on.
  * @param concurrencyGroupId Concurrency group ID for the run.
- * @param priority           Priority of the run.
+ * @param priority           Priority of the run. Must be between 0 and 100.
  * @param labels             Labels for the run.
  * @param argument           Argument for the run.
  * @param <A>                Type of the workflow argument.
@@ -42,17 +43,23 @@ public record CreateWorkflowRunRequest<A>(
         int workflowVersion,
         String queueName,
         @Nullable String concurrencyGroupId,
-        short priority,
+        int priority,
         @Nullable Map<String, String> labels,
         @Nullable A argument) {
 
     public CreateWorkflowRunRequest {
         requireNonNull(workflowName, "workflowName must not be null");
+        if (workflowVersion < 1 || workflowVersion > 100) {
+            throw new IllegalArgumentException("workflowVersion must be between 1 and 100, but is " + workflowVersion);
+        }
         requireNonNull(queueName, "queueName must not be null");
+        if (priority < 0 || priority > 100) {
+            throw new IllegalArgumentException("priority must be between 0 and 100, but is " + priority);
+        }
     }
 
     public CreateWorkflowRunRequest(final String workflowName, final int workflowVersion, final String queueName) {
-        this(workflowName, workflowVersion, queueName, null, (short) 0, null, null);
+        this(workflowName, workflowVersion, queueName, null, 0, null, null);
     }
 
     public CreateWorkflowRunRequest(final Class<? extends WorkflowExecutor<A, ?>> executorClass, final String queueName) {
@@ -64,7 +71,7 @@ public record CreateWorkflowRunRequest<A>(
                 concurrencyGroupId, this.priority, this.labels, this.argument);
     }
 
-    public CreateWorkflowRunRequest<A> withPriority(final short priority) {
+    public CreateWorkflowRunRequest<A> withPriority(final int priority) {
         return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion, this.queueName,
                 this.concurrencyGroupId, priority, this.labels, this.argument);
     }

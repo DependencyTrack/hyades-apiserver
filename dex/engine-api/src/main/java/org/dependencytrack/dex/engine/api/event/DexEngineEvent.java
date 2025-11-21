@@ -18,5 +18,5 @@
  */
 package org.dependencytrack.dex.engine.api.event;
 
-public sealed interface DexEngineEvent permits DexRunsCompletedEvent {
+public sealed interface DexEngineEvent permits WorkflowRunsCompletedEvent {
 }
