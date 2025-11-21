@@ -106,6 +106,7 @@ public interface ProjectDao extends SqlObject {
                      WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID") AS "teams"
                  , "PROJECT"."LAST_BOM_IMPORTED" AS "lastBomImport"
                  , "PROJECT"."LAST_BOM_IMPORTED_FORMAT" AS "lastBomImportFormat"
+                 , "PROJECT"."LAST_RISKSCORE" AS "lastRiskScore"
                  , (SELECT EXISTS(
                      SELECT 1
                        FROM "PROJECT" AS "CHILD_PROJECT"
@@ -204,6 +205,7 @@ public interface ProjectDao extends SqlObject {
             @AllowApiOrdering.Column(name = "isLatest"),
             @AllowApiOrdering.Column(name = "lastBomImport"),
             @AllowApiOrdering.Column(name = "lastBomImportFormat"),
+            @AllowApiOrdering.Column(name = "lastRiskScore")
     })
     List<ConciseProjectListRow> getPageConcise(
             @Bind String nameFilter,
@@ -229,6 +231,7 @@ public interface ProjectDao extends SqlObject {
             List<String> teams,
             @Nullable Instant lastBomImport,
             @Nullable String lastBomImportFormat,
+            @Nullable Double lastRiskScore,
             boolean hasChildren,
             @Nullable @Json ConciseProjectMetricsRow metrics,
             long totalCount

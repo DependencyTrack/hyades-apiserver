@@ -657,6 +657,7 @@ public class ProjectResourceTest extends ResourceTest {
         project.setName("acme-app");
         project.setVersion("1.0.0");
         project.setClassifier(Classifier.APPLICATION);
+        project.setLastInheritedRiskScore(1.23);
         qm.persist(project);
 
         qm.bind(project, List.of(qm.createTag("foo")));
@@ -669,7 +670,7 @@ public class ProjectResourceTest extends ResourceTest {
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
         assertThatJson(getPlainTextBody(response))
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
-                .isEqualTo("""
+                .isEqualTo(/* language=JSON */ """
                         [
                           {
                             "uuid": "${json-unit.matches:projectUuid}",
@@ -684,6 +685,7 @@ public class ProjectResourceTest extends ResourceTest {
                                 "name": "foo"
                               }
                             ],
+                            "lastRiskScore": 1.23,
                             "hasChildren": false
                           }
                         ]
