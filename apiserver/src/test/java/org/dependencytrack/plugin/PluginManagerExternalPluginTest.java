@@ -18,11 +18,10 @@
  */
 package org.dependencytrack.plugin;
 
-import alpine.Config;
 import org.dependencytrack.PersistenceCapableTest;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +32,7 @@ public class PluginManagerExternalPluginTest extends PersistenceCapableTest {
 
     private PluginManager pluginManager;
 
+    // Source code for external plugin
     private static final String TEST_PLUGIN_SOURCE = """
         package org.dependencytrack.plugin;
         
@@ -40,7 +40,6 @@ public class PluginManagerExternalPluginTest extends PersistenceCapableTest {
         import org.dependencytrack.plugin.api.ExtensionPoint;
         import org.dependencytrack.plugin.api.Plugin;
         import java.util.Collection;
-        import java.util.List;
         
         public class MyExternalPlugin implements Plugin {
             @Override
@@ -50,20 +49,23 @@ public class PluginManagerExternalPluginTest extends PersistenceCapableTest {
         }
         """;
 
-    @BeforeEach
-    void setUp() {
-        Config.enableUnitTests();
+    @Before
+    @Override
+    public void before() throws Exception {
+        super.before();
         pluginManager = PluginManager.getInstance();
         pluginManager.unloadPlugins();
     }
 
-    @AfterEach
-    void tearDown() {
+    @After
+    @Override
+    public void after() {
         pluginManager.unloadPlugins();
+        super.after();
     }
 
     @Test
-    void shouldNotLoadExternalPluginsWhenDisabled() throws Exception {
+    public void shouldNotLoadExternalPluginsWhenDisabled() throws Exception {
         Path tempDir = Files.createTempDirectory("plugins");
         TestPluginJarBuilder.buildTestPluginJar(tempDir, "MyExternalPlugin", TEST_PLUGIN_SOURCE);
 
@@ -75,13 +77,15 @@ public class PluginManagerExternalPluginTest extends PersistenceCapableTest {
     }
 
     @Test
-    void shouldLoadExternalPluginWhenEnabled() throws Exception {
+    public void shouldLoadExternalPluginWhenEnabled() throws Exception {
         Path tempDir = Files.createTempDirectory("plugins");
         TestPluginJarBuilder.buildTestPluginJar(tempDir, "MyExternalPlugin", TEST_PLUGIN_SOURCE);
 
+        // Enable external plugins
         pluginManager.setExternalPluginConfig(true, tempDir.toString());
         pluginManager.loadPlugins();
 
+        // Verify the plugin was loaded
         assertThat(pluginManager.getLoadedPlugins())
                 .anyMatch(p -> p.getClass().getSimpleName().equals("MyExternalPlugin"));
 
@@ -90,7 +94,7 @@ public class PluginManagerExternalPluginTest extends PersistenceCapableTest {
                 .findFirst()
                 .orElseThrow();
 
-        assertThat(plugin.getClass().getClassLoader())
-                .isInstanceOf(PluginIsolatedClassLoader.class);
+        // Verify the plugin classloader is isolated
+        assertThat(plugin.getClass().getClassLoader()).isInstanceOf(PluginIsolatedClassLoader.class);
     }
 }

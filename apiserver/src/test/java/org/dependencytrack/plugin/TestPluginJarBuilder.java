@@ -29,35 +29,37 @@ import java.util.jar.JarOutputStream;
 public class TestPluginJarBuilder {
 
     static Path buildTestPluginJar(final Path outputDir, final String className, final String sourceCode) throws IOException {
-        Files.createDirectories(outputDir);
-        Path srcFile = outputDir.resolve(className + ".java");
+        Path packageDir = outputDir.resolve("org/dependencytrack/plugin");
+        Files.createDirectories(packageDir);
+        Path srcFile = packageDir.resolve(className + ".java");
         Files.writeString(srcFile, sourceCode);
 
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null) {
-            throw new IllegalStateException("No system Java compiler found.");
-        }
+        if (compiler == null) throw new IllegalStateException("No system Java compiler found.");
 
         String classpath = System.getProperty("java.class.path");
 
         int result = compiler.run(
                 null, null, null,
                 "-classpath", classpath,
+                "-d", outputDir.toString(),
                 srcFile.toString()
         );
 
-        if (result != 0) {
-            throw new IllegalStateException("Compilation failed for " + className);
-        }
+        if (result != 0) throw new IllegalStateException("Compilation failed for " + className);
 
-        Path classFile = outputDir.resolve(className + ".class");
+        Path compiledClass = packageDir.resolve(className + ".class");
+        if (!Files.exists(compiledClass)) throw new IllegalStateException("Compiled class not found: " + compiledClass);
+
         Path jarFile = outputDir.resolve(className + ".jar");
-
         try (JarOutputStream jar = new JarOutputStream(Files.newOutputStream(jarFile))) {
-            jar.putNextEntry(new JarEntry(className + ".class"));
-            Files.copy(classFile, jar);
+
+            // Add plugin class
+            jar.putNextEntry(new JarEntry("org/dependencytrack/plugin/" + className + ".class"));
+            Files.copy(compiledClass, jar);
             jar.closeEntry();
 
+            // Add SPI file
             jar.putNextEntry(new JarEntry("META-INF/services/org.dependencytrack.plugin.api.Plugin"));
             jar.write(("org.dependencytrack.plugin." + className).getBytes());
             jar.closeEntry();
