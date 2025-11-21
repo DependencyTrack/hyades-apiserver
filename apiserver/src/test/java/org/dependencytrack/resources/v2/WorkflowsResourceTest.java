@@ -51,7 +51,7 @@ import static org.mockito.Mockito.reset;
 
 public class WorkflowsResourceTest extends ResourceTest {
 
-    private static final DexEngine WORKFLOW_ENGINE_MOCK = mock(DexEngine.class);
+    private static final DexEngine DEX_ENGINE_MOCK = mock(DexEngine.class);
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
@@ -59,14 +59,14 @@ public class WorkflowsResourceTest extends ResourceTest {
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
-                            bind(WORKFLOW_ENGINE_MOCK).to(DexEngine.class);
+                            bind(DEX_ENGINE_MOCK).to(DexEngine.class);
                         }
                     }));
 
     @After
     @Override
     public void after() {
-        reset(WORKFLOW_ENGINE_MOCK);
+        reset(DEX_ENGINE_MOCK);
         super.after();
     }
 
@@ -75,10 +75,10 @@ public class WorkflowsResourceTest extends ResourceTest {
         final var workflowRunMetadata = new WorkflowRunMetadata(
                 UUID.fromString("724c0700-4eeb-45f0-8ff4-8bba369c0174"),
                 "workflowName",
-                666,
+                66,
                 WorkflowRunStatus.RUNNING,
                 "customStatus",
-                123,
+                12,
                 "concurrencyGroupId",
                 Map.of("foo", "bar"),
                 Instant.ofEpochMilli(666666),
@@ -87,7 +87,7 @@ public class WorkflowsResourceTest extends ResourceTest {
                 null);
 
         doReturn(new Page<>(List.of(workflowRunMetadata), null))
-                .when(WORKFLOW_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
+                .when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
 
         final Response response = jersey.target("/workflow-runs").request()
                 .header(X_API_KEY, apiKey)
@@ -100,10 +100,10 @@ public class WorkflowsResourceTest extends ResourceTest {
                             {
                               "id": "724c0700-4eeb-45f0-8ff4-8bba369c0174",
                               "workflow_name": "workflowName",
-                              "workflow_version": 666,
+                              "workflow_version": 66,
                               "status": "RUNNING",
                               "created_at": 666666,
-                              "priority": 123,
+                              "priority": 12,
                               "concurrency_group_id": "concurrencyGroupId",
                               "labels": {
                                 "foo": "bar"
@@ -128,7 +128,7 @@ public class WorkflowsResourceTest extends ResourceTest {
         final var runMetadata = new WorkflowRunMetadata(
                 runId,
                 "workflowName",
-                666,
+                66,
                 WorkflowRunStatus.CREATED,
                 null,
                 0,
@@ -149,10 +149,8 @@ public class WorkflowsResourceTest extends ResourceTest {
                         .build())
                 .build();
 
-        doReturn(runMetadata)
-                .when(WORKFLOW_ENGINE_MOCK).getRunMetadata(eq(runId));
-        doReturn(new Page<>(List.of(event), null))
-                .when(WORKFLOW_ENGINE_MOCK).listRunEvents(any(ListWorkflowRunEventsRequest.class));
+        doReturn(runMetadata).when(DEX_ENGINE_MOCK).getRunMetadata(eq(runId));
+        doReturn(new Page<>(List.of(event), null)).when(DEX_ENGINE_MOCK).listRunEvents(any(ListWorkflowRunEventsRequest.class));
 
         final Response response = jersey.target("/workflow-runs/%s/events".formatted(runId)).request()
                 .header(X_API_KEY, apiKey)
@@ -188,8 +186,7 @@ public class WorkflowsResourceTest extends ResourceTest {
 
     @Test
     public void listWorkflowRunEventsShouldReturnNotFoundWhenRunDoesNotExist() {
-        doReturn(null)
-                .when(WORKFLOW_ENGINE_MOCK).getRunMetadata(any(UUID.class));
+        doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadata(any(UUID.class));
 
         final Response response = jersey.target("/workflow-runs/a81df43d-bd7f-4997-9d7a-d735d5101d52/events").request()
                 .header(X_API_KEY, apiKey)

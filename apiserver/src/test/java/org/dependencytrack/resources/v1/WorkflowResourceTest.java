@@ -56,7 +56,7 @@ import static org.mockito.Mockito.reset;
 
 public class WorkflowResourceTest extends ResourceTest {
 
-    private static final DexEngine WORKFLOW_ENGINE_MOCK = mock(DexEngine.class);
+    private static final DexEngine DEX_ENGINE_MOCK = mock(DexEngine.class);
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
@@ -67,14 +67,14 @@ public class WorkflowResourceTest extends ResourceTest {
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
-                            bind(WORKFLOW_ENGINE_MOCK).to(DexEngine.class);
+                            bind(DEX_ENGINE_MOCK).to(DexEngine.class);
                         }
                     }));
 
     @After
     @Override
     public void after() {
-        reset(WORKFLOW_ENGINE_MOCK);
+        reset(DEX_ENGINE_MOCK);
         super.after();
     }
 
@@ -165,7 +165,7 @@ public class WorkflowResourceTest extends ResourceTest {
                 Instant.ofEpochMilli(777777),
                 null);
 
-        doReturn(runMetadata).when(WORKFLOW_ENGINE_MOCK).getRunMetadata(
+        doReturn(runMetadata).when(DEX_ENGINE_MOCK).getRunMetadata(
                 eq(UUID.fromString("f5cd00be-417d-4df5-b351-0499d498c9c1")));
 
         final Response response = jersey.target(V1_WORKFLOW + "/token/f5cd00be-417d-4df5-b351-0499d498c9c1/status")

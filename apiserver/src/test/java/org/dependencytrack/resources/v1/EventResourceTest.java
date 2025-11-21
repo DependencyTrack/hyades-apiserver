@@ -50,7 +50,7 @@ import static org.mockito.Mockito.mock;
 
 public class EventResourceTest extends ResourceTest {
 
-    private static final DexEngine WORKFLOW_ENGINE_MOCK = mock(DexEngine.class);
+    private static final DexEngine DEX_ENGINE_MOCK = mock(DexEngine.class);
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
@@ -60,7 +60,7 @@ public class EventResourceTest extends ResourceTest {
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
-                            bind(WORKFLOW_ENGINE_MOCK).to(DexEngine.class);
+                            bind(DEX_ENGINE_MOCK).to(DexEngine.class);
                         }
                     }));
 
@@ -154,7 +154,7 @@ public class EventResourceTest extends ResourceTest {
                 null,
                 null);
 
-        doReturn(runMetadata).when(WORKFLOW_ENGINE_MOCK).getRunMetadata(
+        doReturn(runMetadata).when(DEX_ENGINE_MOCK).getRunMetadata(
                 eq(UUID.fromString("97282c4b-70fc-4169-be01-35e7bbe4c9e8")));
 
         final Response response = jersey.target(V1_EVENT + "/token/97282c4b-70fc-4169-be01-35e7bbe4c9e8").request()
@@ -184,7 +184,7 @@ public class EventResourceTest extends ResourceTest {
                 Instant.ofEpochMilli(777777),
                 Instant.ofEpochMilli(888888));
 
-        doReturn(runMetadata).when(WORKFLOW_ENGINE_MOCK).getRunMetadata(
+        doReturn(runMetadata).when(DEX_ENGINE_MOCK).getRunMetadata(
                 eq(UUID.fromString("97282c4b-70fc-4169-be01-35e7bbe4c9e8")));
 
         final Response response = jersey.target(V1_EVENT + "/token/97282c4b-70fc-4169-be01-35e7bbe4c9e8").request()
