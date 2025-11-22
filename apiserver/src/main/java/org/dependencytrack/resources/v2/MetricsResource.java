@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
@@ -29,16 +28,16 @@ import org.dependencytrack.api.v2.model.ListVulnerabilityMetricsResponse;
 import org.dependencytrack.api.v2.model.ListVulnerabilityMetricsResponseItem;
 import org.dependencytrack.api.v2.model.PortfolioMetricsResponse;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
-import org.dependencytrack.persistence.pagination.Page;
+import org.dependencytrack.resources.AbstractApiResource;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
 
 @Path("/")
-public class MetricsResource extends AlpineResource implements MetricsApi {
+public class MetricsResource extends AbstractApiResource implements MetricsApi {
 
     @Context
     private UriInfo uriInfo;

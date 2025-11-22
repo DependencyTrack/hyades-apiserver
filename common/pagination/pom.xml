@@ -23,22 +23,34 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.dependencytrack</groupId>
-        <artifactId>dependency-track-parent</artifactId>
+        <artifactId>common-parent</artifactId>
         <version>5.7.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>common-parent</artifactId>
-    <packaging>pom</packaging>
-
-    <modules>
-        <module>config</module>
-        <module>datasource</module>
-        <module>health</module>
-        <module>pagination</module>
-    </modules>
+    <artifactId>common-pagination</artifactId>
+    <packaging>jar</packaging>
 
     <properties>
-        <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
+        <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
 </project>

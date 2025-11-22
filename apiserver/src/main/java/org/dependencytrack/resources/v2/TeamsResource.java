@@ -36,12 +36,13 @@ import org.dependencytrack.api.v2.model.ListTeamMembershipsResponseItem;
 import org.dependencytrack.api.v2.model.ListTeamsResponse;
 import org.dependencytrack.api.v2.model.ListTeamsResponseItem;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.exception.AlreadyExistsException;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.TeamDao;
 import org.dependencytrack.persistence.jdbi.TeamDao.ListTeamMembershipsRow;
 import org.dependencytrack.persistence.jdbi.TeamDao.ListTeamsRow;
-import org.dependencytrack.persistence.pagination.Page;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,11 +50,10 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
-import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
 @Path("/")
-public class TeamsResource implements TeamsApi {
+public class TeamsResource extends AbstractApiResource implements TeamsApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TeamsResource.class);
 

@@ -33,6 +33,7 @@ import org.dependencytrack.api.v2.model.ListAdvisoriesResponseItem;
 import org.dependencytrack.api.v2.model.ListProjectAdvisoriesResponseItem;
 import org.dependencytrack.api.v2.model.ListProjectAdvisoryFindingsResponseItem;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.datasource.vuln.csaf.CsafSource;
 import org.dependencytrack.datasource.vuln.csaf.ModelConverter;
 import org.dependencytrack.model.Advisory;
@@ -42,7 +43,6 @@ import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
-import org.dependencytrack.persistence.pagination.Page;
 import org.dependencytrack.resources.AbstractApiResource;
 
 import java.io.ByteArrayOutputStream;
@@ -55,7 +55,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
-import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
 
 /**
  * API resources for advisories.

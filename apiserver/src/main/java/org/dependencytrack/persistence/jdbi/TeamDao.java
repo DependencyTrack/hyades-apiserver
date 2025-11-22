@@ -18,7 +18,9 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import org.dependencytrack.persistence.pagination.Page;
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.common.pagination.PageToken;
+import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
@@ -29,19 +31,18 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import java.util.Collection;
 import java.util.List;
 
-import static org.dependencytrack.persistence.pagination.PageUtil.decodePageToken;
-import static org.dependencytrack.persistence.pagination.PageUtil.encodePageToken;
-
 public interface TeamDao extends SqlObject {
 
-    record ListTeamsPageToken(String lastName) {
+    record ListTeamsPageToken(String lastName) implements PageToken {
     }
 
     record ListTeamsRow(String name, int apiKeys, int members) {
     }
 
     default Page<ListTeamsRow> listTeams(final int limit, final String pageToken) {
-        final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListTeamsPageToken.class);
+        final PageTokenEncoder pageTokenEncoder =
+                getHandle().getConfig(PaginationConfig.class).getPageTokenEncoder();
+        final var decodedPageToken = pageTokenEncoder.decode(pageToken, ListTeamsPageToken.class);
 
         final Query query = getHandle().createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="lastName" type="Boolean" -->
@@ -74,10 +75,10 @@ public interface TeamDao extends SqlObject {
                 ? new ListTeamsPageToken(resultRows.getLast().name())
                 : null;
 
-        return new Page<>(resultRows, encodePageToken(getHandle(), nextPageToken));
+        return new Page<>(resultRows, pageTokenEncoder.encode(nextPageToken));
     }
 
-    record ListTeamMembershipsPageToken(String lastTeamName, String lastUsername) {
+    record ListTeamMembershipsPageToken(String lastTeamName, String lastUsername) implements PageToken {
     }
 
     record ListTeamMembershipsRow(String teamName, String username) {
@@ -88,7 +89,9 @@ public interface TeamDao extends SqlObject {
             final String username,
             final int limit,
             final String pageToken) {
-        final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListTeamMembershipsPageToken.class);
+        final PageTokenEncoder pageTokenEncoder =
+                getHandle().getConfig(PaginationConfig.class).getPageTokenEncoder();
+        final var decodedPageToken = pageTokenEncoder.decode(pageToken, ListTeamMembershipsPageToken.class);
 
         final Query query = getHandle().createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="teamName" type="Boolean" -->
@@ -140,7 +143,7 @@ public interface TeamDao extends SqlObject {
                 resultRows.getLast().username())
                 : null;
 
-        return new Page<>(resultRows, encodePageToken(getHandle(), nextPageToken));
+        return new Page<>(resultRows, pageTokenEncoder.encode(nextPageToken));
     }
 
     @SqlUpdate("""
