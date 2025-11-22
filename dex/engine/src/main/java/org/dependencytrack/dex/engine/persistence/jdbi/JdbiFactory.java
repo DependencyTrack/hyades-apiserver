@@ -21,15 +21,6 @@ package org.dependencytrack.dex.engine.persistence.jdbi;
 import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.dex.engine.api.ActivityTaskQueue;
 import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
-import org.dependencytrack.dex.engine.persistence.mapping.ActivityTaskQueueRowMapper;
-import org.dependencytrack.dex.engine.persistence.mapping.PolledActivityTaskRowMapper;
-import org.dependencytrack.dex.engine.persistence.mapping.PolledWorkflowEventRowMapper;
-import org.dependencytrack.dex.engine.persistence.mapping.PolledWorkflowRunRowMapper;
-import org.dependencytrack.dex.engine.persistence.mapping.ProtobufColumnMapper;
-import org.dependencytrack.dex.engine.persistence.mapping.WorkflowEventArgumentFactory;
-import org.dependencytrack.dex.engine.persistence.mapping.WorkflowEventSqlArrayType;
-import org.dependencytrack.dex.engine.persistence.mapping.WorkflowPayloadSqlArrayType;
-import org.dependencytrack.dex.engine.persistence.mapping.WorkflowTaskQueueRowMapper;
 import org.dependencytrack.dex.engine.persistence.model.PolledActivityTask;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
@@ -76,11 +67,8 @@ public final class JdbiFactory {
                 // on startup. Defining these on a per-query basis imposes
                 // additional overhead that is worth avoiding given how
                 // frequently queries are being executed.
-                .registerArgument(new WorkflowEventArgumentFactory())
                 .registerArrayType(Duration.class, "interval")
                 .registerArrayType(Instant.class, "timestamptz")
-                .registerArrayType(new WorkflowEventSqlArrayType())
-                .registerArrayType(new WorkflowPayloadSqlArrayType())
                 .registerColumnMapper(
                         Event.class,
                         new ProtobufColumnMapper<>(Event.parser()))

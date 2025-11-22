@@ -16,25 +16,40 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence.mapping;
+package org.dependencytrack.dex.engine.persistence.jdbi;
 
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.dex.proto.event.v1.Event;
+import org.jdbi.v3.core.config.ConfigRegistry;
+import org.jdbi.v3.core.mapper.ColumnMapper;
+import org.jdbi.v3.core.mapper.ColumnMappers;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
+import org.jspecify.annotations.Nullable;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 
-public final class PolledWorkflowEventRowMapper implements RowMapper<PolledWorkflowEvent> {
+import static java.util.Objects.requireNonNull;
+
+final class PolledWorkflowEventRowMapper implements RowMapper<PolledWorkflowEvent> {
+
+    private @Nullable ColumnMapper<Event> eventColumnMapper;
+
+    @Override
+    public void init(final ConfigRegistry registry) {
+        eventColumnMapper = registry.get(ColumnMappers.class).findFor(Event.class).orElseThrow();
+    }
 
     @Override
     public PolledWorkflowEvent map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        requireNonNull(eventColumnMapper);
+
         return new PolledWorkflowEvent(
                 PolledWorkflowEvent.EventType.valueOf(rs.getString("event_type")),
                 rs.getObject("workflow_run_id", UUID.class),
-                ctx.findColumnMapperFor(Event.class).orElseThrow().map(rs, "event", ctx),
+                eventColumnMapper.map(rs, "event", ctx),
                 rs.getInt("sequence_number"),
                 rs.getInt("dequeue_count"));
     }

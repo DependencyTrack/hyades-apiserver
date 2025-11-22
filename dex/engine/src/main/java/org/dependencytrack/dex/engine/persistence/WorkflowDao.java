@@ -41,7 +41,6 @@ import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.engine.persistence.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.proto.event.v1.Event;
 import org.jdbi.v3.core.Handle;
-import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
 import org.jdbi.v3.json.JsonConfig;
@@ -62,6 +61,7 @@ import java.util.UUID;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
+import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
 
 public final class WorkflowDao extends AbstractDao {
 
@@ -193,21 +193,21 @@ public final class WorkflowDao extends AbstractDao {
                 returning id
                 """);
 
-        final var ids = new ArrayList<UUID>(commands.size());
-        final var parentIds = new ArrayList<@Nullable UUID>(commands.size());
-        final var workflowNames = new ArrayList<String>(commands.size());
-        final var workflowVersions = new ArrayList<Integer>(commands.size());
-        final var queueNames = new ArrayList<String>(commands.size());
-        final var concurrencyGroupIds = new ArrayList<@Nullable String>(commands.size());
-        final var priorities = new ArrayList<Integer>(commands.size());
-        final var labelsJsons = new ArrayList<@Nullable String>(commands.size());
-        final var createdAts = new ArrayList<Instant>(commands.size());
+        final var ids = new UUID[commands.size()];
+        final var parentIds = new @Nullable UUID[commands.size()];
+        final var workflowNames = new String[commands.size()];
+        final var workflowVersions = new int[commands.size()];
+        final var queueNames = new String[commands.size()];
+        final var concurrencyGroupIds = new @Nullable String[commands.size()];
+        final var priorities = new int[commands.size()];
+        final var labelsJsons = new @Nullable String[commands.size()];
+        final var createdAts = new Instant[commands.size()];
 
         final TypedJsonMapper jsonMapper = jdbiHandle
                 .getConfig(JsonConfig.class).getJsonMapper()
-                .forType(new GenericType<Map<String, String>>() {
-                }.getType(), jdbiHandle.getConfig());
+                .forType(parameterizeClass(Map.class, String.class, String.class), jdbiHandle.getConfig());
 
+        int i = 0;
         for (final CreateWorkflowRunCommand command : commands) {
             final String labelsJson;
             if (command.labels() == null || command.labels().isEmpty()) {
@@ -216,27 +216,28 @@ public final class WorkflowDao extends AbstractDao {
                 labelsJson = jsonMapper.toJson(command.labels(), jdbiHandle.getConfig());
             }
 
-            ids.add(command.id());
-            parentIds.add(command.parentId());
-            workflowNames.add(command.workflowName());
-            workflowVersions.add(command.workflowVersion());
-            queueNames.add(command.queueName());
-            concurrencyGroupIds.add(command.concurrencyGroupId());
-            priorities.add(command.priority());
-            labelsJsons.add(labelsJson);
-            createdAts.add(command.createdAt());
+            ids[i] = command.id();
+            parentIds[i] = command.parentId();
+            workflowNames[i] = command.workflowName();
+            workflowVersions[i] = command.workflowVersion();
+            queueNames[i] = command.queueName();
+            concurrencyGroupIds[i] = command.concurrencyGroupId();
+            priorities[i] = command.priority();
+            labelsJsons[i] = labelsJson;
+            createdAts[i] = command.createdAt();
+            i++;
         }
 
         return update
-                .bindArray("ids", UUID.class, ids)
-                .bindArray("parentIds", UUID.class, parentIds)
-                .bindArray("workflowNames", String.class, workflowNames)
-                .bindArray("workflowVersions", Integer.class, workflowVersions)
-                .bindArray("queueNames", String.class, queueNames)
-                .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
-                .bindArray("priorities", Integer.class, priorities)
-                .bindArray("labelsJsons", String.class, labelsJsons)
-                .bindArray("createdAts", Instant.class, createdAts)
+                .bind("ids", ids)
+                .bind("parentIds", parentIds)
+                .bind("workflowNames", workflowNames)
+                .bind("workflowVersions", workflowVersions)
+                .bind("queueNames", queueNames)
+                .bind("concurrencyGroupIds", concurrencyGroupIds)
+                .bind("priorities", priorities)
+                .bind("labelsJsons", labelsJsons)
+                .bind("createdAts", createdAts)
                 .executeAndReturnGeneratedKeys("id")
                 .mapTo(UUID.class)
                 .list();
@@ -290,34 +291,36 @@ public final class WorkflowDao extends AbstractDao {
                 returning run.id
                 """);
 
-        final var ids = new ArrayList<UUID>(commands.size());
-        final var queueNames = new ArrayList<String>(commands.size());
-        final var statuses = new ArrayList<WorkflowRunStatus>(commands.size());
-        final var customStatuses = new ArrayList<@Nullable String>(commands.size());
-        final var updatedAts = new ArrayList<@Nullable Instant>(commands.size());
-        final var startedAts = new ArrayList<@Nullable Instant>(commands.size());
-        final var completedAts = new ArrayList<@Nullable Instant>(commands.size());
+        final var ids = new UUID[commands.size()];
+        final var queueNames = new String[commands.size()];
+        final var statuses = new WorkflowRunStatus[commands.size()];
+        final var customStatuses = new @Nullable String[commands.size()];
+        final var updatedAts = new @Nullable Instant[commands.size()];
+        final var startedAts = new @Nullable Instant[commands.size()];
+        final var completedAts = new @Nullable Instant[commands.size()];
 
+        int i = 0;
         for (final UpdateAndUnlockRunCommand command : commands) {
-            ids.add(command.id());
-            queueNames.add(command.queueName());
-            statuses.add(command.status());
-            customStatuses.add(command.customStatus());
-            updatedAts.add(command.updatedAt());
-            startedAts.add(command.startedAt());
-            completedAts.add(command.completedAt());
+            ids[i] = command.id();
+            queueNames[i] = command.queueName();
+            statuses[i] = command.status();
+            customStatuses[i] = command.customStatus();
+            updatedAts[i] = command.updatedAt();
+            startedAts[i] = command.startedAt();
+            completedAts[i] = command.completedAt();
+            i++;
         }
 
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
-                .bindArray("ids", UUID.class, ids)
-                .bindArray("queueNames", String.class, queueNames)
-                .bindArray("statuses", WorkflowRunStatus.class, statuses)
-                .bindArray("customStatuses", String.class, customStatuses)
-                .bindArray("updatedAts", Instant.class, updatedAts)
-                .bindArray("startedAts", Instant.class, startedAts)
-                .bindArray("completedAts", Instant.class, completedAts)
-                .executeAndReturnGeneratedKeys("id")
+                .bind("ids", ids)
+                .bind("queueNames", queueNames)
+                .bind("statuses", statuses)
+                .bind("customStatuses", customStatuses)
+                .bind("updatedAts", updatedAts)
+                .bind("startedAts", startedAts)
+                .bind("completedAts", completedAts)
+                .executeAndReturnGeneratedKeys()
                 .mapTo(UUID.class)
                 .list();
     }
@@ -385,19 +388,21 @@ public final class WorkflowDao extends AbstractDao {
                    and cte_locked.workflow_run_id = run.id
                 """);
 
-        final var workflowNames = new ArrayList<String>(commands.size());
-        final var lockTimeouts = new ArrayList<Duration>(commands.size());
+        final var workflowNames = new String[commands.size()];
+        final var lockTimeouts = new Duration[commands.size()];
 
+        int i = 0;
         for (final PollWorkflowTaskCommand command : commands) {
-            workflowNames.add(command.workflowName());
-            lockTimeouts.add(command.lockTimeout());
+            workflowNames[i] = command.workflowName();
+            lockTimeouts[i] = command.lockTimeout();
+            i++;
         }
 
         return query
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bind("queueName", queueName)
-                .bindArray("workflowNames", String.class, workflowNames)
-                .bindArray("lockTimeouts", Duration.class, lockTimeouts)
+                .bind("workflowNames", workflowNames)
+                .bind("lockTimeouts", lockTimeouts)
                 .bind("limit", limit)
                 .mapTo(PolledWorkflowTask.class)
                 .collectToMap(PolledWorkflowTask::runId, Function.identity());
@@ -415,18 +420,20 @@ public final class WorkflowDao extends AbstractDao {
                    and task.locked_by = :workerInstanceId
                 """);
 
-        final var queueNames = new ArrayList<String>(commands.size());
-        final var runIds = new ArrayList<UUID>(commands.size());
+        final var queueNames = new String[commands.size()];
+        final var runIds = new UUID[commands.size()];
 
+        int i = 0;
         for (final UnlockWorkflowTaskCommand command : commands) {
-            queueNames.add(command.queueName());
-            runIds.add(command.runId());
+            queueNames[i] = command.queueName();
+            runIds[i] = command.runId();
+            i++;
         }
 
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
-                .bindArray("queueNames", String.class, queueNames)
-                .bindArray("runIds", UUID.class, runIds)
+                .bindArray("queueNames", queueNames)
+                .bindArray("runIds", runIds)
                 .execute();
     }
 
@@ -440,20 +447,22 @@ public final class WorkflowDao extends AbstractDao {
                 select * from unnest(:runIds, :visibleFroms, :events)
                 """);
 
-        final var runIds = new ArrayList<UUID>(commands.size());
-        final var visibleFroms = new ArrayList<@Nullable Instant>(commands.size());
-        final var events = new ArrayList<Event>(commands.size());
+        final var runIds = new UUID[commands.size()];
+        final var visibleFroms = new @Nullable Instant[commands.size()];
+        final var events = new byte[commands.size()][];
 
+        int i = 0;
         for (final CreateWorkflowRunInboxEntryCommand command : commands) {
-            runIds.add(command.workflowRunId());
-            visibleFroms.add(command.visibleFrom());
-            events.add(command.event());
+            runIds[i] = command.workflowRunId();
+            visibleFroms[i] = command.visibleFrom();
+            events[i] = command.event().toByteArray();
+            i++;
         }
 
         return update
-                .bindArray("runIds", UUID.class, runIds)
-                .bindArray("visibleFroms", Instant.class, visibleFroms)
-                .bindArray("events", Event.class, events)
+                .bind("runIds", runIds)
+                .bind("visibleFroms", visibleFroms)
+                .bind("events", events)
                 .execute();
     }
 
@@ -506,18 +515,20 @@ public final class WorkflowDao extends AbstractDao {
                   from cte_polled_inbox
                 """);
 
-        final var historyRequestRunIds = new ArrayList<UUID>(requests.size());
-        final var historyRequestOffsets = new ArrayList<Integer>(requests.size());
+        final var historyRequestRunIds = new UUID[requests.size()];
+        final var historyRequestOffsets = new int[requests.size()];
 
+        int i = 0;
         for (final GetWorkflowRunHistoryRequest request : requests) {
-            historyRequestRunIds.add(request.runId());
-            historyRequestOffsets.add(request.offset());
+            historyRequestRunIds[i] = request.runId();
+            historyRequestOffsets[i] = request.offset();
+            i++;
         }
 
         final List<PolledWorkflowEvent> polledEvents = query
                 .bind("workerInstanceId", workerInstanceId.toString())
-                .bindArray("historyRequestRunIds", UUID.class, historyRequestRunIds)
-                .bindArray("historyRequestOffsets", Integer.class, historyRequestOffsets)
+                .bind("historyRequestRunIds", historyRequestRunIds)
+                .bind("historyRequestOffsets", historyRequestOffsets)
                 .mapTo(PolledWorkflowEvent.class)
                 .list();
 
@@ -589,18 +600,20 @@ public final class WorkflowDao extends AbstractDao {
                    and locked_by = :workerInstanceId
                 """);
 
-        final var runIds = new ArrayList<UUID>(commands.size());
-        final var visibilityDelays = new ArrayList<Duration>(commands.size());
+        final var runIds = new UUID[commands.size()];
+        final var visibilityDelays = new Duration[commands.size()];
 
+        int i = 0;
         for (final UnlockWorkflowRunInboxEventsCommand command : commands) {
-            runIds.add(command.workflowRunId());
-            visibilityDelays.add(command.visibilityDelay());
+            runIds[i] = command.workflowRunId();
+            visibilityDelays[i] = command.visibilityDelay();
+            i++;
         }
 
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
-                .bindArray("runIds", UUID.class, runIds)
-                .bindArray("visibilityDelays", Duration.class, visibilityDelays)
+                .bind("runIds", runIds)
+                .bind("visibilityDelays", visibilityDelays)
                 .execute();
     }
 
@@ -616,17 +629,19 @@ public final class WorkflowDao extends AbstractDao {
                          or dex_workflow_run_inbox.locked_by = :workerInstanceId)
                 """);
 
-        final var runIds = new ArrayList<UUID>(commands.size());
-        final var onlyLockeds = new ArrayList<Boolean>(commands.size());
+        final var runIds = new UUID[commands.size()];
+        final var onlyLockeds = new boolean[commands.size()];
 
+        int i = 0;
         for (final DeleteInboxEventsCommand command : commands) {
-            runIds.add(command.workflowRunId());
-            onlyLockeds.add(command.onlyLocked());
+            runIds[i] = command.workflowRunId();
+            onlyLockeds[i] = command.onlyLocked();
+            i++;
         }
 
         return update
-                .bindArray("workflowRunIds", UUID.class, runIds)
-                .bindArray("onlyLockeds", Boolean.class, onlyLockeds)
+                .bind("workflowRunIds", runIds)
+                .bind("onlyLockeds", onlyLockeds)
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .execute();
     }
@@ -641,20 +656,22 @@ public final class WorkflowDao extends AbstractDao {
                 select * from unnest(:runIds, :sequenceNumbers, :events)
                 """);
 
-        final var runIds = new ArrayList<UUID>(commands.size());
-        final var sequenceNumbers = new ArrayList<Integer>(commands.size());
-        final var events = new ArrayList<Event>(commands.size());
+        final var runIds = new UUID[commands.size()];
+        final var sequenceNumbers = new int[commands.size()];
+        final var events = new byte[commands.size()][];
 
+        int i = 0;
         for (final CreateWorkflowRunHistoryEntryCommand command : commands) {
-            runIds.add(command.workflowRunId());
-            sequenceNumbers.add(command.sequenceNumber());
-            events.add(command.event());
+            runIds[i] = command.workflowRunId();
+            sequenceNumbers[i] = command.sequenceNumber();
+            events[i] = command.event().toByteArray();
+            i++;
         }
 
         return update
-                .bindArray("runIds", UUID.class, runIds)
-                .bindArray("sequenceNumbers", Integer.class, sequenceNumbers)
-                .bindArray("events", Event.class, events)
+                .bind("runIds", runIds)
+                .bind("sequenceNumbers", sequenceNumbers)
+                .bind("events", events)
                 .execute();
     }
 

@@ -28,7 +28,6 @@ import org.dependencytrack.dex.engine.persistence.command.CreateActivityTaskComm
 import org.dependencytrack.dex.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.dex.engine.persistence.model.ActivityTaskId;
 import org.dependencytrack.dex.engine.persistence.model.PolledActivityTask;
-import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
@@ -36,7 +35,6 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -173,32 +171,36 @@ public final class ActivityDao extends AbstractDao {
                        )
                 """);
 
-        final var runIds = new ArrayList<UUID>(commands.size());
-        final var createdEventIds = new ArrayList<Integer>(commands.size());
-        final var activityNames = new ArrayList<String>(commands.size());
-        final var queueNames = new ArrayList<String>(commands.size());
-        final var priorities = new ArrayList<Integer>(commands.size());
-        final var arguments = new ArrayList<@Nullable Payload>(commands.size());
-        final var visibleFroms = new ArrayList<@Nullable Instant>(commands.size());
+        final var runIds = new UUID[commands.size()];
+        final var createdEventIds = new int[commands.size()];
+        final var activityNames = new String[commands.size()];
+        final var queueNames = new String[commands.size()];
+        final var priorities = new int[commands.size()];
+        final var arguments = new byte[commands.size()][];
+        final var visibleFroms = new @Nullable Instant[commands.size()];
 
+        int i = 0;
         for (final CreateActivityTaskCommand command : commands) {
-            runIds.add(command.workflowRunId());
-            createdEventIds.add(command.createdEventId());
-            activityNames.add(command.activityName());
-            queueNames.add(command.queueName());
-            priorities.add(command.priority());
-            arguments.add(command.argument());
-            visibleFroms.add(command.visibleFrom());
+            runIds[i] = command.workflowRunId();
+            createdEventIds[i] = command.createdEventId();
+            activityNames[i] = command.activityName();
+            queueNames[i] = command.queueName();
+            priorities[i] = command.priority();
+            arguments[i] = command.argument() != null
+                    ? command.argument().toByteArray()
+                    : null;
+            visibleFroms[i] = command.visibleFrom();
+            i++;
         }
 
         return update
-                .bindArray("runIds", UUID.class, runIds)
-                .bindArray("createdEventIds", Integer.class, createdEventIds)
-                .bindArray("activityNames", String.class, activityNames)
-                .bindArray("queueNames", String.class, queueNames)
-                .bindArray("priorities", Integer.class, priorities)
-                .bindArray("arguments", Payload.class, arguments)
-                .bindArray("visibleFroms", Instant.class, visibleFroms)
+                .bind("runIds", runIds)
+                .bind("createdEventIds", createdEventIds)
+                .bind("activityNames", activityNames)
+                .bind("queueNames", queueNames)
+                .bind("priorities", priorities)
+                .bind("arguments", arguments)
+                .bind("visibleFroms", visibleFroms)
                 .execute();
     }
 
@@ -249,19 +251,21 @@ public final class ActivityDao extends AbstractDao {
                         , dat.locked_until
                 """);
 
-        final var activityNames = new ArrayList<String>(commands.size());
-        final var lockTimeouts = new ArrayList<Duration>(commands.size());
+        final var activityNames = new String[commands.size()];
+        final var lockTimeouts = new Duration[commands.size()];
 
+        int i = 0;
         for (final PollActivityTaskCommand command : commands) {
-            activityNames.add(command.activityName());
-            lockTimeouts.add(command.lockTimeout());
+            activityNames[i] = command.activityName();
+            lockTimeouts[i] = command.lockTimeout();
+            i++;
         }
 
         return query
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bind("queueName", queueName)
-                .bindArray("activityNames", String.class, activityNames)
-                .bindArray("lockTimeouts", Duration.class, lockTimeouts)
+                .bind("activityNames", activityNames)
+                .bind("lockTimeouts", lockTimeouts)
                 .bind("limit", limit)
                 .mapTo(PolledActivityTask.class)
                 .list();
@@ -295,14 +299,16 @@ public final class ActivityDao extends AbstractDao {
     }
 
     public int unlockActivityTasks(final UUID workerInstanceId, final List<ActivityTaskId> activityTasks) {
-        final var queueNames = new ArrayList<String>(activityTasks.size());
-        final var workflowRunIds = new ArrayList<UUID>(activityTasks.size());
-        final var createdEventIds = new ArrayList<Integer>(activityTasks.size());
+        final var queueNames = new String[activityTasks.size()];
+        final var workflowRunIds = new UUID[activityTasks.size()];
+        final var createdEventIds = new int[activityTasks.size()];
 
+        int i = 0;
         for (final ActivityTaskId activityTask : activityTasks) {
-            queueNames.add(activityTask.queueName());
-            workflowRunIds.add(activityTask.workflowRunId());
-            createdEventIds.add(activityTask.createdEventId());
+            queueNames[i] = activityTask.queueName();
+            workflowRunIds[i] = activityTask.workflowRunId();
+            createdEventIds[i] = activityTask.createdEventId();
+            i++;
         }
 
         final Update update = jdbiHandle.createUpdate("""
@@ -324,21 +330,23 @@ public final class ActivityDao extends AbstractDao {
 
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
-                .bindArray("queueNames", String.class, queueNames)
-                .bindArray("workflowRunIds", UUID.class, workflowRunIds)
-                .bindArray("createdEventIds", Integer.class, createdEventIds)
+                .bind("queueNames", queueNames)
+                .bind("workflowRunIds", workflowRunIds)
+                .bind("createdEventIds", createdEventIds)
                 .execute();
     }
 
     public int deleteLockedActivityTasks(final UUID workerInstanceId, final List<ActivityTaskId> activityTasks) {
-        final var queueNames = new ArrayList<String>(activityTasks.size());
-        final var workflowRunIds = new ArrayList<UUID>(activityTasks.size());
-        final var createdEventIds = new ArrayList<Integer>(activityTasks.size());
+        final var queueNames = new String[activityTasks.size()];
+        final var workflowRunIds = new UUID[activityTasks.size()];
+        final var createdEventIds = new int[activityTasks.size()];
 
+        int i = 0;
         for (final ActivityTaskId activityTask : activityTasks) {
-            queueNames.add(activityTask.queueName());
-            workflowRunIds.add(activityTask.workflowRunId());
-            createdEventIds.add(activityTask.createdEventId());
+            queueNames[i] = activityTask.queueName();
+            workflowRunIds[i] = activityTask.workflowRunId();
+            createdEventIds[i] = activityTask.createdEventId();
+            i++;
         }
 
         final Update update = jdbiHandle.createUpdate("""
@@ -359,9 +367,9 @@ public final class ActivityDao extends AbstractDao {
 
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
-                .bindArray("queueNames", String.class, queueNames)
-                .bindArray("workflowRunIds", UUID.class, workflowRunIds)
-                .bindArray("createdEventIds", Integer.class, createdEventIds)
+                .bind("queueNames", queueNames)
+                .bind("workflowRunIds", workflowRunIds)
+                .bind("createdEventIds", createdEventIds)
                 .execute();
     }
 

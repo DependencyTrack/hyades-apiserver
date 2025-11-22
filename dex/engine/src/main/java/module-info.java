@@ -26,6 +26,7 @@ import org.jspecify.annotations.NullMarked;
 module org.dependencytrack.dex.engine {
     provides DexEngineFactory with DexEngineFactoryImpl;
 
+    requires com.fasterxml.jackson.databind;
     requires com.fasterxml.uuid;
     requires com.github.benmanes.caffeine;
     requires com.google.protobuf.util;

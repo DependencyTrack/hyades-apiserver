@@ -16,10 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence.mapping;
+package org.dependencytrack.dex.engine.persistence.jdbi;
 
-import org.dependencytrack.dex.engine.api.ActivityTaskQueue;
 import org.dependencytrack.dex.engine.api.TaskQueueStatus;
+import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
 import org.jdbi.v3.core.config.ConfigRegistry;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.mapper.ColumnMappers;
@@ -31,7 +31,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 
-public final class ActivityTaskQueueRowMapper implements RowMapper<ActivityTaskQueue> {
+import static java.util.Objects.requireNonNull;
+
+final class WorkflowTaskQueueRowMapper implements RowMapper<WorkflowTaskQueue> {
 
     private @Nullable ColumnMapper<Instant> instantColumnMapper;
 
@@ -41,8 +43,10 @@ public final class ActivityTaskQueueRowMapper implements RowMapper<ActivityTaskQ
     }
 
     @Override
-    public ActivityTaskQueue map(final ResultSet rs, final StatementContext ctx) throws SQLException {
-        return new ActivityTaskQueue(
+    public WorkflowTaskQueue map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        requireNonNull(instantColumnMapper);
+
+        return new WorkflowTaskQueue(
                 rs.getString("name"),
                 TaskQueueStatus.valueOf(rs.getString("status")),
                 rs.getInt("max_concurrency"),

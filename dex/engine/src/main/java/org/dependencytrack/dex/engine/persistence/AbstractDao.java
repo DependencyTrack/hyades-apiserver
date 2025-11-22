@@ -24,6 +24,8 @@ import org.dependencytrack.dex.engine.persistence.jdbi.PaginationConfig;
 import org.jdbi.v3.core.Handle;
 import org.jspecify.annotations.Nullable;
 
+import static java.util.Objects.requireNonNull;
+
 abstract class AbstractDao {
 
     final Handle jdbiHandle;
@@ -40,6 +42,7 @@ abstract class AbstractDao {
         final PageTokenEncoder encoder = jdbiHandle
                 .getConfig(PaginationConfig.class)
                 .getPageTokenEncoder();
+        requireNonNull(encoder);
 
         return encoder.encode(token);
     }
@@ -52,6 +55,7 @@ abstract class AbstractDao {
         final PageTokenEncoder encoder = jdbiHandle
                 .getConfig(PaginationConfig.class)
                 .getPageTokenEncoder();
+        requireNonNull(encoder);
 
         return encoder.decode(token, tokenClass);
     }

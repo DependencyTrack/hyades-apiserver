@@ -16,19 +16,36 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence.mapping;
+package org.dependencytrack.dex.engine.persistence.jdbi;
 
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
+import org.jdbi.v3.core.config.ConfigRegistry;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
+import org.jdbi.v3.json.JsonConfig;
+import org.jdbi.v3.json.JsonMapper.TypedJsonMapper;
+import org.jspecify.annotations.Nullable;
 
+import java.lang.reflect.Type;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
+import java.util.Map;
 import java.util.UUID;
 
-import static org.dependencytrack.dex.engine.persistence.mapping.MappingUtil.mapJsonEncodedMap;
+import static java.util.Objects.requireNonNull;
+import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
 
-public final class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowTask> {
+final class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowTask> {
+
+    private static final Type LABELS_TYPE = parameterizeClass(Map.class, String.class, String.class);
+
+    private @Nullable TypedJsonMapper labelsJsonMapper;
+
+    @Override
+    public void init(final ConfigRegistry registry) {
+        labelsJsonMapper = registry.get(JsonConfig.class).getJsonMapper().forType(LABELS_TYPE, registry);
+    }
 
     @Override
     public PolledWorkflowTask map(final ResultSet rs, final StatementContext ctx) throws SQLException {
@@ -39,7 +56,19 @@ public final class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflo
                 rs.getString("queue_name"),
                 rs.getString("concurrency_group_id"),
                 rs.getInt("priority"),
-                mapJsonEncodedMap(rs, ctx, "labels", String.class, String.class));
+                getLabels(rs, ctx));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, String> getLabels(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        requireNonNull(labelsJsonMapper);
+
+        final String labelsJson = rs.getString("labels");
+        if (rs.wasNull()) {
+            return Collections.emptyMap();
+        }
+
+        return (Map<String, String>) labelsJsonMapper.fromJson(labelsJson, ctx.getConfig());
     }
 
 }

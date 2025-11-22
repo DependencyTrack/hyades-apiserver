@@ -16,30 +16,49 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence.mapping;
+package org.dependencytrack.dex.engine.persistence.jdbi;
 
 import org.dependencytrack.dex.engine.persistence.model.PolledActivityTask;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
+import org.jdbi.v3.core.config.ConfigRegistry;
+import org.jdbi.v3.core.mapper.ColumnMapper;
+import org.jdbi.v3.core.mapper.ColumnMappers;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
+import org.jspecify.annotations.Nullable;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.UUID;
 
-public final class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTask> {
+import static java.util.Objects.requireNonNull;
+
+final class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTask> {
+
+    private @Nullable ColumnMapper<Instant> instantColumnMapper;
+    private @Nullable ColumnMapper<Payload> payloadColumnMapper;
+
+    @Override
+    public void init(final ConfigRegistry registry) {
+        final var columnMappers = registry.get(ColumnMappers.class);
+        instantColumnMapper = columnMappers.findFor(Instant.class).orElseThrow();
+        payloadColumnMapper = columnMappers.findFor(Payload.class).orElseThrow();
+    }
 
     @Override
     public PolledActivityTask map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        requireNonNull(instantColumnMapper);
+        requireNonNull(payloadColumnMapper);
+
         return new PolledActivityTask(
                 rs.getObject("workflow_run_id", UUID.class),
                 rs.getInt("created_event_id"),
                 rs.getString("activity_name"),
                 rs.getString("queue_name"),
                 rs.getInt("priority"),
-                ctx.findColumnMapperFor(Payload.class).orElseThrow().map(rs, "argument", ctx),
-                ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "locked_until", ctx));
+                payloadColumnMapper.map(rs, "argument", ctx),
+                instantColumnMapper.map(rs, "locked_until", ctx));
     }
 
 }

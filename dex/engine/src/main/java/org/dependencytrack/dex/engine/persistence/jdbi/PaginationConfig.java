@@ -26,6 +26,7 @@ public final class PaginationConfig implements JdbiConfig<PaginationConfig> {
 
     private @Nullable PageTokenEncoder pageTokenEncoder;
 
+    @SuppressWarnings("unused") // Used by JDBI.
     public PaginationConfig() {
     }
 

@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence.mapping;
+package org.dependencytrack.dex.engine.persistence.jdbi;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
@@ -25,10 +25,11 @@ import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 import org.jspecify.annotations.Nullable;
 
+import java.io.UncheckedIOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public final class ProtobufColumnMapper<T extends Message> implements ColumnMapper<T> {
+final class ProtobufColumnMapper<T extends Message> implements ColumnMapper<T> {
 
     private final Parser<T> parser;
 
@@ -46,7 +47,7 @@ public final class ProtobufColumnMapper<T extends Message> implements ColumnMapp
         try {
             return parser.parseFrom(valueBytes);
         } catch (InvalidProtocolBufferException e) {
-            throw new SQLException("Failed to parse workflow event", e);
+            throw new UncheckedIOException("Failed to parse Protobuf message", e);
         }
     }
 
