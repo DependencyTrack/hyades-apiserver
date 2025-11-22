@@ -18,10 +18,12 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.common.pagination.PageToken;
+import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.License;
-import org.dependencytrack.persistence.pagination.Page;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.mapper.reflect.BeanMapper;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -39,8 +41,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
-import static org.dependencytrack.persistence.pagination.PageUtil.decodePageToken;
-import static org.dependencytrack.persistence.pagination.PageUtil.encodePageToken;
 
 public interface ComponentDao extends SqlObject {
 
@@ -88,9 +88,15 @@ public interface ComponentDao extends SqlObject {
             """)
     Long getComponentId(@Bind UUID componentUuid);
 
-    default Page<Component> listProjectComponents(final long projectId, final Boolean onlyOutdated,
-                                                    final Boolean onlyDirect, final int limit, final String pageToken) {
-        final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListComponentPageToken.class);
+    default Page<Component> listProjectComponents(
+            final long projectId,
+            final Boolean onlyOutdated,
+            final Boolean onlyDirect,
+            final int limit,
+            final String pageToken) {
+        final PageTokenEncoder pageTokenEncoder =
+                getHandle().getConfig(PaginationConfig.class).getPageTokenEncoder();
+        final var decodedPageToken = pageTokenEncoder.decode(pageToken, ListComponentPageToken.class);
 
         final List<Component> rows = listProjectComponents(projectId, limit + 1, onlyOutdated, onlyDirect,
                 decodedPageToken != null ? decodedPageToken.lastName() : null,
@@ -105,10 +111,10 @@ public interface ComponentDao extends SqlObject {
                 ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion(), resultRows.getLast().getId())
                 : null;
 
-        return new Page<>(resultRows, encodePageToken(getHandle(), nextPageToken));
+        return new Page<>(resultRows, pageTokenEncoder.encode(nextPageToken));
     }
 
-    record ListComponentPageToken(String lastName, String lastVersion, Long lastId) {
+    record ListComponentPageToken(String lastName, String lastVersion, Long lastId) implements PageToken {
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """

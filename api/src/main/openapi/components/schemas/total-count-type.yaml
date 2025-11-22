@@ -16,5 +16,6 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: string
 enum:
-- EXACT
 - AT_LEAST
+- ESTIMATE
+- EXACT

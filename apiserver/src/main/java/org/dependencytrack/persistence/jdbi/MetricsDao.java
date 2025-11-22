@@ -18,10 +18,12 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.common.pagination.PageToken;
+import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.ProjectMetrics;
-import org.dependencytrack.persistence.pagination.Page;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.sqlobject.SqlObject;
@@ -38,22 +40,21 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.List;
 
-import static org.dependencytrack.persistence.pagination.PageUtil.decodePageToken;
-import static org.dependencytrack.persistence.pagination.PageUtil.encodePageToken;
-
 /**
  * @since 5.6.0
  */
 public interface MetricsDao extends SqlObject {
 
-    record ListVulnerabilityMetricsPageToken(int year, int month) {
+    record ListVulnerabilityMetricsPageToken(int year, int month) implements PageToken {
     }
 
     record ListVulnerabilityMetricsRow(int year, int month, int count, Instant measuredAt) {
     }
 
     default Page<ListVulnerabilityMetricsRow> getVulnerabilityMetrics(final int limit, final String pageToken) {
-        final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListVulnerabilityMetricsPageToken.class);
+        final PageTokenEncoder pageTokenEncoder =
+                getHandle().getConfig(PaginationConfig.class).getPageTokenEncoder();
+        final var decodedPageToken = pageTokenEncoder.decode(pageToken, ListVulnerabilityMetricsPageToken.class);
 
         final Query query = getHandle().createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="year" type="Boolean" -->
@@ -88,7 +89,7 @@ public interface MetricsDao extends SqlObject {
                 ? new ListVulnerabilityMetricsPageToken(resultRows.getLast().year, resultRows.getLast().month)
                 : null;
 
-        return new Page<>(resultRows, encodePageToken(getHandle(), nextPageToken));
+        return new Page<>(resultRows, pageTokenEncoder.encode(nextPageToken));
     }
 
     /**
