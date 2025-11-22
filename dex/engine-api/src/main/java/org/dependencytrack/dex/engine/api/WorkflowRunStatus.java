@@ -38,11 +38,11 @@ public enum WorkflowRunStatus {
 
     private final Set<Integer> allowedTransitions;
 
-    WorkflowRunStatus(final Integer... allowedTransitions) {
+    WorkflowRunStatus(Integer... allowedTransitions) {
         this.allowedTransitions = Set.of(allowedTransitions);
     }
 
-    public boolean canTransitionTo(final WorkflowRunStatus newState) {
+    public boolean canTransitionTo(WorkflowRunStatus newState) {
         return allowedTransitions.contains(newState.ordinal());
     }
 
@@ -51,7 +51,7 @@ public enum WorkflowRunStatus {
     }
 
     public static WorkflowRunStatus fromProto(
-            final org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus protoStatus) {
+            org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus protoStatus) {
         return switch (protoStatus) {
             case WORKFLOW_RUN_STATUS_CREATED -> CREATED;
             case WORKFLOW_RUN_STATUS_RUNNING -> RUNNING;

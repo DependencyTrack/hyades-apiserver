@@ -18,12 +18,18 @@
  */
 package org.dependencytrack.dex.engine.api;
 
+import io.github.resilience4j.core.IntervalFunction;
+
+import java.time.Duration;
+
 import static java.util.Objects.requireNonNull;
 
 public record WorkflowTaskWorkerOptions(
         String name,
         String queueName,
-        int maxConcurrency) {
+        int maxConcurrency,
+        Duration minPollInterval,
+        IntervalFunction pollBackoffFunction) {
 
     public WorkflowTaskWorkerOptions {
         requireNonNull(name, "name must not be null");
@@ -31,6 +37,30 @@ public record WorkflowTaskWorkerOptions(
         if (maxConcurrency <= 0) {
             throw new IllegalArgumentException("maxConcurrency must not be negative or zero");
         }
+        requireNonNull(minPollInterval, "minPollInterval must not be null");
+        requireNonNull(pollBackoffFunction, "pollBackoffFunction must not be null");
+    }
+
+    public WorkflowTaskWorkerOptions(String name, String queueName, int maxConcurrency) {
+        this(name, queueName, maxConcurrency, Duration.ofMillis(100), IntervalFunction.of(Duration.ofMillis(500)));
+    }
+
+    public WorkflowTaskWorkerOptions withMinPollInterval(Duration minPollInterval) {
+        return new WorkflowTaskWorkerOptions(
+                this.name,
+                this.queueName,
+                this.maxConcurrency,
+                minPollInterval,
+                this.pollBackoffFunction);
+    }
+
+    public WorkflowTaskWorkerOptions withPollBackoffFunction(IntervalFunction pollBackoffFunction) {
+        return new WorkflowTaskWorkerOptions(
+                this.name,
+                this.queueName,
+                this.maxConcurrency,
+                this.minPollInterval,
+                pollBackoffFunction);
     }
 
 }

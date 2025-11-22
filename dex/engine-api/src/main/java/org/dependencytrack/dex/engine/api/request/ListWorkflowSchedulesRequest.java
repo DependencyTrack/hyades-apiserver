@@ -29,15 +29,15 @@ public record ListWorkflowSchedulesRequest(
         this(null, null, 10);
     }
 
-    public ListWorkflowSchedulesRequest withWorkflowName(final @Nullable String workflowName) {
+    public ListWorkflowSchedulesRequest withWorkflowName(@Nullable String workflowName) {
         return new ListWorkflowSchedulesRequest(workflowName, this.pageToken, this.limit);
     }
 
-    public ListWorkflowSchedulesRequest withPageToken(final @Nullable String pageToken) {
+    public ListWorkflowSchedulesRequest withPageToken(@Nullable String pageToken) {
         return new ListWorkflowSchedulesRequest(this.workflowName, pageToken, this.limit);
     }
 
-    public ListWorkflowSchedulesRequest withLimit(final int limit) {
+    public ListWorkflowSchedulesRequest withLimit(int limit) {
         return new ListWorkflowSchedulesRequest(this.workflowName, this.pageToken, limit);
     }
 

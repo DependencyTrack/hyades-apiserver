@@ -20,9 +20,7 @@ package org.dependencytrack.dex.engine.api.request;
 
 import static java.util.Objects.requireNonNull;
 
-public record CreateWorkflowTaskQueueRequest(
-        String name,
-        int maxConcurrency) {
+public record CreateWorkflowTaskQueueRequest(String name, int maxConcurrency) {
 
     public CreateWorkflowTaskQueueRequest {
         requireNonNull(name, "name must not be null");

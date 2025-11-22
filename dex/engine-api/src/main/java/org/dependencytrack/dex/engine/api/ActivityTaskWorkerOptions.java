@@ -18,12 +18,18 @@
  */
 package org.dependencytrack.dex.engine.api;
 
+import io.github.resilience4j.core.IntervalFunction;
+
+import java.time.Duration;
+
 import static java.util.Objects.requireNonNull;
 
 public record ActivityTaskWorkerOptions(
         String name,
         String queueName,
-        int maxConcurrency) {
+        int maxConcurrency,
+        Duration minPollInterval,
+        IntervalFunction pollBackoffFunction) {
 
     public ActivityTaskWorkerOptions {
         requireNonNull(name, "name must not be null");
@@ -31,6 +37,30 @@ public record ActivityTaskWorkerOptions(
         if (maxConcurrency <= 0) {
             throw new IllegalArgumentException("maxConcurrency must not be negative or zero");
         }
+        requireNonNull(minPollInterval, "minPollInterval must not be null");
+        requireNonNull(pollBackoffFunction, "pollBackoffFunction must not be null");
+    }
+
+    public ActivityTaskWorkerOptions(String name, String queueName, int maxConcurrency) {
+        this(name, queueName, maxConcurrency, Duration.ofMillis(100), IntervalFunction.of(Duration.ofMillis(500)));
+    }
+
+    public ActivityTaskWorkerOptions withMinPollInterval(Duration minPollInterval) {
+        return new ActivityTaskWorkerOptions(
+                this.name,
+                this.queueName,
+                this.maxConcurrency,
+                minPollInterval,
+                this.pollBackoffFunction);
+    }
+
+    public ActivityTaskWorkerOptions withPollBackoffFunction(IntervalFunction pollBackoffFunction) {
+        return new ActivityTaskWorkerOptions(
+                this.name,
+                this.queueName,
+                this.maxConcurrency,
+                this.minPollInterval,
+                pollBackoffFunction);
     }
 
 }

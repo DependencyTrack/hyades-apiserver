@@ -58,35 +58,59 @@ public record CreateWorkflowRunRequest<A>(
         }
     }
 
-    public CreateWorkflowRunRequest(final String workflowName, final int workflowVersion, final String queueName) {
+    public CreateWorkflowRunRequest(String workflowName, int workflowVersion, String queueName) {
         this(workflowName, workflowVersion, queueName, null, 0, null, null);
     }
 
-    public CreateWorkflowRunRequest(final Class<? extends WorkflowExecutor<A, ?>> executorClass, final String queueName) {
+    public CreateWorkflowRunRequest(Class<? extends WorkflowExecutor<A, ?>> executorClass, String queueName) {
         this(getWorkflowName(executorClass), getWorkflowVersion(executorClass), queueName);
     }
 
-    public CreateWorkflowRunRequest<A> withConcurrencyGroupId(final @Nullable String concurrencyGroupId) {
-        return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion, this.queueName,
-                concurrencyGroupId, this.priority, this.labels, this.argument);
+    public CreateWorkflowRunRequest<A> withConcurrencyGroupId(@Nullable String concurrencyGroupId) {
+        return new CreateWorkflowRunRequest<>(
+                this.workflowName,
+                this.workflowVersion,
+                this.queueName,
+                concurrencyGroupId,
+                this.priority,
+                this.labels,
+                this.argument);
     }
 
-    public CreateWorkflowRunRequest<A> withPriority(final int priority) {
-        return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion, this.queueName,
-                this.concurrencyGroupId, priority, this.labels, this.argument);
+    public CreateWorkflowRunRequest<A> withPriority(int priority) {
+        return new CreateWorkflowRunRequest<>(
+                this.workflowName,
+                this.workflowVersion,
+                this.queueName,
+                this.concurrencyGroupId,
+                priority,
+                this.labels,
+                this.argument);
     }
 
-    public CreateWorkflowRunRequest<A> withLabels(final @Nullable Map<String, String> labels) {
-        return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion, this.queueName,
-                this.concurrencyGroupId, this.priority, labels, this.argument);
+    public CreateWorkflowRunRequest<A> withLabels(@Nullable Map<String, String> labels) {
+        return new CreateWorkflowRunRequest<>(
+                this.workflowName,
+                this.workflowVersion,
+                this.queueName,
+                this.concurrencyGroupId,
+                this.priority,
+                labels,
+                this.argument);
     }
 
-    public CreateWorkflowRunRequest<A> withArgument(final @Nullable A argument) {
-        return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion, this.queueName,
-                this.concurrencyGroupId, this.priority, this.labels, argument);
+    public CreateWorkflowRunRequest<A> withArgument(@Nullable A argument) {
+        return new CreateWorkflowRunRequest<>(
+                this.workflowName,
+                this.workflowVersion,
+                this.queueName,
+                this.concurrencyGroupId,
+                this.priority,
+                this.labels,
+                argument);
     }
 
-    private static String getWorkflowName(final Class<? extends WorkflowExecutor<?, ?>> executorClass) {
+    private static String getWorkflowName(Class<? extends WorkflowExecutor<?, ?>> executorClass) {
         final Workflow annotation = executorClass.getAnnotation(Workflow.class);
         if (annotation == null) {
             throw new IllegalArgumentException("Class %s is not annotated with @%s".formatted(

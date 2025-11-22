@@ -20,9 +20,7 @@ package org.dependencytrack.dex.engine.api.request;
 
 import static java.util.Objects.requireNonNull;
 
-public record CreateActivityTaskQueueRequest(
-        String name,
-        int maxConcurrency) {
+public record CreateActivityTaskQueueRequest(String name, int maxConcurrency) {
 
     public CreateActivityTaskQueueRequest {
         requireNonNull(name, "name must not be null");

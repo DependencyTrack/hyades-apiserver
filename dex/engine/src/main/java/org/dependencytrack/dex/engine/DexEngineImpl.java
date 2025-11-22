@@ -397,8 +397,8 @@ final class DexEngineImpl implements DexEngine {
 
         final var worker = new ActivityTaskWorker(
                 this,
-                config.activityTaskWorker().minPollInterval(),
-                config.activityTaskWorker().pollBackoffIntervalFunction(),
+                options.minPollInterval(),
+                options.pollBackoffFunction(),
                 metadataRegistry,
                 options.queueName(),
                 options.maxConcurrency(),
@@ -417,8 +417,8 @@ final class DexEngineImpl implements DexEngine {
                 this,
                 metadataRegistry,
                 options.queueName(),
-                config.workflowTaskWorker().minPollInterval(),
-                config.workflowTaskWorker().pollBackoffIntervalFunction(),
+                options.minPollInterval(),
+                options.pollBackoffFunction(),
                 options.maxConcurrency(),
                 config.meterRegistry());
 

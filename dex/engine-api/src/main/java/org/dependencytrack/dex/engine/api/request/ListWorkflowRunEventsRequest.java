@@ -24,10 +24,7 @@ import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
 
-public record ListWorkflowRunEventsRequest(
-        UUID runId,
-        @Nullable String pageToken,
-        int limit) {
+public record ListWorkflowRunEventsRequest(UUID runId, @Nullable String pageToken, int limit) {
 
     public ListWorkflowRunEventsRequest {
         requireNonNull(runId, "runId must not be null");
@@ -36,15 +33,15 @@ public record ListWorkflowRunEventsRequest(
         }
     }
 
-    public ListWorkflowRunEventsRequest(final UUID runId) {
+    public ListWorkflowRunEventsRequest(UUID runId) {
         this(runId, null, 10);
     }
 
-    public ListWorkflowRunEventsRequest withPageToken(final @Nullable String pageToken) {
+    public ListWorkflowRunEventsRequest withPageToken(@Nullable String pageToken) {
         return new ListWorkflowRunEventsRequest(this.runId, pageToken, this.limit);
     }
 
-    public ListWorkflowRunEventsRequest withLimit(final int limit) {
+    public ListWorkflowRunEventsRequest withLimit(int limit) {
         return new ListWorkflowRunEventsRequest(this.runId, this.pageToken, limit);
     }
 

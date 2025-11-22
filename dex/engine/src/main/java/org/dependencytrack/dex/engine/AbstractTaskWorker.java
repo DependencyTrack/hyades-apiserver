@@ -51,7 +51,7 @@ import static java.util.Objects.requireNonNull;
 abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
 
     private final long minPollIntervalMillis;
-    private final IntervalFunction pollBackoffIntervalFunction;
+    private final IntervalFunction pollBackoffFunction;
     private final Semaphore semaphore;
     private final MeterRegistry meterRegistry;
     private final Lock statusLock;
@@ -68,11 +68,11 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
 
     AbstractTaskWorker(
             final Duration minPollInterval,
-            final IntervalFunction pollBackoffIntervalFunction,
+            final IntervalFunction pollBackoffFunction,
             final int maxConcurrency,
             final MeterRegistry meterRegistry) {
         this.minPollIntervalMillis = requireNonNull(minPollInterval, "minPollInterval must not be null").toMillis();
-        this.pollBackoffIntervalFunction = requireNonNull(pollBackoffIntervalFunction, "pollBackoffIntervalFunction must not be null");
+        this.pollBackoffFunction = requireNonNull(pollBackoffFunction, "pollBackoffFunction must not be null");
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry must not be null");
         this.statusLock = new ReentrantLock();
         this.semaphore = new Semaphore(maxConcurrency);
@@ -178,7 +178,7 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
                         : 0;
             } else {
                 nextPollDueInMillis = Math.max(
-                        pollBackoffIntervalFunction.apply(pollsWithoutResults - 2),
+                        pollBackoffFunction.apply(pollsWithoutResults - 2),
                         minPollIntervalMillis);
             }
 

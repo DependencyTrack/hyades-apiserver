@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.dex.engine.api;
 
-import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.dependencytrack.common.pagination.PageTokenEncoder;
@@ -27,9 +26,7 @@ import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
 import javax.sql.DataSource;
 import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
-import static io.github.resilience4j.core.IntervalFunction.ofExponentialRandomBackoff;
 import static java.util.Objects.requireNonNull;
 
 public class DexEngineConfig {
@@ -174,42 +171,6 @@ public class DexEngineConfig {
 
     }
 
-    public static class TaskWorkerConfig {
-
-        private Duration minPollInterval = Duration.ofMillis(5);
-        private IntervalFunction pollBackoffIntervalFunction = ofExponentialRandomBackoff(
-                /* initialIntervalMillis */ 100,
-                /* multiplier */ 2,
-                /* randomizationFactor */ 0.3,
-                /* maxIntervalMillis */ TimeUnit.SECONDS.toMillis(3));
-
-        private TaskWorkerConfig() {
-        }
-
-        /**
-         * @return Minimum interval at which tasks are being polled.
-         */
-        public Duration minPollInterval() {
-            return minPollInterval;
-        }
-
-        public void setMinPollInterval(final Duration minPollInterval) {
-            this.minPollInterval = minPollInterval;
-        }
-
-        /**
-         * @return Interval function to use for poll backoff.
-         */
-        public IntervalFunction pollBackoffIntervalFunction() {
-            return pollBackoffIntervalFunction;
-        }
-
-        public void setPollBackoffIntervalFunction(final IntervalFunction pollBackoffIntervalFunction) {
-            this.pollBackoffIntervalFunction = pollBackoffIntervalFunction;
-        }
-
-    }
-
     private final UUID instanceId;
     private final DataSource dataSource;
     private final CacheConfig runHistoryCache = new CacheConfig();
@@ -218,7 +179,6 @@ public class DexEngineConfig {
     private final RetentionConfig retentionConfig = new RetentionConfig();
     private final TaskSchedulerConfig workflowTaskSchedulerConfig = new TaskSchedulerConfig();
     private final TaskSchedulerConfig activityTaskSchedulerConfig = new TaskSchedulerConfig();
-    private final TaskWorkerConfig activityTaskWorkerConfig = new TaskWorkerConfig();
 
     private MeterRegistry meterRegistry = new SimpleMeterRegistry();
     private PageTokenEncoder pageTokenEncoder = new SimplePageTokenEncoder();
@@ -273,14 +233,6 @@ public class DexEngineConfig {
 
     public TaskSchedulerConfig activityTaskScheduler() {
         return activityTaskSchedulerConfig;
-    }
-
-    public TaskWorkerConfig activityTaskWorker() {
-        return activityTaskWorkerConfig;
-    }
-
-    public TaskWorkerConfig workflowTaskWorker() {
-        return activityTaskWorkerConfig;
     }
 
     /**

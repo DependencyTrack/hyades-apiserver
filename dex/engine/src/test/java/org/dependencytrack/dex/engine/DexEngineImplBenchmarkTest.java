@@ -144,10 +144,6 @@ public class DexEngineImplBenchmarkTest {
         engineConfig.runHistoryCache().setMaxSize(10_000);
         engineConfig.taskCommandBuffer().setFlushInterval(Duration.ofMillis(3));
         engineConfig.taskCommandBuffer().setMaxBatchSize(250);
-        engineConfig.workflowTaskWorker().setMinPollInterval(Duration.ofMillis(5));
-        engineConfig.workflowTaskWorker().setPollBackoffIntervalFunction(IntervalFunction.of(Duration.ofMillis(50)));
-        engineConfig.activityTaskWorker().setMinPollInterval(Duration.ofMillis(5));
-        engineConfig.activityTaskWorker().setPollBackoffIntervalFunction(IntervalFunction.of(Duration.ofMillis(50)));
         engineConfig.activityTaskScheduler().setPollInterval(Duration.ofMillis(100));
         engineConfig.setMeterRegistry(meterRegistry);
 
@@ -157,8 +153,14 @@ public class DexEngineImplBenchmarkTest {
         engine.registerActivity(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5), false);
         engine.registerActivity(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5), false);
 
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", "default", 100));
-        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", "default", 150));
+        engine.registerWorkflowWorker(
+                new WorkflowTaskWorkerOptions("workflow-worker", "default", 100)
+                        .withMinPollInterval(Duration.ofMillis(10))
+                        .withPollBackoffFunction(IntervalFunction.of(Duration.ofMillis(100))));
+        engine.registerActivityWorker(
+                new ActivityTaskWorkerOptions("activity-worker", "default", 150)
+                        .withMinPollInterval(Duration.ofMillis(10))
+                        .withPollBackoffFunction(IntervalFunction.of(Duration.ofMillis(100))));
 
         engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("default", 1000));
         engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("default", 1000));

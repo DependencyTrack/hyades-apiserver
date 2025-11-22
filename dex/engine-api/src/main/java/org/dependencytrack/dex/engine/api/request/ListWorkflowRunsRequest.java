@@ -49,7 +49,7 @@ public record ListWorkflowRunsRequest(
         this(null, null, null, null, null, null, null, null, null, null, null, 10);
     }
 
-    public ListWorkflowRunsRequest withWorkflowName(final @Nullable String workflowName) {
+    public ListWorkflowRunsRequest withWorkflowName(@Nullable String workflowName) {
         return new ListWorkflowRunsRequest(
                 workflowName,
                 this.workflowVersion,
@@ -65,7 +65,7 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withWorkflowVersion(final @Nullable Integer workflowVersion) {
+    public ListWorkflowRunsRequest withWorkflowVersion(@Nullable Integer workflowVersion) {
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 workflowVersion,
@@ -81,7 +81,7 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withStatus(final @Nullable WorkflowRunStatus status) {
+    public ListWorkflowRunsRequest withStatus(@Nullable WorkflowRunStatus status) {
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
@@ -97,7 +97,7 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withLabels(final @Nullable Map<String, String> labelFilter) {
+    public ListWorkflowRunsRequest withLabels(@Nullable Map<String, String> labelFilter) {
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
@@ -113,7 +113,7 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withCreatedAtFrom(final @Nullable Instant createdAtFrom) {
+    public ListWorkflowRunsRequest withCreatedAtFrom(@Nullable Instant createdAtFrom) {
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
@@ -129,7 +129,7 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withCreatedAtTo(final @Nullable Instant createdAtTo) {
+    public ListWorkflowRunsRequest withCreatedAtTo(@Nullable Instant createdAtTo) {
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
@@ -145,7 +145,7 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withCompletedAtFrom(final @Nullable Instant completedAtFrom) {
+    public ListWorkflowRunsRequest withCompletedAtFrom(@Nullable Instant completedAtFrom) {
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
@@ -161,7 +161,7 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withCompletedAtTo(final @Nullable Instant completedAtTo) {
+    public ListWorkflowRunsRequest withCompletedAtTo(@Nullable Instant completedAtTo) {
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
@@ -177,7 +177,7 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withPageToken(final @Nullable String pageToken) {
+    public ListWorkflowRunsRequest withPageToken(@Nullable String pageToken) {
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
@@ -193,7 +193,7 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withLimit(final int limit) {
+    public ListWorkflowRunsRequest withLimit(int limit) {
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
@@ -209,7 +209,7 @@ public record ListWorkflowRunsRequest(
                 limit);
     }
 
-    public ListWorkflowRunsRequest withSortBy(final @Nullable SortBy sortBy) {
+    public ListWorkflowRunsRequest withSortBy(@Nullable SortBy sortBy) {
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
@@ -225,7 +225,7 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withSortDirection(final @Nullable SortDirection sortDirection) {
+    public ListWorkflowRunsRequest withSortDirection(@Nullable SortDirection sortDirection) {
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,

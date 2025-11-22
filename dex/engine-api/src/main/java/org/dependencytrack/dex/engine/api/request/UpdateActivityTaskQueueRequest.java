@@ -30,6 +30,9 @@ public record UpdateActivityTaskQueueRequest(
 
     public UpdateActivityTaskQueueRequest {
         requireNonNull(name, "name must not be null");
+        if (maxConcurrency != null && maxConcurrency <= 0) {
+            throw new IllegalArgumentException("maxConcurrency must not be negative or zero");
+        }
     }
 
 }
