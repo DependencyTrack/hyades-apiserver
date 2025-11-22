@@ -20,6 +20,7 @@ package org.dependencytrack.dex.engine.persistence;
 
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.pagination.Page;
+import org.dependencytrack.dex.engine.api.pagination.SortDirection;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunHistoryEntry;
@@ -30,7 +31,9 @@ import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.json.JsonConfig;
 import org.jdbi.v3.json.JsonMapper;
+import org.jspecify.annotations.Nullable;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -43,28 +46,34 @@ public final class WorkflowRunDao extends AbstractDao {
         super(jdbiHandle);
     }
 
-    record ListRunsPageToken(UUID lastId) {
+    record ListRunsPageToken(
+            UUID lastId,
+            long lastCreatedAt,
+            @Nullable Long lastCompletedAt,
+            ListWorkflowRunsRequest.SortBy sortBy,
+            SortDirection sortDirection) {
     }
 
     public Page<WorkflowRunMetadata> listRuns(final ListWorkflowRunsRequest request) {
         requireNonNull(request, "request must not be null");
 
         final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
-                <#-- @ftlvariable name="lastId" type="boolean" -->
-                <#-- @ftlvariable name="workflowName" type="boolean" -->
-                <#-- @ftlvariable name="workflowVersion" type="boolean" -->
-                <#-- @ftlvariable name="status" type="boolean" -->
-                <#-- @ftlvariable name="labels" type="boolean" -->
-                <#-- @ftlvariable name="createdAtFrom" type="boolean" -->
-                <#-- @ftlvariable name="createdAtTo" type="boolean" -->
                 <#-- @ftlvariable name="completedAtFrom" type="boolean" -->
                 <#-- @ftlvariable name="completedAtTo" type="boolean" -->
+                <#-- @ftlvariable name="createdAtFrom" type="boolean" -->
+                <#-- @ftlvariable name="createdAtTo" type="boolean" -->
+                <#-- @ftlvariable name="labels" type="boolean" -->
+                <#-- @ftlvariable name="lastCompletedAt" type="boolean" -->
+                <#-- @ftlvariable name="lastCreatedAt" type="boolean" -->
+                <#-- @ftlvariable name="lastId" type="boolean" -->
+                <#-- @ftlvariable name="sortBy" type="org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest.SortBy" -->
+                <#-- @ftlvariable name="sortDirection" type="org.dependencytrack.dex.engine.api.pagination.SortDirection" -->
+                <#-- @ftlvariable name="status" type="boolean" -->
+                <#-- @ftlvariable name="workflowName" type="boolean" -->
+                <#-- @ftlvariable name="workflowVersion" type="boolean" -->
                 select *
                   from dex_workflow_run
                  where true
-                <#if lastId>
-                   and id < :lastId
-                </#if>
                 <#if workflowName>
                    and workflow_name = :workflowName
                 </#if>
@@ -89,7 +98,43 @@ public final class WorkflowRunDao extends AbstractDao {
                 <#if completedAtTo>
                    and completed_at < :completedAtTo
                 </#if>
-                 order by id desc
+                <#if sortBy == 'CREATED_AT'>
+                  <#if sortDirection == 'ASC'>
+                    <#if lastCreatedAt && lastId>
+                      and (created_at > :lastCreatedAt or (created_at = :lastCreatedAt and id > :lastId))
+                    </#if>
+                    order by created_at asc, id asc
+                  <#else>
+                    <#if lastCreatedAt && lastId>
+                      and (created_at < :lastCreatedAt or (created_at = :lastCreatedAt and id < :lastId))
+                    </#if>
+                    order by created_at desc, id desc
+                  </#if>
+                <#elseif sortBy == 'COMPLETED_AT'>
+                  <#if sortDirection == 'ASC'>
+                    <#if lastCompletedAt && lastId>
+                      and (completed_at > :lastCompletedAt or (completed_at = :lastCompletedAt and id > :lastId))
+                    </#if>
+                    order by completed_at asc nulls last, id asc nulls first
+                  <#else>
+                    <#if lastCompletedAt && lastId>
+                      and (completed_at < :lastCompletedAt or (completed_at = :lastCompletedAt and id < :lastId))
+                    </#if>
+                    order by completed_at desc nulls first, id desc
+                  </#if>
+                <#else>
+                  <#if sortDirection == 'ASC'>
+                    <#if lastId>
+                      and id > :lastId
+                    </#if>
+                    order by id
+                  <#else>
+                    <#if lastId>
+                      and id < :lastId
+                    </#if>
+                    order by id desc
+                  </#if>
+                </#if>
                  limit :limit
                 """);
 
@@ -104,6 +149,27 @@ public final class WorkflowRunDao extends AbstractDao {
 
         final var decodedPageToken = decodePageToken(request.pageToken(), ListRunsPageToken.class);
 
+        Instant lastCompletedAt = null;
+        Instant lastCreatedAt = null;
+        ListWorkflowRunsRequest.SortBy sortBy;
+        SortDirection sortDirection;
+
+        if (decodedPageToken != null) {
+            lastCompletedAt = decodedPageToken.lastCompletedAt() != null
+                    ? Instant.ofEpochMilli(decodedPageToken.lastCompletedAt())
+                    : null;
+            lastCreatedAt = Instant.ofEpochMilli(decodedPageToken.lastCreatedAt());
+            sortBy = decodedPageToken.sortBy();
+            sortDirection = decodedPageToken.sortDirection();
+        } else {
+            sortBy = request.sortBy() == null
+                    ? ListWorkflowRunsRequest.SortBy.ID
+                    : request.sortBy();
+            sortDirection = request.sortDirection() == null
+                    ? SortDirection.DESC
+                    : request.sortDirection();
+        }
+
         final List<WorkflowRunMetadata> rows = query
                 .bind("workflowName", request.workflowName())
                 .bind("workflowVersion", request.workflowVersion())
@@ -114,7 +180,11 @@ public final class WorkflowRunDao extends AbstractDao {
                 .bind("completedAtFrom", request.completedAtFrom())
                 .bind("completedAtTo", request.completedAtTo())
                 .bind("limit", request.limit() + 1)
+                .bind("lastCompletedAt", lastCompletedAt)
+                .bind("lastCreatedAt", lastCreatedAt)
                 .bind("lastId", decodedPageToken != null ? decodedPageToken.lastId() : null)
+                .define("sortBy", sortBy)
+                .define("sortDirection", sortDirection)
                 .defineNamedBindings()
                 .mapTo(WorkflowRunMetadataRow.class)
                 .map(row -> new WorkflowRunMetadata(
@@ -137,7 +207,14 @@ public final class WorkflowRunDao extends AbstractDao {
                 : rows;
 
         final ListRunsPageToken nextPageToken = rows.size() == (request.limit() + 1)
-                ? new ListRunsPageToken(resultItems.getLast().id())
+                ? new ListRunsPageToken(
+                resultItems.getLast().id(),
+                resultItems.getLast().createdAt().toEpochMilli(),
+                resultItems.getLast().completedAt() != null
+                        ? resultItems.getLast().completedAt().toEpochMilli()
+                        : null,
+                sortBy,
+                sortDirection)
                 : null;
 
         return new Page<>(resultItems, encodePageToken(nextPageToken));

@@ -32,6 +32,7 @@ import org.dependencytrack.api.v2.model.ListWorkflowRunsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponseItem;
 import org.dependencytrack.api.v2.model.PaginationLinks;
 import org.dependencytrack.api.v2.model.PaginationMetadata;
+import org.dependencytrack.api.v2.model.SortDirection;
 import org.dependencytrack.api.v2.model.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
@@ -41,6 +42,7 @@ import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.proto.event.v1.Event;
 import org.jspecify.annotations.NonNull;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Path("/")
@@ -58,8 +60,14 @@ public class WorkflowsResource implements WorkflowsApi {
             final String workflowName,
             final Integer workflowVersion,
             final WorkflowRunStatus status,
+            final Long createdAtFrom,
+            final Long createdAtTo,
+            final Long completedAtFrom,
+            final Long completedAtTo,
             final Integer limit,
-            final String pageToken) {
+            final String pageToken,
+            final SortDirection sortDirection,
+            final String sortBy) {
         if (dexEngine == null) {
             throw new ServerErrorException(Response.Status.SERVICE_UNAVAILABLE);
         }
@@ -75,6 +83,29 @@ public class WorkflowsResource implements WorkflowsApi {
                             case CREATED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CREATED;
                             case RUNNING -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.RUNNING;
                             case SUSPENDED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.SUSPENDED;
+                            case null -> null;
+                        })
+                        .withCreatedAtFrom(completedAtFrom != null
+                                ? Instant.ofEpochMilli(completedAtFrom)
+                                : null)
+                        .withCreatedAtTo(createdAtTo != null
+                                ? Instant.ofEpochMilli(createdAtTo)
+                                : null)
+                        .withCompletedAtFrom(completedAtFrom != null
+                                ? Instant.ofEpochMilli(completedAtFrom)
+                                : null)
+                        .withCompletedAtTo(completedAtTo != null
+                                ? Instant.ofEpochMilli(completedAtTo)
+                                : null)
+                        .withSortBy(switch (sortBy) {
+                            case "id" -> ListWorkflowRunsRequest.SortBy.ID;
+                            case "created_at" -> ListWorkflowRunsRequest.SortBy.CREATED_AT;
+                            case "completed_at" -> ListWorkflowRunsRequest.SortBy.COMPLETED_AT;
+                            case null, default -> null;
+                        })
+                        .withSortDirection(switch (sortDirection) {
+                            case ASC -> org.dependencytrack.dex.engine.api.pagination.SortDirection.ASC;
+                            case DESC -> org.dependencytrack.dex.engine.api.pagination.SortDirection.DESC;
                             case null -> null;
                         })
                         .withLimit(limit)
@@ -115,7 +146,9 @@ public class WorkflowsResource implements WorkflowsApi {
                                 .self(uriInfo.getRequestUri())
                                 .next(runsPage.nextPageToken() != null
                                         ? uriInfo.getRequestUriBuilder()
-                                        .queryParam("page_token", runsPage.nextPageToken())
+                                        .replaceQueryParam("page_token", runsPage.nextPageToken())
+                                        .replaceQueryParam("sort_by")
+                                        .replaceQueryParam("sort_direction")
                                         .build()
                                         : null)
                                 .build())
@@ -150,7 +183,7 @@ public class WorkflowsResource implements WorkflowsApi {
                                 .self(uriInfo.getRequestUri())
                                 .next(eventsPage.nextPageToken() != null
                                         ? uriInfo.getRequestUriBuilder()
-                                        .queryParam("page_token", eventsPage.nextPageToken())
+                                        .replaceQueryParam("page_token", eventsPage.nextPageToken())
                                         .build()
                                         : null)
                                 .build())

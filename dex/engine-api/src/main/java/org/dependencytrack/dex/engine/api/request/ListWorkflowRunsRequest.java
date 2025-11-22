@@ -19,6 +19,7 @@
 package org.dependencytrack.dex.engine.api.request;
 
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.pagination.SortDirection;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
@@ -33,11 +34,19 @@ public record ListWorkflowRunsRequest(
         @Nullable Instant createdAtTo,
         @Nullable Instant completedAtFrom,
         @Nullable Instant completedAtTo,
+        @Nullable SortBy sortBy,
+        @Nullable SortDirection sortDirection,
         @Nullable String pageToken,
         int limit) {
 
+    public enum SortBy {
+        ID,
+        CREATED_AT,
+        COMPLETED_AT
+    }
+
     public ListWorkflowRunsRequest() {
-        this(null, null, null, null, null, null, null, null, null, 10);
+        this(null, null, null, null, null, null, null, null, null, null, null, 10);
     }
 
     public ListWorkflowRunsRequest withWorkflowName(final @Nullable String workflowName) {
@@ -50,6 +59,8 @@ public record ListWorkflowRunsRequest(
                 this.createdAtTo,
                 this.completedAtFrom,
                 this.completedAtTo,
+                this.sortBy,
+                this.sortDirection,
                 this.pageToken,
                 this.limit);
     }
@@ -64,6 +75,8 @@ public record ListWorkflowRunsRequest(
                 this.createdAtTo,
                 this.completedAtFrom,
                 this.completedAtTo,
+                this.sortBy,
+                this.sortDirection,
                 this.pageToken,
                 this.limit);
     }
@@ -78,6 +91,8 @@ public record ListWorkflowRunsRequest(
                 this.createdAtTo,
                 this.completedAtFrom,
                 this.completedAtTo,
+                this.sortBy,
+                this.sortDirection,
                 this.pageToken,
                 this.limit);
     }
@@ -92,6 +107,8 @@ public record ListWorkflowRunsRequest(
                 this.createdAtTo,
                 this.completedAtFrom,
                 this.completedAtTo,
+                this.sortBy,
+                this.sortDirection,
                 this.pageToken,
                 this.limit);
     }
@@ -106,6 +123,8 @@ public record ListWorkflowRunsRequest(
                 this.createdAtTo,
                 this.completedAtFrom,
                 this.completedAtTo,
+                this.sortBy,
+                this.sortDirection,
                 this.pageToken,
                 this.limit);
     }
@@ -120,6 +139,8 @@ public record ListWorkflowRunsRequest(
                 createdAtTo,
                 this.completedAtFrom,
                 this.completedAtTo,
+                this.sortBy,
+                this.sortDirection,
                 this.pageToken,
                 this.limit);
     }
@@ -134,6 +155,8 @@ public record ListWorkflowRunsRequest(
                 this.createdAtTo,
                 completedAtFrom,
                 this.completedAtTo,
+                this.sortBy,
+                this.sortDirection,
                 this.pageToken,
                 this.limit);
     }
@@ -148,6 +171,8 @@ public record ListWorkflowRunsRequest(
                 this.createdAtTo,
                 this.completedAtFrom,
                 completedAtTo,
+                this.sortBy,
+                this.sortDirection,
                 this.pageToken,
                 this.limit);
     }
@@ -162,6 +187,8 @@ public record ListWorkflowRunsRequest(
                 this.createdAtTo,
                 this.completedAtFrom,
                 this.completedAtTo,
+                this.sortBy,
+                this.sortDirection,
                 pageToken,
                 this.limit);
     }
@@ -176,8 +203,42 @@ public record ListWorkflowRunsRequest(
                 this.createdAtTo,
                 this.completedAtFrom,
                 this.completedAtTo,
+                this.sortBy,
+                this.sortDirection,
                 this.pageToken,
                 limit);
+    }
+
+    public ListWorkflowRunsRequest withSortBy(final @Nullable SortBy sortBy) {
+        return new ListWorkflowRunsRequest(
+                this.workflowName,
+                this.workflowVersion,
+                this.status,
+                this.labels,
+                this.createdAtFrom,
+                this.createdAtTo,
+                this.completedAtFrom,
+                this.completedAtTo,
+                sortBy,
+                this.sortDirection,
+                this.pageToken,
+                this.limit);
+    }
+
+    public ListWorkflowRunsRequest withSortDirection(final @Nullable SortDirection sortDirection) {
+        return new ListWorkflowRunsRequest(
+                this.workflowName,
+                this.workflowVersion,
+                this.status,
+                this.labels,
+                this.createdAtFrom,
+                this.createdAtTo,
+                this.completedAtFrom,
+                this.completedAtTo,
+                this.sortBy,
+                sortDirection,
+                this.pageToken,
+                this.limit);
     }
 
 }
