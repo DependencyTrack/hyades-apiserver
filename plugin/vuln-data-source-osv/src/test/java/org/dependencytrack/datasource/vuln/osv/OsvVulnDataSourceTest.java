@@ -32,8 +32,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
-import java.net.URI;
-import java.net.URL;
 import java.net.http.HttpClient;
 import java.time.Instant;
 import java.util.List;
@@ -61,16 +59,14 @@ class OsvVulnDataSourceTest {
     private ObjectMapper objectMapper;
 
     @BeforeEach
-    void beforeEach() throws Exception {
+    void beforeEach() {
         watermarkManagerMock = mock(WatermarkManager.class);
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-
-        URL url = URI.create("http://localhost").toURL();
 
         vulnDataSource = new OsvVulnDataSource(
                 watermarkManagerMock,
                 objectMapper,
-                url,
+                "http://localhost",
                 List.of("maven"),
                 mock(HttpClient.class),
                 false
@@ -179,12 +175,10 @@ class OsvVulnDataSourceTest {
                         .withBody(zipBytes.toByteArray())
                         .withHeader("Content-Type", "application/zip")));
 
-        URL url = new URL("http://localhost:" + wireMockServer.port());
-
         OsvVulnDataSource dataSource = new OsvVulnDataSource(
                 watermarkManagerMock,
                 objectMapper,
-                url,
+                "http://localhost:" + wireMockServer.port(),
                 List.of(ecosystem),
                 HttpClient.newHttpClient(),
                 false
