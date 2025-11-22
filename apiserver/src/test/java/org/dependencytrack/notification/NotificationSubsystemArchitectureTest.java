@@ -25,7 +25,9 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.junit.ArchUnitRunner;
 import com.tngtech.archunit.lang.ArchRule;
-import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.notification.api.NotificationFactory;
+import org.dependencytrack.notification.api.TestNotificationFactory;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.junit.runner.RunWith;
 
 import static com.tngtech.archunit.core.domain.JavaAccess.Predicates.target;
@@ -72,7 +74,6 @@ public class NotificationSubsystemArchitectureTest {
             noClasses()
                     .that().resideInAPackage("org.dependencytrack.notification..")
                     .and().areNotAssignableTo(JdoNotificationEmitter.class)
-                    .and().areNotAssignableTo(NotificationEmitter.class)
                     .should().dependOnClassesThat().areAssignableTo(AbstractAlpineQueryManager.class)
                     .orShould().dependOnClassesThat().resideInAPackage("javax.jdo..")
                     .because("""

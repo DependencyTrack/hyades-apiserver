@@ -45,6 +45,11 @@ public final class MockConfigRegistry implements ConfigRegistry {
 
     @Override
     public <T> void setValue(final RuntimeConfigDefinition<T> config, final T value) {
+        if (config.isRequired() && value == null) {
+            throw new IllegalArgumentException(
+                    "Config %s is defined as required, but value is null".formatted(config.name()));
+        }
+        
         properties.put(config.name(), config.type().toString(value));
     }
 

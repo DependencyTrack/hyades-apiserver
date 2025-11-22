@@ -39,6 +39,10 @@
         <module>plugin/file-storage-local</module>
         <module>plugin/file-storage-memory</module>
         <module>plugin/file-storage-s3</module>
+        <module>notification/proto</module>
+        <module>notification/api</module>
+        <module>notification/templating</module>
+        <module>notification/publishing</module>
         <module>plugin/vuln-data-source-csaf</module>
         <module>plugin/vuln-data-source-github</module>
         <module>plugin/vuln-data-source-nvd</module>
@@ -114,6 +118,8 @@
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
+        <lib.eclipse-angus.version>2.0.5</lib.eclipse-angus.version>
+        <lib.greenmail.version>2.1.6</lib.greenmail.version>
         <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
         <lib.httpclient5.version>5.5.1</lib.httpclient5.version>
         <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
@@ -126,6 +132,7 @@
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>6.0.1</lib.junit-jupiter.version>
+        <lib.kafka-clients.version>3.9.1</lib.kafka-clients.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.micrometer.version>1.16.0</lib.micrometer.version>
         <lib.microprofile-config.version>3.1</lib.microprofile-config.version>
@@ -221,6 +228,18 @@
             </dependency>
 
             <dependency>
+                <groupId>org.eclipse.angus</groupId>
+                <artifactId>angus-mail</artifactId>
+                <version>${lib.eclipse-angus.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.icegreen</groupId>
+                <artifactId>greenmail-junit5</artifactId>
+                <version>${lib.greenmail.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>com.zaxxer</groupId>
                 <artifactId>HikariCP</artifactId>
                 <version>${lib.hikaricp.version}</version>
@@ -309,6 +328,12 @@
                 <version>${lib.junit-jupiter.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-clients</artifactId>
+                <version>${lib.kafka-clients.version}</version>
             </dependency>
 
             <dependency>
@@ -521,6 +546,29 @@
                             <groupId>org.slf4j</groupId>
                             <artifactId>slf4j-nop</artifactId>
                             <version>1.7.36</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+
+                <plugin>
+                    <groupId>io.github.ascopes</groupId>
+                    <artifactId>protobuf-maven-plugin</artifactId>
+                    <version>4.0.2</version>
+                    <configuration>
+                        <protocVersion>${lib.protobuf-java.version}</protocVersion>
+                        <sourceDirectories>
+                            <sourceDirectory>${project.basedir}/src/main/proto</sourceDirectory>
+                        </sourceDirectories>
+                    </configuration>
+                    <!--
+                      https://github.com/ascopes/protobuf-maven-plugin/issues/472
+                      https://issues.apache.org/jira/browse/MBUILDCACHE-115
+                    -->
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.codehaus.plexus</groupId>
+                            <artifactId>plexus-utils</artifactId>
+                            <version>4.0.2</version>
                         </dependency>
                     </dependencies>
                 </plugin>
