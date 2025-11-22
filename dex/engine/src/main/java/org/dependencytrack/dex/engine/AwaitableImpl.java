@@ -32,69 +32,78 @@ import static java.util.Objects.requireNonNull;
 
 sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableImpl {
 
+    private sealed interface State<R> {
+
+        record Pending<R>() implements State<R> {
+        }
+
+        record Completed<R>(@Nullable R result) implements State<R> {
+        }
+
+        record Failed<R>(FailureException exception) implements State<R> {
+        }
+
+        record Canceled<R>(String reason) implements State<R> {
+        }
+
+    }
+
     // This error is thrown very frequently, it is used for control flow,
     // and we don't care about stack traces for them. Having a single shared
     // instance avoids garbage, and overhead of filling stack traces.
     private static final WorkflowRunBlockedError BLOCKED_ERROR = new WorkflowRunBlockedError();
 
-    private final WorkflowContextImpl<?, ?> executionContext;
+    private final WorkflowContextImpl<?, ?> workflowContext;
     private final PayloadConverter<T> resultConverter;
-    private boolean completed;
-    private boolean canceled;
-    private @Nullable String cancelReason;
+    private State<T> state = new State.Pending<>();
     private @Nullable Consumer<@Nullable T> completeCallback;
-    private @Nullable Consumer<FailureException> errorCallback;
-    private @Nullable T result;
-    private @Nullable FailureException exception;
 
     AwaitableImpl(
             final WorkflowContextImpl<?, ?> workflowContext,
             final PayloadConverter<T> resultConverter) {
-        this.executionContext = workflowContext;
+        this.workflowContext = workflowContext;
         this.resultConverter = resultConverter;
     }
 
     @Override
     public @Nullable T await() {
-        do {
-            if (completed) {
-                if (exception != null) {
-                    throw exception;
-                } else if (canceled) {
-                    throw new CancellationFailureException(cancelReason);
-                }
-
-                return result;
+        while (state instanceof State.Pending<T>) {
+            if (workflowContext.processNextEvent() == null) {
+                throw BLOCKED_ERROR;
             }
-        } while (executionContext.processNextEvent() != null);
+        }
 
-        throw BLOCKED_ERROR;
+        return switch (state) {
+            case State.Completed<T> it -> it.result();
+            case State.Failed<T> it -> throw it.exception();
+            case State.Canceled<T> it -> throw new CancellationFailureException(it.reason());
+            case State.Pending<T> ignored -> throw new AssertionError("unreachable");
+        };
     }
 
-    boolean complete(final @Nullable Payload result) {
-        if (completed) {
+    boolean complete(final @Nullable Payload resultPayload) {
+        if (!(state instanceof State.Pending<T>)) {
             return false;
         }
 
-        this.completed = true;
-        this.result = resultConverter.convertFromPayload(result);
+        final T result = resultConverter.convertFromPayload(resultPayload);
+        state = new State.Completed<>(result);
+
         if (completeCallback != null) {
-            completeCallback.accept(this.result);
+            completeCallback.accept(result);
         }
 
         return true;
     }
 
     boolean completeExceptionally(final FailureException exception) {
-        if (completed) {
+        requireNonNull(exception, "exception must not be null");
+
+        if (!(state instanceof State.Pending<T>)) {
             return false;
         }
 
-        this.completed = true;
-        this.exception = exception;
-        if (errorCallback != null) {
-            errorCallback.accept(this.exception);
-        }
+        state = new State.Failed<>(exception);
 
         return true;
     }
@@ -102,23 +111,17 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
     boolean cancel(final String reason) {
         requireNonNull(reason, "reason must not be null");
 
-        if (completed) {
+        if (!(state instanceof State.Pending<T>)) {
             return false;
         }
 
-        this.completed = true;
-        this.canceled = true;
-        this.cancelReason = reason;
+        state = new State.Canceled<>(reason);
 
         return true;
     }
 
     void onComplete(final Consumer<T> callback) {
         this.completeCallback = callback;
-    }
-
-    void onError(final Consumer<FailureException> callback) {
-        this.errorCallback = callback;
     }
 
 }
