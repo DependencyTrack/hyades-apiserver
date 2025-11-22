@@ -39,8 +39,6 @@ import java.time.Duration;
 import java.util.ServiceLoader;
 import java.util.UUID;
 
-import static io.github.resilience4j.core.IntervalFunction.ofExponentialRandomBackoff;
-
 /**
  * @since 5.7.0
  */
@@ -141,22 +139,6 @@ public final class DexEngineInitializer implements ServletContextListener {
                 .ifPresent(engineConfig.workflowTaskScheduler()::setEnabled);
         config.getOptionalValue("dt.dex-engine.task-scheduler.workflow.poll-interval", Duration.class)
                 .ifPresent(engineConfig.workflowTaskScheduler()::setPollInterval);
-
-        config.getOptionalValue("dt.dex-engine.task-worker.activity.min-poll-interval", Duration.class)
-                .ifPresent(engineConfig.activityTaskWorker()::setMinPollInterval);
-        engineConfig.activityTaskWorker().setPollBackoffIntervalFunction(ofExponentialRandomBackoff(
-                config.getOptionalValue("dt.dex-engine.task-worker.activity.poll-backoff.initial-delay", Duration.class).orElseGet(() -> Duration.ofMillis(100)),
-                config.getOptionalValue("dt.dex-engine.task-worker.activity.poll-backoff.multiplier", double.class).orElse(1.5),
-                config.getOptionalValue("dt.dex-engine.task-worker.activity.poll-backoff.randomization-factor", double.class).orElse(0.3),
-                config.getOptionalValue("dt.dex-engine.task-worker.activity.poll-backoff.max-delay", Duration.class).orElseGet(() -> Duration.ofSeconds(3))));
-
-        config.getOptionalValue("dt.dex-engine.task-worker.workflow.min-poll-interval", Duration.class)
-                .ifPresent(engineConfig.workflowTaskWorker()::setMinPollInterval);
-        engineConfig.workflowTaskWorker().setPollBackoffIntervalFunction(ofExponentialRandomBackoff(
-                config.getOptionalValue("dt.dex-engine.task-worker.workflow.poll-backoff.initial-delay", Duration.class).orElseGet(() -> Duration.ofMillis(100)),
-                config.getOptionalValue("dt.dex-engine.task-worker.workflow.poll-backoff.multiplier", double.class).orElse(1.5),
-                config.getOptionalValue("dt.dex-engine.task-worker.workflow.poll-backoff.randomization-factor", double.class).orElse(0.3),
-                config.getOptionalValue("dt.dex-engine.task-worker.workflow.poll-backoff.max-delay", Duration.class).orElseGet(() -> Duration.ofSeconds(3))));
 
         if (config.getOptionalValue("alpine.metrics.enabled", boolean.class).orElse(false)) {
             engineConfig.setMeterRegistry(Metrics.globalRegistry);
