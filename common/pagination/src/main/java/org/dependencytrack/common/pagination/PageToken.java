@@ -16,9 +16,14 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.persistence.pagination;
+package org.dependencytrack.common.pagination;
 
-import java.util.List;
-
-public record Page<T>(List<T> items, String nextPageToken) {
+/**
+ * Marker interface for page tokens.
+ * <p>
+ * To be used in conjunction with {@link PageTokenEncoder}.
+ *
+ * @since 5.7.0
+ */
+public interface PageToken {
 }

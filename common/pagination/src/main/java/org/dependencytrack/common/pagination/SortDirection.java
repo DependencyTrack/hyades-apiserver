@@ -16,12 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.persistence.pagination;
+package org.dependencytrack.common.pagination;
 
-public class InvalidPageTokenException extends IllegalArgumentException {
+/**
+ * @since 5.7.0
+ */
+public enum SortDirection {
 
-    public InvalidPageTokenException(final Throwable cause) {
-        super(cause);
-    }
+    ASC,
+
+    DESC
 
 }
