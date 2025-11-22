@@ -18,9 +18,10 @@
  */
 package org.dependencytrack.dex.engine.persistence;
 
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
-import org.dependencytrack.dex.engine.api.pagination.Page;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
@@ -113,7 +114,7 @@ public final class WorkflowDao extends AbstractDao {
         return updated;
     }
 
-    record ListWorkflowTaskQueuesPageToken(String lastName) {
+    record ListWorkflowTaskQueuesPageToken(String lastName) implements PageToken {
     }
 
     public Page<WorkflowTaskQueue> listWorkflowTaskQueues(final ListWorkflowTaskQueuesRequest request) {

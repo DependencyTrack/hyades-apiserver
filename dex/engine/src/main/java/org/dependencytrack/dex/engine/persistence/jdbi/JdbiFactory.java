@@ -16,8 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence;
+package org.dependencytrack.dex.engine.persistence.jdbi;
 
+import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.dex.engine.api.ActivityTaskQueue;
 import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
 import org.dependencytrack.dex.engine.persistence.mapping.ActivityTaskQueueRowMapper;
@@ -38,6 +39,7 @@ import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.proto.event.v1.Event;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.config.ConfiguringPlugin;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.SqlStatements;
 import org.jdbi.v3.freemarker.FreemarkerEngine;
@@ -48,16 +50,26 @@ import javax.sql.DataSource;
 import java.time.Duration;
 import java.time.Instant;
 
+import static java.util.Objects.requireNonNull;
+
 public final class JdbiFactory {
 
     private JdbiFactory() {
     }
 
-    public static Jdbi create(final DataSource dataSource) {
+    public static Jdbi create(
+            final DataSource dataSource,
+            final PageTokenEncoder pageTokenEncoder) {
+        requireNonNull(dataSource, "dataSource must not be null");
+        requireNonNull(pageTokenEncoder, "pageTokenEncoder must not be null");
+
         return Jdbi
                 .create(dataSource)
                 .installPlugin(new Jackson2Plugin())
                 .installPlugin(new PostgresPlugin())
+                .installPlugin(ConfiguringPlugin.of(
+                        PaginationConfig.class,
+                        config -> config.setPageTokenEncoder(pageTokenEncoder)))
                 .setTemplateEngine(FreemarkerEngine.instance())
                 .configure(SqlStatements.class, statementsCfg -> statementsCfg.setQueryTimeout(10))
                 // Ensure all required mappings are registered *once*

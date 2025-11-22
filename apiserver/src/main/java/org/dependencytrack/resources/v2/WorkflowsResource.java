@@ -30,25 +30,22 @@ import org.dependencytrack.api.v2.WorkflowsApi;
 import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponseItem;
-import org.dependencytrack.api.v2.model.PaginationLinks;
-import org.dependencytrack.api.v2.model.PaginationMetadata;
 import org.dependencytrack.api.v2.model.SortDirection;
-import org.dependencytrack.api.v2.model.TotalCount;
-import org.dependencytrack.api.v2.model.TotalCountType;
 import org.dependencytrack.api.v2.model.WorkflowRunStatus;
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
-import org.dependencytrack.dex.engine.api.pagination.Page;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.jspecify.annotations.NonNull;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Path("/")
-public class WorkflowsResource implements WorkflowsApi {
+public class WorkflowsResource extends AbstractApiResource implements WorkflowsApi {
 
     @Context
     private UriInfo uriInfo;
@@ -106,8 +103,8 @@ public class WorkflowsResource implements WorkflowsApi {
                             case null, default -> null;
                         })
                         .withSortDirection(switch (sortDirection) {
-                            case ASC -> org.dependencytrack.dex.engine.api.pagination.SortDirection.ASC;
-                            case DESC -> org.dependencytrack.dex.engine.api.pagination.SortDirection.DESC;
+                            case ASC -> org.dependencytrack.common.pagination.SortDirection.ASC;
+                            case DESC -> org.dependencytrack.common.pagination.SortDirection.DESC;
                             case null -> null;
                         })
                         .withLimit(limit)
@@ -143,25 +140,7 @@ public class WorkflowsResource implements WorkflowsApi {
                                                 : null)
                                         .build())
                         .toList())
-                .pagination(PaginationMetadata.builder()
-                        .links(PaginationLinks.builder()
-                                .self(uriInfo.getRequestUri())
-                                .next(runsPage.nextPageToken() != null
-                                        ? uriInfo.getRequestUriBuilder()
-                                        .replaceQueryParam("page_token", runsPage.nextPageToken())
-                                        .replaceQueryParam("sort_by")
-                                        .replaceQueryParam("sort_direction")
-                                        .build()
-                                        : null)
-                                .build())
-                        .total(TotalCount.builder()
-                                .count(runsPage.totalCount().value())
-                                .type(switch (runsPage.totalCount().type()) {
-                                    case EXACT -> TotalCountType.EXACT;
-                                    case AT_LEAST -> TotalCountType.AT_LEAST;
-                                })
-                                .build())
-                        .build())
+                .pagination(createPaginationMetadata(uriInfo, runsPage))
                 .build();
 
         return Response.ok(response).build();
@@ -187,16 +166,7 @@ public class WorkflowsResource implements WorkflowsApi {
                 .events(eventsPage.items().stream()
                         .map(event -> (Object) event)
                         .toList())
-                .pagination(PaginationMetadata.builder()
-                        .links(PaginationLinks.builder()
-                                .self(uriInfo.getRequestUri())
-                                .next(eventsPage.nextPageToken() != null
-                                        ? uriInfo.getRequestUriBuilder()
-                                        .replaceQueryParam("page_token", eventsPage.nextPageToken())
-                                        .build()
-                                        : null)
-                                .build())
-                        .build())
+                .pagination(createPaginationMetadata(uriInfo, eventsPage))
                 .build();
 
         return Response.ok(response).build();

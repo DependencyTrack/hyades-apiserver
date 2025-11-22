@@ -21,6 +21,8 @@ package org.dependencytrack.dex.engine.api;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.dependencytrack.common.pagination.PageTokenEncoder;
+import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
 
 import javax.sql.DataSource;
 import java.time.Duration;
@@ -219,6 +221,7 @@ public class DexEngineConfig {
     private final TaskWorkerConfig activityTaskWorkerConfig = new TaskWorkerConfig();
 
     private MeterRegistry meterRegistry = new SimpleMeterRegistry();
+    private PageTokenEncoder pageTokenEncoder = new SimplePageTokenEncoder();
 
     public DexEngineConfig(final UUID instanceId, final DataSource dataSource) {
         this.instanceId = requireNonNull(instanceId, "instanceId must not be null");
@@ -289,6 +292,14 @@ public class DexEngineConfig {
 
     public void setMeterRegistry(final MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry must not be null");
+    }
+
+    public PageTokenEncoder pageTokenEncoder() {
+        return pageTokenEncoder;
+    }
+
+    public void setPageTokenEncoder(final PageTokenEncoder pageTokenEncoder) {
+        this.pageTokenEncoder = requireNonNull(pageTokenEncoder, "pageTokenEncoder must not be null");
     }
 
 }

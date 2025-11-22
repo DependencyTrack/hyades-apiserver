@@ -18,8 +18,9 @@
  */
 package org.dependencytrack.dex.engine.persistence;
 
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.dex.engine.api.ActivityTaskQueue;
-import org.dependencytrack.dex.engine.api.pagination.Page;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
@@ -95,7 +96,7 @@ public final class ActivityDao extends AbstractDao {
         return updated;
     }
 
-    record ListActivityTaskQueuesPageToken(String lastName) {
+    record ListActivityTaskQueuesPageToken(String lastName) implements PageToken {
     }
 
     public Page<ActivityTaskQueue> listActivityTaskQueues(final ListActivityTaskQueuesRequest request) {

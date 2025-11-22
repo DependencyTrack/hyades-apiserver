@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.dex.engine.api.request;
 
+import org.dependencytrack.common.pagination.SortDirection;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
-import org.dependencytrack.dex.engine.api.pagination.SortDirection;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;

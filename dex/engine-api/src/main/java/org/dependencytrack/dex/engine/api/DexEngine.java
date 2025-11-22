@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.dex.engine.api;
 
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.api.ActivityExecutor;
 import org.dependencytrack.dex.api.WorkflowExecutor;
 import org.dependencytrack.dex.api.annotation.Activity;
@@ -25,7 +26,6 @@ import org.dependencytrack.dex.api.annotation.Workflow;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
 import org.dependencytrack.dex.engine.api.event.DexEngineEvent;
 import org.dependencytrack.dex.engine.api.event.DexEngineEventListener;
-import org.dependencytrack.dex.engine.api.pagination.Page;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;

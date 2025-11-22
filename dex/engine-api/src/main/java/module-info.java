@@ -24,13 +24,13 @@ import org.jspecify.annotations.NullMarked;
 module org.dependencytrack.dex.engine.api {
     exports org.dependencytrack.dex.engine.api;
     exports org.dependencytrack.dex.engine.api.event;
-    exports org.dependencytrack.dex.engine.api.pagination;
     exports org.dependencytrack.dex.engine.api.request;
 
     requires transitive io.github.resilience4j.core;
     requires transitive java.sql;
     requires transitive micrometer.core;
     requires transitive microprofile.health.api;
+    requires transitive org.dependencytrack.common.pagination;
     requires transitive org.dependencytrack.dex.api;
     requires transitive org.dependencytrack.dex.proto;
     requires transitive org.jspecify;

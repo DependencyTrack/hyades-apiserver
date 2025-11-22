@@ -18,7 +18,8 @@
  */
 package org.dependencytrack.dex.engine;
 
-import org.dependencytrack.dex.engine.persistence.JdbiFactory;
+import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
+import org.dependencytrack.dex.engine.persistence.jdbi.JdbiFactory;
 import org.jdbi.v3.core.Jdbi;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +51,7 @@ class RetentionWorkerTest {
         dataSource.setPassword(postgresContainer.getPassword());
         dataSource.setDatabaseName(postgresContainer.getDatabaseName());
 
-        jdbi = JdbiFactory.create(dataSource);
+        jdbi = JdbiFactory.create(dataSource, new SimplePageTokenEncoder());
     }
 
     @Test

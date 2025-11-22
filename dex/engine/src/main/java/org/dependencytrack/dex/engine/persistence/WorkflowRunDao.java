@@ -18,9 +18,10 @@
  */
 package org.dependencytrack.dex.engine.persistence;
 
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.common.pagination.PageToken;
+import org.dependencytrack.common.pagination.SortDirection;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
-import org.dependencytrack.dex.engine.api.pagination.Page;
-import org.dependencytrack.dex.engine.api.pagination.SortDirection;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunHistoryEntry;
@@ -55,7 +56,7 @@ public final class WorkflowRunDao extends AbstractDao {
             ListWorkflowRunsRequest.SortBy sortBy,
             SortDirection sortDirection,
             int totalCount,
-            Page.TotalCount.Type totalCountType) {
+            Page.TotalCount.Type totalCountType) implements PageToken {
     }
 
     public Page<WorkflowRunMetadata> listRuns(final ListWorkflowRunsRequest request) {
@@ -167,7 +168,7 @@ public final class WorkflowRunDao extends AbstractDao {
                 <#-- @ftlvariable name="lastCreatedAt" type="boolean" -->
                 <#-- @ftlvariable name="lastId" type="boolean" -->
                 <#-- @ftlvariable name="sortBy" type="org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest.SortBy" -->
-                <#-- @ftlvariable name="sortDirection" type="org.dependencytrack.dex.engine.api.pagination.SortDirection" -->
+                <#-- @ftlvariable name="sortDirection" type="org.dependencytrack.common.pagination.SortDirection" -->
                 <#-- @ftlvariable name="whereConditions" type="java.util.Collection<String>" -->
                 select *
                   from dex_workflow_run
@@ -259,7 +260,7 @@ public final class WorkflowRunDao extends AbstractDao {
                 .withTotalCount(totalCount, totalCountType);
     }
 
-    record ListRunHistoryPageToken(int lastSequenceNumber) {
+    record ListRunHistoryPageToken(int lastSequenceNumber) implements PageToken {
     }
 
     public Page<Event> listRunEvents(final ListWorkflowRunEventsRequest request) {

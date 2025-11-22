@@ -25,6 +25,7 @@ import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.api.ActivityExecutor;
 import org.dependencytrack.dex.api.WorkflowExecutor;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
@@ -48,7 +49,6 @@ import org.dependencytrack.dex.engine.api.event.DexEngineEvent;
 import org.dependencytrack.dex.engine.api.event.DexEngineEventListener;
 import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEvent;
 import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEventListener;
-import org.dependencytrack.dex.engine.api.pagination.Page;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
@@ -59,7 +59,6 @@ import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
 import org.dependencytrack.dex.engine.persistence.ActivityDao;
-import org.dependencytrack.dex.engine.persistence.JdbiFactory;
 import org.dependencytrack.dex.engine.persistence.WorkflowDao;
 import org.dependencytrack.dex.engine.persistence.WorkflowRunDao;
 import org.dependencytrack.dex.engine.persistence.command.CreateActivityTaskCommand;
@@ -72,6 +71,7 @@ import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskComman
 import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowRunInboxEventsCommand;
 import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunCommand;
+import org.dependencytrack.dex.engine.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.dex.engine.persistence.model.ActivityTaskId;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
@@ -166,7 +166,7 @@ final class DexEngineImpl implements DexEngine {
 
     DexEngineImpl(final DexEngineConfig config) {
         this.config = requireNonNull(config);
-        this.jdbi = JdbiFactory.create(config.dataSource());
+        this.jdbi = JdbiFactory.create(config.dataSource(), config.pageTokenEncoder());
     }
 
     @Override

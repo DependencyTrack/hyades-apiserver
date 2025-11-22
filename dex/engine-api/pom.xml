@@ -39,6 +39,12 @@
     <dependencies>
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>common-pagination</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>dex-api</artifactId>
             <version>${project.version}</version>
         </dependency>

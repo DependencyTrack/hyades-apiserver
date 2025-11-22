@@ -18,14 +18,11 @@
  */
 package org.dependencytrack.dex.engine.persistence;
 
-import org.dependencytrack.dex.engine.api.pagination.InvalidPageTokenException;
+import org.dependencytrack.common.pagination.PageToken;
+import org.dependencytrack.common.pagination.PageTokenEncoder;
+import org.dependencytrack.dex.engine.persistence.jdbi.PaginationConfig;
 import org.jdbi.v3.core.Handle;
-import org.jdbi.v3.core.result.UnableToProduceResultException;
-import org.jdbi.v3.json.JsonConfig;
-import org.jdbi.v3.json.JsonMapper.TypedJsonMapper;
 import org.jspecify.annotations.Nullable;
-
-import java.util.Base64;
 
 abstract class AbstractDao {
 
@@ -35,37 +32,28 @@ abstract class AbstractDao {
         this.jdbiHandle = jdbiHandle;
     }
 
-    <T> @Nullable String encodePageToken(final @Nullable T token) {
+    <T extends PageToken> @Nullable String encodePageToken(final @Nullable T token) {
         if (token == null) {
             return null;
         }
 
-        final TypedJsonMapper jsonMapper = jdbiHandle
-                .getConfig(JsonConfig.class)
-                .getJsonMapper()
-                .forType(token.getClass(), jdbiHandle.getConfig());
+        final PageTokenEncoder encoder = jdbiHandle
+                .getConfig(PaginationConfig.class)
+                .getPageTokenEncoder();
 
-        final String pageTokenJson = jsonMapper.toJson(token, jdbiHandle.getConfig());
-        return Base64.getUrlEncoder().encodeToString(pageTokenJson.getBytes());
+        return encoder.encode(token);
     }
 
-    @SuppressWarnings("unchecked")
-    <T> @Nullable T decodePageToken(final @Nullable String token, final Class<T> tokenClass) {
-        if (token == null || token.isBlank()) {
+    <T extends PageToken> @Nullable T decodePageToken(final @Nullable String token, final Class<T> tokenClass) {
+        if (token == null) {
             return null;
         }
 
-        final TypedJsonMapper jsonMapper = jdbiHandle
-                .getConfig(JsonConfig.class)
-                .getJsonMapper()
-                .forType(tokenClass, jdbiHandle.getConfig());
+        final PageTokenEncoder encoder = jdbiHandle
+                .getConfig(PaginationConfig.class)
+                .getPageTokenEncoder();
 
-        try {
-            final byte[] tokenBytes = Base64.getUrlDecoder().decode(token);
-            return (T) jsonMapper.fromJson(new String(tokenBytes), jdbiHandle.getConfig());
-        } catch (IllegalArgumentException | UnableToProduceResultException e) {
-            throw new InvalidPageTokenException(e);
-        }
+        return encoder.decode(token, tokenClass);
     }
 
 }

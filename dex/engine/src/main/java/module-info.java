@@ -40,6 +40,7 @@ module org.dependencytrack.dex.engine {
     requires org.jdbi.v3.postgres;
     requires org.postgresql.jdbc;
     requires org.slf4j;
+    requires transitive org.dependencytrack.common.pagination;
     requires transitive org.dependencytrack.dex.api;
     requires transitive org.dependencytrack.dex.engine.api;
     requires transitive org.dependencytrack.dex.engine.migration;

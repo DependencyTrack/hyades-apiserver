@@ -21,6 +21,7 @@ package org.dependencytrack.dex;
 import io.micrometer.core.instrument.Metrics;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
@@ -108,6 +109,8 @@ public final class DexEngineInitializer implements ServletContextListener {
         final DataSource dataSource = dataSourceRegistry.get(dataSourceName);
 
         final var engineConfig = new DexEngineConfig(UUID.randomUUID(), dataSource);
+
+        engineConfig.setPageTokenEncoder(new EncryptedPageTokenEncoder());
 
         config.getOptionalValue("dt.dex-engine.cache.run-history.max-size", int.class)
                 .ifPresent(engineConfig.runHistoryCache()::setMaxSize);
