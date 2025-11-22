@@ -171,6 +171,10 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     public void start() {
+        if (status == Status.RUNNING) {
+            return;
+        }
+
         setStatus(Status.STARTING);
         LOGGER.debug("Starting");
 
@@ -215,7 +219,7 @@ final class DexEngineImpl implements DexEngine {
 
         LOGGER.debug("Starting external event buffer");
         externalEventBuffer = new Buffer<>(
-                "workflow-external-event",
+                "external-event",
                 this::flushExternalEvents,
                 config.externalEventBuffer().flushInterval(),
                 config.externalEventBuffer().maxBatchSize(),
@@ -230,7 +234,7 @@ final class DexEngineImpl implements DexEngine {
         //  Workflow tasks usually complete a lot faster than activity tasks.
         LOGGER.debug("Starting task command buffer");
         taskCommandBuffer = new Buffer<>(
-                "workflow-task-command",
+                "task-command",
                 this::executeTaskCommands,
                 config.taskCommandBuffer().flushInterval(),
                 config.taskCommandBuffer().maxBatchSize(),
@@ -260,6 +264,10 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     public void close() throws IOException {
+        if (status == Status.STOPPED) {
+            return;
+        }
+
         setStatus(Status.STOPPING);
         LOGGER.debug("Stopping");
 
@@ -322,6 +330,15 @@ final class DexEngineImpl implements DexEngine {
         boolean isUp = this.status == Status.RUNNING;
 
         responseBuilder.withData("internalStatus", this.status.name());
+
+        if (externalEventBuffer != null) {
+            isUp &= externalEventBuffer.status() == Buffer.Status.RUNNING;
+            responseBuilder.withData("buffer:" + externalEventBuffer.name(), externalEventBuffer.status().name());
+        }
+        if (taskCommandBuffer != null) {
+            isUp &= taskCommandBuffer.status() == Buffer.Status.RUNNING;
+            responseBuilder.withData("buffer:" + taskCommandBuffer.name(), taskCommandBuffer.status().name());
+        }
 
         for (final Map.Entry<String, TaskWorker> entry : taskWorkerByName.entrySet()) {
             isUp &= entry.getValue().status() == TaskWorker.Status.RUNNING;
@@ -1311,7 +1328,7 @@ final class DexEngineImpl implements DexEngine {
         }
     }
 
-    public Status status() {
+    Status status() {
         return status;
     }
 

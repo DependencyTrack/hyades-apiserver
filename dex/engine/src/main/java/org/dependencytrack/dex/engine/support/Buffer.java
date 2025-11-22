@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 
 public final class Buffer<T> implements Closeable {
 
-    private enum Status {
+    public enum Status {
 
         CREATED(1, 2), // 0
         RUNNING(2),    // 1
@@ -116,6 +116,14 @@ public final class Buffer<T> implements Closeable {
         this.flushLock = new ReentrantLock();
         this.statusLock = new ReentrantLock();
         this.meterRegistry = meterRegistry;
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public Status status() {
+        return status;
     }
 
     public void start() {

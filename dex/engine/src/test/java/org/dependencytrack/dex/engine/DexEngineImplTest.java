@@ -46,6 +46,7 @@ import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
 import org.dependencytrack.dex.proto.event.v1.Event;
+import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -1350,6 +1351,53 @@ class DexEngineImplTest {
                 assertThat(queue.updatedAt()).isNull();
             });
             assertThat(queuesPage.nextPageToken()).isNull();
+        }
+
+    }
+
+    @Nested
+    class HealthProbeTest {
+
+        @Test
+        void shouldReportAsUpWhenRunning() {
+            engine.start();
+
+            final HealthCheckResponse response = engine.probeHealth();
+
+            assertThat(response).isNotNull();
+            assertThat(response.getName()).isEqualTo("dex-engine");
+            assertThat(response.getStatus()).isEqualTo(HealthCheckResponse.Status.UP);
+            assertThat(response.getData()).isPresent();
+            assertThat(response.getData().get()).containsExactlyInAnyOrderEntriesOf(
+                    Map.ofEntries(
+                            Map.entry("internalStatus", "RUNNING"),
+                            Map.entry("buffer:external-event", "RUNNING"),
+                            Map.entry("buffer:task-command", "RUNNING")));
+        }
+
+        @Test
+        void shouldReportAsDownWhenCreated() {
+            final HealthCheckResponse response = engine.probeHealth();
+
+            assertThat(response).isNotNull();
+            assertThat(response.getName()).isEqualTo("dex-engine");
+            assertThat(response.getStatus()).isEqualTo(HealthCheckResponse.Status.DOWN);
+            assertThat(response.getData()).isPresent();
+            assertThat(response.getData().get()).containsExactlyInAnyOrderEntriesOf(Map.of("internalStatus", "CREATED"));
+        }
+
+        @Test
+        void shouldReportAsDownWhenStopped() throws Exception {
+            engine.start();
+            engine.close();
+
+            final HealthCheckResponse response = engine.probeHealth();
+
+            assertThat(response).isNotNull();
+            assertThat(response.getName()).isEqualTo("dex-engine");
+            assertThat(response.getStatus()).isEqualTo(HealthCheckResponse.Status.DOWN);
+            assertThat(response.getData()).isPresent();
+            assertThat(response.getData().get()).containsExactlyInAnyOrderEntriesOf(Map.of("internalStatus", "STOPPED"));
         }
 
     }
