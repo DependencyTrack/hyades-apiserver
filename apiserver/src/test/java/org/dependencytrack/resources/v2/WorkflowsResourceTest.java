@@ -26,6 +26,7 @@ import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.pagination.Page;
+import org.dependencytrack.dex.engine.api.pagination.Page.TotalCount;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.proto.event.v1.Event;
@@ -86,7 +87,7 @@ public class WorkflowsResourceTest extends ResourceTest {
                 Instant.ofEpochMilli(888888),
                 null);
 
-        doReturn(new Page<>(List.of(workflowRunMetadata), null))
+        doReturn(new Page<>(List.of(workflowRunMetadata), null).withTotalCount(1, TotalCount.Type.EXACT))
                 .when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
 
         final Response response = jersey.target("/workflow-runs").request()
@@ -115,6 +116,10 @@ public class WorkflowsResourceTest extends ResourceTest {
                           "_pagination": {
                             "links": {
                               "self": "${json-unit.any-string}"
+                            },
+                            "total": {
+                              "count": 1,
+                              "type": "EXACT"
                             }
                           }
                         }

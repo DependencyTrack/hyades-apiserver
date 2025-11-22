@@ -38,6 +38,8 @@ properties:
               If not present, no more items exist.
         required:
         - self
+      total:
+        $ref: "./total-count.yaml"
     required:
     - links
 # Enable inheritance for schemas that extend this object via allOf.

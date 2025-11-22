@@ -33,6 +33,8 @@ import org.dependencytrack.api.v2.model.ListWorkflowRunsResponseItem;
 import org.dependencytrack.api.v2.model.PaginationLinks;
 import org.dependencytrack.api.v2.model.PaginationMetadata;
 import org.dependencytrack.api.v2.model.SortDirection;
+import org.dependencytrack.api.v2.model.TotalCount;
+import org.dependencytrack.api.v2.model.TotalCountType;
 import org.dependencytrack.api.v2.model.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
@@ -85,8 +87,8 @@ public class WorkflowsResource implements WorkflowsApi {
                             case SUSPENDED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.SUSPENDED;
                             case null -> null;
                         })
-                        .withCreatedAtFrom(completedAtFrom != null
-                                ? Instant.ofEpochMilli(completedAtFrom)
+                        .withCreatedAtFrom(createdAtFrom != null
+                                ? Instant.ofEpochMilli(createdAtFrom)
                                 : null)
                         .withCreatedAtTo(createdAtTo != null
                                 ? Instant.ofEpochMilli(createdAtTo)
@@ -151,6 +153,13 @@ public class WorkflowsResource implements WorkflowsApi {
                                         .replaceQueryParam("sort_direction")
                                         .build()
                                         : null)
+                                .build())
+                        .total(TotalCount.builder()
+                                .count(runsPage.totalCount().value())
+                                .type(switch (runsPage.totalCount().type()) {
+                                    case EXACT -> TotalCountType.EXACT;
+                                    case AT_LEAST -> TotalCountType.AT_LEAST;
+                                })
                                 .build())
                         .build())
                 .build();
