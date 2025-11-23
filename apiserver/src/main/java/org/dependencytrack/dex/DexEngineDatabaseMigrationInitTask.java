@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.dex;
 
+import io.smallrye.config.SmallRyeConfig;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.dex.engine.migration.MigrationExecutor;
 import org.dependencytrack.init.InitTask;
@@ -62,14 +63,18 @@ public final class DexEngineDatabaseMigrationInitTask implements InitTask {
             return;
         }
 
-        final String dataSourceName = ctx.config()
-                .getOptionalValue("dt.dex-engine.migration.datasource.name", String.class)
-                .or(() -> ctx.config().getOptionalValue("dt.dex-engine.datasource.name", String.class))
-                .orElse(null);
+        final var configMapping = ctx.config()
+                .unwrap(SmallRyeConfig.class)
+                .getConfigMapping(DexEngineConfigMapping.class);
 
-        final DataSource dataSource = dataSourceName != null
-                ? dataSourceRegistry.get(dataSourceName)
-                : ctx.dataSource();
+        final DataSource dataSource;
+        if (configMapping.migration().dataSourceName().isPresent()) {
+            dataSource = dataSourceRegistry.get(
+                    configMapping.migration().dataSourceName().get());
+        } else {
+            dataSource = dataSourceRegistry.get(
+                    configMapping.dataSource().name());
+        }
 
         new MigrationExecutor(dataSource).execute();
     }

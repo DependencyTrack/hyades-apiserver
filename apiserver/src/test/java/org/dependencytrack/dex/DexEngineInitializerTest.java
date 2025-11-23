@@ -70,6 +70,7 @@ public class DexEngineInitializerTest {
     public void shouldDoNothingWhenEngineIsDisabled() {
         final var config = new SmallRyeConfigBuilder()
                 .withDefaultValue("dt.dex-engine.enabled", "false")
+                .withCustomizers(new DexEngineConfigMappingRegistrar())
                 .build();
 
         dataSourceRegistry = new DataSourceRegistry(config);
@@ -89,6 +90,7 @@ public class DexEngineInitializerTest {
                         Map.entry("dt.datasource.foo.url", postgresContainer.getJdbcUrl()),
                         Map.entry("dt.datasource.foo.username", postgresContainer.getUsername()),
                         Map.entry("dt.datasource.foo.password", postgresContainer.getPassword())))
+                .withCustomizers(new DexEngineConfigMappingRegistrar())
                 .build();
 
         dataSourceRegistry = new DataSourceRegistry(config);

@@ -19,13 +19,17 @@
 package org.dependencytrack.dex;
 
 import io.micrometer.core.instrument.Metrics;
+import io.smallrye.config.SmallRyeConfig;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.dependencytrack.dex.DexEngineConfigMapping.TaskWorkerConfigMapping;
+import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.DexEngineFactory;
+import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
 import org.eclipse.microprofile.config.Config;
@@ -35,7 +39,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.ServiceLoader;
 import java.util.UUID;
 
@@ -64,11 +67,17 @@ public final class DexEngineInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (!config.getOptionalValue("dt.dex-engine.enabled", Boolean.class).orElse(false)) {
+        // NB: DexEngineConfigMapping is only available when engine is enabled,
+        // so have to check enablement manually first.
+        if (!config.getOptionalValue("dt.dex-engine.enabled", boolean.class).orElse(false)) {
             return;
         }
 
-        final DexEngineConfig engineConfig = createEngineConfig();
+        final var configMapping = config
+                .unwrap(SmallRyeConfig.class)
+                .getConfigMapping(DexEngineConfigMapping.class);
+
+        final DexEngineConfig engineConfig = createEngineConfig(configMapping);
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Effective configuration: {}", engineConfig);
         }
@@ -79,10 +88,10 @@ public final class DexEngineInitializer implements ServletContextListener {
 
         // TODO: Register workflows and activities here.
 
-        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("default", 100));
-        engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("default", 25));
+        ensureWorkflowQueues(engine, new CreateWorkflowTaskQueueRequest("default", 100));
+        ensureActivityQueues(engine, new CreateActivityTaskQueueRequest("default", 25));
 
-        // TODO: Register workers based on configuration.
+        registerTaskWorkers(engine, configMapping);
 
         LOGGER.info("Starting dex engine");
         engine.start();
@@ -102,49 +111,97 @@ public final class DexEngineInitializer implements ServletContextListener {
         }
     }
 
-    private DexEngineConfig createEngineConfig() {
-        final String dataSourceName = config.getValue("dt.dex-engine.datasource.name", String.class);
-        final DataSource dataSource = dataSourceRegistry.get(dataSourceName);
+    private DexEngineConfig createEngineConfig(DexEngineConfigMapping configMapping) {
+        final DataSource dataSource = dataSourceRegistry.get(configMapping.dataSource().name());
 
         final var engineConfig = new DexEngineConfig(UUID.randomUUID(), dataSource);
 
+        engineConfig.workflowTaskScheduler().setEnabled(configMapping.workflowTaskScheduler().enabled());
+        engineConfig.workflowTaskScheduler().setPollInterval(configMapping.workflowTaskScheduler().pollInterval());
+
+        engineConfig.activityTaskScheduler().setEnabled(configMapping.activityTaskScheduler().enabled());
+        engineConfig.activityTaskScheduler().setPollInterval(configMapping.activityTaskScheduler().pollInterval());
+
+        engineConfig.retention().setWorkerEnabled(configMapping.retention().enabled());
+        engineConfig.retention().setDays(configMapping.retention().days());
+
+        engineConfig.taskCommandBuffer().setFlushInterval(configMapping.taskCommandBuffer().flushInterval());
+        engineConfig.taskCommandBuffer().setMaxBatchSize(configMapping.taskCommandBuffer().maxSize());
+
+        engineConfig.externalEventBuffer().setFlushInterval(configMapping.externalEventBuffer().flushInterval());
+        engineConfig.externalEventBuffer().setMaxBatchSize(configMapping.externalEventBuffer().maxSize());
+
+        engineConfig.runHistoryCache().setEvictAfterAccess(configMapping.runHistoryCache().ttl());
+        engineConfig.runHistoryCache().setMaxSize(configMapping.runHistoryCache().maxSize());
+
         engineConfig.setPageTokenEncoder(new EncryptedPageTokenEncoder());
-
-        config.getOptionalValue("dt.dex-engine.cache.run-history.max-size", int.class)
-                .ifPresent(engineConfig.runHistoryCache()::setMaxSize);
-        config.getOptionalValue("dt.dex-engine.cache.run-history.ttl", Duration.class)
-                .ifPresent(engineConfig.runHistoryCache()::setEvictAfterAccess);
-
-        config.getOptionalValue("dt.dex-engine.buffer.external-event.flush-interval", Duration.class)
-                .ifPresent(engineConfig.externalEventBuffer()::setFlushInterval);
-        config.getOptionalValue("dt.dex-engine.buffer.external-event.max-size", int.class)
-                .ifPresent(engineConfig.externalEventBuffer()::setMaxBatchSize);
-
-        config.getOptionalValue("dt.dex-engine.buffer.task-command.flush-interval", Duration.class)
-                .ifPresent(engineConfig.taskCommandBuffer()::setFlushInterval);
-        config.getOptionalValue("dt.dex-engine.buffer.task-command.max-size", int.class)
-                .ifPresent(engineConfig.taskCommandBuffer()::setMaxBatchSize);
-
-        config.getOptionalValue("dt.dex-engine.retention.enabled", boolean.class)
-                .ifPresent(engineConfig.retention()::setWorkerEnabled);
-        config.getOptionalValue("dt.dex-engine.retention.days", int.class)
-                .ifPresent(engineConfig.retention()::setDays);
-
-        config.getOptionalValue("dt.dex-engine.task-scheduler.activity.enabled", boolean.class)
-                .ifPresent(engineConfig.activityTaskScheduler()::setEnabled);
-        config.getOptionalValue("dt.dex-engine.task-scheduler.activity.poll-interval", Duration.class)
-                .ifPresent(engineConfig.activityTaskScheduler()::setPollInterval);
-
-        config.getOptionalValue("dt.dex-engine.task-scheduler.workflow.enabled", boolean.class)
-                .ifPresent(engineConfig.workflowTaskScheduler()::setEnabled);
-        config.getOptionalValue("dt.dex-engine.task-scheduler.workflow.poll-interval", Duration.class)
-                .ifPresent(engineConfig.workflowTaskScheduler()::setPollInterval);
-
-        if (config.getOptionalValue("alpine.metrics.enabled", boolean.class).orElse(false)) {
-            engineConfig.setMeterRegistry(Metrics.globalRegistry);
-        }
+        engineConfig.setMeterRegistry(Metrics.globalRegistry);
 
         return engineConfig;
+    }
+
+    private void ensureWorkflowQueues(DexEngine engine, CreateWorkflowTaskQueueRequest... requests) {
+        for (final CreateWorkflowTaskQueueRequest request : requests) {
+            final boolean created = engine.createWorkflowTaskQueue(request);
+            if (created) {
+                LOGGER.info(
+                        "Workflow task queue '{}' created with max concurrency {}",
+                        request.name(), request.maxConcurrency());
+            } else {
+                LOGGER.debug("Workflow task queue '{}' already exists", request.name());
+            }
+        }
+    }
+
+    private void ensureActivityQueues(DexEngine engine, CreateActivityTaskQueueRequest... requests) {
+        for (final CreateActivityTaskQueueRequest request : requests) {
+            final boolean created = engine.createActivityTaskQueue(request);
+            if (created) {
+                LOGGER.info(
+                        "Activity task queue '{}' created with max concurrency {}",
+                        request.name(), request.maxConcurrency());
+            } else {
+                LOGGER.debug("Activity task queue '{}' already exists", request.name());
+            }
+        }
+    }
+
+    private void registerTaskWorkers(DexEngine engine, DexEngineConfigMapping configMapping) {
+        for (final var entry : configMapping.workflowTaskWorker().entrySet()) {
+            final String name = entry.getKey();
+            final TaskWorkerConfigMapping config = entry.getValue();
+
+            if (!config.enabled()) {
+                LOGGER.debug("Not registering workflow task worker '{}' because it is disabled", name);
+                continue;
+            }
+
+            LOGGER.info(
+                    "Registering workflow task worker '{}' for queue '{}' with max concurrency {}",
+                    name, config.queueName(), config.maxConcurrency());
+            engine.registerWorkflowWorker(
+                    new WorkflowTaskWorkerOptions(name, config.queueName(), config.maxConcurrency())
+                            .withMinPollInterval(config.minPollInterval())
+                            .withPollBackoffFunction(config.pollBackoff().asIntervalFunction()));
+        }
+
+        for (final var entry : configMapping.activityTaskWorker().entrySet()) {
+            final String name = entry.getKey();
+            final TaskWorkerConfigMapping config = entry.getValue();
+
+            if (!config.enabled()) {
+                LOGGER.debug("Not registering activity task worker '{}' because it is disabled", name);
+                continue;
+            }
+
+            LOGGER.info(
+                    "Registering activity task worker '{}' for queue '{}' with max concurrency {}",
+                    name, config.queueName(), config.maxConcurrency());
+            engine.registerActivityWorker(
+                    new ActivityTaskWorkerOptions(name, config.queueName(), config.maxConcurrency())
+                            .withMinPollInterval(config.minPollInterval())
+                            .withPollBackoffFunction(config.pollBackoff().asIntervalFunction()));
+        }
     }
 
 }

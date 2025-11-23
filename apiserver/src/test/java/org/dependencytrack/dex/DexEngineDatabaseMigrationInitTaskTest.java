@@ -67,6 +67,7 @@ public class DexEngineDatabaseMigrationInitTaskTest {
     public void shouldNotExecuteWhenEngineIsDisabled() throws Exception {
         final var config = new SmallRyeConfigBuilder()
                 .withDefaultValue("dt.dex-engine.enabled", "false")
+                .withCustomizers(new DexEngineConfigMappingRegistrar())
                 .build();
 
         dataSourceRegistry = new DataSourceRegistry(config);
@@ -86,6 +87,7 @@ public class DexEngineDatabaseMigrationInitTaskTest {
                         Map.entry("dt.datasource.foo.password", postgresContainer.getPassword()),
                         Map.entry("dt.dex-engine.enabled", "true"),
                         Map.entry("dt.dex-engine.migration.datasource.name", "foo")))
+                .withCustomizers(new DexEngineConfigMappingRegistrar())
                 .build();
 
         dataSourceRegistry = new DataSourceRegistry(config);
@@ -105,24 +107,13 @@ public class DexEngineDatabaseMigrationInitTaskTest {
                         Map.entry("dt.datasource.foo.password", postgresContainer.getPassword()),
                         Map.entry("dt.dex-engine.enabled", "true"),
                         Map.entry("dt.dex-engine.datasource.name", "foo")))
+                .withCustomizers(new DexEngineConfigMappingRegistrar())
                 .build();
 
         dataSourceRegistry = new DataSourceRegistry(config);
 
         new DexEngineDatabaseMigrationInitTask(dataSourceRegistry)
                 .execute(new InitTaskContext(config, null));
-
-        assertMigrationExecuted(true);
-    }
-
-    @Test
-    public void shouldUseInitTaskDataSourceAsFallback() throws Exception {
-        final var config = new SmallRyeConfigBuilder()
-                .withDefaultValues(Map.of("dt.dex-engine.enabled", "true"))
-                .build();
-
-        new DexEngineDatabaseMigrationInitTask(null)
-                .execute(new InitTaskContext(config, initTaskDataSource));
 
         assertMigrationExecuted(true);
     }
