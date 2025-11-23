@@ -114,6 +114,21 @@ public final class WorkflowDao extends AbstractDao {
         return updated;
     }
 
+    public boolean doesWorkflowTaskQueueExists(final String name) {
+        final Query query = jdbiHandle.createQuery("""
+                select exists(
+                  select 1
+                    from dex_workflow_task_queue
+                   where name = :name
+                )
+                """);
+
+        return query
+                .bind("name", name)
+                .mapTo(boolean.class)
+                .one();
+    }
+
     record ListWorkflowTaskQueuesPageToken(String lastName) implements PageToken {
     }
 

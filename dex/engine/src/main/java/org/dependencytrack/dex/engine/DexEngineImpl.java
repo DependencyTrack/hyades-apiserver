@@ -395,6 +395,12 @@ final class DexEngineImpl implements DexEngine {
     public void registerActivityWorker(final ActivityTaskWorkerOptions options) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
 
+        final boolean queueExists = jdbi.withHandle(
+                handle -> new ActivityDao(handle).doesActivityTaskQueueExists(options.queueName()));
+        if (!queueExists) {
+            throw new IllegalStateException("Activity task queue %s does not exist".formatted(options.queueName()));
+        }
+
         final var worker = new ActivityTaskWorker(
                 this,
                 options.minPollInterval(),
@@ -404,14 +410,21 @@ final class DexEngineImpl implements DexEngine {
                 options.maxConcurrency(),
                 config.meterRegistry());
 
-        if (taskWorkerByName.putIfAbsent(options.name(), worker) != null) {
-            throw new IllegalStateException("A task worker with name %s was already registered".formatted(options.name()));
+        if (taskWorkerByName.putIfAbsent("activity/" + options.name(), worker) != null) {
+            throw new IllegalStateException(
+                    "An activity task worker with name %s was already registered".formatted(options.name()));
         }
     }
 
     @Override
     public void registerWorkflowWorker(final WorkflowTaskWorkerOptions options) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
+
+        final boolean queueExists = jdbi.withHandle(
+                handle -> new WorkflowDao(handle).doesWorkflowTaskQueueExists(options.queueName()));
+        if (!queueExists) {
+            throw new IllegalStateException("Workflow task queue %s does not exist".formatted(options.queueName()));
+        }
 
         final var worker = new WorkflowTaskWorker(
                 this,
@@ -422,8 +435,9 @@ final class DexEngineImpl implements DexEngine {
                 options.maxConcurrency(),
                 config.meterRegistry());
 
-        if (taskWorkerByName.putIfAbsent(options.name(), worker) != null) {
-            throw new IllegalStateException("A task worker with name %s was already registered".formatted(options.name()));
+        if (taskWorkerByName.putIfAbsent("workflow/" + options.name(), worker) != null) {
+            throw new IllegalStateException(
+                    "A workflow task worker with name %s was already registered".formatted(options.name()));
         }
     }
 

@@ -94,6 +94,21 @@ public final class ActivityDao extends AbstractDao {
         return updated;
     }
 
+    public boolean doesActivityTaskQueueExists(final String name) {
+        final Query query = jdbiHandle.createQuery("""
+                select exists(
+                  select 1
+                    from dex_activity_task_queue
+                   where name = :name
+                )
+                """);
+
+        return query
+                .bind("name", name)
+                .mapTo(boolean.class)
+                .one();
+    }
+
     record ListActivityTaskQueuesPageToken(String lastName) implements PageToken {
     }
 
