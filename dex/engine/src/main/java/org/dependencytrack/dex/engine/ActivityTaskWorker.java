@@ -27,6 +27,8 @@ import org.dependencytrack.dex.proto.payload.v1.Payload;
 import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
 import static java.util.Objects.requireNonNull;
@@ -37,6 +39,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
     private final MetadataRegistry metadataRegistry;
     private final String queueName;
     private final List<PollActivityTaskCommand> pollCommands;
+    private final Set<ActivityContextImpl<?>> activeContexts;
 
     ActivityTaskWorker(
             final DexEngineImpl engine,
@@ -53,6 +56,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
         this.pollCommands = metadataRegistry.getAllActivityMetadata().stream()
                 .map(metadata -> new PollActivityTaskCommand(metadata.name(), metadata.lockTimeout()))
                 .toList();
+        this.activeContexts = ConcurrentHashMap.newKeySet();
     }
 
     @Override
@@ -83,6 +87,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
                 activityMetadata.heartbeatEnabled());
         final var arg = activityMetadata.argumentConverter().convertFromPayload(task.argument());
 
+        activeContexts.add(ctx);
         try {
             final Payload result;
             try (ctx) {
@@ -109,6 +114,8 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
             } catch (TimeoutException ex) {
                 throw new RuntimeException("Timed out while waiting for task failure to be acknowledged", ex);
             }
+        } finally {
+            activeContexts.remove(ctx);
         }
     }
 
@@ -125,4 +132,12 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
         }
     }
 
+    @Override
+    public void close() {
+        for (final ActivityContextImpl<?> ctx : activeContexts) {
+            ctx.cancel();
+        }
+
+        super.close();
+    }
 }

@@ -277,18 +277,6 @@ final class DexEngineImpl implements DexEngine {
             retentionWorker = null;
         }
 
-        if (externalEventBuffer != null) {
-            LOGGER.debug("Waiting for external event buffer to stop");
-            externalEventBuffer.close();
-            externalEventBuffer = null;
-        }
-
-        if (taskCommandBuffer != null) {
-            LOGGER.debug("Waiting for task command buffer to stop");
-            taskCommandBuffer.close();
-            taskCommandBuffer = null;
-        }
-
         if (activityTaskScheduler != null) {
             LOGGER.debug("Waiting for activity task scheduler to stop");
             activityTaskScheduler.close();
@@ -307,6 +295,18 @@ final class DexEngineImpl implements DexEngine {
                 entry.getValue().close();
             }
             taskWorkerByName.clear();
+        }
+
+        if (externalEventBuffer != null) {
+            LOGGER.debug("Waiting for external event buffer to stop");
+            externalEventBuffer.close();
+            externalEventBuffer = null;
+        }
+
+        if (taskCommandBuffer != null) {
+            LOGGER.debug("Waiting for task command buffer to stop");
+            taskCommandBuffer.close();
+            taskCommandBuffer = null;
         }
 
         if (eventListenerExecutor != null) {

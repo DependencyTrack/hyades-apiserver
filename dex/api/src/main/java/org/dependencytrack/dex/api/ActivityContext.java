@@ -19,6 +19,7 @@
 package org.dependencytrack.dex.api;
 
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 
 /**
  * Context available to {@link ActivityExecutor}s.
@@ -29,5 +30,26 @@ public interface ActivityContext {
      * @return ID of the workflow run that this activity run is part of.
      */
     UUID workflowRunId();
+
+    /**
+     * @return Whether the activity execution was requested to be cancelled,
+     * e.g. as part of graceful shutdown. It is OK to continue execution if
+     * the activity is "almost done". If remaining execution duration is not
+     * known, or anticipated to take a long time (upwards of multiple seconds),
+     * the cancellation should be respected and immediately acted upon.
+     */
+    boolean isCanceled();
+
+    /**
+     * Check whether cancellation was requested.
+     *
+     * @throws CancellationException When cancellation was requested.
+     * @see #isCanceled()
+     */
+    default void checkCanceled() {
+        if (isCanceled()) {
+            throw new CancellationException();
+        }
+    }
 
 }

@@ -70,6 +70,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -904,6 +905,42 @@ class DexEngineImplTest {
                     assertThat(entry.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_FAILED);
                 },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED));
+    }
+
+    @Test
+    void shouldCancelActivitiesDuringGracefulShutdown() throws Exception {
+        final var activityStarted = new AtomicBoolean(false);
+        final var activityCanceled = new AtomicBoolean(false);
+
+        registerWorkflow("test", (ctx, arg) -> {
+            ctx.callActivity("test", ACTIVITY_TASK_QUEUE, null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
+            return null;
+        });
+        registerActivity("test", (ctx, arg) -> {
+            while (true) {
+                activityStarted.set(true);
+                if (ctx.isCanceled()) {
+                    // NB: Normally activities should throw an exception
+                    // so they'll be retried. This is just for ease of testing.
+                    activityCanceled.set(true);
+                    return null;
+                }
+                Thread.sleep(5);
+            }
+        });
+        registerWorkflowWorker("workflow-worker", 1);
+        registerActivityWorker("activity-worker", 1);
+        engine.start();
+
+        engine.createRun(new CreateWorkflowRunRequest<>("test", 1, WORKFLOW_TASK_QUEUE));
+
+        await("Activity start")
+                .atMost(Duration.ofSeconds(3))
+                .until(activityStarted::get);
+
+        engine.close();
+
+        assertThat(activityCanceled).isTrue();
     }
 
     @Test

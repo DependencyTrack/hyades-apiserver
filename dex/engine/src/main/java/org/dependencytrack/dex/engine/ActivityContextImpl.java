@@ -42,6 +42,7 @@ final class ActivityContextImpl<T> implements ActivityContext, Closeable {
     private final Duration lockTimeout;
     private @Nullable ScheduledExecutorService heartbeatExecutor;
     private volatile Instant lockedUntil;
+    private volatile boolean canceled;
 
     ActivityContextImpl(
             final DexEngineImpl engine,
@@ -79,6 +80,22 @@ final class ActivityContextImpl<T> implements ActivityContext, Closeable {
         return workflowRunId;
     }
 
+    @Override
+    public boolean isCanceled() {
+        return canceled;
+    }
+
+    @Override
+    public void close() {
+        if (this.heartbeatExecutor != null) {
+            this.heartbeatExecutor.close();
+        }
+    }
+
+    void cancel() {
+        canceled = true;
+    }
+
     private void heartbeat() {
         // TODO: Fail when task was not locked by this worker.
         // TODO: Return info about workflow run so the task can
@@ -87,13 +104,6 @@ final class ActivityContextImpl<T> implements ActivityContext, Closeable {
                 new ActivityTaskId(queueName, workflowRunId, createdEventId), lockTimeout);
         LoggerFactory.getLogger(activityExecutor.getClass()).debug(
                 "Lock extended to {}", this.lockedUntil);
-    }
-
-    @Override
-    public void close() {
-        if (this.heartbeatExecutor != null) {
-            this.heartbeatExecutor.close();
-        }
     }
 
 }
