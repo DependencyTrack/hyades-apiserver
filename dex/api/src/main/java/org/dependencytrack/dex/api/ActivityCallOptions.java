@@ -23,35 +23,26 @@ import org.jspecify.annotations.Nullable;
 import static java.util.Objects.requireNonNull;
 
 /**
- * @param queueName   Name of the queue in which the call should be added.
  * @param argument    Argument of the call.
  * @param retryPolicy Retry policy of the call.
  * @param <A>
  */
-public record ActivityCallOptions<A extends @Nullable Object>(
-        String queueName,
-        @Nullable A argument,
-        RetryPolicy retryPolicy) {
+public record ActivityCallOptions<A extends @Nullable Object>(@Nullable A argument, RetryPolicy retryPolicy) {
 
     public ActivityCallOptions {
-        requireNonNull(queueName, "queueName must not be null");
         requireNonNull(retryPolicy, "retryPolicy must not be null");
     }
 
     public ActivityCallOptions() {
-        this("default", null, RetryPolicy.defaultRetryPolicy());
-    }
-
-    public ActivityCallOptions<A> withQueueName(final String queueName) {
-        return new ActivityCallOptions<>(queueName, this.argument, this.retryPolicy);
+        this(null, RetryPolicy.defaultRetryPolicy());
     }
 
     public ActivityCallOptions<A> withArgument(final @Nullable A argument) {
-        return new ActivityCallOptions<>(this.queueName, argument, this.retryPolicy);
+        return new ActivityCallOptions<>(argument, this.retryPolicy);
     }
 
     public ActivityCallOptions<A> withRetryPolicy(final RetryPolicy retryPolicy) {
-        return new ActivityCallOptions<>(this.queueName, this.argument, retryPolicy);
+        return new ActivityCallOptions<>(this.argument, retryPolicy);
     }
 
 }

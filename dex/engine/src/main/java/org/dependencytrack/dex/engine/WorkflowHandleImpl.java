@@ -32,18 +32,21 @@ final class WorkflowHandleImpl<A, R> implements WorkflowHandle<A, R> {
     private final int workflowVersion;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
+    private final String queueName;
 
     WorkflowHandleImpl(
             final WorkflowContextImpl<?, ?> workflowContext,
             final String workflowName,
             final int workflowVersion,
+            final String queueName,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter) {
-        this.workflowContext = requireNonNull(workflowContext);
-        this.workflowName = workflowName;
+        this.workflowContext = requireNonNull(workflowContext, "workflowContext must not be null");
+        this.workflowName = requireNonNull(workflowName, "workflowName must not be null");
         this.workflowVersion = workflowVersion;
-        this.argumentConverter = argumentConverter;
-        this.resultConverter = resultConverter;
+        this.queueName = requireNonNull(queueName, "queueName must not be null");
+        this.argumentConverter = requireNonNull(argumentConverter, "argumentConverter must not be null");
+        this.resultConverter = requireNonNull(resultConverter, "resultConverter must not be null");
     }
 
     @Override
@@ -52,7 +55,7 @@ final class WorkflowHandleImpl<A, R> implements WorkflowHandle<A, R> {
         return workflowContext.callChildWorkflow(
                 this.workflowName,
                 this.workflowVersion,
-                options.queueName(),
+                this.queueName,
                 options.concurrencyGroupId(),
                 options.argument(),
                 argumentConverter,

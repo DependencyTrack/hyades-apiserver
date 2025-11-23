@@ -31,7 +31,7 @@ public final class MigrationExecutor {
                 .dataSource(dataSource)
                 .baselineVersion("0.0.0")
                 .baselineOnMigrate(true)
-                .table("dex_engine_schema_history")
+                .table("dex_schema_history")
                 .locations("classpath:org/dependencytrack/dex/engine/migration")
                 .loggers("slf4j")
                 .load();

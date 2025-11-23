@@ -20,27 +20,20 @@ package org.dependencytrack.dex.api;
 
 import org.jspecify.annotations.Nullable;
 
-import static java.util.Objects.requireNonNull;
-
 public record WorkflowCallOptions<A extends @Nullable Object>(
-        String queueName,
         @Nullable A argument,
         @Nullable String concurrencyGroupId) {
 
-    public WorkflowCallOptions {
-        requireNonNull(queueName, "queueName must not be null");
-    }
-
-    public WorkflowCallOptions(final String queueName) {
-        this(queueName, null, null);
+    public WorkflowCallOptions() {
+        this(null, null);
     }
 
     public WorkflowCallOptions<A> withArgument(final @Nullable A argument) {
-        return new WorkflowCallOptions<>(this.queueName, argument, this.concurrencyGroupId);
+        return new WorkflowCallOptions<>(argument, this.concurrencyGroupId);
     }
 
     public WorkflowCallOptions<A> withConcurrencyGroupId(final @Nullable String concurrencyGroupId) {
-        return new WorkflowCallOptions<>(this.queueName, this.argument, concurrencyGroupId);
+        return new WorkflowCallOptions<>(this.argument, concurrencyGroupId);
     }
 
 }

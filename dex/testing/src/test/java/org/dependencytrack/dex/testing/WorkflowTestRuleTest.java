@@ -57,6 +57,9 @@ public class WorkflowTestRuleTest {
     public static final PostgreSQLContainer<?> POSTGRES_CONTAINER =
             new PostgreSQLContainer<>(DockerImageName.parse("postgres:14-alpine"));
 
+    private static final String WORKFLOW_TASK_QUEUE = "default";
+    private static final String ACTIVITY_TASK_QUEUE = "default";
+
     @Rule
     public final WorkflowTestRule workflowTestRule = new WorkflowTestRule(POSTGRES_CONTAINER);
 
@@ -69,23 +72,20 @@ public class WorkflowTestRuleTest {
                 voidConverter(),
                 stringConverter(),
                 Duration.ofSeconds(3));
-
         engine.registerActivity(
                 new TestActivity(),
                 voidConverter(),
                 stringConverter(),
                 Duration.ofSeconds(3),
                 false);
-
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", "default", 1));
-        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", "default", 1));
-
-        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("default", 10));
-        engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("default", 10));
+        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest(WORKFLOW_TASK_QUEUE, 10));
+        engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest(ACTIVITY_TASK_QUEUE, 10));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", WORKFLOW_TASK_QUEUE, 1));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", ACTIVITY_TASK_QUEUE, 1));
 
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>(TestWorkflow.class, "default"));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>(TestWorkflow.class, WORKFLOW_TASK_QUEUE));
 
         final WorkflowRun run = workflowTestRule.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
         assertThat(run).isNotNull();
@@ -102,9 +102,8 @@ public class WorkflowTestRuleTest {
                 voidConverter(),
                 stringConverter(),
                 Duration.ofSeconds(3));
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", "default", 1));
-
-        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest("default", 10));
+        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest(WORKFLOW_TASK_QUEUE, 10));
+        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", WORKFLOW_TASK_QUEUE, 1));
 
         final var activityMock = mock(TestActivity.class);
         doReturn("mocked").when(activityMock).execute(any(ActivityContext.class), isNull());
@@ -115,13 +114,12 @@ public class WorkflowTestRuleTest {
                 stringConverter(),
                 Duration.ofSeconds(3),
                 false);
-        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", "default", 1));
-
-        engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest("default", 10));
+        engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest(ACTIVITY_TASK_QUEUE, 10));
+        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", ACTIVITY_TASK_QUEUE, 1));
 
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>(TestWorkflow.class, "default"));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>(TestWorkflow.class, WORKFLOW_TASK_QUEUE));
 
         final WorkflowRun run = workflowTestRule.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
         assertThat(run).isNotNull();
@@ -134,7 +132,10 @@ public class WorkflowTestRuleTest {
 
         @Override
         public String execute(final WorkflowContext<Void> ctx, final @Nullable Void argument) {
-            final String activityResult = ctx.activity(TestActivity.class).call(new ActivityCallOptions<>()).await();
+            final String activityResult = ctx
+                    .activity(TestActivity.class, ACTIVITY_TASK_QUEUE)
+                    .call(new ActivityCallOptions<>())
+                    .await();
             return "foo-" + activityResult;
         }
 

@@ -148,7 +148,7 @@ public final class WorkflowTestRule implements TestRule {
                             FROM pg_tables
                            WHERE schemaname = CURRENT_SCHEMA()
                              AND tablename LIKE 'dex_%'
-                             AND tablename NOT LIKE 'dex_engine_schema_%'
+                             AND tablename != 'dex_schema_history'
                         ) LOOP
                             EXECUTE 'TRUNCATE TABLE ' || QUOTE_IDENT(r.tablename) || ' CASCADE';
                         END LOOP;

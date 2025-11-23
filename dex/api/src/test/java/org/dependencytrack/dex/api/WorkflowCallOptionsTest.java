@@ -21,34 +21,25 @@ package org.dependencytrack.dex.api;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class WorkflowCallOptionsTest {
 
     @Test
     void shouldHaveExpectedDefaults() {
-        final var callOptions = new WorkflowCallOptions<>("queueName");
-        assertThat(callOptions.queueName()).isEqualTo("queueName");
+        final var callOptions = new WorkflowCallOptions<>();
         assertThat(callOptions.argument()).isNull();
         assertThat(callOptions.concurrencyGroupId()).isNull();
     }
 
     @Test
-    void shouldThrowWhenQueueNameIsNull() {
-        assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new WorkflowCallOptions<>(null))
-                .withMessage("queueName must not be null");
-    }
-
-    @Test
     void withArgumentShouldAddArgument() {
-        final var callOptions = new WorkflowCallOptions<>("queueName").withArgument("foo");
+        final var callOptions = new WorkflowCallOptions<>().withArgument("foo");
         assertThat(callOptions.argument()).isEqualTo("foo");
     }
 
     @Test
     void withConcurrencyGroupIdShouldAddConcurrencyGroupId() {
-        final var callOptions = new WorkflowCallOptions<>("queueName").withConcurrencyGroupId("foo");
+        final var callOptions = new WorkflowCallOptions<>().withConcurrencyGroupId("foo");
         assertThat(callOptions.concurrencyGroupId()).isEqualTo("foo");
     }
 

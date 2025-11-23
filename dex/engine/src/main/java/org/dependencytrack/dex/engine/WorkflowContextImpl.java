@@ -187,25 +187,29 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     @Override
     public <AA, AR> ActivityHandle<AA, AR> activity(
-            final Class<? extends ActivityExecutor<AA, AR>> activityClass) {
+            final Class<? extends ActivityExecutor<AA, AR>> activityClass,
+            final String queueName) {
         final ActivityMetadata<AA, AR> activityMetadata =
                 metadataRegistry.getActivityMetadata(activityClass);
         return new ActivityHandleImpl<>(
                 this,
                 activityMetadata.name(),
+                queueName,
                 activityMetadata.argumentConverter(),
                 activityMetadata.resultConverter());
     }
 
     @Override
     public <WA, WR> WorkflowHandle<WA, WR> workflow(
-            final Class<? extends WorkflowExecutor<WA, WR>> workflowClass) {
+            final Class<? extends WorkflowExecutor<WA, WR>> workflowClass,
+            final String queueName) {
         final WorkflowMetadata<WA, WR> workflowMetadata =
                 metadataRegistry.getWorkflowMetadata(workflowClass);
         return new WorkflowHandleImpl<>(
                 this,
                 workflowMetadata.name(),
                 workflowMetadata.version(),
+                queueName,
                 workflowMetadata.argumentConverter(),
                 workflowMetadata.resultConverter());
     }
