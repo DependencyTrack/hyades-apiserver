@@ -19,65 +19,48 @@
 package org.dependencytrack.dex.engine;
 
 import org.dependencytrack.dex.api.ActivityContext;
-import org.dependencytrack.dex.api.ActivityExecutor;
-import org.dependencytrack.dex.engine.persistence.model.ActivityTaskId;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
-final class ActivityContextImpl<T> implements ActivityContext, Closeable {
+final class ActivityContextImpl implements ActivityContext {
 
     private final DexEngineImpl engine;
-    private final String queueName;
-    private final UUID workflowRunId;
-    private final int createdEventId;
-    private final ActivityExecutor<T, ?> activityExecutor;
+    private final ActivityTaskId taskId;
     private final Duration lockTimeout;
-    private @Nullable ScheduledExecutorService heartbeatExecutor;
     private volatile Instant lockedUntil;
     private volatile boolean canceled;
 
     ActivityContextImpl(
             final DexEngineImpl engine,
-            final String queueName,
-            final UUID workflowRunId,
-            final int createdEventId,
-            final ActivityExecutor<T, ?> activityExecutor,
+            final ActivityTaskId taskId,
             final Duration lockTimeout,
-            final Instant lockedUntil,
-            final boolean heartbeatEnabled) {
+            final Instant lockedUntil) {
         this.engine = engine;
-        this.queueName = queueName;
-        this.workflowRunId = workflowRunId;
-        this.createdEventId = createdEventId;
-        this.activityExecutor = activityExecutor;
+        this.taskId = taskId;
         this.lockTimeout = lockTimeout;
         this.lockedUntil = lockedUntil;
-
-        if (heartbeatEnabled) {
-            // Heartbeat after 2/3 of the lock timeout elapsed.
-            // TODO: Signal back to the activity when heartbeat failed (Interrupt?).
-            final long heartbeatIntervalMillis = lockTimeout.minus(
-                    lockTimeout.dividedBy(3)).toMillis();
-            this.heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().factory());
-            heartbeatExecutor.scheduleAtFixedRate(
-                    this::heartbeat,
-                    heartbeatIntervalMillis,
-                    heartbeatIntervalMillis,
-                    TimeUnit.MILLISECONDS);
-        }
     }
 
     @Override
     public UUID workflowRunId() {
-        return workflowRunId;
+        return taskId.workflowRunId();
+    }
+
+    @Override
+    public boolean maybeHeartbeat() {
+        // Debounce heartbeats such that they're only emitted if the current
+        // lock is almost expired. "Almost" in this case referring to 1/3 of
+        // or less of the lock timeout remaining.
+        final Instant now = Instant.now();
+        final Instant threshold = lockedUntil.minus(lockTimeout.dividedBy(3));
+        if (now.isBefore(threshold)) {
+            return false;
+        }
+
+        lockedUntil = engine.heartbeatActivityTask(taskId, lockTimeout).join();
+        return true;
     }
 
     @Override
@@ -85,25 +68,8 @@ final class ActivityContextImpl<T> implements ActivityContext, Closeable {
         return canceled;
     }
 
-    @Override
-    public void close() {
-        if (this.heartbeatExecutor != null) {
-            this.heartbeatExecutor.close();
-        }
-    }
-
     void cancel() {
         canceled = true;
-    }
-
-    private void heartbeat() {
-        // TODO: Fail when task was not locked by this worker.
-        // TODO: Return info about workflow run so the task can
-        //  detect when run was canceled or failed.
-        this.lockedUntil = engine.heartbeatActivityTask(
-                new ActivityTaskId(queueName, workflowRunId, createdEventId), lockTimeout);
-        LoggerFactory.getLogger(activityExecutor.getClass()).debug(
-                "Lock extended to {}", this.lockedUntil);
     }
 
 }

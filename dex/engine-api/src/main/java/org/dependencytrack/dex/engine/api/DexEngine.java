@@ -81,8 +81,6 @@ public interface DexEngine extends Closeable {
      * @param argumentConverter The {@link PayloadConverter} to use for arguments.
      * @param resultConverter   The {@link PayloadConverter} to use for results.
      * @param lockTimeout       How instances of this activity shall be locked for execution.
-     * @param heartbeatEnabled  Whether the engine should send heartbeats to extend locks,
-     *                          in case the activity takes longer than expected to complete.
      * @param <A>               Type of the activity's argument.
      * @param <R>               Type of the activity's result.
      * @throws IllegalStateException When the engine was already started.
@@ -91,8 +89,7 @@ public interface DexEngine extends Closeable {
             ActivityExecutor<A, R> executor,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
-            Duration lockTimeout,
-            boolean heartbeatEnabled);
+            Duration lockTimeout);
 
     /**
      * Register a worker for activity tasks.

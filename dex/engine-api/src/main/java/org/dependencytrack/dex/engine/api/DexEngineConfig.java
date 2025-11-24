@@ -176,6 +176,7 @@ public class DexEngineConfig {
     private final CacheConfig runHistoryCache = new CacheConfig();
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
     private final BufferConfig taskCommandBufferConfig = new BufferConfig();
+    private final BufferConfig activityTaskHeartbeatBufferConfig = new BufferConfig();
     private final RetentionConfig retentionConfig = new RetentionConfig();
     private final TaskSchedulerConfig workflowTaskSchedulerConfig = new TaskSchedulerConfig();
     private final TaskSchedulerConfig activityTaskSchedulerConfig = new TaskSchedulerConfig();
@@ -218,6 +219,10 @@ public class DexEngineConfig {
      */
     public BufferConfig taskCommandBuffer() {
         return taskCommandBufferConfig;
+    }
+
+    public BufferConfig activityTaskHeartbeatBuffer() {
+        return activityTaskHeartbeatBufferConfig;
     }
 
     /**

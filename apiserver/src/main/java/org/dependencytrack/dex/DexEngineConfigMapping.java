@@ -66,6 +66,9 @@ public interface DexEngineConfigMapping {
     BufferConfigMapping taskCommandBuffer();
 
     @Valid
+    BufferConfigMapping activityTaskHeartbeatBuffer();
+
+    @Valid
     CacheConfigMapping runHistoryCache();
 
     interface DataSourceConfigMapping {

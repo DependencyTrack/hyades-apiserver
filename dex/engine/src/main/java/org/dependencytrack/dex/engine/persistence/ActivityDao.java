@@ -20,13 +20,13 @@ package org.dependencytrack.dex.engine.persistence;
 
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.PageToken;
+import org.dependencytrack.dex.engine.ActivityTaskId;
 import org.dependencytrack.dex.engine.api.ActivityTaskQueue;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.persistence.command.CreateActivityTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollActivityTaskCommand;
-import org.dependencytrack.dex.engine.persistence.model.ActivityTaskId;
 import org.dependencytrack.dex.engine.persistence.model.PolledActivityTask;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.Query;
@@ -284,33 +284,6 @@ public final class ActivityDao extends AbstractDao {
                 .bind("limit", limit)
                 .mapTo(PolledActivityTask.class)
                 .list();
-    }
-
-    public @Nullable Instant extendActivityTaskLock(
-            final UUID workerInstanceId,
-            final ActivityTaskId activityTask,
-            final Duration lockTimeout) {
-        final Update update = jdbiHandle.createUpdate("""
-                update dex_activity_task
-                   set locked_until = locked_until + :lockTimeout
-                     , updated_at = now()
-                 where queue_name = :queueName
-                   and workflow_run_id = :workflowRunId
-                   and created_event_id = :createdEventId
-                   and locked_by = :workerInstanceId
-                returning locked_until
-                """);
-
-        return update
-                .bind("workerInstanceId", workerInstanceId.toString())
-                .bind("queueName", activityTask.queueName())
-                .bind("workflowRunId", activityTask.workflowRunId())
-                .bind("createdEventId", activityTask.createdEventId())
-                .bind("lockTimeout", lockTimeout)
-                .executeAndReturnGeneratedKeys("locked_until")
-                .mapTo(Instant.class)
-                .findOne()
-                .orElse(null);
     }
 
     public int unlockActivityTasks(final UUID workerInstanceId, final List<ActivityTaskId> activityTasks) {

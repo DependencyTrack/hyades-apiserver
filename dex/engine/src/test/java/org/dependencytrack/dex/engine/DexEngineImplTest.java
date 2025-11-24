@@ -908,6 +908,31 @@ class DexEngineImplTest {
     }
 
     @Test
+    void shouldHeartbeatActivity() {
+        final var heartbeatsPerformed = new ArrayBlockingQueue<Boolean>(3);
+
+        registerWorkflow("test", (ctx, arg) -> {
+            ctx.callActivity("test", ACTIVITY_TASK_QUEUE, null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
+            return null;
+        });
+        registerActivity("test", (ctx, arg) -> {
+            heartbeatsPerformed.add(ctx.maybeHeartbeat());
+            Thread.sleep(3_500);
+            heartbeatsPerformed.add(ctx.maybeHeartbeat());
+            heartbeatsPerformed.add(ctx.maybeHeartbeat());
+            return null;
+        });
+        registerWorkflowWorker("workflow-worker", 1);
+        registerActivityWorker("activity-worker", 1);
+        engine.start();
+
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1, WORKFLOW_TASK_QUEUE));
+        awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThat(heartbeatsPerformed).containsExactly(false, true, false);
+    }
+
+    @Test
     void shouldCancelActivitiesDuringGracefulShutdown() throws Exception {
         final var activityStarted = new AtomicBoolean(false);
         final var activityCanceled = new AtomicBoolean(false);
@@ -1436,7 +1461,7 @@ class DexEngineImplTest {
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final ActivityExecutor<A, R> executor) {
-        engine.registerActivityInternal(name, argumentConverter, resultConverter, Duration.ofSeconds(5), false, executor);
+        engine.registerActivityInternal(name, argumentConverter, resultConverter, Duration.ofSeconds(5), executor);
     }
 
     private void registerActivity(final String name, final ActivityExecutor<Void, Void> executor) {

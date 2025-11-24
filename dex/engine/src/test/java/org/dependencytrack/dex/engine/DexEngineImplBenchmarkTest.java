@@ -151,9 +151,9 @@ public class DexEngineImplBenchmarkTest {
 
         engine = new DexEngineImpl(engineConfig);
         engine.registerWorkflow(new TestWorkflow(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
-        engine.registerActivity(new TestActivityFoo(), voidConverter(), voidConverter(), Duration.ofSeconds(5), false);
-        engine.registerActivity(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5), false);
-        engine.registerActivity(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5), false);
+        engine.registerActivity(new TestActivityFoo(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
+        engine.registerActivity(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
+        engine.registerActivity(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
 
         engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest(WORKFLOW_QUEUE_NAME, 1000));
         engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest(ACTIVITY_QUEUE_NAME, 1000));

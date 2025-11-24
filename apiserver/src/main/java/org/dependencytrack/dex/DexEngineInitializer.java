@@ -131,6 +131,9 @@ public final class DexEngineInitializer implements ServletContextListener {
         engineConfig.externalEventBuffer().setFlushInterval(configMapping.externalEventBuffer().flushInterval());
         engineConfig.externalEventBuffer().setMaxBatchSize(configMapping.externalEventBuffer().maxSize());
 
+        engineConfig.activityTaskHeartbeatBuffer().setFlushInterval(configMapping.activityTaskHeartbeatBuffer().flushInterval());
+        engineConfig.activityTaskHeartbeatBuffer().setMaxBatchSize(configMapping.activityTaskHeartbeatBuffer().maxSize());
+
         engineConfig.runHistoryCache().setEvictAfterAccess(configMapping.runHistoryCache().ttl());
         engineConfig.runHistoryCache().setMaxSize(configMapping.runHistoryCache().maxSize());
 

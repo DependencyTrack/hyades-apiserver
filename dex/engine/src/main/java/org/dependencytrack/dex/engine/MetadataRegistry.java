@@ -50,8 +50,7 @@ final class MetadataRegistry {
             ActivityExecutor<A, R> executor,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
-            Duration lockTimeout,
-            boolean heartbeatEnabled) {
+            Duration lockTimeout) {
     }
 
     private static final Pattern WORKFLOW_NAME_PATTERN = Pattern.compile("^[\\w-]+");
@@ -75,9 +74,6 @@ final class MetadataRegistry {
             final PayloadConverter<R> resultConverter,
             final Duration lockTimeout) {
         requireNonNull(executor, "executor must not be null");
-        requireNonNull(argumentConverter, "argumentConverter must not be null");
-        requireNonNull(resultConverter, "resultConverter must not be null");
-        requireNonNull(lockTimeout, "lockTimeout must not be null");
 
         final Workflow workflowAnnotation = executor.getClass().getAnnotation(Workflow.class);
         if (workflowAnnotation == null) {
@@ -102,6 +98,10 @@ final class MetadataRegistry {
             final WorkflowExecutor<A, R> executor) {
         requireValidWorkflowName(name);
         requireValidWorkflowVersion(version);
+        requireNonNull(argumentConverter, "argumentConverter must not be null");
+        requireNonNull(resultConverter, "resultConverter must not be null");
+        requireValidLockTimeout(lockTimeout);
+        requireNonNull(executor, "executor must not be null");
 
         if (workflowNameByExecutorClass.containsKey(executor.getClass())) {
             throw new IllegalArgumentException(
@@ -128,12 +128,8 @@ final class MetadataRegistry {
             final ActivityExecutor<A, R> executor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final Duration lockTimeout,
-            final boolean heartbeatEnabled) {
+            final Duration lockTimeout) {
         requireNonNull(executor, "executor must not be null");
-        requireNonNull(argumentConverter, "argumentConverter must not be null");
-        requireNonNull(resultConverter, "resultConverter must not be null");
-        requireNonNull(lockTimeout, "lockTimeout must not be null");
 
         final Activity activityAnnotation = executor.getClass().getAnnotation(Activity.class);
         if (activityAnnotation == null) {
@@ -145,7 +141,6 @@ final class MetadataRegistry {
                 argumentConverter,
                 resultConverter,
                 lockTimeout,
-                heartbeatEnabled,
                 executor);
     }
 
@@ -154,9 +149,12 @@ final class MetadataRegistry {
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration lockTimeout,
-            final boolean heartbeatEnabled,
             final ActivityExecutor<A, R> executor) {
         requireValidActivityName(name);
+        requireNonNull(argumentConverter, "argumentConverter must not be null");
+        requireNonNull(resultConverter, "resultConverter must not be null");
+        requireValidLockTimeout(lockTimeout);
+        requireNonNull(executor, "executor must not be null");
 
         if (activityNameByExecutorClass.containsKey(executor.getClass())) {
             throw new IllegalArgumentException(
@@ -173,8 +171,7 @@ final class MetadataRegistry {
                 executor,
                 argumentConverter,
                 resultConverter,
-                lockTimeout,
-                heartbeatEnabled);
+                lockTimeout);
         activityNameByExecutorClass.put(executor.getClass(), name);
         activityMetadataByName.put(name, metadata);
     }
@@ -270,6 +267,13 @@ final class MetadataRegistry {
     private static void requireValidActivityName(final String activityName) {
         if (!ACTIVITY_NAME_PATTERN.matcher(activityName).matches()) {
             throw new IllegalArgumentException("activityName must match " + ACTIVITY_NAME_PATTERN.pattern());
+        }
+    }
+
+    private static void requireValidLockTimeout(final Duration lockTimeout) {
+        requireNonNull(lockTimeout, "lockTimeout must not be null");
+        if (lockTimeout.compareTo(Duration.ofSeconds(5)) < 0) {
+            throw new IllegalArgumentException("lockTimeout must be at least 5 seconds");
         }
     }
 

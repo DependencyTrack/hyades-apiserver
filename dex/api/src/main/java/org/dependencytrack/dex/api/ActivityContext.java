@@ -27,9 +27,20 @@ import java.util.concurrent.CancellationException;
 public interface ActivityContext {
 
     /**
-     * @return ID of the workflow run that this activity run is part of.
+     * @return ID of the workflow run that this activity execution is part of.
      */
     UUID workflowRunId();
+
+    /**
+     * Emit a heartbeat to signal to the engine that the activity is still being worked on.
+     * <p>
+     * This method is safe to call frequently. It is up to the engine to decide
+     * whether a heartbeat is actually emitted or dropped if deemed unnecessary.
+     *
+     * @return {@code true} when a heartbeat was emitted and succeeded,
+     * or {@code false} when no heartbeat was emitted.
+     */
+    boolean maybeHeartbeat();
 
     /**
      * @return Whether the activity execution was requested to be cancelled,

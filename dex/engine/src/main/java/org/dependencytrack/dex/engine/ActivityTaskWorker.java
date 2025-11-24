@@ -39,7 +39,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
     private final MetadataRegistry metadataRegistry;
     private final String queueName;
     private final List<PollActivityTaskCommand> pollCommands;
-    private final Set<ActivityContextImpl<?>> activeContexts;
+    private final Set<ActivityContextImpl> activeContexts;
 
     ActivityTaskWorker(
             final DexEngineImpl engine,
@@ -76,24 +76,17 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
             return;
         }
 
-        final var ctx = new ActivityContextImpl<>(
+        final var ctx = new ActivityContextImpl(
                 engine,
-                task.queueName(),
-                task.workflowRunId(),
-                task.createdEventId(),
-                activityMetadata.executor(),
+                new ActivityTaskId(task.queueName(), task.workflowRunId(), task.createdEventId()),
                 activityMetadata.lockTimeout(),
-                task.lockedUntil(),
-                activityMetadata.heartbeatEnabled());
+                task.lockedUntil());
         final var arg = activityMetadata.argumentConverter().convertFromPayload(task.argument());
 
         activeContexts.add(ctx);
         try {
-            final Payload result;
-            try (ctx) {
-                final Object activityResult = activityMetadata.executor().execute(ctx, arg);
-                result = activityMetadata.resultConverter().convertToPayload(activityResult);
-            }
+            final Object activityResult = activityMetadata.executor().execute(ctx, arg);
+            final Payload result = activityMetadata.resultConverter().convertToPayload(activityResult);
 
             try {
                 // TODO: Retry on TimeoutException
@@ -134,7 +127,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
 
     @Override
     public void close() {
-        for (final ActivityContextImpl<?> ctx : activeContexts) {
+        for (final ActivityContextImpl ctx : activeContexts) {
             ctx.cancel();
         }
 

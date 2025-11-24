@@ -72,7 +72,6 @@ import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowRunInbox
 import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunCommand;
 import org.dependencytrack.dex.engine.persistence.jdbi.JdbiFactory;
-import org.dependencytrack.dex.engine.persistence.model.ActivityTaskId;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
@@ -91,6 +90,7 @@ import org.dependencytrack.dex.proto.event.v1.RunSuspended;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.statement.Update;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -161,6 +161,7 @@ final class DexEngineImpl implements DexEngine {
     private @Nullable ExecutorService eventListenerExecutor;
     private @Nullable Buffer<ExternalEvent> externalEventBuffer;
     private @Nullable Buffer<TaskCommand> taskCommandBuffer;
+    private @Nullable Buffer<ActivityTaskHeartbeat> activityTaskHeartbeatBuffer;
     private @Nullable RetentionWorker retentionWorker;
     private @Nullable Cache<UUID, CachedWorkflowRunHistory> runHistoryCache;
 
@@ -240,6 +241,15 @@ final class DexEngineImpl implements DexEngine {
                 config.taskCommandBuffer().maxBatchSize(),
                 config.meterRegistry());
         taskCommandBuffer.start();
+
+        LOGGER.debug("Starting activity task heartbeat buffer");
+        activityTaskHeartbeatBuffer = new Buffer<>(
+                "activity-task-heartbeat",
+                this::processActivityTaskHeartbeats,
+                config.activityTaskHeartbeatBuffer().flushInterval(),
+                config.activityTaskHeartbeatBuffer().maxBatchSize(),
+                config.meterRegistry());
+        activityTaskHeartbeatBuffer.start();
 
         if (config.retention().isWorkerEnabled()) {
             LOGGER.debug("Starting retention worker");
@@ -374,10 +384,9 @@ final class DexEngineImpl implements DexEngine {
             final ActivityExecutor<A, R> activityExecutor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final Duration lockTimeout,
-            boolean heartbeatEnabled) {
+            final Duration lockTimeout) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.registerActivity(activityExecutor, argumentConverter, resultConverter, lockTimeout, heartbeatEnabled);
+        metadataRegistry.registerActivity(activityExecutor, argumentConverter, resultConverter, lockTimeout);
     }
 
     <A, R> void registerActivityInternal(
@@ -385,10 +394,9 @@ final class DexEngineImpl implements DexEngine {
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration lockTimeout,
-            final boolean heartbeatEnabled,
             final ActivityExecutor<A, R> activityExecutor) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.registerActivity(activityName, argumentConverter, resultConverter, lockTimeout, heartbeatEnabled, activityExecutor);
+        metadataRegistry.registerActivity(activityName, argumentConverter, resultConverter, lockTimeout, activityExecutor);
     }
 
     @Override
@@ -1217,17 +1225,89 @@ final class DexEngineImpl implements DexEngine {
                 createdInboxEvents, inboxEventsToCreate.size());
     }
 
-    Instant heartbeatActivityTask(final ActivityTaskId taskId, final Duration lockTimeout) {
-        return jdbi.inTransaction(handle -> {
-            final Instant newLockedUntil = new ActivityDao(handle).extendActivityTaskLock(
-                    this.config.instanceId(), taskId, lockTimeout);
-            if (newLockedUntil == null) {
-                throw new IllegalStateException(
-                        "Lock of activity task %s was not extended; Did we lose the lock already?".formatted(taskId));
+    CompletableFuture<Instant> heartbeatActivityTask(
+            final ActivityTaskId taskId,
+            final Duration lockTimeout) {
+        final var future = new CompletableFuture<Instant>();
+        final var heartbeat = new ActivityTaskHeartbeat(taskId, lockTimeout, future);
+
+        try {
+            activityTaskHeartbeatBuffer.add(heartbeat);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            future.completeExceptionally(e);
+        } catch (TimeoutException e) {
+            future.completeExceptionally(e);
+        }
+
+        return future;
+    }
+
+    private void processActivityTaskHeartbeats(final List<ActivityTaskHeartbeat> heartbeats) {
+        // TODO: Complete all futures exceptionally when transaction fails.
+        final Map<ActivityTaskId, Instant> lockedUntilByTaskId = jdbi.inTransaction(handle -> {
+            final Update update = handle.createUpdate("""
+                    update dex_activity_task as task
+                       set locked_until = locked_until + t.lock_timeout
+                         , updated_at = now()
+                      from unnest(:queueNames, :workflowRunIds, :createdEventIds, :lockTimeouts)
+                        as t(queue_name, workflow_run_id, created_event_id, lock_timeout)
+                     where task.queue_name = t.queue_name
+                       and task.workflow_run_id = t.workflow_run_id
+                       and task.created_event_id = t.created_event_id
+                       and task.locked_by = :workerInstanceId
+                    returning task.queue_name
+                            , task.workflow_run_id
+                            , task.created_event_id
+                            , task.locked_until
+                    """);
+
+            final var queueNames = new String[heartbeats.size()];
+            final var workflowRunIds = new UUID[heartbeats.size()];
+            final var createdEventIds = new int[heartbeats.size()];
+            final var lockTimeouts = new Duration[heartbeats.size()];
+
+            int i = 0;
+            for (final ActivityTaskHeartbeat heartbeat : heartbeats) {
+                queueNames[i] = heartbeat.taskId().queueName();
+                workflowRunIds[i] = heartbeat.taskId().workflowRunId();
+                createdEventIds[i] = heartbeat.taskId().createdEventId();
+                lockTimeouts[i] = heartbeat.lockTimeout();
+                i++;
             }
 
-            return newLockedUntil;
+            return update
+                    .bind("workerInstanceId", config.instanceId().toString())
+                    .bind("queueNames", queueNames)
+                    .bind("workflowRunIds", workflowRunIds)
+                    .bind("createdEventIds", createdEventIds)
+                    .bind("lockTimeouts", lockTimeouts)
+                    .executeAndReturnGeneratedKeys("locked_until")
+                    .map((rs, ctx) -> Map.entry(
+                            new ActivityTaskId(
+                                    rs.getString("queue_name"),
+                                    rs.getObject("workflow_run_id", UUID.class),
+                                    rs.getInt("created_event_id")),
+                            ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "locked_until", ctx)))
+                    .collectToMap(Map.Entry::getKey, Map.Entry::getValue);
         });
+
+        final Map<ActivityTaskId, CompletableFuture<Instant>> futureByTaskId = heartbeats.stream()
+                .collect(Collectors.toMap(
+                        ActivityTaskHeartbeat::taskId,
+                        ActivityTaskHeartbeat::future));
+
+        for (final var entry : futureByTaskId.entrySet()) {
+            final ActivityTaskId taskId = entry.getKey();
+            final CompletableFuture<Instant> future = entry.getValue();
+
+            final Instant lockedUntil = lockedUntilByTaskId.get(taskId);
+            if (lockedUntil != null) {
+                future.complete(lockedUntil);
+            } else {
+                future.completeExceptionally(new IllegalStateException());
+            }
+        }
     }
 
     private void executeTaskCommands(final List<TaskCommand> commands) {

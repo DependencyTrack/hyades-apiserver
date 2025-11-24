@@ -76,8 +76,7 @@ public class WorkflowTestRuleTest {
                 new TestActivity(),
                 voidConverter(),
                 stringConverter(),
-                Duration.ofSeconds(3),
-                false);
+                Duration.ofSeconds(3));
         engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest(WORKFLOW_TASK_QUEUE, 10));
         engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest(ACTIVITY_TASK_QUEUE, 10));
         engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", WORKFLOW_TASK_QUEUE, 1));
@@ -112,8 +111,7 @@ public class WorkflowTestRuleTest {
                 activityMock,
                 voidConverter(),
                 stringConverter(),
-                Duration.ofSeconds(3),
-                false);
+                Duration.ofSeconds(3));
         engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest(ACTIVITY_TASK_QUEUE, 10));
         engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", ACTIVITY_TASK_QUEUE, 1));
 
