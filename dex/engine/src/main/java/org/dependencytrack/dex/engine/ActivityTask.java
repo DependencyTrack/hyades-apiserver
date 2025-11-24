@@ -24,23 +24,10 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.Set;
-import java.util.UUID;
 
-/**
- * Unit of work for the execution of an activity.
- *
- * @param workflowRunId  ID of the workflow run the activity belongs to.
- * @param createdEventId ID of the event that created the activity execution.
- * @param activityName   Name of the activity.
- * @param queueName      Name of the queue.
- * @param argument       Argument of the activity.
- * @param lockedUntil    Timestamp until when the activity is locked for execution.
- */
 record ActivityTask(
-        UUID workflowRunId,
-        int createdEventId,
+        ActivityTaskId id,
         String activityName,
-        String queueName,
         @Nullable Payload argument,
         Instant lockedUntil) implements Task {
 

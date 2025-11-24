@@ -21,6 +21,9 @@ package org.dependencytrack.dex.engine;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.dependencytrack.dex.engine.MetadataRegistry.ActivityMetadata;
+import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskAbandonedEvent;
+import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskCompletedEvent;
+import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskFailedEvent;
 import org.dependencytrack.dex.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 
@@ -78,7 +81,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
 
         final var ctx = new ActivityContextImpl(
                 engine,
-                new ActivityTaskId(task.queueName(), task.workflowRunId(), task.createdEventId()),
+                task.id(),
                 activityMetadata.lockTimeout(),
                 task.lockedUntil());
         final var arg = activityMetadata.argumentConverter().convertFromPayload(task.argument());
@@ -90,7 +93,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
 
             try {
                 // TODO: Retry on TimeoutException
-                engine.completeActivityTask(task, result).join();
+                engine.onTaskEvent(new ActivityTaskCompletedEvent(task.id(), result)).join();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 logger.warn("Interrupted while waiting for task completion to be acknowledged", e);
@@ -100,7 +103,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
         } catch (Exception e) {
             try {
                 // TODO: Retry on TimeoutException
-                engine.failActivityTask(task, e).join();
+                engine.onTaskEvent(new ActivityTaskFailedEvent(task.id(), e)).join();
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 logger.warn("Interrupted while waiting for task failure to be acknowledged", ex);
@@ -116,7 +119,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
     void abandon(final ActivityTask task) {
         try {
             // TODO: Retry on TimeoutException
-            engine.abandonActivityTask(task).join();
+            engine.onTaskEvent(new ActivityTaskAbandonedEvent(task.id())).join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             logger.warn("Interrupted while waiting for task abandonment to be acknowledged", e);

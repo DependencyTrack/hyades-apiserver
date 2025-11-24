@@ -70,7 +70,10 @@ public final class Buffer<T> implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Buffer.class);
 
-    private record BufferedItem<I>(I item, CompletableFuture<@Nullable Void> future) {
+    private record BufferedItem<I>(
+            I item,
+            long addedAtNanos,
+            CompletableFuture<@Nullable Void> future) {
     }
 
     private final String name;
@@ -86,6 +89,7 @@ public final class Buffer<T> implements Closeable {
     private final MeterRegistry meterRegistry;
     private Status status = Status.CREATED;
     private @Nullable DistributionSummary batchSizeDistribution;
+    private @Nullable Timer itemWaitLatencyTimer;
     private @Nullable Timer flushLatencyTimer;
 
     public Buffer(
@@ -132,6 +136,10 @@ public final class Buffer<T> implements Closeable {
                 .builder("dt.dex.engine.buffer.flush.batch.size")
                 .tags(commonMeterTags)
                 .register(meterRegistry);
+        itemWaitLatencyTimer = Timer
+                .builder("dt.dex.engine.buffer.item.wait.latency")
+                .tags(commonMeterTags)
+                .register(meterRegistry);
         flushLatencyTimer = Timer
                 .builder("dt.dex.engine.buffer.flush.latency")
                 .tags(commonMeterTags)
@@ -174,8 +182,9 @@ public final class Buffer<T> implements Closeable {
         }
 
         final CompletableFuture<Void> future = new CompletableFuture<>();
+
         final boolean added = itemsQueue.offer(
-                new BufferedItem<>(item, future),
+                new BufferedItem<>(item, System.nanoTime(), future),
                 itemsQueueTimeout.toMillis(),
                 TimeUnit.MILLISECONDS);
         if (!added) {
@@ -196,35 +205,30 @@ public final class Buffer<T> implements Closeable {
             }
 
             itemsQueue.drainTo(currentBatch, maxBatchSize);
-
-            if (batchSizeDistribution != null) {
-                batchSizeDistribution.record(currentBatch.size());
-            }
+            batchSizeDistribution.record(currentBatch.size());
 
             LOGGER.debug("{}: Flushing batch of {} items", name, currentBatch.size());
             final Timer.Sample flushLatencySample = Timer.start();
             try {
                 batchConsumer.accept(currentBatch.stream().map(BufferedItem::item).collect(Collectors.toList()));
-                for (final BufferedItem<T> bufferedItem : currentBatch) {
-                    bufferedItem.future().complete(null);
+
+                final long nowNanos = System.nanoTime();
+                for (final BufferedItem<T> item : currentBatch) {
+                    item.future().complete(null);
+                    itemWaitLatencyTimer.record(
+                            nowNanos - item.addedAtNanos(),
+                            TimeUnit.NANOSECONDS);
                 }
             } catch (Throwable e) {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("{}: Flush of {} items failed", name, currentBatch.size(), e);
-                }
-
+                final long nowNanos = System.nanoTime();
                 for (final BufferedItem<T> item : currentBatch) {
                     item.future().completeExceptionally(e);
+                    itemWaitLatencyTimer.record(
+                            nowNanos - item.addedAtNanos(),
+                            TimeUnit.NANOSECONDS);
                 }
             } finally {
-                if (flushLatencyTimer != null) {
-                    final long latencyNanos = flushLatencySample.stop(flushLatencyTimer);
-                    if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("{}: Flush of {} items completed in {}",
-                                name, currentBatch.size(), Duration.ofNanos(latencyNanos));
-                    }
-                }
-
+                flushLatencySample.stop(flushLatencyTimer);
                 currentBatch.clear();
             }
         } finally {

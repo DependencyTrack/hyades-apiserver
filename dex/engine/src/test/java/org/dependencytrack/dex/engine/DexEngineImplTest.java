@@ -1403,7 +1403,7 @@ class DexEngineImplTest {
                     Map.ofEntries(
                             Map.entry("internalStatus", "RUNNING"),
                             Map.entry("buffer:external-event", "RUNNING"),
-                            Map.entry("buffer:task-command", "RUNNING")));
+                            Map.entry("buffer:task-event", "RUNNING")));
         }
 
         @Test

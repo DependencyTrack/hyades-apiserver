@@ -33,7 +33,7 @@ public class DexEngineConfig {
 
     public static class BufferConfig {
 
-        private Duration flushInterval = Duration.ofMillis(5);
+        private Duration flushInterval = Duration.ofMillis(100);
         private int maxBatchSize = 100;
 
         private BufferConfig() {
@@ -175,7 +175,7 @@ public class DexEngineConfig {
     private final DataSource dataSource;
     private final CacheConfig runHistoryCache = new CacheConfig();
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
-    private final BufferConfig taskCommandBufferConfig = new BufferConfig();
+    private final BufferConfig taskEventsBufferConfig = new BufferConfig();
     private final BufferConfig activityTaskHeartbeatBufferConfig = new BufferConfig();
     private final RetentionConfig retentionConfig = new RetentionConfig();
     private final TaskSchedulerConfig workflowTaskSchedulerConfig = new TaskSchedulerConfig();
@@ -215,10 +215,10 @@ public class DexEngineConfig {
     }
 
     /**
-     * @return Config for the buffer of task commands.
+     * @return Config for the buffer of task events.
      */
-    public BufferConfig taskCommandBuffer() {
-        return taskCommandBufferConfig;
+    public BufferConfig taskEventBuffer() {
+        return taskEventsBufferConfig;
     }
 
     public BufferConfig activityTaskHeartbeatBuffer() {

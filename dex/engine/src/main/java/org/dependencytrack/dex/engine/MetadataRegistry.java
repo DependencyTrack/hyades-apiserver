@@ -272,8 +272,8 @@ final class MetadataRegistry {
 
     private static void requireValidLockTimeout(final Duration lockTimeout) {
         requireNonNull(lockTimeout, "lockTimeout must not be null");
-        if (lockTimeout.compareTo(Duration.ofSeconds(5)) < 0) {
-            throw new IllegalArgumentException("lockTimeout must be at least 5 seconds");
+        if (!lockTimeout.isPositive()) {
+            throw new IllegalArgumentException("lockTimeout must positive");
         }
     }
 

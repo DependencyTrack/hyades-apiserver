@@ -30,11 +30,11 @@ import org.dependencytrack.dex.api.ActivityExecutor;
 import org.dependencytrack.dex.api.WorkflowExecutor;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
 import org.dependencytrack.dex.engine.MetadataRegistry.WorkflowMetadata;
-import org.dependencytrack.dex.engine.TaskCommand.AbandonActivityTaskCommand;
-import org.dependencytrack.dex.engine.TaskCommand.AbandonWorkflowTaskCommand;
-import org.dependencytrack.dex.engine.TaskCommand.CompleteActivityTaskCommand;
-import org.dependencytrack.dex.engine.TaskCommand.CompleteWorkflowTaskCommand;
-import org.dependencytrack.dex.engine.TaskCommand.FailActivityTaskCommand;
+import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskAbandonedEvent;
+import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskCompletedEvent;
+import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskFailedEvent;
+import org.dependencytrack.dex.engine.TaskEvent.WorkflowTaskAbandonedEvent;
+import org.dependencytrack.dex.engine.TaskEvent.WorkflowTaskCompletedEvent;
 import org.dependencytrack.dex.engine.api.ActivityTaskQueue;
 import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngine;
@@ -160,7 +160,7 @@ final class DexEngineImpl implements DexEngine {
     private @Nullable ActivityTaskScheduler activityTaskScheduler;
     private @Nullable ExecutorService eventListenerExecutor;
     private @Nullable Buffer<ExternalEvent> externalEventBuffer;
-    private @Nullable Buffer<TaskCommand> taskCommandBuffer;
+    private @Nullable Buffer<TaskEvent> taskEventBuffer;
     private @Nullable Buffer<ActivityTaskHeartbeat> activityTaskHeartbeatBuffer;
     private @Nullable RetentionWorker retentionWorker;
     private @Nullable Cache<UUID, CachedWorkflowRunHistory> runHistoryCache;
@@ -231,16 +231,16 @@ final class DexEngineImpl implements DexEngine {
         // for more than one task result to be included, but short enough
         // to not block task execution unnecessarily. In a worst-case scenario,
         // task workers can be blocked for an entire flush interval.
-        // TODO: Separate buffer for workflow commands from buffer for activity commands?
+        // TODO: Separate buffer for workflow task events from buffer for activity task events?
         //  Workflow tasks usually complete a lot faster than activity tasks.
-        LOGGER.debug("Starting task command buffer");
-        taskCommandBuffer = new Buffer<>(
-                "task-command",
-                this::executeTaskCommands,
-                config.taskCommandBuffer().flushInterval(),
-                config.taskCommandBuffer().maxBatchSize(),
+        LOGGER.debug("Starting task event buffer");
+        taskEventBuffer = new Buffer<>(
+                "task-event",
+                this::flushTaskEvents,
+                config.taskEventBuffer().flushInterval(),
+                config.taskEventBuffer().maxBatchSize(),
                 config.meterRegistry());
-        taskCommandBuffer.start();
+        taskEventBuffer.start();
 
         LOGGER.debug("Starting activity task heartbeat buffer");
         activityTaskHeartbeatBuffer = new Buffer<>(
@@ -313,10 +313,10 @@ final class DexEngineImpl implements DexEngine {
             externalEventBuffer = null;
         }
 
-        if (taskCommandBuffer != null) {
-            LOGGER.debug("Waiting for task command buffer to stop");
-            taskCommandBuffer.close();
-            taskCommandBuffer = null;
+        if (taskEventBuffer != null) {
+            LOGGER.debug("Waiting for task event buffer to stop");
+            taskEventBuffer.close();
+            taskEventBuffer = null;
         }
 
         if (eventListenerExecutor != null) {
@@ -345,9 +345,9 @@ final class DexEngineImpl implements DexEngine {
             isUp &= externalEventBuffer.status() == Buffer.Status.RUNNING;
             responseBuilder.withData("buffer:" + externalEventBuffer.name(), externalEventBuffer.status().name());
         }
-        if (taskCommandBuffer != null) {
-            isUp &= taskCommandBuffer.status() == Buffer.Status.RUNNING;
-            responseBuilder.withData("buffer:" + taskCommandBuffer.name(), taskCommandBuffer.status().name());
+        if (taskEventBuffer != null) {
+            isUp &= taskEventBuffer.status() == Buffer.Status.RUNNING;
+            responseBuilder.withData("buffer:" + taskEventBuffer.name(), taskEventBuffer.status().name());
         }
 
         for (final Map.Entry<String, TaskWorker> entry : taskWorkerByName.entrySet()) {
@@ -746,6 +746,10 @@ final class DexEngineImpl implements DexEngine {
         return jdbi.withHandle(handle -> new ActivityDao(handle).listActivityTaskQueues(request));
     }
 
+    CompletableFuture<Void> onTaskEvent(final TaskEvent taskEvent) throws InterruptedException, TimeoutException {
+        return taskEventBuffer.add(taskEvent);
+    }
+
     private void flushExternalEvents(final List<ExternalEvent> externalEvents) {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
@@ -849,20 +853,15 @@ final class DexEngineImpl implements DexEngine {
         });
     }
 
-    CompletableFuture<Void> abandonWorkflowTask(
-            final WorkflowTask task) throws InterruptedException, TimeoutException {
-        return taskCommandBuffer.add(new AbandonWorkflowTaskCommand(task));
-    }
-
     private void abandonWorkflowTasksInternal(
             final WorkflowDao dao,
-            final Collection<AbandonWorkflowTaskCommand> abandonCommands) {
+            final Collection<WorkflowTaskAbandonedEvent> events) {
         // TODO: Make this configurable on a per-workflow basis.
         final IntervalFunction abandonDelayIntervalFunction =
                 IntervalFunction.ofExponentialBackoff(
                         Duration.ofSeconds(5), 1.5, Duration.ofMinutes(30));
 
-        final List<UnlockWorkflowRunInboxEventsCommand> unlockCommands = abandonCommands.stream()
+        final List<UnlockWorkflowRunInboxEventsCommand> unlockCommands = events.stream()
                 .map(abandonCommand -> {
                     final Duration visibilityDelay = Duration.ofMillis(
                             abandonDelayIntervalFunction.apply(abandonCommand.task().attempt() + 1));
@@ -876,26 +875,21 @@ final class DexEngineImpl implements DexEngine {
 
         final int unlockedWorkflowRuns = dao.unlockWorkflowTasks(
                 this.config.instanceId(),
-                abandonCommands.stream()
+                events.stream()
                         .map(abandonCommand -> new UnlockWorkflowTaskCommand(
                                 abandonCommand.task().queueName(),
                                 abandonCommand.task().workflowRunId()))
                         .toList());
-        assert unlockedWorkflowRuns == abandonCommands.size();
-    }
-
-    CompletableFuture<Void> completeWorkflowTask(
-            final WorkflowRunState workflowRunState) throws InterruptedException, TimeoutException {
-        return taskCommandBuffer.add(new CompleteWorkflowTaskCommand(workflowRunState));
+        assert unlockedWorkflowRuns == events.size();
     }
 
     private void completeWorkflowTasksInternal(
             final WorkflowDao workflowDao,
             final ActivityDao activityDao,
-            final Collection<CompleteWorkflowTaskCommand> commands,
+            final Collection<WorkflowTaskCompletedEvent> events,
             final Collection<DexEngineEvent> engineEvents) {
-        final List<WorkflowRunState> actionableRuns = commands.stream()
-                .map(CompleteWorkflowTaskCommand::workflowRunState)
+        final List<WorkflowRunState> actionableRuns = events.stream()
+                .map(WorkflowTaskCompletedEvent::workflowRunState)
                 .collect(Collectors.toList());
 
         final List<UUID> updatedRunIds = workflowDao.updateAndUnlockRuns(
@@ -912,9 +906,9 @@ final class DexEngineImpl implements DexEngine {
                                 run.completedAt()))
                         .toList());
 
-        if (updatedRunIds.size() != commands.size()) {
-            final Set<UUID> notUpdatedRunIds = commands.stream()
-                    .map(CompleteWorkflowTaskCommand::workflowRunState)
+        if (updatedRunIds.size() != events.size()) {
+            final Set<UUID> notUpdatedRunIds = events.stream()
+                    .map(WorkflowTaskCompletedEvent::workflowRunState)
                     .map(WorkflowRunState::id)
                     .filter(runId -> !updatedRunIds.contains(runId))
                     .collect(Collectors.toSet());
@@ -929,8 +923,8 @@ final class DexEngineImpl implements DexEngine {
             actionableRuns.removeIf(run -> notUpdatedRunIds.contains(run.id()));
         }
 
-        final var createHistoryEntryCommands = new ArrayList<CreateWorkflowRunHistoryEntryCommand>(commands.size() * 2);
-        final var createInboxEntryCommands = new ArrayList<CreateWorkflowRunInboxEntryCommand>(commands.size() * 2);
+        final var createHistoryEntryCommands = new ArrayList<CreateWorkflowRunHistoryEntryCommand>(events.size() * 2);
+        final var createInboxEntryCommands = new ArrayList<CreateWorkflowRunInboxEntryCommand>(events.size() * 2);
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>();
         final var continuedAsNewRunIds = new ArrayList<UUID>();
         final var createActivityTaskCommands = new ArrayList<CreateActivityTaskCommand>();
@@ -1107,71 +1101,51 @@ final class DexEngineImpl implements DexEngine {
                             commands,
                             limit).stream()
                     .map(polledTask -> new ActivityTask(
-                            polledTask.workflowRunId(),
-                            polledTask.createdEventId(),
+                            new ActivityTaskId(
+                                    polledTask.queueName(),
+                                    polledTask.workflowRunId(),
+                                    polledTask.createdEventId()),
                             polledTask.activityName(),
-                            polledTask.queueName(),
                             polledTask.argument(),
                             polledTask.lockedUntil()))
                     .toList();
         });
     }
 
-    CompletableFuture<Void> abandonActivityTask(
-            final ActivityTask task) throws InterruptedException, TimeoutException {
-        return taskCommandBuffer.add(new AbandonActivityTaskCommand(task));
-    }
-
     private void abandonActivityTasksInternal(
             final ActivityDao activityDao,
-            final Collection<AbandonActivityTaskCommand> commands) {
+            final Collection<ActivityTaskAbandonedEvent> events) {
         final int abandonedTasks = activityDao.unlockActivityTasks(
                 this.config.instanceId(),
-                commands.stream()
-                        .map(command -> new ActivityTaskId(
-                                command.task().queueName(),
-                                command.task().workflowRunId(),
-                                command.task().createdEventId()))
+                events.stream()
+                        .map(ActivityTaskAbandonedEvent::taskId)
                         .toList());
-        assert abandonedTasks == commands.size()
+        assert abandonedTasks == events.size()
                 : "Abandoned tasks: actual=%d, expected=%d".formatted(abandonedTasks, 1);
-    }
-
-    CompletableFuture<Void> completeActivityTask(
-            final ActivityTask task, final @Nullable Payload result) throws InterruptedException, TimeoutException {
-        return taskCommandBuffer.add(new CompleteActivityTaskCommand(task, result, Instant.now()));
-    }
-
-    CompletableFuture<Void> failActivityTask(
-            final ActivityTask task, final Throwable exception) throws InterruptedException, TimeoutException {
-        return taskCommandBuffer.add(new FailActivityTaskCommand(task, exception, Instant.now()));
     }
 
     private void completeActivityTasksInternal(
             final WorkflowDao workflowDao,
             final ActivityDao activityDao,
-            final Collection<CompleteActivityTaskCommand> commands) {
-        final var tasksToDelete = new ArrayList<ActivityTaskId>(commands.size());
-        final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(commands.size());
+            final Collection<ActivityTaskCompletedEvent> events) {
+        final var tasksToDelete = new ArrayList<ActivityTaskId>(events.size());
+        final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(events.size());
 
-        for (final CompleteActivityTaskCommand command : commands) {
-            tasksToDelete.add(new ActivityTaskId(
-                    command.task().queueName(),
-                    command.task().workflowRunId(),
-                    command.task().createdEventId()));
+        for (final ActivityTaskCompletedEvent event : events) {
+            tasksToDelete.add(event.taskId());
 
             final var taskCompletedBuilder = ActivityTaskCompleted.newBuilder()
-                    .setActivityTaskCreatedEventId(command.task().createdEventId());
-            if (command.result() != null) {
-                taskCompletedBuilder.setResult(command.result());
+                    .setActivityTaskCreatedEventId(event.taskId().createdEventId());
+            if (event.result() != null) {
+                taskCompletedBuilder.setResult(event.result());
             }
             inboxEventsToCreate.add(
                     new CreateWorkflowRunInboxEntryCommand(
-                            command.task().workflowRunId(),
+                            event.taskId().workflowRunId(),
                             null,
                             Event.newBuilder()
                                     .setId(-1)
-                                    .setTimestamp(toTimestamp(command.timestamp()))
+                                    .setTimestamp(toTimestamp(event.timestamp()))
                                     .setActivityTaskCompleted(taskCompletedBuilder.build())
                                     .build()));
         }
@@ -1190,26 +1164,23 @@ final class DexEngineImpl implements DexEngine {
     private void failActivityTasksInternal(
             final WorkflowDao workflowDao,
             final ActivityDao activityDao,
-            final Collection<FailActivityTaskCommand> commands) {
-        final var tasksToDelete = new ArrayList<ActivityTaskId>(commands.size());
-        final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(commands.size());
+            final Collection<ActivityTaskFailedEvent> events) {
+        final var tasksToDelete = new ArrayList<ActivityTaskId>(events.size());
+        final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(events.size());
 
-        for (final FailActivityTaskCommand command : commands) {
-            tasksToDelete.add(new ActivityTaskId(
-                    command.task().queueName(),
-                    command.task().workflowRunId(),
-                    command.task().createdEventId()));
+        for (final ActivityTaskFailedEvent event : events) {
+            tasksToDelete.add(event.taskId());
 
             inboxEventsToCreate.add(
                     new CreateWorkflowRunInboxEntryCommand(
-                            command.task().workflowRunId(),
+                            event.taskId().workflowRunId(),
                             /* visibleFrom */ null,
                             Event.newBuilder()
                                     .setId(-1)
-                                    .setTimestamp(toTimestamp(command.timestamp()))
+                                    .setTimestamp(toTimestamp(event.timestamp()))
                                     .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
-                                            .setActivityTaskCreatedEventId(command.task().createdEventId())
-                                            .setFailure(FailureConverter.toFailure(command.exception()))
+                                            .setActivityTaskCreatedEventId(event.taskId().createdEventId())
+                                            .setFailure(FailureConverter.toFailure(event.exception()))
                                             .build())
                                     .build()));
         }
@@ -1310,31 +1281,31 @@ final class DexEngineImpl implements DexEngine {
         }
     }
 
-    private void executeTaskCommands(final List<TaskCommand> commands) {
+    private void flushTaskEvents(final List<TaskEvent> taskEvents) {
         final var engineEvents = new ArrayList<DexEngineEvent>();
+
+        final var activityTaskAbandonedEvents = new ArrayList<ActivityTaskAbandonedEvent>();
+        final var completeActivityTaskCommands = new ArrayList<ActivityTaskCompletedEvent>();
+        final var failActivityTaskCommands = new ArrayList<ActivityTaskFailedEvent>();
+        final var abandonWorkflowTaskCommands = new ArrayList<WorkflowTaskAbandonedEvent>();
+        final var completeWorkflowTaskCommands = new ArrayList<WorkflowTaskCompletedEvent>();
+
+        for (final TaskEvent command : taskEvents) {
+            switch (command) {
+                case ActivityTaskAbandonedEvent it -> activityTaskAbandonedEvents.add(it);
+                case ActivityTaskCompletedEvent it -> completeActivityTaskCommands.add(it);
+                case ActivityTaskFailedEvent it -> failActivityTaskCommands.add(it);
+                case WorkflowTaskAbandonedEvent it -> abandonWorkflowTaskCommands.add(it);
+                case WorkflowTaskCompletedEvent it -> completeWorkflowTaskCommands.add(it);
+            }
+        }
 
         jdbi.useTransaction(handle -> {
             final var workflowDao = new WorkflowDao(handle);
             final var activityDao = new ActivityDao(handle);
 
-            final var abandonActivityTaskCommands = new ArrayList<AbandonActivityTaskCommand>();
-            final var completeActivityTaskCommands = new ArrayList<CompleteActivityTaskCommand>();
-            final var failActivityTaskCommands = new ArrayList<FailActivityTaskCommand>();
-            final var abandonWorkflowTaskCommands = new ArrayList<AbandonWorkflowTaskCommand>();
-            final var completeWorkflowTaskCommands = new ArrayList<CompleteWorkflowTaskCommand>();
-
-            for (final TaskCommand command : commands) {
-                switch (command) {
-                    case AbandonActivityTaskCommand it -> abandonActivityTaskCommands.add(it);
-                    case CompleteActivityTaskCommand it -> completeActivityTaskCommands.add(it);
-                    case FailActivityTaskCommand it -> failActivityTaskCommands.add(it);
-                    case AbandonWorkflowTaskCommand it -> abandonWorkflowTaskCommands.add(it);
-                    case CompleteWorkflowTaskCommand it -> completeWorkflowTaskCommands.add(it);
-                }
-            }
-
-            if (!abandonActivityTaskCommands.isEmpty()) {
-                abandonActivityTasksInternal(activityDao, abandonActivityTaskCommands);
+            if (!activityTaskAbandonedEvents.isEmpty()) {
+                abandonActivityTasksInternal(activityDao, activityTaskAbandonedEvents);
             }
             if (!completeActivityTaskCommands.isEmpty()) {
                 completeActivityTasksInternal(workflowDao, activityDao, completeActivityTaskCommands);

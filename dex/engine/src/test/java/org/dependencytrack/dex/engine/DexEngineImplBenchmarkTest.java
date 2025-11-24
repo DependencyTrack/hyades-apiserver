@@ -144,8 +144,8 @@ public class DexEngineImplBenchmarkTest {
         engineConfig.retention().setWorkerEnabled(false);
         engineConfig.runHistoryCache().setEvictAfterAccess(Duration.ofMinutes(1));
         engineConfig.runHistoryCache().setMaxSize(10_000);
-        engineConfig.taskCommandBuffer().setFlushInterval(Duration.ofMillis(3));
-        engineConfig.taskCommandBuffer().setMaxBatchSize(250);
+        engineConfig.taskEventBuffer().setFlushInterval(Duration.ofMillis(15));
+        engineConfig.taskEventBuffer().setMaxBatchSize(250);
         engineConfig.activityTaskScheduler().setPollInterval(Duration.ofMillis(100));
         engineConfig.setMeterRegistry(meterRegistry);
 
@@ -268,6 +268,8 @@ public class DexEngineImplBenchmarkTest {
                         "dt.dex.engine.task.worker.tasks.polled").summaries();
                 final Collection<Timer> taskProcessLatencies = meterRegistry.get(
                         "dt.dex.engine.task.worker.process.latency").timers();
+                final Collection<Timer> bufferItemWaitLatencies = meterRegistry.get(
+                        "dt.dex.engine.buffer.item.wait.latency").timers();
                 final Collection<Timer> bufferFlushLatencies = meterRegistry.get(
                         "dt.dex.engine.buffer.flush.latency").timers();
                 final Collection<DistributionSummary> bufferBatchSizes = meterRegistry.get(
@@ -311,6 +313,13 @@ public class DexEngineImplBenchmarkTest {
                             timer.max(TimeUnit.MILLISECONDS));
                 }
 
+                for (final Timer timer : bufferItemWaitLatencies) {
+                    System.out.printf(
+                            "Buffer Item Wait Latency: buffer=%s, mean=%.2fms, max=%.2fms\n",
+                            timer.getId().getTag("buffer"),
+                            timer.mean(TimeUnit.MILLISECONDS),
+                            timer.max(TimeUnit.MILLISECONDS));
+                }
                 for (final Timer timer : bufferFlushLatencies) {
                     System.out.printf(
                             "Buffer Flush Latency: buffer=%s, mean=%.2fms, max=%.2fms\n",

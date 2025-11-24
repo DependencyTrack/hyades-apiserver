@@ -63,7 +63,7 @@ public interface DexEngineConfigMapping {
     BufferConfigMapping externalEventBuffer();
 
     @Valid
-    BufferConfigMapping taskCommandBuffer();
+    BufferConfigMapping taskEventBuffer();
 
     @Valid
     BufferConfigMapping activityTaskHeartbeatBuffer();

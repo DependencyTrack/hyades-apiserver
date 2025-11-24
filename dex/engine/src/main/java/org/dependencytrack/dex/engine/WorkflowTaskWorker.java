@@ -22,6 +22,8 @@ import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.dependencytrack.dex.engine.MetadataRegistry.WorkflowMetadata;
+import org.dependencytrack.dex.engine.TaskEvent.WorkflowTaskAbandonedEvent;
+import org.dependencytrack.dex.engine.TaskEvent.WorkflowTaskCompletedEvent;
 import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskCommand;
 import org.dependencytrack.dex.proto.event.v1.Event;
 import org.dependencytrack.dex.proto.event.v1.ExecutionCompleted;
@@ -148,7 +150,7 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
 
         try {
             // TODO: Retry on TimeoutException.
-            engine.completeWorkflowTask(workflowRunState).join();
+            engine.onTaskEvent(new WorkflowTaskCompletedEvent(workflowRunState)).join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             logger.warn("Interrupted while waiting for task completion to be acknowledged", e);
@@ -161,7 +163,7 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
     void abandon(final WorkflowTask task) {
         try {
             // TODO: Retry on TimeoutException
-            engine.abandonWorkflowTask(task).join();
+            engine.onTaskEvent(new WorkflowTaskAbandonedEvent(task)).join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             logger.warn("Interrupted while waiting for task abandonment to be acknowledged", e);
