@@ -166,101 +166,111 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
         long nextPollAtMillis;
         long nextPollDueInMillis;
         int pollsWithoutResults = 0;
+        int consecutiveErrors = 0;
 
         while (!status.isStoppingOrStopped() && !Thread.currentThread().isInterrupted()) {
-            // Start backing off after 2 poll attempts that did not yield any results.
-            // It doesn't make sense to keep polling at high frequency if the system sits idle.
-            if (pollsWithoutResults < 3) {
-                nowMillis = System.currentTimeMillis();
-                nextPollAtMillis = lastPolledAtMillis + minPollIntervalMillis;
-                nextPollDueInMillis = nextPollAtMillis > nowMillis
-                        ? nextPollAtMillis - nowMillis
-                        : 0;
-            } else {
-                nextPollDueInMillis = Math.max(
-                        pollBackoffFunction.apply(pollsWithoutResults - 2),
-                        minPollIntervalMillis);
-            }
+            try {
+                // Start backing off after 2 poll attempts that did not yield any results,
+                // OR if errors occurred previously. It doesn't make sense to keep polling
+                // at high frequency if the system sits idle or is experiencing issues.
+                if (pollsWithoutResults < 3 && consecutiveErrors == 0) {
+                    nowMillis = System.currentTimeMillis();
+                    nextPollAtMillis = lastPolledAtMillis + minPollIntervalMillis;
+                    nextPollDueInMillis = nextPollAtMillis > nowMillis
+                            ? nextPollAtMillis - nowMillis
+                            : 0;
+                } else {
+                    final int backoffAttempts = Math.max(pollsWithoutResults - 2, consecutiveErrors);
+                    nextPollDueInMillis = Math.max(
+                            pollBackoffFunction.apply(backoffAttempts),
+                            minPollIntervalMillis);
+                }
 
-            if (nextPollDueInMillis > 0) {
-                logger.debug("Waiting for next poll to be due in {}ms", nextPollDueInMillis);
+                if (nextPollDueInMillis > 0) {
+                    logger.debug("Waiting for next poll to be due in {}ms", nextPollDueInMillis);
+                    try {
+                        Thread.sleep(nextPollDueInMillis);
+                    } catch (InterruptedException e) {
+                        logger.info("Interrupted while waiting for next poll to be due", e);
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+
+                logger.debug("Waiting for at least one executor to be available");
                 try {
-                    Thread.sleep(nextPollDueInMillis);
+                    final boolean acquired = semaphore.tryAcquire(100, TimeUnit.MILLISECONDS);
+                    if (!acquired) {
+                        logger.debug("All task executors busy, nothing to poll");
+                        continue;
+                    }
+
+                    semaphore.release();
                 } catch (InterruptedException e) {
-                    logger.info("Interrupted while waiting for next poll to be due", e);
+                    logger.debug("Interrupted while waiting for available task executors", e);
                     Thread.currentThread().interrupt();
                     break;
                 }
-            }
 
-            logger.debug("Waiting for at least one executor to be available");
-            try {
-                final boolean acquired = semaphore.tryAcquire(100, TimeUnit.MILLISECONDS);
-                if (!acquired) {
-                    logger.debug("All task executors busy, nothing to poll");
+                final int tasksToPoll = semaphore.availablePermits();
+                if (tasksToPoll == 0) {
+                    // VERY unlikely to happen.
+                    logger.warn("Semaphore permits exhausted between check and poll");
                     continue;
                 }
 
-                semaphore.release();
-            } catch (InterruptedException e) {
-                logger.debug("Interrupted while waiting for available task executors", e);
-                Thread.currentThread().interrupt();
-                break;
-            }
+                logger.debug("Polling for up to {} tasks", tasksToPoll);
+                pollsCounter.increment();
 
-            final int tasksToPoll = semaphore.availablePermits();
-            if (tasksToPoll == 0) {
-                // VERY unlikely to happen.
-                logger.warn("Semaphore permits exhausted between check and poll");
-                continue;
-            }
+                final List<T> polledTasks;
+                final Timer.Sample pollLatencySample = Timer.start();
+                try {
+                    polledTasks = poll(tasksToPoll);
+                } finally {
+                    pollLatencySample.stop(pollLatencyTimer);
+                }
 
-            logger.debug("Polling for up to {} tasks", tasksToPoll);
-            pollsCounter.increment();
+                if (polledTasks.isEmpty()) {
+                    pollsWithoutResults++;
+                    consecutiveErrors = 0;
+                    continue;
+                }
 
-            final List<T> polledTasks;
-            final Timer.Sample pollLatencySample = Timer.start();
-            try {
-                polledTasks = poll(tasksToPoll);
-            } finally {
-                pollLatencySample.stop(pollLatencyTimer);
-            }
+                pollsWithoutResults = 0;
+                consecutiveErrors = 0;
 
-            if (polledTasks.isEmpty()) {
-                pollsWithoutResults++;
-                continue;
-            }
+                final Map<Set<Tag>, Long> taskCountByMeterTags =
+                        polledTasks.stream().collect(
+                                Collectors.groupingBy(
+                                        Task::meterTags,
+                                        Collectors.counting()));
+                for (final Map.Entry<Set<Tag>, Long> entry : taskCountByMeterTags.entrySet()) {
+                    polledTasksDistribution
+                            .withTags(entry.getKey())
+                            .record(entry.getValue());
+                }
 
-            pollsWithoutResults = 0;
+                final var permitAcquiredLatch = new CountDownLatch(polledTasks.size());
+                final var submittedFutures = new ArrayList<Future<?>>(polledTasks.size());
 
-            final Map<Set<Tag>, Long> taskCountByMeterTags =
-                    polledTasks.stream().collect(
-                            Collectors.groupingBy(
-                                    Task::meterTags,
-                                    Collectors.counting()));
-            for (final Map.Entry<Set<Tag>, Long> entry : taskCountByMeterTags.entrySet()) {
-                polledTasksDistribution
-                        .withTags(entry.getKey())
-                        .record(entry.getValue());
-            }
+                for (final T polledTask : polledTasks) {
+                    submittedFutures.add(
+                            taskExecutor.submit(
+                                    () -> executeTask(polledTask, permitAcquiredLatch)));
+                }
 
-            final var permitAcquiredLatch = new CountDownLatch(polledTasks.size());
-            final var submittedFutures = new ArrayList<Future<?>>(polledTasks.size());
-
-            for (final T polledTask : polledTasks) {
-                submittedFutures.add(
-                        taskExecutor.submit(
-                                () -> executeTask(polledTask, permitAcquiredLatch)));
-            }
-
-            try {
-                // Prevent race conditions where the next poll iteration acquires a semaphore
-                // permit before the task executors acquired theirs.
-                permitAcquiredLatch.await();
-            } catch (InterruptedException e) {
-                logger.warn("Interrupted while waiting for task executors to start", e);
-                submittedFutures.forEach(future -> future.cancel(/* interruptIfRunning */ true));
-                Thread.currentThread().interrupt();
+                try {
+                    // Prevent race conditions where the next poll iteration acquires a semaphore
+                    // permit before the task executors acquired theirs.
+                    permitAcquiredLatch.await();
+                } catch (InterruptedException e) {
+                    logger.warn("Interrupted while waiting for task executors to start", e);
+                    submittedFutures.forEach(future -> future.cancel(/* interruptIfRunning */ true));
+                    Thread.currentThread().interrupt();
+                }
+            } catch (Throwable t) {
+                consecutiveErrors++;
+                logger.error("Unexpected error occurred while polling for tasks (attempt {})", consecutiveErrors, t);
             }
         }
     }
