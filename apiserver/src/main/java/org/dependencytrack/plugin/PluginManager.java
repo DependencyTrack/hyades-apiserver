@@ -289,8 +289,7 @@ public class PluginManager {
 
             // Shared package prefixes
             final List<String> sharedPackages = List.of(
-                    "org.dependencytrack.plugin.api.",
-                    "org.dependencytrack.plugin."
+                    "org.dependencytrack.plugin.api."
             );
 
             final PluginIsolatedClassLoader loader = new PluginIsolatedClassLoader(
