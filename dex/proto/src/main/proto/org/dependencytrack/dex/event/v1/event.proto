@@ -255,9 +255,6 @@ message TimerCreated {
 message TimerElapsed {
   // ID of the event in the run's history that created the timer.
   int32 timer_created_event_id = 1;
-
-  // Timestamp of when the timer elapsed.
-  google.protobuf.Timestamp elapse_at = 2;
 }
 
 // SideEffectExecuted informs about the execution of a side effect.

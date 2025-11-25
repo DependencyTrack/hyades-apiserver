@@ -973,12 +973,12 @@ final class DexEngineImpl implements DexEngine {
                                 newEvent));
             }
 
-            for (final WorkflowEvent newEvent : run.pendingTimerElapsedEvents()) {
+            for (final WorkflowEvent timerElapsedEvent : run.pendingTimerElapsedEvents()) {
                 createInboxEntryCommands.add(
                         new CreateWorkflowRunInboxEntryCommand(
                                 run.id(),
-                                toInstant(newEvent.getTimerElapsed().getElapseAt()),
-                                newEvent));
+                                toInstant(timerElapsedEvent.getTimestamp()),
+                                timerElapsedEvent));
             }
 
             final var now = Timestamps.now();
@@ -1010,7 +1010,7 @@ final class DexEngineImpl implements DexEngine {
                                             : null,
                                     message.event().getRunCreated().getPriority(),
                                     message.event().getRunCreated().getLabelsCount() > 0
-                                            ? Map.copyOf(message.event().getRunCreated().getLabelsMap())
+                                            ? message.event().getRunCreated().getLabelsMap()
                                             : null,
                                     nowInstant));
                 }

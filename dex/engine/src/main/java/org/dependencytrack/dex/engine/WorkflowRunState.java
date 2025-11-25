@@ -19,6 +19,7 @@
 package org.dependencytrack.dex.engine;
 
 import com.google.protobuf.DebugFormat;
+import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import org.dependencytrack.dex.engine.WorkflowCommand.CompleteRunCommand;
 import org.dependencytrack.dex.engine.WorkflowCommand.ContinueRunAsNewCommand;
@@ -501,21 +502,22 @@ final class WorkflowRunState {
     }
 
     private void processCreateTimerCommand(final CreateTimerCommand command) {
+        final Timestamp elapseAt = toTimestamp(command.elapseAt());
+
         applyEvent(WorkflowEvent.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setTimerCreated(TimerCreated.newBuilder()
                         .setName(command.name())
-                        .setElapseAt(toTimestamp(command.elapseAt()))
+                        .setElapseAt(elapseAt)
                         .build())
                 .build(), /* isNew */ true);
 
         pendingTimerElapsedEvents.add(WorkflowEvent.newBuilder()
                 .setId(command.elapsedEventId())
-                .setTimestamp(Timestamps.now())
+                .setTimestamp(elapseAt)
                 .setTimerElapsed(TimerElapsed.newBuilder()
                         .setTimerCreatedEventId(command.eventId())
-                        .setElapseAt(toTimestamp(command.elapseAt()))
                         .build())
                 .build());
     }
