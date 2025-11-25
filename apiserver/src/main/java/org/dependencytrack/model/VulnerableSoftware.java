@@ -66,7 +66,7 @@ public class VulnerableSoftware implements ICpe, Serializable {
     private long id;
 
     @Persistent
-    @Column(name = "PURL", jdbcType = "VARCHAR")
+    @Column(name = "PURL", jdbcType = "VARCHAR", length = 1024)
     private String purl;
 
     @Persistent
