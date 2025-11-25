@@ -23,6 +23,7 @@ import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
+import jakarta.annotation.Nullable;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.policy.v1.Component;
@@ -44,7 +45,6 @@ import org.projectnessie.cel.common.types.Types;
 import org.projectnessie.cel.common.types.ref.Val;
 import org.projectnessie.cel.interpreter.functions.Overload;
 
-import jakarta.annotation.Nullable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
@@ -76,6 +76,7 @@ public class CelCommonPolicyLibrary implements Library {
     static final String FUNC_DEPENDS_ON = "depends_on";
     static final String FUNC_IS_DEPENDENCY_OF = "is_dependency_of";
     static final String FUNC_IS_EXCLUSIVE_DEPENDENCY_OF = "is_exclusive_dependency_of";
+    static final String FUNC_IS_DIRECT_DEPENDENCY_OF = "is_direct_dependency_of";
     static final String FUNC_MATCHES_RANGE = "matches_range";
     static final String FUNC_COMPARE_AGE = "compare_age";
     static final String FUNC_COMPARE_VERSION_DISTANCE = "version_distance";
@@ -108,6 +109,15 @@ public class CelCommonPolicyLibrary implements Library {
                                 // component.is_exclusive_dependency_of(v1.Component{name: "foo"})
                                 Decls.newInstanceOverload(
                                         "component_is_exclusive_dependency_of_component_bool",
+                                        List.of(TYPE_COMPONENT, TYPE_COMPONENT),
+                                        Decls.Bool
+                                )
+                        ),
+                        Decls.newFunction(
+                                FUNC_IS_DIRECT_DEPENDENCY_OF,
+                                // component.is_direct_dependency_of(v1.Component{name: "foo"})
+                                Decls.newInstanceOverload(
+                                        "component_is_direct_dependency_of_component_bool",
                                         List.of(TYPE_COMPONENT, TYPE_COMPONENT),
                                         Decls.Bool
                                 )
@@ -174,6 +184,10 @@ public class CelCommonPolicyLibrary implements Library {
                         Overload.binary(
                                 FUNC_IS_EXCLUSIVE_DEPENDENCY_OF,
                                 CelCommonPolicyLibrary::isExclusiveDependencyOfFunc
+                        ),
+                        Overload.binary(
+                                FUNC_IS_DIRECT_DEPENDENCY_OF,
+                                CelCommonPolicyLibrary::isDirectDependencyOfFunc
                         ),
                         Overload.binary(
                                 FUNC_MATCHES_RANGE,
@@ -268,6 +282,21 @@ public class CelCommonPolicyLibrary implements Library {
 
         if (rhs.value() instanceof final Component rootComponent) {
             return Types.boolOf(isExclusiveDependencyOf(leafComponent, rootComponent));
+        }
+
+        return Err.maybeNoSuchOverloadErr(rhs);
+    }
+
+    private static Val isDirectDependencyOfFunc(final Val lhs, final Val rhs) {
+        final Component leafComponent;
+        if (lhs.value() instanceof final Component lhsValue) {
+            leafComponent = lhsValue;
+        } else {
+            return Err.maybeNoSuchOverloadErr(lhs);
+        }
+
+        if (rhs.value() instanceof final Component rootComponent) {
+            return Types.boolOf(isDirectDependencyOf(leafComponent, rootComponent));
         }
 
         return Err.maybeNoSuchOverloadErr(rhs);
@@ -768,6 +797,52 @@ public class CelCommonPolicyLibrary implements Library {
             return paths.stream().allMatch(path -> path.stream().anyMatch(matchedNodeIds::contains));
         }
     }
+
+    private static boolean isDirectDependencyOf(final Component childComponent,
+                                                final Component parentTemplate) {
+        if (childComponent.getUuid().isBlank()) {
+            LOGGER.warn("isDirectDependencyOf: leaf component does not have a UUID; returning false");
+            return false;
+        }
+
+        final var compositeNodeFilter = CompositeDependencyNodeFilter.of(parentTemplate);
+        if (!compositeNodeFilter.hasSqlFilters()) {
+            LOGGER.warn("""
+                isDirectDependencyOf: Unable to construct filter expression from parent component %s; \
+                returning false""".formatted(parentTemplate));
+            return false;
+        }
+
+        try (final Handle jdbiHandle = openJdbiHandle()) {
+            final Query query = jdbiHandle.createQuery("""
+                WITH "CTE_PROJECT" AS (
+                    SELECT "PROJECT_ID" AS "ID"
+                    FROM "COMPONENT"
+                    WHERE "UUID" = :childUuid
+                )
+                SELECT EXISTS(
+                    SELECT 1
+                    FROM "COMPONENT" AS "PARENT"
+                    WHERE
+                        "PARENT"."PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
+                        AND "PARENT"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(
+                              JSONB_BUILD_OBJECT('uuid', :childUuid)
+                            )
+                        AND ${filters}
+                )
+                """);
+
+            return query
+                    .define(ATTRIBUTE_QUERY_NAME,
+                            "%s#isDirectDependencyOf".formatted(CelCommonPolicyLibrary.class.getSimpleName()))
+                    .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
+                    .bind("childUuid", UUID.fromString(childComponent.getUuid()))
+                    .bindMap(compositeNodeFilter.sqlFilterParams())
+                    .mapTo(Boolean.class)
+                    .one();
+        }
+    }
+
 
     private static boolean matchesRange(final String version, final String versStr) {
         try {
