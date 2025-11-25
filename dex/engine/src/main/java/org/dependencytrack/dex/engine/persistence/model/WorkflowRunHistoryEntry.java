@@ -18,12 +18,12 @@
  */
 package org.dependencytrack.dex.engine.persistence.model;
 
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 
 import java.util.UUID;
 
 public record WorkflowRunHistoryEntry(
         UUID workflowRunId,
         int sequenceNumber,
-        Event event) {
+        WorkflowEvent event) {
 }

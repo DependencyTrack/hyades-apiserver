@@ -19,7 +19,7 @@
 package org.dependencytrack.dex.api.payload;
 
 import com.google.protobuf.Any;
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.dependencytrack.dex.proto.failure.v1.Failure;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.junit.jupiter.api.Test;
@@ -31,34 +31,34 @@ class ProtobufPayloadConverterTest {
 
     @Test
     void convertToPayloadShouldReturnNullWhenArgumentIsNull() {
-        final var converter = new ProtobufPayloadConverter<>(Event.class);
+        final var converter = new ProtobufPayloadConverter<>(WorkflowEvent.class);
         assertThat(converter.convertToPayload(null)).isNull();
     }
 
     @Test
     void convertToPayloadShouldReturnPayloadWithProtoContent() throws Exception {
-        final var converter = new ProtobufPayloadConverter<>(Event.class);
-        final var event = Event.getDefaultInstance();
+        final var converter = new ProtobufPayloadConverter<>(WorkflowEvent.class);
+        final var event = WorkflowEvent.getDefaultInstance();
 
         final Payload payload = converter.convertToPayload(event);
         assertThat(payload).isNotNull();
         assertThat(payload.hasProtoContent()).isTrue();
 
         final Any protoContent = payload.getProtoContent();
-        assertThat(protoContent.is(Event.class)).isTrue();
-        assertThat(protoContent.unpack(Event.class)).isEqualTo(event);
+        assertThat(protoContent.is(WorkflowEvent.class)).isTrue();
+        assertThat(protoContent.unpack(WorkflowEvent.class)).isEqualTo(event);
     }
 
     @Test
     void convertFromPayloadShouldReturnNullWhenArgumentIsNull() {
-        final var converter = new ProtobufPayloadConverter<>(Event.class);
+        final var converter = new ProtobufPayloadConverter<>(WorkflowEvent.class);
         assertThat(converter.convertFromPayload(null)).isNull();
     }
 
     @Test
     void convertFromPayloadShouldReturnProtobufContent() {
-        final var converter = new ProtobufPayloadConverter<>(Event.class);
-        final var event = Event.getDefaultInstance();
+        final var converter = new ProtobufPayloadConverter<>(WorkflowEvent.class);
+        final var event = WorkflowEvent.getDefaultInstance();
         final var payload = Payload.newBuilder()
                 .setProtoContent(Any.pack(event))
                 .build();
@@ -68,7 +68,7 @@ class ProtobufPayloadConverterTest {
 
     @Test
     void convertFromPayloadShouldThrowWhenNotHavingProtobufContent() {
-        final var converter = new ProtobufPayloadConverter<>(Event.class);
+        final var converter = new ProtobufPayloadConverter<>(WorkflowEvent.class);
         final var payload = Payload.getDefaultInstance();
 
         assertThatExceptionOfType(PayloadConversionException.class)
@@ -78,7 +78,7 @@ class ProtobufPayloadConverterTest {
 
     @Test
     void convertFromPayloadShouldThrowOnProtobufTypeMismatch() {
-        final var converter = new ProtobufPayloadConverter<>(Event.class);
+        final var converter = new ProtobufPayloadConverter<>(WorkflowEvent.class);
         final var payload = Payload.newBuilder()
                 .setProtoContent(Any.pack(Failure.getDefaultInstance()))
                 .build();
@@ -86,7 +86,7 @@ class ProtobufPayloadConverterTest {
         assertThatExceptionOfType(PayloadConversionException.class)
                 .isThrownBy(() -> converter.convertFromPayload(payload))
                 .withMessage("""
-                        Expected Protobuf payload to be of type org.dependencytrack.dex.proto.event.v1.Event, \
+                        Expected Protobuf payload to be of type org.dependencytrack.dex.proto.event.v1.WorkflowEvent, \
                         but was type.googleapis.com/org.dependencytrack.dex.failure.v1.Failure""");
     }
 

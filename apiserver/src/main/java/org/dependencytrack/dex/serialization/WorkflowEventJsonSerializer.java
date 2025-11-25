@@ -22,24 +22,24 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.google.protobuf.util.JsonFormat;
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 
 import java.io.IOException;
 
 /**
  * @since 5.7.0
  */
-final class EventJsonSerializer extends StdSerializer<Event> {
+final class WorkflowEventJsonSerializer extends StdSerializer<WorkflowEvent> {
 
     private final JsonFormat.Printer jsonPrinter = JsonFormat.printer();
 
-    EventJsonSerializer() {
-        super(Event.class);
+    WorkflowEventJsonSerializer() {
+        super(WorkflowEvent.class);
     }
 
     @Override
     public void serialize(
-            final Event event,
+            final WorkflowEvent event,
             final JsonGenerator jsonGenerator,
             final SerializerProvider serializerProvider) throws IOException {
         jsonGenerator.writeRawValue(jsonPrinter.print(event));

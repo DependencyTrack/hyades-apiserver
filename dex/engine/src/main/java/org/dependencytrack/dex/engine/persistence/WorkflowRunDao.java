@@ -26,7 +26,7 @@ import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunHistoryEntry;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -263,7 +263,7 @@ public final class WorkflowRunDao extends AbstractDao {
     record ListRunHistoryPageToken(int lastSequenceNumber) implements PageToken {
     }
 
-    public Page<Event> listRunEvents(final ListWorkflowRunEventsRequest request) {
+    public Page<WorkflowEvent> listRunEvents(final ListWorkflowRunEventsRequest request) {
         requireNonNull(request, "request must not be null");
 
         final Query query = jdbiHandle.createQuery("""

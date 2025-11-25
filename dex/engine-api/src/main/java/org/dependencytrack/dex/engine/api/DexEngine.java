@@ -35,7 +35,7 @@ import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.jspecify.annotations.Nullable;
 
@@ -207,9 +207,9 @@ public interface DexEngine extends Closeable {
      * Retrieve the event history of a workflow run.
      *
      * @param request The request.
-     * @return A {@link Page} containing {@link Event}s.
+     * @return A {@link Page} containing {@link WorkflowEvent}s.
      */
-    Page<Event> listRunEvents(ListWorkflowRunEventsRequest request);
+    Page<WorkflowEvent> listRunEvents(ListWorkflowRunEventsRequest request);
 
     /**
      * Send an external event to a workflow run.

@@ -31,12 +31,12 @@ import org.dependencytrack.dex.proto.event.v1.ActivityTaskCreated;
 import org.dependencytrack.dex.proto.event.v1.ChildRunCompleted;
 import org.dependencytrack.dex.proto.event.v1.ChildRunCreated;
 import org.dependencytrack.dex.proto.event.v1.ChildRunFailed;
-import org.dependencytrack.dex.proto.event.v1.Event;
 import org.dependencytrack.dex.proto.event.v1.RunCompleted;
 import org.dependencytrack.dex.proto.event.v1.RunCreated;
 import org.dependencytrack.dex.proto.event.v1.SideEffectExecuted;
 import org.dependencytrack.dex.proto.event.v1.TimerCreated;
 import org.dependencytrack.dex.proto.event.v1.TimerElapsed;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.dependencytrack.dex.proto.failure.v1.Failure;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
@@ -55,7 +55,7 @@ import static org.dependencytrack.dex.engine.support.ProtobufUtil.toTimestamp;
 /**
  * State of a workflow run.
  * <p>
- * The state is event-sourced by applying {@link Event}s,
+ * The state is event-sourced by applying {@link WorkflowEvent}s,
  * and modified via processing of {@link WorkflowCommand}s.
  * <p>
  * This merely implements a state machine and does not
@@ -68,14 +68,14 @@ final class WorkflowRunState {
     private @Nullable Integer workflowVersion;
     private @Nullable String queueName;
     private @Nullable String concurrencyGroupId;
-    private final List<Event> eventHistory;
-    private final List<Event> newEvents;
-    private final List<Event> pendingActivityTaskCreatedEvents;
-    private final List<Event> pendingTimerElapsedEvents;
+    private final List<WorkflowEvent> eventHistory;
+    private final List<WorkflowEvent> newEvents;
+    private final List<WorkflowEvent> pendingActivityTaskCreatedEvents;
+    private final List<WorkflowEvent> pendingTimerElapsedEvents;
     private final List<WorkflowRunMessage> pendingMessages;
-    private @Nullable Event createdEvent;
-    private @Nullable Event startedEvent;
-    private @Nullable Event completedEvent;
+    private @Nullable WorkflowEvent createdEvent;
+    private @Nullable WorkflowEvent startedEvent;
+    private @Nullable WorkflowEvent completedEvent;
     private @Nullable Payload argument;
     private @Nullable Payload result;
     private @Nullable Failure failure;
@@ -91,7 +91,7 @@ final class WorkflowRunState {
 
     WorkflowRunState(
             final UUID id,
-            final List<Event> eventHistory) {
+            final List<WorkflowEvent> eventHistory) {
         this.id = id;
         this.eventHistory = new ArrayList<>(eventHistory.size());
         this.newEvents = new ArrayList<>();
@@ -99,7 +99,7 @@ final class WorkflowRunState {
         this.pendingTimerElapsedEvents = new ArrayList<>();
         this.pendingMessages = new ArrayList<>();
 
-        for (final Event event : eventHistory) {
+        for (final WorkflowEvent event : eventHistory) {
             applyEvent(event, /* isNew */ false);
         }
     }
@@ -128,19 +128,19 @@ final class WorkflowRunState {
         return concurrencyGroupId;
     }
 
-    List<Event> eventHistory() {
+    List<WorkflowEvent> eventHistory() {
         return eventHistory;
     }
 
-    List<Event> newEvents() {
+    List<WorkflowEvent> newEvents() {
         return newEvents;
     }
 
-    List<Event> pendingActivityTaskCreatedEvents() {
+    List<WorkflowEvent> pendingActivityTaskCreatedEvents() {
         return pendingActivityTaskCreatedEvents;
     }
 
-    List<Event> pendingTimerElapsedEvents() {
+    List<WorkflowEvent> pendingTimerElapsedEvents() {
         return pendingTimerElapsedEvents;
     }
 
@@ -211,11 +211,11 @@ final class WorkflowRunState {
         return continuedAsNew;
     }
 
-    void applyEvent(final Event event) {
+    void applyEvent(final WorkflowEvent event) {
         applyEvent(event, /* isNew */ true);
     }
 
-    private void applyEvent(final Event event, final boolean isNew) {
+    private void applyEvent(final WorkflowEvent event, final boolean isNew) {
         switch (event.getSubjectCase()) {
             case RUN_CREATED -> {
                 if (createdEvent != null) {
@@ -315,7 +315,7 @@ final class WorkflowRunState {
             final RunCreated.ParentRun parentRun = createdEvent.getRunCreated().getParentRun();
             final var parentRunId = UUID.fromString(parentRun.getRunId());
 
-            final var childRunEventBuilder = Event.newBuilder()
+            final var childRunEventBuilder = WorkflowEvent.newBuilder()
                     .setId(-1)
                     .setTimestamp(Timestamps.now());
             if (command.status() == WorkflowRunStatus.COMPLETED) {
@@ -353,7 +353,7 @@ final class WorkflowRunState {
         if (command.failure() != null) {
             subjectBuilder.setFailure(command.failure());
         }
-        applyEvent(Event.newBuilder()
+        applyEvent(WorkflowEvent.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setRunCompleted(subjectBuilder.build())
@@ -387,7 +387,7 @@ final class WorkflowRunState {
         this.pendingMessages.clear();
         this.pendingMessages.add(new WorkflowRunMessage(
                 this.id,
-                Event.newBuilder()
+                WorkflowEvent.newBuilder()
                         .setId(-1)
                         .setTimestamp(Timestamps.now())
                         .setRunCreated(newRunCreatedBuilder)
@@ -396,13 +396,12 @@ final class WorkflowRunState {
 
     private void processRecordSideEffectResultCommand(final RecordSideEffectResultCommand command) {
         final var subjectBuilder = SideEffectExecuted.newBuilder()
-                .setSideEffectEventId(command.eventId())
                 .setName(command.name());
         if (command.result() != null) {
             subjectBuilder.setResult(command.result());
         }
 
-        applyEvent(Event.newBuilder()
+        applyEvent(WorkflowEvent.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setSideEffectExecuted(subjectBuilder.build())
@@ -421,7 +420,7 @@ final class WorkflowRunState {
             subjectBuilder.setScheduledFor(toTimestamp(command.scheduleFor()));
         }
 
-        final var activityTaskCreatedEvent = Event.newBuilder()
+        final var activityTaskCreatedEvent = WorkflowEvent.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setActivityTaskCreated(subjectBuilder.build())
@@ -463,7 +462,7 @@ final class WorkflowRunState {
             runCreatedBuilder.setArgument(command.argument());
         }
 
-        applyEvent(Event.newBuilder()
+        applyEvent(WorkflowEvent.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setChildRunCreated(childRunCreatedBuilder.build())
@@ -471,7 +470,7 @@ final class WorkflowRunState {
 
         pendingMessages.add(new WorkflowRunMessage(
                 childRunId,
-                Event.newBuilder()
+                WorkflowEvent.newBuilder()
                         .setId(-1)
                         .setTimestamp(Timestamps.now())
                         .setRunCreated(runCreatedBuilder.build())
@@ -479,7 +478,7 @@ final class WorkflowRunState {
     }
 
     private void processCreateTimerCommand(final CreateTimerCommand command) {
-        applyEvent(Event.newBuilder()
+        applyEvent(WorkflowEvent.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setTimerCreated(TimerCreated.newBuilder()
@@ -488,7 +487,7 @@ final class WorkflowRunState {
                         .build())
                 .build(), /* isNew */ true);
 
-        pendingTimerElapsedEvents.add(Event.newBuilder()
+        pendingTimerElapsedEvents.add(WorkflowEvent.newBuilder()
                 .setId(command.elapsedEventId())
                 .setTimestamp(Timestamps.now())
                 .setTimerElapsed(TimerElapsed.newBuilder()

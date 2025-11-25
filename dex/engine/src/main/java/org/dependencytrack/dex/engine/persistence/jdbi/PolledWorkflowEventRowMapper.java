@@ -19,7 +19,7 @@
 package org.dependencytrack.dex.engine.persistence.jdbi;
 
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.jdbi.v3.core.config.ConfigRegistry;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.mapper.ColumnMappers;
@@ -35,11 +35,11 @@ import static java.util.Objects.requireNonNull;
 
 final class PolledWorkflowEventRowMapper implements RowMapper<PolledWorkflowEvent> {
 
-    private @Nullable ColumnMapper<Event> eventColumnMapper;
+    private @Nullable ColumnMapper<WorkflowEvent> eventColumnMapper;
 
     @Override
     public void init(final ConfigRegistry registry) {
-        eventColumnMapper = registry.get(ColumnMappers.class).findFor(Event.class).orElseThrow();
+        eventColumnMapper = registry.get(ColumnMappers.class).findFor(WorkflowEvent.class).orElseThrow();
     }
 
     @Override

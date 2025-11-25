@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.dex.engine.api;
 
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.dependencytrack.dex.proto.failure.v1.Failure;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
@@ -44,5 +44,5 @@ public record WorkflowRun(
         @Nullable Payload argument,
         @Nullable Payload result,
         @Nullable Failure failure,
-        List<Event> eventHistory) {
+        List<WorkflowEvent> eventHistory) {
 }

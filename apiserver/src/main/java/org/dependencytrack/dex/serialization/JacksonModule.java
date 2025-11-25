@@ -19,7 +19,7 @@
 package org.dependencytrack.dex.serialization;
 
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 
 /**
  * @since 5.7.0
@@ -28,7 +28,7 @@ public final class JacksonModule extends SimpleModule {
 
     public JacksonModule() {
         super(JacksonModule.class.getName());
-        addSerializer(Event.class, new EventJsonSerializer());
+        addSerializer(WorkflowEvent.class, new WorkflowEventJsonSerializer());
     }
 
 }

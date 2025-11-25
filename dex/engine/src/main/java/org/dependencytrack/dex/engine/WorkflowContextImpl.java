@@ -53,12 +53,12 @@ import org.dependencytrack.dex.proto.event.v1.ActivityTaskFailed;
 import org.dependencytrack.dex.proto.event.v1.ChildRunCompleted;
 import org.dependencytrack.dex.proto.event.v1.ChildRunCreated;
 import org.dependencytrack.dex.proto.event.v1.ChildRunFailed;
-import org.dependencytrack.dex.proto.event.v1.Event;
 import org.dependencytrack.dex.proto.event.v1.RunCanceled;
 import org.dependencytrack.dex.proto.event.v1.RunCreated;
 import org.dependencytrack.dex.proto.event.v1.SideEffectExecuted;
 import org.dependencytrack.dex.proto.event.v1.TimerCreated;
 import org.dependencytrack.dex.proto.event.v1.TimerElapsed;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -96,14 +96,14 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     private final WorkflowExecutor<A, R> workflowExecutor;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
-    private final List<Event> eventHistory;
-    private final List<Event> newEvents;
-    private final List<Event> suspendedEvents;
-    private final Map<Integer, Event> eventById;
+    private final List<WorkflowEvent> eventHistory;
+    private final List<WorkflowEvent> newEvents;
+    private final List<WorkflowEvent> suspendedEvents;
+    private final Map<Integer, WorkflowEvent> eventById;
     private final Map<Integer, WorkflowCommand> pendingCommandByEventId;
     private final Map<Integer, AwaitableImpl<?>> pendingAwaitableByEventId;
     private final Map<String, Queue<AwaitableImpl<?>>> pendingAwaitablesByExternalEventId;
-    private final Map<String, Queue<Event>> bufferedExternalEvents;
+    private final Map<String, Queue<WorkflowEvent>> bufferedExternalEvents;
     private final Logger logger;
     private int currentEventIndex;
     private int currentEventId;
@@ -124,8 +124,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             final WorkflowExecutor<A, R> workflowExecutor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final List<Event> eventHistory,
-            final List<Event> newEvents) {
+            final List<WorkflowEvent> eventHistory,
+            final List<WorkflowEvent> newEvents) {
         this.runId = runId;
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;
@@ -389,9 +389,9 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final var awaitable = new AwaitableImpl<>(this, resultConverter);
 
-        final Queue<Event> bufferedEvents = bufferedExternalEvents.get(externalEventId);
+        final Queue<WorkflowEvent> bufferedEvents = bufferedExternalEvents.get(externalEventId);
         if (bufferedEvents != null && !bufferedEvents.isEmpty()) {
-            final Event event = bufferedEvents.poll();
+            final WorkflowEvent event = bufferedEvents.poll();
             awaitable.complete(event.getExternalEventReceived().hasPayload()
                     ? event.getExternalEventReceived().getPayload()
                     : null);
@@ -438,7 +438,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     WorkflowRunExecutionResult execute() {
         try {
-            Event currentEvent;
+            WorkflowEvent currentEvent;
             while ((currentEvent = processNextEvent()) != null) {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Processed {}", DebugFormat.singleLine().toString(currentEvent));
@@ -464,8 +464,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     @Nullable
-    Event processNextEvent() {
-        final Event event = nextEvent();
+    WorkflowEvent processNextEvent() {
+        final WorkflowEvent event = nextEvent();
         if (event == null) {
             return null;
         }
@@ -474,7 +474,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         return event;
     }
 
-    private void processEvent(final Event event) {
+    private void processEvent(final WorkflowEvent event) {
         if (event.getId() >= 0) {
             eventById.put(event.getId(), event);
         }
@@ -511,7 +511,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         }
     }
 
-    private @Nullable Event nextEvent() {
+    private @Nullable WorkflowEvent nextEvent() {
         if (currentEventIndex < eventHistory.size()) {
             isReplaying = true;
             return eventHistory.get(currentEventIndex++);
@@ -523,11 +523,11 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         return null;
     }
 
-    private void onExecutionStarted(final Event event) {
+    private void onExecutionStarted(final WorkflowEvent event) {
         currentTime = toInstant(event.getTimestamp());
     }
 
-    private void onRunCreated(final Event event) {
+    private void onRunCreated(final WorkflowEvent event) {
         final RunCreated eventSubject = event.getRunCreated();
         logger().debug("Created");
 
@@ -536,7 +536,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         }
     }
 
-    private void onRunStarted(final Event ignored) {
+    private void onRunStarted(final WorkflowEvent ignored) {
         logger().debug("Started");
 
         final R result;
@@ -553,18 +553,18 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         complete(result);
     }
 
-    private void onRunCanceled(final Event event) {
+    private void onRunCanceled(final WorkflowEvent event) {
         final RunCanceled eventSubject = event.getRunCanceled();
         logger().debug("Canceled with reason: {}", eventSubject.getReason());
         throw new WorkflowRunCanceledError(eventSubject.getReason());
     }
 
-    private void onRunSuspended(final Event ignored) {
+    private void onRunSuspended(final WorkflowEvent ignored) {
         logger().debug("Suspended");
         isSuspended = true;
     }
 
-    private void onRunResumed(final Event ignored) {
+    private void onRunResumed(final WorkflowEvent ignored) {
         if (!isSuspended) {
             logger().warn("""
                     Encountered RunResumed event at index {}, \
@@ -575,12 +575,12 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         logger().debug("Resumed");
         isSuspended = false;
 
-        for (final Event event : suspendedEvents) {
+        for (final WorkflowEvent event : suspendedEvents) {
             processEvent(event);
         }
     }
 
-    private void onActivityTaskCreated(final Event event) {
+    private void onActivityTaskCreated(final WorkflowEvent event) {
         logger().debug("Activity run created for event ID {}", event.getId());
         final ActivityTaskCreated eventSubject = event.getActivityTaskCreated();
 
@@ -616,12 +616,12 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         pendingCommandByEventId.remove(event.getId());
     }
 
-    private void onActivityTaskCompleted(final Event event) {
+    private void onActivityTaskCompleted(final WorkflowEvent event) {
         final ActivityTaskCompleted eventSubject = event.getActivityTaskCompleted();
         final int createdEventId = eventSubject.getActivityTaskCreatedEventId();
         logger().debug("Activity task completed for event ID {}", createdEventId);
 
-        final Event createdEvent = eventById.get(createdEventId);
+        final WorkflowEvent createdEvent = eventById.get(createdEventId);
         if (createdEvent == null || !createdEvent.hasActivityTaskCreated()) {
             throw new WorkflowRunDeterminismError(
                     "Expected event with ID %d to be of type %s, but was: %s".formatted(
@@ -645,12 +645,12 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         pendingAwaitableByEventId.remove(createdEventId);
     }
 
-    private void onActivityTaskFailed(final Event event) {
+    private void onActivityTaskFailed(final WorkflowEvent event) {
         final ActivityTaskFailed eventSubject = event.getActivityTaskFailed();
         final int createdEventId = eventSubject.getActivityTaskCreatedEventId();
         logger().debug("Activity task failed for event ID {}", createdEventId);
 
-        final Event createdEvent = eventById.get(createdEventId);
+        final WorkflowEvent createdEvent = eventById.get(createdEventId);
         if (createdEvent == null || !createdEvent.hasActivityTaskCreated()) {
             throw new WorkflowRunDeterminismError(
                     "Expected event with ID %d to be of type %s, but was: %s".formatted(
@@ -678,7 +678,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         pendingAwaitableByEventId.remove(createdEventId);
     }
 
-    private void onChildRunCreated(final Event event) {
+    private void onChildRunCreated(final WorkflowEvent event) {
         logger().debug("Child workflow run created for event ID {}", event.getId());
         final ChildRunCreated eventSubject = event.getChildRunCreated();
 
@@ -719,12 +719,12 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         pendingCommandByEventId.remove(event.getId());
     }
 
-    private void onChildRunCompleted(final Event event) {
+    private void onChildRunCompleted(final WorkflowEvent event) {
         final ChildRunCompleted eventSubject = event.getChildRunCompleted();
         final int createdEventId = eventSubject.getChildRunCreatedEventId();
         logger().debug("Child workflow run failed for event ID {}", createdEventId);
 
-        final Event createdEvent = eventById.get(createdEventId);
+        final WorkflowEvent createdEvent = eventById.get(createdEventId);
         if (createdEvent == null || !createdEvent.hasChildRunCreated()) {
             throw new WorkflowRunDeterminismError(
                     "Expected event with ID %d to be of type %s, but was: %s".formatted(
@@ -748,12 +748,12 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         pendingAwaitableByEventId.remove(createdEventId);
     }
 
-    private void onChildRunFailed(final Event event) {
+    private void onChildRunFailed(final WorkflowEvent event) {
         final ChildRunFailed eventSubject = event.getChildRunFailed();
         final int createdEventId = eventSubject.getChildRunCreatedEventId();
         logger().debug("Child workflow run failed for event ID {}", createdEventId);
 
-        final Event createdEvent = eventById.get(createdEventId);
+        final WorkflowEvent createdEvent = eventById.get(createdEventId);
         if (createdEvent == null || !createdEvent.hasChildRunCreated()) {
             throw new WorkflowRunDeterminismError(
                     "Expected event with ID %d to be of type %s, but was: %s".formatted(
@@ -783,7 +783,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         pendingAwaitableByEventId.remove(createdEventId);
     }
 
-    private void onTimerCreated(final Event event) {
+    private void onTimerCreated(final WorkflowEvent event) {
         logger().debug("Timer created for event ID {}", event.getId());
         final TimerCreated eventSubject = event.getTimerCreated();
 
@@ -817,12 +817,12 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         pendingCommandByEventId.remove(event.getId());
     }
 
-    private void onTimerElapsed(final Event event) {
+    private void onTimerElapsed(final WorkflowEvent event) {
         final TimerElapsed eventSubject = event.getTimerElapsed();
         final int createdEventId = eventSubject.getTimerCreatedEventId();
         logger().debug("Timer elapsed for event ID {}", createdEventId);
 
-        final Event createdEvent = eventById.get(createdEventId);
+        final WorkflowEvent createdEvent = eventById.get(createdEventId);
         if (createdEvent == null || !createdEvent.hasTimerCreated()) {
             throw new WorkflowRunDeterminismError(
                     "Expected event with ID %d to be of type %s, but was: %s".formatted(
@@ -846,27 +846,26 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         awaitable.complete(null);
     }
 
-    private void onSideEffectExecuted(final Event event) {
+    private void onSideEffectExecuted(final WorkflowEvent event) {
         final SideEffectExecuted eventSubject = event.getSideEffectExecuted();
-        final int eventId = eventSubject.getSideEffectEventId();
-        logger().debug("Side effect executed for event ID {}", eventId);
+        logger().debug("Side effect executed for event ID {}", event.getId());
 
-        final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(eventId);
+        final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(event.getId());
         if (awaitable == null) {
             throw new WorkflowRunDeterminismError("""
                     Encountered %s event for ID %d, but no corresponding \
                     awaitable was found for it""".formatted(
                     SideEffectExecuted.class.getSimpleName(),
-                    eventId));
+                    event.getId()));
         }
 
-        pendingAwaitableByEventId.remove(eventId);
+        pendingAwaitableByEventId.remove(event.getId());
         awaitable.complete(eventSubject.hasResult()
                 ? eventSubject.getResult()
                 : null);
     }
 
-    private void onExternalEventReceived(final Event event) {
+    private void onExternalEventReceived(final WorkflowEvent event) {
         final String externalEventId = event.getExternalEventReceived().getId();
         logger().debug("External event received for ID {}", externalEventId);
 

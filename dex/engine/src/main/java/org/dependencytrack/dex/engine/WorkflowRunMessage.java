@@ -18,9 +18,9 @@
  */
 package org.dependencytrack.dex.engine;
 
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 
 import java.util.UUID;
 
-record WorkflowRunMessage(UUID recipientRunId, Event event) {
+record WorkflowRunMessage(UUID recipientRunId, WorkflowEvent event) {
 }

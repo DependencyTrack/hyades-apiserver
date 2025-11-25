@@ -37,7 +37,7 @@ import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.jspecify.annotations.NonNull;
 
@@ -157,7 +157,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
             throw new NotFoundException();
         }
 
-        final Page<@NonNull Event> eventsPage = dexEngine.listRunEvents(
+        final Page<@NonNull WorkflowEvent> eventsPage = dexEngine.listRunEvents(
                 new ListWorkflowRunEventsRequest(runId)
                         .withLimit(limit)
                         .withPageToken(pageToken));

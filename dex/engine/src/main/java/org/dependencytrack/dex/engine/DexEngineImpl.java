@@ -81,12 +81,12 @@ import org.dependencytrack.dex.engine.support.Buffer;
 import org.dependencytrack.dex.engine.support.DefaultThreadFactory;
 import org.dependencytrack.dex.proto.event.v1.ActivityTaskCompleted;
 import org.dependencytrack.dex.proto.event.v1.ActivityTaskFailed;
-import org.dependencytrack.dex.proto.event.v1.Event;
 import org.dependencytrack.dex.proto.event.v1.ExternalEventReceived;
 import org.dependencytrack.dex.proto.event.v1.RunCanceled;
 import org.dependencytrack.dex.proto.event.v1.RunCreated;
 import org.dependencytrack.dex.proto.event.v1.RunResumed;
 import org.dependencytrack.dex.proto.event.v1.RunSuspended;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.jdbi.v3.core.Jdbi;
@@ -508,7 +508,7 @@ final class DexEngineImpl implements DexEngine {
                     new CreateWorkflowRunInboxEntryCommand(
                             runId,
                             null,
-                            Event.newBuilder()
+                            WorkflowEvent.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(now)
                                     .setRunCreated(runCreatedBuilder.build())
@@ -535,11 +535,11 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     public @Nullable WorkflowRun getRun(final UUID id) {
-        final List<Event> eventHistory = jdbi.withHandle(handle -> {
+        final List<WorkflowEvent> eventHistory = jdbi.withHandle(handle -> {
             final var dao = new WorkflowRunDao(handle);
-            final var events = new ArrayList<Event>();
+            final var events = new ArrayList<WorkflowEvent>();
 
-            Page<Event> eventsPage;
+            Page<WorkflowEvent> eventsPage;
             String nextPageToken = null;
             do {
                 eventsPage = dao.listRunEvents(
@@ -606,7 +606,7 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     public void requestRunCancellation(final UUID runId, final String reason) {
-        final var cancellationEvent = Event.newBuilder()
+        final var cancellationEvent = WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
                 .setRunCanceled(RunCanceled.newBuilder()
@@ -625,7 +625,7 @@ final class DexEngineImpl implements DexEngine {
             }
 
             final boolean hasPendingCancellation = dao.getRunInboxByRunId(runId).stream()
-                    .anyMatch(Event::hasRunCanceled);
+                    .anyMatch(WorkflowEvent::hasRunCanceled);
             if (hasPendingCancellation) {
                 throw new IllegalStateException("Cancellation of workflow run %s already pending".formatted(runId));
             }
@@ -638,7 +638,7 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     public void requestRunSuspension(final UUID runId) {
-        final var suspensionEvent = Event.newBuilder()
+        final var suspensionEvent = WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
                 .setRunSuspended(RunSuspended.getDefaultInstance())
@@ -657,7 +657,7 @@ final class DexEngineImpl implements DexEngine {
             }
 
             final boolean hasPendingSuspension = dao.getRunInboxByRunId(runId).stream()
-                    .anyMatch(Event::hasRunSuspended);
+                    .anyMatch(WorkflowEvent::hasRunSuspended);
             if (hasPendingSuspension) {
                 throw new IllegalStateException("Suspension of workflow run %s is already pending".formatted(runId));
             }
@@ -670,7 +670,7 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     public void requestRunResumption(final UUID runId) {
-        final var resumeEvent = Event.newBuilder()
+        final var resumeEvent = WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
                 .setRunResumed(RunResumed.getDefaultInstance())
@@ -689,7 +689,7 @@ final class DexEngineImpl implements DexEngine {
             }
 
             final boolean hasPendingResumption = dao.getRunInboxByRunId(runId).stream()
-                    .anyMatch(Event::hasRunResumed);
+                    .anyMatch(WorkflowEvent::hasRunResumed);
             if (hasPendingResumption) {
                 throw new IllegalStateException("Resumption of workflow run %s is already pending".formatted(runId));
             }
@@ -701,7 +701,7 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public Page<Event> listRunEvents(final ListWorkflowRunEventsRequest request) {
+    public Page<WorkflowEvent> listRunEvents(final ListWorkflowRunEventsRequest request) {
         return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRunEvents(request));
     }
 
@@ -767,7 +767,7 @@ final class DexEngineImpl implements DexEngine {
                         new CreateWorkflowRunInboxEntryCommand(
                                 externalEvent.workflowRunId(),
                                 null,
-                                Event.newBuilder()
+                                WorkflowEvent.newBuilder()
                                         .setId(-1)
                                         .setTimestamp(now)
                                         .setExternalEventReceived(subjectBuilder)
@@ -797,7 +797,7 @@ final class DexEngineImpl implements DexEngine {
             }
 
             final var historyRequests = new ArrayList<GetWorkflowRunHistoryRequest>(polledTaskByRunId.size());
-            final var cachedHistoryByRunId = new HashMap<UUID, List<Event>>(polledTaskByRunId.size());
+            final var cachedHistoryByRunId = new HashMap<UUID, List<WorkflowEvent>>(polledTaskByRunId.size());
 
             // Try to populate event histories from cache first.
             for (final UUID runId : polledTaskByRunId.keySet()) {
@@ -818,14 +818,14 @@ final class DexEngineImpl implements DexEngine {
             return polledTaskByRunId.values().stream()
                     .map(polledTask -> {
                         final PolledWorkflowEvents polledEvents = polledEventsByRunId.get(polledTask.runId());
-                        final List<Event> cachedHistoryEvents = cachedHistoryByRunId.get(polledTask.runId());
+                        final List<WorkflowEvent> cachedHistoryEvents = cachedHistoryByRunId.get(polledTask.runId());
 
                         var historySize = polledEvents.history().size();
                         if (cachedHistoryEvents != null) {
                             historySize += cachedHistoryEvents.size();
                         }
 
-                        final var history = new ArrayList<Event>(historySize);
+                        final var history = new ArrayList<WorkflowEvent>(historySize);
                         if (cachedHistoryEvents != null) {
                             history.addAll(cachedHistoryEvents);
                         }
@@ -949,7 +949,7 @@ final class DexEngineImpl implements DexEngine {
 
             // Write all processed events to history.
             int sequenceNumber = run.eventHistory().size();
-            for (final Event newEvent : run.newEvents()) {
+            for (final WorkflowEvent newEvent : run.newEvents()) {
                 createHistoryEntryCommands.add(
                         new CreateWorkflowRunHistoryEntryCommand(
                                 run.id(),
@@ -957,7 +957,7 @@ final class DexEngineImpl implements DexEngine {
                                 newEvent));
             }
 
-            for (final Event newEvent : run.pendingTimerElapsedEvents()) {
+            for (final WorkflowEvent newEvent : run.pendingTimerElapsedEvents()) {
                 createInboxEntryCommands.add(
                         new CreateWorkflowRunInboxEntryCommand(
                                 run.id(),
@@ -1009,7 +1009,7 @@ final class DexEngineImpl implements DexEngine {
                             new CreateWorkflowRunInboxEntryCommand(
                                     childRunId,
                                     /* visibleFrom */ null,
-                                    Event.newBuilder()
+                                    WorkflowEvent.newBuilder()
                                             .setId(-1)
                                             .setTimestamp(now)
                                             .setRunCanceled(RunCanceled.newBuilder()
@@ -1019,7 +1019,7 @@ final class DexEngineImpl implements DexEngine {
                 }
             }
 
-            for (final Event newEvent : run.pendingActivityTaskCreatedEvents()) {
+            for (final WorkflowEvent newEvent : run.pendingActivityTaskCreatedEvents()) {
                 createActivityTaskCommands.add(
                         new CreateActivityTaskCommand(
                                 run.id(),
@@ -1143,7 +1143,7 @@ final class DexEngineImpl implements DexEngine {
                     new CreateWorkflowRunInboxEntryCommand(
                             event.taskId().workflowRunId(),
                             null,
-                            Event.newBuilder()
+                            WorkflowEvent.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(toTimestamp(event.timestamp()))
                                     .setActivityTaskCompleted(taskCompletedBuilder.build())
@@ -1175,7 +1175,7 @@ final class DexEngineImpl implements DexEngine {
                     new CreateWorkflowRunInboxEntryCommand(
                             event.taskId().workflowRunId(),
                             /* visibleFrom */ null,
-                            Event.newBuilder()
+                            WorkflowEvent.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(toTimestamp(event.timestamp()))
                                     .setActivityTaskFailed(ActivityTaskFailed.newBuilder()

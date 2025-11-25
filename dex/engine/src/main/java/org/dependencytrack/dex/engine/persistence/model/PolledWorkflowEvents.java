@@ -18,13 +18,13 @@
  */
 package org.dependencytrack.dex.engine.persistence.model;
 
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 
 import java.util.List;
 
 public record PolledWorkflowEvents(
-        List<Event> history,
-        List<Event> inbox,
+        List<WorkflowEvent> history,
+        List<WorkflowEvent> inbox,
         int maxHistoryEventSequenceNumber,
         int maxInboxEventDequeueCount) {
 }

@@ -28,11 +28,19 @@ import "org/dependencytrack/dex/payload/v1/payload.proto";
 option java_multiple_files = true;
 option java_package = "org.dependencytrack.dex.proto.event.v1";
 
-message Event {
+// WorkflowEvent describes an event that occurred during the execution of
+// a workflow run. When an execution completes, events are recorded in the
+// run's history. Consecutive executions will replay events from history to
+// rehydrate state.
+message WorkflowEvent {
+  // ID of the event.
+  // Miscellaneous / informational events may use the ID -1.
   int32 id = 1;
 
+  // When the event occurred.
   google.protobuf.Timestamp timestamp = 2;
 
+  // Subject of the event.
   oneof subject {
     ExecutionStarted execution_started = 25;
     ExecutionCompleted execution_completed = 26;
@@ -61,106 +69,203 @@ message Event {
   }
 }
 
+// ExecutionStarted informs about a workflow run execution having started.
 message ExecutionStarted {
 }
 
+// ExecutionCompleted informs about a workflow run execution having completed.
 message ExecutionCompleted {
 }
 
+// RunCreated records information about the workflow run having been created.
 message RunCreated {
+  // Name of the workflow.
   string workflow_name = 1;
+
+  // Version of the workflow.
   int32 workflow_version = 2;
+
+  // Argument of the workflow run.
   optional org.dependencytrack.dex.payload.v1.Payload argument = 3;
+
+  // Concurrency group ID of the workflow run.
   optional string concurrency_group_id = 4;
+
+  // Name of the queue to schedule tasks on.
   string queue_name = 5;
+
+  // Priority of the workflow run.
   int32 priority = 6;
+
+  // Labels of the workflow run.
   map<string, string> labels = 7;
+
+  // Information about the workflow run that created this run.
   optional ParentRun parent_run = 8;
 
   message ParentRun {
+    // ID of the corresponding ChildRunCreated event in the parent run.
     int32 child_run_created_event_id = 1;
+
+    // ID of the parent run.
     string run_id = 2;
+
+    // Workflow name of the parent run.
     string workflow_name = 3;
+
+    // Workflow version of the parent run.
     int32 workflow_version = 4;
   }
 }
 
+// RunStarted informs about a workflow run having started.
+// Emitted during the first execution of a run.
 message RunStarted {
 }
 
+// RunCanceled informs about a workflow run having been canceled.
 message RunCanceled {
+  // Reason for the cancellation.
   string reason = 1;
 }
 
+// RunSuspended informs about a workflow run having been suspended.
 message RunSuspended {
 }
 
+// RunResumed informs about a workflow run having been resumed.
 message RunResumed {
 }
 
+// RunCompleted informs about the completion of a workflow run.
 message RunCompleted {
+  // Final status of the run. Can be any of CANCELED, COMPLETED, or FAILED.
   org.dependencytrack.dex.common.v1.WorkflowRunStatus status = 1;
+
+  // Optional custom status of the run.
   optional string custom_status = 2;
+
+  // Result of the run. Only populated when status is COMPLETED.
   optional org.dependencytrack.dex.payload.v1.Payload result = 3;
+
+  // Failure of the run. Only populated when status is CANCELED or FAILED.
   optional org.dependencytrack.dex.failure.v1.Failure failure = 4;
 }
 
+// ActivityTaskCreated informs about the creation of an activity task.
 message ActivityTaskCreated {
+  // Name of the activity.
   string name = 1;
+
+  // Name of the queue the task is scheduled on.
   string queue_name = 2;
+
+  // Priority of the task.
   int32 priority = 3;
+
+  // Argument of the task.
   optional org.dependencytrack.dex.payload.v1.Payload argument = 4;
+
+  // Optional scheduling time. May be used to facilitate backoff of task retries.
   optional google.protobuf.Timestamp scheduled_for = 5;
 }
 
+// ActivityTaskCompleted informs about the successful completion of an activity task.
 message ActivityTaskCompleted {
+  // ID of the event in the workflow run's history that created the task.
   int32 activity_task_created_event_id = 1;
+
+  // Result of the task.
   optional org.dependencytrack.dex.payload.v1.Payload result = 2;
 }
 
+// ActivityTaskFailed informs about the failure of an activity task.
 message ActivityTaskFailed {
+  // ID of the event in the workflow run's history that created the task.
   int32 activity_task_created_event_id = 1;
+
+  // Failure of the task.
   org.dependencytrack.dex.failure.v1.Failure failure = 2;
 }
 
+// ChildRunCreated informs about the creation of a child workflow run.
+// A child run is created when a workflow invokes another workflow.
 message ChildRunCreated {
+  // ID of the child run.
   string run_id = 1;
+
+  // Name of the workflow.
   string workflow_name = 2;
+
+  // Version of the workflow.
   int32 workflow_version = 3;
+
+  // Name of the queue to schedule tasks on.
   string queue_name = 4;
+
+  // Concurrency group ID of the child run.
   optional string concurrency_group_id = 5;
+
+  // Priority of the child run.
   int32 priority = 6;
+
+  // Labels of the child run.
   map<string, string> labels = 7;
+
+  // Argument of the child run.
   optional org.dependencytrack.dex.payload.v1.Payload argument = 8;
 }
 
+// ChildRunCompleted informs about the successful completion of a child workflow run.
 message ChildRunCompleted {
+  // ID of the event in the parent run's history that created the child run.
   int32 child_run_created_event_id = 1;
+
+  // Result of the child run.
   optional org.dependencytrack.dex.payload.v1.Payload result = 2;
 }
 
+// ChildRunFailed informs about the failure of a child workflow run.
 message ChildRunFailed {
+  // ID of the event in the parent run's history that created the child run.
   int32 child_run_created_event_id = 1;
+
+  // Failure of the child run.
   org.dependencytrack.dex.failure.v1.Failure failure = 2;
 }
 
+// TimerCreated informs about the creation of a durable timer.
 message TimerCreated {
+  // Name of the timer.
   string name = 1;
+
+  // Timestamp of when the timer elapses.
   google.protobuf.Timestamp elapse_at = 2;
 }
 
+// TimerElapsed informs about a durable timer having elapsed.
 message TimerElapsed {
+  // ID of the event in the run's history that created the timer.
   int32 timer_created_event_id = 1;
+
+  // Timestamp of when the timer elapsed.
   google.protobuf.Timestamp elapse_at = 2;
 }
 
+// SideEffectExecuted informs about the execution of a side effect.
 message SideEffectExecuted {
-  int32 side_effect_event_id = 1;
-  string name = 2;
-  optional org.dependencytrack.dex.payload.v1.Payload result = 3;
+  // Name of the side effect.
+  string name = 1;
+
+  // Result of the side effect.
+  optional org.dependencytrack.dex.payload.v1.Payload result = 2;
 }
 
+// ExternalEventReceived informs about the reception of an external event.
 message ExternalEventReceived {
+  // ID of the external event.
   string id = 1;
+
+  // Payload of the external event.
   optional org.dependencytrack.dex.payload.v1.Payload payload = 2;
 }

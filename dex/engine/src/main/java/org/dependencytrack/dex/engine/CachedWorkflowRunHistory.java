@@ -18,9 +18,9 @@
  */
 package org.dependencytrack.dex.engine;
 
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 
 import java.util.List;
 
-record CachedWorkflowRunHistory(List<Event> events, int maxSequenceNumber) {
+record CachedWorkflowRunHistory(List<WorkflowEvent> events, int maxSequenceNumber) {
 }

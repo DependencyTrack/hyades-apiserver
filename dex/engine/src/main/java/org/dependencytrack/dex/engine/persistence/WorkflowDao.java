@@ -39,7 +39,7 @@ import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.engine.persistence.request.GetWorkflowRunHistoryRequest;
-import org.dependencytrack.dex.proto.event.v1.Event;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
@@ -547,8 +547,8 @@ public final class WorkflowDao extends AbstractDao {
                 .mapTo(PolledWorkflowEvent.class)
                 .list();
 
-        final var historyByRunId = new HashMap<UUID, List<Event>>(requests.size());
-        final var inboxByRunId = new HashMap<UUID, List<Event>>(requests.size());
+        final var historyByRunId = new HashMap<UUID, List<WorkflowEvent>>(requests.size());
+        final var inboxByRunId = new HashMap<UUID, List<WorkflowEvent>>(requests.size());
         final var maxHistoryEventSequenceNumberByRunId = new HashMap<UUID, Integer>(requests.size());
         final var maxInboxEventDequeueCountByRunId = new HashMap<UUID, Integer>(requests.size());
 
@@ -589,7 +589,7 @@ public final class WorkflowDao extends AbstractDao {
         return polledEventsByRunId;
     }
 
-    public List<Event> getRunInboxByRunId(final UUID runId) {
+    public List<WorkflowEvent> getRunInboxByRunId(final UUID runId) {
         final Query query = jdbiHandle.createQuery("""
                 select event
                   from dex_workflow_run_inbox
@@ -599,7 +599,7 @@ public final class WorkflowDao extends AbstractDao {
 
         return query
                 .bind("runId", runId)
-                .mapTo(Event.class)
+                .mapTo(WorkflowEvent.class)
                 .list();
     }
 

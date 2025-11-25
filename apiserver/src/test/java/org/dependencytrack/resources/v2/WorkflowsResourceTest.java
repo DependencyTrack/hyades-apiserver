@@ -29,8 +29,8 @@ import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.dex.proto.event.v1.Event;
 import org.dependencytrack.dex.proto.event.v1.RunCreated;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.junit.After;
 import org.junit.ClassRule;
@@ -144,7 +144,7 @@ public class WorkflowsResourceTest extends ResourceTest {
                 null,
                 null);
 
-        final var event = Event.newBuilder()
+        final var event = WorkflowEvent.newBuilder()
                 .setId(1)
                 .setTimestamp(Timestamps.fromMillis(666666))
                 .setRunCreated(RunCreated.newBuilder()
