@@ -25,6 +25,7 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.Page.TotalCount;
 import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
@@ -81,6 +82,7 @@ public class WorkflowsResourceTest extends ResourceTest {
                 "customStatus",
                 12,
                 "concurrencyGroupId",
+                WorkflowRunConcurrencyMode.SERIAL,
                 Map.of("foo", "bar"),
                 Instant.ofEpochMilli(666666),
                 Instant.ofEpochMilli(777777),
@@ -106,6 +108,7 @@ public class WorkflowsResourceTest extends ResourceTest {
                               "created_at": 666666,
                               "priority": 12,
                               "concurrency_group_id": "concurrencyGroupId",
+                              "concurrency_mode": "SERIAL",
                               "labels": {
                                 "foo": "bar"
                               },
@@ -137,6 +140,7 @@ public class WorkflowsResourceTest extends ResourceTest {
                 WorkflowRunStatus.CREATED,
                 null,
                 0,
+                null,
                 null,
                 null,
                 Instant.ofEpochMilli(666666),

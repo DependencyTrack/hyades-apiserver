@@ -160,6 +160,7 @@ public class WorkflowResourceTest extends ResourceTest {
                 0,
                 null,
                 null,
+                null,
                 Instant.ofEpochMilli(666666),
                 Instant.ofEpochMilli(777777),
                 Instant.ofEpochMilli(777777),

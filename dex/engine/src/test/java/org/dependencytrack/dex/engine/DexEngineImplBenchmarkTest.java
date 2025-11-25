@@ -36,6 +36,7 @@ import org.dependencytrack.dex.api.annotation.Activity;
 import org.dependencytrack.dex.api.annotation.Workflow;
 import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
+import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
@@ -203,7 +204,11 @@ public class DexEngineImplBenchmarkTest {
 
             scheduleOptions.add(
                     new CreateWorkflowRunRequest<>("test", 1, "default")
-                            .withConcurrencyGroupId(concurrencyGroupId)
+                            .withConcurrency(
+                                    concurrencyGroupId,
+                                    concurrencyGroupId != null
+                                            ? WorkflowRunConcurrencyMode.SERIAL
+                                            : null)
                             .withLabels(labels));
         }
 

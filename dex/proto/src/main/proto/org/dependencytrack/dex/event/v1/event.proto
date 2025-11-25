@@ -91,17 +91,21 @@ message RunCreated {
   // Concurrency group ID of the workflow run.
   optional string concurrency_group_id = 4;
 
+  // Concurrency mode of the workflow run.
+  // Only set when a concurrency_group_id is also set.
+  optional org.dependencytrack.dex.common.v1.WorkflowRunConcurrencyMode concurrency_mode = 5;
+
   // Name of the queue to schedule tasks on.
-  string queue_name = 5;
+  string queue_name = 6;
 
   // Priority of the workflow run.
-  int32 priority = 6;
+  int32 priority = 7;
 
   // Labels of the workflow run.
-  map<string, string> labels = 7;
+  map<string, string> labels = 8;
 
   // Information about the workflow run that created this run.
-  optional ParentRun parent_run = 8;
+  optional ParentRun parent_run = 9;
 
   message ParentRun {
     // ID of the corresponding ChildRunCreated event in the parent run.
@@ -206,14 +210,18 @@ message ChildRunCreated {
   // Concurrency group ID of the child run.
   optional string concurrency_group_id = 5;
 
+  // Concurrency mode of the child run.
+  // Only set when a concurrency_group_id is also set.
+  optional org.dependencytrack.dex.common.v1.WorkflowRunConcurrencyMode concurrency_mode = 6;
+
   // Priority of the child run.
-  int32 priority = 6;
+  int32 priority = 7;
 
   // Labels of the child run.
-  map<string, string> labels = 7;
+  map<string, string> labels = 8;
 
   // Argument of the child run.
-  optional org.dependencytrack.dex.payload.v1.Payload argument = 8;
+  optional org.dependencytrack.dex.payload.v1.Payload argument = 9;
 }
 
 // ChildRunCompleted informs about the successful completion of a child workflow run.

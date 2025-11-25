@@ -26,6 +26,7 @@ import org.dependencytrack.dex.engine.WorkflowCommand.CreateActivityTaskCommand;
 import org.dependencytrack.dex.engine.WorkflowCommand.CreateChildRunCommand;
 import org.dependencytrack.dex.engine.WorkflowCommand.CreateTimerCommand;
 import org.dependencytrack.dex.engine.WorkflowCommand.RecordSideEffectResultCommand;
+import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.proto.event.v1.ActivityTaskCreated;
 import org.dependencytrack.dex.proto.event.v1.ChildRunCompleted;
@@ -51,6 +52,7 @@ import java.util.UUID;
 import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toInstant;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toTimestamp;
+import static org.dependencytrack.dex.proto.common.v1.WorkflowRunConcurrencyMode.WORKFLOW_RUN_CONCURRENCY_MODE_SERIAL;
 
 /**
  * State of a workflow run.
@@ -68,6 +70,7 @@ final class WorkflowRunState {
     private @Nullable Integer workflowVersion;
     private @Nullable String queueName;
     private @Nullable String concurrencyGroupId;
+    private @Nullable WorkflowRunConcurrencyMode concurrencyMode;
     private final List<WorkflowEvent> eventHistory;
     private final List<WorkflowEvent> newEvents;
     private final List<WorkflowEvent> pendingActivityTaskCreatedEvents;
@@ -126,6 +129,11 @@ final class WorkflowRunState {
     @Nullable
     String concurrencyGroupId() {
         return concurrencyGroupId;
+    }
+
+    @Nullable
+    WorkflowRunConcurrencyMode concurrencyMode() {
+        return concurrencyMode;
     }
 
     List<WorkflowEvent> eventHistory() {
@@ -231,6 +239,9 @@ final class WorkflowRunState {
                 queueName = event.getRunCreated().getQueueName();
                 concurrencyGroupId = event.getRunCreated().hasConcurrencyGroupId()
                         ? event.getRunCreated().getConcurrencyGroupId()
+                        : null;
+                concurrencyMode = event.getRunCreated().hasConcurrencyMode()
+                        ? WorkflowRunConcurrencyMode.fromProto(event.getRunCreated().getConcurrencyMode())
                         : null;
                 setStatus(WorkflowRunStatus.CREATED);
                 createdEvent = event;
@@ -372,6 +383,9 @@ final class WorkflowRunState {
         if (this.concurrencyGroupId != null) {
             newRunCreatedBuilder.setConcurrencyGroupId(this.concurrencyGroupId);
         }
+        if (this.concurrencyMode != null) {
+            newRunCreatedBuilder.setConcurrencyMode(this.concurrencyMode.toProto());
+        }
         if (this.labels != null && !this.labels.isEmpty()) {
             newRunCreatedBuilder.putAllLabels(this.labels);
         }
@@ -452,6 +466,15 @@ final class WorkflowRunState {
         if (command.concurrencyGroupId() != null) {
             childRunCreatedBuilder.setConcurrencyGroupId(command.concurrencyGroupId());
             runCreatedBuilder.setConcurrencyGroupId(command.concurrencyGroupId());
+
+            // Always use SERIAL mode for workflow-to-workflow calls.
+            // EXCLUSIVE mode is difficult to enforce because creation
+            // of child runs happens asynchronously. It would also force
+            // workflows to deal with child runs failing to be scheduled.
+            // We can revisit this later but for the time being, only allowing
+            // SERIAL avoid *a lot* of complexity.
+            childRunCreatedBuilder.setConcurrencyMode(WORKFLOW_RUN_CONCURRENCY_MODE_SERIAL);
+            runCreatedBuilder.setConcurrencyMode(WORKFLOW_RUN_CONCURRENCY_MODE_SERIAL);
         }
         if (command.labels() != null && !command.labels().isEmpty()) {
             childRunCreatedBuilder.putAllLabels(command.labels());

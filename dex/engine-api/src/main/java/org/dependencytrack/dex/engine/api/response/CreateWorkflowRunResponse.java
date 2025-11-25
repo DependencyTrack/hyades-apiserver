@@ -16,25 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-syntax = "proto3";
+package org.dependencytrack.dex.engine.api.response;
 
-package org.dependencytrack.dex.common.v1;
+import java.util.UUID;
 
-option java_multiple_files = true;
-option java_package = "org.dependencytrack.dex.proto.common.v1";
-
-enum WorkflowRunConcurrencyMode {
-  WORKFLOW_RUN_CONCURRENCY_MODE_UNSPECIFIED = 0;
-  WORKFLOW_RUN_CONCURRENCY_MODE_EXCLUSIVE = 1;
-  WORKFLOW_RUN_CONCURRENCY_MODE_SERIAL = 2;
-}
-
-enum WorkflowRunStatus {
-  WORKFLOW_RUN_STATUS_UNSPECIFIED = 0;
-  WORKFLOW_RUN_STATUS_CREATED = 1;
-  WORKFLOW_RUN_STATUS_RUNNING = 2;
-  WORKFLOW_RUN_STATUS_SUSPENDED = 3;
-  WORKFLOW_RUN_STATUS_CANCELED = 4;
-  WORKFLOW_RUN_STATUS_COMPLETED = 5;
-  WORKFLOW_RUN_STATUS_FAILED = 6;
+public record CreateWorkflowRunResponse(UUID requestId, UUID runId) {
 }

@@ -35,6 +35,7 @@ import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.response.CreateWorkflowRunResponse;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.jspecify.annotations.Nullable;
@@ -117,28 +118,35 @@ public interface DexEngine extends Closeable {
 
     /**
      * Create one or more workflow runs.
+     * <p>
+     * Responses may be correlated with requests using {@link CreateWorkflowRunRequest#requestId()}
+     * and {@link CreateWorkflowRunResponse#requestId()}.
      *
      * @param requests Requests for runs to create.
      * @return IDs of the created runs.
      * @throws NoSuchElementException When a workflow is not known to the engine.
      */
-    List<UUID> createRuns(Collection<CreateWorkflowRunRequest<?>> requests);
+    List<CreateWorkflowRunResponse> createRuns(Collection<CreateWorkflowRunRequest<?>> requests);
 
     /**
      * Creates a single workflow run.
+     * <p>
+     * May return {@code null} when {@code request} specifies a concurrency group ID
+     * combined with {@link WorkflowRunConcurrencyMode#EXCLUSIVE}, and another run with
+     * the same concurrency group ID is already in progress.
      *
      * @param request Request for the run to create.
      * @param <A>     Type of the workflow's argument.
      * @return ID of the created run.
      * @see #createRuns(Collection)
      */
-    default <A> UUID createRun(final CreateWorkflowRunRequest<A> request) {
-        final List<UUID> results = createRuns(List.of(request));
-        if (results.isEmpty()) {
-            throw new IllegalStateException("createRuns returned no results");
+    default <A> @Nullable UUID createRun(final CreateWorkflowRunRequest<A> request) {
+        final List<CreateWorkflowRunResponse> responses = createRuns(List.of(request));
+        if (responses.isEmpty()) {
+            return null;
         }
 
-        return results.getFirst();
+        return responses.getFirst().runId();
     }
 
     /**

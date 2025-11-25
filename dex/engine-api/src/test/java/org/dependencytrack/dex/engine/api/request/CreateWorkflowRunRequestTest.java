@@ -18,9 +18,11 @@
  */
 package org.dependencytrack.dex.engine.api.request;
 
+import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Map;
@@ -61,11 +63,25 @@ class CreateWorkflowRunRequestTest {
                 .withMessage("priority must be between 0 and 100, but is " + priority);
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "concurrencyGroup, ",
+            ", EXCLUSIVE"
+    })
+    void shouldThrowWhenConcurrencyGroupIdAndModeAreNotDefinedTogether(
+            final String concurrencyGroupId,
+            final WorkflowRunConcurrencyMode concurrencyMode) {
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> new CreateWorkflowRunRequest<>("workflowName", 1, "queueName")
+                        .withConcurrency(concurrencyGroupId, concurrencyMode))
+                .withMessage("must provide either concurrencyGroupId AND concurrencyMode, or none");
+    }
+
     @Test
     void shouldPopulateFieldsUsingWithers() {
         final var request = new CreateWorkflowRunRequest<>("workflowName", 1, "queueName")
                 .withPriority(66)
-                .withConcurrencyGroupId("concurrencyGroupId")
+                .withConcurrency("concurrencyGroupId", WorkflowRunConcurrencyMode.SERIAL)
                 .withLabels(Map.of("foo", "bar"))
                 .withArgument(Payload.getDefaultInstance());
 
@@ -74,6 +90,7 @@ class CreateWorkflowRunRequestTest {
         assertThat(request.queueName()).isEqualTo("queueName");
         assertThat(request.priority()).isEqualTo(66);
         assertThat(request.concurrencyGroupId()).isEqualTo("concurrencyGroupId");
+        assertThat(request.concurrencyMode()).isEqualTo(WorkflowRunConcurrencyMode.SERIAL);
         assertThat(request.labels()).containsEntry("foo", "bar");
         assertThat(request.argument()).isEqualTo(Payload.getDefaultInstance());
     }

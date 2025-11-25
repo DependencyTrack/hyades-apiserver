@@ -41,6 +41,7 @@ import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.ExternalEvent;
 import org.dependencytrack.dex.engine.api.WorkflowRun;
+import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
@@ -58,6 +59,7 @@ import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.response.CreateWorkflowRunResponse;
 import org.dependencytrack.dex.engine.persistence.ActivityDao;
 import org.dependencytrack.dex.engine.persistence.WorkflowDao;
 import org.dependencytrack.dex.engine.persistence.WorkflowRunDao;
@@ -460,51 +462,56 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<UUID> createRuns(final Collection<CreateWorkflowRunRequest<?>> options) {
+    public List<CreateWorkflowRunResponse> createRuns(final Collection<CreateWorkflowRunRequest<?>> requests) {
         final var now = Timestamps.now();
         final var nowInstant = toInstant(now);
-        final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>(options.size());
-        final var createInboxEntryCommand = new ArrayList<CreateWorkflowRunInboxEntryCommand>(options.size());
+        final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>(requests.size());
+        final var createInboxEntryCommands = new ArrayList<CreateWorkflowRunInboxEntryCommand>(requests.size());
 
-        for (final CreateWorkflowRunRequest<?> option : options) {
+        for (final CreateWorkflowRunRequest<?> request : requests) {
             @SuppressWarnings("rawtypes") final WorkflowMetadata workflowMetadata =
-                    metadataRegistry.getWorkflowMetadata(option.workflowName());
+                    metadataRegistry.getWorkflowMetadata(request.workflowName());
 
             final UUID runId = timeBasedEpochRandomGenerator().generate();
             createWorkflowRunCommands.add(
                     new CreateWorkflowRunCommand(
+                            request.requestId(),
                             runId,
                             /* parentId */ null,
-                            option.workflowName(),
-                            option.workflowVersion(),
-                            option.queueName(),
-                            option.concurrencyGroupId(),
-                            option.priority(),
-                            option.labels(),
+                            request.workflowName(),
+                            request.workflowVersion(),
+                            request.queueName(),
+                            request.concurrencyGroupId(),
+                            request.concurrencyMode(),
+                            request.priority(),
+                            request.labels(),
                             nowInstant));
 
             final var runCreatedBuilder = RunCreated.newBuilder()
-                    .setWorkflowName(option.workflowName())
-                    .setWorkflowVersion(option.workflowVersion())
-                    .setQueueName(option.queueName())
-                    .setPriority(option.priority());
-            if (option.concurrencyGroupId() != null) {
-                runCreatedBuilder.setConcurrencyGroupId(option.concurrencyGroupId());
+                    .setWorkflowName(request.workflowName())
+                    .setWorkflowVersion(request.workflowVersion())
+                    .setQueueName(request.queueName())
+                    .setPriority(request.priority());
+            if (request.concurrencyGroupId() != null) {
+                runCreatedBuilder.setConcurrencyGroupId(request.concurrencyGroupId());
             }
-            if (option.labels() != null) {
-                runCreatedBuilder.putAllLabels(option.labels());
+            if (request.concurrencyMode() != null) {
+                runCreatedBuilder.setConcurrencyMode(request.concurrencyMode().toProto());
             }
-            if (option.argument() != null) {
+            if (request.labels() != null) {
+                runCreatedBuilder.putAllLabels(request.labels());
+            }
+            if (request.argument() != null) {
                 final Payload argumentPayload;
-                if (option.argument() instanceof final Payload payload) {
+                if (request.argument() instanceof final Payload payload) {
                     argumentPayload = payload;
                 } else {
-                    argumentPayload = workflowMetadata.argumentConverter().convertToPayload(option.argument());
+                    argumentPayload = workflowMetadata.argumentConverter().convertToPayload(request.argument());
                 }
                 runCreatedBuilder.setArgument(argumentPayload);
             }
 
-            createInboxEntryCommand.add(
+            createInboxEntryCommands.add(
                     new CreateWorkflowRunInboxEntryCommand(
                             runId,
                             null,
@@ -518,17 +525,23 @@ final class DexEngineImpl implements DexEngine {
         return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final List<UUID> createdRunIds = dao.createRuns(createWorkflowRunCommands);
-            assert createdRunIds.size() == createWorkflowRunCommands.size()
-                    : "Created runs: actual=%d, expected=%d".formatted(
-                    createdRunIds.size(), createWorkflowRunCommands.size());
+            final Map<UUID, UUID> createdRunIdByRequestId = dao.createRuns(createWorkflowRunCommands);
+            if (createdRunIdByRequestId.isEmpty()) {
+                return Collections.emptyList();
+            }
+            if (createdRunIdByRequestId.size() != createWorkflowRunCommands.size()) {
+                createInboxEntryCommands.removeIf(
+                        command -> createdRunIdByRequestId.containsValue(command.workflowRunId()));
+            }
 
-            final int createdInboxEvents = dao.createRunInboxEvents(createInboxEntryCommand);
-            assert createdInboxEvents == createInboxEntryCommand.size()
+            final int createdInboxEvents = dao.createRunInboxEvents(createInboxEntryCommands);
+            assert createdInboxEvents == createInboxEntryCommands.size()
                     : "Created inbox events: actual=%d, expected=%d".formatted(
-                    createdInboxEvents, createInboxEntryCommand.size());
+                    createdInboxEvents, createInboxEntryCommands.size());
 
-            return createdRunIds;
+            return createdRunIdByRequestId.entrySet().stream()
+                    .map(entry -> new CreateWorkflowRunResponse(entry.getKey(), entry.getValue()))
+                    .toList();
         });
     }
 
@@ -566,6 +579,7 @@ final class DexEngineImpl implements DexEngine {
                 runState.customStatus(),
                 runState.priority(),
                 runState.concurrencyGroupId(),
+                runState.concurrencyMode(),
                 runState.labels(),
                 runState.createdAt(),
                 runState.updatedAt(),
@@ -592,6 +606,7 @@ final class DexEngineImpl implements DexEngine {
                 metadataRow.customStatus(),
                 metadataRow.priority(),
                 metadataRow.concurrencyGroupId(),
+                metadataRow.concurrencyMode(),
                 metadataRow.labels(),
                 metadataRow.createdAt(),
                 metadataRow.updatedAt(),
@@ -940,6 +955,7 @@ final class DexEngineImpl implements DexEngine {
                         run.customStatus(),
                         run.priority(),
                         run.concurrencyGroupId(),
+                        run.concurrencyMode(),
                         run.labels(),
                         run.createdAt(),
                         run.updatedAt(),
@@ -980,6 +996,7 @@ final class DexEngineImpl implements DexEngine {
                 if (shouldCreateWorkflowRun) {
                     createWorkflowRunCommands.add(
                             new CreateWorkflowRunCommand(
+                                    UUID.randomUUID(),
                                     message.recipientRunId(),
                                     /* parentId */ run.id(),
                                     message.event().getRunCreated().getWorkflowName(),
@@ -987,6 +1004,9 @@ final class DexEngineImpl implements DexEngine {
                                     message.event().getRunCreated().getQueueName(),
                                     message.event().getRunCreated().hasConcurrencyGroupId()
                                             ? message.event().getRunCreated().getConcurrencyGroupId()
+                                            : null,
+                                    message.event().getRunCreated().hasConcurrencyMode()
+                                            ? WorkflowRunConcurrencyMode.fromProto(message.event().getRunCreated().getConcurrencyMode())
                                             : null,
                                     message.event().getRunCreated().getPriority(),
                                     message.event().getRunCreated().getLabelsCount() > 0
@@ -1052,10 +1072,10 @@ final class DexEngineImpl implements DexEngine {
         }
 
         if (!createWorkflowRunCommands.isEmpty()) {
-            final List<UUID> createdRunIds = workflowDao.createRuns(createWorkflowRunCommands);
-            assert createdRunIds.size() == createWorkflowRunCommands.size()
+            final Map<UUID, UUID> createdRunIdByRequestId = workflowDao.createRuns(createWorkflowRunCommands);
+            assert createdRunIdByRequestId.size() == createWorkflowRunCommands.size()
                     : "Created runs: actual=%d, expected=%d".formatted(
-                    createdRunIds.size(), createWorkflowRunCommands.size());
+                    createdRunIdByRequestId.size(), createWorkflowRunCommands.size());
         }
 
         if (!createInboxEntryCommands.isEmpty()) {

@@ -232,6 +232,7 @@ public final class WorkflowRunDao extends AbstractDao {
                         row.customStatus(),
                         row.priority(),
                         row.concurrencyGroupId(),
+                        row.concurrencyMode(),
                         row.labels(),
                         row.createdAt(),
                         row.updatedAt(),

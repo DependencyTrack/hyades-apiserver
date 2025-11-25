@@ -31,6 +31,7 @@ import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponseItem;
 import org.dependencytrack.api.v2.model.SortDirection;
+import org.dependencytrack.api.v2.model.WorkflowRunConcurrencyMode;
 import org.dependencytrack.api.v2.model.WorkflowRunStatus;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.engine.api.DexEngine;
@@ -127,6 +128,11 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                                         })
                                         .priority(runMetadata.priority())
                                         .concurrencyGroupId(runMetadata.concurrencyGroupId())
+                                        .concurrencyMode(switch (runMetadata.concurrencyMode()) {
+                                            case EXCLUSIVE -> WorkflowRunConcurrencyMode.EXCLUSIVE;
+                                            case SERIAL -> WorkflowRunConcurrencyMode.SERIAL;
+                                            case null -> null;
+                                        })
                                         .labels(runMetadata.labels())
                                         .createdAt(runMetadata.createdAt().toEpochMilli())
                                         .updatedAt(runMetadata.updatedAt() != null

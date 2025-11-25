@@ -36,6 +36,7 @@ import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.ExternalEvent;
 import org.dependencytrack.dex.engine.api.TaskQueueStatus;
+import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
@@ -50,6 +51,7 @@ import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.response.CreateWorkflowRunResponse;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.jspecify.annotations.NonNull;
@@ -135,7 +137,7 @@ class DexEngineImplTest {
 
         final UUID runId = engine.createRun(
                 new CreateWorkflowRunRequest<>("test", 1, WORKFLOW_TASK_QUEUE)
-                        .withConcurrencyGroupId("someConcurrencyGroupId")
+                        .withConcurrency("someConcurrencyGroupId", WorkflowRunConcurrencyMode.SERIAL)
                         .withPriority(6)
                         .withLabels(Map.of("label-a", "123", "label-b", "321"))
                         .withArgument("someArgument"));
@@ -609,6 +611,21 @@ class DexEngineImplTest {
     class ConcurrencyGroupTest {
 
         @Test
+        void shouldNotCreateRunWhenConcurrencyModeIsExclusiveAndAnotherRunIsInProgress() {
+            registerWorkflow("test", stringConverter(), voidConverter(), (ctx, arg) -> null);
+
+            UUID runId = engine.createRun(
+                    new CreateWorkflowRunRequest<>("test", 1, WORKFLOW_TASK_QUEUE)
+                            .withConcurrency("concurrencyGroup", WorkflowRunConcurrencyMode.EXCLUSIVE));
+            assertThat(runId).isNotNull();
+
+            runId = engine.createRun(
+                    new CreateWorkflowRunRequest<>("test", 1, WORKFLOW_TASK_QUEUE)
+                            .withConcurrency("concurrencyGroup", WorkflowRunConcurrencyMode.EXCLUSIVE));
+            assertThat(runId).isNull();
+        }
+
+        @Test
         void shouldExecuteRunsWithSameConcurrencyGroupInPriorityOrder() {
             final var executionQueue = new ArrayBlockingQueue<String>(5);
 
@@ -621,17 +638,17 @@ class DexEngineImplTest {
 
             final var concurrencyGroupId = "concurrencyGroup";
 
-            final List<UUID> runIds = engine.createRuns(
+            final List<CreateWorkflowRunResponse> responses = engine.createRuns(
                     Stream.of(1, 2, 3, 4, 5)
                             .<CreateWorkflowRunRequest<?>>map(
                                     number -> new CreateWorkflowRunRequest<>("test", 1, WORKFLOW_TASK_QUEUE)
-                                            .withConcurrencyGroupId(concurrencyGroupId)
+                                            .withConcurrency(concurrencyGroupId, WorkflowRunConcurrencyMode.SERIAL)
                                             .withPriority(number)
                                             .withArgument(String.valueOf(number)))
                             .toList());
 
-            for (final var runId : runIds) {
-                awaitRunStatus(runId, WorkflowRunStatus.COMPLETED, Duration.ofSeconds(5));
+            for (final var response : responses) {
+                awaitRunStatus(response.runId(), WorkflowRunStatus.COMPLETED, Duration.ofSeconds(5));
             }
 
             assertThat(executionQueue).containsExactly("5", "4", "3", "2", "1");

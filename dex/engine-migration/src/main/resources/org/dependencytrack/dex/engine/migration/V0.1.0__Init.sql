@@ -19,6 +19,7 @@ create table dex_workflow_run (
 , status text not null default 'CREATED'
 , custom_status text
 , concurrency_group_id text
+, concurrency_mode text
 , priority smallint not null default 0
 , labels jsonb
 , created_at timestamptz(3) not null
@@ -30,6 +31,11 @@ create table dex_workflow_run (
 , constraint dex_workflow_run_queue_fk foreign key (queue_name) references dex_workflow_task_queue (name) on delete cascade deferrable initially deferred
 , constraint dex_workflow_run_workflow_version check (workflow_version > 0 and workflow_version <= 100)
 , constraint dex_workflow_run_status_check check (status in ('CREATED', 'RUNNING', 'SUSPENDED', 'CANCELED', 'COMPLETED', 'FAILED'))
+, constraint dex_workflow_run_concurrency_mode_check check (concurrency_mode in ('EXCLUSIVE', 'SERIAL'))
+, constraint dex_workflow_run_concurrency_check check (
+    (concurrency_group_id is not null and concurrency_mode is not null)
+    or (concurrency_group_id is null and concurrency_mode is null)
+  )
 , constraint dex_workflow_run_priority_check check (priority >= 0 and priority <= 100)
 ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 80);
 
@@ -120,6 +126,13 @@ create unique index dex_workflow_run_concurrency_group_executing_idx
     on dex_workflow_run (queue_name, concurrency_group_id)
  where concurrency_group_id is not null
    and status in ('RUNNING', 'SUSPENDED');
+
+-- Index to support enforcement of the EXCLUSIVE concurrency mode.
+create unique index dex_workflow_run_exclusive_concurrency_idx
+    on dex_workflow_run (concurrency_group_id)
+ where concurrency_group_id is not null
+   and concurrency_mode = 'EXCLUSIVE'
+   and status in ('CREATED', 'RUNNING', 'SUSPENDED');
 
 -- Index to support identification of the next run to execute for a concurrency group.
 create index dex_workflow_run_concurrency_group_next_idx

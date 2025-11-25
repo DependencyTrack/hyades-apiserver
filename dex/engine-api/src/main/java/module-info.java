@@ -25,6 +25,7 @@ module org.dependencytrack.dex.engine.api {
     exports org.dependencytrack.dex.engine.api;
     exports org.dependencytrack.dex.engine.api.event;
     exports org.dependencytrack.dex.engine.api.request;
+    exports org.dependencytrack.dex.engine.api.response;
 
     requires transitive io.github.resilience4j.core;
     requires transitive java.sql;

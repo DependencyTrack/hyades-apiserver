@@ -35,6 +35,8 @@ properties:
     maximum: 100
   concurrency_group_id:
     type: string
+  concurrency_mode:
+    $ref: "./workflow-run-concurrency-mode.yaml"
   labels:
     type: object
     additionalProperties:

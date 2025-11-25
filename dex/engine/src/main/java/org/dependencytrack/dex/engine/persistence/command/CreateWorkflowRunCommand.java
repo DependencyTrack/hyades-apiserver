@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.dex.engine.persistence.command;
 
+import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
@@ -25,12 +26,14 @@ import java.util.Map;
 import java.util.UUID;
 
 public record CreateWorkflowRunCommand(
+        UUID requestId,
         UUID id,
         @Nullable UUID parentId,
         String workflowName,
         int workflowVersion,
         String queueName,
         @Nullable String concurrencyGroupId,
+        @Nullable WorkflowRunConcurrencyMode concurrencyMode,
         int priority,
         @Nullable Map<String, String> labels,
         Instant createdAt) {

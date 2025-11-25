@@ -180,40 +180,84 @@ public final class WorkflowDao extends AbstractDao {
         return new Page<>(resultItems, encodePageToken(nextPageToken));
     }
 
-    public List<UUID> createRuns(final Collection<CreateWorkflowRunCommand> commands) {
-        final Update update = jdbiHandle.createUpdate("""
-                insert into dex_workflow_run (
-                  id
-                , parent_id
-                , workflow_name
-                , workflow_version
-                , queue_name
-                , concurrency_group_id
-                , priority
-                , labels
-                , created_at
+    public Map<UUID, UUID> createRuns(final Collection<CreateWorkflowRunCommand> commands) {
+        final Query query = jdbiHandle.createQuery("""
+                with
+                cte_cmd as (
+                  select *
+                    from unnest (
+                      :requestIds
+                    , :ids
+                    , :parentIds
+                    , :workflowNames
+                    , :workflowVersions
+                    , :queueNames
+                    , :concurrencyGroupIds
+                    , :concurrencyModes
+                    , :priorities
+                    , cast(:labelsJsons as jsonb[])
+                    , :createdAts
+                    ) as t (
+                      request_id
+                    , id
+                    , parent_id
+                    , workflow_name
+                    , workflow_version
+                    , queue_name
+                    , concurrency_group_id
+                    , concurrency_mode
+                    , priority
+                    , labels
+                    , created_at
+                    )
+                ),
+                cte_created as (
+                  insert into dex_workflow_run (
+                    id
+                  , parent_id
+                  , workflow_name
+                  , workflow_version
+                  , queue_name
+                  , concurrency_group_id
+                  , concurrency_mode
+                  , priority
+                  , labels
+                  , created_at
+                  )
+                  select id
+                       , parent_id
+                       , workflow_name
+                       , workflow_version
+                       , queue_name
+                       , concurrency_group_id
+                       , concurrency_mode
+                       , priority
+                       , labels
+                       , created_at
+                    from cte_cmd
+                  -- Index expression of dex_workflow_run_exclusive_concurrency_idx.
+                  on conflict (concurrency_group_id)
+                        where concurrency_group_id is not null
+                          and concurrency_mode = 'EXCLUSIVE'
+                          and status in ('CREATED', 'RUNNING', 'SUSPENDED')
+                  do nothing
+                  returning id
                 )
-                select *
-                  from unnest (
-                         :ids
-                       , :parentIds
-                       , :workflowNames
-                       , :workflowVersions
-                       , :queueNames
-                       , :concurrencyGroupIds
-                       , :priorities
-                       , cast(:labelsJsons as jsonb[])
-                       , :createdAts
-                       )
-                returning id
+                select cte_cmd.request_id as request_id
+                     , cte_created.id as run_id
+                  from cte_created
+                 inner join cte_cmd
+                    on cte_cmd.id = cte_created.id
                 """);
 
+        final var requestIds = new UUID[commands.size()];
         final var ids = new UUID[commands.size()];
         final var parentIds = new @Nullable UUID[commands.size()];
         final var workflowNames = new String[commands.size()];
         final var workflowVersions = new int[commands.size()];
         final var queueNames = new String[commands.size()];
         final var concurrencyGroupIds = new @Nullable String[commands.size()];
+        final var concurrencyModes = new @Nullable String[commands.size()];
         final var priorities = new int[commands.size()];
         final var labelsJsons = new @Nullable String[commands.size()];
         final var createdAts = new Instant[commands.size()];
@@ -231,31 +275,38 @@ public final class WorkflowDao extends AbstractDao {
                 labelsJson = jsonMapper.toJson(command.labels(), jdbiHandle.getConfig());
             }
 
+            requestIds[i] = command.requestId();
             ids[i] = command.id();
             parentIds[i] = command.parentId();
             workflowNames[i] = command.workflowName();
             workflowVersions[i] = command.workflowVersion();
             queueNames[i] = command.queueName();
             concurrencyGroupIds[i] = command.concurrencyGroupId();
+            concurrencyModes[i] = command.concurrencyMode() != null
+                    ? command.concurrencyMode().name()
+                    : null;
             priorities[i] = command.priority();
             labelsJsons[i] = labelsJson;
             createdAts[i] = command.createdAt();
             i++;
         }
 
-        return update
+        return query
+                .bind("requestIds", requestIds)
                 .bind("ids", ids)
                 .bind("parentIds", parentIds)
                 .bind("workflowNames", workflowNames)
                 .bind("workflowVersions", workflowVersions)
                 .bind("queueNames", queueNames)
                 .bind("concurrencyGroupIds", concurrencyGroupIds)
+                .bind("concurrencyModes", concurrencyModes)
                 .bind("priorities", priorities)
                 .bind("labelsJsons", labelsJsons)
                 .bind("createdAts", createdAts)
-                .executeAndReturnGeneratedKeys("id")
-                .mapTo(UUID.class)
-                .list();
+                .map((rs, ctx) -> Map.entry(
+                        rs.getObject("request_id", UUID.class),
+                        rs.getObject("run_id", UUID.class)))
+                .collectToMap(Map.Entry::getKey, Map.Entry::getValue);
     }
 
     public List<WorkflowRunCountByNameAndStatusRow> getRunCountByNameAndStatus() {
