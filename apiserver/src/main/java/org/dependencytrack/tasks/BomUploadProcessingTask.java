@@ -42,6 +42,10 @@ import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.DependencyGraphEdge;
+import org.dependencytrack.model.DependencyGraphEdgeClosure;
+import org.dependencytrack.model.DependencyGraphNode;
+import org.dependencytrack.model.DependencyGraphNodeType;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
@@ -484,7 +488,14 @@ public class BomUploadProcessingTask implements Subscriber {
                         processServices(qm, persistentProject, bom.services(), bom.identitiesByBomRef(), bom.bomRefsByIdentity());
 
                 LOGGER.info("Processing %d dependency graph entries".formatted(bom.dependencyGraph().asMap().size()));
-                processDependencyGraph(qm, persistentProject, bom.dependencyGraph(), persistentComponentsByIdentity, bom.identitiesByBomRef());
+                processDependencyGraph(
+                        qm,
+                        persistentProject,
+                        persistentComponentsByIdentity,
+                        persistentServicesByIdentity,
+                        bom.identitiesByBomRef(),
+                        bom.dependencyGraph()
+                );
 
                 recordBomImport(ctx, qm, persistentProject);
 
@@ -766,56 +777,150 @@ public class BomUploadProcessingTask implements Subscriber {
     private void processDependencyGraph(
             final QueryManager qm,
             final Project project,
-            final MultiValuedMap<String, String> dependencyGraph,
-            final Map<ComponentIdentity, Component> componentsByIdentity,
-            final Map<String, ComponentIdentity> identitiesByBomRef
-    ) {
-        assertPersistent(project, "Project must be persistent");
+            final Map<ComponentIdentity, Component> componentByIdentity,
+            final Map<ComponentIdentity, ServiceComponent> serviceByIdentity,
+            final Map<String, ComponentIdentity> identitiesByBomRef,
+            final MultiValuedMap<String, String> dependencyGraph) {
+        // TODO: This could use some optimizing.
 
-        if (project.getBomRef() != null) {
-            final Collection<String> directDependencyBomRefs = dependencyGraph.get(project.getBomRef());
-            if (directDependencyBomRefs == null || directDependencyBomRefs.isEmpty()) {
-                LOGGER.warn("""
-                        The dependency graph has %d entries, but the project (metadata.component node of the BOM) \
-                        is not one of them; Graph will be incomplete because it is not possible to determine its root\
-                        """.formatted(dependencyGraph.size()));
-            }
-            final String directDependenciesJson = resolveDirectDependenciesJson(project.getBomRef(), directDependencyBomRefs, identitiesByBomRef);
-            if (!Objects.equals(directDependenciesJson, project.getDirectDependencies())) {
-                project.setDirectDependencies(directDependenciesJson);
-                qm.getPersistenceManager().flush();
-            }
-        } else {
-            // Make sure we don't retain stale data from previous BOM uploads.
-            if (project.getDirectDependencies() != null) {
-                project.setDirectDependencies(null);
-                qm.getPersistenceManager().flush();
-            }
-        }
+        final var nodeByBomRef = new HashMap<String, DependencyGraphNode>(identitiesByBomRef.size());
+        nodeByBomRef.put(project.getBomRef(), new DependencyGraphNode(DependencyGraphNodeType.PROJECT, project.getId()));
 
-        for (final Map.Entry<String, ComponentIdentity> entry : identitiesByBomRef.entrySet()) {
-            final String componentBomRef = entry.getKey();
-            final Collection<String> directDependencyBomRefs = dependencyGraph.get(componentBomRef);
-            final String directDependenciesJson = resolveDirectDependenciesJson(componentBomRef, directDependencyBomRefs, identitiesByBomRef);
+        for (final var entry : identitiesByBomRef.entrySet()) {
+            final String bomRef = entry.getKey();
+            final ComponentIdentity identity = entry.getValue();
 
-            final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(entry.getKey());
-            final Component component = componentsByIdentity.get(dependencyIdentity);
-            // TODO: Check servicesByIdentity when persistentComponent is null
-            //   We do not currently store directDependencies for ServiceComponent
-            if (component != null) {
-                assertPersistent(component, "Component must be persistent");
-                if (!Objects.equals(directDependenciesJson, component.getDirectDependencies())) {
-                    component.setDirectDependencies(directDependenciesJson);
-                }
+            if (identity.getObjectType() == ComponentIdentity.ObjectType.COMPONENT) {
+                final Component component = componentByIdentity.get(identity);
+                nodeByBomRef.put(bomRef, new DependencyGraphNode(DependencyGraphNodeType.COMPONENT, component.getId()));
+            } else if (identity.getObjectType() == ComponentIdentity.ObjectType.SERVICE) {
+                final ServiceComponent service = serviceByIdentity.get(identity);
+                nodeByBomRef.put(bomRef, new DependencyGraphNode(DependencyGraphNodeType.SERVICE, service.getId()));
             } else {
-                LOGGER.warn("""
-                        Unable to resolve component identity %s to a persistent component; \
-                        As a result, the dependency graph will likely be incomplete\
-                        """.formatted(dependencyIdentity.toJSON()));
+                throw new IllegalStateException("Unexpected identity type: " + identity.getObjectType());
             }
         }
 
-        qm.getPersistenceManager().flush();
+        final var nodeGraph = new HashMap<DependencyGraphNode, Set<DependencyGraphNode>>();
+        for (final var entry : dependencyGraph.asMap().entrySet()) {
+            final String ancestorBomRef = entry.getKey();
+            final Collection<String> descendantBomRefs = entry.getValue();
+
+            final DependencyGraphNode ancestorNode = nodeByBomRef.get(ancestorBomRef);
+            final Set<DependencyGraphNode> descendantNodes = descendantBomRefs.stream()
+                    .map(nodeByBomRef::get)
+                    .collect(Collectors.toSet());
+
+            if (!descendantNodes.isEmpty()) {
+                nodeGraph.put(ancestorNode, descendantNodes);
+            }
+        }
+
+        final var closureByEdge = new HashMap<DependencyGraphEdge, DependencyGraphEdgeClosure>();
+        for (final DependencyGraphNode node : nodeByBomRef.values()) {
+            closureByEdge.put(
+                    new DependencyGraphEdge(node, node),
+                    new DependencyGraphEdgeClosure(0, 0));
+        }
+        for (final var entry : nodeGraph.entrySet()) {
+            final DependencyGraphNode ancestorNode = entry.getKey();
+            final Set<DependencyGraphNode> descendantNodes = entry.getValue();
+
+            for (final DependencyGraphNode descendantNode : descendantNodes) {
+                closureByEdge.put(
+                        new DependencyGraphEdge(ancestorNode, descendantNode),
+                        new DependencyGraphEdgeClosure(1, 1));
+            }
+        }
+
+        Set<DependencyGraphNode> changedNodes = new HashSet<>(nodeGraph.keySet());
+        while (!changedNodes.isEmpty()) {
+            final Set<DependencyGraphNode> nextChangedNodes = new HashSet<>();
+
+            for (final DependencyGraphNode nodeA : changedNodes) {
+                final Set<DependencyGraphNode> childrenA = nodeGraph.get(nodeA);
+                if (childrenA == null) {
+                    continue;
+                }
+
+                for (final DependencyGraphNode nodeB : childrenA) {
+                    final var edgeAB = new DependencyGraphEdge(nodeA, nodeB);
+                    final DependencyGraphEdgeClosure closureAB = closureByEdge.get(edgeAB);
+
+                    if (closureAB == null) {
+                        throw new IllegalStateException();
+                    }
+
+                    final Set<DependencyGraphNode> childrenB = nodeGraph.get(nodeB);
+                    if (childrenB == null) {
+                        continue;
+                    }
+
+                    for (final DependencyGraphNode nodeC : childrenB) {
+                        if (nodeA.equals(nodeC)) {
+                            // Cyclic dependency.
+                            continue;
+                        }
+
+                        final var edgeAC = new DependencyGraphEdge(nodeA, nodeC);
+                        int newMinDepth = closureAB.minDepth() + 1;
+                        int newMaxDepth = closureAB.maxDepth() + 1;
+
+                        if (newMinDepth > 100) {
+                            LOGGER.warn("Max depth exceeded for edge: %s".formatted(edgeAC));
+                            continue;
+                        }
+
+                        DependencyGraphEdgeClosure existingClosureAC = closureByEdge.get(edgeAC);
+                        if (existingClosureAC == null) {
+                            closureByEdge.put(
+                                    edgeAC,
+                                    new DependencyGraphEdgeClosure(
+                                            newMinDepth,
+                                            newMaxDepth));
+                            nextChangedNodes.add(nodeA);
+                        } else {
+                            final int updatedMinDepth = Math.min(existingClosureAC.minDepth(), newMinDepth);
+                            final int updatedMaxDepth = Math.max(existingClosureAC.maxDepth(), newMaxDepth);
+
+                            if (updatedMinDepth != existingClosureAC.minDepth()
+                                    || updatedMaxDepth != existingClosureAC.maxDepth()) {
+                                closureByEdge.put(
+                                        edgeAC,
+                                        new DependencyGraphEdgeClosure(
+                                                updatedMinDepth,
+                                                updatedMaxDepth));
+                                nextChangedNodes.add(nodeA);
+                            }
+                        }
+                    }
+                }
+            }
+
+            changedNodes = nextChangedNodes;
+        }
+
+        final Map<DependencyGraphNode, Integer> maxDepthByNode = new HashMap<>();
+        for (final var entry : closureByEdge.entrySet()) {
+            final DependencyGraphNode ancestor = entry.getKey().ancestor();
+            final DependencyGraphNode descendant = entry.getKey().descendant();
+            final DependencyGraphEdgeClosure closure = entry.getValue();
+
+            if (!ancestor.equals(descendant)) {
+                maxDepthByNode.merge(ancestor, closure.maxDepth(), Math::max);
+            }
+        }
+
+        for (final var entry : maxDepthByNode.entrySet()) {
+            final DependencyGraphNode node = entry.getKey();
+            final int maxDepth = entry.getValue();
+
+            closureByEdge.put(
+                    new DependencyGraphEdge(node, node),
+                    new DependencyGraphEdgeClosure(0, maxDepth));
+        }
+
+        qm.updateDependencyGraph(project.getId(), closureByEdge);
     }
 
     private static void recordBomImport(final Context ctx, final QueryManager qm, final Project project) {

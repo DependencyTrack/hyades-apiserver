@@ -579,7 +579,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getPurl()).isNotNull();
         assertThat(project.getPurl().canonicalize()).isEqualTo("pkg:npm/bloated@1.0.0");
-        assertThat(project.getDirectDependencies()).isNotNull();
+        assertThat(project.getDirectDependencies()).isNull();
 
         // Make sure we ingested all components of the BOM.
         final List<Component> components = qm.getAllComponents(project);
@@ -599,11 +599,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         // with open("bloated.bom.json", "r") as f:
         //     bom = json.load(f)
         // len(list(filter(lambda x: len(x.get("dependsOn", [])) == 0, bom["dependencies"])))
-        final long componentsWithoutDirectDependencies = components.stream()
-                .map(Component::getDirectDependencies)
-                .filter(Objects::isNull)
-                .count();
-        assertThat(componentsWithoutDirectDependencies).isEqualTo(6378);
+        assertThat(qm.getDependencyGraphLeafNodes(project.getId())).isEqualTo(6378);
 
         // A VulnerabilityScan should've been initiated properly.
         final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier());

@@ -53,6 +53,8 @@ import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.DependencyGraphEdge;
+import org.dependencytrack.model.DependencyGraphEdgeClosure;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.IntegrityAnalysis;
@@ -153,6 +155,7 @@ public class QueryManager extends AlpineQueryManager {
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
     private AdvisoryQueryManager advisoryQueryManager;
+    private DependencyGraphQueryManager dependencyGraphQueryManager;
 
     /**
      * Default constructor.
@@ -419,6 +422,16 @@ public class QueryManager extends AlpineQueryManager {
             advisoryQueryManager = (request == null) ? new AdvisoryQueryManager(getPersistenceManager()) : new AdvisoryQueryManager(getPersistenceManager(), request);
         }
         return advisoryQueryManager;
+    }
+
+    private DependencyGraphQueryManager getDependencyGraphQueryManager() {
+        if (dependencyGraphQueryManager == null) {
+            dependencyGraphQueryManager = request != null
+                    ? new DependencyGraphQueryManager(getPersistenceManager(), request)
+                    : new DependencyGraphQueryManager(getPersistenceManager());
+        }
+
+        return dependencyGraphQueryManager;
     }
 
     /**
@@ -1624,6 +1637,16 @@ public class QueryManager extends AlpineQueryManager {
 
     public void synchronizeComponentOccurrences(final Component component, final Collection<ComponentOccurrence> occurrences) {
         getComponentQueryManager().synchronizeComponentOccurrences(component, occurrences);
+    }
+
+    public void updateDependencyGraph(
+            final long projectId,
+            final Map<DependencyGraphEdge, DependencyGraphEdgeClosure> closureByEdge) {
+        getDependencyGraphQueryManager().updateDependencyGraph(projectId, closureByEdge);
+    }
+
+    public long getDependencyGraphLeafNodes(final long projectId) {
+        return getDependencyGraphQueryManager().getDependencyGraphLeafNodes(projectId);
     }
 
     /**
