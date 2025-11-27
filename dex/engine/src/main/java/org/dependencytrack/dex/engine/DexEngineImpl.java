@@ -27,7 +27,9 @@ import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.api.ActivityExecutor;
+import org.dependencytrack.dex.api.RetryPolicy;
 import org.dependencytrack.dex.api.WorkflowExecutor;
+import org.dependencytrack.dex.api.failure.ApplicationFailureException;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskAbandonedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskCompletedEvent;
@@ -69,6 +71,7 @@ import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunInbox
 import org.dependencytrack.dex.engine.persistence.command.DeleteInboxEventsCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskCommand;
+import org.dependencytrack.dex.engine.persistence.command.ScheduleActivityTaskRetryCommand;
 import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowRunInboxEventsCommand;
 import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunCommand;
@@ -1049,9 +1052,7 @@ final class DexEngineImpl implements DexEngine {
                                 newEvent.getActivityTaskCreated().hasArgument()
                                         ? newEvent.getActivityTaskCreated().getArgument()
                                         : null,
-                                newEvent.getActivityTaskCreated().hasScheduledFor()
-                                        ? toInstant(newEvent.getActivityTaskCreated().getScheduledFor())
-                                        : null));
+                                newEvent.getActivityTaskCreated().getRetryPolicy()));
             }
 
             if (run.continuedAsNew()) {
@@ -1126,6 +1127,8 @@ final class DexEngineImpl implements DexEngine {
                                     polledTask.createdEventId()),
                             polledTask.activityName(),
                             polledTask.argument(),
+                            RetryPolicy.fromProto(polledTask.retryPolicy()),
+                            polledTask.attempt(),
                             polledTask.lockedUntil()))
                     .toList();
         });
@@ -1186,33 +1189,67 @@ final class DexEngineImpl implements DexEngine {
             final Collection<ActivityTaskFailedEvent> events) {
         final var tasksToDelete = new ArrayList<ActivityTaskId>(events.size());
         final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(events.size());
+        final var retriesToSchedule = new ArrayList<ScheduleActivityTaskRetryCommand>();
 
         for (final ActivityTaskFailedEvent event : events) {
-            tasksToDelete.add(event.taskId());
+            final ActivityTask task = event.task();
+            final RetryPolicy retryPolicy = event.task().retryPolicy();
 
-            inboxEventsToCreate.add(
-                    new CreateWorkflowRunInboxEntryCommand(
-                            event.taskId().workflowRunId(),
-                            /* visibleFrom */ null,
-                            WorkflowEvent.newBuilder()
-                                    .setId(-1)
-                                    .setTimestamp(toTimestamp(event.timestamp()))
-                                    .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
-                                            .setActivityTaskCreatedEventId(event.taskId().createdEventId())
-                                            .setFailure(FailureConverter.toFailure(event.exception()))
-                                            .build())
-                                    .build()));
+            final boolean isTerminal =
+                    event.exception() instanceof ApplicationFailureException afe
+                            && afe.isTerminal();
+            final boolean hasExceededMaxAttempts =
+                    retryPolicy.maxAttempts() > 0
+                            && retryPolicy.maxAttempts() <= task.attempt();
+
+            if (isTerminal || hasExceededMaxAttempts) {
+                tasksToDelete.add(task.id());
+
+                inboxEventsToCreate.add(
+                        new CreateWorkflowRunInboxEntryCommand(
+                                task.id().workflowRunId(),
+                                /* visibleFrom */ null,
+                                WorkflowEvent.newBuilder()
+                                        .setId(-1)
+                                        .setTimestamp(toTimestamp(event.timestamp()))
+                                        .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
+                                                .setActivityTaskCreatedEventId(task.id().createdEventId())
+                                                .setAttempts(task.attempt())
+                                                .setFailure(FailureConverter.toFailure(event.exception()))
+                                                .build())
+                                        .build()));
+            } else {
+                final Duration retryDelay = getRetryDelay(retryPolicy, task.attempt() + 1);
+                final Instant retryAt = event.timestamp().plus(retryDelay);
+
+                retriesToSchedule.add(
+                        new ScheduleActivityTaskRetryCommand(
+                                event.task().id(), retryAt));
+            }
         }
 
-        final int deletedTasks = activityDao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
-        assert deletedTasks == tasksToDelete.size()
-                : "Deleted activity tasks: actual=%d, expected=%d".formatted(
-                deletedTasks, tasksToDelete.size());
+        if (!tasksToDelete.isEmpty()) {
+            final int deletedTasks = activityDao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
+            assert deletedTasks == tasksToDelete.size()
+                    : "Deleted activity tasks: actual=%d, expected=%d".formatted(
+                    deletedTasks, tasksToDelete.size());
+        }
 
-        final int createdInboxEvents = workflowDao.createRunInboxEvents(inboxEventsToCreate);
-        assert createdInboxEvents == inboxEventsToCreate.size()
-                : "Created inbox events: actual=%d, expected=%d".formatted(
-                createdInboxEvents, inboxEventsToCreate.size());
+        if (!inboxEventsToCreate.isEmpty()) {
+            final int createdInboxEvents = workflowDao.createRunInboxEvents(inboxEventsToCreate);
+            assert createdInboxEvents == inboxEventsToCreate.size()
+                    : "Created inbox events: actual=%d, expected=%d".formatted(
+                    createdInboxEvents, inboxEventsToCreate.size());
+        }
+
+        if (!retriesToSchedule.isEmpty()) {
+            final int tasksScheduledForRetry =
+                    activityDao.scheduleActivityTasksForRetry(
+                            this.config.instanceId(), retriesToSchedule);
+            assert tasksScheduledForRetry == retriesToSchedule.size()
+                    : "Scheduled activity tasks: actual=%d, expected=%d".formatted(
+                    tasksScheduledForRetry, retriesToSchedule.size());
+        }
     }
 
     CompletableFuture<Instant> heartbeatActivityTask(
@@ -1445,6 +1482,15 @@ final class DexEngineImpl implements DexEngine {
 
         throw new IllegalStateException(
                 "Engine must be in state any of %s, but is %s".formatted(expectedStatuses, this.status));
+    }
+
+    private static Duration getRetryDelay(final RetryPolicy retryPolicy, final int attempt) {
+        final var intervalFunc = IntervalFunction.ofExponentialRandomBackoff(
+                retryPolicy.initialDelay(),
+                retryPolicy.delayMultiplier(),
+                retryPolicy.delayRandomizationFactor(),
+                retryPolicy.maxDelay());
+        return Duration.ofMillis(intervalFunc.apply(attempt));
     }
 
 }

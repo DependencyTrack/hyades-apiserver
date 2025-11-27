@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.dex.engine;
 
+import org.dependencytrack.dex.api.RetryPolicy;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.proto.event.v1.TimerCreated;
 import org.dependencytrack.dex.proto.event.v1.TimerElapsed;
@@ -67,7 +68,7 @@ sealed interface WorkflowCommand {
             String queueName,
             int priority,
             @Nullable Payload argument,
-            @Nullable Instant scheduleFor) implements WorkflowCommand {
+            RetryPolicy retryPolicy) implements WorkflowCommand {
 
         public CreateActivityTaskCommand {
             requireNonNull(name, "name must not be null");

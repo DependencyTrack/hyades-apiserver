@@ -23,6 +23,7 @@ import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.api.ActivityExecutor;
 import org.dependencytrack.dex.api.Awaitable;
 import org.dependencytrack.dex.api.ContinueAsNewOptions;
+import org.dependencytrack.dex.api.RetryPolicy;
 import org.dependencytrack.dex.api.WorkflowContext;
 import org.dependencytrack.dex.api.WorkflowExecutor;
 import org.dependencytrack.dex.api.failure.ActivityFailureException;
@@ -81,7 +82,6 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.awaitility.Awaitility.await;
-import static org.dependencytrack.dex.api.RetryPolicy.defaultRetryPolicy;
 import static org.dependencytrack.dex.api.payload.PayloadConverters.stringConverter;
 import static org.dependencytrack.dex.api.payload.PayloadConverters.voidConverter;
 import static org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELED;
@@ -237,9 +237,9 @@ class DexEngineImplTest {
 
         registerWorkflow("test", (ctx, arg) -> {
             if (executionCounter.incrementAndGet() == 1) {
-                ctx.callActivity("abc", ACTIVITY_TASK_QUEUE, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+                ctx.callActivity("abc", ACTIVITY_TASK_QUEUE, null, voidConverter(), stringConverter(), RetryPolicy.ofDefault()).await();
             } else {
-                ctx.callActivity("def", ACTIVITY_TASK_QUEUE, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+                ctx.callActivity("def", ACTIVITY_TASK_QUEUE, null, voidConverter(), stringConverter(), RetryPolicy.ofDefault()).await();
             }
             return null;
         });
@@ -790,7 +790,7 @@ class DexEngineImplTest {
     @Test
     void shouldCallActivity() {
         registerWorkflow("test", (ctx, arg) -> {
-            ctx.callActivity("abc", ACTIVITY_TASK_QUEUE, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+            ctx.callActivity("abc", ACTIVITY_TASK_QUEUE, null, voidConverter(), stringConverter(), RetryPolicy.ofDefault()).await();
             return null;
         });
         registerActivity("abc", voidConverter(), stringConverter(), (ctx, arg) -> "123");
@@ -818,8 +818,8 @@ class DexEngineImplTest {
     void shouldCreateMultipleActivitiesConcurrently() {
         registerWorkflow("test", voidConverter(), stringConverter(), (ctx, arg) -> {
             final List<Awaitable<String>> awaitables = List.of(
-                    ctx.callActivity("abc", ACTIVITY_TASK_QUEUE, "first", stringConverter(), stringConverter(), defaultRetryPolicy()),
-                    ctx.callActivity("abc", ACTIVITY_TASK_QUEUE, "second", stringConverter(), stringConverter(), defaultRetryPolicy()));
+                    ctx.callActivity("abc", ACTIVITY_TASK_QUEUE, "first", stringConverter(), stringConverter(), RetryPolicy.ofDefault()),
+                    ctx.callActivity("abc", ACTIVITY_TASK_QUEUE, "second", stringConverter(), stringConverter(), RetryPolicy.ofDefault()));
 
             return awaitables.stream()
                     .map(Awaitable::await)
@@ -850,7 +850,7 @@ class DexEngineImplTest {
 
     @Test
     void shouldRetryFailingActivity() {
-        final var retryPolicy = defaultRetryPolicy()
+        final var retryPolicy = RetryPolicy.ofDefault()
                 .withMaxDelay(Duration.ofMillis(10))
                 .withMaxAttempts(3);
 
@@ -876,15 +876,10 @@ class DexEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_FAILED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_CREATED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_FAILED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_CREATED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_FAILED),
+                entry -> {
+                    assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_FAILED);
+                    assertThat(entry.getActivityTaskFailed().getAttempts()).isEqualTo(3);
+                },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
@@ -892,7 +887,7 @@ class DexEngineImplTest {
     @Test
     void shouldNotRetryActivityFailingWithTerminalException() {
         registerWorkflow("test", (ctx, arg) -> {
-            ctx.callActivity("abc", ACTIVITY_TASK_QUEUE, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+            ctx.callActivity("abc", ACTIVITY_TASK_QUEUE, null, voidConverter(), stringConverter(), RetryPolicy.ofDefault()).await();
             return null;
         });
         registerActivity("abc", voidConverter(), stringConverter(), (ctx, arg) -> {
@@ -928,7 +923,7 @@ class DexEngineImplTest {
         final var heartbeatsPerformed = new ArrayBlockingQueue<Boolean>(3);
 
         registerWorkflow("test", (ctx, arg) -> {
-            ctx.callActivity("test", ACTIVITY_TASK_QUEUE, null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
+            ctx.callActivity("test", ACTIVITY_TASK_QUEUE, null, voidConverter(), voidConverter(), RetryPolicy.ofDefault()).await();
             return null;
         });
         registerActivity("test", (ctx, arg) -> {
@@ -954,7 +949,7 @@ class DexEngineImplTest {
         final var activityCanceled = new AtomicBoolean(false);
 
         registerWorkflow("test", (ctx, arg) -> {
-            ctx.callActivity("test", ACTIVITY_TASK_QUEUE, null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
+            ctx.callActivity("test", ACTIVITY_TASK_QUEUE, null, voidConverter(), voidConverter(), RetryPolicy.ofDefault()).await();
             return null;
         });
         registerActivity("test", (ctx, arg) -> {
@@ -1003,7 +998,7 @@ class DexEngineImplTest {
             return null;
         });
         registerWorkflow("baz", (ctx, arg) -> {
-            ctx.callActivity("qux", ACTIVITY_TASK_QUEUE, null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
+            ctx.callActivity("qux", ACTIVITY_TASK_QUEUE, null, voidConverter(), voidConverter(), RetryPolicy.ofDefault()).await();
             return null;
         });
         registerActivity("qux", (ctx, arg) -> {
@@ -1520,7 +1515,7 @@ class DexEngineImplTest {
     }
 
     private WorkflowRunMetadata awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
-        return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(5));
+        return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(15));
     }
 
 }

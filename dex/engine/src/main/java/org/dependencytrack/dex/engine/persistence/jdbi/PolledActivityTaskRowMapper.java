@@ -19,6 +19,7 @@
 package org.dependencytrack.dex.engine.persistence.jdbi;
 
 import org.dependencytrack.dex.engine.persistence.model.PolledActivityTask;
+import org.dependencytrack.dex.proto.common.v1.RetryPolicy;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jdbi.v3.core.config.ConfigRegistry;
 import org.jdbi.v3.core.mapper.ColumnMapper;
@@ -38,18 +39,21 @@ final class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTask>
 
     private @Nullable ColumnMapper<Instant> instantColumnMapper;
     private @Nullable ColumnMapper<Payload> payloadColumnMapper;
+    private @Nullable ColumnMapper<RetryPolicy> retryPolicyColumnMapper;
 
     @Override
     public void init(final ConfigRegistry registry) {
         final var columnMappers = registry.get(ColumnMappers.class);
         instantColumnMapper = columnMappers.findFor(Instant.class).orElseThrow();
         payloadColumnMapper = columnMappers.findFor(Payload.class).orElseThrow();
+        retryPolicyColumnMapper = columnMappers.findFor(RetryPolicy.class).orElseThrow();
     }
 
     @Override
     public PolledActivityTask map(final ResultSet rs, final StatementContext ctx) throws SQLException {
         requireNonNull(instantColumnMapper);
         requireNonNull(payloadColumnMapper);
+        requireNonNull(retryPolicyColumnMapper);
 
         return new PolledActivityTask(
                 rs.getObject("workflow_run_id", UUID.class),
@@ -58,6 +62,8 @@ final class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTask>
                 rs.getString("queue_name"),
                 rs.getInt("priority"),
                 payloadColumnMapper.map(rs, "argument", ctx),
+                retryPolicyColumnMapper.map(rs, "retry_policy", ctx),
+                rs.getInt("attempt"),
                 instantColumnMapper.map(rs, "locked_until", ctx));
     }
 

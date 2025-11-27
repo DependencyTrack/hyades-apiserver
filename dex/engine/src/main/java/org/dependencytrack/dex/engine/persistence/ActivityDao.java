@@ -27,11 +27,11 @@ import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.persistence.command.CreateActivityTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollActivityTaskCommand;
+import org.dependencytrack.dex.engine.persistence.command.ScheduleActivityTaskRetryCommand;
 import org.dependencytrack.dex.engine.persistence.model.PolledActivityTask;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
-import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -170,7 +170,7 @@ public final class ActivityDao extends AbstractDao {
                 , queue_name
                 , priority
                 , argument
-                , visible_from
+                , retry_policy
                 , created_at
                 )
                 select *
@@ -182,7 +182,7 @@ public final class ActivityDao extends AbstractDao {
                        , :queueNames
                        , :priorities
                        , :arguments
-                       , :visibleFroms
+                       , :retryPolicies
                        )
                 """);
 
@@ -192,7 +192,7 @@ public final class ActivityDao extends AbstractDao {
         final var queueNames = new String[commands.size()];
         final var priorities = new int[commands.size()];
         final var arguments = new byte[commands.size()][];
-        final var visibleFroms = new @Nullable Instant[commands.size()];
+        final var retryPolicies = new byte[commands.size()][];
 
         int i = 0;
         for (final CreateActivityTaskCommand command : commands) {
@@ -204,7 +204,7 @@ public final class ActivityDao extends AbstractDao {
             arguments[i] = command.argument() != null
                     ? command.argument().toByteArray()
                     : null;
-            visibleFroms[i] = command.visibleFrom();
+            retryPolicies[i] = command.retryPolicy().toByteArray();
             i++;
         }
 
@@ -215,7 +215,7 @@ public final class ActivityDao extends AbstractDao {
                 .bind("queueNames", queueNames)
                 .bind("priorities", priorities)
                 .bind("arguments", arguments)
-                .bind("visibleFroms", visibleFroms)
+                .bind("retryPolicies", retryPolicies)
                 .execute();
     }
 
@@ -263,6 +263,8 @@ public final class ActivityDao extends AbstractDao {
                         , dat.queue_name
                         , dat.priority
                         , dat.argument
+                        , dat.retry_policy
+                        , dat.attempt
                         , dat.locked_until
                 """);
 
@@ -284,6 +286,52 @@ public final class ActivityDao extends AbstractDao {
                 .bind("limit", limit)
                 .mapTo(PolledActivityTask.class)
                 .list();
+    }
+
+    public int scheduleActivityTasksForRetry(
+            final UUID workerInstanceId,
+            final Collection<ScheduleActivityTaskRetryCommand> commands) {
+        final Update update = jdbiHandle.createUpdate("""
+                with cte_cmd as (
+                  select *
+                    from unnest(:queueNames, :workflowRunIds, :createdEventIds, :retryAts)
+                      as t(queue_name, workflow_run_id, created_event_id, retry_at)
+                )
+                update dex_activity_task as dat
+                   set status = 'CREATED'
+                     , attempt = attempt + 1
+                     , visible_from = cte_cmd.retry_at
+                     , locked_by = null
+                     , locked_until = null
+                     , updated_at = now()
+                  from cte_cmd
+                 where dat.queue_name = cte_cmd.queue_name
+                   and dat.workflow_run_id = cte_cmd.workflow_run_id
+                   and dat.created_event_id = cte_cmd.created_event_id
+                   and dat.locked_by = :workerInstanceId
+                """);
+
+        final var queueNames = new String[commands.size()];
+        final var workflowRunIds = new UUID[commands.size()];
+        final var createdEventIds = new int[commands.size()];
+        final var retryAts = new Instant[commands.size()];
+
+        int i = 0;
+        for (final ScheduleActivityTaskRetryCommand command : commands) {
+            queueNames[i] = command.taskId().queueName();
+            workflowRunIds[i] = command.taskId().workflowRunId();
+            createdEventIds[i] = command.taskId().createdEventId();
+            retryAts[i] = command.retryAt();
+            i++;
+        }
+
+        return update
+                .bind("workerInstanceId", workerInstanceId.toString())
+                .bind("queueNames", queueNames)
+                .bind("workflowRunIds", workflowRunIds)
+                .bind("createdEventIds", createdEventIds)
+                .bind("retryAts", retryAts)
+                .execute();
     }
 
     public int unlockActivityTasks(final UUID workerInstanceId, final List<ActivityTaskId> activityTasks) {

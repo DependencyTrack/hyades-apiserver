@@ -20,8 +20,18 @@ syntax = "proto3";
 
 package org.dependencytrack.dex.common.v1;
 
+import "google/protobuf/duration.proto";
+
 option java_multiple_files = true;
 option java_package = "org.dependencytrack.dex.proto.common.v1";
+
+message RetryPolicy {
+  int32 max_attempts = 1;
+  google.protobuf.Duration initial_delay = 2;
+  float delay_multiplier = 3;
+  float delay_randomization_factor = 4;
+  google.protobuf.Duration max_delay = 5;
+}
 
 enum WorkflowRunConcurrencyMode {
   WORKFLOW_RUN_CONCURRENCY_MODE_UNSPECIFIED = 0;

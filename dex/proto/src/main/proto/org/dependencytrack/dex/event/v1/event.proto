@@ -170,8 +170,8 @@ message ActivityTaskCreated {
   // Argument of the task.
   optional org.dependencytrack.dex.payload.v1.Payload argument = 4;
 
-  // Optional scheduling time. May be used to facilitate backoff of task retries.
-  optional google.protobuf.Timestamp scheduled_for = 5;
+  // Retry policy to apply.
+  org.dependencytrack.dex.common.v1.RetryPolicy retry_policy = 5;
 }
 
 // ActivityTaskCompleted informs about the successful completion of an activity task.
@@ -188,8 +188,11 @@ message ActivityTaskFailed {
   // ID of the event in the workflow run's history that created the task.
   int32 activity_task_created_event_id = 1;
 
+  // How many attempts have been performed.
+  int32 attempts = 2;
+
   // Failure of the task.
-  org.dependencytrack.dex.failure.v1.Failure failure = 2;
+  org.dependencytrack.dex.failure.v1.Failure failure = 3;
 }
 
 // ChildRunCreated informs about the creation of a child workflow run.

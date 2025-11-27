@@ -27,6 +27,7 @@ module org.dependencytrack.dex.api {
     exports org.dependencytrack.dex.api.failure;
     exports org.dependencytrack.dex.api.payload;
 
+    requires com.google.protobuf.util;
     requires com.google.protobuf;
     requires transitive org.dependencytrack.dex.proto;
     requires transitive org.jspecify;

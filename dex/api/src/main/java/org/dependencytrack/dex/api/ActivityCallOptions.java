@@ -34,7 +34,7 @@ public record ActivityCallOptions<A extends @Nullable Object>(@Nullable A argume
     }
 
     public ActivityCallOptions() {
-        this(null, RetryPolicy.defaultRetryPolicy());
+        this(null, RetryPolicy.ofDefault());
     }
 
     public ActivityCallOptions<A> withArgument(final @Nullable A argument) {

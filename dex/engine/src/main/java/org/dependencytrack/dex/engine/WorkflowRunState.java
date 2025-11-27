@@ -427,12 +427,10 @@ final class WorkflowRunState {
         final var subjectBuilder = ActivityTaskCreated.newBuilder()
                 .setName(command.name())
                 .setQueueName(command.queueName())
-                .setPriority(command.priority());
+                .setPriority(command.priority())
+                .setRetryPolicy(command.retryPolicy().toProto());
         if (command.argument() != null) {
             subjectBuilder.setArgument(command.argument());
-        }
-        if (command.scheduleFor() != null) {
-            subjectBuilder.setScheduledFor(toTimestamp(command.scheduleFor()));
         }
 
         final var activityTaskCreatedEvent = WorkflowEvent.newBuilder()

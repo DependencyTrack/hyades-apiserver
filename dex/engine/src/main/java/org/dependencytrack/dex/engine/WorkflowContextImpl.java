@@ -19,7 +19,6 @@
 package org.dependencytrack.dex.engine;
 
 import com.google.protobuf.DebugFormat;
-import io.github.resilience4j.core.IntervalFunction;
 import org.dependencytrack.dex.api.ActivityExecutor;
 import org.dependencytrack.dex.api.ActivityHandle;
 import org.dependencytrack.dex.api.Awaitable;
@@ -33,7 +32,6 @@ import org.dependencytrack.dex.api.WorkflowRunCanceledError;
 import org.dependencytrack.dex.api.WorkflowRunContinuedAsNewError;
 import org.dependencytrack.dex.api.WorkflowRunDeterminismError;
 import org.dependencytrack.dex.api.failure.ActivityFailureException;
-import org.dependencytrack.dex.api.failure.ApplicationFailureException;
 import org.dependencytrack.dex.api.failure.CancellationFailureException;
 import org.dependencytrack.dex.api.failure.ChildWorkflowFailureException;
 import org.dependencytrack.dex.api.failure.SideEffectFailureException;
@@ -221,70 +219,6 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             final RetryPolicy retryPolicy) {
         requireNotInSideEffect("Activities can not be called from within a side effect");
 
-        return callActivityInternal(
-                name,
-                queueName,
-                argument,
-                argumentConverter,
-                resultConverter,
-                retryPolicy,
-                /* attempt */ 1,
-                /* delay */ null);
-    }
-
-    private <AA, AR> AwaitableImpl<AR> callActivityInternal(
-            final String name,
-            final String queueName,
-            final @Nullable AA argument,
-            final PayloadConverter<AA> argumentConverter,
-            final PayloadConverter<AR> resultConverter,
-            final RetryPolicy retryPolicy,
-            final int attempt,
-            final @Nullable Duration delay) {
-        final AwaitableImpl<AR> initialAwaitable =
-                callActivityInternalWithNoRetries(
-                        name,
-                        queueName,
-                        argument,
-                        argumentConverter,
-                        resultConverter,
-                        delay);
-        return new RetryingAwaitableImpl<>(
-                this,
-                resultConverter,
-                initialAwaitable,
-                exception -> {
-                    if (exception instanceof final ActivityFailureException activityException
-                            && activityException.getCause() instanceof final ApplicationFailureException applicationException
-                            && applicationException.isTerminal()) {
-                        throw exception;
-                    } else if (retryPolicy.maxAttempts() > 0 && attempt + 1 > retryPolicy.maxAttempts()) {
-                        logger().warn("Max retry attempts ({}) exceeded", retryPolicy.maxAttempts());
-                        throw exception;
-                    }
-
-                    final Duration nextDelay = getRetryDelay(retryPolicy, attempt);
-                    logger().warn("Activity {} failed; Scheduling retry attempt #{} in {}", name, attempt, nextDelay, exception);
-
-                    return callActivityInternal(
-                            name,
-                            queueName,
-                            argument,
-                            argumentConverter,
-                            resultConverter,
-                            retryPolicy,
-                            attempt + 1,
-                            nextDelay);
-                });
-    }
-
-    private <AA, AR> AwaitableImpl<AR> callActivityInternalWithNoRetries(
-            final String name,
-            final String queueName,
-            final @Nullable AA argument,
-            final PayloadConverter<AA> argumentConverter,
-            final PayloadConverter<AR> resultConverter,
-            final @Nullable Duration delay) {
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId,
                 new CreateActivityTaskCommand(
@@ -293,7 +227,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                         queueName,
                         this.priority,
                         argumentConverter.convertToPayload(argument),
-                        delay != null ? currentTime.plus(delay) : null));
+                        retryPolicy));
 
         final var awaitable = new AwaitableImpl<>(this, resultConverter);
         pendingAwaitableByEventId.put(eventId, awaitable);
@@ -599,8 +533,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                     CreateActivityTaskCommand.class.getSimpleName()));
         } else if (!Objects.equals(eventSubject.getName(), concreteCommand.name())
                 || !Objects.equals(eventSubject.getPriority(), concreteCommand.priority())
-                || (eventSubject.hasArgument()
-                && !Objects.equals(eventSubject.getArgument(), concreteCommand.argument()))) {
+                || (eventSubject.hasArgument() && !Objects.equals(eventSubject.getArgument(), concreteCommand.argument()))
+                || !Objects.equals(eventSubject.getRetryPolicy(), concreteCommand.retryPolicy().toProto())) {
             throw new WorkflowRunDeterminismError("""
                     Encountered %s event for ID %d, but it does not match \
                     the corresponding %s: event=%s, command=%s""".formatted(
@@ -959,15 +893,6 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         if (isInSideEffect) {
             throw new IllegalStateException(message);
         }
-    }
-
-    private static Duration getRetryDelay(final RetryPolicy retryPolicy, final int attempt) {
-        final var intervalFunc = IntervalFunction.ofExponentialRandomBackoff(
-                retryPolicy.initialDelay(),
-                retryPolicy.multiplier(),
-                retryPolicy.randomizationFactor(),
-                retryPolicy.maxDelay());
-        return Duration.ofMillis(intervalFunc.apply(attempt + 1));
     }
 
 }

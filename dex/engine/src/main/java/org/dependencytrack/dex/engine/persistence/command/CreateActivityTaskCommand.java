@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.dex.engine.persistence.command;
 
+import org.dependencytrack.dex.proto.common.v1.RetryPolicy;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
-import java.time.Instant;
 import java.util.UUID;
 
 public record CreateActivityTaskCommand(
@@ -31,5 +31,5 @@ public record CreateActivityTaskCommand(
         String queueName,
         int priority,
         @Nullable Payload argument,
-        @Nullable Instant visibleFrom) {
+        RetryPolicy retryPolicy) {
 }

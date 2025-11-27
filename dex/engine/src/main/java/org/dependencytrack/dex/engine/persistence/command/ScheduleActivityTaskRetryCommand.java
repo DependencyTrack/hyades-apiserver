@@ -16,23 +16,11 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence.model;
+package org.dependencytrack.dex.engine.persistence.command;
 
-import org.dependencytrack.dex.proto.common.v1.RetryPolicy;
-import org.dependencytrack.dex.proto.payload.v1.Payload;
-import org.jspecify.annotations.Nullable;
+import org.dependencytrack.dex.engine.ActivityTaskId;
 
 import java.time.Instant;
-import java.util.UUID;
 
-public record PolledActivityTask(
-        UUID workflowRunId,
-        int createdEventId,
-        String activityName,
-        String queueName,
-        int priority,
-        @Nullable Payload argument,
-        RetryPolicy retryPolicy,
-        int attempt,
-        Instant lockedUntil) {
+public record ScheduleActivityTaskRetryCommand(ActivityTaskId taskId, Instant retryAt) {
 }

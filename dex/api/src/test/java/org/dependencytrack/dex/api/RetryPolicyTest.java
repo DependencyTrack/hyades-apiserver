@@ -31,10 +31,10 @@ class RetryPolicyTest {
 
     @Test
     void shouldHaveExpectedDefaultPolicy() {
-        final var defaultPolicy = RetryPolicy.defaultRetryPolicy();
+        final var defaultPolicy = RetryPolicy.ofDefault();
         assertThat(defaultPolicy.initialDelay()).hasSeconds(5);
-        assertThat(defaultPolicy.multiplier()).isEqualTo(1.5);
-        assertThat(defaultPolicy.randomizationFactor()).isEqualTo(0.3);
+        assertThat(defaultPolicy.delayMultiplier()).isEqualTo(1.5);
+        assertThat(defaultPolicy.delayRandomizationFactor()).isEqualTo(0.3);
         assertThat(defaultPolicy.maxDelay()).hasMinutes(30);
         assertThat(defaultPolicy.maxAttempts()).isEqualTo(6);
     }
@@ -42,48 +42,48 @@ class RetryPolicyTest {
     @Test
     void shouldThrowWhenInitialDelayIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> RetryPolicy.defaultRetryPolicy().withInitialDelay(null));
+                .isThrownBy(() -> RetryPolicy.ofDefault().withInitialDelay(null));
     }
 
     @ParameterizedTest
     @ValueSource(ints = {0, -1})
     void shouldThrowWhenInitialDelayIsNotPositive(final int delaySeconds) {
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> RetryPolicy.defaultRetryPolicy().withInitialDelay(Duration.ofSeconds(delaySeconds)));
+                .isThrownBy(() -> RetryPolicy.ofDefault().withInitialDelay(Duration.ofSeconds(delaySeconds)));
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {0, -1})
     void shouldThrowWhenMultiplierIsNotPositive(final double multiplier) {
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> RetryPolicy.defaultRetryPolicy().withMultiplier(multiplier));
+                .isThrownBy(() -> RetryPolicy.ofDefault().withDelayMultiplier(multiplier));
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {0, -1})
     void shouldThrowWhenRandomizationFactorIsNotPositive(final double randomizationFactor) {
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> RetryPolicy.defaultRetryPolicy().withRandomizationFactor(randomizationFactor));
+                .isThrownBy(() -> RetryPolicy.ofDefault().withDelayRandomizationFactor(randomizationFactor));
     }
 
     @Test
     void shouldThrowWhenMaxDelayIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> RetryPolicy.defaultRetryPolicy().withMaxDelay(null));
+                .isThrownBy(() -> RetryPolicy.ofDefault().withMaxDelay(null));
     }
 
     @ParameterizedTest
     @ValueSource(ints = {0, -1})
     void shouldThrowWhenMaxDelayIsNotPositive(final int delaySeconds) {
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> RetryPolicy.defaultRetryPolicy().withMaxDelay(Duration.ofSeconds(delaySeconds)));
+                .isThrownBy(() -> RetryPolicy.ofDefault().withMaxDelay(Duration.ofSeconds(delaySeconds)));
     }
 
     @ParameterizedTest
     @ValueSource(ints = {0, -1})
     void shouldThrowWhenMaxAttemptsIsNotPositive(final int maxAttempts) {
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> RetryPolicy.defaultRetryPolicy().withMaxAttempts(maxAttempts));
+                .isThrownBy(() -> RetryPolicy.ofDefault().withMaxAttempts(maxAttempts));
     }
 
 }

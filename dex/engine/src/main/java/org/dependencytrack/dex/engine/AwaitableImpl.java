@@ -43,7 +43,7 @@ import static java.util.Objects.requireNonNull;
  * If after no more events can be replayed, the awaitable remains in {@link State.Pending} state,
  * the workflow is blocked and a {@link WorkflowRunBlockedError} is thrown.
  */
-sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableImpl {
+final class AwaitableImpl<T> implements Awaitable<T> {
 
     private sealed interface State<R> {
 

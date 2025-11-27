@@ -100,6 +100,8 @@ create table dex_activity_task (
 , priority smallint not null default 0
 , status text not null default 'CREATED'
 , argument bytea
+, retry_policy bytea not null
+, attempt smallint not null default 1
 , visible_from timestamptz(3)
 , locked_by text
 , locked_until timestamptz(3)

@@ -102,7 +102,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
         } catch (Exception e) {
             try {
                 // TODO: Retry on TimeoutException
-                engine.onTaskEvent(new ActivityTaskFailedEvent(task.id(), e)).join();
+                engine.onTaskEvent(new ActivityTaskFailedEvent(task, e)).join();
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 logger.warn("Interrupted while waiting for task failure to be acknowledged", ex);

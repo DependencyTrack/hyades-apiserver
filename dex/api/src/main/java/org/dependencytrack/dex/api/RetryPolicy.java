@@ -18,14 +18,16 @@
  */
 package org.dependencytrack.dex.api;
 
+import com.google.protobuf.util.Durations;
+
 import java.time.Duration;
 
 import static java.util.Objects.requireNonNull;
 
 public record RetryPolicy(
         Duration initialDelay,
-        double multiplier,
-        double randomizationFactor,
+        double delayMultiplier,
+        double delayRandomizationFactor,
         Duration maxDelay,
         int maxAttempts) {
 
@@ -34,11 +36,11 @@ public record RetryPolicy(
         if (initialDelay.isZero() || initialDelay.isNegative()) {
             throw new IllegalArgumentException("initialDelay must be positive");
         }
-        if (multiplier <= 0) {
-            throw new IllegalArgumentException("multiplier must be positive");
+        if (delayMultiplier <= 0) {
+            throw new IllegalArgumentException("delayMultiplier must be positive");
         }
-        if (randomizationFactor <= 0) {
-            throw new IllegalArgumentException("randomizationFactor must be positive");
+        if (delayRandomizationFactor <= 0) {
+            throw new IllegalArgumentException("delayRandomizationFactor must be positive");
         }
         requireNonNull(maxDelay, "maxDelay must not be null");
         if (maxDelay.isZero() || maxDelay.isNegative()) {
@@ -49,28 +51,72 @@ public record RetryPolicy(
         }
     }
 
-    public static RetryPolicy defaultRetryPolicy() {
+    public static RetryPolicy ofDefault() {
         return new RetryPolicy(Duration.ofSeconds(5), 1.5, 0.3, Duration.ofMinutes(30), 6);
     }
 
+    public static RetryPolicy fromProto(final org.dependencytrack.dex.proto.common.v1.RetryPolicy protoPolicy) {
+        return new RetryPolicy(
+                Duration.ofMillis(Durations.toMillis(protoPolicy.getInitialDelay())),
+                protoPolicy.getDelayMultiplier(),
+                protoPolicy.getDelayRandomizationFactor(),
+                Duration.ofMillis(Durations.toMillis(protoPolicy.getMaxDelay())),
+                protoPolicy.getMaxAttempts());
+    }
+
+    public org.dependencytrack.dex.proto.common.v1.RetryPolicy toProto() {
+        return org.dependencytrack.dex.proto.common.v1.RetryPolicy.newBuilder()
+                .setInitialDelay(Durations.fromMillis(this.initialDelay.toMillis()))
+                .setDelayMultiplier((float) this.delayMultiplier)
+                .setDelayRandomizationFactor((float) this.delayRandomizationFactor)
+                .setMaxDelay(Durations.fromMillis(this.maxDelay.toMillis()))
+                .setMaxAttempts(this.maxAttempts)
+                .build();
+    }
+
     public RetryPolicy withInitialDelay(final Duration initialDelay) {
-        return new RetryPolicy(initialDelay, this.multiplier, this.randomizationFactor, this.maxDelay, this.maxAttempts);
+        return new RetryPolicy(
+                initialDelay,
+                this.delayMultiplier,
+                this.delayRandomizationFactor,
+                this.maxDelay,
+                this.maxAttempts);
     }
 
-    public RetryPolicy withMultiplier(final double multiplier) {
-        return new RetryPolicy(this.initialDelay, multiplier, this.randomizationFactor, this.maxDelay, this.maxAttempts);
+    public RetryPolicy withDelayMultiplier(final double delayMultiplier) {
+        return new RetryPolicy(
+                this.initialDelay,
+                delayMultiplier,
+                this.delayRandomizationFactor,
+                this.maxDelay,
+                this.maxAttempts);
     }
 
-    public RetryPolicy withRandomizationFactor(final double randomizationFactor) {
-        return new RetryPolicy(this.initialDelay, this.multiplier, randomizationFactor, this.maxDelay, this.maxAttempts);
+    public RetryPolicy withDelayRandomizationFactor(final double delayRandomizationFactor) {
+        return new RetryPolicy(
+                this.initialDelay,
+                this.delayMultiplier,
+                delayRandomizationFactor,
+                this.maxDelay,
+                this.maxAttempts);
     }
 
     public RetryPolicy withMaxDelay(final Duration maxDelay) {
-        return new RetryPolicy(this.initialDelay, this.multiplier, this.randomizationFactor, maxDelay, this.maxAttempts);
+        return new RetryPolicy(
+                this.initialDelay,
+                this.delayMultiplier,
+                this.delayRandomizationFactor,
+                maxDelay,
+                this.maxAttempts);
     }
 
     public RetryPolicy withMaxAttempts(final int maxAttempts) {
-        return new RetryPolicy(this.initialDelay, this.multiplier, this.randomizationFactor, this.maxDelay, maxAttempts);
+        return new RetryPolicy(
+                this.initialDelay,
+                this.delayMultiplier,
+                this.delayRandomizationFactor,
+                this.maxDelay,
+                maxAttempts);
     }
 
 }

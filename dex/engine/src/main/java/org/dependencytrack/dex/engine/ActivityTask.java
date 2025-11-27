@@ -19,6 +19,7 @@
 package org.dependencytrack.dex.engine;
 
 import io.micrometer.core.instrument.Tag;
+import org.dependencytrack.dex.api.RetryPolicy;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
@@ -29,6 +30,8 @@ record ActivityTask(
         ActivityTaskId id,
         String activityName,
         @Nullable Payload argument,
+        RetryPolicy retryPolicy,
+        int attempt,
         Instant lockedUntil) implements Task {
 
     @Override

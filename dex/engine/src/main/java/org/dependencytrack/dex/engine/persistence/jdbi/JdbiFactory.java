@@ -27,6 +27,7 @@ import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunHistoryEntry;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
+import org.dependencytrack.dex.proto.common.v1.RetryPolicy;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jdbi.v3.core.Jdbi;
@@ -70,11 +71,14 @@ public final class JdbiFactory {
                 .registerArrayType(Duration.class, "interval")
                 .registerArrayType(Instant.class, "timestamptz")
                 .registerColumnMapper(
-                        WorkflowEvent.class,
-                        new ProtobufColumnMapper<>(WorkflowEvent.parser()))
-                .registerColumnMapper(
                         Payload.class,
                         new ProtobufColumnMapper<>(Payload.parser()))
+                .registerColumnMapper(
+                        RetryPolicy.class,
+                        new ProtobufColumnMapper<>(RetryPolicy.parser()))
+                .registerColumnMapper(
+                        WorkflowEvent.class,
+                        new ProtobufColumnMapper<>(WorkflowEvent.parser()))
                 .registerRowMapper(
                         ActivityTaskQueue.class,
                         new ActivityTaskQueueRowMapper())
