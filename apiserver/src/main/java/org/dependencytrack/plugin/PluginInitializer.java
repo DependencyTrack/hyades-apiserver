@@ -22,6 +22,8 @@ import alpine.common.logging.Logger;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 /**
  * @since 5.6.0
@@ -32,9 +34,16 @@ public class PluginInitializer implements ServletContextListener {
 
     private final PluginManager pluginManager = PluginManager.getInstance();
 
+    private final Config config = ConfigProvider.getConfig();
+
     @Override
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Loading plugins");
+
+        if (!config.getValue("plugin.external.load.enabled", boolean.class)) {
+            pluginManager.setExternalPluginConfig(true, config.getValue("plugin.external.dir", String.class));
+        }
+
         pluginManager.loadPlugins();
     }
 
