@@ -35,7 +35,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -43,6 +42,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -66,7 +66,7 @@ final class OsvVulnDataSource implements VulnDataSource {
 
     private final WatermarkManager watermarkManager;
     private final ObjectMapper objectMapper;
-    private final URL dataUrl;
+    private final String dataUrl;
     private final List<String> ecosystems;
     private final Set<String> successfullyCompletedEcosystems;
     private final HttpClient httpClient;
@@ -82,14 +82,14 @@ final class OsvVulnDataSource implements VulnDataSource {
     OsvVulnDataSource(
             final WatermarkManager watermarkManager,
             final ObjectMapper objectMapper,
-            final URL dataUrl,
-            final List<String> ecosystems,
+            final String dataUrl,
+            final Collection<String> ecosystems,
             final HttpClient httpClient,
             final boolean isAliasSyncEnabled) {
         this.watermarkManager = watermarkManager;
         this.objectMapper = objectMapper;
         this.dataUrl = dataUrl;
-        this.ecosystems = ecosystems;
+        this.ecosystems = List.copyOf(ecosystems);
         this.isAliasSyncEnabled = isAliasSyncEnabled;
         this.successfullyCompletedEcosystems = new HashSet<>();
         this.httpClient = httpClient;

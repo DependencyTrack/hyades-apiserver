@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.plugin;
 
-import alpine.model.IConfigProperty;
 import alpine.test.config.ConfigPropertyRule;
 import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
@@ -60,28 +59,12 @@ public class PluginManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testGetExtension() {
-        final TestExtensionPoint extension =
-                PluginManager.getInstance().getExtension(TestExtensionPoint.class);
-        assertThat(extension).isNotNull();
-        assertThat(extension.test()).isEqualTo("null-null");
-    }
-
-    @Test
     @WithConfigProperty("test.extension.dummy.bar=qux")
     public void testGetExtensionWithConfig() {
-        qm.createConfigProperty(
-                /* groupName */ "test",
-                /* propertyName */ "extension.dummy.foo",
-                /* propertyValue */ "baz",
-                IConfigProperty.PropertyType.STRING,
-                /* description */ null
-        );
-
         final TestExtensionPoint extension =
                 PluginManager.getInstance().getExtension(TestExtensionPoint.class);
         assertThat(extension).isNotNull();
-        assertThat(extension.test()).isEqualTo("baz-qux");
+        assertThat(extension.test()).isEqualTo("qux");
     }
 
     @Test
