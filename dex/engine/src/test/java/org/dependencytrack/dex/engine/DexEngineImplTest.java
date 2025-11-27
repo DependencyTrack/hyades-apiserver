@@ -727,10 +727,7 @@ class DexEngineImplTest {
             final var sideEffectInvocationCounter = new AtomicInteger();
 
             registerWorkflow("test", (ctx, arg) -> {
-                ctx.executeSideEffect("sideEffect", null, voidConverter(), ignored -> {
-                    sideEffectInvocationCounter.incrementAndGet();
-                    return null;
-                }).await();
+                ctx.executeSideEffect("sideEffect", sideEffectInvocationCounter::incrementAndGet).await();
 
                 ctx.createTimer("sleep", Duration.ofMillis(10)).await();
                 return null;
@@ -763,11 +760,8 @@ class DexEngineImplTest {
         @Test
         void shouldNotAllowNestedSideEffects() {
             registerWorkflow("test", (ctx, arg) -> {
-                ctx.executeSideEffect("outerSideEffect", null, voidConverter(), ignored -> {
-                    ctx.executeSideEffect("nestedSideEffect", null, voidConverter(), ignored2 -> null).await();
-                    return null;
-                }).await();
-
+                ctx.executeSideEffect("outerSideEffect", () -> ctx.executeSideEffect("nestedSideEffect", () -> {
+                }).await()).await();
                 return null;
             });
             registerWorkflowWorker("workflow-worker", 1);
@@ -1116,7 +1110,7 @@ class DexEngineImplTest {
     void shouldContinueAsNew() {
         registerWorkflow("foo", stringConverter(), stringConverter(), (ctx, arg) -> {
             final int iteration = Integer.parseInt(arg);
-            ctx.executeSideEffect("abc-" + iteration, null, stringConverter(), ignored -> "def-" + iteration).await();
+            ctx.executeSideEffect("abc-" + iteration, stringConverter(), () -> "def-" + iteration).await();
             if (iteration < 3) {
                 ctx.continueAsNew(
                         new ContinueAsNewOptions<String>()
@@ -1218,8 +1212,10 @@ class DexEngineImplTest {
     @Test
     void shouldListRunEvents() {
         registerWorkflow("foo", (ctx, arg) -> {
-            ctx.executeSideEffect("a", null, voidConverter(), ignored -> null).await();
-            ctx.executeSideEffect("b", null, voidConverter(), ignored -> null).await();
+            ctx.executeSideEffect("a", () -> {
+            }).await();
+            ctx.executeSideEffect("b", () -> {
+            }).await();
             return null;
         });
         registerWorkflowWorker("workflow-worker", 1);

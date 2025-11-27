@@ -20,7 +20,6 @@ package org.dependencytrack.dex.engine;
 
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.dependencytrack.dex.engine.MetadataRegistry.ActivityMetadata;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskAbandonedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskCompletedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskFailedEvent;

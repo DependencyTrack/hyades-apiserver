@@ -21,7 +21,6 @@ package org.dependencytrack.dex.engine;
 import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.dependencytrack.dex.engine.MetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.dex.engine.TaskEvent.WorkflowTaskAbandonedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.WorkflowTaskCompletedEvent;
 import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskCommand;

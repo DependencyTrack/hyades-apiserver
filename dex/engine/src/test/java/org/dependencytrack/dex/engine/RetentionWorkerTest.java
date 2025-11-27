@@ -72,7 +72,7 @@ class RetentionWorkerTest {
         });
 
         try (final var worker = new RetentionWorker(
-                jdbi, /* retentionDays */ 3, Duration.ZERO, Duration.ofMillis(100))) {
+                jdbi, /* retentionDays */ Duration.ofDays(3), Duration.ZERO, Duration.ofMillis(100))) {
             worker.start();
 
             await()

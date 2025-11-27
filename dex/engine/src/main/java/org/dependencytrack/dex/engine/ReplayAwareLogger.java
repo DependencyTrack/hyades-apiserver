@@ -21,20 +21,23 @@ package org.dependencytrack.dex.engine;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 
+/**
+ * A {@link Logger} that omits log messages during workflow replay.
+ */
 final class ReplayAwareLogger implements Logger {
 
-    private final WorkflowContextImpl<?, ?> executionContext;
+    private final WorkflowContextImpl<?, ?> workflowContext;
     private final Logger delegate;
 
     ReplayAwareLogger(
-            final WorkflowContextImpl<?, ?> executionContext,
+            final WorkflowContextImpl<?, ?> workflowContext,
             final Logger delegate) {
-        this.executionContext = executionContext;
+        this.workflowContext = workflowContext;
         this.delegate = delegate;
     }
 
     private void unlessReplaying(final Runnable runnable) {
-        if (!executionContext.isReplaying()) {
+        if (!workflowContext.isReplaying()) {
             runnable.run();
         }
     }

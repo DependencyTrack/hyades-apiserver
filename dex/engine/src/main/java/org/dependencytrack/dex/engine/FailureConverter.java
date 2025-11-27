@@ -38,6 +38,9 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Utility class that converts {@link Throwable}s into {@link Failure}s and vice versa.
+ */
 final class FailureConverter {
 
     private FailureConverter() {

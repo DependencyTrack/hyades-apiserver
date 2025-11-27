@@ -38,8 +38,6 @@ import org.dependencytrack.dex.api.failure.CancellationFailureException;
 import org.dependencytrack.dex.api.failure.ChildWorkflowFailureException;
 import org.dependencytrack.dex.api.failure.SideEffectFailureException;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
-import org.dependencytrack.dex.engine.MetadataRegistry.ActivityMetadata;
-import org.dependencytrack.dex.engine.MetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.dex.engine.WorkflowCommand.CompleteRunCommand;
 import org.dependencytrack.dex.engine.WorkflowCommand.ContinueRunAsNewCommand;
 import org.dependencytrack.dex.engine.WorkflowCommand.CreateActivityTaskCommand;
@@ -351,11 +349,11 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             final String name,
             final @Nullable SA argument,
             final PayloadConverter<SR> resultConverter,
-            final Function<@Nullable SA, @Nullable SR> sideEffectFunction) {
+            final Function<@Nullable SA, @Nullable SR> function) {
         requireNotInSideEffect("Nested side effects are not allowed");
         requireNonNull(name, "name must not be null");
         requireNonNull(resultConverter, "resultConverter must not be null");
-        requireNonNull(sideEffectFunction, "sideEffectFunction must not be null");
+        requireNonNull(function, "sideEffectFunction must not be null");
 
         final int eventId = currentEventId++;
 
@@ -365,7 +363,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         if (!isReplaying) {
             try {
                 isInSideEffect = true;
-                final SR result = sideEffectFunction.apply(argument);
+                final SR result = function.apply(argument);
                 final Payload resultPayload = resultConverter.convertToPayload(result);
                 pendingCommandByEventId.put(eventId, new RecordSideEffectResultCommand(
                         name, eventId, resultPayload));

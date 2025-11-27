@@ -29,6 +29,9 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Supplier;
+
+import static org.dependencytrack.dex.api.payload.PayloadConverters.voidConverter;
 
 /**
  * Context available to {@link WorkflowExecutor}s.
@@ -118,9 +121,9 @@ public interface WorkflowContext<A extends @Nullable Object> {
      * will throw an {@link SideEffectFailureException} if the side effect failed.
      *
      * @param name               Name of the side effect. Purely descriptive to make it recognizable in the history.
-     * @param argument           Argument to pass to {@code sideEffectFunction}.
+     * @param argument           Argument to pass to {@code function}.
      * @param resultConverter    {@link PayloadConverter} to use for the side effect's result.
-     * @param sideEffectFunction The side effect to execute.
+     * @param function The side effect to execute.
      * @param <SA>               Type of the side effect's argument.
      * @param <SR>               Type of the side effect's result.
      * @return An {@link Awaitable} wrapping the side effect's result, if any.
@@ -129,7 +132,21 @@ public interface WorkflowContext<A extends @Nullable Object> {
             String name,
             @Nullable SA argument,
             PayloadConverter<SR> resultConverter,
-            Function<SA, SR> sideEffectFunction);
+            Function<SA, SR> function);
+
+    default <SR> Awaitable<SR> executeSideEffect(
+            String name,
+            PayloadConverter<SR> resultConverter,
+            Supplier<SR> supplier) {
+        return executeSideEffect(name, null, resultConverter, ignored -> supplier.get());
+    }
+
+    default Awaitable<Void> executeSideEffect(String name, Runnable runnable) {
+        return executeSideEffect(name, null, voidConverter(), ignored -> {
+            runnable.run();
+            return null;
+        });
+    }
 
     /**
      * Wait for an external event.

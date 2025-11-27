@@ -19,6 +19,7 @@
 package org.dependencytrack.dex.engine;
 
 import org.dependencytrack.dex.api.Awaitable;
+import org.dependencytrack.dex.api.WorkflowContext;
 import org.dependencytrack.dex.api.WorkflowRunBlockedError;
 import org.dependencytrack.dex.api.failure.CancellationFailureException;
 import org.dependencytrack.dex.api.failure.FailureException;
@@ -30,6 +31,18 @@ import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Implementation of {@link Awaitable}.
+ * <p>
+ * An {@link Awaitable} is always bound to a {@link WorkflowContext}.
+ * <p>
+ * Awaiting works by replaying events from the workflow run history.
+ * Event handling is facilitated by {@link WorkflowContext}. It is responsible for initiating
+ * state transitions of {@link Awaitable}s.
+ * <p>
+ * If after no more events can be replayed, the awaitable remains in {@link State.Pending} state,
+ * the workflow is blocked and a {@link WorkflowRunBlockedError} is thrown.
+ */
 sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableImpl {
 
     private sealed interface State<R> {

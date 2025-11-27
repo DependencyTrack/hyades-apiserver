@@ -29,7 +29,6 @@ import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.api.ActivityExecutor;
 import org.dependencytrack.dex.api.WorkflowExecutor;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
-import org.dependencytrack.dex.engine.MetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskAbandonedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskCompletedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskFailedEvent;
@@ -257,7 +256,7 @@ final class DexEngineImpl implements DexEngine {
             LOGGER.debug("Starting retention worker");
             retentionWorker = new RetentionWorker(
                     jdbi,
-                    config.retention().days(),
+                    config.retention().duration(),
                     config.retention().workerInitialDelay(),
                     config.retention().workerInterval());
             retentionWorker.start();

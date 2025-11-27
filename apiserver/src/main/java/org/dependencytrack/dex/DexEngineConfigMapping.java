@@ -120,9 +120,9 @@ public interface DexEngineConfigMapping {
         @WithDefault("true")
         boolean enabled();
 
-        @WithDefault("1")
+        @WithDefault("P1D")
         @Positive
-        int days();
+        Duration duration();
 
     }
 

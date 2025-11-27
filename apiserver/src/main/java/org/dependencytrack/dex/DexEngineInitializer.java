@@ -123,7 +123,7 @@ public final class DexEngineInitializer implements ServletContextListener {
         engineConfig.activityTaskScheduler().setPollInterval(configMapping.activityTaskScheduler().pollInterval());
 
         engineConfig.retention().setWorkerEnabled(configMapping.retention().enabled());
-        engineConfig.retention().setDays(configMapping.retention().days());
+        engineConfig.retention().setDuration(configMapping.retention().duration());
 
         engineConfig.taskEventBuffer().setFlushInterval(configMapping.taskEventBuffer().flushInterval());
         engineConfig.taskEventBuffer().setMaxBatchSize(configMapping.taskEventBuffer().maxSize());

@@ -91,7 +91,7 @@ public class DexEngineConfig {
 
     public static class RetentionConfig {
 
-        private int days = 3;
+        private Duration duration = Duration.ofDays(1);
         private boolean workerEnabled = true;
         private Duration workerInitialDelay = Duration.ofMinutes(1);
         private Duration workerInterval = Duration.ofMinutes(30);
@@ -100,14 +100,14 @@ public class DexEngineConfig {
         }
 
         /**
-         * @return Number of days to retain completed workflow runs for.
+         * @return Duration to retain completed workflow runs for.
          */
-        public int days() {
-            return days;
+        public Duration duration() {
+            return duration;
         }
 
-        public void setDays(final int days) {
-            this.days = days;
+        public void setDuration(final Duration duration) {
+            this.duration = duration;
         }
 
         /**

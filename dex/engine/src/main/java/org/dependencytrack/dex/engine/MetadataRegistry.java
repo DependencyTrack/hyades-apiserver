@@ -36,23 +36,6 @@ import static java.util.Objects.requireNonNull;
 
 final class MetadataRegistry {
 
-    record WorkflowMetadata<A, R>(
-            String name,
-            int version,
-            WorkflowExecutor<A, R> executor,
-            PayloadConverter<A> argumentConverter,
-            PayloadConverter<R> resultConverter,
-            Duration lockTimeout) {
-    }
-
-    record ActivityMetadata<A, R>(
-            String name,
-            ActivityExecutor<A, R> executor,
-            PayloadConverter<A> argumentConverter,
-            PayloadConverter<R> resultConverter,
-            Duration lockTimeout) {
-    }
-
     private static final Pattern WORKFLOW_NAME_PATTERN = Pattern.compile("^[\\w-]+");
     private static final Pattern ACTIVITY_NAME_PATTERN = WORKFLOW_NAME_PATTERN;
 

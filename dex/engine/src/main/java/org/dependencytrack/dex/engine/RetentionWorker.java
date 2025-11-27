@@ -38,18 +38,18 @@ final class RetentionWorker implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(RetentionWorker.class);
 
     private final Jdbi jdbi;
-    private final int retentionDays;
+    private final Duration retentionDuration;
     private final Duration initialDelay;
     private final Duration interval;
     private @Nullable ScheduledExecutorService executor;
 
     RetentionWorker(
             final Jdbi jdbi,
-            final int retentionDays,
+            final Duration retentionDuration,
             final Duration initialDelay,
             final Duration interval) {
         this.jdbi = jdbi;
-        this.retentionDays = retentionDays;
+        this.retentionDuration = retentionDuration;
         this.initialDelay = initialDelay;
         this.interval = interval;
     }
@@ -91,7 +91,7 @@ final class RetentionWorker implements Closeable {
                     with cte_candidates as (
                       select id
                         from dex_workflow_run
-                       where completed_at < (NOW() - (:retentionDays * cast('1 day' as interval)))
+                       where completed_at < (NOW() - (:retentionDuration))
                        order by completed_at
                        limit 100 -- TODO: Make configurable.
                          for no key update
@@ -101,7 +101,7 @@ final class RetentionWorker implements Closeable {
                     """);
 
             final int runsDeleted = update
-                    .bind("retentionDays", retentionDays)
+                    .bind("retentionDuration", retentionDuration)
                     .execute();
             LOGGER.debug("Deleted {} workflow run(s)", runsDeleted);
         });
