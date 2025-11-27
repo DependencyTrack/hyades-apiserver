@@ -814,11 +814,12 @@ public class CelCommonPolicyLibrary implements Library {
         }
 
         try (final Handle jdbiHandle = openJdbiHandle()) {
-            final Query query = jdbiHandle.createQuery("""
+            if (!compositeNodeFilter.hasInMemoryFilters()) {
+                final Query query = jdbiHandle.createQuery("""
                 WITH "CTE_PROJECT" AS (
-                    SELECT "PROJECT_ID" AS "ID"
-                    FROM "COMPONENT"
-                    WHERE "UUID" = :childUuid
+                SELECT "PROJECT_ID" AS "ID"
+                FROM "COMPONENT"
+                WHERE "UUID" = :childUuid
                 )
                 SELECT EXISTS(
                     SELECT 1
@@ -831,15 +832,58 @@ public class CelCommonPolicyLibrary implements Library {
                         AND ${filters}
                 )
                 """);
+                return query
+                        .define(ATTRIBUTE_QUERY_NAME,
+                                "%s#isDirectDependencyOf_withoutInMemoryFilters".formatted(CelCommonPolicyLibrary.class.getSimpleName()))
+                        .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
+                        .bind("childUuid", UUID.fromString(childComponent.getUuid()))
+                        .bindMap(compositeNodeFilter.sqlFilterParams())
+                        .mapTo(Boolean.class)
+                        .one();
+            }
+
+            final Query query = jdbiHandle.createQuery("""
+                WITH "CTE_PROJECT" AS (
+                    SELECT "PROJECT_ID" AS "ID"
+                    FROM "COMPONENT"
+                    WHERE "UUID" = :childUuid
+                ),
+                "CTE_PARENTS" ("ID", "UUID", "PROJECT_ID"
+                     , ${selectColumnNames?join(", ", "", ", ")} "FOUND", "PATH") AS (
+                     SELECT
+                         "PARENT"."ID"          AS "ID",
+                         "PARENT"."UUID"        AS "UUID",
+                         "PARENT"."PROJECT_ID"  AS "PROJECT_ID",
+                         -- Select columns required for in-memory filtering
+                         <#list selectColumnNames as columnName>
+                            "PARENT".${columnName} AS ${columnName},
+                         </#list>
+                         TRUE                   AS "FOUND",
+                         ARRAY["PARENT"."ID"]::BIGINT[] AS "PATH"
+                         FROM
+                           "COMPONENT" AS "PARENT"
+                         WHERE
+                            "PARENT"."PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
+                         AND "PARENT"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(
+                               JSONB_BUILD_OBJECT('uuid', :childUuid)
+                             )
+                         AND ${filters}
+                )
+                SELECT "ID", "UUID", "PROJECT_ID"
+                    , ${selectColumnNames?join(", ", "", ", ")} "FOUND", "PATH"
+                FROM "CTE_PARENTS";
+                """);
 
             return query
                     .define(ATTRIBUTE_QUERY_NAME,
-                            "%s#isDirectDependencyOf".formatted(CelCommonPolicyLibrary.class.getSimpleName()))
+                            "%s#isDirectDependencyOf_withInMemoryFilters".formatted(CelCommonPolicyLibrary.class.getSimpleName()))
                     .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
+                    .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
                     .bind("childUuid", UUID.fromString(childComponent.getUuid()))
                     .bindMap(compositeNodeFilter.sqlFilterParams())
-                    .mapTo(Boolean.class)
-                    .one();
+                    .map(ConstructorMapper.of(DependencyNode.class))
+                    .stream()
+                    .anyMatch(compositeNodeFilter.inMemoryFiltersConjunctive());
         }
     }
 
