@@ -77,7 +77,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 import static org.dependencytrack.dex.api.payload.PayloadConverters.voidConverter;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toInstant;
-import static org.dependencytrack.dex.engine.support.ProtobufUtil.toTimestamp;
+import static org.dependencytrack.dex.engine.support.ProtobufUtil.toProtoTimestamp;
 
 final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
@@ -735,7 +735,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                     command.getClass().getSimpleName(),
                     CreateTimerCommand.class.getSimpleName()));
         } else if (!Objects.equals(eventSubject.getName(), concreteCommand.name())
-                || !Objects.equals(eventSubject.getElapseAt(), toTimestamp(concreteCommand.elapseAt()))) {
+                || !Objects.equals(eventSubject.getElapseAt(), toProtoTimestamp(concreteCommand.elapseAt()))) {
             throw new WorkflowRunDeterminismError("""
                     Encountered %s event for ID %d, but it does not match \
                     the corresponding %s: event=%s, command=%s""".formatted(

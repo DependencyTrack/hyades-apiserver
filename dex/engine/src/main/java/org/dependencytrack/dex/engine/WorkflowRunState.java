@@ -52,7 +52,7 @@ import java.util.UUID;
 
 import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toInstant;
-import static org.dependencytrack.dex.engine.support.ProtobufUtil.toTimestamp;
+import static org.dependencytrack.dex.engine.support.ProtobufUtil.toProtoTimestamp;
 import static org.dependencytrack.dex.proto.common.v1.WorkflowRunConcurrencyMode.WORKFLOW_RUN_CONCURRENCY_MODE_SERIAL;
 
 /**
@@ -500,7 +500,7 @@ final class WorkflowRunState {
     }
 
     private void processCreateTimerCommand(final CreateTimerCommand command) {
-        final Timestamp elapseAt = toTimestamp(command.elapseAt());
+        final Timestamp elapseAt = toProtoTimestamp(command.elapseAt());
 
         applyEvent(WorkflowEvent.newBuilder()
                 .setId(command.eventId())

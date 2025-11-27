@@ -77,7 +77,6 @@ import org.dependencytrack.dex.engine.persistence.model.WorkflowRunCountByNameAn
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.engine.persistence.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.engine.support.Buffer;
-import org.dependencytrack.dex.engine.support.DefaultThreadFactory;
 import org.dependencytrack.dex.proto.event.v1.ActivityTaskCompleted;
 import org.dependencytrack.dex.proto.event.v1.ActivityTaskFailed;
 import org.dependencytrack.dex.proto.event.v1.ExternalEventReceived;
@@ -117,7 +116,7 @@ import java.util.stream.Stream;
 import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toInstant;
-import static org.dependencytrack.dex.engine.support.ProtobufUtil.toTimestamp;
+import static org.dependencytrack.dex.engine.support.ProtobufUtil.toProtoTimestamp;
 
 // TODO: Add metrics for:
 //   - Workflow runs created
@@ -195,7 +194,7 @@ final class DexEngineImpl implements DexEngine {
 
         LOGGER.debug("Starting event listener executor");
         eventListenerExecutor = Executors.newSingleThreadExecutor(
-                new DefaultThreadFactory("DexEngine-EventListener"));
+                Thread.ofPlatform().name("DexEngine-EventListener").factory());
         new ExecutorServiceMetrics(eventListenerExecutor, "DexEngine-EventListener", null)
                 .bindTo(config.meterRegistry());
 
@@ -1140,7 +1139,7 @@ final class DexEngineImpl implements DexEngine {
                             null,
                             WorkflowEvent.newBuilder()
                                     .setId(-1)
-                                    .setTimestamp(toTimestamp(event.timestamp()))
+                                    .setTimestamp(toProtoTimestamp(event.timestamp()))
                                     .setActivityTaskCompleted(taskCompletedBuilder.build())
                                     .build()));
         }
@@ -1184,7 +1183,7 @@ final class DexEngineImpl implements DexEngine {
                                 /* visibleFrom */ null,
                                 WorkflowEvent.newBuilder()
                                         .setId(-1)
-                                        .setTimestamp(toTimestamp(event.timestamp()))
+                                        .setTimestamp(toProtoTimestamp(event.timestamp()))
                                         .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
                                                 .setActivityTaskCreatedEventId(task.id().createdEventId())
                                                 .setAttempts(task.attempt())
@@ -1371,7 +1370,13 @@ final class DexEngineImpl implements DexEngine {
             switch (event) {
                 case WorkflowRunsCompletedEvent it -> {
                     for (final WorkflowRunsCompletedEventListener listener : runsCompletedEventListeners) {
-                        eventListenerExecutor.execute(() -> listener.onEvent(it));
+                        eventListenerExecutor.execute(() -> {
+                            try {
+                                listener.onEvent(it);
+                            } catch (RuntimeException e) {
+                                LOGGER.warn("Failed to notify event listener {}", listener.getClass().getName(), e);
+                            }
+                        });
                     }
                 }
             }

@@ -33,7 +33,7 @@ public final class ProtobufUtil {
         return Instant.ofEpochSecond(0L, Timestamps.toNanos(timestamp));
     }
 
-    public static Timestamp toTimestamp(final Instant instant) {
+    public static Timestamp toProtoTimestamp(final Instant instant) {
         return Timestamps.fromDate(Date.from(instant));
     }
 

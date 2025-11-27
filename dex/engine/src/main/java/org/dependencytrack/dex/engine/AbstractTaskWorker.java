@@ -26,7 +26,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
-import org.dependencytrack.dex.engine.support.LoggingUncaughtExceptionHandler;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,13 +90,11 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
 
         pollThread = Thread.ofVirtual()
                 .name("%s-Poller".formatted(getClass().getSimpleName()), 0)
-                .uncaughtExceptionHandler(new LoggingUncaughtExceptionHandler())
                 .unstarted(this::pollAndDispatch);
 
         final var taskExecutorName = "%s-Executor".formatted(getClass().getSimpleName());
         taskExecutor = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual()
-                        .uncaughtExceptionHandler(new LoggingUncaughtExceptionHandler())
                         .name(taskExecutorName, 0)
                         .factory());
 
