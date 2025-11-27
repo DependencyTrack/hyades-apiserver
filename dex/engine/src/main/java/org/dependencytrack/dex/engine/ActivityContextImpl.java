@@ -27,25 +27,22 @@ import java.util.UUID;
 final class ActivityContextImpl implements ActivityContext {
 
     private final DexEngineImpl engine;
-    private final ActivityTaskId taskId;
+    private final ActivityTask task;
     private final Duration lockTimeout;
-    private volatile Instant lockedUntil;
     private volatile boolean canceled;
 
     ActivityContextImpl(
             final DexEngineImpl engine,
-            final ActivityTaskId taskId,
-            final Duration lockTimeout,
-            final Instant lockedUntil) {
+            final ActivityTask task,
+            final Duration lockTimeout) {
         this.engine = engine;
-        this.taskId = taskId;
+        this.task = task;
         this.lockTimeout = lockTimeout;
-        this.lockedUntil = lockedUntil;
     }
 
     @Override
     public UUID workflowRunId() {
-        return taskId.workflowRunId();
+        return task.id().workflowRunId();
     }
 
     @Override
@@ -54,12 +51,12 @@ final class ActivityContextImpl implements ActivityContext {
         // lock is almost expired. "Almost" in this case referring to 1/3 of
         // or less of the lock timeout remaining.
         final Instant now = Instant.now();
-        final Instant threshold = lockedUntil.minus(lockTimeout.dividedBy(3));
+        final Instant threshold = task.lock().expiresAt().minus(lockTimeout.dividedBy(3));
         if (now.isBefore(threshold)) {
             return false;
         }
 
-        lockedUntil = engine.heartbeatActivityTask(taskId, lockTimeout).join();
+        task.setLock(engine.heartbeatActivityTask(task.id(), task.lock(), lockTimeout).join());
         return true;
     }
 

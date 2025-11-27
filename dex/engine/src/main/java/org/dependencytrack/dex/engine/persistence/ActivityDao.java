@@ -20,7 +20,7 @@ package org.dependencytrack.dex.engine.persistence;
 
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.PageToken;
-import org.dependencytrack.dex.engine.ActivityTaskId;
+import org.dependencytrack.dex.engine.ActivityTask;
 import org.dependencytrack.dex.engine.api.ActivityTaskQueue;
 import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
@@ -250,6 +250,7 @@ public final class ActivityDao extends AbstractDao {
                 update dex_activity_task as dat
                    set locked_by = :workerInstanceId
                      , locked_until = now() + cte_poll_req.lock_timeout
+                     , lock_version = lock_version + 1
                      , updated_at = now()
                   from cte_poll
                  inner join cte_poll_req
@@ -266,6 +267,7 @@ public final class ActivityDao extends AbstractDao {
                         , dat.retry_policy
                         , dat.attempt
                         , dat.locked_until
+                        , dat.lock_version
                 """);
 
         final var activityNames = new String[commands.size()];
@@ -294,8 +296,8 @@ public final class ActivityDao extends AbstractDao {
         final Update update = jdbiHandle.createUpdate("""
                 with cte_cmd as (
                   select *
-                    from unnest(:queueNames, :workflowRunIds, :createdEventIds, :retryAts)
-                      as t(queue_name, workflow_run_id, created_event_id, retry_at)
+                    from unnest(:queueNames, :workflowRunIds, :createdEventIds, :lockVersions, :retryAts)
+                      as t(queue_name, workflow_run_id, created_event_id, lock_version, retry_at)
                 )
                 update dex_activity_task as dat
                    set status = 'CREATED'
@@ -309,18 +311,21 @@ public final class ActivityDao extends AbstractDao {
                    and dat.workflow_run_id = cte_cmd.workflow_run_id
                    and dat.created_event_id = cte_cmd.created_event_id
                    and dat.locked_by = :workerInstanceId
+                   and dat.lock_version = cte_cmd.lock_version
                 """);
 
         final var queueNames = new String[commands.size()];
         final var workflowRunIds = new UUID[commands.size()];
         final var createdEventIds = new int[commands.size()];
+        final var lockVersions = new int[commands.size()];
         final var retryAts = new Instant[commands.size()];
 
         int i = 0;
         for (final ScheduleActivityTaskRetryCommand command : commands) {
-            queueNames[i] = command.taskId().queueName();
-            workflowRunIds[i] = command.taskId().workflowRunId();
-            createdEventIds[i] = command.taskId().createdEventId();
+            queueNames[i] = command.task().id().queueName();
+            workflowRunIds[i] = command.task().id().workflowRunId();
+            createdEventIds[i] = command.task().id().createdEventId();
+            lockVersions[i] = command.task().lock().version();
             retryAts[i] = command.retryAt();
             i++;
         }
@@ -330,38 +335,42 @@ public final class ActivityDao extends AbstractDao {
                 .bind("queueNames", queueNames)
                 .bind("workflowRunIds", workflowRunIds)
                 .bind("createdEventIds", createdEventIds)
+                .bind("lockVersions", lockVersions)
                 .bind("retryAts", retryAts)
                 .execute();
     }
 
-    public int unlockActivityTasks(final UUID workerInstanceId, final List<ActivityTaskId> activityTasks) {
+    public int unlockActivityTasks(final UUID workerInstanceId, final Collection<ActivityTask> activityTasks) {
         final var queueNames = new String[activityTasks.size()];
         final var workflowRunIds = new UUID[activityTasks.size()];
         final var createdEventIds = new int[activityTasks.size()];
+        final var lockVersions = new int[activityTasks.size()];
 
         int i = 0;
-        for (final ActivityTaskId activityTask : activityTasks) {
-            queueNames[i] = activityTask.queueName();
-            workflowRunIds[i] = activityTask.workflowRunId();
-            createdEventIds[i] = activityTask.createdEventId();
+        for (final ActivityTask activityTask : activityTasks) {
+            queueNames[i] = activityTask.id().queueName();
+            workflowRunIds[i] = activityTask.id().workflowRunId();
+            createdEventIds[i] = activityTask.id().createdEventId();
+            lockVersions[i] = activityTask.lock().version();
             i++;
         }
 
         final Update update = jdbiHandle.createUpdate("""
-                with cte as (
+                with cte_cmd as (
                   select *
-                    from unnest(:queueNames, :workflowRunIds, :createdEventIds)
-                      as t(queue_name, workflow_run_id, created_event_id)
+                    from unnest(:queueNames, :workflowRunIds, :createdEventIds, :lockVersions)
+                      as t(queue_name, workflow_run_id, created_event_id, lock_version)
                 )
                 update dex_activity_task as dat
                    set locked_by = null
                      , locked_until = null
                      , updated_at = now()
-                  from cte
-                 where cte.workflow_run_id = dat.workflow_run_id
-                   and cte.created_event_id = dat.created_event_id
-                   and dat.queue_name = cte.queue_name
+                  from cte_cmd
+                 where cte_cmd.workflow_run_id = dat.workflow_run_id
+                   and cte_cmd.created_event_id = dat.created_event_id
+                   and dat.queue_name = cte_cmd.queue_name
                    and dat.locked_by = :workerInstanceId
+                   and dat.lock_version = cte_cmd.lock_version
                 """);
 
         return update
@@ -369,19 +378,22 @@ public final class ActivityDao extends AbstractDao {
                 .bind("queueNames", queueNames)
                 .bind("workflowRunIds", workflowRunIds)
                 .bind("createdEventIds", createdEventIds)
+                .bind("lockVersions", lockVersions)
                 .execute();
     }
 
-    public int deleteLockedActivityTasks(final UUID workerInstanceId, final List<ActivityTaskId> activityTasks) {
-        final var queueNames = new String[activityTasks.size()];
-        final var workflowRunIds = new UUID[activityTasks.size()];
-        final var createdEventIds = new int[activityTasks.size()];
+    public int deleteLockedActivityTasks(final UUID workerInstanceId, final List<ActivityTask> tasks) {
+        final var queueNames = new String[tasks.size()];
+        final var workflowRunIds = new UUID[tasks.size()];
+        final var createdEventIds = new int[tasks.size()];
+        final var lockVersions = new int[tasks.size()];
 
         int i = 0;
-        for (final ActivityTaskId activityTask : activityTasks) {
-            queueNames[i] = activityTask.queueName();
-            workflowRunIds[i] = activityTask.workflowRunId();
-            createdEventIds[i] = activityTask.createdEventId();
+        for (final ActivityTask task : tasks) {
+            queueNames[i] = task.id().queueName();
+            workflowRunIds[i] = task.id().workflowRunId();
+            createdEventIds[i] = task.id().createdEventId();
+            lockVersions[i] = task.lock().version();
             i++;
         }
 
@@ -389,8 +401,8 @@ public final class ActivityDao extends AbstractDao {
                 with
                 cte_req as (
                   select *
-                    from unnest(:queueNames, :workflowRunIds, :createdEventIds)
-                      as t(queue_name, workflow_run_id, created_event_id)
+                    from unnest(:queueNames, :workflowRunIds, :createdEventIds, :lockVersions)
+                      as t(queue_name, workflow_run_id, created_event_id, lock_version)
                 )
                 delete
                   from dex_activity_task as dat
@@ -399,6 +411,7 @@ public final class ActivityDao extends AbstractDao {
                    and cte_req.created_event_id = dat.created_event_id
                    and dat.queue_name = cte_req.queue_name
                    and dat.locked_by = :workerInstanceId
+                   and dat.lock_version = cte_req.lock_version
                 """);
 
         return update
@@ -406,6 +419,7 @@ public final class ActivityDao extends AbstractDao {
                 .bind("queueNames", queueNames)
                 .bind("workflowRunIds", workflowRunIds)
                 .bind("createdEventIds", createdEventIds)
+                .bind("lockVersions", lockVersions)
                 .execute();
     }
 

@@ -78,11 +78,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
             return;
         }
 
-        final var ctx = new ActivityContextImpl(
-                engine,
-                task.id(),
-                activityMetadata.lockTimeout(),
-                task.lockedUntil());
+        final var ctx = new ActivityContextImpl(engine, task, activityMetadata.lockTimeout());
         final var arg = activityMetadata.argumentConverter().convertFromPayload(task.argument());
 
         activeContexts.add(ctx);
@@ -92,7 +88,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
 
             try {
                 // TODO: Retry on TimeoutException
-                engine.onTaskEvent(new ActivityTaskCompletedEvent(task.id(), result)).join();
+                engine.onTaskEvent(new ActivityTaskCompletedEvent(task, result)).join();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 logger.warn("Interrupted while waiting for task completion to be acknowledged", e);
@@ -118,7 +114,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
     void abandon(final ActivityTask task) {
         try {
             // TODO: Retry on TimeoutException
-            engine.onTaskEvent(new ActivityTaskAbandonedEvent(task.id())).join();
+            engine.onTaskEvent(new ActivityTaskAbandonedEvent(task)).join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             logger.warn("Interrupted while waiting for task abandonment to be acknowledged", e);

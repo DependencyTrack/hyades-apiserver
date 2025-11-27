@@ -46,6 +46,7 @@ create table dex_workflow_task (
 , priority smallint not null
 , locked_by text
 , locked_until timestamptz(3)
+, lock_version smallint not null default 0
 , created_at timestamptz(3) not null default now()
 , constraint dex_workflow_task_pk primary key (queue_name, workflow_run_id)
 , constraint dex_workflow_task_queue_fk foreign key (queue_name) references dex_workflow_task_queue (name) on delete cascade deferrable initially deferred
@@ -105,6 +106,7 @@ create table dex_activity_task (
 , visible_from timestamptz(3)
 , locked_by text
 , locked_until timestamptz(3)
+, lock_version smallint not null default 0
 , created_at timestamptz(3) not null default now()
 , updated_at timestamptz(3)
 , constraint dex_activity_task_pk primary key (queue_name, workflow_run_id, created_event_id)

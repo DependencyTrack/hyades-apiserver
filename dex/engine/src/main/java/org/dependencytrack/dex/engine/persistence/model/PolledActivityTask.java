@@ -34,5 +34,6 @@ public record PolledActivityTask(
         @Nullable Payload argument,
         RetryPolicy retryPolicy,
         int attempt,
-        Instant lockedUntil) {
+        Instant lockedUntil,
+        int lockVersion) {
 }

@@ -149,7 +149,7 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
 
         try {
             // TODO: Retry on TimeoutException.
-            engine.onTaskEvent(new WorkflowTaskCompletedEvent(workflowRunState)).join();
+            engine.onTaskEvent(new WorkflowTaskCompletedEvent(task, workflowRunState)).join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             logger.warn("Interrupted while waiting for task completion to be acknowledged", e);

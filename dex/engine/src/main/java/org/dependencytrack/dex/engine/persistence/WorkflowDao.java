@@ -20,6 +20,7 @@ package org.dependencytrack.dex.engine.persistence;
 
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.PageToken;
+import org.dependencytrack.dex.engine.WorkflowTask;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
@@ -31,7 +32,6 @@ import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunInbox
 import org.dependencytrack.dex.engine.persistence.command.DeleteInboxEventsCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowRunInboxEventsCommand;
-import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunCommand;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
@@ -329,30 +329,31 @@ public final class WorkflowDao extends AbstractDao {
             final Collection<UpdateAndUnlockRunCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 with
-                cte_command as (
+                cte_cmd as (
                   select *
-                    from unnest (:ids, :queueNames, :statuses, :customStatuses, :updatedAts, :startedAts, :completedAts)
-                      as t(id, queue_name, status, custom_status, updated_at, started_at, completed_at)
+                    from unnest (:ids, :queueNames, :statuses, :customStatuses, :updatedAts, :startedAts, :completedAts, :lockVersions)
+                      as t(id, queue_name, status, custom_status, updated_at, started_at, completed_at, lock_version)
                 ),
                 cte_deleted_task as (
                   delete
                     from dex_workflow_task as task
-                   using cte_command
-                   where task.queue_name = cte_command.queue_name
-                     and task.workflow_run_id = cte_command.id
+                   using cte_cmd
+                   where task.queue_name = cte_cmd.queue_name
+                     and task.workflow_run_id = cte_cmd.id
                      and task.locked_by = :workerInstanceId
+                     and task.lock_version = cte_cmd.lock_version
                   returning task.workflow_run_id
                           , task.queue_name
                 )
                 update dex_workflow_run as run
-                   set status = coalesce(cte_command.status, run.status)
-                     , custom_status = coalesce(cte_command.custom_status, run.custom_status)
-                     , updated_at = coalesce(cte_command.updated_at, run.updated_at)
-                     , started_at = coalesce(cte_command.started_at, run.started_at)
-                     , completed_at = coalesce(cte_command.completed_at, run.completed_at)
+                   set status = coalesce(cte_cmd.status, run.status)
+                     , custom_status = coalesce(cte_cmd.custom_status, run.custom_status)
+                     , updated_at = coalesce(cte_cmd.updated_at, run.updated_at)
+                     , started_at = coalesce(cte_cmd.started_at, run.started_at)
+                     , completed_at = coalesce(cte_cmd.completed_at, run.completed_at)
                   from cte_deleted_task
-                 inner join cte_command
-                    on cte_command.id = cte_deleted_task.workflow_run_id
+                 inner join cte_cmd
+                    on cte_cmd.id = cte_deleted_task.workflow_run_id
                  where run.id = cte_deleted_task.workflow_run_id
                 returning run.id
                 """);
@@ -364,6 +365,7 @@ public final class WorkflowDao extends AbstractDao {
         final var updatedAts = new @Nullable Instant[commands.size()];
         final var startedAts = new @Nullable Instant[commands.size()];
         final var completedAts = new @Nullable Instant[commands.size()];
+        final var lockVersions = new int[commands.size()];
 
         int i = 0;
         for (final UpdateAndUnlockRunCommand command : commands) {
@@ -374,6 +376,7 @@ public final class WorkflowDao extends AbstractDao {
             updatedAts[i] = command.updatedAt();
             startedAts[i] = command.startedAt();
             completedAts[i] = command.completedAt();
+            lockVersions[i] = command.lockVersion();
             i++;
         }
 
@@ -386,6 +389,7 @@ public final class WorkflowDao extends AbstractDao {
                 .bind("updatedAts", updatedAts)
                 .bind("startedAts", startedAts)
                 .bind("completedAts", completedAts)
+                .bind("lockVersions", lockVersions)
                 .executeAndReturnGeneratedKeys()
                 .mapTo(UUID.class)
                 .list();
@@ -435,11 +439,14 @@ public final class WorkflowDao extends AbstractDao {
                             where t.workflow_name = task.workflow_name
                             limit 1
                          )
+                       , lock_version = lock_version + 1
                    from cte_poll
                   where task.queue_name = :queueName
                     and task.workflow_run_id = cte_poll.workflow_run_id
                   returning task.queue_name
                           , task.workflow_run_id
+                          , task.locked_until
+                          , task.lock_version
                 )
                 select run.id
                      , run.workflow_name
@@ -448,6 +455,8 @@ public final class WorkflowDao extends AbstractDao {
                      , run.concurrency_group_id
                      , run.priority
                      , run.labels
+                     , cte_locked.locked_until
+                     , cte_locked.lock_version
                   from dex_workflow_run as run
                  inner join cte_locked
                     on cte_locked.queue_name = run.queue_name
@@ -474,32 +483,37 @@ public final class WorkflowDao extends AbstractDao {
                 .collectToMap(PolledWorkflowTask::runId, Function.identity());
     }
 
-    public int unlockWorkflowTasks(final UUID workerInstanceId, final Collection<UnlockWorkflowTaskCommand> commands) {
+    public int unlockWorkflowTasks(final UUID workerInstanceId, final Collection<WorkflowTask> tasks) {
         final Update update = jdbiHandle.createUpdate("""
                 update dex_workflow_task as task
                    set locked_by = null
                      , locked_until = null
-                  from unnest(:queueNames, :runIds)
-                    as t(queue_name, run_id)
+                     , lock_version = null
+                  from unnest(:queueNames, :runIds, :lockVersions)
+                    as t(queue_name, run_id, lock_version)
                  where task.queue_name = t.queue_name
                    and task.workflow_run_id = t.run_id
                    and task.locked_by = :workerInstanceId
+                   and task.lock_version = t.lock_version
                 """);
 
-        final var queueNames = new String[commands.size()];
-        final var runIds = new UUID[commands.size()];
+        final var queueNames = new String[tasks.size()];
+        final var runIds = new UUID[tasks.size()];
+        final var lockVersions = new int[tasks.size()];
 
         int i = 0;
-        for (final UnlockWorkflowTaskCommand command : commands) {
-            queueNames[i] = command.queueName();
-            runIds[i] = command.runId();
+        for (final WorkflowTask task : tasks) {
+            queueNames[i] = task.queueName();
+            runIds[i] = task.workflowRunId();
+            lockVersions[i] = task.lock().version();
             i++;
         }
 
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
-                .bindArray("queueNames", queueNames)
-                .bindArray("runIds", runIds)
+                .bind("queueNames", queueNames)
+                .bind("runIds", runIds)
+                .bind("lockVersions", lockVersions)
                 .execute();
     }
 

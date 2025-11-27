@@ -26,22 +26,22 @@ import java.time.Instant;
 sealed interface TaskEvent {
 
     record ActivityTaskAbandonedEvent(
-            ActivityTaskId taskId,
+            ActivityTask task,
             Instant timestamp) implements TaskEvent {
 
-        ActivityTaskAbandonedEvent(ActivityTaskId taskId) {
-            this(taskId, Instant.now());
+        ActivityTaskAbandonedEvent(ActivityTask task) {
+            this(task, Instant.now());
         }
 
     }
 
     record ActivityTaskCompletedEvent(
-            ActivityTaskId taskId,
+            ActivityTask task,
             @Nullable Payload result,
             Instant timestamp) implements TaskEvent {
 
-        ActivityTaskCompletedEvent(ActivityTaskId taskId, @Nullable Payload result) {
-            this(taskId, result, Instant.now());
+        ActivityTaskCompletedEvent(ActivityTask task, @Nullable Payload result) {
+            this(task, result, Instant.now());
         }
 
     }
@@ -60,7 +60,9 @@ sealed interface TaskEvent {
     record WorkflowTaskAbandonedEvent(WorkflowTask task) implements TaskEvent {
     }
 
-    record WorkflowTaskCompletedEvent(WorkflowRunState workflowRunState) implements TaskEvent {
+    record WorkflowTaskCompletedEvent(
+            WorkflowTask task,
+            WorkflowRunState workflowRunState) implements TaskEvent {
     }
 
 }

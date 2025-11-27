@@ -22,7 +22,7 @@ import io.micrometer.core.instrument.Tag;
 
 import java.util.Set;
 
-sealed interface Task permits ActivityTask, WorkflowTask {
+public sealed interface Task permits ActivityTask, WorkflowTask {
 
     Set<Tag> meterTags();
 

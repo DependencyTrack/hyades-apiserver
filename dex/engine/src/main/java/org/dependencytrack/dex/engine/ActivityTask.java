@@ -20,23 +20,82 @@ package org.dependencytrack.dex.engine;
 
 import io.micrometer.core.instrument.Tag;
 import org.dependencytrack.dex.api.RetryPolicy;
+import org.dependencytrack.dex.engine.persistence.model.PolledActivityTask;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
-import java.time.Instant;
 import java.util.Set;
 
-record ActivityTask(
-        ActivityTaskId id,
-        String activityName,
-        @Nullable Payload argument,
-        RetryPolicy retryPolicy,
-        int attempt,
-        Instant lockedUntil) implements Task {
+public final class ActivityTask implements Task {
+
+    private final String activityName;
+    private final ActivityTaskId id;
+    private final @Nullable Payload argument;
+    private final RetryPolicy retryPolicy;
+    private final int attempt;
+    private TaskLock lock;
+
+    private ActivityTask(
+            final String activityName,
+            final ActivityTaskId id,
+            final @Nullable Payload argument,
+            final RetryPolicy retryPolicy,
+            final int attempt,
+            final TaskLock lock) {
+        this.activityName = activityName;
+        this.id = id;
+        this.argument = argument;
+        this.retryPolicy = retryPolicy;
+        this.attempt = attempt;
+        this.lock = lock;
+    }
+
+    static ActivityTask of(final PolledActivityTask polledTask) {
+        return new ActivityTask(
+                polledTask.activityName(),
+                new ActivityTaskId(
+                        polledTask.queueName(),
+                        polledTask.workflowRunId(),
+                        polledTask.createdEventId()),
+                polledTask.argument(),
+                RetryPolicy.fromProto(polledTask.retryPolicy()),
+                polledTask.attempt(),
+                new TaskLock(
+                        polledTask.lockedUntil(),
+                        polledTask.lockVersion()));
+    }
 
     @Override
     public Set<Tag> meterTags() {
         return Set.of(Tag.of("activityName", activityName));
+    }
+
+    public String activityName() {
+        return activityName;
+    }
+
+    public ActivityTaskId id() {
+        return id;
+    }
+
+    public @Nullable Payload argument() {
+        return argument;
+    }
+
+    public RetryPolicy retryPolicy() {
+        return retryPolicy;
+    }
+
+    public int attempt() {
+        return attempt;
+    }
+
+    public TaskLock lock() {
+        return lock;
+    }
+
+    void setLock(final TaskLock lock) {
+        this.lock = lock;
     }
 
 }

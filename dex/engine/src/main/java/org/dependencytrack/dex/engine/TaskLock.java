@@ -16,9 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence.command;
+package org.dependencytrack.dex.engine;
 
-import java.util.UUID;
+import java.time.Instant;
 
-public record UnlockWorkflowTaskCommand(String queueName, UUID runId) {
+public record TaskLock(Instant expiresAt, int version) {
 }

@@ -18,9 +18,9 @@
  */
 package org.dependencytrack.dex.engine.persistence.command;
 
-import org.dependencytrack.dex.engine.ActivityTaskId;
+import org.dependencytrack.dex.engine.ActivityTask;
 
 import java.time.Instant;
 
-public record ScheduleActivityTaskRetryCommand(ActivityTaskId taskId, Instant retryAt) {
+public record ScheduleActivityTaskRetryCommand(ActivityTask task, Instant retryAt) {
 }

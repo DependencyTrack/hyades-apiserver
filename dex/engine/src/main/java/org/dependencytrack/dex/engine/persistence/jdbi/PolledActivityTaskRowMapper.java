@@ -64,7 +64,8 @@ final class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTask>
                 payloadColumnMapper.map(rs, "argument", ctx),
                 retryPolicyColumnMapper.map(rs, "retry_policy", ctx),
                 rs.getInt("attempt"),
-                instantColumnMapper.map(rs, "locked_until", ctx));
+                instantColumnMapper.map(rs, "locked_until", ctx),
+                rs.getInt("lock_version"));
     }
 
 }

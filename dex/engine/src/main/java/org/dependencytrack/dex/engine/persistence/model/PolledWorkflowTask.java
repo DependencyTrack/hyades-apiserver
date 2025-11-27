@@ -20,6 +20,7 @@ package org.dependencytrack.dex.engine.persistence.model;
 
 import org.jspecify.annotations.Nullable;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -30,5 +31,7 @@ public record PolledWorkflowTask(
         String queueName,
         @Nullable String concurrencyGroupId,
         int priority,
-        @Nullable Map<String, String> labels) {
+        @Nullable Map<String, String> labels,
+        Instant lockedUntil,
+        int lockVersion) {
 }

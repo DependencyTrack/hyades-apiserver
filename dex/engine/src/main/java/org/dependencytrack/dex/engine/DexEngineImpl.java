@@ -73,7 +73,6 @@ import org.dependencytrack.dex.engine.persistence.command.PollActivityTaskComman
 import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.ScheduleActivityTaskRetryCommand;
 import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowRunInboxEventsCommand;
-import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunCommand;
 import org.dependencytrack.dex.engine.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
@@ -854,17 +853,11 @@ final class DexEngineImpl implements DexEngine {
                                         history,
                                         polledEvents.maxHistoryEventSequenceNumber()));
 
-                        return new WorkflowTask(
-                                polledTask.runId(),
-                                polledTask.workflowName(),
-                                polledTask.workflowVersion(),
-                                polledTask.queueName(),
-                                polledTask.concurrencyGroupId(),
-                                polledTask.priority(),
-                                polledTask.labels(),
-                                polledEvents.maxInboxEventDequeueCount(),
+                        return WorkflowTask.of(
+                                polledTask,
                                 history,
-                                polledEvents.inbox());
+                                polledEvents.inbox(),
+                                polledEvents.maxInboxEventDequeueCount());
                     })
                     .toList();
         });
@@ -893,9 +886,7 @@ final class DexEngineImpl implements DexEngine {
         final int unlockedWorkflowRuns = dao.unlockWorkflowTasks(
                 this.config.instanceId(),
                 events.stream()
-                        .map(abandonCommand -> new UnlockWorkflowTaskCommand(
-                                abandonCommand.task().queueName(),
-                                abandonCommand.task().workflowRunId()))
+                        .map(WorkflowTaskAbandonedEvent::task)
                         .toList());
         assert unlockedWorkflowRuns == events.size();
     }
@@ -911,16 +902,17 @@ final class DexEngineImpl implements DexEngine {
 
         final List<UUID> updatedRunIds = workflowDao.updateAndUnlockRuns(
                 this.config.instanceId(),
-                actionableRuns.stream()
-                        .map(run -> new UpdateAndUnlockRunCommand(
-                                run.id(),
-                                run.queueName(),
-                                run.status(),
-                                run.customStatus(),
-                                run.createdAt(),
-                                run.updatedAt(),
-                                run.startedAt(),
-                                run.completedAt()))
+                events.stream()
+                        .map(event -> new UpdateAndUnlockRunCommand(
+                                event.workflowRunState().id(),
+                                event.workflowRunState().queueName(),
+                                event.workflowRunState().status(),
+                                event.workflowRunState().customStatus(),
+                                event.workflowRunState().createdAt(),
+                                event.workflowRunState().updatedAt(),
+                                event.workflowRunState().startedAt(),
+                                event.workflowRunState().completedAt(),
+                                event.task().lock().version()))
                         .toList());
 
         if (updatedRunIds.size() != events.size()) {
@@ -1120,16 +1112,7 @@ final class DexEngineImpl implements DexEngine {
                             queueName,
                             commands,
                             limit).stream()
-                    .map(polledTask -> new ActivityTask(
-                            new ActivityTaskId(
-                                    polledTask.queueName(),
-                                    polledTask.workflowRunId(),
-                                    polledTask.createdEventId()),
-                            polledTask.activityName(),
-                            polledTask.argument(),
-                            RetryPolicy.fromProto(polledTask.retryPolicy()),
-                            polledTask.attempt(),
-                            polledTask.lockedUntil()))
+                    .map(ActivityTask::of)
                     .toList();
         });
     }
@@ -1140,7 +1123,7 @@ final class DexEngineImpl implements DexEngine {
         final int abandonedTasks = activityDao.unlockActivityTasks(
                 this.config.instanceId(),
                 events.stream()
-                        .map(ActivityTaskAbandonedEvent::taskId)
+                        .map(ActivityTaskAbandonedEvent::task)
                         .toList());
         assert abandonedTasks == events.size()
                 : "Abandoned tasks: actual=%d, expected=%d".formatted(abandonedTasks, 1);
@@ -1150,20 +1133,20 @@ final class DexEngineImpl implements DexEngine {
             final WorkflowDao workflowDao,
             final ActivityDao activityDao,
             final Collection<ActivityTaskCompletedEvent> events) {
-        final var tasksToDelete = new ArrayList<ActivityTaskId>(events.size());
+        final var tasksToDelete = new ArrayList<ActivityTask>(events.size());
         final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(events.size());
 
         for (final ActivityTaskCompletedEvent event : events) {
-            tasksToDelete.add(event.taskId());
+            tasksToDelete.add(event.task());
 
             final var taskCompletedBuilder = ActivityTaskCompleted.newBuilder()
-                    .setActivityTaskCreatedEventId(event.taskId().createdEventId());
+                    .setActivityTaskCreatedEventId(event.task().id().createdEventId());
             if (event.result() != null) {
                 taskCompletedBuilder.setResult(event.result());
             }
             inboxEventsToCreate.add(
                     new CreateWorkflowRunInboxEntryCommand(
-                            event.taskId().workflowRunId(),
+                            event.task().id().workflowRunId(),
                             null,
                             WorkflowEvent.newBuilder()
                                     .setId(-1)
@@ -1187,7 +1170,7 @@ final class DexEngineImpl implements DexEngine {
             final WorkflowDao workflowDao,
             final ActivityDao activityDao,
             final Collection<ActivityTaskFailedEvent> events) {
-        final var tasksToDelete = new ArrayList<ActivityTaskId>(events.size());
+        final var tasksToDelete = new ArrayList<ActivityTask>(events.size());
         final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(events.size());
         final var retriesToSchedule = new ArrayList<ScheduleActivityTaskRetryCommand>();
 
@@ -1203,7 +1186,7 @@ final class DexEngineImpl implements DexEngine {
                             && retryPolicy.maxAttempts() <= task.attempt();
 
             if (isTerminal || hasExceededMaxAttempts) {
-                tasksToDelete.add(task.id());
+                tasksToDelete.add(task);
 
                 inboxEventsToCreate.add(
                         new CreateWorkflowRunInboxEntryCommand(
@@ -1224,7 +1207,7 @@ final class DexEngineImpl implements DexEngine {
 
                 retriesToSchedule.add(
                         new ScheduleActivityTaskRetryCommand(
-                                event.task().id(), retryAt));
+                                event.task(), retryAt));
             }
         }
 
@@ -1252,11 +1235,12 @@ final class DexEngineImpl implements DexEngine {
         }
     }
 
-    CompletableFuture<Instant> heartbeatActivityTask(
+    CompletableFuture<TaskLock> heartbeatActivityTask(
             final ActivityTaskId taskId,
+            final TaskLock taskLock,
             final Duration lockTimeout) {
-        final var future = new CompletableFuture<Instant>();
-        final var heartbeat = new ActivityTaskHeartbeat(taskId, lockTimeout, future);
+        final var future = new CompletableFuture<TaskLock>();
+        final var heartbeat = new ActivityTaskHeartbeat(taskId, taskLock, lockTimeout, future);
 
         try {
             activityTaskHeartbeatBuffer.add(heartbeat);
@@ -1272,27 +1256,31 @@ final class DexEngineImpl implements DexEngine {
 
     private void processActivityTaskHeartbeats(final List<ActivityTaskHeartbeat> heartbeats) {
         // TODO: Complete all futures exceptionally when transaction fails.
-        final Map<ActivityTaskId, Instant> lockedUntilByTaskId = jdbi.inTransaction(handle -> {
+        final Map<ActivityTaskId, TaskLock> lockByTaskId = jdbi.inTransaction(handle -> {
             final Update update = handle.createUpdate("""
                     update dex_activity_task as task
                        set locked_until = locked_until + t.lock_timeout
+                         , lock_version = task.lock_version + 1
                          , updated_at = now()
-                      from unnest(:queueNames, :workflowRunIds, :createdEventIds, :lockTimeouts)
-                        as t(queue_name, workflow_run_id, created_event_id, lock_timeout)
+                      from unnest(:queueNames, :workflowRunIds, :createdEventIds, :lockTimeouts, :lockVersions)
+                        as t(queue_name, workflow_run_id, created_event_id, lock_timeout, lock_version)
                      where task.queue_name = t.queue_name
                        and task.workflow_run_id = t.workflow_run_id
                        and task.created_event_id = t.created_event_id
                        and task.locked_by = :workerInstanceId
+                       and task.lock_version = t.lock_version
                     returning task.queue_name
                             , task.workflow_run_id
                             , task.created_event_id
                             , task.locked_until
+                            , task.lock_version
                     """);
 
             final var queueNames = new String[heartbeats.size()];
             final var workflowRunIds = new UUID[heartbeats.size()];
             final var createdEventIds = new int[heartbeats.size()];
             final var lockTimeouts = new Duration[heartbeats.size()];
+            final var lockVersions = new int[heartbeats.size()];
 
             int i = 0;
             for (final ActivityTaskHeartbeat heartbeat : heartbeats) {
@@ -1300,6 +1288,7 @@ final class DexEngineImpl implements DexEngine {
                 workflowRunIds[i] = heartbeat.taskId().workflowRunId();
                 createdEventIds[i] = heartbeat.taskId().createdEventId();
                 lockTimeouts[i] = heartbeat.lockTimeout();
+                lockVersions[i] = heartbeat.lock().version();
                 i++;
             }
 
@@ -1309,28 +1298,31 @@ final class DexEngineImpl implements DexEngine {
                     .bind("workflowRunIds", workflowRunIds)
                     .bind("createdEventIds", createdEventIds)
                     .bind("lockTimeouts", lockTimeouts)
+                    .bind("lockVersions", lockVersions)
                     .executeAndReturnGeneratedKeys("locked_until")
                     .map((rs, ctx) -> Map.entry(
                             new ActivityTaskId(
                                     rs.getString("queue_name"),
                                     rs.getObject("workflow_run_id", UUID.class),
                                     rs.getInt("created_event_id")),
-                            ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "locked_until", ctx)))
+                            new TaskLock(
+                                    ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "locked_until", ctx),
+                                    rs.getInt("lock_version"))))
                     .collectToMap(Map.Entry::getKey, Map.Entry::getValue);
         });
 
-        final Map<ActivityTaskId, CompletableFuture<Instant>> futureByTaskId = heartbeats.stream()
+        final Map<ActivityTaskId, CompletableFuture<TaskLock>> futureByTaskId = heartbeats.stream()
                 .collect(Collectors.toMap(
                         ActivityTaskHeartbeat::taskId,
                         ActivityTaskHeartbeat::future));
 
         for (final var entry : futureByTaskId.entrySet()) {
             final ActivityTaskId taskId = entry.getKey();
-            final CompletableFuture<Instant> future = entry.getValue();
+            final CompletableFuture<TaskLock> future = entry.getValue();
 
-            final Instant lockedUntil = lockedUntilByTaskId.get(taskId);
-            if (lockedUntil != null) {
-                future.complete(lockedUntil);
+            final TaskLock lock = lockByTaskId.get(taskId);
+            if (lock != null) {
+                future.complete(lock);
             } else {
                 future.completeExceptionally(new IllegalStateException());
             }

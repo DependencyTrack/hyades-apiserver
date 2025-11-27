@@ -19,6 +19,7 @@
 package org.dependencytrack.dex.engine;
 
 import io.micrometer.core.instrument.Tag;
+import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.jspecify.annotations.Nullable;
 
@@ -27,7 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-record WorkflowTask(
+public record WorkflowTask(
         UUID workflowRunId,
         String workflowName,
         int workflowVersion,
@@ -37,7 +38,30 @@ record WorkflowTask(
         @Nullable Map<String, String> labels,
         int attempt,
         List<WorkflowEvent> history,
-        List<WorkflowEvent> inbox) implements Task {
+        List<WorkflowEvent> inbox,
+        TaskLock lock) implements Task {
+
+    static WorkflowTask of(
+            final PolledWorkflowTask polledTask,
+            final List<WorkflowEvent> history,
+            final List<WorkflowEvent> inbox,
+            final int attempt) {
+        return new WorkflowTask(
+                polledTask.runId(),
+                polledTask.workflowName(),
+                polledTask.workflowVersion(),
+                polledTask.queueName(),
+                polledTask.concurrencyGroupId(),
+                polledTask.priority(),
+                polledTask.labels(),
+                attempt,
+                history,
+                inbox,
+                new TaskLock(
+                        polledTask.lockedUntil(),
+                        polledTask.lockVersion())
+        );
+    }
 
     @Override
     public Set<Tag> meterTags() {

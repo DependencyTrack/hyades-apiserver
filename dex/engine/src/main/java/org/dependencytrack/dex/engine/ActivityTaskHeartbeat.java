@@ -19,11 +19,11 @@
 package org.dependencytrack.dex.engine;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 
 record ActivityTaskHeartbeat(
         ActivityTaskId taskId,
+        TaskLock lock,
         Duration lockTimeout,
-        CompletableFuture<Instant> future) {
+        CompletableFuture<TaskLock> future) {
 }
