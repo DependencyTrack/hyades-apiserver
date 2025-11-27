@@ -18,11 +18,11 @@
  */
 package org.dependencytrack.persistence.jdbi.mapping;
 
-import org.dependencytrack.proto.notification.v1.Component;
-import org.dependencytrack.proto.notification.v1.Project;
-import org.dependencytrack.proto.notification.v1.Vulnerability;
-import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysis;
-import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubject;
+import org.dependencytrack.notification.proto.v1.Component;
+import org.dependencytrack.notification.proto.v1.Project;
+import org.dependencytrack.notification.proto.v1.Vulnerability;
+import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysis;
+import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 

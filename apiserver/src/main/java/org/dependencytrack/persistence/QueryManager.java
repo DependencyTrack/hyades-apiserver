@@ -87,12 +87,12 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.EffectivePermissionDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
-import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 

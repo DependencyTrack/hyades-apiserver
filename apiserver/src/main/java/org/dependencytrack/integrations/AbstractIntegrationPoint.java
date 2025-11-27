@@ -19,10 +19,10 @@
 package org.dependencytrack.integrations;
 
 import alpine.common.logging.Logger;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.persistence.QueryManager;
 
-import static org.dependencytrack.notification.NotificationFactory.createIntegrationErrorNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createIntegrationErrorNotification;
 
 public abstract class AbstractIntegrationPoint implements IntegrationPoint {
 
@@ -37,7 +37,7 @@ public abstract class AbstractIntegrationPoint implements IntegrationPoint {
         logger.error("HTTP Status : " + statusCode + " " + statusText);
         logger.error("Request URL : " + url);
 
-        NotificationEmitter.using(qm).emit(
+        new JdoNotificationEmitter(qm).emit(
                 createIntegrationErrorNotification("""
                         An error occurred while communicating with the %s integration point. \
                         URL: %s - HTTP Status: %s. Check log for details.""".formatted(name(), url, statusCode)));
@@ -46,7 +46,7 @@ public abstract class AbstractIntegrationPoint implements IntegrationPoint {
     public void handleException(final Logger logger, final Exception e) {
         logger.error("An error occurred with the " + name() + " integration point", e);
 
-        NotificationEmitter.using(qm).emit(
+        new JdoNotificationEmitter(qm).emit(
                 createIntegrationErrorNotification("""
                         An error occurred with the %s integration point. \
                         Check log for details. %s""".formatted(name(), e)));

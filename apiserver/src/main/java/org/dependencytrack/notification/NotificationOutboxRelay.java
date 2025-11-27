@@ -30,8 +30,8 @@ import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.persistence.jdbi.NotificationOutboxDao;
-import org.dependencytrack.proto.notification.v1.Notification;
 import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +51,7 @@ import java.util.concurrent.TimeoutException;
 
 import static io.github.resilience4j.core.IntervalFunction.ofExponentialRandomBackoff;
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.notification.ModelConverter.convert;
+import static org.dependencytrack.notification.NotificationModelConverter.convert;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 
 /**
