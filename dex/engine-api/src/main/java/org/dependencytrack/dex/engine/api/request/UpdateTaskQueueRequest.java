@@ -18,27 +18,24 @@
  */
 package org.dependencytrack.dex.engine.api.request;
 
+import org.dependencytrack.dex.engine.api.TaskQueueStatus;
+import org.dependencytrack.dex.engine.api.TaskQueueType;
 import org.jspecify.annotations.Nullable;
 
-public record ListWorkflowSchedulesRequest(
-        @Nullable String workflowName,
-        @Nullable String pageToken,
-        int limit) {
+import static java.util.Objects.requireNonNull;
 
-    public ListWorkflowSchedulesRequest() {
-        this(null, null, 10);
-    }
+public record UpdateTaskQueueRequest(
+        TaskQueueType type,
+        String name,
+        @Nullable TaskQueueStatus status,
+        @Nullable Integer maxConcurrency) {
 
-    public ListWorkflowSchedulesRequest withWorkflowName(@Nullable String workflowName) {
-        return new ListWorkflowSchedulesRequest(workflowName, this.pageToken, this.limit);
-    }
-
-    public ListWorkflowSchedulesRequest withPageToken(@Nullable String pageToken) {
-        return new ListWorkflowSchedulesRequest(this.workflowName, pageToken, this.limit);
-    }
-
-    public ListWorkflowSchedulesRequest withLimit(int limit) {
-        return new ListWorkflowSchedulesRequest(this.workflowName, this.pageToken, limit);
+    public UpdateTaskQueueRequest {
+        requireNonNull(type, "type must not be null");
+        requireNonNull(name, "name must not be null");
+        if (maxConcurrency != null && maxConcurrency <= 0) {
+            throw new IllegalArgumentException("maxConcurrency must not be negative or zero");
+        }
     }
 
 }

@@ -36,12 +36,12 @@ import org.dependencytrack.dex.api.annotation.Activity;
 import org.dependencytrack.dex.api.annotation.Workflow;
 import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
+import org.dependencytrack.dex.engine.api.TaskQueueType;
 import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
-import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
-import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
@@ -156,8 +156,8 @@ public class DexEngineImplBenchmarkTest {
         engine.registerActivity(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
         engine.registerActivity(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
 
-        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest(WORKFLOW_QUEUE_NAME, 1000));
-        engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest(ACTIVITY_QUEUE_NAME, 1000));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, WORKFLOW_QUEUE_NAME, 1000));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, ACTIVITY_QUEUE_NAME, 1000));
 
         engine.registerWorkflowWorker(
                 new WorkflowTaskWorkerOptions("workflow-worker", WORKFLOW_QUEUE_NAME, 100)

@@ -21,10 +21,10 @@ package org.dependencytrack.dex.engine.persistence;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.dex.engine.ActivityTask;
-import org.dependencytrack.dex.engine.api.ActivityTaskQueue;
-import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
-import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
-import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.TaskQueue;
+import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.ListTaskQueuesRequest;
+import org.dependencytrack.dex.engine.api.request.UpdateTaskQueueRequest;
 import org.dependencytrack.dex.engine.persistence.command.CreateActivityTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.ScheduleActivityTaskRetryCommand;
@@ -49,7 +49,7 @@ public final class ActivityDao extends AbstractDao {
         super(jdbiHandle);
     }
 
-    public boolean createActivityTaskQueue(final CreateActivityTaskQueueRequest request) {
+    public boolean createActivityTaskQueue(final CreateTaskQueueRequest request) {
         return jdbiHandle
                 .createQuery("""
                         select dex_create_activity_task_queue(:name, cast(:maxConcurrency as smallint))
@@ -59,7 +59,7 @@ public final class ActivityDao extends AbstractDao {
                 .one();
     }
 
-    public boolean updateActivityTaskQueue(final UpdateActivityTaskQueueRequest request) {
+    public boolean updateActivityTaskQueue(final UpdateTaskQueueRequest request) {
         final Query query = jdbiHandle.createQuery("""
                 with
                 cte_queue as (
@@ -112,12 +112,13 @@ public final class ActivityDao extends AbstractDao {
     record ListActivityTaskQueuesPageToken(String lastName) implements PageToken {
     }
 
-    public Page<ActivityTaskQueue> listActivityTaskQueues(final ListActivityTaskQueuesRequest request) {
+    public Page<TaskQueue> listActivityTaskQueues(final ListTaskQueuesRequest request) {
         requireNonNull(request, "request must not be null");
 
         final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="lastName" type="boolean" -->
-                select name
+                select 'ACTIVITY' as type
+                     , name
                      , status
                      , max_concurrency
                      , (
@@ -143,14 +144,14 @@ public final class ActivityDao extends AbstractDao {
         final int limit = request.limit() > 0 ? request.limit() : 100;
         final int limitWithNext = limit + 1;
 
-        final List<ActivityTaskQueue> rows = query
+        final List<TaskQueue> rows = query
                 .bind("limit", limitWithNext)
                 .bind("lastName", pageTokenValue != null ? pageTokenValue.lastName() : null)
                 .defineNamedBindings()
-                .mapTo(ActivityTaskQueue.class)
+                .mapTo(TaskQueue.class)
                 .list();
 
-        final List<ActivityTaskQueue> resultItems = rows.size() > 1
+        final List<TaskQueue> resultItems = rows.size() > 1
                 ? rows.subList(0, Math.min(rows.size(), limit))
                 : rows;
 

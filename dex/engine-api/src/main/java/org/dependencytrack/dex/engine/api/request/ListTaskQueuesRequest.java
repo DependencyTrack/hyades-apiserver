@@ -18,26 +18,30 @@
  */
 package org.dependencytrack.dex.engine.api.request;
 
+import org.dependencytrack.dex.engine.api.TaskQueueType;
 import org.jspecify.annotations.Nullable;
 
-public record ListWorkflowTaskQueuesRequest(@Nullable String pageToken, int limit) {
+import static java.util.Objects.requireNonNull;
 
-    public ListWorkflowTaskQueuesRequest {
+public record ListTaskQueuesRequest(TaskQueueType type, @Nullable String pageToken, int limit) {
+
+    public ListTaskQueuesRequest {
+        requireNonNull(type, "type must not be null");
         if (limit <= 0) {
             throw new IllegalArgumentException("limit must be greater than 0");
         }
     }
 
-    public ListWorkflowTaskQueuesRequest() {
-        this(null, 10);
+    public ListTaskQueuesRequest(final TaskQueueType type) {
+        this(type, null, 10);
     }
 
-    public ListWorkflowTaskQueuesRequest withPageToken(@Nullable String pageToken) {
-        return new ListWorkflowTaskQueuesRequest(pageToken, this.limit);
+    public ListTaskQueuesRequest withPageToken(final @Nullable String pageToken) {
+        return new ListTaskQueuesRequest(this.type, pageToken, this.limit);
     }
 
-    public ListWorkflowTaskQueuesRequest withLimit(int limit) {
-        return new ListWorkflowTaskQueuesRequest(this.pageToken, limit);
+    public ListTaskQueuesRequest withLimit(final int limit) {
+        return new ListTaskQueuesRequest(this.type, this.pageToken, limit);
     }
 
 }

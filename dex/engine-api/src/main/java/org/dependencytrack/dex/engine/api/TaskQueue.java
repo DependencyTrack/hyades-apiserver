@@ -16,23 +16,18 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.api.request;
+package org.dependencytrack.dex.engine.api;
 
-import org.dependencytrack.dex.engine.api.TaskQueueStatus;
 import org.jspecify.annotations.Nullable;
 
-import static java.util.Objects.requireNonNull;
+import java.time.Instant;
 
-public record UpdateWorkflowTaskQueueRequest(
+public record TaskQueue(
+        TaskQueueType type,
         String name,
-        @Nullable TaskQueueStatus status,
-        @Nullable Integer maxConcurrency) {
-
-    public UpdateWorkflowTaskQueueRequest {
-        requireNonNull(name, "name must not be null");
-        if (maxConcurrency != null && maxConcurrency <= 0) {
-            throw new IllegalArgumentException("maxConcurrency must not be negative or zero");
-        }
-    }
-
+        TaskQueueStatus status,
+        int maxConcurrency,
+        int depth,
+        Instant createdAt,
+        @Nullable Instant updatedAt) {
 }

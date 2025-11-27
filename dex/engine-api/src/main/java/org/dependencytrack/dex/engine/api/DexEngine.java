@@ -26,15 +26,12 @@ import org.dependencytrack.dex.api.annotation.Workflow;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
 import org.dependencytrack.dex.engine.api.event.DexEngineEvent;
 import org.dependencytrack.dex.engine.api.event.DexEngineEventListener;
-import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
-import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
-import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
+import org.dependencytrack.dex.engine.api.request.ListTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
-import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
-import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.UpdateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.response.CreateWorkflowRunResponse;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.eclipse.microprofile.health.HealthCheckResponse;
@@ -230,57 +227,30 @@ public interface DexEngine extends Closeable {
     CompletableFuture<Void> sendExternalEvent(ExternalEvent externalEvent);
 
     /**
-     * Create a queue for workflow tasks.
+     * Create a task queue.
      *
      * @param request The request.
      * @return {@code true} when the queue was created, {@code false} otherwise.
      * If a queue with the same name already exists, it will not be updated
      * and this method will return {@code false}.
      */
-    boolean createWorkflowTaskQueue(CreateWorkflowTaskQueueRequest request);
+    boolean createTaskQueue(CreateTaskQueueRequest request);
 
     /**
-     * Update a workflow task queue.
+     * Update a task queue.
      *
      * @param request The request.
      * @return {@code true} when the queue was updated, {@code false} otherwise.
      * @throws NoSuchElementException When no queue with the given name exist.
      */
-    boolean updateWorkflowTaskQueue(UpdateWorkflowTaskQueueRequest request);
+    boolean updateTaskQueue(UpdateTaskQueueRequest request);
 
     /**
-     * List all workflow task queues known to the engine.
+     * List all task queues known to the engine.
      *
      * @param request The request.
-     * @return A {@link Page} containing {@link WorkflowTaskQueue}s.
+     * @return A {@link Page} containing {@link TaskQueue}s.
      */
-    Page<WorkflowTaskQueue> listWorkflowTaskQueues(ListWorkflowTaskQueuesRequest request);
-
-    /**
-     * Create a queue for activity tasks.
-     *
-     * @param request The request.
-     * @return {@code true} when the queue was created, {@code false} otherwise.
-     * If a queue with the same name already exists, it will not be updated
-     * and this method will return {@code false}.
-     */
-    boolean createActivityTaskQueue(CreateActivityTaskQueueRequest request);
-
-    /**
-     * Update an activity task queue.
-     *
-     * @param request The request.
-     * @return {@code true} when the queue was updated, {@code false} otherwise.
-     * @throws NoSuchElementException When no queue with the given name exist.
-     */
-    boolean updateActivityTaskQueue(UpdateActivityTaskQueueRequest request);
-
-    /**
-     * List all activity task queues known to the engine.
-     *
-     * @param request The request.
-     * @return A {@link Page} containing {@link ActivityTaskQueue}s.
-     */
-    Page<ActivityTaskQueue> listActivityTaskQueues(ListActivityTaskQueuesRequest request);
+    Page<TaskQueue> listTaskQueues(ListTaskQueuesRequest request);
 
 }

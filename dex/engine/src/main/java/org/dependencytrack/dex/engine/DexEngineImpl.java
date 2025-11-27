@@ -36,30 +36,26 @@ import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskCompletedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskFailedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.WorkflowTaskAbandonedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.WorkflowTaskCompletedEvent;
-import org.dependencytrack.dex.engine.api.ActivityTaskQueue;
 import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.ExternalEvent;
+import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.api.WorkflowRun;
 import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
-import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
 import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.event.DexEngineEvent;
 import org.dependencytrack.dex.engine.api.event.DexEngineEventListener;
 import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEvent;
 import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEventListener;
-import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
-import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
-import org.dependencytrack.dex.engine.api.request.ListActivityTaskQueuesRequest;
+import org.dependencytrack.dex.engine.api.request.ListTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
-import org.dependencytrack.dex.engine.api.request.UpdateActivityTaskQueueRequest;
-import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.UpdateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.response.CreateWorkflowRunResponse;
 import org.dependencytrack.dex.engine.persistence.ActivityDao;
 import org.dependencytrack.dex.engine.persistence.WorkflowDao;
@@ -733,33 +729,27 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public boolean createWorkflowTaskQueue(CreateWorkflowTaskQueueRequest request) {
-        return jdbi.inTransaction(handle -> new WorkflowDao(handle).createWorkflowTaskQueue(request));
+    public boolean createTaskQueue(final CreateTaskQueueRequest request) {
+        return jdbi.inTransaction(handle -> switch (request.type()) {
+            case ACTIVITY -> new ActivityDao(handle).createActivityTaskQueue(request);
+            case WORKFLOW -> new WorkflowDao(handle).createWorkflowTaskQueue(request);
+        });
     }
 
     @Override
-    public boolean updateWorkflowTaskQueue(final UpdateWorkflowTaskQueueRequest request) {
-        return jdbi.inTransaction(handle -> new WorkflowDao(handle).updateWorkflowTaskQueue(request));
+    public boolean updateTaskQueue(final UpdateTaskQueueRequest request) {
+        return jdbi.inTransaction(handle -> switch (request.type()) {
+            case ACTIVITY -> new ActivityDao(handle).updateActivityTaskQueue(request);
+            case WORKFLOW -> new WorkflowDao(handle).updateWorkflowTaskQueue(request);
+        });
     }
 
     @Override
-    public Page<WorkflowTaskQueue> listWorkflowTaskQueues(final ListWorkflowTaskQueuesRequest request) {
-        return jdbi.withHandle(handle -> new WorkflowDao(handle).listWorkflowTaskQueues(request));
-    }
-
-    @Override
-    public boolean createActivityTaskQueue(final CreateActivityTaskQueueRequest request) {
-        return jdbi.inTransaction(handle -> new ActivityDao(handle).createActivityTaskQueue(request));
-    }
-
-    @Override
-    public boolean updateActivityTaskQueue(final UpdateActivityTaskQueueRequest request) {
-        return jdbi.inTransaction(handle -> new ActivityDao(handle).updateActivityTaskQueue(request));
-    }
-
-    @Override
-    public Page<ActivityTaskQueue> listActivityTaskQueues(final ListActivityTaskQueuesRequest request) {
-        return jdbi.withHandle(handle -> new ActivityDao(handle).listActivityTaskQueues(request));
+    public Page<TaskQueue> listTaskQueues(final ListTaskQueuesRequest request) {
+        return jdbi.withHandle(handle -> switch (request.type()) {
+            case ACTIVITY -> new ActivityDao(handle).listActivityTaskQueues(request);
+            case WORKFLOW -> new WorkflowDao(handle).listWorkflowTaskQueues(request);
+        });
     }
 
     CompletableFuture<Void> onTaskEvent(final TaskEvent taskEvent) throws InterruptedException, TimeoutException {

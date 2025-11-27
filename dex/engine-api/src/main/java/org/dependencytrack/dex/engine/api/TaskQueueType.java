@@ -16,17 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.api.request;
+package org.dependencytrack.dex.engine.api;
 
-import static java.util.Objects.requireNonNull;
+public enum TaskQueueType {
 
-public record CreateWorkflowTaskQueueRequest(String name, int maxConcurrency) {
+    ACTIVITY,
 
-    public CreateWorkflowTaskQueueRequest {
-        requireNonNull(name, "name must not be null");
-        if (maxConcurrency <= 0) {
-            throw new IllegalArgumentException("maxConcurrency must not be negative or zero");
-        }
-    }
+    WORKFLOW
 
 }

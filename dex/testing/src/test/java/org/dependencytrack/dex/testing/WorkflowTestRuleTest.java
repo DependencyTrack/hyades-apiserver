@@ -27,12 +27,12 @@ import org.dependencytrack.dex.api.annotation.Activity;
 import org.dependencytrack.dex.api.annotation.Workflow;
 import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.TaskQueueType;
 import org.dependencytrack.dex.engine.api.WorkflowRun;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
-import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
-import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
 import org.jspecify.annotations.Nullable;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -77,8 +77,8 @@ public class WorkflowTestRuleTest {
                 voidConverter(),
                 stringConverter(),
                 Duration.ofSeconds(3));
-        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest(WORKFLOW_TASK_QUEUE, 10));
-        engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest(ACTIVITY_TASK_QUEUE, 10));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, WORKFLOW_TASK_QUEUE, 10));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, ACTIVITY_TASK_QUEUE, 10));
         engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", WORKFLOW_TASK_QUEUE, 1));
         engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", ACTIVITY_TASK_QUEUE, 1));
 
@@ -101,7 +101,7 @@ public class WorkflowTestRuleTest {
                 voidConverter(),
                 stringConverter(),
                 Duration.ofSeconds(3));
-        engine.createWorkflowTaskQueue(new CreateWorkflowTaskQueueRequest(WORKFLOW_TASK_QUEUE, 10));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, WORKFLOW_TASK_QUEUE, 10));
         engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", WORKFLOW_TASK_QUEUE, 1));
 
         final var activityMock = mock(TestActivity.class);
@@ -112,7 +112,7 @@ public class WorkflowTestRuleTest {
                 voidConverter(),
                 stringConverter(),
                 Duration.ofSeconds(3));
-        engine.createActivityTaskQueue(new CreateActivityTaskQueueRequest(ACTIVITY_TASK_QUEUE, 10));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, ACTIVITY_TASK_QUEUE, 10));
         engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", ACTIVITY_TASK_QUEUE, 1));
 
         engine.start();

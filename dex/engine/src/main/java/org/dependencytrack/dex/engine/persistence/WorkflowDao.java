@@ -21,11 +21,11 @@ package org.dependencytrack.dex.engine.persistence;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.dex.engine.WorkflowTask;
+import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
-import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
-import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
-import org.dependencytrack.dex.engine.api.request.ListWorkflowTaskQueuesRequest;
-import org.dependencytrack.dex.engine.api.request.UpdateWorkflowTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.ListTaskQueuesRequest;
+import org.dependencytrack.dex.engine.api.request.UpdateTaskQueueRequest;
 import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunCommand;
 import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
 import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunInboxEntryCommand;
@@ -69,7 +69,7 @@ public final class WorkflowDao extends AbstractDao {
         super(jdbiHandle);
     }
 
-    public boolean createWorkflowTaskQueue(final CreateWorkflowTaskQueueRequest request) {
+    public boolean createWorkflowTaskQueue(final CreateTaskQueueRequest request) {
         return jdbiHandle
                 .createQuery("""
                         select dex_create_workflow_task_queue(:name, cast(:maxConcurrency as smallint))
@@ -79,7 +79,7 @@ public final class WorkflowDao extends AbstractDao {
                 .one();
     }
 
-    public boolean updateWorkflowTaskQueue(final UpdateWorkflowTaskQueueRequest request) {
+    public boolean updateWorkflowTaskQueue(final UpdateTaskQueueRequest request) {
         final Query query = jdbiHandle.createQuery("""
                 with
                 cte_queue as (
@@ -132,12 +132,13 @@ public final class WorkflowDao extends AbstractDao {
     record ListWorkflowTaskQueuesPageToken(String lastName) implements PageToken {
     }
 
-    public Page<WorkflowTaskQueue> listWorkflowTaskQueues(final ListWorkflowTaskQueuesRequest request) {
+    public Page<TaskQueue> listWorkflowTaskQueues(final ListTaskQueuesRequest request) {
         requireNonNull(request, "request must not be null");
 
         final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="lastName" type="boolean" -->
-                select name
+                select 'WORKFLOW' as type
+                     , name
                      , status
                      , max_concurrency
                      , (
@@ -162,14 +163,14 @@ public final class WorkflowDao extends AbstractDao {
         final int limit = request.limit() > 0 ? request.limit() : 100;
         final int limitWithNext = limit + 1;
 
-        final List<WorkflowTaskQueue> rows = query
+        final List<TaskQueue> rows = query
                 .bind("limit", limitWithNext)
                 .bind("lastName", pageTokenValue != null ? pageTokenValue.lastName() : null)
                 .defineNamedBindings()
-                .mapTo(WorkflowTaskQueue.class)
+                .mapTo(TaskQueue.class)
                 .list();
 
-        final List<WorkflowTaskQueue> resultItems = rows.size() > 1
+        final List<TaskQueue> resultItems = rows.size() > 1
                 ? rows.subList(0, Math.min(rows.size(), limit))
                 : rows;
 

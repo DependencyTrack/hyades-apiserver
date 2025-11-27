@@ -18,8 +18,9 @@
  */
 package org.dependencytrack.dex.engine.persistence.jdbi;
 
+import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.api.TaskQueueStatus;
-import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
+import org.dependencytrack.dex.engine.api.TaskQueueType;
 import org.jdbi.v3.core.config.ConfigRegistry;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.mapper.ColumnMappers;
@@ -33,7 +34,7 @@ import java.time.Instant;
 
 import static java.util.Objects.requireNonNull;
 
-final class WorkflowTaskQueueRowMapper implements RowMapper<WorkflowTaskQueue> {
+final class TaskQueueRowMapper implements RowMapper<TaskQueue> {
 
     private @Nullable ColumnMapper<Instant> instantColumnMapper;
 
@@ -43,10 +44,11 @@ final class WorkflowTaskQueueRowMapper implements RowMapper<WorkflowTaskQueue> {
     }
 
     @Override
-    public WorkflowTaskQueue map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+    public TaskQueue map(final ResultSet rs, final StatementContext ctx) throws SQLException {
         requireNonNull(instantColumnMapper);
 
-        return new WorkflowTaskQueue(
+        return new TaskQueue(
+                TaskQueueType.valueOf(rs.getString("type")),
                 rs.getString("name"),
                 TaskQueueStatus.valueOf(rs.getString("status")),
                 rs.getInt("max_concurrency"),

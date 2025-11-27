@@ -29,9 +29,9 @@ import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.DexEngineFactory;
+import org.dependencytrack.dex.engine.api.TaskQueueType;
 import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
-import org.dependencytrack.dex.engine.api.request.CreateActivityTaskQueueRequest;
-import org.dependencytrack.dex.engine.api.request.CreateWorkflowTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
@@ -88,8 +88,10 @@ public final class DexEngineInitializer implements ServletContextListener {
 
         // TODO: Register workflows and activities here.
 
-        ensureWorkflowQueues(engine, new CreateWorkflowTaskQueueRequest("default", 100));
-        ensureActivityQueues(engine, new CreateActivityTaskQueueRequest("default", 25));
+        ensureTaskQueues(
+                engine,
+                new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "default", 100),
+                new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "default", 25));
 
         registerTaskWorkers(engine, configMapping);
 
@@ -143,28 +145,15 @@ public final class DexEngineInitializer implements ServletContextListener {
         return engineConfig;
     }
 
-    private void ensureWorkflowQueues(DexEngine engine, CreateWorkflowTaskQueueRequest... requests) {
-        for (final CreateWorkflowTaskQueueRequest request : requests) {
-            final boolean created = engine.createWorkflowTaskQueue(request);
+    private void ensureTaskQueues(DexEngine engine, CreateTaskQueueRequest... requests) {
+        for (final CreateTaskQueueRequest request : requests) {
+            final boolean created = engine.createTaskQueue(request);
             if (created) {
                 LOGGER.info(
-                        "Workflow task queue '{}' created with max concurrency {}",
-                        request.name(), request.maxConcurrency());
+                        "Task queue '{}' of type {} created with max concurrency {}",
+                        request.name(), request.type(), request.maxConcurrency());
             } else {
-                LOGGER.debug("Workflow task queue '{}' already exists", request.name());
-            }
-        }
-    }
-
-    private void ensureActivityQueues(DexEngine engine, CreateActivityTaskQueueRequest... requests) {
-        for (final CreateActivityTaskQueueRequest request : requests) {
-            final boolean created = engine.createActivityTaskQueue(request);
-            if (created) {
-                LOGGER.info(
-                        "Activity task queue '{}' created with max concurrency {}",
-                        request.name(), request.maxConcurrency());
-            } else {
-                LOGGER.debug("Activity task queue '{}' already exists", request.name());
+                LOGGER.debug("Task queue '{}' of type {} already exists", request.name(), request.type());
             }
         }
     }

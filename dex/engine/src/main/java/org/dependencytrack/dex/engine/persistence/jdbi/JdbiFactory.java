@@ -19,8 +19,7 @@
 package org.dependencytrack.dex.engine.persistence.jdbi;
 
 import org.dependencytrack.common.pagination.PageTokenEncoder;
-import org.dependencytrack.dex.engine.api.ActivityTaskQueue;
-import org.dependencytrack.dex.engine.api.WorkflowTaskQueue;
+import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.persistence.model.PolledActivityTask;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
@@ -80,8 +79,8 @@ public final class JdbiFactory {
                         WorkflowEvent.class,
                         new ProtobufColumnMapper<>(WorkflowEvent.parser()))
                 .registerRowMapper(
-                        ActivityTaskQueue.class,
-                        new ActivityTaskQueueRowMapper())
+                        TaskQueue.class,
+                        new TaskQueueRowMapper())
                 .registerRowMapper(
                         WorkflowRunCountByNameAndStatusRow.class,
                         ConstructorMapper.of(WorkflowRunCountByNameAndStatusRow.class))
@@ -99,10 +98,7 @@ public final class JdbiFactory {
                         new PolledWorkflowRunRowMapper())
                 .registerRowMapper(
                         WorkflowRunHistoryEntry.class,
-                        ConstructorMapper.of(WorkflowRunHistoryEntry.class))
-                .registerRowMapper(
-                        WorkflowTaskQueue.class,
-                        new WorkflowTaskQueueRowMapper());
+                        ConstructorMapper.of(WorkflowRunHistoryEntry.class));
     }
 
 }

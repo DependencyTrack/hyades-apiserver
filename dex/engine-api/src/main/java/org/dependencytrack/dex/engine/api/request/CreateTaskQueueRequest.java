@@ -18,22 +18,18 @@
  */
 package org.dependencytrack.dex.engine.api.request;
 
-import org.junit.jupiter.api.Test;
+import org.dependencytrack.dex.engine.api.TaskQueueType;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static java.util.Objects.requireNonNull;
 
-class ListWorkflowSchedulesRequestTest {
+public record CreateTaskQueueRequest(TaskQueueType type, String name, int maxConcurrency) {
 
-    @Test
-    void shouldPopulateFieldsUsingWithers() {
-        final var request = new ListWorkflowSchedulesRequest()
-                .withWorkflowName("workflowName")
-                .withPageToken("pageToken")
-                .withLimit(666);
-
-        assertThat(request.workflowName()).isEqualTo("workflowName");
-        assertThat(request.pageToken()).isEqualTo("pageToken");
-        assertThat(request.limit()).isEqualTo(666);
+    public CreateTaskQueueRequest {
+        requireNonNull(type, "type must not be null");
+        requireNonNull(name, "name must not be null");
+        if (maxConcurrency <= 0) {
+            throw new IllegalArgumentException("maxConcurrency must not be negative or zero");
+        }
     }
 
 }
