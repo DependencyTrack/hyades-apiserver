@@ -21,6 +21,7 @@ package org.dependencytrack.dex.engine.persistence;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.dex.engine.ActivityTask;
+import org.dependencytrack.dex.engine.ActivityTaskId;
 import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.ListTaskQueuesRequest;
@@ -383,7 +384,7 @@ public final class ActivityDao extends AbstractDao {
                 .execute();
     }
 
-    public int deleteLockedActivityTasks(final UUID workerInstanceId, final List<ActivityTask> tasks) {
+    public List<ActivityTaskId> deleteLockedActivityTasks(final UUID workerInstanceId, final List<ActivityTask> tasks) {
         final var queueNames = new String[tasks.size()];
         final var workflowRunIds = new UUID[tasks.size()];
         final var createdEventIds = new int[tasks.size()];
@@ -413,6 +414,9 @@ public final class ActivityDao extends AbstractDao {
                    and dat.queue_name = cte_req.queue_name
                    and dat.locked_by = :workerInstanceId
                    and dat.lock_version = cte_req.lock_version
+                returning dat.queue_name
+                        , dat.workflow_run_id
+                        , dat.created_event_id
                 """);
 
         return update
@@ -421,7 +425,9 @@ public final class ActivityDao extends AbstractDao {
                 .bind("workflowRunIds", workflowRunIds)
                 .bind("createdEventIds", createdEventIds)
                 .bind("lockVersions", lockVersions)
-                .execute();
+                .executeAndReturnGeneratedKeys()
+                .mapTo(ActivityTaskId.class)
+                .list();
     }
 
 }

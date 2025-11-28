@@ -18,7 +18,9 @@
  */
 package org.dependencytrack.dex.engine.persistence.jdbi;
 
-import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
+import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
+import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.jdbi.v3.core.config.ConfigRegistry;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.mapper.ColumnMappers;
@@ -32,13 +34,15 @@ import java.lang.reflect.Type;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
 import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
 
-final class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowTask> {
+final class WorkflowRunMetadataRowMapper implements RowMapper<WorkflowRunMetadataRow> {
 
     private static final Type LABELS_TYPE = parameterizeClass(Map.class, String.class, String.class);
 
@@ -52,20 +56,26 @@ final class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowTask> 
     }
 
     @Override
-    public PolledWorkflowTask map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+    public WorkflowRunMetadataRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
         requireNonNull(instantColumnMapper);
-        requireNonNull(labelsJsonMapper);
 
-        return new PolledWorkflowTask(
+        return new WorkflowRunMetadataRow(
                 rs.getObject("id", UUID.class),
                 rs.getString("workflow_name"),
                 rs.getInt("workflow_version"),
                 rs.getString("queue_name"),
+                WorkflowRunStatus.valueOf(rs.getString("status")),
+                rs.getString("custom_status"),
                 rs.getString("concurrency_group_id"),
+                Optional.ofNullable(rs.getString("concurrency_mode"))
+                        .map(WorkflowRunConcurrencyMode::valueOf)
+                        .orElse(null),
                 rs.getInt("priority"),
                 getLabels(rs, ctx),
-                instantColumnMapper.map(rs, "locked_until", ctx),
-                rs.getInt("lock_version"));
+                instantColumnMapper.map(rs, "created_at", ctx),
+                instantColumnMapper.map(rs, "updated_at", ctx),
+                instantColumnMapper.map(rs, "started_at", ctx),
+                instantColumnMapper.map(rs, "completed_at", ctx));
     }
 
     @SuppressWarnings("unchecked")

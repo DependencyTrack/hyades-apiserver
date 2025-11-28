@@ -20,7 +20,6 @@ package org.dependencytrack.dex.engine.persistence.model;
 
 import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
-import org.jdbi.v3.json.Json;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
@@ -37,7 +36,7 @@ public record WorkflowRunMetadataRow(
         @Nullable String concurrencyGroupId,
         @Nullable WorkflowRunConcurrencyMode concurrencyMode,
         int priority,
-        @Nullable @Json Map<String, String> labels,
+        @Nullable Map<String, String> labels,
         Instant createdAt,
         @Nullable Instant updatedAt,
         @Nullable Instant startedAt,

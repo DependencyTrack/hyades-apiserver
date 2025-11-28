@@ -100,6 +100,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -1123,7 +1124,7 @@ final class DexEngineImpl implements DexEngine {
             final ActivityDao activityDao,
             final Collection<ActivityTaskCompletedEvent> events) {
         final var tasksToDelete = new ArrayList<ActivityTask>(events.size());
-        final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(events.size());
+        final var createInboxEntryCommandByTaskId = new LinkedHashMap<ActivityTaskId, CreateWorkflowRunInboxEntryCommand>(events.size());
 
         for (final ActivityTaskCompletedEvent event : events) {
             tasksToDelete.add(event.task());
@@ -1133,7 +1134,8 @@ final class DexEngineImpl implements DexEngine {
             if (event.result() != null) {
                 taskCompletedBuilder.setResult(event.result());
             }
-            inboxEventsToCreate.add(
+            createInboxEntryCommandByTaskId.put(
+                    event.task().id(),
                     new CreateWorkflowRunInboxEntryCommand(
                             event.task().id().workflowRunId(),
                             null,
@@ -1144,15 +1146,29 @@ final class DexEngineImpl implements DexEngine {
                                     .build()));
         }
 
-        final int deletedTasks = activityDao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
-        assert deletedTasks == tasksToDelete.size()
-                : "Deleted activity tasks: actual=%d, expected=%d".formatted(
-                deletedTasks, tasksToDelete.size());
+        final List<ActivityTaskId> deletedTaskIds = activityDao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
+        if (deletedTaskIds.size() != tasksToDelete.size()) {
+            createInboxEntryCommandByTaskId.keySet().removeIf(taskId -> {
+                if (!deletedTaskIds.contains(taskId)) {
+                    LOGGER.warn("""
+                            A successfully completed activity task with ID {} could not be deleted, \
+                            likely because its lock expired, causing another worker to pick it up. \
+                            Expect duplicate task executions. To prevent this from happening, \
+                            consider increasing the activity's lock timeout, and sending heartbeats \
+                            more frequently.""", taskId);
+                    return true;
+                }
 
-        final int createdInboxEvents = workflowDao.createRunInboxEvents(inboxEventsToCreate);
-        assert createdInboxEvents == inboxEventsToCreate.size()
-                : "Created inbox events: actual=%d, expected=%d".formatted(
-                createdInboxEvents, inboxEventsToCreate.size());
+                return false;
+            });
+        }
+
+        if (!createInboxEntryCommandByTaskId.isEmpty()) {
+            final int createdInboxEvents = workflowDao.createRunInboxEvents(createInboxEntryCommandByTaskId.sequencedValues());
+            assert createdInboxEvents == createInboxEntryCommandByTaskId.size()
+                    : "Created inbox events: actual=%d, expected=%d".formatted(
+                    createdInboxEvents, createInboxEntryCommandByTaskId.size());
+        }
     }
 
     private void failActivityTasksInternal(
@@ -1160,7 +1176,7 @@ final class DexEngineImpl implements DexEngine {
             final ActivityDao activityDao,
             final Collection<ActivityTaskFailedEvent> events) {
         final var tasksToDelete = new ArrayList<ActivityTask>(events.size());
-        final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(events.size());
+        final var createInboxEntyCommandByTaskId = new LinkedHashMap<ActivityTaskId, CreateWorkflowRunInboxEntryCommand>(events.size());
         final var retriesToSchedule = new ArrayList<ScheduleActivityTaskRetryCommand>();
 
         for (final ActivityTaskFailedEvent event : events) {
@@ -1177,7 +1193,8 @@ final class DexEngineImpl implements DexEngine {
             if (isTerminal || hasExceededMaxAttempts) {
                 tasksToDelete.add(task);
 
-                inboxEventsToCreate.add(
+                createInboxEntyCommandByTaskId.put(
+                        task.id(),
                         new CreateWorkflowRunInboxEntryCommand(
                                 task.id().workflowRunId(),
                                 /* visibleFrom */ null,
@@ -1201,17 +1218,29 @@ final class DexEngineImpl implements DexEngine {
         }
 
         if (!tasksToDelete.isEmpty()) {
-            final int deletedTasks = activityDao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
-            assert deletedTasks == tasksToDelete.size()
-                    : "Deleted activity tasks: actual=%d, expected=%d".formatted(
-                    deletedTasks, tasksToDelete.size());
+            final List<ActivityTaskId> deletedTaskIds = activityDao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
+            if (deletedTaskIds.size() != tasksToDelete.size()) {
+                createInboxEntyCommandByTaskId.keySet().removeIf(taskId -> {
+                    if (!deletedTaskIds.contains(taskId)) {
+                        LOGGER.warn("""
+                                A terminally failed activity task with ID {} could not be deleted, \
+                                likely because its lock expired, causing another worker to pick it up. \
+                                Expect duplicate task executions. To prevent this from happening, \
+                                consider increasing the activity's lock timeout, and sending heartbeats \
+                                more frequently.""", taskId);
+                        return true;
+                    }
+
+                    return false;
+                });
+            }
         }
 
-        if (!inboxEventsToCreate.isEmpty()) {
-            final int createdInboxEvents = workflowDao.createRunInboxEvents(inboxEventsToCreate);
-            assert createdInboxEvents == inboxEventsToCreate.size()
+        if (!createInboxEntyCommandByTaskId.isEmpty()) {
+            final int createdInboxEvents = workflowDao.createRunInboxEvents(createInboxEntyCommandByTaskId.sequencedValues());
+            assert createdInboxEvents == createInboxEntyCommandByTaskId.size()
                     : "Created inbox events: actual=%d, expected=%d".formatted(
-                    createdInboxEvents, inboxEventsToCreate.size());
+                    createdInboxEvents, createInboxEntyCommandByTaskId.size());
         }
 
         if (!retriesToSchedule.isEmpty()) {

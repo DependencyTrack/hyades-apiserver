@@ -19,6 +19,7 @@
 package org.dependencytrack.dex.engine.persistence.jdbi;
 
 import org.dependencytrack.common.pagination.PageTokenEncoder;
+import org.dependencytrack.dex.engine.ActivityTaskId;
 import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.persistence.model.PolledActivityTask;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
@@ -30,8 +31,6 @@ import org.dependencytrack.dex.proto.common.v1.RetryPolicy;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.core.config.ConfiguringPlugin;
-import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.SqlStatements;
 import org.jdbi.v3.freemarker.FreemarkerEngine;
 import org.jdbi.v3.jackson2.Jackson2Plugin;
@@ -58,10 +57,8 @@ public final class JdbiFactory {
                 .create(dataSource)
                 .installPlugin(new Jackson2Plugin())
                 .installPlugin(new PostgresPlugin())
-                .installPlugin(ConfiguringPlugin.of(
-                        PaginationConfig.class,
-                        config -> config.setPageTokenEncoder(pageTokenEncoder)))
                 .setTemplateEngine(FreemarkerEngine.instance())
+                .configure(PaginationConfig.class, config -> config.setPageTokenEncoder(pageTokenEncoder))
                 .configure(SqlStatements.class, statementsCfg -> statementsCfg.setQueryTimeout(10))
                 // Ensure all required mappings are registered *once*
                 // on startup. Defining these on a per-query basis imposes
@@ -79,14 +76,8 @@ public final class JdbiFactory {
                         WorkflowEvent.class,
                         new ProtobufColumnMapper<>(WorkflowEvent.parser()))
                 .registerRowMapper(
-                        TaskQueue.class,
-                        new TaskQueueRowMapper())
-                .registerRowMapper(
-                        WorkflowRunCountByNameAndStatusRow.class,
-                        ConstructorMapper.of(WorkflowRunCountByNameAndStatusRow.class))
-                .registerRowMapper(
-                        WorkflowRunMetadataRow.class,
-                        ConstructorMapper.of(WorkflowRunMetadataRow.class))
+                        ActivityTaskId.class,
+                        new ActivityTaskIdRowMapper())
                 .registerRowMapper(
                         PolledActivityTask.class,
                         new PolledActivityTaskRowMapper())
@@ -97,8 +88,17 @@ public final class JdbiFactory {
                         PolledWorkflowTask.class,
                         new PolledWorkflowRunRowMapper())
                 .registerRowMapper(
+                        TaskQueue.class,
+                        new TaskQueueRowMapper())
+                .registerRowMapper(
+                        WorkflowRunCountByNameAndStatusRow.class,
+                        new WorkflowRunCountByNameAndStatusRowMapper())
+                .registerRowMapper(
                         WorkflowRunHistoryEntry.class,
-                        ConstructorMapper.of(WorkflowRunHistoryEntry.class));
+                        new WorkflowRunHistoryEntryRowMapper())
+                .registerRowMapper(
+                        WorkflowRunMetadataRow.class,
+                        new WorkflowRunMetadataRowMapper());
     }
 
 }
