@@ -35,7 +35,7 @@ class CreateWorkflowRunRequestTest {
     @Test
     void shouldThrowWhenWorkflowNameIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new CreateWorkflowRunRequest<>(null, 1, "taskQueueName"))
+                .isThrownBy(() -> new CreateWorkflowRunRequest<>(null, 1))
                 .withMessage("workflowName must not be null");
     }
 
@@ -43,22 +43,15 @@ class CreateWorkflowRunRequestTest {
     @ValueSource(ints = {-1, 0, 101})
     void shouldThrowWhenWorkflowVersionIsInvalid(final int workflowVersion) {
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> new CreateWorkflowRunRequest<>("workflowName", workflowVersion, "taskQueueName"))
+                .isThrownBy(() -> new CreateWorkflowRunRequest<>("workflowName", workflowVersion))
                 .withMessage("workflowVersion must be between 1 and 100, but is " + workflowVersion);
-    }
-
-    @Test
-    void shouldThrowWhenQueueNameIsNull() {
-        assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new CreateWorkflowRunRequest<>("workflowName", 1, null))
-                .withMessage("taskQueueName must not be null");
     }
 
     @ParameterizedTest
     @ValueSource(ints = {-1, 101})
     void shouldThrowWhenPriorityIsInvalid(final int priority) {
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> new CreateWorkflowRunRequest<>("workflowName", 1, "taskQueueName")
+                .isThrownBy(() -> new CreateWorkflowRunRequest<>("workflowName", 1)
                         .withPriority(priority))
                 .withMessage("priority must be between 0 and 100, but is " + priority);
     }
@@ -72,14 +65,15 @@ class CreateWorkflowRunRequestTest {
             final String concurrencyGroupId,
             final WorkflowRunConcurrencyMode concurrencyMode) {
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> new CreateWorkflowRunRequest<>("workflowName", 1, "taskQueueName")
+                .isThrownBy(() -> new CreateWorkflowRunRequest<>("workflowName", 1)
                         .withConcurrency(concurrencyGroupId, concurrencyMode))
                 .withMessage("must provide either concurrencyGroupId AND concurrencyMode, or none");
     }
 
     @Test
     void shouldPopulateFieldsUsingWithers() {
-        final var request = new CreateWorkflowRunRequest<>("workflowName", 1, "taskQueueName")
+        final var request = new CreateWorkflowRunRequest<>("workflowName", 1)
+                .withTaskQueueName("taskQueueName")
                 .withPriority(66)
                 .withConcurrency("concurrencyGroupId", WorkflowRunConcurrencyMode.SERIAL)
                 .withLabels(Map.of("foo", "bar"))
