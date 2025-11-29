@@ -1013,7 +1013,7 @@ class DexEngineImplTest {
         assertThat(exceptionReference.get()).satisfies(e -> {
             assertThat(e).isInstanceOf(ChildWorkflowFailureException.class);
             assertThat(e.getMessage()).matches("Run .+ of child workflow bar v1 failed");
-            assertThat(e.getStackTrace()).isNotEmpty();
+            assertThat(e.getStackTrace()).isEmpty();
 
             {
                 final var failure = (ChildWorkflowFailureException) e;
@@ -1025,7 +1025,7 @@ class DexEngineImplTest {
             assertThat(e.getCause()).satisfies(firstCause -> {
                 assertThat(firstCause).isInstanceOf(ChildWorkflowFailureException.class);
                 assertThat(firstCause.getMessage()).matches("Run .+ of child workflow baz v1 failed");
-                assertThat(firstCause.getStackTrace()).isNotEmpty();
+                assertThat(firstCause.getStackTrace()).isEmpty();
 
                 {
                     final var failure = (ChildWorkflowFailureException) firstCause;
@@ -1037,7 +1037,7 @@ class DexEngineImplTest {
                 assertThat(firstCause.getCause()).satisfies(secondCause -> {
                     assertThat(secondCause).isInstanceOf(ActivityFailureException.class);
                     assertThat(secondCause.getMessage()).isEqualTo("Activity qux failed");
-                    assertThat(secondCause.getStackTrace()).isNotEmpty();
+                    assertThat(secondCause.getStackTrace()).isEmpty();
 
                     {
                         final var failure = (ActivityFailureException) secondCause;
@@ -1459,7 +1459,7 @@ class DexEngineImplTest {
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final InternalWorkflowExecutor<A, R> executor) {
-        engine.registerWorkflowInternal(name, 1, argumentConverter, resultConverter, Duration.ofSeconds(5), executor);
+        engine.registerWorkflowInternal(name, 1, argumentConverter, resultConverter, WORKFLOW_TASK_QUEUE, Duration.ofSeconds(5), executor);
     }
 
     private void registerWorkflow(final String name, final InternalWorkflowExecutor<Void, Void> executor) {
@@ -1471,7 +1471,7 @@ class DexEngineImplTest {
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final ActivityExecutor<A, R> executor) {
-        engine.registerActivityInternal(name, argumentConverter, resultConverter, Duration.ofSeconds(5), executor);
+        engine.registerActivityInternal(name, argumentConverter, resultConverter, ACTIVITY_TASK_QUEUE, Duration.ofSeconds(5), executor);
     }
 
     private void registerActivity(final String name, final ActivityExecutor<Void, Void> executor) {

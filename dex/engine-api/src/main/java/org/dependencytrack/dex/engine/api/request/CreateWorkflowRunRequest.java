@@ -34,7 +34,7 @@ import static java.util.Objects.requireNonNull;
  * @param requestId          Unique identifier of the request.
  * @param workflowName       Name of the workflow. Must be known to the engine.
  * @param workflowVersion    Version of the workflow. Must be between 1 and 100.
- * @param queueName          Name of the queue to schedule tasks on.
+ * @param taskQueueName      Name of the queue to schedule tasks on.
  * @param concurrencyGroupId Concurrency group ID for the run.
  * @param priority           Priority of the run. Must be between 0 and 100.
  * @param labels             Labels for the run.
@@ -45,7 +45,7 @@ public record CreateWorkflowRunRequest<A>(
         UUID requestId,
         String workflowName,
         int workflowVersion,
-        String queueName,
+        String taskQueueName,
         @Nullable String concurrencyGroupId,
         @Nullable WorkflowRunConcurrencyMode concurrencyMode,
         int priority,
@@ -58,7 +58,7 @@ public record CreateWorkflowRunRequest<A>(
         if (workflowVersion < 1 || workflowVersion > 100) {
             throw new IllegalArgumentException("workflowVersion must be between 1 and 100, but is " + workflowVersion);
         }
-        requireNonNull(queueName, "queueName must not be null");
+        requireNonNull(taskQueueName, "taskQueueName must not be null");
         if (priority < 0 || priority > 100) {
             throw new IllegalArgumentException("priority must be between 0 and 100, but is " + priority);
         }
@@ -83,7 +83,7 @@ public record CreateWorkflowRunRequest<A>(
                 this.requestId,
                 this.workflowName,
                 this.workflowVersion,
-                this.queueName,
+                this.taskQueueName,
                 concurrencyGroupId,
                 concurrencyMode,
                 this.priority,
@@ -96,7 +96,7 @@ public record CreateWorkflowRunRequest<A>(
                 this.requestId,
                 this.workflowName,
                 this.workflowVersion,
-                this.queueName,
+                this.taskQueueName,
                 this.concurrencyGroupId,
                 this.concurrencyMode,
                 priority,
@@ -109,7 +109,7 @@ public record CreateWorkflowRunRequest<A>(
                 this.requestId,
                 this.workflowName,
                 this.workflowVersion,
-                this.queueName,
+                this.taskQueueName,
                 this.concurrencyGroupId,
                 this.concurrencyMode,
                 this.priority,
@@ -122,7 +122,7 @@ public record CreateWorkflowRunRequest<A>(
                 this.requestId,
                 this.workflowName,
                 this.workflowVersion,
-                this.queueName,
+                this.taskQueueName,
                 this.concurrencyGroupId,
                 this.concurrencyMode,
                 this.priority,

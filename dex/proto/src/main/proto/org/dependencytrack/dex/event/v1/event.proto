@@ -96,7 +96,7 @@ message RunCreated {
   optional org.dependencytrack.dex.common.v1.WorkflowRunConcurrencyMode concurrency_mode = 5;
 
   // Name of the queue to schedule tasks on.
-  string queue_name = 6;
+  string task_queue_name = 6;
 
   // Priority of the workflow run.
   int32 priority = 7;

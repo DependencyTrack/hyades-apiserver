@@ -29,19 +29,19 @@ final class ActivityHandleImpl<A, R> implements ActivityHandle<A, R> {
 
     private final WorkflowContextImpl<?, ?> workflowContext;
     private final String activityName;
+    private final String defaultTaskQueueName;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
-    private final String queueName;
 
     ActivityHandleImpl(
             final WorkflowContextImpl<?, ?> workflowContext,
             final String activityName,
-            final String queueName,
+            final String defaultTaskQueueName,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter) {
         this.workflowContext = requireNonNull(workflowContext, "workflowContext must not be null");
         this.activityName = requireNonNull(activityName, "activityName must not be null");
-        this.queueName = requireNonNull(queueName, "queueName must not be null");
+        this.defaultTaskQueueName = requireNonNull(defaultTaskQueueName, "defaultTaskQueueName must not be null");
         this.argumentConverter = requireNonNull(argumentConverter, "argumentConverter must not be null");
         this.resultConverter = requireNonNull(resultConverter, "resultConverter must not be null");
     }
@@ -49,9 +49,12 @@ final class ActivityHandleImpl<A, R> implements ActivityHandle<A, R> {
     @Override
     public Awaitable<R> call(final ActivityCallOptions<A> options) {
         requireNonNull(options, "options must not be null");
+
         return workflowContext.callActivity(
                 this.activityName,
-                this.queueName,
+                options.taskQueueName() != null
+                        ? options.taskQueueName()
+                        : this.defaultTaskQueueName,
                 options.argument(),
                 this.argumentConverter,
                 this.resultConverter,

@@ -34,4 +34,9 @@ public @interface Activity {
      */
     String name();
 
+    /**
+     * @return Name of the default queue where tasks of this activity will be scheduled.
+     */
+    String defaultTaskQueue() default "default";
+
 }

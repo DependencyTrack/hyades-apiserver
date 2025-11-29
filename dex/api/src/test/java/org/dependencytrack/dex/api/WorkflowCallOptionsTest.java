@@ -27,6 +27,7 @@ class WorkflowCallOptionsTest {
     @Test
     void shouldHaveExpectedDefaults() {
         final var callOptions = new WorkflowCallOptions<>();
+        assertThat(callOptions.taskQueueName()).isNull();
         assertThat(callOptions.argument()).isNull();
         assertThat(callOptions.concurrencyGroupId()).isNull();
     }

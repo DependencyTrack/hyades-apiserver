@@ -84,7 +84,7 @@ sealed interface WorkflowCommand {
             int eventId,
             String workflowName,
             int workflowVersion,
-            String queueName,
+            String taskQueueName,
             @Nullable String concurrencyGroupId,
             int priority,
             @Nullable Map<String, String> labels,

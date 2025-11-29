@@ -182,37 +182,33 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     @Override
-    public <AA, AR> ActivityHandle<AA, AR> activity(
-            final Class<? extends ActivityExecutor<AA, AR>> activityClass,
-            final String queueName) {
+    public <AA, AR> ActivityHandle<AA, AR> activity(final Class<? extends ActivityExecutor<AA, AR>> activityClass) {
         final ActivityMetadata<AA, AR> activityMetadata =
                 metadataRegistry.getActivityMetadata(activityClass);
         return new ActivityHandleImpl<>(
                 this,
                 activityMetadata.name(),
-                queueName,
+                activityMetadata.defaultTaskQueueName(),
                 activityMetadata.argumentConverter(),
                 activityMetadata.resultConverter());
     }
 
     @Override
-    public <WA, WR> WorkflowHandle<WA, WR> workflow(
-            final Class<? extends WorkflowExecutor<WA, WR>> workflowClass,
-            final String queueName) {
+    public <WA, WR> WorkflowHandle<WA, WR> workflow(final Class<? extends WorkflowExecutor<WA, WR>> workflowClass) {
         final WorkflowMetadata<WA, WR> workflowMetadata =
                 metadataRegistry.getWorkflowMetadata(workflowClass);
         return new WorkflowHandleImpl<>(
                 this,
                 workflowMetadata.name(),
                 workflowMetadata.version(),
-                queueName,
+                workflowMetadata.defaultTaskQueueName(),
                 workflowMetadata.argumentConverter(),
                 workflowMetadata.resultConverter());
     }
 
     <AA, AR> Awaitable<AR> callActivity(
             final String name,
-            final String queueName,
+            final String taskQueueName,
             final @Nullable AA argument,
             final PayloadConverter<AA> argumentConverter,
             final PayloadConverter<AR> resultConverter,
@@ -224,7 +220,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                 new CreateActivityTaskCommand(
                         eventId,
                         name,
-                        queueName,
+                        taskQueueName,
                         this.priority,
                         argumentConverter.convertToPayload(argument),
                         retryPolicy));
@@ -237,18 +233,23 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     <WA, WR> Awaitable<WR> callChildWorkflow(
             final String name,
             final int version,
-            final String queueName,
+            final String taskQueueName,
             final @Nullable String concurrencyGroupId,
             final @Nullable WA argument,
             final PayloadConverter<WA> argumentConverter,
             final PayloadConverter<WR> resultConverter) {
         requireNotInSideEffect("Child workflows can not be called from within a side effect");
 
-        final Payload convertedArgument = argumentConverter.convertToPayload(argument);
-
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId, new CreateChildRunCommand(
-                eventId, name, version, queueName, concurrencyGroupId, this.priority, this.labels, convertedArgument));
+                eventId,
+                name,
+                version,
+                taskQueueName,
+                concurrencyGroupId,
+                this.priority,
+                this.labels,
+                argumentConverter.convertToPayload(argument)));
 
         final var awaitable = new AwaitableImpl<>(this, resultConverter);
         pendingAwaitableByEventId.put(eventId, awaitable);

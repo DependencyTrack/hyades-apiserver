@@ -28,5 +28,6 @@ record ActivityMetadata<A, R>(
         ActivityExecutor<A, R> executor,
         PayloadConverter<A> argumentConverter,
         PayloadConverter<R> resultConverter,
+        String defaultTaskQueueName,
         Duration lockTimeout) {
 }

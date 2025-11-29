@@ -30,21 +30,21 @@ final class WorkflowHandleImpl<A, R> implements WorkflowHandle<A, R> {
     private final WorkflowContextImpl<?, ?> workflowContext;
     private final String workflowName;
     private final int workflowVersion;
+    private final String defaultTaskQueueName;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
-    private final String queueName;
 
     WorkflowHandleImpl(
             final WorkflowContextImpl<?, ?> workflowContext,
             final String workflowName,
             final int workflowVersion,
-            final String queueName,
+            final String defaultTaskQueueName,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter) {
         this.workflowContext = requireNonNull(workflowContext, "workflowContext must not be null");
         this.workflowName = requireNonNull(workflowName, "workflowName must not be null");
         this.workflowVersion = workflowVersion;
-        this.queueName = requireNonNull(queueName, "queueName must not be null");
+        this.defaultTaskQueueName = requireNonNull(defaultTaskQueueName, "defaultTaskQueueName must not be null");
         this.argumentConverter = requireNonNull(argumentConverter, "argumentConverter must not be null");
         this.resultConverter = requireNonNull(resultConverter, "resultConverter must not be null");
     }
@@ -52,10 +52,13 @@ final class WorkflowHandleImpl<A, R> implements WorkflowHandle<A, R> {
     @Override
     public Awaitable<R> call(final WorkflowCallOptions<A> options) {
         requireNonNull(options, "options must not be null");
+
         return workflowContext.callChildWorkflow(
                 this.workflowName,
                 this.workflowVersion,
-                this.queueName,
+                options.taskQueueName() != null
+                        ? options.taskQueueName()
+                        : defaultTaskQueueName,
                 options.concurrencyGroupId(),
                 options.argument(),
                 argumentConverter,

@@ -23,26 +23,34 @@ import org.jspecify.annotations.Nullable;
 import static java.util.Objects.requireNonNull;
 
 /**
- * @param argument    Argument of the call.
- * @param retryPolicy Retry policy of the call.
+ * @param taskQueueName Name of the queue to schedule the activity task on.
+ * @param argument      Argument of the call.
+ * @param retryPolicy   Retry policy of the call.
  * @param <A>
  */
-public record ActivityCallOptions<A extends @Nullable Object>(@Nullable A argument, RetryPolicy retryPolicy) {
+public record ActivityCallOptions<A extends @Nullable Object>(
+        @Nullable String taskQueueName,
+        @Nullable A argument,
+        RetryPolicy retryPolicy) {
 
     public ActivityCallOptions {
         requireNonNull(retryPolicy, "retryPolicy must not be null");
     }
 
     public ActivityCallOptions() {
-        this(null, RetryPolicy.ofDefault());
+        this(null, null, RetryPolicy.ofDefault());
+    }
+
+    public ActivityCallOptions<A> withTaskQueueName(final @Nullable String taskQueueName) {
+        return new ActivityCallOptions<>(taskQueueName, this.argument, this.retryPolicy);
     }
 
     public ActivityCallOptions<A> withArgument(final @Nullable A argument) {
-        return new ActivityCallOptions<>(argument, this.retryPolicy);
+        return new ActivityCallOptions<>(this.taskQueueName, argument, this.retryPolicy);
     }
 
     public ActivityCallOptions<A> withRetryPolicy(final RetryPolicy retryPolicy) {
-        return new ActivityCallOptions<>(this.argument, retryPolicy);
+        return new ActivityCallOptions<>(this.taskQueueName, this.argument, retryPolicy);
     }
 
 }

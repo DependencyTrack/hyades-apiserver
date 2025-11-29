@@ -68,6 +68,7 @@ final class MetadataRegistry {
                 workflowAnnotation.version(),
                 argumentConverter,
                 resultConverter,
+                workflowAnnotation.defaultTaskQueue(),
                 lockTimeout,
                 executor);
     }
@@ -77,12 +78,14 @@ final class MetadataRegistry {
             final int version,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
+            final String defaultTaskQueueName,
             final Duration lockTimeout,
             final WorkflowExecutor<A, R> executor) {
         requireValidWorkflowName(name);
         requireValidWorkflowVersion(version);
         requireNonNull(argumentConverter, "argumentConverter must not be null");
         requireNonNull(resultConverter, "resultConverter must not be null");
+        requireValidTaskQueueName(defaultTaskQueueName);
         requireValidLockTimeout(lockTimeout);
         requireNonNull(executor, "executor must not be null");
 
@@ -102,6 +105,7 @@ final class MetadataRegistry {
                 executor,
                 argumentConverter,
                 resultConverter,
+                defaultTaskQueueName,
                 lockTimeout);
         workflowNameByExecutorClass.put(executor.getClass(), name);
         workflowMetadataByName.put(name, metadata);
@@ -123,6 +127,7 @@ final class MetadataRegistry {
                 activityAnnotation.name(),
                 argumentConverter,
                 resultConverter,
+                activityAnnotation.defaultTaskQueue(),
                 lockTimeout,
                 executor);
     }
@@ -131,11 +136,13 @@ final class MetadataRegistry {
             final String name,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
+            final String defaultTaskQueueName,
             final Duration lockTimeout,
             final ActivityExecutor<A, R> executor) {
         requireValidActivityName(name);
         requireNonNull(argumentConverter, "argumentConverter must not be null");
         requireNonNull(resultConverter, "resultConverter must not be null");
+        requireValidTaskQueueName(defaultTaskQueueName);
         requireValidLockTimeout(lockTimeout);
         requireNonNull(executor, "executor must not be null");
 
@@ -154,6 +161,7 @@ final class MetadataRegistry {
                 executor,
                 argumentConverter,
                 resultConverter,
+                defaultTaskQueueName,
                 lockTimeout);
         activityNameByExecutorClass.put(executor.getClass(), name);
         activityMetadataByName.put(name, metadata);
@@ -250,6 +258,12 @@ final class MetadataRegistry {
     private static void requireValidActivityName(final String activityName) {
         if (!ACTIVITY_NAME_PATTERN.matcher(activityName).matches()) {
             throw new IllegalArgumentException("activityName must match " + ACTIVITY_NAME_PATTERN.pattern());
+        }
+    }
+
+    private static void requireValidTaskQueueName(final String taskQueueName) {
+        if (taskQueueName == null || taskQueueName.isBlank()) {
+            throw new IllegalArgumentException("taskQueueName must not be null or blank");
         }
     }
 

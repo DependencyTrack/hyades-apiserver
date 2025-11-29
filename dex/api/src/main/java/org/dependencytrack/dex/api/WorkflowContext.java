@@ -70,28 +70,22 @@ public interface WorkflowContext<A extends @Nullable Object> {
      * Get a handle on an activity that can be used for invocations.
      *
      * @param activityClass Class of the activity.
-     * @param queueName     Name of the queue to schedule tasks on.
      * @param <AA>          Type of the activity's argument.
      * @param <AR>          Type of the activity's result.
      * @return An {@link ActivityHandle}.
      * @throws java.util.NoSuchElementException When the activity is not known to the engine.
      */
-    <AA, AR> ActivityHandle<AA, AR> activity(
-            Class<? extends ActivityExecutor<AA, AR>> activityClass,
-            String queueName);
+    <AA, AR> ActivityHandle<AA, AR> activity(Class<? extends ActivityExecutor<AA, AR>> activityClass);
 
     /**
      * Get a handle on a workflow that can be used for invocations.
      *
      * @param workflowClass Class of the workflow.
-     * @param queueName     Name of the queue to schedule tasks on.
      * @param <WA>          Type of the workflow's argument.
      * @param <WR>          Type of the workflow's result.
      * @return A {@link WorkflowHandle}.
      */
-    <WA, WR> WorkflowHandle<WA, WR> workflow(
-            Class<? extends WorkflowExecutor<WA, WR>> workflowClass,
-            String queueName);
+    <WA, WR> WorkflowHandle<WA, WR> workflow(Class<? extends WorkflowExecutor<WA, WR>> workflowClass);
 
     /**
      * Create a durable timer.

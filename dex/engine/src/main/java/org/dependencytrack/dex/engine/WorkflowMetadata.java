@@ -29,5 +29,6 @@ record WorkflowMetadata<A, R>(
         WorkflowExecutor<A, R> executor,
         PayloadConverter<A> argumentConverter,
         PayloadConverter<R> resultConverter,
+        String defaultTaskQueueName,
         Duration lockTimeout) {
 }

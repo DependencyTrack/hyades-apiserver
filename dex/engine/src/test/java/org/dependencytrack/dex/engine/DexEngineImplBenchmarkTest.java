@@ -77,8 +77,6 @@ public class DexEngineImplBenchmarkTest {
 
     @Container
     private static final PostgresTestContainer postgresContainer = new PostgresTestContainer();
-    private static final String WORKFLOW_QUEUE_NAME = "default";
-    private static final String ACTIVITY_QUEUE_NAME = "default";
 
     @Activity(name = "foo")
     public static class TestActivityFoo implements ActivityExecutor<Void, Void> {
@@ -115,9 +113,9 @@ public class DexEngineImplBenchmarkTest {
 
         @Override
         public Void execute(final @NonNull WorkflowContext<Void> ctx, final Void argument) {
-            ctx.activity(TestActivityFoo.class, ACTIVITY_QUEUE_NAME).call(new ActivityCallOptions<>()).await();
-            ctx.activity(TestActivityBar.class, ACTIVITY_QUEUE_NAME).call(new ActivityCallOptions<>()).await();
-            ctx.activity(TestActivityBaz.class, ACTIVITY_QUEUE_NAME).call(new ActivityCallOptions<>()).await();
+            ctx.activity(TestActivityFoo.class).call(new ActivityCallOptions<>()).await();
+            ctx.activity(TestActivityBar.class).call(new ActivityCallOptions<>()).await();
+            ctx.activity(TestActivityBaz.class).call(new ActivityCallOptions<>()).await();
             return null;
         }
 
@@ -156,15 +154,15 @@ public class DexEngineImplBenchmarkTest {
         engine.registerActivity(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
         engine.registerActivity(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
 
-        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, WORKFLOW_QUEUE_NAME, 1000));
-        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, ACTIVITY_QUEUE_NAME, 1000));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "default", 1000));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "default", 1000));
 
         engine.registerWorkflowWorker(
-                new WorkflowTaskWorkerOptions("workflow-worker", WORKFLOW_QUEUE_NAME, 100)
+                new WorkflowTaskWorkerOptions("workflow-worker", "default", 100)
                         .withMinPollInterval(Duration.ofMillis(10))
                         .withPollBackoffFunction(IntervalFunction.of(Duration.ofMillis(100))));
         engine.registerActivityWorker(
-                new ActivityTaskWorkerOptions("activity-worker", ACTIVITY_QUEUE_NAME, 150)
+                new ActivityTaskWorkerOptions("activity-worker", "default", 150)
                         .withMinPollInterval(Duration.ofMillis(10))
                         .withPollBackoffFunction(IntervalFunction.of(Duration.ofMillis(100))));
     }

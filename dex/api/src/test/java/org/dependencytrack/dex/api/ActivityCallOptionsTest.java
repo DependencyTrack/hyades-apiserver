@@ -35,6 +35,7 @@ class ActivityCallOptionsTest {
     @Test
     void shouldHaveExpectedDefaults() {
         final var callOptions = new ActivityCallOptions<>();
+        assertThat(callOptions.taskQueueName()).isNull();
         assertThat(callOptions.argument()).isNull();
         assertThat(callOptions.retryPolicy()).isEqualTo(RetryPolicy.ofDefault());
     }

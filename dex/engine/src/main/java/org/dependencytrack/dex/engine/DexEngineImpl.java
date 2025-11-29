@@ -372,10 +372,18 @@ final class DexEngineImpl implements DexEngine {
             final int workflowVersion,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
+            final String defaultTaskQueueName,
             final Duration lockTimeout,
             final WorkflowExecutor<A, R> workflowExecutor) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.registerWorkflow(workflowName, workflowVersion, argumentConverter, resultConverter, lockTimeout, workflowExecutor);
+        metadataRegistry.registerWorkflow(
+                workflowName,
+                workflowVersion,
+                argumentConverter,
+                resultConverter,
+                defaultTaskQueueName,
+                lockTimeout,
+                workflowExecutor);
     }
 
     @Override
@@ -392,10 +400,17 @@ final class DexEngineImpl implements DexEngine {
             final String activityName,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
+            final String defaultTaskQueueName,
             final Duration lockTimeout,
             final ActivityExecutor<A, R> activityExecutor) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.registerActivity(activityName, argumentConverter, resultConverter, lockTimeout, activityExecutor);
+        metadataRegistry.registerActivity(
+                activityName,
+                argumentConverter,
+                resultConverter,
+                defaultTaskQueueName,
+                lockTimeout,
+                activityExecutor);
     }
 
     @Override
@@ -477,7 +492,7 @@ final class DexEngineImpl implements DexEngine {
                             /* parentId */ null,
                             request.workflowName(),
                             request.workflowVersion(),
-                            request.queueName(),
+                            request.taskQueueName(),
                             request.concurrencyGroupId(),
                             request.concurrencyMode(),
                             request.priority(),
@@ -487,7 +502,7 @@ final class DexEngineImpl implements DexEngine {
             final var runCreatedBuilder = RunCreated.newBuilder()
                     .setWorkflowName(request.workflowName())
                     .setWorkflowVersion(request.workflowVersion())
-                    .setQueueName(request.queueName())
+                    .setTaskQueueName(request.taskQueueName())
                     .setPriority(request.priority());
             if (request.concurrencyGroupId() != null) {
                 runCreatedBuilder.setConcurrencyGroupId(request.concurrencyGroupId());
@@ -895,7 +910,7 @@ final class DexEngineImpl implements DexEngine {
                 events.stream()
                         .map(event -> new UpdateAndUnlockRunCommand(
                                 event.workflowRunState().id(),
-                                event.workflowRunState().queueName(),
+                                event.workflowRunState().taskQueueName(),
                                 event.workflowRunState().status(),
                                 event.workflowRunState().customStatus(),
                                 event.workflowRunState().createdAt(),
@@ -985,7 +1000,7 @@ final class DexEngineImpl implements DexEngine {
                                     /* parentId */ run.id(),
                                     message.event().getRunCreated().getWorkflowName(),
                                     message.event().getRunCreated().getWorkflowVersion(),
-                                    message.event().getRunCreated().getQueueName(),
+                                    message.event().getRunCreated().getTaskQueueName(),
                                     message.event().getRunCreated().hasConcurrencyGroupId()
                                             ? message.event().getRunCreated().getConcurrencyGroupId()
                                             : null,
