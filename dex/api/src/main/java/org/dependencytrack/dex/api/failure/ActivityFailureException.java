@@ -30,7 +30,7 @@ public final class ActivityFailureException extends FailureException {
     private final String activityName;
 
     public ActivityFailureException(final String activityName, final @Nullable Throwable cause) {
-        super("Activity %s failed".formatted(activityName), null, cause);
+        super("Activity %s failed".formatted(activityName), null, cause, false);
         this.activityName = activityName;
     }
 

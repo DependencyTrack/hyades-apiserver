@@ -30,7 +30,7 @@ public final class SideEffectFailureException extends FailureException {
     private final String sideEffectName;
 
     public SideEffectFailureException(final String sideEffectName, final @Nullable Throwable cause) {
-        super("Side effect %s failed".formatted(sideEffectName), null, cause);
+        super("Side effect %s failed".formatted(sideEffectName), null, cause, false);
         this.sideEffectName = sideEffectName;
     }
 

@@ -32,9 +32,17 @@ public abstract sealed class FailureException extends RuntimeException permits
     FailureException(
             final @Nullable String message,
             final @Nullable String originalMessage,
-            final @Nullable Throwable cause) {
-        super(message, cause);
+            final @Nullable Throwable cause,
+            final boolean writableStackTrace) {
+        super(message, cause, true, writableStackTrace);
         this.originalMessage = originalMessage != null ? originalMessage : message;
+    }
+
+    FailureException(
+            final @Nullable String message,
+            final @Nullable String originalMessage,
+            final @Nullable Throwable cause) {
+        this(message, originalMessage, cause, true);
     }
 
 
