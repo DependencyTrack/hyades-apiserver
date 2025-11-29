@@ -111,6 +111,7 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
                 .register(meterRegistry);
         polledTasksDistribution = DistributionSummary
                 .builder("dt.dex.engine.task.worker.tasks.polled")
+                .publishPercentileHistogram()
                 .tags(commonMeterTags)
                 .withRegistry(meterRegistry);
         processedCounter = Counter

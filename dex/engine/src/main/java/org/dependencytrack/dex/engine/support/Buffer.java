@@ -134,6 +134,7 @@ public final class Buffer<T> implements Closeable {
         final List<Tag> commonMeterTags = List.of(Tag.of("buffer", name));
         batchSizeDistribution = DistributionSummary
                 .builder("dt.dex.engine.buffer.flush.batch.size")
+                .publishPercentileHistogram()
                 .tags(commonMeterTags)
                 .register(meterRegistry);
         itemWaitLatencyTimer = Timer
