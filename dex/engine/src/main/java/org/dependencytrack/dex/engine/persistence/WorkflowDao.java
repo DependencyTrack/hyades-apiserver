@@ -72,7 +72,7 @@ public final class WorkflowDao extends AbstractDao {
     public boolean createWorkflowTaskQueue(final CreateTaskQueueRequest request) {
         return jdbiHandle
                 .createQuery("""
-                        select dex_create_workflow_task_queue(:name, cast(:maxConcurrency as smallint))
+                        select dex_create_workflow_task_queue(:name, cast(:capacity as smallint))
                         """)
                 .bindMethods(request)
                 .mapTo(boolean.class)
@@ -90,9 +90,9 @@ public final class WorkflowDao extends AbstractDao {
                 cte_updated_queue as (
                   update dex_workflow_task_queue as queue
                      set status = coalesce(:status, queue.status)
-                       , max_concurrency = coalesce(:maxConcurrency, queue.max_concurrency)
+                       , capacity = coalesce(:capacity, queue.capacity)
                    where queue.name = :name
-                     and (queue.status != :status or queue.max_concurrency != :maxConcurrency)
+                     and (queue.status != :status or queue.capacity != :capacity)
                    returning 1
                 )
                 select exists(select 1 from cte_queue) as exists
@@ -140,7 +140,7 @@ public final class WorkflowDao extends AbstractDao {
                 select 'WORKFLOW' as type
                      , name
                      , status
-                     , max_concurrency
+                     , capacity
                      , (
                          select count(*)
                            from dex_workflow_task as task

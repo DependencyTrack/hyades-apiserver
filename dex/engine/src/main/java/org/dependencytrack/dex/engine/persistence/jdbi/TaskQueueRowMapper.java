@@ -51,7 +51,7 @@ final class TaskQueueRowMapper implements RowMapper<TaskQueue> {
                 TaskQueueType.valueOf(rs.getString("type")),
                 rs.getString("name"),
                 TaskQueueStatus.valueOf(rs.getString("status")),
-                rs.getInt("max_concurrency"),
+                rs.getInt("capacity"),
                 rs.getInt("depth"),
                 instantColumnMapper.map(rs, "created_at", ctx),
                 instantColumnMapper.map(rs, "updated_at", ctx));

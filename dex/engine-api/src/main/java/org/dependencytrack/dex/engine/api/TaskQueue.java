@@ -26,7 +26,7 @@ public record TaskQueue(
         TaskQueueType type,
         String name,
         TaskQueueStatus status,
-        int maxConcurrency,
+        int capacity,
         int depth,
         Instant createdAt,
         @Nullable Instant updatedAt) {

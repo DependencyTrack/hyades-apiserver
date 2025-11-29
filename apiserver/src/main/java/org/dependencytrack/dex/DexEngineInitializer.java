@@ -150,8 +150,8 @@ public final class DexEngineInitializer implements ServletContextListener {
             final boolean created = engine.createTaskQueue(request);
             if (created) {
                 LOGGER.info(
-                        "Task queue '{}' of type {} created with max concurrency {}",
-                        request.name(), request.type(), request.maxConcurrency());
+                        "Task queue '{}' of type {} created with capacity {}",
+                        request.name(), request.type(), request.capacity());
             } else {
                 LOGGER.debug("Task queue '{}' of type {} already exists", request.name(), request.type());
             }

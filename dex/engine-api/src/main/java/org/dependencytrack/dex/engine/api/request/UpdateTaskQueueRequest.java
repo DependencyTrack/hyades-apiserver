@@ -28,13 +28,13 @@ public record UpdateTaskQueueRequest(
         TaskQueueType type,
         String name,
         @Nullable TaskQueueStatus status,
-        @Nullable Integer maxConcurrency) {
+        @Nullable Integer capacity) {
 
     public UpdateTaskQueueRequest {
         requireNonNull(type, "type must not be null");
         requireNonNull(name, "name must not be null");
-        if (maxConcurrency != null && maxConcurrency <= 0) {
-            throw new IllegalArgumentException("maxConcurrency must not be negative or zero");
+        if (capacity != null && capacity <= 0) {
+            throw new IllegalArgumentException("capacity must not be negative or zero");
         }
     }
 

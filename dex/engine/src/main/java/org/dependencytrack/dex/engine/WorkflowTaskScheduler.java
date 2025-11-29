@@ -121,13 +121,13 @@ final class WorkflowTaskScheduler implements Closeable {
         });
     }
 
-    private record Queue(String name, int maxConcurrency) {
+    private record Queue(String name, int capacity) {
 
         private static class RowMapper implements org.jdbi.v3.core.mapper.RowMapper<Queue> {
 
             @Override
             public Queue map(final ResultSet rs, final StatementContext ctx) throws SQLException {
-                return new Queue(rs.getString("name"), rs.getInt("max_concurrency"));
+                return new Queue(rs.getString("name"), rs.getInt("capacity"));
             }
 
         }
@@ -138,21 +138,21 @@ final class WorkflowTaskScheduler implements Closeable {
         final Query query = handle.createQuery("""
                 with cte_candidate as (
                   select name
-                       , max_concurrency
+                       , capacity
                     from dex_workflow_task_queue
                    where status = 'ACTIVE'
                 )
                 select queue.name
-                     , queue.max_concurrency
+                     , queue.capacity
                   from dex_workflow_task_queue as queue
                  inner join cte_candidate
                     on cte_candidate.name = queue.name
                  where status = 'ACTIVE'
-                   and queue.max_concurrency - (
+                   and queue.capacity - (
                          select count(*)
                            from dex_workflow_task
                           where queue_name = queue.name
-                          limit cte_candidate.max_concurrency
+                          limit cte_candidate.capacity
                        ) > 0
                 """);
 
@@ -168,7 +168,7 @@ final class WorkflowTaskScheduler implements Closeable {
                   select count(*) as depth
                     from dex_workflow_task
                    where queue_name = :queueName
-                   limit :maxConcurrency
+                   limit :capacity
                 ),
                 cte_eligible_run as (
                   select id
@@ -216,7 +216,7 @@ final class WorkflowTaskScheduler implements Closeable {
                      )
                    order by priority desc
                           , id
-                   limit greatest(0, :maxConcurrency - (select depth from cte_queue_depth))
+                   limit greatest(0, :capacity - (select depth from cte_queue_depth))
                 )
                 insert into dex_workflow_task (queue_name, workflow_run_id, workflow_name, priority)
                 select :queueName
@@ -230,7 +230,7 @@ final class WorkflowTaskScheduler implements Closeable {
 
         final List<String> scheduledWorkflowNames = update
                 .bind("queueName", queue.name())
-                .bind("maxConcurrency", queue.maxConcurrency())
+                .bind("capacity", queue.capacity())
                 .executeAndReturnGeneratedKeys()
                 .mapTo(String.class)
                 .list();

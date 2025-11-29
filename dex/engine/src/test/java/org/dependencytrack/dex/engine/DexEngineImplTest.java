@@ -1286,7 +1286,7 @@ class DexEngineImplTest {
                     queue -> {
                         assertThat(queue.name()).isEqualTo("default");
                         assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
-                        assertThat(queue.maxConcurrency()).isEqualTo(10);
+                        assertThat(queue.capacity()).isEqualTo(10);
                         assertThat(queue.depth()).isEqualTo(0);
                         assertThat(queue.createdAt()).isNotNull();
                         assertThat(queue.updatedAt()).isNull();
@@ -1294,7 +1294,7 @@ class DexEngineImplTest {
                     queue -> {
                         assertThat(queue.name()).isEqualTo("foo-1");
                         assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
-                        assertThat(queue.maxConcurrency()).isEqualTo(1);
+                        assertThat(queue.capacity()).isEqualTo(1);
                         assertThat(queue.depth()).isEqualTo(0);
                         assertThat(queue.createdAt()).isNotNull();
                         assertThat(queue.updatedAt()).isNull();
@@ -1306,7 +1306,7 @@ class DexEngineImplTest {
             assertThat(queuesPage.items()).satisfiesExactly(queue -> {
                 assertThat(queue.name()).isEqualTo("foo-2");
                 assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
-                assertThat(queue.maxConcurrency()).isEqualTo(2);
+                assertThat(queue.capacity()).isEqualTo(2);
                 assertThat(queue.depth()).isEqualTo(0);
                 assertThat(queue.createdAt()).isNotNull();
                 assertThat(queue.updatedAt()).isNull();
@@ -1366,7 +1366,7 @@ class DexEngineImplTest {
                     queue -> {
                         assertThat(queue.name()).isEqualTo("default");
                         assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
-                        assertThat(queue.maxConcurrency()).isEqualTo(10);
+                        assertThat(queue.capacity()).isEqualTo(10);
                         assertThat(queue.depth()).isEqualTo(0);
                         assertThat(queue.createdAt()).isNotNull();
                         assertThat(queue.updatedAt()).isNull();
@@ -1374,7 +1374,7 @@ class DexEngineImplTest {
                     queue -> {
                         assertThat(queue.name()).isEqualTo("foo-1");
                         assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
-                        assertThat(queue.maxConcurrency()).isEqualTo(1);
+                        assertThat(queue.capacity()).isEqualTo(1);
                         assertThat(queue.depth()).isEqualTo(0);
                         assertThat(queue.createdAt()).isNotNull();
                         assertThat(queue.updatedAt()).isNull();
@@ -1386,7 +1386,7 @@ class DexEngineImplTest {
             assertThat(queuesPage.items()).satisfiesExactly(queue -> {
                 assertThat(queue.name()).isEqualTo("foo-2");
                 assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
-                assertThat(queue.maxConcurrency()).isEqualTo(2);
+                assertThat(queue.capacity()).isEqualTo(2);
                 assertThat(queue.depth()).isEqualTo(0);
                 assertThat(queue.createdAt()).isNotNull();
                 assertThat(queue.updatedAt()).isNull();

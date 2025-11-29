@@ -22,13 +22,13 @@ import org.dependencytrack.dex.engine.api.TaskQueueType;
 
 import static java.util.Objects.requireNonNull;
 
-public record CreateTaskQueueRequest(TaskQueueType type, String name, int maxConcurrency) {
+public record CreateTaskQueueRequest(TaskQueueType type, String name, int capacity) {
 
     public CreateTaskQueueRequest {
         requireNonNull(type, "type must not be null");
         requireNonNull(name, "name must not be null");
-        if (maxConcurrency <= 0) {
-            throw new IllegalArgumentException("maxConcurrency must not be negative or zero");
+        if (capacity <= 0) {
+            throw new IllegalArgumentException("capacity must not be negative or zero");
         }
     }
 

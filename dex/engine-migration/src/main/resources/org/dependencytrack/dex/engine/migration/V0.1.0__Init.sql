@@ -2,12 +2,12 @@ create table dex_workflow_task_queue (
   name text
 , partition_name text not null
 , status text not null default 'ACTIVE'
-, max_concurrency smallint not null default 100
+, capacity smallint not null default 100
 , created_at timestamptz(3) not null default now()
 , updated_at timestamptz(3)
 , constraint dex_workflow_task_queue_pk primary key (name)
 , constraint dex_activity_task_queue_status_check check (status in ('ACTIVE', 'PAUSED'))
-, constraint dex_activity_task_queue_max_concurrency_check check (max_concurrency > 0)
+, constraint dex_activity_task_queue_capacity_check check (capacity > 0)
 );
 
 create table dex_workflow_run (
@@ -85,12 +85,12 @@ create table dex_activity_task_queue (
   name text
 , partition_name text not null
 , status text not null default 'ACTIVE'
-, max_concurrency smallint not null default 100
+, capacity smallint not null default 100
 , created_at timestamptz(3) not null default now()
 , updated_at timestamptz(3)
 , constraint dex_activity_task_queue_pk primary key (name)
 , constraint dex_activity_task_queue_status_check check (status in ('ACTIVE', 'PAUSED'))
-, constraint dex_activity_task_queue_max_concurrency_check check (max_concurrency > 0)
+, constraint dex_activity_task_queue_capacity_check check (capacity > 0)
 );
 
 create table dex_activity_task (
@@ -165,7 +165,7 @@ create index dex_activity_task_poll_idx
     on dex_activity_task (priority desc, created_at)
  where status = 'QUEUED';
 
-create function dex_create_workflow_task_queue(queue_name text, max_queue_concurrency smallint)
+create function dex_create_workflow_task_queue(queue_name text, queue_capacity smallint)
 returns bool as $$
 declare
   normalized_queue_name text;
@@ -181,8 +181,8 @@ begin
     into partition_name;
 
   with cte_created_queue as (
-    insert into dex_workflow_task_queue (name, partition_name, max_concurrency)
-    values (queue_name, partition_name, max_queue_concurrency)
+    insert into dex_workflow_task_queue (name, partition_name, capacity)
+    values (queue_name, partition_name, queue_capacity)
     on conflict (name) do nothing
     returning 1
   )
@@ -202,7 +202,7 @@ begin
 end;
 $$ language plpgsql;
 
-create function dex_create_activity_task_queue(queue_name text, max_queue_concurrency smallint)
+create function dex_create_activity_task_queue(queue_name text, queue_capacity smallint)
 returns bool as $$
 declare
   normalized_queue_name text;
@@ -218,8 +218,8 @@ begin
     into partition_name;
 
   with cte_created_queue as (
-    insert into dex_activity_task_queue (name, partition_name, max_concurrency)
-    values (queue_name, partition_name, max_queue_concurrency)
+    insert into dex_activity_task_queue (name, partition_name, capacity)
+    values (queue_name, partition_name, queue_capacity)
     on conflict (name) do nothing
     returning 1
   )
