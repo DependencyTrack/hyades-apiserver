@@ -280,6 +280,7 @@ public class Component implements Serializable {
     private String purl;
 
     @Persistent(defaultFetchGroup = "true")
+    @Column(name = "PURLCOORDINATES", jdbcType = "VARCHAR", length = 1024)
     @Index(name = "COMPONENT_PURL_COORDINATES_IDX")
     @Size(max = 1024)
     @com.github.packageurl.validator.PackageURL
