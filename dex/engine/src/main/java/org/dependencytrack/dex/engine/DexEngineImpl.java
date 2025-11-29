@@ -484,6 +484,10 @@ final class DexEngineImpl implements DexEngine {
             @SuppressWarnings("rawtypes") final WorkflowMetadata workflowMetadata =
                     metadataRegistry.getWorkflowMetadata(request.workflowName());
 
+            final String taskQueueName = request.taskQueueName() != null
+                    ? request.taskQueueName()
+                    : workflowMetadata.defaultTaskQueueName();
+
             final UUID runId = timeBasedEpochRandomGenerator().generate();
             createWorkflowRunCommands.add(
                     new CreateWorkflowRunCommand(
@@ -492,7 +496,7 @@ final class DexEngineImpl implements DexEngine {
                             /* parentId */ null,
                             request.workflowName(),
                             request.workflowVersion(),
-                            request.taskQueueName(),
+                            taskQueueName,
                             request.concurrencyGroupId(),
                             request.concurrencyMode(),
                             request.priority(),
@@ -502,7 +506,7 @@ final class DexEngineImpl implements DexEngine {
             final var runCreatedBuilder = RunCreated.newBuilder()
                     .setWorkflowName(request.workflowName())
                     .setWorkflowVersion(request.workflowVersion())
-                    .setTaskQueueName(request.taskQueueName())
+                    .setTaskQueueName(taskQueueName)
                     .setPriority(request.priority());
             if (request.concurrencyGroupId() != null) {
                 runCreatedBuilder.setConcurrencyGroupId(request.concurrencyGroupId());

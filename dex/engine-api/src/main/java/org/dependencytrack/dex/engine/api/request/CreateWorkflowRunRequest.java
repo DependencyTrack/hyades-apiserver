@@ -45,7 +45,7 @@ public record CreateWorkflowRunRequest<A>(
         UUID requestId,
         String workflowName,
         int workflowVersion,
-        String taskQueueName,
+        @Nullable String taskQueueName,
         @Nullable String concurrencyGroupId,
         @Nullable WorkflowRunConcurrencyMode concurrencyMode,
         int priority,
@@ -58,7 +58,6 @@ public record CreateWorkflowRunRequest<A>(
         if (workflowVersion < 1 || workflowVersion > 100) {
             throw new IllegalArgumentException("workflowVersion must be between 1 and 100, but is " + workflowVersion);
         }
-        requireNonNull(taskQueueName, "taskQueueName must not be null");
         if (priority < 0 || priority > 100) {
             throw new IllegalArgumentException("priority must be between 0 and 100, but is " + priority);
         }
@@ -68,12 +67,25 @@ public record CreateWorkflowRunRequest<A>(
         }
     }
 
-    public CreateWorkflowRunRequest(String workflowName, int workflowVersion, String queueName) {
-        this(UUID.randomUUID(), workflowName, workflowVersion, queueName, null, null, 0, null, null);
+    public CreateWorkflowRunRequest(String workflowName, int workflowVersion) {
+        this(UUID.randomUUID(), workflowName, workflowVersion, null, null, null, 0, null, null);
     }
 
-    public CreateWorkflowRunRequest(Class<? extends WorkflowExecutor<A, ?>> executorClass, String queueName) {
-        this(getWorkflowName(executorClass), getWorkflowVersion(executorClass), queueName);
+    public CreateWorkflowRunRequest(Class<? extends WorkflowExecutor<A, ?>> executorClass) {
+        this(getWorkflowName(executorClass), getWorkflowVersion(executorClass));
+    }
+
+    public CreateWorkflowRunRequest<A> withTaskQueueName(final @Nullable String taskQueueName) {
+        return new CreateWorkflowRunRequest<>(
+                this.requestId,
+                this.workflowName,
+                this.workflowVersion,
+                taskQueueName,
+                this.concurrencyGroupId,
+                this.concurrencyMode,
+                this.priority,
+                this.labels,
+                this.argument);
     }
 
     public CreateWorkflowRunRequest<A> withConcurrency(

@@ -201,7 +201,7 @@ public class DexEngineImplBenchmarkTest {
             final Map<String, String> labels = (i % 5 == 0) ? Map.of("foo", "test-" + i) : null;
 
             scheduleOptions.add(
-                    new CreateWorkflowRunRequest<>("test", 1, "default")
+                    new CreateWorkflowRunRequest<>("test", 1)
                             .withConcurrency(
                                     concurrencyGroupId,
                                     concurrencyGroupId != null
