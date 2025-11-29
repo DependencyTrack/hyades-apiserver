@@ -430,4 +430,34 @@ public final class ActivityDao extends AbstractDao {
                 .list();
     }
 
+    public int deleteActivityTasks(final Collection<ActivityTaskId> taskIds) {
+        final var queueNames = new String[taskIds.size()];
+        final var workflowRunIds = new UUID[taskIds.size()];
+        final var createdEventIds = new int[taskIds.size()];
+
+        int i = 0;
+        for (final ActivityTaskId taskId : taskIds) {
+            queueNames[i] = taskId.queueName();
+            workflowRunIds[i] = taskId.workflowRunId();
+            createdEventIds[i] = taskId.createdEventId();
+            i++;
+        }
+
+        final Update update = jdbiHandle.createUpdate("""
+                delete
+                  from dex_activity_task as dat
+                 using unnest(:queueNames, :workflowRunIds, :createdEventIds)
+                    as t(queue_name, workflow_run_id, created_event_id)
+                 where dat.queue_name = t.queue_name
+                   and dat.workflow_run_id = t.workflow_run_id
+                   and dat.created_event_id = t.created_event_id
+                """);
+
+        return update
+                .bind("queueNames", queueNames)
+                .bind("workflowRunIds", workflowRunIds)
+                .bind("createdEventIds", createdEventIds)
+                .execute();
+    }
+
 }

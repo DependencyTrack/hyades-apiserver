@@ -45,6 +45,8 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SequencedCollection;
@@ -77,6 +79,8 @@ final class WorkflowRunState {
     private final List<WorkflowEvent> pendingActivityTaskCreatedEvents;
     private final List<WorkflowEvent> pendingTimerElapsedEvents;
     private final List<WorkflowRunMessage> pendingMessages;
+    private final Map<Integer, UUID> pendingChildRunIdByEventId;
+    private final Map<Integer, ActivityTaskId> pendingActivityTaskIdByEventId;
     private @Nullable WorkflowEvent createdEvent;
     private @Nullable WorkflowEvent startedEvent;
     private @Nullable WorkflowEvent completedEvent;
@@ -102,6 +106,8 @@ final class WorkflowRunState {
         this.pendingActivityTaskCreatedEvents = new ArrayList<>();
         this.pendingTimerElapsedEvents = new ArrayList<>();
         this.pendingMessages = new ArrayList<>();
+        this.pendingChildRunIdByEventId = new HashMap<>();
+        this.pendingActivityTaskIdByEventId = new HashMap<>();
 
         for (final WorkflowEvent event : eventHistory) {
             applyEvent(event, /* isNew */ false);
@@ -155,6 +161,22 @@ final class WorkflowRunState {
 
     List<WorkflowRunMessage> pendingWorkflowMessages() {
         return pendingMessages;
+    }
+
+    /**
+     * @return IDs of child runs that were created, but for which no completion
+     * event has been recorded yet.
+     */
+    Collection<UUID> pendingChildRunIds() {
+        return pendingChildRunIdByEventId.values();
+    }
+
+    /**
+     * @return IDs of activity tasks that were created, but for which no completion
+     * event has been recorded yet.
+     */
+    Collection<ActivityTaskId> pendingActivityTaskIds() {
+        return pendingActivityTaskIdByEventId.values();
     }
 
     @Nullable
@@ -292,6 +314,34 @@ final class WorkflowRunState {
             }
             case RUN_SUSPENDED -> setStatus(WorkflowRunStatus.SUSPENDED);
             case RUN_RESUMED -> setStatus(WorkflowRunStatus.RUNNING);
+            case ACTIVITY_TASK_CREATED -> {
+                pendingActivityTaskIdByEventId.put(
+                        event.getId(),
+                        new ActivityTaskId(
+                                event.getActivityTaskCreated().getQueueName(),
+                                this.id,
+                                event.getId()));
+            }
+            case ACTIVITY_TASK_COMPLETED -> {
+                final int createdEventId = event.getActivityTaskCompleted().getActivityTaskCreatedEventId();
+                pendingActivityTaskIdByEventId.remove(createdEventId);
+            }
+            case ACTIVITY_TASK_FAILED -> {
+                final int createdEventId = event.getActivityTaskFailed().getActivityTaskCreatedEventId();
+                pendingActivityTaskIdByEventId.remove(createdEventId);
+            }
+            case CHILD_RUN_CREATED -> {
+                final String runId = event.getChildRunCreated().getRunId();
+                pendingChildRunIdByEventId.put(event.getId(), UUID.fromString(runId));
+            }
+            case CHILD_RUN_COMPLETED -> {
+                final int createdEventId = event.getChildRunCompleted().getChildRunCreatedEventId();
+                pendingChildRunIdByEventId.remove(createdEventId);
+            }
+            case CHILD_RUN_FAILED -> {
+                final int createdEventId = event.getChildRunFailed().getChildRunCreatedEventId();
+                pendingChildRunIdByEventId.remove(createdEventId);
+            }
         }
 
         if (isNew) {

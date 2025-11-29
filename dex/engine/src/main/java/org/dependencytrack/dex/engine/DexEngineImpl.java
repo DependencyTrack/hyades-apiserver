@@ -112,7 +112,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static java.util.Objects.requireNonNull;
@@ -946,6 +945,7 @@ final class DexEngineImpl implements DexEngine {
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>();
         final var continuedAsNewRunIds = new ArrayList<UUID>();
         final var createActivityTaskCommands = new ArrayList<CreateActivityTaskCommand>();
+        final var activityTasksToDelete = new ArrayList<ActivityTaskId>();
         final var completedRuns = new ArrayList<WorkflowRunMetadata>();
 
         for (final WorkflowRunState run : actionableRuns) {
@@ -1025,23 +1025,6 @@ final class DexEngineImpl implements DexEngine {
                                 message.event()));
             }
 
-            // If there are pending sub workflow runs, make sure those are canceled, too.
-            if (run.status() == WorkflowRunStatus.CANCELED) {
-                for (final UUID childRunId : getPendingChildRunIds(run)) {
-                    createInboxEntryCommands.add(
-                            new CreateWorkflowRunInboxEntryCommand(
-                                    childRunId,
-                                    /* visibleFrom */ null,
-                                    WorkflowEvent.newBuilder()
-                                            .setId(-1)
-                                            .setTimestamp(now)
-                                            .setRunCanceled(RunCanceled.newBuilder()
-                                                    .setReason("Parent canceled")
-                                                    .build())
-                                            .build()));
-                }
-            }
-
             for (final WorkflowEvent newEvent : run.pendingActivityTaskCreatedEvents()) {
                 createActivityTaskCommands.add(
                         new CreateActivityTaskCommand(
@@ -1054,6 +1037,36 @@ final class DexEngineImpl implements DexEngine {
                                         ? newEvent.getActivityTaskCreated().getArgument()
                                         : null,
                                 newEvent.getActivityTaskCreated().getRetryPolicy()));
+            }
+
+            // If the run reached a terminal state, clean up any pending
+            // work such as child runs and activity tasks.
+            if (run.status().isTerminal()) {
+                for (final UUID childRunId : run.pendingChildRunIds()) {
+                    createInboxEntryCommands.add(
+                            new CreateWorkflowRunInboxEntryCommand(
+                                    childRunId,
+                                    /* visibleFrom */ null,
+                                    WorkflowEvent.newBuilder()
+                                            .setId(-1)
+                                            .setTimestamp(now)
+                                            .setRunCanceled(RunCanceled.newBuilder()
+                                                    .setReason("Parent terminated with status " + run.status())
+                                                    .build())
+                                            .build()));
+                }
+
+                // Pending activities should be rare, but this can happen when a
+                // workflow fails or is canceled before it had the chance to await activity results.
+                // What we want to avoid is activity tasks occupying queue capacity
+                // when their outcome is no longer of any use anyway.
+                if (!run.pendingActivityTaskIds().isEmpty()) {
+                    LOGGER.warn("""
+                            Run {} of workflow {} terminated while {} activities \
+                            were still pending. Pending activity tasks will be deleted.\
+                            """, run.id(), run.workflowName(), run.pendingActivityTaskIds().size());
+                    activityTasksToDelete.addAll(run.pendingActivityTaskIds());
+                }
             }
 
             if (run.continuedAsNew()) {
@@ -1093,6 +1106,16 @@ final class DexEngineImpl implements DexEngine {
                     createdActivityTasks, createActivityTaskCommands.size());
         }
 
+        if (!activityTasksToDelete.isEmpty()) {
+            // This is fire-and-forget, since activity tasks have possibly been
+            // completed while we were processing workflow task completions.
+            activityDao.deleteActivityTasks(activityTasksToDelete);
+        }
+
+        // Delete *all* inbox events for terminated runs,
+        // or only locked events for non-terminated runs.
+        // The latter is crucial since new events could have
+        // been added to inboxes in the meantime.
         final int deletedInboxEvents = workflowDao.deleteRunInboxEvents(
                 this.config.instanceId(),
                 actionableRuns.stream()
@@ -1437,29 +1460,6 @@ final class DexEngineImpl implements DexEngine {
 
     MetadataRegistry executorMetadataRegistry() {
         return metadataRegistry;
-    }
-
-    private Set<UUID> getPendingChildRunIds(final WorkflowRunState run) {
-        final var runIdByEventId = new HashMap<Integer, UUID>();
-
-        Stream.concat(run.eventHistory().stream(), run.newEvents().stream()).forEach(event -> {
-            switch (event.getSubjectCase()) {
-                case CHILD_RUN_CREATED -> {
-                    final String runId = event.getChildRunCreated().getRunId();
-                    runIdByEventId.put(event.getId(), UUID.fromString(runId));
-                }
-                case CHILD_RUN_COMPLETED -> {
-                    final int createdEventId = event.getChildRunCompleted().getChildRunCreatedEventId();
-                    runIdByEventId.remove(createdEventId);
-                }
-                case CHILD_RUN_FAILED -> {
-                    final int createdEventId = event.getChildRunFailed().getChildRunCreatedEventId();
-                    runIdByEventId.remove(createdEventId);
-                }
-            }
-        });
-
-        return Set.copyOf(runIdByEventId.values());
     }
 
     private void invalidateCompletedRunsHistoryCache(final WorkflowRunsCompletedEvent event) {
