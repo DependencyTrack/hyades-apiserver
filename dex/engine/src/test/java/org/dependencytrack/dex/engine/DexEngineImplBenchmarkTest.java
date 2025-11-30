@@ -27,7 +27,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.search.MeterNotFoundException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import org.dependencytrack.dex.api.ActivityCallOptions;
 import org.dependencytrack.dex.api.ActivityContext;
 import org.dependencytrack.dex.api.ActivityExecutor;
 import org.dependencytrack.dex.api.WorkflowContext;
@@ -113,9 +112,9 @@ public class DexEngineImplBenchmarkTest {
 
         @Override
         public Void execute(final @NonNull WorkflowContext<Void> ctx, final Void argument) {
-            ctx.activity(TestActivityFoo.class).call(new ActivityCallOptions<>()).await();
-            ctx.activity(TestActivityBar.class).call(new ActivityCallOptions<>()).await();
-            ctx.activity(TestActivityBaz.class).call(new ActivityCallOptions<>()).await();
+            ctx.activity(TestActivityFoo.class).call().await();
+            ctx.activity(TestActivityBar.class).call().await();
+            ctx.activity(TestActivityBaz.class).call().await();
             return null;
         }
 

@@ -33,4 +33,11 @@ public interface ActivityHandle<A extends @Nullable Object, R extends @Nullable 
      */
     Awaitable<@Nullable R> call(ActivityCallOptions<@Nullable A> options);
 
+    /**
+     * @see #call(ActivityCallOptions)
+     */
+    default Awaitable<@Nullable R> call() {
+        return call(new ActivityCallOptions<>());
+    }
+
 }
