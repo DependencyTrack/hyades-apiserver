@@ -18,116 +18,197 @@
  */
 package org.dependencytrack.resources.v2;
 
-import net.javacrumbs.jsonunit.core.Option;
-import org.apache.http.HttpStatus;
+import com.google.protobuf.util.Timestamps;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.common.pagination.Page.TotalCount;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.dex.proto.event.v1.RunCreated;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
+import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.ws.rs.core.Response;
 import java.time.Instant;
-import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
-import static org.dependencytrack.model.WorkflowStatus.PENDING;
-import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
-import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
-import static org.hamcrest.CoreMatchers.equalTo;
+import static org.dependencytrack.dex.api.payload.PayloadConverters.stringConverter;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 
 public class WorkflowsResourceTest extends ResourceTest {
 
+    private static final DexEngine DEX_ENGINE_MOCK = mock(DexEngine.class);
+
     @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(new ResourceConfig());
+    public static JerseyTestRule jersey = new JerseyTestRule(
+            new ResourceConfig()
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bind(DEX_ENGINE_MOCK).to(DexEngine.class);
+                        }
+                    }));
+
+    @After
+    @Override
+    public void after() {
+        reset(DEX_ENGINE_MOCK);
+        super.after();
+    }
 
     @Test
-    public void getWorkflowStatusOk() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+    public void listWorkflowRunsShouldReturnWorkflowRunMetadata() {
+        final var workflowRunMetadata = new WorkflowRunMetadata(
+                UUID.fromString("724c0700-4eeb-45f0-8ff4-8bba369c0174"),
+                "workflowName",
+                66,
+                WorkflowRunStatus.RUNNING,
+                "customStatus",
+                12,
+                "concurrencyGroupId",
+                WorkflowRunConcurrencyMode.SERIAL,
+                Map.of("foo", "bar"),
+                Instant.ofEpochMilli(666666),
+                Instant.ofEpochMilli(777777),
+                Instant.ofEpochMilli(888888),
+                null);
 
-        UUID uuid = UUID.randomUUID();
-        WorkflowState workflowState1 = new WorkflowState();
-        workflowState1.setParent(null);
-        workflowState1.setFailureReason(null);
-        workflowState1.setStep(BOM_CONSUMPTION);
-        workflowState1.setStatus(COMPLETED);
-        workflowState1.setToken(uuid);
-        workflowState1.setUpdatedAt(new Date());
-        var workflowState1Persisted = qm.persist(workflowState1);
+        doReturn(new Page<>(List.of(workflowRunMetadata), null).withTotalCount(1, TotalCount.Type.EXACT))
+                .when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
 
-        WorkflowState workflowState2 = new WorkflowState();
-        workflowState2.setParent(workflowState1Persisted);
-        workflowState2.setFailureReason(null);
-        workflowState2.setStep(BOM_PROCESSING);
-        workflowState2.setStatus(PENDING);
-        workflowState2.setToken(uuid);
-        workflowState2.setStartedAt(Date.from(Instant.now()));
-        workflowState2.setUpdatedAt(Date.from(Instant.now()));
-        qm.persist(workflowState2);
-
-        Response response = jersey.target("/workflows/" + uuid).request()
+        final Response response = jersey.target("/workflow-runs").request()
                 .header(X_API_KEY, apiKey)
                 .get();
-        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
-        final String jsonResponse = getPlainTextBody(response);
-        assertThatJson(jsonResponse)
-                .withOptions(Option.IGNORING_ARRAY_ORDER)
-                .withMatcher("token", equalTo(uuid.toString()))
-                .withMatcher("step1", equalTo("BOM_CONSUMPTION"))
-                .withMatcher("status1", equalTo("COMPLETED"))
-                .withMatcher("step2", equalTo("BOM_PROCESSING"))
-                .withMatcher("status2", equalTo("PENDING"))
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
                 .isEqualTo(/* language=JSON */ """
                         {
-                          "states": [
+                          "workflow_runs": [
                             {
-                              "token": "${json-unit.matches:token}",
-                              "step": "${json-unit.matches:step1}",
-                              "status": "${json-unit.matches:status1}",
-                              "updated_at": "${json-unit.any-number}"
-                            },
-                            {
-                              "token": "${json-unit.matches:token}",
-                              "started_at": "${json-unit.any-number}",
-                              "updated_at": "${json-unit.any-number}",
-                              "step": "${json-unit.matches:step2}",
-                              "status": "${json-unit.matches:status2}"
+                              "id": "724c0700-4eeb-45f0-8ff4-8bba369c0174",
+                              "workflow_name": "workflowName",
+                              "workflow_version": 66,
+                              "status": "RUNNING",
+                              "created_at": 666666,
+                              "priority": 12,
+                              "concurrency_group_id": "concurrencyGroupId",
+                              "concurrency_mode": "SERIAL",
+                              "labels": {
+                                "foo": "bar"
+                              },
+                              "updated_at": 777777,
+                              "started_at": 888888
                             }
-                          ]
+                          ],
+                          "_pagination": {
+                            "links": {
+                              "self": "${json-unit.any-string}"
+                            },
+                            "total": {
+                              "count": 1,
+                              "type": "EXACT"
+                            }
+                          }
                         }
                         """);
     }
 
     @Test
-    public void getWorkflowStatusNotFound() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+    public void listWorkflowRunEventsShouldReturnWorkflowRunEvents() {
+        final var runId = UUID.fromString("a81df43d-bd7f-4997-9d7a-d735d5101d52");
 
-        WorkflowState workflowState1 = new WorkflowState();
-        workflowState1.setParent(null);
-        workflowState1.setFailureReason(null);
-        workflowState1.setStep(BOM_CONSUMPTION);
-        workflowState1.setStatus(COMPLETED);
-        workflowState1.setToken(UUID.randomUUID());
-        workflowState1.setUpdatedAt(new Date());
-        qm.persist(workflowState1);
+        final var runMetadata = new WorkflowRunMetadata(
+                runId,
+                "workflowName",
+                66,
+                WorkflowRunStatus.CREATED,
+                null,
+                0,
+                null,
+                null,
+                null,
+                Instant.ofEpochMilli(666666),
+                null,
+                null,
+                null);
 
-        UUID randomUuid = UUID.randomUUID();
-        Response response = jersey.target("/workflows/" + randomUuid).request()
+        final var event = WorkflowEvent.newBuilder()
+                .setId(1)
+                .setTimestamp(Timestamps.fromMillis(666666))
+                .setRunCreated(RunCreated.newBuilder()
+                        .setWorkflowName("workflowName")
+                        .setWorkflowVersion(123)
+                        .setArgument(stringConverter().convertToPayload("argument"))
+                        .build())
+                .build();
+
+        doReturn(runMetadata).when(DEX_ENGINE_MOCK).getRunMetadata(eq(runId));
+        doReturn(new Page<>(List.of(event), null)).when(DEX_ENGINE_MOCK).listRunEvents(any(ListWorkflowRunEventsRequest.class));
+
+        final Response response = jersey.target("/workflow-runs/%s/events".formatted(runId)).request()
                 .header(X_API_KEY, apiKey)
                 .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "events": [
+                            {
+                              "id": 1,
+                              "timestamp": "1970-01-01T00:11:06.666Z",
+                              "runCreated": {
+                                "workflowName": "workflowName",
+                                "workflowVersion": 123,
+                                "argument": {
+                                  "binaryContent": {
+                                    "mediaType": "text/plain",
+                                    "data": "YXJndW1lbnQ="
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "_pagination": {
+                            "links": {
+                              "self": "${json-unit.any-string}"
+                            }
+                          }
+                        }
+                        """);
+    }
 
-        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_NOT_FOUND);
+    @Test
+    public void listWorkflowRunEventsShouldReturnNotFoundWhenRunDoesNotExist() {
+        doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadata(any(UUID.class));
+
+        final Response response = jersey.target("/workflow-runs/a81df43d-bd7f-4997-9d7a-d735d5101d52/events").request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(404);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "type":"about:blank",
-                  "status": 404,
+                  "type": "about:blank",
+                  "status":404,
                   "title": "Not Found",
                   "detail": "The requested resource could not be found."
                 }
                 """);
     }
+
 }

@@ -18,53 +18,164 @@
  */
 package org.dependencytrack.resources.v2;
 
-import alpine.server.auth.PermissionRequired;
+import alpine.server.auth.AuthenticationNotRequired;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.ServerErrorException;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
 import org.dependencytrack.api.v2.WorkflowsApi;
-import org.dependencytrack.api.v2.model.ListWorkflowStatesResponse;
-import org.dependencytrack.api.v2.model.ListWorkflowStatesResponseItem;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponse;
+import org.dependencytrack.api.v2.model.ListWorkflowRunsResponse;
+import org.dependencytrack.api.v2.model.ListWorkflowRunsResponseItem;
+import org.dependencytrack.api.v2.model.SortDirection;
+import org.dependencytrack.api.v2.model.WorkflowRunConcurrencyMode;
+import org.dependencytrack.api.v2.model.WorkflowRunStatus;
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
+import org.dependencytrack.resources.AbstractApiResource;
+import org.jspecify.annotations.NonNull;
 
-import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Path("/")
-public class WorkflowsResource implements WorkflowsApi {
+public class WorkflowsResource extends AbstractApiResource implements WorkflowsApi {
+
+    @Context
+    private UriInfo uriInfo;
+
+    @Inject
+    private DexEngine dexEngine;
 
     @Override
-    @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
-    public Response getWorkflowStates(final UUID token) {
-        List<WorkflowState> workflowStates;
-        try (final var qm = new QueryManager()) {
-            workflowStates = qm.getAllWorkflowStatesForAToken(token);
-            if (workflowStates.isEmpty()) {
-                throw new NotFoundException();
-            }
+    @AuthenticationNotRequired // TODO
+    public Response listWorkflowRuns(
+            final String workflowName,
+            final Integer workflowVersion,
+            final WorkflowRunStatus status,
+            final Long createdAtFrom,
+            final Long createdAtTo,
+            final Long completedAtFrom,
+            final Long completedAtTo,
+            final Integer limit,
+            final String pageToken,
+            final SortDirection sortDirection,
+            final String sortBy) {
+        if (dexEngine == null) {
+            throw new ServerErrorException(Response.Status.SERVICE_UNAVAILABLE);
         }
-        List<ListWorkflowStatesResponseItem> states = workflowStates.stream()
-                .map(this::mapWorkflowStateResponse)
-                .collect(Collectors.toList());
-        return Response.ok(ListWorkflowStatesResponse.builder().states(states).build()).build();
+
+        final Page<@NonNull WorkflowRunMetadata> runsPage = dexEngine.listRuns(
+                new ListWorkflowRunsRequest()
+                        .withWorkflowName(workflowName)
+                        .withWorkflowVersion(workflowVersion)
+                        .withStatus(switch (status) {
+                            case CANCELLED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CANCELED;
+                            case COMPLETED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.COMPLETED;
+                            case FAILED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.FAILED;
+                            case CREATED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CREATED;
+                            case RUNNING -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.RUNNING;
+                            case SUSPENDED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.SUSPENDED;
+                            case null -> null;
+                        })
+                        .withCreatedAtFrom(createdAtFrom != null
+                                ? Instant.ofEpochMilli(createdAtFrom)
+                                : null)
+                        .withCreatedAtTo(createdAtTo != null
+                                ? Instant.ofEpochMilli(createdAtTo)
+                                : null)
+                        .withCompletedAtFrom(completedAtFrom != null
+                                ? Instant.ofEpochMilli(completedAtFrom)
+                                : null)
+                        .withCompletedAtTo(completedAtTo != null
+                                ? Instant.ofEpochMilli(completedAtTo)
+                                : null)
+                        .withSortBy(switch (sortBy) {
+                            case "id" -> ListWorkflowRunsRequest.SortBy.ID;
+                            case "created_at" -> ListWorkflowRunsRequest.SortBy.CREATED_AT;
+                            case "completed_at" -> ListWorkflowRunsRequest.SortBy.COMPLETED_AT;
+                            case null, default -> null;
+                        })
+                        .withSortDirection(switch (sortDirection) {
+                            case ASC -> org.dependencytrack.common.pagination.SortDirection.ASC;
+                            case DESC -> org.dependencytrack.common.pagination.SortDirection.DESC;
+                            case null -> null;
+                        })
+                        .withLimit(limit)
+                        .withPageToken(pageToken));
+
+        final var response = ListWorkflowRunsResponse.builder()
+                .workflowRuns(runsPage.items().stream()
+                        .<ListWorkflowRunsResponseItem>map(
+                                runMetadata -> ListWorkflowRunsResponseItem.builder()
+                                        .id(runMetadata.id())
+                                        .workflowName(runMetadata.workflowName())
+                                        .workflowVersion(runMetadata.workflowVersion())
+                                        .status(switch (runMetadata.status()) {
+                                            case CANCELED -> WorkflowRunStatus.CANCELLED;
+                                            case COMPLETED -> WorkflowRunStatus.COMPLETED;
+                                            case FAILED -> WorkflowRunStatus.FAILED;
+                                            case CREATED -> WorkflowRunStatus.CREATED;
+                                            case RUNNING -> WorkflowRunStatus.RUNNING;
+                                            case SUSPENDED -> WorkflowRunStatus.SUSPENDED;
+                                        })
+                                        .priority(runMetadata.priority())
+                                        .concurrencyGroupId(runMetadata.concurrencyGroupId())
+                                        .concurrencyMode(switch (runMetadata.concurrencyMode()) {
+                                            case EXCLUSIVE -> WorkflowRunConcurrencyMode.EXCLUSIVE;
+                                            case SERIAL -> WorkflowRunConcurrencyMode.SERIAL;
+                                            case null -> null;
+                                        })
+                                        .labels(runMetadata.labels())
+                                        .createdAt(runMetadata.createdAt().toEpochMilli())
+                                        .updatedAt(runMetadata.updatedAt() != null
+                                                ? runMetadata.updatedAt().toEpochMilli()
+                                                : null)
+                                        .startedAt(runMetadata.startedAt() != null
+                                                ? runMetadata.startedAt().toEpochMilli()
+                                                : null)
+                                        .completedAt(runMetadata.completedAt() != null
+                                                ? runMetadata.completedAt().toEpochMilli()
+                                                : null)
+                                        .build())
+                        .toList())
+                .pagination(createPaginationMetadata(uriInfo, runsPage))
+                .build();
+
+        return Response.ok(response).build();
     }
 
-    private ListWorkflowStatesResponseItem mapWorkflowStateResponse(WorkflowState workflowState) {
-        var mappedState = ListWorkflowStatesResponseItem.builder()
-                .token(workflowState.getToken())
-                .status(ListWorkflowStatesResponseItem.StatusEnum.fromString(workflowState.getStatus().name()))
-                .step(ListWorkflowStatesResponseItem.StepEnum.fromString(workflowState.getStep().name()))
-                .failureReason(workflowState.getFailureReason())
+    @Override
+    public Response listWorkflowRunEvents(final UUID runId, final Integer limit, final String pageToken) {
+        if (dexEngine == null) {
+            throw new ServerErrorException(Response.Status.SERVICE_UNAVAILABLE);
+        }
+
+        final WorkflowRunMetadata runMetadata = dexEngine.getRunMetadata(runId);
+        if (runMetadata == null) {
+            throw new NotFoundException();
+        }
+
+        final Page<@NonNull WorkflowEvent> eventsPage = dexEngine.listRunEvents(
+                new ListWorkflowRunEventsRequest(runId)
+                        .withLimit(limit)
+                        .withPageToken(pageToken));
+
+        final var response = ListWorkflowRunEventsResponse.builder()
+                .events(eventsPage.items().stream()
+                        .map(event -> (Object) event)
+                        .toList())
+                .pagination(createPaginationMetadata(uriInfo, eventsPage))
                 .build();
-        if (workflowState.getStartedAt() != null) {
-            mappedState.setStartedAt(workflowState.getStartedAt().getTime());
-        }
-        if (workflowState.getUpdatedAt() != null) {
-            mappedState.setUpdatedAt(workflowState.getUpdatedAt().getTime());
-        }
-        return mappedState;
+
+        return Response.ok(response).build();
     }
+
 }

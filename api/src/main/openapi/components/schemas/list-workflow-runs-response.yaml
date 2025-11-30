@@ -15,8 +15,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
+allOf:
+- $ref: "./paginated-response.yaml"
 properties:
-  states:
+  workflow_runs:
     type: array
     items:
-      $ref: "./list-workflow-states-response-item.yaml"
+      $ref: "./list-workflow-runs-response-item.yaml"
+required:
+- _pagination
+- workflow_runs

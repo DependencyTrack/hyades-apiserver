@@ -15,33 +15,5 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
-properties:
-  step:
-    type: string
-    enum:
-      - BOM_CONSUMPTION
-      - BOM_PROCESSING
-      - VULN_ANALYSIS
-      - REPO_META_ANALYSIS
-      - POLICY_EVALUATION
-      - METRICS_UPDATE
-      - POLICY_BUNDLE_SYNC
-      - PROJECT_CLONE
-  status:
-    type: string
-    enum:
-      - PENDING
-      - TIMED_OUT
-      - COMPLETED
-      - FAILED
-      - CANCELLED
-      - NOT_APPLICABLE
-  failure_reason:
-    type: string
-  token:
-    type: string
-    format: uuid
-  started_at:
-    $ref: "./timestamp.yaml"
-  updated_at:
-    $ref: "./timestamp.yaml"
+description: >-
+  A workflow run event in [ProtoJSON](https://protobuf.dev/programming-guides/json/) format.
