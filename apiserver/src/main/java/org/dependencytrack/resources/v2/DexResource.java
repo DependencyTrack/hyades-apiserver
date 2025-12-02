@@ -26,27 +26,38 @@ import jakarta.ws.rs.ServerErrorException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
-import org.dependencytrack.api.v2.WorkflowsApi;
+import org.dependencytrack.api.v2.DexApi;
+import org.dependencytrack.api.v2.model.ListTaskQueuesResponse;
+import org.dependencytrack.api.v2.model.ListTaskQueuesResponseItem;
 import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponseItem;
 import org.dependencytrack.api.v2.model.SortDirection;
+import org.dependencytrack.api.v2.model.TaskQueueStatus;
+import org.dependencytrack.api.v2.model.TaskQueueType;
+import org.dependencytrack.api.v2.model.UpdateTaskQueueRequest;
 import org.dependencytrack.api.v2.model.WorkflowRunConcurrencyMode;
 import org.dependencytrack.api.v2.model.WorkflowRunStatus;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.request.ListTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.jspecify.annotations.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Path("/")
-public class WorkflowsResource extends AbstractApiResource implements WorkflowsApi {
+public class DexResource extends AbstractApiResource implements DexApi {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DexResource.class);
 
     @Context
     private UriInfo uriInfo;
@@ -76,15 +87,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                 new ListWorkflowRunsRequest()
                         .withWorkflowName(workflowName)
                         .withWorkflowVersion(workflowVersion)
-                        .withStatus(switch (status) {
-                            case CANCELLED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CANCELED;
-                            case COMPLETED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.COMPLETED;
-                            case FAILED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.FAILED;
-                            case CREATED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CREATED;
-                            case RUNNING -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.RUNNING;
-                            case SUSPENDED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.SUSPENDED;
-                            case null -> null;
-                        })
+                        .withStatus(convert(status))
                         .withCreatedAtFrom(createdAtFrom != null
                                 ? Instant.ofEpochMilli(createdAtFrom)
                                 : null)
@@ -118,14 +121,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                                         .id(runMetadata.id())
                                         .workflowName(runMetadata.workflowName())
                                         .workflowVersion(runMetadata.workflowVersion())
-                                        .status(switch (runMetadata.status()) {
-                                            case CANCELED -> WorkflowRunStatus.CANCELLED;
-                                            case COMPLETED -> WorkflowRunStatus.COMPLETED;
-                                            case FAILED -> WorkflowRunStatus.FAILED;
-                                            case CREATED -> WorkflowRunStatus.CREATED;
-                                            case RUNNING -> WorkflowRunStatus.RUNNING;
-                                            case SUSPENDED -> WorkflowRunStatus.SUSPENDED;
-                                        })
+                                        .status(convert(runMetadata.status()))
                                         .priority(runMetadata.priority())
                                         .concurrencyGroupId(runMetadata.concurrencyGroupId())
                                         .concurrencyMode(switch (runMetadata.concurrencyMode()) {
@@ -153,6 +149,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
     }
 
     @Override
+    @AuthenticationNotRequired // TODO
     public Response listWorkflowRunEvents(final UUID runId, final Integer limit, final String pageToken) {
         if (dexEngine == null) {
             throw new ServerErrorException(Response.Status.SERVICE_UNAVAILABLE);
@@ -176,6 +173,114 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                 .build();
 
         return Response.ok(response).build();
+    }
+
+    @Override
+    @AuthenticationNotRequired // TODO
+    public Response updateTaskQueue(
+            final TaskQueueType type,
+            final String name,
+            final UpdateTaskQueueRequest request) {
+
+        final boolean updated = dexEngine.updateTaskQueue(
+                new org.dependencytrack.dex.engine.api.request.UpdateTaskQueueRequest(
+                        convert(type),
+                        name,
+                        convert(request.getStatus()),
+                        request.getCapacity()));
+        if (updated) {
+            LOGGER.info("Updated task queue {} of type {}", name, type);
+            return Response.ok().build();
+        }
+
+        return Response.notModified().build();
+    }
+
+    @Override
+    @AuthenticationNotRequired // TODO
+    public Response listTaskQueues(
+            final TaskQueueType type,
+            final Integer limit,
+            final String pageToken) {
+        final Page<@NonNull TaskQueue> queuesPage = dexEngine.listTaskQueues(
+                new ListTaskQueuesRequest(convert(type))
+                        .withPageToken(pageToken)
+                        .withLimit(limit));
+
+        final var response = ListTaskQueuesResponse.builder()
+                .taskQueues(queuesPage.items().stream()
+                        .map(DexResource::convert)
+                        .toList())
+                .pagination(createPaginationMetadata(uriInfo, queuesPage))
+                .build();
+
+        return Response.ok(response).build();
+    }
+
+    private static org.dependencytrack.dex.engine.api.WorkflowRunStatus convert(final WorkflowRunStatus status) {
+        return switch (status) {
+            case CANCELLED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CANCELED;
+            case COMPLETED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.COMPLETED;
+            case FAILED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.FAILED;
+            case CREATED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CREATED;
+            case RUNNING -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.RUNNING;
+            case SUSPENDED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.SUSPENDED;
+            case null -> null;
+        };
+    }
+
+    private static WorkflowRunStatus convert(final org.dependencytrack.dex.engine.api.WorkflowRunStatus status) {
+        return switch (status) {
+            case CANCELED -> WorkflowRunStatus.CANCELLED;
+            case COMPLETED -> WorkflowRunStatus.COMPLETED;
+            case FAILED -> WorkflowRunStatus.FAILED;
+            case CREATED -> WorkflowRunStatus.CREATED;
+            case RUNNING -> WorkflowRunStatus.RUNNING;
+            case SUSPENDED -> WorkflowRunStatus.SUSPENDED;
+        };
+    }
+
+    private static org.dependencytrack.dex.engine.api.TaskQueueType convert(final TaskQueueType type) {
+        return switch (type) {
+            case ACTIVITY -> org.dependencytrack.dex.engine.api.TaskQueueType.ACTIVITY;
+            case WORKFLOW -> org.dependencytrack.dex.engine.api.TaskQueueType.WORKFLOW;
+        };
+    }
+
+    private static TaskQueueType convert(final org.dependencytrack.dex.engine.api.TaskQueueType type) {
+        return switch (type) {
+            case ACTIVITY -> TaskQueueType.ACTIVITY;
+            case WORKFLOW -> TaskQueueType.WORKFLOW;
+        };
+    }
+
+    private static org.dependencytrack.dex.engine.api.TaskQueueStatus convert(final TaskQueueStatus status) {
+        return switch (status) {
+            case ACTIVE -> org.dependencytrack.dex.engine.api.TaskQueueStatus.ACTIVE;
+            case PAUSED -> org.dependencytrack.dex.engine.api.TaskQueueStatus.PAUSED;
+            case null -> null;
+        };
+    }
+
+    private static TaskQueueStatus convert(final org.dependencytrack.dex.engine.api.TaskQueueStatus status) {
+        return switch (status) {
+            case ACTIVE -> TaskQueueStatus.ACTIVE;
+            case PAUSED -> TaskQueueStatus.PAUSED;
+        };
+    }
+
+    private static ListTaskQueuesResponseItem convert(final TaskQueue taskQueue) {
+        return ListTaskQueuesResponseItem.builder()
+                .type(convert(taskQueue.type()))
+                .name(taskQueue.name())
+                .status(convert(taskQueue.status()))
+                .capacity(taskQueue.capacity())
+                .depth(taskQueue.depth())
+                .createdAt(taskQueue.createdAt().toEpochMilli())
+                .updatedAt(taskQueue.updatedAt() != null
+                        ? taskQueue.updatedAt().toEpochMilli()
+                        : null)
+                .build();
     }
 
 }

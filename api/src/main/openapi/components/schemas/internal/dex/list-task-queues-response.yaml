@@ -16,12 +16,12 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 allOf:
-- $ref: "./paginated-response.yaml"
+- $ref: "../../paginated-response.yaml"
 properties:
-  workflow_runs:
+  task_queues:
     type: array
     items:
-      $ref: "./list-workflow-runs-response-item.yaml"
+      $ref: "./list-task-queues-response-item.yaml"
 required:
 - _pagination
-- workflow_runs
+- task_queues

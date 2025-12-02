@@ -36,6 +36,11 @@ tags:
   description: Endpoints related to advisories
 - name: Components
   description: Endpoints related to components
+- name: Dex
+  description: |-
+    Endpoints related to durable execution.
+    These endpoints are internal and should not be used by 3rd party clients.
+    Structure, format and behaviour may change without further notice.
 - name: Extensions
   description: Endpoints related to extensions
 - name: Metrics
@@ -46,8 +51,6 @@ tags:
   description: Endpoints related to secrets
 - name: Teams
   description: Endpoints related to teams
-- name: Workflows
-  description: Endpoints related to workflows
 
 paths:
   /advisories:
@@ -74,6 +77,14 @@ paths:
     $ref: "./paths/extension-points__vuln-datasource__extensions__csaf__sources.yaml"
   /extension-points/vuln.datasource/extensions/csaf/sources/{csafSourceId}:
     $ref: "./paths/extension-points__vuln-datasource__extensions__csaf__sources__csafSourceId_.yaml"
+  /internal/dex/task-queues:
+    $ref: "./paths/internal/dex/task-queues.yaml"
+  /internal/dex/task-queues/{type}/{name}:
+    $ref: "./paths/internal/dex/task-queues__type___name_.yaml"
+  /internal/dex/workflow-runs:
+    $ref: "./paths/internal/dex/workflow-runs.yaml"
+  /internal/dex/workflow-runs/{id}/events:
+    $ref: "./paths/internal/dex/workflow-runs__id__events.yaml"
   /projects/{uuid}/clone:
     $ref: "./paths/projects__uuid__clone.yaml"
   /projects/{uuid}/components:
@@ -92,10 +103,6 @@ paths:
     $ref: "./paths/teams__name_.yaml"
   /team-memberships:
     $ref: "./paths/team-memberships.yaml"
-  /workflow-runs:
-    $ref: "./paths/workflow-runs.yaml"
-  /workflow-runs/{id}/events:
-    $ref: "./paths/workflow-runs__id__events.yaml"
 
 components:
   securitySchemes:

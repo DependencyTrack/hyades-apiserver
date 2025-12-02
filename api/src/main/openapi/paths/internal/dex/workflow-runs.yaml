@@ -27,8 +27,10 @@ get:
     * `id`
     * `created_at`
     * `completed_at`
+    
+    **Note:** This is an internal API endpoint and may change without notice.
   tags:
-  - Workflows
+  - Dex
   parameters:
   - name: workflow_name
     description: Name of the workflow to filter by. Must be an exact match.
@@ -47,43 +49,43 @@ get:
     description: Status to filter by
     in: query
     schema:
-      $ref: "../components/schemas/workflow-run-status.yaml"
+      $ref: "../../../components/schemas/internal/dex/workflow-run-status.yaml"
   - name: created_at_from
     description: foo
     in: query
     schema:
-      $ref: "../components/schemas/timestamp.yaml"
+      $ref: "../../../components/schemas/timestamp.yaml"
   - name: created_at_to
     description: foo
     in: query
     schema:
-      $ref: "../components/schemas/timestamp.yaml"
+      $ref: "../../../components/schemas/timestamp.yaml"
   - name: completed_at_from
     description: foo
     in: query
     schema:
-      $ref: "../components/schemas/timestamp.yaml"
+      $ref: "../../../components/schemas/timestamp.yaml"
   - name: completed_at_to
     description: foo
     in: query
     schema:
-      $ref: "../components/schemas/timestamp.yaml"
-  - $ref: "../components/parameters/pagination-limit.yaml"
-  - $ref: "../components/parameters/page-token.yaml"
-  - $ref: "../components/parameters/sort-direction.yaml"
-  - $ref: "../components/parameters/sort-by.yaml"
+      $ref: "../../../components/schemas/timestamp.yaml"
+  - $ref: "../../../components/parameters/pagination-limit.yaml"
+  - $ref: "../../../components/parameters/page-token.yaml"
+  - $ref: "../../../components/parameters/sort-direction.yaml"
+  - $ref: "../../../components/parameters/sort-by.yaml"
   responses:
     "200":
       description: Paginated list of workflow runs
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/list-workflow-runs-response.yaml"
+            $ref: "../../../components/schemas/internal/dex/list-workflow-runs-response.yaml"
     "400":
-      $ref: "../components/responses/invalid-request-error.yaml"
+      $ref: "../../../components/responses/invalid-request-error.yaml"
     "401":
-      $ref: "../components/responses/generic-unauthorized-error.yaml"
+      $ref: "../../../components/responses/generic-unauthorized-error.yaml"
     "403":
-      $ref: "../components/responses/generic-forbidden-error.yaml"
+      $ref: "../../../components/responses/generic-forbidden-error.yaml"
     default:
-      $ref: "../components/responses/generic-error.yaml"
+      $ref: "../../../components/responses/generic-error.yaml"

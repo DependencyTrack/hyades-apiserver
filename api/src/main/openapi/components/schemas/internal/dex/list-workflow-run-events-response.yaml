@@ -16,7 +16,7 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 allOf:
-- $ref: "./paginated-response.yaml"
+- $ref: "../../paginated-response.yaml"
 properties:
   events:
     type: array

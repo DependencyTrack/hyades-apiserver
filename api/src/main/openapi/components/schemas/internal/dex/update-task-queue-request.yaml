@@ -16,43 +16,10 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  id:
-    type: string
-    format: uuid
-  workflow_name:
-    type: string
-  workflow_version:
+  status:
+    $ref: "./task-queue-status.yaml"
+  capacity:
     type: integer
     format: int32
     minimum: 1
-    maximum: 100
-  status:
-    $ref: "./workflow-run-status.yaml"
-  priority:
-    type: integer
-    format: int32
-    minimum: 0
-    maximum: 100
-  concurrency_group_id:
-    type: string
-  concurrency_mode:
-    $ref: "./workflow-run-concurrency-mode.yaml"
-  labels:
-    type: object
-    additionalProperties:
-      type: string
-  created_at:
-    $ref: "./timestamp.yaml"
-  updated_at:
-    $ref: "./timestamp.yaml"
-  started_at:
-    $ref: "./timestamp.yaml"
-  completed_at:
-    $ref: "./timestamp.yaml"
-required:
-- id
-- workflow_name
-- workflow_version
-- status
-- priority
-- created_at
+    description: Maximum number of tasks that can be queued at any given point in time

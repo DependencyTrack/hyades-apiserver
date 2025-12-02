@@ -20,10 +20,9 @@ get:
   description: |-
     Returns a paginated list of a workflow run's events.
     
-    Events are exposed for diagnostics purposes. 3rd party clients should not depend on them.
-    The event structure is to be considered an implementation detail that may change without further notice.
+    **Note:** This is an internal API endpoint and may change without notice.
   tags:
-  - Workflows
+  - Dex
   parameters:
   - name: id
     description: ID of the workflow run
@@ -32,20 +31,20 @@ get:
     schema:
       type: string
       format: uuid
-  - $ref: "../components/parameters/pagination-limit.yaml"
-  - $ref: "../components/parameters/page-token.yaml"
+  - $ref: "../../../components/parameters/pagination-limit.yaml"
+  - $ref: "../../../components/parameters/page-token.yaml"
   responses:
     "200":
       description: Paginated list of workflow run events
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/list-workflow-run-events-response.yaml"
+            $ref: "../../../components/schemas/internal/dex/list-workflow-run-events-response.yaml"
     "401":
-      $ref: "../components/responses/generic-unauthorized-error.yaml"
+      $ref: "../../../components/responses/generic-unauthorized-error.yaml"
     "403":
-      $ref: "../components/responses/generic-forbidden-error.yaml"
+      $ref: "../../../components/responses/generic-forbidden-error.yaml"
     "404":
-      $ref: "../components/responses/generic-not-found-error.yaml"
+      $ref: "../../../components/responses/generic-not-found-error.yaml"
     default:
-      $ref: "../components/responses/generic-error.yaml"
+      $ref: "../../../components/responses/generic-error.yaml"
