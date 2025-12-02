@@ -2027,7 +2027,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
 
         // Is component introduced strictly directly through A?
-        PolicyCondition condition = qm.createPolicyCondition(policy,
+        qm.createPolicyCondition(policy,
                 PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                         component.is_direct_dependency_of(v1.Component{name: "acme-lib-a"})
                         """, PolicyViolation.Type.OPERATIONAL);
@@ -2107,5 +2107,57 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         policyEngine.evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(componentD)).isEmpty();
         assertThat(qm.getAllPolicyViolations(componentE)).hasSize(1);
+    }
+
+    @Test
+    public void testEvaluateProjectWithFuncComponentIsDirectDependencyOfComponentWithInMemoryFilter() {
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        componentA.setVersion("v1.9.0");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("acme-lib-b");
+        qm.persist(componentB);
+
+        //  /-> A -> B
+        project.setDirectDependencies("[%s]".formatted(
+                new ComponentIdentity(componentA).toJSON())
+        );
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        qm.persist(project);
+        qm.persist(componentA);
+
+        final var policyEngine = new CelPolicyEngine();
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        // Is component introduced directly through A with in-memory filter of vers range?
+        PolicyCondition condition = qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        component.is_direct_dependency_of(v1.Component{
+                            name: "acme-lib-a",
+                            version: "vers:golang/>=v2.0.0"
+                        })
+                        """, PolicyViolation.Type.OPERATIONAL);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+
+        condition.setValue("""
+                        component.is_direct_dependency_of(v1.Component{
+                            name: "acme-lib-a",
+                            version: "vers:golang/>=v1.0.0|<v2.0.0"
+                        })
+                        """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
     }
 }
