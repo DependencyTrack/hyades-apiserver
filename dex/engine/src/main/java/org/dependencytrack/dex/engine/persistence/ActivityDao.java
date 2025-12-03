@@ -72,6 +72,7 @@ public final class ActivityDao extends AbstractDao {
                   update dex_activity_task_queue as queue
                      set status = coalesce(:status, queue.status)
                        , capacity = coalesce(:capacity, queue.capacity)
+                       , updated_at = now()
                    where queue.name = :name
                      and (queue.status != :status or queue.capacity != :capacity)
                    returning 1

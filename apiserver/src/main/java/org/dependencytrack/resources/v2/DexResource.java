@@ -190,7 +190,7 @@ public class DexResource extends AbstractApiResource implements DexApi {
                         request.getCapacity()));
         if (updated) {
             LOGGER.info("Updated task queue {} of type {}", name, type);
-            return Response.ok().build();
+            return Response.noContent().build();
         }
 
         return Response.notModified().build();
