@@ -19,8 +19,10 @@
 package org.dependencytrack.filestorage.memory;
 
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 final class MemoryFileStorageFactory implements FileStorageFactory {
 
-    private Map<String, byte[]> fileContentByKey;
+    private final Map<String, byte[]> fileContentByKey = new ConcurrentHashMap<>();
 
     @Override
     public String extensionName() {
@@ -48,8 +50,17 @@ final class MemoryFileStorageFactory implements FileStorageFactory {
     }
 
     @Override
+    public @Nullable Class<? extends RuntimeConfig> runtimeConfigClass() {
+        return null;
+    }
+
+    @Override
+    public @Nullable RuntimeConfig defaultRuntimeConfig() {
+        return null;
+    }
+
+    @Override
     public void init(final ExtensionContext ctx) {
-        fileContentByKey = new ConcurrentHashMap<>();
     }
 
     @Override

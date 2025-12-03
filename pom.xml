@@ -36,6 +36,8 @@
         <module>alpine</module>
         <module>proto</module>
         <module>plugin/api</module>
+        <module>plugin/runtime-config-mapping</module>
+        <module>plugin/testing</module>
         <module>plugin/file-storage-local</module>
         <module>plugin/file-storage-memory</module>
         <module>plugin/file-storage-s3</module>
@@ -122,6 +124,8 @@
         <lib.jdbi.version>3.50.0</lib.jdbi.version>
         <lib.jersey.version>3.1.11</lib.jersey.version>
         <lib.jetty.version>12.1.4</lib.jetty.version>
+        <lib.jsonschema-generator.version>4.38.0</lib.jsonschema-generator.version>
+        <lib.json-schema-validator.version>1.5.9</lib.json-schema-validator.version>
         <lib.json-unit.version>5.0.0</lib.json-unit.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
@@ -141,6 +145,7 @@
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
         <lib.smallrye-config.version>3.14.1</lib.smallrye-config.version>
+        <lib.swagger.version>2.2.40</lib.swagger.version>
         <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
         <lib.tink.version>1.19.0</lib.tink.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
@@ -286,6 +291,20 @@
             </dependency>
 
             <dependency>
+                <groupId>com.github.victools</groupId>
+                <artifactId>jsonschema-generator-bom</artifactId>
+                <version>${lib.jsonschema-generator.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>com.networknt</groupId>
+                <artifactId>json-schema-validator</artifactId>
+                <version>${lib.json-schema-validator.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>net.javacrumbs.json-unit</groupId>
                 <artifactId>json-unit-assertj</artifactId>
                 <version>${lib.json-unit.version}</version>
@@ -414,6 +433,22 @@
                 <version>${lib.smallrye-config.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>${lib.swagger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations-jakarta</artifactId>
+                <version>${lib.swagger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-jaxrs2-jakarta</artifactId>
+                <version>${lib.swagger.version}</version>
             </dependency>
 
             <dependency>

@@ -437,4 +437,22 @@
                 onDelete="CASCADE"/>
     </changeSet>
 
+    <changeSet id="v5.7.0-23" author="nscuro">
+        <createTable tableName="EXTENSION_RUNTIME_CONFIG">
+            <column name="EXTENSION_POINT" type="TEXT"/>
+            <column name="EXTENSION" type="TEXT"/>
+            <column name="CONFIG" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="EXTENSION_RUNTIME_CONFIG"
+                columnNames="EXTENSION_POINT, EXTENSION"
+                constraintName="EXTENSION_RUNTIME_CONFIG_PK"/>
+    </changeSet>
 </databaseChangeLog>

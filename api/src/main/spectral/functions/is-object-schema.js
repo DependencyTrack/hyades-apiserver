@@ -22,7 +22,11 @@ const assertObjectSchema = (schema) => {
     if (schema.type !== 'object') {
         throw 'Schema type is not `object`';
     }
-    if (schema.additionalProperties) {
+
+    // Require some properties to be defined when additionalProperties
+    // is used. There should never be responses with properties that
+    // are completely unknown.
+    if (schema.additionalProperties && !schema.properties) {
         throw 'Schema is a map';
     }
 };
