@@ -34,6 +34,7 @@ import java.util.Set;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_DEPENDS_ON;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_EXCLUSIVE_DEPENDENCY_OF;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_DIRECT_DEPENDENCY_OF;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_MATCHES_RANGE;
 
 class CelPolicyScriptVersValidationVisitor {
@@ -71,7 +72,8 @@ class CelPolicyScriptVersValidationVisitor {
             return;
         } else if ((FUNC_DEPENDS_ON.equals(functionName)
                     || FUNC_IS_DEPENDENCY_OF.equals(functionName)
-                    || FUNC_IS_EXCLUSIVE_DEPENDENCY_OF.equals(functionName))
+                    || FUNC_IS_EXCLUSIVE_DEPENDENCY_OF.equals(functionName)
+                    || FUNC_IS_DIRECT_DEPENDENCY_OF.equals(functionName))
                    && callExpr.getArgsCount() == 1) {
             maybeValidateComponentStruct(callExpr.getArgs(0));
             return;
