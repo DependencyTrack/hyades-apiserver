@@ -38,12 +38,28 @@ public class BadgerTest {
     }
 
     @Test
+    public void generateVulnerabilitiesWithoutMetricsGenerateExpectedSvgClickable() throws Exception {
+        Badger badger = new Badger();
+        String svg = badger.generateVulnerabilities(null, "test.url.com");
+        Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns-nometrics-href.svg")));
+    }
+
+    @Test
     public void generateVulnerabilitiesWithoutVulnerabilitiesGenerateExpectedSvg() throws Exception {
         ProjectMetrics metrics = new ProjectMetrics();
         metrics.setVulnerabilities(0);
         Badger badger = new Badger();
         String svg = badger.generateVulnerabilities(metrics, null);
         Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns-none.svg")));
+    }
+
+    @Test
+    public void generateVulnerabilitiesWithoutVulnerabilitiesGenerateExpectedSvgClickable() throws Exception {
+        ProjectMetrics metrics = new ProjectMetrics();
+        metrics.setVulnerabilities(0);
+        Badger badger = new Badger();
+        String svg = badger.generateVulnerabilities(metrics, "test.url.com");
+        Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns-none-href.svg")));
     }
 
     @Test
@@ -61,10 +77,31 @@ public class BadgerTest {
     }
 
     @Test
+    public void generateVulnerabilitiesWithVulnerabilitiesGenerateExpectedSvgClickable() throws Exception {
+        ProjectMetrics metrics = new ProjectMetrics();
+        metrics.setVulnerabilities(1 + 2 + 3 + 4 + 5);
+        metrics.setCritical(1);
+        metrics.setHigh(2);
+        metrics.setMedium(3);
+        metrics.setLow(4);
+        metrics.setUnassigned(5);
+        Badger badger = new Badger();
+        String svg = badger.generateVulnerabilities(metrics, "test.url.com");
+        Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns-href.svg")));
+    }
+
+    @Test
     public void generateViolationsWithoutMetricsGenerateExpectedSvg() throws Exception {
         Badger badger = new Badger();
         String svg = badger.generateViolations(null, null);
         Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations-nometrics.svg")));
+    }
+
+    @Test
+    public void generateViolationsWithoutMetricsGenerateExpectedSvgClickable() throws Exception {
+        Badger badger = new Badger();
+        String svg = badger.generateViolations(null, "test.url.com");
+        Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations-nometrics-href.svg")));
     }
 
     @Test
@@ -77,6 +114,15 @@ public class BadgerTest {
     }
 
     @Test
+    public void generateViolationsWithoutViolationsGenerateExpectedSvgClickable() throws Exception {
+        ProjectMetrics metrics = new ProjectMetrics();
+        metrics.setPolicyViolationsTotal(0);
+        Badger badger = new Badger();
+        String svg = badger.generateViolations(metrics, "test.url.com");
+        Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations-none-href.svg")));
+    }
+
+    @Test
     public void generateViolationsWithViolationsGenerateExpectedSvg() throws Exception {
         ProjectMetrics metrics = new ProjectMetrics();
         metrics.setPolicyViolationsTotal(1 + 2 + 3);
@@ -86,6 +132,18 @@ public class BadgerTest {
         Badger badger = new Badger();
         String svg = badger.generateViolations(metrics, null);
         Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations.svg")));
+    }
+
+    @Test
+    public void generateViolationsWithViolationsGenerateExpectedSvgClickable() throws Exception {
+        ProjectMetrics metrics = new ProjectMetrics();
+        metrics.setPolicyViolationsTotal(1 + 2 + 3);
+        metrics.setPolicyViolationsFail(1);
+        metrics.setPolicyViolationsWarn(2);
+        metrics.setPolicyViolationsInfo(3);
+        Badger badger = new Badger();
+        String svg = badger.generateViolations(metrics, "test.url.com");
+        Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations-href.svg")));
     }
 
     private String expectedSvg(String filename) throws Exception {
