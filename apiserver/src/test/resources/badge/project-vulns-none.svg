@@ -1,9 +1,13 @@
-<svg width="144" height="20" viewBox="0 0 144 20" xmlns="http://www.w3.org/2000/svg">
+<svg width="144" height="20" viewBox="0 0 144 20"
+     xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink">
     <linearGradient id="a" x2="0" y2="100%">
         <stop offset="0" stop-opacity=".1" stop-color="#EEE"/>
         <stop offset="1" stop-opacity=".1"/>
     </linearGradient>
-    <mask id="m"><rect width="144" height="20" rx="3" fill="#FFF"/></mask>
+    <mask id="m">
+        <rect width="144" height="20" rx="3" fill="#FFF"/>
+    </mask>
     <g mask="url(#m)">
         <rect width="84" height="20" fill="#555"/>
         <rect width="60" height="20" fill="#357abd" x="84"/>

@@ -105,6 +105,8 @@ public class BadgerTest {
         return svg
                 .trim()
                 .replaceAll(" {2}", "")
-                .replaceAll("\r\n", "\n");
+                .replaceAll("\r\n", "\n")
+                .replaceAll(">\\s+<", "><")
+                .replaceAll("\\s+", " ");
     }
 }
