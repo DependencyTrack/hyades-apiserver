@@ -33,7 +33,7 @@ public class BadgerTest {
     @Test
     public void generateVulnerabilitiesWithoutMetricsGenerateExpectedSvg() throws Exception {
         Badger badger = new Badger();
-        String svg = badger.generateVulnerabilities(null);
+        String svg = badger.generateVulnerabilities(null, null);
         Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns-nometrics.svg")));
     }
 
@@ -42,7 +42,7 @@ public class BadgerTest {
         ProjectMetrics metrics = new ProjectMetrics();
         metrics.setVulnerabilities(0);
         Badger badger = new Badger();
-        String svg = badger.generateVulnerabilities(metrics);
+        String svg = badger.generateVulnerabilities(metrics, null);
         Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns-none.svg")));
     }
 
@@ -56,14 +56,14 @@ public class BadgerTest {
         metrics.setLow(4);
         metrics.setUnassigned(5);
         Badger badger = new Badger();
-        String svg = badger.generateVulnerabilities(metrics);
+        String svg = badger.generateVulnerabilities(metrics, null);
         Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns.svg")));
     }
 
     @Test
     public void generateViolationsWithoutMetricsGenerateExpectedSvg() throws Exception {
         Badger badger = new Badger();
-        String svg = badger.generateViolations(null);
+        String svg = badger.generateViolations(null, null);
         Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations-nometrics.svg")));
     }
 
@@ -72,7 +72,7 @@ public class BadgerTest {
         ProjectMetrics metrics = new ProjectMetrics();
         metrics.setPolicyViolationsTotal(0);
         Badger badger = new Badger();
-        String svg = badger.generateViolations(metrics);
+        String svg = badger.generateViolations(metrics, null);
         Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations-none.svg")));
     }
 
@@ -84,7 +84,7 @@ public class BadgerTest {
         metrics.setPolicyViolationsWarn(2);
         metrics.setPolicyViolationsInfo(3);
         Badger badger = new Badger();
-        String svg = badger.generateViolations(metrics);
+        String svg = badger.generateViolations(metrics, null);
         Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations.svg")));
     }
 
