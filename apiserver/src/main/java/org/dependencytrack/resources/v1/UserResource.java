@@ -63,7 +63,8 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdoNotificationEmitter;
+import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
@@ -81,8 +82,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.dependencytrack.notification.NotificationFactory.createUserCreatedNotification;
-import static org.dependencytrack.notification.NotificationFactory.createUserDeletedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createUserCreatedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createUserDeletedNotification;
 
 /**
  * JAX-RS resources for processing users.
@@ -453,7 +454,9 @@ public class UserResource extends AlpineResource {
                 if (user == null) {
                     user = qm.createLdapUser(jsonUser.getUsername());
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user created: " + jsonUser.getUsername());
-                    NotificationEmitter.using(qm).emit(createUserCreatedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserCreatedNotification(
+                                    NotificationModelConverter.convert(user)));
                     return Response.status(Response.Status.CREATED).entity(user).build();
                 } else {
                     return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
@@ -481,7 +484,9 @@ public class UserResource extends AlpineResource {
             return qm.callInTransaction(() -> {
                 final LdapUser user = qm.getLdapUser(jsonUser.getUsername());
                 if (user != null) {
-                    NotificationEmitter.using(qm).emit(createUserDeletedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserDeletedNotification(
+                                    NotificationModelConverter.convert(user)));
                     qm.delete(user);
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user deleted: " + jsonUser.getUsername());
                     return Response.status(Response.Status.NO_CONTENT).build();
@@ -536,7 +541,9 @@ public class UserResource extends AlpineResource {
                             String.valueOf(PasswordService.createHash(jsonUser.getNewPassword().toCharArray())),
                             jsonUser.isForcePasswordChange(), jsonUser.isNonExpiryPassword(), jsonUser.isSuspended());
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user created: " + jsonUser.getUsername());
-                    NotificationEmitter.using(qm).emit(createUserCreatedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserCreatedNotification(
+                                    NotificationModelConverter.convert(user)));
                     return Response.status(Response.Status.CREATED).entity(user).build();
                 } else {
                     return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
@@ -613,7 +620,9 @@ public class UserResource extends AlpineResource {
             return qm.callInTransaction(() -> {
                 final ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
                 if (user != null) {
-                    NotificationEmitter.using(qm).emit(createUserDeletedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserDeletedNotification(
+                                    NotificationModelConverter.convert(user)));
                     qm.delete(user);
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user deleted: " + jsonUser.getUsername());
                     return Response.status(Response.Status.NO_CONTENT).build();
@@ -653,7 +662,9 @@ public class UserResource extends AlpineResource {
                 if (user == null) {
                     user = qm.createOidcUser(jsonUser.getUsername());
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user created: " + jsonUser.getUsername());
-                    NotificationEmitter.using(qm).emit(createUserCreatedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserCreatedNotification(
+                                    NotificationModelConverter.convert(user)));
                     return Response.status(Response.Status.CREATED).entity(user).build();
                 } else {
                     return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
@@ -681,7 +692,9 @@ public class UserResource extends AlpineResource {
             return qm.callInTransaction(() -> {
                 final OidcUser user = qm.getOidcUser(jsonUser.getUsername());
                 if (user != null) {
-                    NotificationEmitter.using(qm).emit(createUserDeletedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserDeletedNotification(
+                                    NotificationModelConverter.convert(user)));
                     qm.delete(user);
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user deleted: " + jsonUser.getUsername());
                     return Response.status(Response.Status.NO_CONTENT).build();

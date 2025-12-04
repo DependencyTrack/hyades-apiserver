@@ -31,14 +31,14 @@ import static org.dependencytrack.notification.publisher.PublisherClass.WebhookP
 
 public enum DefaultNotificationPublishers {
 
-    SLACK("Slack", "Publishes notifications to a Slack channel", SlackPublisher, "/templates/notification/publisher/slack.peb", MediaType.APPLICATION_JSON, true),
-    MS_TEAMS("Microsoft Teams", "Publishes notifications to a Microsoft Teams channel", MsTeamsPublisher, "/templates/notification/publisher/msteams.peb", MediaType.APPLICATION_JSON, true),
-    MATTERMOST("Mattermost", "Publishes notifications to a Mattermost channel", MattermostPublisher, "/templates/notification/publisher/mattermost.peb", MediaType.APPLICATION_JSON, true),
-    EMAIL("Email", "Sends notifications to an email address", SendMailPublisher, "/templates/notification/publisher/email.peb", MediaType.TEXT_PLAIN, true),
-    CONSOLE("Console", "Displays notifications on the system console", ConsolePublisher, "/templates/notification/publisher/console.peb", MediaType.TEXT_PLAIN, true),
-    WEBHOOK("Outbound Webhook", "Publishes notifications to a configurable endpoint", WebhookPublisher, "/templates/notification/publisher/webhook.peb", MediaType.APPLICATION_JSON, true),
-    CS_WEBEX("Cisco Webex", "Publishes notifications to a Cisco Webex Teams channel", CsWebexPublisher, "/templates/notification/publisher/cswebex.peb", MediaType.APPLICATION_JSON, true),
-    JIRA("Jira", "Creates a Jira issue in a configurable Jira instance and queue", JiraPublisher, "/templates/notification/publisher/jira.peb", MediaType.APPLICATION_JSON, true);
+    SLACK("Slack", "Publishes notifications to a Slack channel", SlackPublisher, "/org/dependencytrack/notification/publishing/slack/default-template.peb", MediaType.APPLICATION_JSON, true),
+    MS_TEAMS("Microsoft Teams", "Publishes notifications to a Microsoft Teams channel", MsTeamsPublisher, "/org/dependencytrack/notification/publishing/msteams/default-template.peb", MediaType.APPLICATION_JSON, true),
+    MATTERMOST("Mattermost", "Publishes notifications to a Mattermost channel", MattermostPublisher, "/org/dependencytrack/notification/publishing/mattermost/default-template.peb", MediaType.APPLICATION_JSON, true),
+    EMAIL("Email", "Sends notifications to an email address", SendMailPublisher, "/org/dependencytrack/notification/publishing/email/default-template.peb", MediaType.TEXT_PLAIN, true),
+    CONSOLE("Console", "Displays notifications on the system console", ConsolePublisher, "/org/dependencytrack/notification/publishing/console/default-template.peb", MediaType.TEXT_PLAIN, true),
+    WEBHOOK("Outbound Webhook", "Publishes notifications to a configurable endpoint", WebhookPublisher, "/org/dependencytrack/notification/publishing/webhook/default-template.peb", MediaType.APPLICATION_JSON, true),
+    CS_WEBEX("Cisco Webex", "Publishes notifications to a Cisco Webex Teams channel", CsWebexPublisher, "/org/dependencytrack/notification/publishing/webex/default-template.peb", MediaType.APPLICATION_JSON, true),
+    JIRA("Jira", "Creates a Jira issue in a configurable Jira instance and queue", JiraPublisher, "/org/dependencytrack/notification/publishing/jira/default-template.peb", MediaType.APPLICATION_JSON, true);
 
     private String name;
     private String description;

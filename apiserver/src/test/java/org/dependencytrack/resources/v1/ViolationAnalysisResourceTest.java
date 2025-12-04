@@ -53,9 +53,9 @@ import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
-import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 
 @NotThreadSafe
 public class ViolationAnalysisResourceTest extends ResourceTest {

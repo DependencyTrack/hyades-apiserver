@@ -25,10 +25,11 @@ import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
-import org.dependencytrack.proto.notification.v1.Group;
-import org.dependencytrack.proto.notification.v1.Level;
-import org.dependencytrack.proto.notification.v1.Notification;
-import org.dependencytrack.proto.notification.v1.Scope;
+import org.dependencytrack.notification.api.NotificationEmitter;
+import org.dependencytrack.notification.proto.v1.Group;
+import org.dependencytrack.notification.proto.v1.Level;
+import org.dependencytrack.notification.proto.v1.Notification;
+import org.dependencytrack.notification.proto.v1.Scope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,10 +42,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.notification.ModelConverter.convert;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_UNSPECIFIED;
-import static org.dependencytrack.proto.notification.v1.Level.LEVEL_UNSPECIFIED;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_UNSPECIFIED;
+import static org.dependencytrack.notification.NotificationModelConverter.convert;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_UNSPECIFIED;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_UNSPECIFIED;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_UNSPECIFIED;
 
 /**
  * A {@link NotificationEmitter} that uses the JDBC API for database interactions.
