@@ -41,6 +41,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Only needed when using SimplePageTokenEncoder. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <dependency>
             <groupId>org.jspecify</groupId>
             <artifactId>jspecify</artifactId>
