@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.dex.engine.persistence.jdbi;
 
-import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.jdbi.v3.core.config.ConfigRegistry;
@@ -35,7 +34,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
@@ -62,13 +60,11 @@ final class WorkflowRunMetadataRowMapper implements RowMapper<WorkflowRunMetadat
                 rs.getObject("id", UUID.class),
                 rs.getString("workflow_name"),
                 rs.getInt("workflow_version"),
-                rs.getString("queue_name"),
+                rs.getString("workflow_instance_id"),
+                rs.getString("task_queue_name"),
                 WorkflowRunStatus.valueOf(rs.getString("status")),
                 rs.getString("custom_status"),
-                rs.getString("concurrency_group_id"),
-                Optional.ofNullable(rs.getString("concurrency_mode"))
-                        .map(WorkflowRunConcurrencyMode::valueOf)
-                        .orElse(null),
+                rs.getString("concurrency_key"),
                 rs.getInt("priority"),
                 getLabels(rs, ctx),
                 instantColumnMapper.map(rs, "created_at", ctx),

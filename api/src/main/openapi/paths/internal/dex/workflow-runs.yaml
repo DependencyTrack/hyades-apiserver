@@ -45,6 +45,11 @@ get:
       format: int32
       minimum: 1
       maximum: 100
+  - name: workflow_instance_id
+    description: Workflow instance ID to filter by. Must be an exact match.
+    in: query
+    schema:
+      type: string
   - name: status
     description: Status to filter by
     in: query

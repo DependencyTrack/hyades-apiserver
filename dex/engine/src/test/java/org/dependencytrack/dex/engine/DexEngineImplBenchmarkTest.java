@@ -36,7 +36,6 @@ import org.dependencytrack.dex.api.annotation.Workflow;
 import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.TaskQueueType;
-import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
@@ -189,11 +188,11 @@ public class DexEngineImplBenchmarkTest {
         // Disabling this will significantly improve throughput.
         // Note that realistic workloads will have a balance between
         // runs that use concurrency groups, and runs that don't.
-        final boolean withConcurrencyGroups = false;
+        final boolean withConcurrencyKeys = false;
 
         final var scheduleOptions = new ArrayList<CreateWorkflowRunRequest<?>>(numRuns);
         for (int i = 0; i < numRuns; i++) {
-            final String concurrencyGroupId = withConcurrencyGroups
+            final String concurrencyKey = withConcurrencyKeys
                     ? ((i % 2 == 0 && i != 0) ? "test-" + (i - 1) : "test-" + i)
                     : null;
 
@@ -201,11 +200,7 @@ public class DexEngineImplBenchmarkTest {
 
             scheduleOptions.add(
                     new CreateWorkflowRunRequest<>("test", 1)
-                            .withConcurrency(
-                                    concurrencyGroupId,
-                                    concurrencyGroupId != null
-                                            ? WorkflowRunConcurrencyMode.SERIAL
-                                            : null)
+                            .withConcurrencyKey(concurrencyKey)
                             .withLabels(labels));
         }
 

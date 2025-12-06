@@ -42,7 +42,6 @@ import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.ExternalEvent;
 import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.api.WorkflowRun;
-import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
@@ -495,9 +494,9 @@ final class DexEngineImpl implements DexEngine {
                             /* parentId */ null,
                             request.workflowName(),
                             request.workflowVersion(),
+                            request.workflowInstanceId(),
                             taskQueueName,
-                            request.concurrencyGroupId(),
-                            request.concurrencyMode(),
+                            request.concurrencyKey(),
                             request.priority(),
                             request.labels(),
                             nowInstant));
@@ -507,11 +506,11 @@ final class DexEngineImpl implements DexEngine {
                     .setWorkflowVersion(request.workflowVersion())
                     .setTaskQueueName(taskQueueName)
                     .setPriority(request.priority());
-            if (request.concurrencyGroupId() != null) {
-                runCreatedBuilder.setConcurrencyGroupId(request.concurrencyGroupId());
+            if (request.workflowInstanceId() != null) {
+                runCreatedBuilder.setWorkflowInstanceId(request.workflowInstanceId());
             }
-            if (request.concurrencyMode() != null) {
-                runCreatedBuilder.setConcurrencyMode(request.concurrencyMode().toProto());
+            if (request.concurrencyKey() != null) {
+                runCreatedBuilder.setConcurrencyKey(request.concurrencyKey());
             }
             if (request.labels() != null) {
                 runCreatedBuilder.putAllLabels(request.labels());
@@ -590,11 +589,11 @@ final class DexEngineImpl implements DexEngine {
                 runState.id(),
                 runState.workflowName(),
                 runState.workflowVersion(),
+                runState.workflowInstanceId(),
                 runState.status(),
                 runState.customStatus(),
                 runState.priority(),
-                runState.concurrencyGroupId(),
-                runState.concurrencyMode(),
+                runState.concurrencyKey(),
                 runState.labels(),
                 runState.createdAt(),
                 runState.updatedAt(),
@@ -617,11 +616,11 @@ final class DexEngineImpl implements DexEngine {
                 metadataRow.id(),
                 metadataRow.workflowName(),
                 metadataRow.workflowVersion(),
+                metadataRow.workflowInstanceId(),
                 metadataRow.status(),
                 metadataRow.customStatus(),
                 metadataRow.priority(),
-                metadataRow.concurrencyGroupId(),
-                metadataRow.concurrencyMode(),
+                metadataRow.concurrencyKey(),
                 metadataRow.labels(),
                 metadataRow.createdAt(),
                 metadataRow.updatedAt(),
@@ -954,11 +953,11 @@ final class DexEngineImpl implements DexEngine {
                         run.id(),
                         run.workflowName(),
                         run.workflowVersion(),
+                        run.workflowInstanceId(),
                         run.status(),
                         run.customStatus(),
                         run.priority(),
-                        run.concurrencyGroupId(),
-                        run.concurrencyMode(),
+                        run.concurrencyKey(),
                         run.labels(),
                         run.createdAt(),
                         run.updatedAt(),
@@ -1004,12 +1003,12 @@ final class DexEngineImpl implements DexEngine {
                                     /* parentId */ run.id(),
                                     message.event().getRunCreated().getWorkflowName(),
                                     message.event().getRunCreated().getWorkflowVersion(),
-                                    message.event().getRunCreated().getTaskQueueName(),
-                                    message.event().getRunCreated().hasConcurrencyGroupId()
-                                            ? message.event().getRunCreated().getConcurrencyGroupId()
+                                    message.event().getRunCreated().hasWorkflowInstanceId()
+                                            ? message.event().getRunCreated().getWorkflowInstanceId()
                                             : null,
-                                    message.event().getRunCreated().hasConcurrencyMode()
-                                            ? WorkflowRunConcurrencyMode.fromProto(message.event().getRunCreated().getConcurrencyMode())
+                                    message.event().getRunCreated().getTaskQueueName(),
+                                    message.event().getRunCreated().hasConcurrencyKey()
+                                            ? message.event().getRunCreated().getConcurrencyKey()
                                             : null,
                                     message.event().getRunCreated().getPriority(),
                                     message.event().getRunCreated().getLabelsCount() > 0

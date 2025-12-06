@@ -29,7 +29,7 @@ class WorkflowCallOptionsTest {
         final var callOptions = new WorkflowCallOptions<>();
         assertThat(callOptions.taskQueueName()).isNull();
         assertThat(callOptions.argument()).isNull();
-        assertThat(callOptions.concurrencyGroupId()).isNull();
+        assertThat(callOptions.concurrencyKey()).isNull();
     }
 
     @Test
@@ -39,9 +39,9 @@ class WorkflowCallOptionsTest {
     }
 
     @Test
-    void withConcurrencyGroupIdShouldAddConcurrencyGroupId() {
-        final var callOptions = new WorkflowCallOptions<>().withConcurrencyGroupId("foo");
-        assertThat(callOptions.concurrencyGroupId()).isEqualTo("foo");
+    void withConcurrencyKeyShouldAddConcurrencyKey() {
+        final var callOptions = new WorkflowCallOptions<>().withConcurrencyKey("foo");
+        assertThat(callOptions.concurrencyKey()).isEqualTo("foo");
     }
 
 }

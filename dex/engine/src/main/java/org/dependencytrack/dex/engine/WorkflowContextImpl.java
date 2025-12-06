@@ -109,6 +109,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     private boolean isReplaying;
     private boolean isSuspended;
     private @Nullable String customStatus;
+    private int randomCounter;
 
     WorkflowContextImpl(
             final UUID runId,
@@ -231,22 +232,24 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     <WA, WR> Awaitable<WR> callChildWorkflow(
-            final String name,
-            final int version,
-            final String taskQueueName,
-            final @Nullable String concurrencyGroupId,
-            final @Nullable WA argument,
-            final PayloadConverter<WA> argumentConverter,
-            final PayloadConverter<WR> resultConverter) {
+            String workflowName,
+            int workflowVersion,
+            @Nullable String workflowInstanceId,
+            String taskQueueName,
+            @Nullable String concurrencyKey,
+            @Nullable WA argument,
+            PayloadConverter<WA> argumentConverter,
+            PayloadConverter<WR> resultConverter) {
         requireNotInSideEffect("Child workflows can not be called from within a side effect");
 
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId, new CreateChildRunCommand(
                 eventId,
-                name,
-                version,
+                workflowName,
+                workflowVersion,
+                workflowInstanceId,
                 taskQueueName,
-                concurrencyGroupId,
+                concurrencyKey,
                 this.priority,
                 this.labels,
                 argumentConverter.convertToPayload(argument)));
@@ -632,9 +635,11 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                     CreateChildRunCommand.class.getSimpleName()));
         } else if (!Objects.equals(eventSubject.getWorkflowName(), concreteCommand.workflowName())
                 || !Objects.equals(eventSubject.getWorkflowVersion(), concreteCommand.workflowVersion())
+                || (eventSubject.hasWorkflowInstanceId()
+                && !Objects.equals(eventSubject.getWorkflowInstanceId(), concreteCommand.workflowInstanceId()))
                 || !Objects.equals(eventSubject.getPriority(), concreteCommand.priority())
-                || (eventSubject.hasConcurrencyGroupId()
-                && !Objects.equals(eventSubject.getConcurrencyGroupId(), concreteCommand.concurrencyGroupId()))
+                || (eventSubject.hasConcurrencyKey()
+                && !Objects.equals(eventSubject.getConcurrencyKey(), concreteCommand.concurrencyKey()))
                 || (eventSubject.getLabelsCount() > 0
                 && !Objects.equals(eventSubject.getLabelsMap(), concreteCommand.labels()))
                 || (eventSubject.hasArgument()
@@ -707,7 +712,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         }
 
         final var exception = new ChildWorkflowFailureException(
-                UUID.fromString(createdEvent.getChildRunCreated().getRunId()),
+                UUID.fromString(createdEvent.getChildRunCreated().getId()),
                 createdEvent.getChildRunCreated().getWorkflowName(),
                 createdEvent.getChildRunCreated().getWorkflowVersion(),
                 FailureConverter.toException(eventSubject.getFailure()));

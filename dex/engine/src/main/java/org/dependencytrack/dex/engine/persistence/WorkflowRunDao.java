@@ -75,6 +75,10 @@ public final class WorkflowRunDao extends AbstractDao {
             whereConditions.add("workflow_version = :workflowVersion");
             queryParams.put("workflowVersion", request.workflowVersion());
         }
+        if (request.workflowInstanceId() != null) {
+            whereConditions.add("workflow_instance_id = :workflowInstanceId");
+            queryParams.put("workflowInstanceId", request.workflowInstanceId());
+        }
         if (request.status() != null) {
             whereConditions.add("status = :status");
             queryParams.put("status", request.status());
@@ -228,11 +232,11 @@ public final class WorkflowRunDao extends AbstractDao {
                         row.id(),
                         row.workflowName(),
                         row.workflowVersion(),
+                        row.workflowInstanceId(),
                         row.status(),
                         row.customStatus(),
                         row.priority(),
-                        row.concurrencyGroupId(),
-                        row.concurrencyMode(),
+                        row.concurrencyKey(),
                         row.labels(),
                         row.createdAt(),
                         row.updatedAt(),
@@ -269,7 +273,7 @@ public final class WorkflowRunDao extends AbstractDao {
 
         final Query query = jdbiHandle.createQuery("""
                 select *
-                  from dex_workflow_run_history
+                  from dex_workflow_history
                  where workflow_run_id = :runId
                    and sequence_number > :lastSequenceNumber
                  order by sequence_number

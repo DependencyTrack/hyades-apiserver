@@ -87,11 +87,11 @@ public class EventResourceTest extends ResourceTest {
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         final String jsonResponse = getPlainTextBody(response);
-        assertThatJson(jsonResponse).isEqualTo("""
-                        {
-                            "processing": true
-                        }
-                        """);
+        assertThatJson(jsonResponse).isEqualTo(/* language=JSON */ """
+                {
+                  "processing": true
+                }
+                """);
     }
 
     @Test
@@ -117,9 +117,9 @@ public class EventResourceTest extends ResourceTest {
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         final String jsonResponse = getPlainTextBody(response);
-        assertThatJson(jsonResponse).isEqualTo("""
+        assertThatJson(jsonResponse).isEqualTo(/* language=JSON */ """
                 {
-                    "processing": false
+                  "processing": false
                 }
                 """);
     }
@@ -131,11 +131,11 @@ public class EventResourceTest extends ResourceTest {
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         final String jsonResponse = getPlainTextBody(response);
-        assertThatJson(jsonResponse).isEqualTo("""
-                        {
-                            "processing": false
-                        }
-                        """);
+        assertThatJson(jsonResponse).isEqualTo(/* language=JSON */ """
+                {
+                  "processing": false
+                }
+                """);
     }
 
     @Test
@@ -144,10 +144,10 @@ public class EventResourceTest extends ResourceTest {
                 UUID.fromString("97282c4b-70fc-4169-be01-35e7bbe4c9e8"),
                 "dummy",
                 1,
+                null,
                 WorkflowRunStatus.CREATED,
                 null,
                 0,
-                null,
                 null,
                 null,
                 Instant.ofEpochMilli(666666),
@@ -175,10 +175,10 @@ public class EventResourceTest extends ResourceTest {
                 UUID.fromString("97282c4b-70fc-4169-be01-35e7bbe4c9e8"),
                 "dummy",
                 1,
+                null,
                 WorkflowRunStatus.COMPLETED,
                 null,
                 0,
-                null,
                 null,
                 null,
                 Instant.ofEpochMilli(666666),

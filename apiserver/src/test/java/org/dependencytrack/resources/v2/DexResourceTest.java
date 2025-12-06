@@ -25,7 +25,6 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.Page.TotalCount;
 import org.dependencytrack.dex.engine.api.DexEngine;
-import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
@@ -78,11 +77,11 @@ public class DexResourceTest extends ResourceTest {
                 UUID.fromString("724c0700-4eeb-45f0-8ff4-8bba369c0174"),
                 "workflowName",
                 66,
+                "workflowInstanceId",
                 WorkflowRunStatus.RUNNING,
                 "customStatus",
                 12,
-                "concurrencyGroupId",
-                WorkflowRunConcurrencyMode.SERIAL,
+                "concurrencyKey",
                 Map.of("foo", "bar"),
                 Instant.ofEpochMilli(666666),
                 Instant.ofEpochMilli(777777),
@@ -104,11 +103,11 @@ public class DexResourceTest extends ResourceTest {
                               "id": "724c0700-4eeb-45f0-8ff4-8bba369c0174",
                               "workflow_name": "workflowName",
                               "workflow_version": 66,
+                              "workflow_instance_id": "workflowInstanceId",
                               "status": "RUNNING",
                               "created_at": 666666,
                               "priority": 12,
-                              "concurrency_group_id": "concurrencyGroupId",
-                              "concurrency_mode": "SERIAL",
+                              "concurrency_key": "concurrencyKey",
                               "labels": {
                                 "foo": "bar"
                               },
@@ -137,10 +136,10 @@ public class DexResourceTest extends ResourceTest {
                 runId,
                 "workflowName",
                 66,
+                "workflowInstanceId",
                 WorkflowRunStatus.CREATED,
                 null,
                 0,
-                null,
                 null,
                 null,
                 Instant.ofEpochMilli(666666),

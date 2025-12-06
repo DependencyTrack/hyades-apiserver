@@ -128,9 +128,7 @@ public interface DexEngine extends Closeable {
     /**
      * Creates a single workflow run.
      * <p>
-     * May return {@code null} when {@code request} specifies a concurrency group ID
-     * combined with {@link WorkflowRunConcurrencyMode#EXCLUSIVE}, and another run with
-     * the same concurrency group ID is already in progress.
+     * May return {@code null} when another run with the same instance ID is already in progress.
      *
      * @param request Request for the run to create.
      * @param <A>     Type of the workflow's argument.

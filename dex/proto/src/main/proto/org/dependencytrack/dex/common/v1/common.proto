@@ -33,12 +33,6 @@ message RetryPolicy {
   google.protobuf.Duration max_delay = 5;
 }
 
-enum WorkflowRunConcurrencyMode {
-  WORKFLOW_RUN_CONCURRENCY_MODE_UNSPECIFIED = 0;
-  WORKFLOW_RUN_CONCURRENCY_MODE_EXCLUSIVE = 1;
-  WORKFLOW_RUN_CONCURRENCY_MODE_SERIAL = 2;
-}
-
 enum WorkflowRunStatus {
   WORKFLOW_RUN_STATUS_UNSPECIFIED = 0;
   WORKFLOW_RUN_STATUS_CREATED = 1;

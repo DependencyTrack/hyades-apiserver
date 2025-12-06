@@ -18,11 +18,9 @@
  */
 package org.dependencytrack.dex.engine.api.request;
 
-import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Map;
@@ -56,26 +54,12 @@ class CreateWorkflowRunRequestTest {
                 .withMessage("priority must be between 0 and 100, but is " + priority);
     }
 
-    @ParameterizedTest
-    @CsvSource({
-            "concurrencyGroup, ",
-            ", EXCLUSIVE"
-    })
-    void shouldThrowWhenConcurrencyGroupIdAndModeAreNotDefinedTogether(
-            final String concurrencyGroupId,
-            final WorkflowRunConcurrencyMode concurrencyMode) {
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> new CreateWorkflowRunRequest<>("workflowName", 1)
-                        .withConcurrency(concurrencyGroupId, concurrencyMode))
-                .withMessage("must provide either concurrencyGroupId AND concurrencyMode, or none");
-    }
-
     @Test
     void shouldPopulateFieldsUsingWithers() {
         final var request = new CreateWorkflowRunRequest<>("workflowName", 1)
                 .withTaskQueueName("taskQueueName")
                 .withPriority(66)
-                .withConcurrency("concurrencyGroupId", WorkflowRunConcurrencyMode.SERIAL)
+                .withConcurrencyKey("concurrencyKey")
                 .withLabels(Map.of("foo", "bar"))
                 .withArgument(Payload.getDefaultInstance());
 
@@ -83,8 +67,7 @@ class CreateWorkflowRunRequestTest {
         assertThat(request.workflowVersion()).isEqualTo(1);
         assertThat(request.taskQueueName()).isEqualTo("taskQueueName");
         assertThat(request.priority()).isEqualTo(66);
-        assertThat(request.concurrencyGroupId()).isEqualTo("concurrencyGroupId");
-        assertThat(request.concurrencyMode()).isEqualTo(WorkflowRunConcurrencyMode.SERIAL);
+        assertThat(request.concurrencyKey()).isEqualTo("concurrencyKey");
         assertThat(request.labels()).containsEntry("foo", "bar");
         assertThat(request.argument()).isEqualTo(Payload.getDefaultInstance());
     }

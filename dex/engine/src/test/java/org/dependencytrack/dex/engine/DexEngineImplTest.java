@@ -38,7 +38,6 @@ import org.dependencytrack.dex.engine.api.ExternalEvent;
 import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.api.TaskQueueStatus;
 import org.dependencytrack.dex.engine.api.TaskQueueType;
-import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
@@ -134,7 +133,7 @@ class DexEngineImplTest {
 
         final UUID runId = engine.createRun(
                 new CreateWorkflowRunRequest<>("test", 1)
-                        .withConcurrency("someConcurrencyGroupId", WorkflowRunConcurrencyMode.SERIAL)
+                        .withConcurrencyKey("someConcurrencyKey")
                         .withPriority(6)
                         .withLabels(Map.of("label-a", "123", "label-b", "321"))
                         .withArgument("someArgument"));
@@ -142,7 +141,7 @@ class DexEngineImplTest {
         final WorkflowRunMetadata completedRun = awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
         assertThat(completedRun.customStatus()).isEqualTo("someCustomStatus");
-        assertThat(completedRun.concurrencyGroupId()).isEqualTo("someConcurrencyGroupId");
+        assertThat(completedRun.concurrencyKey()).isEqualTo("someConcurrencyKey");
         assertThat(completedRun.priority()).isEqualTo(6);
         assertThat(completedRun.labels()).containsOnlyKeys("label-a", "label-b");
         assertThat(completedRun.createdAt()).isNotNull();
@@ -164,7 +163,7 @@ class DexEngineImplTest {
                     assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_CREATED);
                     assertThat(event.getRunCreated().getWorkflowName()).isEqualTo("test");
                     assertThat(event.getRunCreated().getWorkflowVersion()).isEqualTo(1);
-                    assertThat(event.getRunCreated().getConcurrencyGroupId()).isEqualTo("someConcurrencyGroupId");
+                    assertThat(event.getRunCreated().getConcurrencyKey()).isEqualTo("someConcurrencyKey");
                     assertThat(event.getRunCreated().getPriority()).isEqualTo(6);
                     assertThat(event.getRunCreated().getLabelsMap()).containsOnlyKeys("label-a", "label-b");
                     assertThat(event.getRunCreated().getArgument().hasBinaryContent()).isTrue();
@@ -207,7 +206,7 @@ class DexEngineImplTest {
         final WorkflowRunMetadata failedRun = awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
         assertThat(failedRun.customStatus()).isNull();
-        assertThat(failedRun.concurrencyGroupId()).isNull();
+        assertThat(failedRun.concurrencyKey()).isNull();
         assertThat(failedRun.priority()).isZero();
         assertThat(failedRun.labels()).isNull();
         assertThat(failedRun.createdAt()).isNotNull();
@@ -287,7 +286,7 @@ class DexEngineImplTest {
         final WorkflowRunMetadata canceledRun = awaitRunStatus(runId, WorkflowRunStatus.CANCELED);
 
         assertThat(canceledRun.customStatus()).isNull();
-        assertThat(canceledRun.concurrencyGroupId()).isNull();
+        assertThat(canceledRun.concurrencyKey()).isNull();
         assertThat(canceledRun.priority()).isZero();
         assertThat(canceledRun.labels()).isNull();
         assertThat(canceledRun.createdAt()).isNotNull();
@@ -382,7 +381,7 @@ class DexEngineImplTest {
     void shouldWaitForChildRun() {
         registerWorkflow("foo", (ctx, arg) -> {
             final String childWorkflowResult =
-                    ctx.callChildWorkflow("bar", 1, WORKFLOW_TASK_QUEUE, null, "inputValue", stringConverter(), stringConverter()).await();
+                    ctx.callChildWorkflow("bar", 1, null, WORKFLOW_TASK_QUEUE, null, "inputValue", stringConverter(), stringConverter()).await();
             assertThat(childWorkflowResult).contains("inputValue-outputValue");
             return null;
         });
@@ -409,7 +408,7 @@ class DexEngineImplTest {
     @Test
     void shouldFailWhenChildRunFails() {
         registerWorkflow("foo", (ctx, arg) -> {
-            ctx.callChildWorkflow("bar", 1, WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
+            ctx.callChildWorkflow("bar", 1, null, WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
         registerWorkflow("bar", (ctx, arg) -> {
@@ -448,12 +447,12 @@ class DexEngineImplTest {
         final var grandChildRunIdReference = new AtomicReference<UUID>();
 
         registerWorkflow("parent", (ctx, arg) -> {
-            ctx.callChildWorkflow("child", 1, WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
+            ctx.callChildWorkflow("child", 1, null, WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
         registerWorkflow("child", (ctx, arg) -> {
             childRunIdReference.set(ctx.runId());
-            ctx.callChildWorkflow("grand-child", 1, WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
+            ctx.callChildWorkflow("grand-child", 1, null, WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
         registerWorkflow("grand-child", (ctx, arg) -> {
@@ -605,25 +604,30 @@ class DexEngineImplTest {
     }
 
     @Nested
-    class ConcurrencyGroupTest {
+    class WorkflowInstanceIdTest {
 
         @Test
-        void shouldNotCreateRunWhenConcurrencyModeIsExclusiveAndAnotherRunIsInProgress() {
+        void shouldNotCreateRunWhenAnotherRunWithSameInstanceIdIsInProgress() {
             registerWorkflow("test", stringConverter(), voidConverter(), (ctx, arg) -> null);
 
             UUID runId = engine.createRun(
                     new CreateWorkflowRunRequest<>("test", 1)
-                            .withConcurrency("concurrencyGroup", WorkflowRunConcurrencyMode.EXCLUSIVE));
+                            .withWorkflowInstanceId("instanceId"));
             assertThat(runId).isNotNull();
 
             runId = engine.createRun(
                     new CreateWorkflowRunRequest<>("test", 1)
-                            .withConcurrency("concurrencyGroup", WorkflowRunConcurrencyMode.EXCLUSIVE));
+                            .withWorkflowInstanceId("instanceId"));
             assertThat(runId).isNull();
         }
 
+    }
+
+    @Nested
+    class ConcurrencyKeyTest {
+
         @Test
-        void shouldExecuteRunsWithSameConcurrencyGroupInPriorityOrder() {
+        void shouldExecuteRunsWithSameConcurrencyKeyInPriorityOrder() {
             final var executionQueue = new ArrayBlockingQueue<String>(5);
 
             registerWorkflow("test", stringConverter(), voidConverter(), (ctx, arg) -> {
@@ -633,13 +637,13 @@ class DexEngineImplTest {
             registerWorkflowWorker("workflow-worker", 5);
             engine.start();
 
-            final var concurrencyGroupId = "concurrencyGroup";
+            final var concurrencyKey = "concurrencyKey";
 
             final List<CreateWorkflowRunResponse> responses = engine.createRuns(
                     Stream.of(1, 2, 3, 4, 5)
                             .<CreateWorkflowRunRequest<?>>map(
                                     number -> new CreateWorkflowRunRequest<>("test", 1)
-                                            .withConcurrency(concurrencyGroupId, WorkflowRunConcurrencyMode.SERIAL)
+                                            .withConcurrencyKey(concurrencyKey)
                                             .withPriority(number)
                                             .withArgument(String.valueOf(number)))
                             .toList());
@@ -982,7 +986,7 @@ class DexEngineImplTest {
 
         registerWorkflow("foo", (ctx, arg) -> {
             try {
-                ctx.callChildWorkflow("bar", 1, WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
+                ctx.callChildWorkflow("bar", 1, null, WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
             } catch (FailureException e) {
                 exceptionReference.set(e);
                 throw e;
@@ -991,7 +995,7 @@ class DexEngineImplTest {
             return null;
         });
         registerWorkflow("bar", (ctx, arg) -> {
-            ctx.callChildWorkflow("baz", 1, WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
+            ctx.callChildWorkflow("baz", 1, null, WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
         registerWorkflow("baz", (ctx, arg) -> {
@@ -1064,7 +1068,7 @@ class DexEngineImplTest {
     void shouldPropagateLabels() {
         registerWorkflow("foo", (ctx, arg) -> {
             assertThat(ctx.labels()).containsOnlyKeys("oof", "rab");
-            ctx.callChildWorkflow("bar", 1, WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
+            ctx.callChildWorkflow("bar", 1, null, WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
         registerWorkflow("bar", (ctx, arg) -> {

@@ -56,10 +56,11 @@ final class WorkflowHandleImpl<A, R> implements WorkflowHandle<A, R> {
         return workflowContext.callChildWorkflow(
                 this.workflowName,
                 this.workflowVersion,
+                options.workflowInstanceId(),
                 options.taskQueueName() != null
                         ? options.taskQueueName()
                         : defaultTaskQueueName,
-                options.concurrencyGroupId(),
+                options.concurrencyKey(),
                 options.argument(),
                 argumentConverter,
                 resultConverter);

@@ -21,30 +21,35 @@ package org.dependencytrack.dex.api;
 import org.jspecify.annotations.Nullable;
 
 /**
- * @param taskQueueName      Name of the queue to schedule the workflow task on.
- * @param argument           Argument of the call.
- * @param concurrencyGroupId Concurrency group ID of the workflow run.
+ * @param taskQueueName  Name of the queue to schedule the workflow task on.
+ * @param argument       Argument of the call.
+ * @param concurrencyKey Concurrency key of the workflow run.
  * @param <A>
  */
 public record WorkflowCallOptions<A extends @Nullable Object>(
+        @Nullable String workflowInstanceId,
         @Nullable String taskQueueName,
         @Nullable A argument,
-        @Nullable String concurrencyGroupId) {
+        @Nullable String concurrencyKey) {
 
     public WorkflowCallOptions() {
-        this(null, null, null);
+        this(null, null, null, null);
     }
 
-    public WorkflowCallOptions<A> withTaskQueueName(final @Nullable String taskQueueName) {
-        return new WorkflowCallOptions<>(taskQueueName, this.argument, this.concurrencyGroupId);
+    public WorkflowCallOptions<A> withWorkflowInstanceId(@Nullable String workflowInstanceId) {
+        return new WorkflowCallOptions<>(workflowInstanceId, this.taskQueueName, this.argument, this.concurrencyKey);
     }
 
-    public WorkflowCallOptions<A> withArgument(final @Nullable A argument) {
-        return new WorkflowCallOptions<>(this.taskQueueName, argument, this.concurrencyGroupId);
+    public WorkflowCallOptions<A> withTaskQueueName(@Nullable String taskQueueName) {
+        return new WorkflowCallOptions<>(this.workflowInstanceId, taskQueueName, this.argument, this.concurrencyKey);
     }
 
-    public WorkflowCallOptions<A> withConcurrencyGroupId(final @Nullable String concurrencyGroupId) {
-        return new WorkflowCallOptions<>(this.taskQueueName, this.argument, concurrencyGroupId);
+    public WorkflowCallOptions<A> withArgument(@Nullable A argument) {
+        return new WorkflowCallOptions<>(this.workflowInstanceId, this.taskQueueName, argument, this.concurrencyKey);
+    }
+
+    public WorkflowCallOptions<A> withConcurrencyKey(@Nullable String concurrencyKey) {
+        return new WorkflowCallOptions<>(this.workflowInstanceId, this.taskQueueName, this.argument, concurrencyKey);
     }
 
 }

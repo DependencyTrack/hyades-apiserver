@@ -27,7 +27,6 @@ import org.dependencytrack.dex.engine.WorkflowCommand.CreateActivityTaskCommand;
 import org.dependencytrack.dex.engine.WorkflowCommand.CreateChildRunCommand;
 import org.dependencytrack.dex.engine.WorkflowCommand.CreateTimerCommand;
 import org.dependencytrack.dex.engine.WorkflowCommand.RecordSideEffectResultCommand;
-import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.proto.event.v1.ActivityTaskCreated;
 import org.dependencytrack.dex.proto.event.v1.ChildRunCompleted;
@@ -55,7 +54,6 @@ import java.util.UUID;
 import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toInstant;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toProtoTimestamp;
-import static org.dependencytrack.dex.proto.common.v1.WorkflowRunConcurrencyMode.WORKFLOW_RUN_CONCURRENCY_MODE_SERIAL;
 
 /**
  * State of a workflow run.
@@ -71,9 +69,9 @@ final class WorkflowRunState {
     private final UUID id;
     private @Nullable String workflowName;
     private @Nullable Integer workflowVersion;
+    private @Nullable String workflowInstanceId;
     private @Nullable String taskQueueName;
-    private @Nullable String concurrencyGroupId;
-    private @Nullable WorkflowRunConcurrencyMode concurrencyMode;
+    private @Nullable String concurrencyKey;
     private final List<WorkflowEvent> eventHistory;
     private final List<WorkflowEvent> newEvents;
     private final List<WorkflowEvent> pendingActivityTaskCreatedEvents;
@@ -129,18 +127,18 @@ final class WorkflowRunState {
     }
 
     @Nullable
+    String workflowInstanceId() {
+        return workflowInstanceId;
+    }
+
+    @Nullable
     String taskQueueName() {
         return taskQueueName;
     }
 
     @Nullable
-    String concurrencyGroupId() {
-        return concurrencyGroupId;
-    }
-
-    @Nullable
-    WorkflowRunConcurrencyMode concurrencyMode() {
-        return concurrencyMode;
+    String concurrencyKey() {
+        return concurrencyKey;
     }
 
     List<WorkflowEvent> eventHistory() {
@@ -259,12 +257,12 @@ final class WorkflowRunState {
                 }
                 workflowName = event.getRunCreated().getWorkflowName();
                 workflowVersion = event.getRunCreated().getWorkflowVersion();
-                taskQueueName = event.getRunCreated().getTaskQueueName();
-                concurrencyGroupId = event.getRunCreated().hasConcurrencyGroupId()
-                        ? event.getRunCreated().getConcurrencyGroupId()
+                workflowInstanceId = event.getRunCreated().hasWorkflowInstanceId()
+                        ? event.getRunCreated().getWorkflowInstanceId()
                         : null;
-                concurrencyMode = event.getRunCreated().hasConcurrencyMode()
-                        ? WorkflowRunConcurrencyMode.fromProto(event.getRunCreated().getConcurrencyMode())
+                taskQueueName = event.getRunCreated().getTaskQueueName();
+                concurrencyKey = event.getRunCreated().hasConcurrencyKey()
+                        ? event.getRunCreated().getConcurrencyKey()
                         : null;
                 setStatus(WorkflowRunStatus.CREATED);
                 createdEvent = event;
@@ -331,7 +329,7 @@ final class WorkflowRunState {
                 pendingActivityTaskIdByEventId.remove(createdEventId);
             }
             case CHILD_RUN_CREATED -> {
-                final String runId = event.getChildRunCreated().getRunId();
+                final String runId = event.getChildRunCreated().getId();
                 pendingChildRunIdByEventId.put(event.getId(), UUID.fromString(runId));
             }
             case CHILD_RUN_COMPLETED -> {
@@ -375,7 +373,7 @@ final class WorkflowRunState {
         // If this is a sub-workflow run, ensure the parent run is informed about the outcome.
         if (createdEvent.getRunCreated().hasParentRun()) {
             final RunCreated.ParentRun parentRun = createdEvent.getRunCreated().getParentRun();
-            final var parentRunId = UUID.fromString(parentRun.getRunId());
+            final var parentRunId = UUID.fromString(parentRun.getId());
 
             final var childRunEventBuilder = WorkflowEvent.newBuilder()
                     .setId(-1)
@@ -431,11 +429,11 @@ final class WorkflowRunState {
         if (command.argument() != null) {
             newRunCreatedBuilder.setArgument(command.argument());
         }
-        if (this.concurrencyGroupId != null) {
-            newRunCreatedBuilder.setConcurrencyGroupId(this.concurrencyGroupId);
+        if (this.workflowInstanceId != null) {
+            newRunCreatedBuilder.setWorkflowInstanceId(this.workflowInstanceId);
         }
-        if (this.concurrencyMode != null) {
-            newRunCreatedBuilder.setConcurrencyMode(this.concurrencyMode.toProto());
+        if (this.concurrencyKey != null) {
+            newRunCreatedBuilder.setConcurrencyKey(this.concurrencyKey);
         }
         if (this.labels != null && !this.labels.isEmpty()) {
             newRunCreatedBuilder.putAllLabels(this.labels);
@@ -495,35 +493,25 @@ final class WorkflowRunState {
     private void processCreateChildRunCommand(final CreateChildRunCommand command) {
         final UUID childRunId = timeBasedEpochRandomGenerator().generate();
 
+
         final var childRunCreatedBuilder = ChildRunCreated.newBuilder()
-                .setRunId(childRunId.toString())
+                .setId(childRunId.toString())
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion())
-                .setQueueName(command.taskQueueName())
+                .setTaskQueueName(command.taskQueueName())
                 .setPriority(command.priority());
         final var runCreatedBuilder = RunCreated.newBuilder()
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion())
                 .setTaskQueueName(command.taskQueueName())
-                .setPriority(command.priority())
-                .setParentRun(RunCreated.ParentRun.newBuilder()
-                        .setChildRunCreatedEventId(command.eventId())
-                        .setRunId(this.id.toString())
-                        .setWorkflowName(this.workflowName)
-                        .setWorkflowVersion(this.workflowVersion)
-                        .build());
-        if (command.concurrencyGroupId() != null) {
-            childRunCreatedBuilder.setConcurrencyGroupId(command.concurrencyGroupId());
-            runCreatedBuilder.setConcurrencyGroupId(command.concurrencyGroupId());
-
-            // Always use SERIAL mode for workflow-to-workflow calls.
-            // EXCLUSIVE mode is difficult to enforce because creation
-            // of child runs happens asynchronously. It would also force
-            // workflows to deal with child runs failing to be scheduled.
-            // We can revisit this later but for the time being, only allowing
-            // SERIAL avoid *a lot* of complexity.
-            childRunCreatedBuilder.setConcurrencyMode(WORKFLOW_RUN_CONCURRENCY_MODE_SERIAL);
-            runCreatedBuilder.setConcurrencyMode(WORKFLOW_RUN_CONCURRENCY_MODE_SERIAL);
+                .setPriority(command.priority());
+        if (command.workflowInstanceId() != null) {
+            childRunCreatedBuilder.setWorkflowInstanceId(command.workflowInstanceId());
+            runCreatedBuilder.setWorkflowInstanceId(command.workflowInstanceId());
+        }
+        if (command.concurrencyKey() != null) {
+            childRunCreatedBuilder.setConcurrencyKey(command.concurrencyKey());
+            runCreatedBuilder.setConcurrencyKey(command.concurrencyKey());
         }
         if (command.labels() != null && !command.labels().isEmpty()) {
             childRunCreatedBuilder.putAllLabels(command.labels());
@@ -533,6 +521,16 @@ final class WorkflowRunState {
             childRunCreatedBuilder.setArgument(command.argument());
             runCreatedBuilder.setArgument(command.argument());
         }
+
+        final var parentRunBuilder = RunCreated.ParentRun.newBuilder()
+                .setChildRunCreatedEventId(command.eventId())
+                .setId(this.id.toString())
+                .setWorkflowName(this.workflowName)
+                .setWorkflowVersion(this.workflowVersion);
+        if (this.workflowInstanceId != null) {
+            parentRunBuilder.setWorkflowInstanceId(this.workflowInstanceId);
+        }
+        runCreatedBuilder.setParentRun(parentRunBuilder.build());
 
         applyEvent(WorkflowEvent.newBuilder()
                 .setId(command.eventId())

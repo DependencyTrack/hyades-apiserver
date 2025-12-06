@@ -175,12 +175,12 @@ final class WorkflowTaskScheduler implements Closeable {
                        , workflow_name
                        , priority
                     from dex_workflow_run as run
-                   where queue_name = :queueName
+                   where task_queue_name = :queueName
                      and status in ('CREATED', 'RUNNING', 'SUSPENDED')
                      -- Only consider runs with visible messages in their inbox.
                      and exists(
                        select 1
-                         from dex_workflow_run_inbox as inbox
+                         from dex_workflow_inbox as inbox
                         where inbox.workflow_run_id = run.id
                           and (visible_from is null or visible_from <= now())
                      )
@@ -192,24 +192,24 @@ final class WorkflowTaskScheduler implements Closeable {
                           and task.workflow_run_id = run.id
                      )
                      and (
-                       run.concurrency_group_id is null
+                       run.concurrency_key is null
                        or run.status != 'CREATED'
                        or (
-                         -- This run is the highest priority CREATED run in its concurrency group.
+                         -- This run is the highest priority CREATED run of a concurrency key.
                          not exists(
                            select 1
                              from dex_workflow_run as other
-                            where other.queue_name = run.queue_name
-                              and other.concurrency_group_id = run.concurrency_group_id
+                            where other.task_queue_name = run.task_queue_name
+                              and other.concurrency_key = run.concurrency_key
                               and other.status = 'CREATED'
                               and (other.priority, other.id) > (run.priority, run.id)
                          )
-                         -- No other run in the same concurrency group is currently executing.
+                         -- No other run with the same concurrency key is currently executing.
                          and not exists(
                            select 1
                              from dex_workflow_run as executing
-                            where executing.queue_name = run.queue_name
-                              and executing.concurrency_group_id = run.concurrency_group_id
+                            where executing.task_queue_name = run.task_queue_name
+                              and executing.concurrency_key = run.concurrency_key
                               and executing.status in ('RUNNING', 'SUSPENDED')
                          )
                        )

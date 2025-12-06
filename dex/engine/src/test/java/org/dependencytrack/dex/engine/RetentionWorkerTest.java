@@ -62,7 +62,7 @@ class RetentionWorkerTest {
                     """);
 
             handle.execute("""
-                    insert into dex_workflow_run(id, workflow_name, workflow_version, queue_name, status, created_at, completed_at)
+                    insert into dex_workflow_run(id, workflow_name, workflow_version, task_queue_name, status, created_at, completed_at)
                     values ('f6650566-5739-4880-a54d-863bbf705d3f', 'foo', 1, 'default', 'COMPLETED', now() - '10 days'::interval, now() - '5 days'::interval)
                          , ('c717aa74-0255-4b5a-a1b2-c641bf36f407', 'bar', 2, 'default', 'FAILED', now() - '9 days'::interval, now() - '4 days'::interval)
                          , ('e01d0fe8-f972-474c-bc70-ba8ce4bc4351', 'bar', 2, 'default', 'RUNNING', now() - '9 days'::interval, null)

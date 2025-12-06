@@ -85,15 +85,14 @@ message RunCreated {
   // Version of the workflow.
   int32 workflow_version = 2;
 
+  // ID of the workflow instance.
+  optional string workflow_instance_id = 3;
+
   // Argument of the workflow run.
-  optional org.dependencytrack.dex.payload.v1.Payload argument = 3;
+  optional org.dependencytrack.dex.payload.v1.Payload argument = 4;
 
-  // Concurrency group ID of the workflow run.
-  optional string concurrency_group_id = 4;
-
-  // Concurrency mode of the workflow run.
-  // Only set when a concurrency_group_id is also set.
-  optional org.dependencytrack.dex.common.v1.WorkflowRunConcurrencyMode concurrency_mode = 5;
+  // Concurrency key of the workflow run.
+  optional string concurrency_key = 5;
 
   // Name of the queue to schedule tasks on.
   string task_queue_name = 6;
@@ -112,13 +111,16 @@ message RunCreated {
     int32 child_run_created_event_id = 1;
 
     // ID of the parent run.
-    string run_id = 2;
+    string id = 2;
 
     // Workflow name of the parent run.
     string workflow_name = 3;
 
     // Workflow version of the parent run.
     int32 workflow_version = 4;
+
+    // Workflow instance ID of the parent run.
+    optional string workflow_instance_id = 5;
   }
 }
 
@@ -199,7 +201,7 @@ message ActivityTaskFailed {
 // A child run is created when a workflow invokes another workflow.
 message ChildRunCreated {
   // ID of the child run.
-  string run_id = 1;
+  string id = 1;
 
   // Name of the workflow.
   string workflow_name = 2;
@@ -207,15 +209,14 @@ message ChildRunCreated {
   // Version of the workflow.
   int32 workflow_version = 3;
 
+  // Workflow instance ID of the child run.
+  optional string workflow_instance_id = 4;
+
   // Name of the queue to schedule tasks on.
-  string queue_name = 4;
+  string task_queue_name = 5;
 
-  // Concurrency group ID of the child run.
-  optional string concurrency_group_id = 5;
-
-  // Concurrency mode of the child run.
-  // Only set when a concurrency_group_id is also set.
-  optional org.dependencytrack.dex.common.v1.WorkflowRunConcurrencyMode concurrency_mode = 6;
+  // Concurrency key of the child run.
+  optional string concurrency_key = 6;
 
   // Priority of the child run.
   int32 priority = 7;

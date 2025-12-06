@@ -28,6 +28,7 @@ import java.util.Map;
 public record ListWorkflowRunsRequest(
         @Nullable String workflowName,
         @Nullable Integer workflowVersion,
+        @Nullable String workflowInstanceId,
         @Nullable WorkflowRunStatus status,
         @Nullable Map<String, String> labels,
         @Nullable Instant createdAtFrom,
@@ -46,13 +47,14 @@ public record ListWorkflowRunsRequest(
     }
 
     public ListWorkflowRunsRequest() {
-        this(null, null, null, null, null, null, null, null, null, null, null, 10);
+        this(null, null, null, null, null, null, null, null, null, null, null, null, 10);
     }
 
     public ListWorkflowRunsRequest withWorkflowName(@Nullable String workflowName) {
         return new ListWorkflowRunsRequest(
                 workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.status,
                 this.labels,
                 this.createdAtFrom,
@@ -69,6 +71,24 @@ public record ListWorkflowRunsRequest(
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 workflowVersion,
+                this.workflowInstanceId,
+                this.status,
+                this.labels,
+                this.createdAtFrom,
+                this.createdAtTo,
+                this.completedAtFrom,
+                this.completedAtTo,
+                this.sortBy,
+                this.sortDirection,
+                this.pageToken,
+                this.limit);
+    }
+
+    public ListWorkflowRunsRequest withWorkflowInstanceId(@Nullable String workflowInstanceId) {
+        return new ListWorkflowRunsRequest(
+                this.workflowName,
+                this.workflowVersion,
+                workflowInstanceId,
                 this.status,
                 this.labels,
                 this.createdAtFrom,
@@ -85,6 +105,7 @@ public record ListWorkflowRunsRequest(
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 status,
                 this.labels,
                 this.createdAtFrom,
@@ -101,6 +122,7 @@ public record ListWorkflowRunsRequest(
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.status,
                 labelFilter,
                 this.createdAtFrom,
@@ -117,6 +139,7 @@ public record ListWorkflowRunsRequest(
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.status,
                 this.labels,
                 createdAtFrom,
@@ -133,6 +156,7 @@ public record ListWorkflowRunsRequest(
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.status,
                 this.labels,
                 this.createdAtFrom,
@@ -149,6 +173,7 @@ public record ListWorkflowRunsRequest(
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.status,
                 this.labels,
                 this.createdAtFrom,
@@ -165,6 +190,7 @@ public record ListWorkflowRunsRequest(
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.status,
                 this.labels,
                 this.createdAtFrom,
@@ -181,6 +207,7 @@ public record ListWorkflowRunsRequest(
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.status,
                 this.labels,
                 this.createdAtFrom,
@@ -197,6 +224,7 @@ public record ListWorkflowRunsRequest(
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.status,
                 this.labels,
                 this.createdAtFrom,
@@ -213,6 +241,7 @@ public record ListWorkflowRunsRequest(
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.status,
                 this.labels,
                 this.createdAtFrom,
@@ -229,6 +258,7 @@ public record ListWorkflowRunsRequest(
         return new ListWorkflowRunsRequest(
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.status,
                 this.labels,
                 this.createdAtFrom,

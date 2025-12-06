@@ -20,7 +20,6 @@ package org.dependencytrack.dex.engine.api.request;
 
 import org.dependencytrack.dex.api.WorkflowExecutor;
 import org.dependencytrack.dex.api.annotation.Workflow;
-import org.dependencytrack.dex.engine.api.WorkflowRunConcurrencyMode;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
@@ -31,23 +30,23 @@ import static java.util.Objects.requireNonNull;
 /**
  * Request for creating a workflow run.
  *
- * @param requestId          Unique identifier of the request.
- * @param workflowName       Name of the workflow. Must be known to the engine.
- * @param workflowVersion    Version of the workflow. Must be between 1 and 100.
- * @param taskQueueName      Name of the queue to schedule tasks on.
- * @param concurrencyGroupId Concurrency group ID for the run.
- * @param priority           Priority of the run. Must be between 0 and 100.
- * @param labels             Labels for the run.
- * @param argument           Argument for the run.
- * @param <A>                Type of the workflow argument.
+ * @param requestId       Unique identifier of the request.
+ * @param workflowName    Name of the workflow. Must be known to the engine.
+ * @param workflowVersion Version of the workflow. Must be between 1 and 100.
+ * @param taskQueueName   Name of the queue to schedule tasks on.
+ * @param concurrencyKey  Concurrency key for the run.
+ * @param priority        Priority of the run. Must be between 0 and 100.
+ * @param labels          Labels for the run.
+ * @param argument        Argument for the run.
+ * @param <A>             Type of the workflow argument.
  */
 public record CreateWorkflowRunRequest<A>(
         UUID requestId,
         String workflowName,
         int workflowVersion,
+        @Nullable String workflowInstanceId,
         @Nullable String taskQueueName,
-        @Nullable String concurrencyGroupId,
-        @Nullable WorkflowRunConcurrencyMode concurrencyMode,
+        @Nullable String concurrencyKey,
         int priority,
         @Nullable Map<String, String> labels,
         @Nullable A argument) {
@@ -61,10 +60,6 @@ public record CreateWorkflowRunRequest<A>(
         if (priority < 0 || priority > 100) {
             throw new IllegalArgumentException("priority must be between 0 and 100, but is " + priority);
         }
-        if ((concurrencyGroupId != null && concurrencyMode == null)
-                || (concurrencyGroupId == null && concurrencyMode != null)) {
-            throw new IllegalArgumentException("must provide either concurrencyGroupId AND concurrencyMode, or none");
-        }
     }
 
     public CreateWorkflowRunRequest(String workflowName, int workflowVersion) {
@@ -75,29 +70,40 @@ public record CreateWorkflowRunRequest<A>(
         this(getWorkflowName(executorClass), getWorkflowVersion(executorClass));
     }
 
-    public CreateWorkflowRunRequest<A> withTaskQueueName(final @Nullable String taskQueueName) {
+    public CreateWorkflowRunRequest<A> withWorkflowInstanceId(@Nullable String workflowInstanceId) {
         return new CreateWorkflowRunRequest<>(
                 this.requestId,
                 this.workflowName,
                 this.workflowVersion,
-                taskQueueName,
-                this.concurrencyGroupId,
-                this.concurrencyMode,
+                workflowInstanceId,
+                this.taskQueueName,
+                this.concurrencyKey,
                 this.priority,
                 this.labels,
                 this.argument);
     }
 
-    public CreateWorkflowRunRequest<A> withConcurrency(
-            @Nullable String concurrencyGroupId,
-            @Nullable WorkflowRunConcurrencyMode concurrencyMode) {
+    public CreateWorkflowRunRequest<A> withTaskQueueName(@Nullable String taskQueueName) {
         return new CreateWorkflowRunRequest<>(
                 this.requestId,
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
+                taskQueueName,
+                this.concurrencyKey,
+                this.priority,
+                this.labels,
+                this.argument);
+    }
+
+    public CreateWorkflowRunRequest<A> withConcurrencyKey(@Nullable String concurrencyKey) {
+        return new CreateWorkflowRunRequest<>(
+                this.requestId,
+                this.workflowName,
+                this.workflowVersion,
+                this.workflowInstanceId,
                 this.taskQueueName,
-                concurrencyGroupId,
-                concurrencyMode,
+                concurrencyKey,
                 this.priority,
                 this.labels,
                 this.argument);
@@ -108,9 +114,9 @@ public record CreateWorkflowRunRequest<A>(
                 this.requestId,
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.taskQueueName,
-                this.concurrencyGroupId,
-                this.concurrencyMode,
+                this.concurrencyKey,
                 priority,
                 this.labels,
                 this.argument);
@@ -121,9 +127,9 @@ public record CreateWorkflowRunRequest<A>(
                 this.requestId,
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.taskQueueName,
-                this.concurrencyGroupId,
-                this.concurrencyMode,
+                this.concurrencyKey,
                 this.priority,
                 labels,
                 this.argument);
@@ -134,9 +140,9 @@ public record CreateWorkflowRunRequest<A>(
                 this.requestId,
                 this.workflowName,
                 this.workflowVersion,
+                this.workflowInstanceId,
                 this.taskQueueName,
-                this.concurrencyGroupId,
-                this.concurrencyMode,
+                this.concurrencyKey,
                 this.priority,
                 this.labels,
                 argument);

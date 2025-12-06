@@ -65,11 +65,11 @@ import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
 
 public final class WorkflowDao extends AbstractDao {
 
-    public WorkflowDao(final Handle jdbiHandle) {
+    public WorkflowDao(Handle jdbiHandle) {
         super(jdbiHandle);
     }
 
-    public boolean createWorkflowTaskQueue(final CreateTaskQueueRequest request) {
+    public boolean createWorkflowTaskQueue(CreateTaskQueueRequest request) {
         return jdbiHandle
                 .createQuery("""
                         select dex_create_workflow_task_queue(:name, cast(:capacity as smallint))
@@ -79,7 +79,7 @@ public final class WorkflowDao extends AbstractDao {
                 .one();
     }
 
-    public boolean updateWorkflowTaskQueue(final UpdateTaskQueueRequest request) {
+    public boolean updateWorkflowTaskQueue(UpdateTaskQueueRequest request) {
         final Query query = jdbiHandle.createQuery("""
                 with
                 cte_queue as (
@@ -115,7 +115,7 @@ public final class WorkflowDao extends AbstractDao {
         return updated;
     }
 
-    public boolean doesWorkflowTaskQueueExists(final String name) {
+    public boolean doesWorkflowTaskQueueExists(String name) {
         final Query query = jdbiHandle.createQuery("""
                 select exists(
                   select 1
@@ -133,7 +133,7 @@ public final class WorkflowDao extends AbstractDao {
     record ListWorkflowTaskQueuesPageToken(String lastName) implements PageToken {
     }
 
-    public Page<TaskQueue> listWorkflowTaskQueues(final ListTaskQueuesRequest request) {
+    public Page<TaskQueue> listWorkflowTaskQueues(ListTaskQueuesRequest request) {
         requireNonNull(request, "request must not be null");
 
         final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
@@ -182,7 +182,7 @@ public final class WorkflowDao extends AbstractDao {
         return new Page<>(resultItems, encodePageToken(nextPageToken));
     }
 
-    public Map<UUID, UUID> createRuns(final Collection<CreateWorkflowRunCommand> commands) {
+    public Map<UUID, UUID> createRuns(Collection<CreateWorkflowRunCommand> commands) {
         final Query query = jdbiHandle.createQuery("""
                 with
                 cte_cmd as (
@@ -193,9 +193,9 @@ public final class WorkflowDao extends AbstractDao {
                     , :parentIds
                     , :workflowNames
                     , :workflowVersions
-                    , :queueNames
-                    , :concurrencyGroupIds
-                    , :concurrencyModes
+                    , :workflowInstanceIds
+                    , :taskQueueNames
+                    , :concurrencyKeys
                     , :priorities
                     , cast(:labelsJsons as jsonb[])
                     , :createdAts
@@ -205,9 +205,9 @@ public final class WorkflowDao extends AbstractDao {
                     , parent_id
                     , workflow_name
                     , workflow_version
-                    , queue_name
-                    , concurrency_group_id
-                    , concurrency_mode
+                    , workflow_instance_id
+                    , task_queue_name
+                    , concurrency_key
                     , priority
                     , labels
                     , created_at
@@ -219,9 +219,9 @@ public final class WorkflowDao extends AbstractDao {
                   , parent_id
                   , workflow_name
                   , workflow_version
-                  , queue_name
-                  , concurrency_group_id
-                  , concurrency_mode
+                  , workflow_instance_id
+                  , task_queue_name
+                  , concurrency_key
                   , priority
                   , labels
                   , created_at
@@ -230,17 +230,16 @@ public final class WorkflowDao extends AbstractDao {
                        , parent_id
                        , workflow_name
                        , workflow_version
-                       , queue_name
-                       , concurrency_group_id
-                       , concurrency_mode
+                       , workflow_instance_id
+                       , task_queue_name
+                       , concurrency_key
                        , priority
                        , labels
                        , created_at
                     from cte_cmd
-                  -- Index expression of dex_workflow_run_exclusive_concurrency_idx.
-                  on conflict (concurrency_group_id)
-                        where concurrency_group_id is not null
-                          and concurrency_mode = 'EXCLUSIVE'
+                  -- Index expression of dex_workflow_run_workflow_instance_id_idx.
+                  on conflict (workflow_instance_id)
+                        where workflow_instance_id is not null
                           and status in ('CREATED', 'RUNNING', 'SUSPENDED')
                   do nothing
                   returning id
@@ -257,9 +256,9 @@ public final class WorkflowDao extends AbstractDao {
         final var parentIds = new @Nullable UUID[commands.size()];
         final var workflowNames = new String[commands.size()];
         final var workflowVersions = new int[commands.size()];
-        final var queueNames = new String[commands.size()];
-        final var concurrencyGroupIds = new @Nullable String[commands.size()];
-        final var concurrencyModes = new @Nullable String[commands.size()];
+        final var workflowInstanceIds = new @Nullable String[commands.size()];
+        final var taskQueueNames = new String[commands.size()];
+        final var concurrencyKeys = new @Nullable String[commands.size()];
         final var priorities = new int[commands.size()];
         final var labelsJsons = new @Nullable String[commands.size()];
         final var createdAts = new Instant[commands.size()];
@@ -282,11 +281,9 @@ public final class WorkflowDao extends AbstractDao {
             parentIds[i] = command.parentId();
             workflowNames[i] = command.workflowName();
             workflowVersions[i] = command.workflowVersion();
-            queueNames[i] = command.queueName();
-            concurrencyGroupIds[i] = command.concurrencyGroupId();
-            concurrencyModes[i] = command.concurrencyMode() != null
-                    ? command.concurrencyMode().name()
-                    : null;
+            workflowInstanceIds[i] = command.workflowInstanceId();
+            taskQueueNames[i] = command.taskQueueName();
+            concurrencyKeys[i] = command.concurrencyKey();
             priorities[i] = command.priority();
             labelsJsons[i] = labelsJson;
             createdAts[i] = command.createdAt();
@@ -299,9 +296,9 @@ public final class WorkflowDao extends AbstractDao {
                 .bind("parentIds", parentIds)
                 .bind("workflowNames", workflowNames)
                 .bind("workflowVersions", workflowVersions)
-                .bind("queueNames", queueNames)
-                .bind("concurrencyGroupIds", concurrencyGroupIds)
-                .bind("concurrencyModes", concurrencyModes)
+                .bind("workflowInstanceIds", workflowInstanceIds)
+                .bind("taskQueueNames", taskQueueNames)
+                .bind("concurrencyKeys", concurrencyKeys)
                 .bind("priorities", priorities)
                 .bind("labelsJsons", labelsJsons)
                 .bind("createdAts", createdAts)
@@ -327,8 +324,8 @@ public final class WorkflowDao extends AbstractDao {
     }
 
     public List<UUID> updateAndUnlockRuns(
-            final UUID workerInstanceId,
-            final Collection<UpdateAndUnlockRunCommand> commands) {
+            UUID workerInstanceId,
+            Collection<UpdateAndUnlockRunCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 with
                 cte_cmd as (
@@ -397,7 +394,7 @@ public final class WorkflowDao extends AbstractDao {
                 .list();
     }
 
-    public @Nullable WorkflowRunMetadataRow getRunMetadataById(final UUID id) {
+    public @Nullable WorkflowRunMetadataRow getRunMetadataById(UUID id) {
         final Query query = jdbiHandle.createQuery("""
                 select *
                   from dex_workflow_run
@@ -412,10 +409,10 @@ public final class WorkflowDao extends AbstractDao {
     }
 
     public Map<UUID, PolledWorkflowTask> pollAndLockWorkflowTasks(
-            final UUID workerInstanceId,
-            final String queueName,
-            final Collection<PollWorkflowTaskCommand> commands,
-            final int limit) {
+            UUID workerInstanceId,
+            String queueName,
+            Collection<PollWorkflowTaskCommand> commands,
+            int limit) {
         final Query query = jdbiHandle.createQuery("""
                 with
                 cte_poll as (
@@ -453,15 +450,16 @@ public final class WorkflowDao extends AbstractDao {
                 select run.id
                      , run.workflow_name
                      , run.workflow_version
-                     , run.queue_name
-                     , run.concurrency_group_id
+                     , run.workflow_instance_id
+                     , run.task_queue_name
+                     , run.concurrency_key
                      , run.priority
                      , run.labels
                      , cte_locked.locked_until
                      , cte_locked.lock_version
                   from dex_workflow_run as run
                  inner join cte_locked
-                    on cte_locked.queue_name = run.queue_name
+                    on cte_locked.queue_name = run.task_queue_name
                    and cte_locked.workflow_run_id = run.id
                 """);
 
@@ -485,7 +483,7 @@ public final class WorkflowDao extends AbstractDao {
                 .collectToMap(PolledWorkflowTask::runId, Function.identity());
     }
 
-    public int unlockWorkflowTasks(final UUID workerInstanceId, final Collection<WorkflowTask> tasks) {
+    public int unlockWorkflowTasks(UUID workerInstanceId, Collection<WorkflowTask> tasks) {
         final Update update = jdbiHandle.createUpdate("""
                 update dex_workflow_task as task
                    set locked_by = null
@@ -519,9 +517,9 @@ public final class WorkflowDao extends AbstractDao {
                 .execute();
     }
 
-    public int createRunInboxEvents(final SequencedCollection<CreateWorkflowRunInboxEntryCommand> commands) {
+    public int createRunInboxEvents(SequencedCollection<CreateWorkflowRunInboxEntryCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
-                insert into dex_workflow_run_inbox (
+                insert into dex_workflow_inbox (
                   workflow_run_id
                 , visible_from
                 , event
@@ -549,23 +547,23 @@ public final class WorkflowDao extends AbstractDao {
     }
 
     public Map<UUID, PolledWorkflowEvents> pollRunEvents(
-            final UUID workerInstanceId,
-            final Collection<GetWorkflowRunHistoryRequest> requests) {
+            UUID workerInstanceId,
+            Collection<GetWorkflowRunHistoryRequest> requests) {
         final Query query = jdbiHandle.createQuery("""
                 with
                 cte_history as (
-                    select dex_workflow_run_history.workflow_run_id
+                    select history.workflow_run_id
                          , event
                          , sequence_number
-                      from dex_workflow_run_history
+                      from dex_workflow_history as history
                      inner join unnest(:historyRequestRunIds, :historyRequestOffsets) as request(run_id, "offset")
-                        on request.run_id = dex_workflow_run_history.workflow_run_id
-                       and request."offset" < dex_workflow_run_history.sequence_number
+                        on request.run_id = history.workflow_run_id
+                       and request."offset" < history.sequence_number
                      order by sequence_number
                 ),
                 cte_inbox_poll_candidate as (
                     select id
-                      from dex_workflow_run_inbox
+                      from dex_workflow_inbox
                      where workflow_run_id = any(:historyRequestRunIds)
                        and (visible_from is null or visible_from <= now())
                      order by id
@@ -573,14 +571,14 @@ public final class WorkflowDao extends AbstractDao {
                       skip locked
                 ),
                 cte_polled_inbox as (
-                    update dex_workflow_run_inbox
+                    update dex_workflow_inbox as inbox
                        set locked_by = :workerInstanceId
                          , dequeue_count = coalesce(dequeue_count, 0) + 1
                       from cte_inbox_poll_candidate
-                     where cte_inbox_poll_candidate.id = dex_workflow_run_inbox.id
-                    returning dex_workflow_run_inbox.workflow_run_id
-                            , dex_workflow_run_inbox.event
-                            , dex_workflow_run_inbox.dequeue_count
+                     where cte_inbox_poll_candidate.id = inbox.id
+                    returning inbox.workflow_run_id
+                            , inbox.event
+                            , inbox.dequeue_count
                 )
                 select 'HISTORY' as event_type
                      , workflow_run_id
@@ -656,10 +654,10 @@ public final class WorkflowDao extends AbstractDao {
         return polledEventsByRunId;
     }
 
-    public List<WorkflowEvent> getRunInboxByRunId(final UUID runId) {
+    public List<WorkflowEvent> getRunInboxByRunId(UUID runId) {
         final Query query = jdbiHandle.createQuery("""
                 select event
-                  from dex_workflow_run_inbox
+                  from dex_workflow_inbox
                  where workflow_run_id = :runId
                  order by id
                 """);
@@ -671,10 +669,10 @@ public final class WorkflowDao extends AbstractDao {
     }
 
     public int unlockRunInboxEvents(
-            final UUID workerInstanceId,
-            final Collection<UnlockWorkflowRunInboxEventsCommand> commands) {
+            UUID workerInstanceId,
+            Collection<UnlockWorkflowRunInboxEventsCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
-                update dex_workflow_run_inbox
+                update dex_workflow_inbox
                    set locked_by = null
                      , visible_from = now() + t.visibility_delay
                   from unnest(:runIds, :visibilityDelays) as t(run_id, visibility_delay)
@@ -700,15 +698,15 @@ public final class WorkflowDao extends AbstractDao {
     }
 
     public int deleteRunInboxEvents(
-            final UUID workerInstanceId,
-            final Collection<DeleteInboxEventsCommand> commands) {
+            UUID workerInstanceId,
+            Collection<DeleteInboxEventsCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 delete
-                  from dex_workflow_run_inbox
+                  from dex_workflow_inbox as inbox
                  using unnest(:workflowRunIds, :onlyLockeds) as delete_command (workflow_run_id, only_locked)
-                 where dex_workflow_run_inbox.workflow_run_id = delete_command.workflow_run_id
+                 where inbox.workflow_run_id = delete_command.workflow_run_id
                    and (not delete_command.only_locked
-                         or dex_workflow_run_inbox.locked_by = :workerInstanceId)
+                         or inbox.locked_by = :workerInstanceId)
                 """);
 
         final var runIds = new UUID[commands.size()];
@@ -728,9 +726,9 @@ public final class WorkflowDao extends AbstractDao {
                 .execute();
     }
 
-    public int createRunHistoryEntries(final Collection<CreateWorkflowRunHistoryEntryCommand> commands) {
+    public int createRunHistoryEntries(Collection<CreateWorkflowRunHistoryEntryCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
-                insert into dex_workflow_run_history (
+                insert into dex_workflow_history (
                   workflow_run_id
                 , sequence_number
                 , event
@@ -757,10 +755,10 @@ public final class WorkflowDao extends AbstractDao {
                 .execute();
     }
 
-    public int truncateRunHistories(final Collection<UUID> runIds) {
+    public int truncateRunHistories(Collection<UUID> runIds) {
         final Update update = jdbiHandle.createUpdate("""
                 delete
-                  from dex_workflow_run_history
+                  from dex_workflow_history
                  where workflow_run_id = any(:runIds)
                 """);
 

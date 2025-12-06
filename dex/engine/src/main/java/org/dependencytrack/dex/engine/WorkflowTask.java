@@ -32,8 +32,9 @@ public record WorkflowTask(
         UUID workflowRunId,
         String workflowName,
         int workflowVersion,
+        String workflowInstanceId,
         String queueName,
-        @Nullable String concurrencyGroupId,
+        @Nullable String concurrencyKey,
         int priority,
         @Nullable Map<String, String> labels,
         int attempt,
@@ -50,8 +51,9 @@ public record WorkflowTask(
                 polledTask.runId(),
                 polledTask.workflowName(),
                 polledTask.workflowVersion(),
+                polledTask.workflowInstanceId(),
                 polledTask.queueName(),
-                polledTask.concurrencyGroupId(),
+                polledTask.concurrencyKey(),
                 polledTask.priority(),
                 polledTask.labels(),
                 attempt,
@@ -67,7 +69,8 @@ public record WorkflowTask(
     public Set<Tag> meterTags() {
         return Set.of(
                 Tag.of("workflowName", workflowName),
-                Tag.of("workflowVersion", String.valueOf(workflowVersion)));
+                Tag.of("workflowVersion", String.valueOf(workflowVersion)),
+                Tag.of("workflowInstanceId", String.valueOf(workflowInstanceId)));
     }
 
 }
