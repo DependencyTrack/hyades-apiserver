@@ -428,7 +428,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         }
 
         switch (event.getSubjectCase()) {
-            case EXECUTION_STARTED -> onExecutionStarted(event);
+            case WORKFLOW_TASK_STARTED -> onWorkflowTaskStarted(event);
             case RUN_CREATED -> onRunCreated(event);
             case RUN_STARTED -> onRunStarted(event);
             case RUN_CANCELED -> onRunCanceled(event);
@@ -459,7 +459,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         return null;
     }
 
-    private void onExecutionStarted(final WorkflowEvent event) {
+    private void onWorkflowTaskStarted(final WorkflowEvent event) {
         currentTime = toInstant(event.getTimestamp());
     }
 

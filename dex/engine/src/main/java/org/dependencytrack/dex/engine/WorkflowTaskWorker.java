@@ -24,10 +24,10 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.dependencytrack.dex.engine.TaskEvent.WorkflowTaskAbandonedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.WorkflowTaskCompletedEvent;
 import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskCommand;
-import org.dependencytrack.dex.proto.event.v1.ExecutionCompleted;
-import org.dependencytrack.dex.proto.event.v1.ExecutionStarted;
 import org.dependencytrack.dex.proto.event.v1.RunStarted;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
+import org.dependencytrack.dex.proto.event.v1.WorkflowTaskCompleted;
+import org.dependencytrack.dex.proto.event.v1.WorkflowTaskStarted;
 
 import java.time.Duration;
 import java.util.List;
@@ -90,13 +90,13 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
             return;
         }
 
-        // Inject an ExecutionStarted event.
+        // Inject a WorkflowTaskStarted event.
         // Its timestamp will be used as deterministic "now" timestamp while processing new events.
         workflowRunState.applyEvent(
                 WorkflowEvent.newBuilder()
                         .setId(-1)
                         .setTimestamp(Timestamps.now())
-                        .setExecutionStarted(ExecutionStarted.getDefaultInstance())
+                        .setWorkflowTaskStarted(WorkflowTaskStarted.getDefaultInstance())
                         .build());
 
         int eventsAdded = 0;
@@ -144,7 +144,7 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
                 WorkflowEvent.newBuilder()
                         .setId(-1)
                         .setTimestamp(Timestamps.now())
-                        .setExecutionCompleted(ExecutionCompleted.getDefaultInstance())
+                        .setWorkflowTaskCompleted(WorkflowTaskCompleted.getDefaultInstance())
                         .build());
 
         try {
