@@ -24,12 +24,14 @@ import org.dependencytrack.dex.api.failure.ApplicationFailureException;
 import org.dependencytrack.dex.api.failure.CancellationFailureException;
 import org.dependencytrack.dex.api.failure.ChildWorkflowFailureException;
 import org.dependencytrack.dex.api.failure.FailureException;
+import org.dependencytrack.dex.api.failure.InternalFailureException;
 import org.dependencytrack.dex.api.failure.SideEffectFailureException;
 import org.dependencytrack.dex.proto.failure.v1.ActivityFailureDetails;
 import org.dependencytrack.dex.proto.failure.v1.ApplicationFailureDetails;
 import org.dependencytrack.dex.proto.failure.v1.CancellationFailureDetails;
 import org.dependencytrack.dex.proto.failure.v1.ChildWorkflowFailureDetails;
 import org.dependencytrack.dex.proto.failure.v1.Failure;
+import org.dependencytrack.dex.proto.failure.v1.InternalFailureDetails;
 import org.dependencytrack.dex.proto.failure.v1.SideEffectFailureDetails;
 import org.jspecify.annotations.Nullable;
 
@@ -64,10 +66,6 @@ final class FailureConverter {
                 final CancellationFailureDetails details = failure.getCancellationFailureDetails();
                 yield new CancellationFailureException(details.getReason());
             }
-            case SIDE_EFFECT_FAILURE_DETAILS -> {
-                final SideEffectFailureDetails details = failure.getSideEffectFailureDetails();
-                yield new SideEffectFailureException(details.getSideEffectName(), cause);
-            }
             case CHILD_WORKFLOW_FAILURE_DETAILS -> {
                 final ChildWorkflowFailureDetails details = failure.getChildWorkflowFailureDetails();
                 yield new ChildWorkflowFailureException(
@@ -75,6 +73,11 @@ final class FailureConverter {
                         details.getWorkflowName(),
                         details.getWorkflowVersion(),
                         cause);
+            }
+            case INTERNAL_FAILURE_DETAILS -> new InternalFailureException(failure.getMessage(), cause);
+            case SIDE_EFFECT_FAILURE_DETAILS -> {
+                final SideEffectFailureDetails details = failure.getSideEffectFailureDetails();
+                yield new SideEffectFailureException(details.getSideEffectName(), cause);
             }
             default -> throw new IllegalArgumentException(
                     "Unknown details type %s for failure: %s".formatted(
@@ -123,16 +126,6 @@ final class FailureConverter {
                                         .setReason(cancellationException.getReason())
                                         .build());
             }
-            case final SideEffectFailureException sideEffectException -> {
-                if (sideEffectException.getOriginalMessage() != null) {
-                    failureBuilder.setMessage(sideEffectException.getOriginalMessage());
-                }
-                failureBuilder
-                        .setSideEffectFailureDetails(
-                                SideEffectFailureDetails.newBuilder()
-                                        .setSideEffectName(sideEffectException.getSideEffectName())
-                                        .build());
-            }
             case final ChildWorkflowFailureException childWorkflowException -> {
                 if (childWorkflowException.getOriginalMessage() != null) {
                     failureBuilder.setMessage(childWorkflowException.getOriginalMessage());
@@ -143,6 +136,22 @@ final class FailureConverter {
                                         .setWorkflowRunId(childWorkflowException.getRunId().toString())
                                         .setWorkflowName(childWorkflowException.getWorkflowName())
                                         .setWorkflowVersion(childWorkflowException.getWorkflowVersion())
+                                        .build());
+            }
+            case final InternalFailureException internalFailureException -> {
+                if (internalFailureException.getMessage() != null) {
+                    failureBuilder.setMessage(internalFailureException.getMessage());
+                }
+                failureBuilder.setInternalFailureDetails(InternalFailureDetails.getDefaultInstance());
+            }
+            case final SideEffectFailureException sideEffectException -> {
+                if (sideEffectException.getOriginalMessage() != null) {
+                    failureBuilder.setMessage(sideEffectException.getOriginalMessage());
+                }
+                failureBuilder
+                        .setSideEffectFailureDetails(
+                                SideEffectFailureDetails.newBuilder()
+                                        .setSideEffectName(sideEffectException.getSideEffectName())
                                         .build());
             }
             default -> {

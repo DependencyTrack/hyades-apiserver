@@ -29,7 +29,7 @@ public final class SideEffectFailureException extends FailureException {
 
     private final String sideEffectName;
 
-    public SideEffectFailureException(final String sideEffectName, final @Nullable Throwable cause) {
+    public SideEffectFailureException(String sideEffectName, @Nullable Throwable cause) {
         super("Side effect %s failed".formatted(sideEffectName), null, cause, false);
         this.sideEffectName = sideEffectName;
     }

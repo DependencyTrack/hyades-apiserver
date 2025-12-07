@@ -34,10 +34,10 @@ public final class ChildWorkflowFailureException extends FailureException {
     private final int workflowVersion;
 
     public ChildWorkflowFailureException(
-            final UUID runId,
-            final String workflowName,
-            final int workflowVersion,
-            final @Nullable Throwable cause) {
+            UUID runId,
+            String workflowName,
+            int workflowVersion,
+            @Nullable Throwable cause) {
         super("Run %s of child workflow %s v%d failed".formatted(runId, workflowName, workflowVersion), null, cause, false);
         this.runId = runId;
         this.workflowName = workflowName;

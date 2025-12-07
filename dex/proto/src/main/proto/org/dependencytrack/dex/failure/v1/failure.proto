@@ -33,6 +33,7 @@ message Failure {
     CancellationFailureDetails cancellation_failure_details = 27;
     SideEffectFailureDetails side_effect_failure_details = 28;
     ChildWorkflowFailureDetails child_workflow_failure_details = 29;
+    InternalFailureDetails internal_failure_details = 30;
   }
 }
 
@@ -56,4 +57,7 @@ message ChildWorkflowFailureDetails {
   string workflow_run_id = 1;
   string workflow_name = 2;
   int32 workflow_version = 3;
+}
+
+message InternalFailureDetails {
 }

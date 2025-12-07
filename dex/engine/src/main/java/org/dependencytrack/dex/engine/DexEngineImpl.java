@@ -30,6 +30,7 @@ import org.dependencytrack.dex.api.ActivityExecutor;
 import org.dependencytrack.dex.api.RetryPolicy;
 import org.dependencytrack.dex.api.WorkflowExecutor;
 import org.dependencytrack.dex.api.failure.ApplicationFailureException;
+import org.dependencytrack.dex.api.failure.InternalFailureException;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskAbandonedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskCompletedEvent;
@@ -77,6 +78,7 @@ import org.dependencytrack.dex.engine.persistence.request.GetWorkflowRunHistoryR
 import org.dependencytrack.dex.engine.support.Buffer;
 import org.dependencytrack.dex.proto.event.v1.ActivityTaskCompleted;
 import org.dependencytrack.dex.proto.event.v1.ActivityTaskFailed;
+import org.dependencytrack.dex.proto.event.v1.ChildRunFailed;
 import org.dependencytrack.dex.proto.event.v1.ExternalEventReceived;
 import org.dependencytrack.dex.proto.event.v1.RunCanceled;
 import org.dependencytrack.dex.proto.event.v1.RunCreated;
@@ -100,6 +102,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -941,6 +944,9 @@ final class DexEngineImpl implements DexEngine {
         final var activityTasksToDelete = new ArrayList<ActivityTaskId>();
         final var completedRuns = new ArrayList<WorkflowRunMetadata>();
 
+        final var now = Timestamps.now();
+        final var nowInstant = toInstant(now);
+
         for (final WorkflowRunState run : actionableRuns) {
             if (!runsCompletedEventListeners.isEmpty() && run.status().isTerminal()) {
                 completedRuns.add(new WorkflowRunMetadata(
@@ -968,9 +974,6 @@ final class DexEngineImpl implements DexEngine {
                                 sequenceNumber++,
                                 newEvent));
             }
-
-            final var now = Timestamps.now();
-            final var nowInstant = toInstant(now);
 
             for (final WorkflowMessage message : run.pendingMessages()) {
                 // If the outbound message is a RunCreated event, the recipient
@@ -1066,10 +1069,47 @@ final class DexEngineImpl implements DexEngine {
         }
 
         if (!createWorkflowRunCommands.isEmpty()) {
-            final Map<UUID, UUID> createdRunIdByRequestId = workflowDao.createRuns(createWorkflowRunCommands);
-            assert createdRunIdByRequestId.size() == createWorkflowRunCommands.size()
-                    : "Created runs: actual=%d, expected=%d".formatted(
-                    createdRunIdByRequestId.size(), createWorkflowRunCommands.size());
+            final Collection<UUID> createdRunIds = workflowDao.createRuns(createWorkflowRunCommands).values();
+
+            // When another workflow run with identical instance ID already exists in non-terminal
+            // state, a new run will not be created. Since runs are created due to a parent workflow
+            // spawning a child workflow, we need to inform the parent about this failure.
+            //
+            // This scenario should be pretty rare but needs to be dealt with nonetheless.
+            if (createdRunIds.size() != createWorkflowRunCommands.size()) {
+                final ListIterator<WorkflowMessage> messageIterator = messagesToCreate.listIterator();
+                while (messageIterator.hasNext()) {
+                    final WorkflowMessage pendingMessage = messageIterator.next();
+
+                    if (!pendingMessage.event().hasRunCreated()
+                            || !pendingMessage.event().getRunCreated().hasParentRun()) {
+                        // Only inspect RunCreated events with a parent.
+                        continue;
+                    }
+
+                    if (createdRunIds.contains(pendingMessage.recipientRunId())) {
+                        // The message is addressed to a run that was successfully created; Nothing to do.
+                        continue;
+                    }
+
+                    final RunCreated runCreated = pendingMessage.event().getRunCreated();
+                    final RunCreated.ParentRun parentRun = runCreated.getParentRun();
+                    final var exception = new InternalFailureException(
+                            "Another run already exists in non-terminal state for instance ID: " + runCreated.getWorkflowInstanceId());
+
+                    final var childRunFailedEvent = WorkflowEvent.newBuilder()
+                            .setId(-1)
+                            .setTimestamp(now)
+                            .setChildRunFailed(
+                                    ChildRunFailed.newBuilder()
+                                            .setChildRunCreatedEventId(pendingMessage.event().getId())
+                                            .setFailure(FailureConverter.toFailure(exception))
+                                            .build())
+                            .build();
+
+                    messageIterator.set(new WorkflowMessage(UUID.fromString(parentRun.getId()), childRunFailedEvent));
+                }
+            }
         }
 
         if (!messagesToCreate.isEmpty()) {

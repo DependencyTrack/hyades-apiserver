@@ -27,7 +27,7 @@ public final class CancellationFailureException extends FailureException {
 
     private final String reason;
 
-    public CancellationFailureException(final String reason) {
+    public CancellationFailureException(String reason) {
         super("Canceled with reason: %s".formatted(reason), reason, null, false);
         this.reason = reason;
     }

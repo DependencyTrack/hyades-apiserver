@@ -21,28 +21,18 @@ package org.dependencytrack.dex.api.failure;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A {@link FailureException} thrown by application code.
+ * A {@link FailureException} thrown by the engine when encountering internal errors.
+ * <p>
+ * Application code must never throw this exception.
  */
-public non-sealed class ApplicationFailureException extends FailureException {
+public final class InternalFailureException extends FailureException {
 
-    private final boolean isTerminal;
-
-    public ApplicationFailureException(
-            @Nullable String message,
-            @Nullable Throwable cause,
-            boolean isTerminal) {
-        super(message, null, cause);
-        this.isTerminal = isTerminal;
+    public InternalFailureException(@Nullable String message, @Nullable Throwable cause) {
+        super(message, null, cause, false);
     }
 
-    public ApplicationFailureException(
-            @Nullable String message,
-            @Nullable Throwable cause) {
-        this(message, cause, false);
-    }
-
-    public boolean isTerminal() {
-        return isTerminal;
+    public InternalFailureException(@Nullable String message) {
+        this(message, null);
     }
 
 }

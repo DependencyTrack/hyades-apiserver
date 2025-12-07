@@ -621,6 +621,45 @@ class DexEngineImplTest {
             assertThat(runId).isNull();
         }
 
+        @Test
+        void shouldFailChildWorkflowWhenRunSameInstanceIdIsInProgress() {
+            registerWorkflow("parent", (ctx, arg) -> {
+                ctx.callChildWorkflow("child", 1, "instanceId", WORKFLOW_TASK_QUEUE, null, null, voidConverter(), voidConverter()).await();
+                return null;
+            });
+            registerWorkflow("child", (ctx, arg) -> {
+                ctx.createTimer("sleep", Duration.ofSeconds(3)).await();
+                return null;
+            });
+            registerWorkflowWorker("workflow-worker", 2);
+            engine.start();
+
+            final UUID childRunId = engine.createRun(
+                    new CreateWorkflowRunRequest<>("child", 1)
+                            .withWorkflowInstanceId("instanceId"));
+            awaitRunStatus(childRunId, WorkflowRunStatus.RUNNING);
+
+            final UUID parentRunId = engine.createRun(
+                    new CreateWorkflowRunRequest<>("parent", 1));
+            awaitRunStatus(parentRunId, WorkflowRunStatus.FAILED);
+
+            assertThat(engine.listRunEvents(new ListWorkflowRunEventsRequest(parentRunId)).items()).satisfiesExactly(
+                    entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_STARTED),
+                    entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_CREATED),
+                    entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
+                    entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.CHILD_RUN_CREATED),
+                    entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_COMPLETED),
+                    entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_STARTED),
+                    entry -> {
+                        assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.CHILD_RUN_FAILED);
+                        assertThat(entry.getChildRunFailed().getFailure().hasInternalFailureDetails()).isTrue();
+                        assertThat(entry.getChildRunFailed().getFailure().getMessage()).isEqualTo(
+                                "Another run already exists in non-terminal state for instance ID: instanceId");
+                    },
+                    entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
+                    entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_COMPLETED));
+        }
+
     }
 
     @Nested
