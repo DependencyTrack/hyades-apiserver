@@ -20,6 +20,7 @@ package org.dependencytrack.dex.engine.persistence;
 
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.PageToken;
+import org.dependencytrack.dex.engine.WorkflowMessage;
 import org.dependencytrack.dex.engine.WorkflowTask;
 import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
@@ -28,10 +29,9 @@ import org.dependencytrack.dex.engine.api.request.ListTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateTaskQueueRequest;
 import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunCommand;
 import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
-import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunInboxEntryCommand;
-import org.dependencytrack.dex.engine.persistence.command.DeleteInboxEventsCommand;
+import org.dependencytrack.dex.engine.persistence.command.DeleteWorkflowMessagesCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskCommand;
-import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowRunInboxEventsCommand;
+import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowMessagesCommand;
 import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunCommand;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
@@ -517,25 +517,28 @@ public final class WorkflowDao extends AbstractDao {
                 .execute();
     }
 
-    public int createRunInboxEvents(SequencedCollection<CreateWorkflowRunInboxEntryCommand> commands) {
+    public int createMessages(SequencedCollection<WorkflowMessage> messages) {
         final Update update = jdbiHandle.createUpdate("""
                 insert into dex_workflow_inbox (
                   workflow_run_id
                 , visible_from
                 , event
+                , subject
                 )
-                select * from unnest(:runIds, :visibleFroms, :events)
+                select * from unnest(:runIds, :visibleFroms, :events, :subjects)
                 """);
 
-        final var runIds = new UUID[commands.size()];
-        final var visibleFroms = new @Nullable Instant[commands.size()];
-        final var events = new byte[commands.size()][];
+        final var runIds = new UUID[messages.size()];
+        final var visibleFroms = new @Nullable Instant[messages.size()];
+        final var events = new byte[messages.size()][];
+        final var subjects = new String[messages.size()];
 
         int i = 0;
-        for (final CreateWorkflowRunInboxEntryCommand command : commands) {
-            runIds[i] = command.workflowRunId();
-            visibleFroms[i] = command.visibleFrom();
-            events[i] = command.event().toByteArray();
+        for (final WorkflowMessage message : messages) {
+            runIds[i] = message.recipientRunId();
+            visibleFroms[i] = message.visibleFrom();
+            events[i] = message.event().toByteArray();
+            subjects[i] = message.event().getSubjectCase().name();
             i++;
         }
 
@@ -543,6 +546,7 @@ public final class WorkflowDao extends AbstractDao {
                 .bind("runIds", runIds)
                 .bind("visibleFroms", visibleFroms)
                 .bind("events", events)
+                .bind("subjects", subjects)
                 .execute();
     }
 
@@ -654,23 +658,26 @@ public final class WorkflowDao extends AbstractDao {
         return polledEventsByRunId;
     }
 
-    public List<WorkflowEvent> getRunInboxByRunId(UUID runId) {
+    public boolean hasMessageWithSubject(UUID runId, WorkflowEvent.SubjectCase subject) {
         final Query query = jdbiHandle.createQuery("""
-                select event
-                  from dex_workflow_inbox
-                 where workflow_run_id = :runId
-                 order by id
+                select exists (
+                  select 1
+                    from dex_workflow_inbox
+                   where workflow_run_id = :runId
+                     and subject = :subject
+                )
                 """);
 
         return query
                 .bind("runId", runId)
-                .mapTo(WorkflowEvent.class)
-                .list();
+                .bind("subject", subject.name())
+                .mapTo(boolean.class)
+                .one();
     }
 
-    public int unlockRunInboxEvents(
+    public int unlockMessages(
             UUID workerInstanceId,
-            Collection<UnlockWorkflowRunInboxEventsCommand> commands) {
+            Collection<UnlockWorkflowMessagesCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 update dex_workflow_inbox
                    set locked_by = null
@@ -684,7 +691,7 @@ public final class WorkflowDao extends AbstractDao {
         final var visibilityDelays = new Duration[commands.size()];
 
         int i = 0;
-        for (final UnlockWorkflowRunInboxEventsCommand command : commands) {
+        for (final UnlockWorkflowMessagesCommand command : commands) {
             runIds[i] = command.workflowRunId();
             visibilityDelays[i] = command.visibilityDelay();
             i++;
@@ -697,9 +704,9 @@ public final class WorkflowDao extends AbstractDao {
                 .execute();
     }
 
-    public int deleteRunInboxEvents(
+    public int deleteMessages(
             UUID workerInstanceId,
-            Collection<DeleteInboxEventsCommand> commands) {
+            Collection<DeleteWorkflowMessagesCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 delete
                   from dex_workflow_inbox as inbox
@@ -713,7 +720,7 @@ public final class WorkflowDao extends AbstractDao {
         final var onlyLockeds = new boolean[commands.size()];
 
         int i = 0;
-        for (final DeleteInboxEventsCommand command : commands) {
+        for (final DeleteWorkflowMessagesCommand command : commands) {
             runIds[i] = command.workflowRunId();
             onlyLockeds[i] = command.onlyLocked();
             i++;
@@ -732,19 +739,22 @@ public final class WorkflowDao extends AbstractDao {
                   workflow_run_id
                 , sequence_number
                 , event
+                , subject
                 )
-                select * from unnest(:runIds, :sequenceNumbers, :events)
+                select * from unnest(:runIds, :sequenceNumbers, :events, :subjects)
                 """);
 
         final var runIds = new UUID[commands.size()];
         final var sequenceNumbers = new int[commands.size()];
         final var events = new byte[commands.size()][];
+        final var subjects = new String[commands.size()];
 
         int i = 0;
         for (final CreateWorkflowRunHistoryEntryCommand command : commands) {
             runIds[i] = command.workflowRunId();
             sequenceNumbers[i] = command.sequenceNumber();
             events[i] = command.event().toByteArray();
+            subjects[i] = command.event().getSubjectCase().name();
             i++;
         }
 
@@ -752,6 +762,7 @@ public final class WorkflowDao extends AbstractDao {
                 .bind("runIds", runIds)
                 .bind("sequenceNumbers", sequenceNumbers)
                 .bind("events", events)
+                .bind("subjects", subjects)
                 .execute();
     }
 

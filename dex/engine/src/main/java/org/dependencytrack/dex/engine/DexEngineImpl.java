@@ -62,12 +62,11 @@ import org.dependencytrack.dex.engine.persistence.WorkflowRunDao;
 import org.dependencytrack.dex.engine.persistence.command.CreateActivityTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunCommand;
 import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
-import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunInboxEntryCommand;
-import org.dependencytrack.dex.engine.persistence.command.DeleteInboxEventsCommand;
+import org.dependencytrack.dex.engine.persistence.command.DeleteWorkflowMessagesCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.ScheduleActivityTaskRetryCommand;
-import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowRunInboxEventsCommand;
+import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowMessagesCommand;
 import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunCommand;
 import org.dependencytrack.dex.engine.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
@@ -476,7 +475,7 @@ final class DexEngineImpl implements DexEngine {
         final var now = Timestamps.now();
         final var nowInstant = toInstant(now);
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>(requests.size());
-        final var createInboxEntryCommands = new ArrayList<CreateWorkflowRunInboxEntryCommand>(requests.size());
+        final var messagesToCreate = new ArrayList<WorkflowMessage>(requests.size());
 
         for (final CreateWorkflowRunRequest<?> request : requests) {
             @SuppressWarnings("rawtypes") final WorkflowMetadata workflowMetadata =
@@ -525,10 +524,9 @@ final class DexEngineImpl implements DexEngine {
                 runCreatedBuilder.setArgument(argumentPayload);
             }
 
-            createInboxEntryCommands.add(
-                    new CreateWorkflowRunInboxEntryCommand(
+            messagesToCreate.add(
+                    new WorkflowMessage(
                             runId,
-                            null,
                             WorkflowEvent.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(now)
@@ -544,14 +542,14 @@ final class DexEngineImpl implements DexEngine {
                 return Collections.emptyList();
             }
             if (createdRunIdByRequestId.size() != createWorkflowRunCommands.size()) {
-                createInboxEntryCommands.removeIf(
-                        command -> createdRunIdByRequestId.containsValue(command.workflowRunId()));
+                messagesToCreate.removeIf(
+                        command -> createdRunIdByRequestId.containsValue(command.recipientRunId()));
             }
 
-            final int createdInboxEvents = dao.createRunInboxEvents(createInboxEntryCommands);
-            assert createdInboxEvents == createInboxEntryCommands.size()
-                    : "Created inbox events: actual=%d, expected=%d".formatted(
-                    createdInboxEvents, createInboxEntryCommands.size());
+            final int createdMessages = dao.createMessages(messagesToCreate);
+            assert createdMessages == messagesToCreate.size()
+                    : "Created messages: actual=%d, expected=%d".formatted(
+                    createdMessages, messagesToCreate.size());
 
             return createdRunIdByRequestId.entrySet().stream()
                     .map(entry -> new CreateWorkflowRunResponse(entry.getKey(), entry.getValue()))
@@ -653,15 +651,14 @@ final class DexEngineImpl implements DexEngine {
                 throw new IllegalStateException("Workflow run %s is already in terminal status".formatted(runId));
             }
 
-            final boolean hasPendingCancellation = dao.getRunInboxByRunId(runId).stream()
-                    .anyMatch(WorkflowEvent::hasRunCanceled);
+            final boolean hasPendingCancellation = dao.hasMessageWithSubject(runId, WorkflowEvent.SubjectCase.RUN_CANCELED);
             if (hasPendingCancellation) {
                 throw new IllegalStateException("Cancellation of workflow run %s already pending".formatted(runId));
             }
 
-            final int createdInboxEvents = dao.createRunInboxEvents(List.of(
-                    new CreateWorkflowRunInboxEntryCommand(runId, null, cancellationEvent)));
-            assert createdInboxEvents == 1;
+            final int createdMessages = dao.createMessages(List.of(
+                    new WorkflowMessage(runId, cancellationEvent)));
+            assert createdMessages == 1;
         });
     }
 
@@ -685,15 +682,14 @@ final class DexEngineImpl implements DexEngine {
                 throw new IllegalStateException("Workflow run %s is already suspended".formatted(runId));
             }
 
-            final boolean hasPendingSuspension = dao.getRunInboxByRunId(runId).stream()
-                    .anyMatch(WorkflowEvent::hasRunSuspended);
+            final boolean hasPendingSuspension = dao.hasMessageWithSubject(runId, WorkflowEvent.SubjectCase.RUN_SUSPENDED);
             if (hasPendingSuspension) {
                 throw new IllegalStateException("Suspension of workflow run %s is already pending".formatted(runId));
             }
 
-            final int createdInboxEvents = dao.createRunInboxEvents(List.of(
-                    new CreateWorkflowRunInboxEntryCommand(runId, null, suspensionEvent)));
-            assert createdInboxEvents == 1;
+            final int createdMessages = dao.createMessages(List.of(
+                    new WorkflowMessage(runId, suspensionEvent)));
+            assert createdMessages == 1;
         });
     }
 
@@ -717,15 +713,14 @@ final class DexEngineImpl implements DexEngine {
                 throw new IllegalStateException("Workflow run %s can not be resumed because it is not suspended".formatted(runId));
             }
 
-            final boolean hasPendingResumption = dao.getRunInboxByRunId(runId).stream()
-                    .anyMatch(WorkflowEvent::hasRunResumed);
+            final boolean hasPendingResumption = dao.hasMessageWithSubject(runId, WorkflowEvent.SubjectCase.RUN_RESUMED);
             if (hasPendingResumption) {
                 throw new IllegalStateException("Resumption of workflow run %s is already pending".formatted(runId));
             }
 
-            final int createdInboxEvents = dao.createRunInboxEvents(List.of(
-                    new CreateWorkflowRunInboxEntryCommand(runId, null, resumeEvent)));
-            assert createdInboxEvents == 1;
+            final int createdMessages = dao.createMessages(List.of(
+                    new WorkflowMessage(runId, resumeEvent)));
+            assert createdMessages == 1;
         });
     }
 
@@ -778,7 +773,7 @@ final class DexEngineImpl implements DexEngine {
             final var dao = new WorkflowDao(handle);
             final var now = Timestamps.now();
 
-            final var createCommands = new ArrayList<CreateWorkflowRunInboxEntryCommand>(externalEvents.size());
+            final var messagesToCreate = new ArrayList<WorkflowMessage>(externalEvents.size());
             for (final ExternalEvent externalEvent : externalEvents) {
                 final var subjectBuilder = ExternalEventReceived.newBuilder()
                         .setId(externalEvent.eventId());
@@ -786,10 +781,9 @@ final class DexEngineImpl implements DexEngine {
                     subjectBuilder.setPayload(externalEvent.payload());
                 }
 
-                createCommands.add(
-                        new CreateWorkflowRunInboxEntryCommand(
+                messagesToCreate.add(
+                        new WorkflowMessage(
                                 externalEvent.workflowRunId(),
-                                null,
                                 WorkflowEvent.newBuilder()
                                         .setId(-1)
                                         .setTimestamp(now)
@@ -797,7 +791,7 @@ final class DexEngineImpl implements DexEngine {
                                         .build()));
             }
 
-            dao.createRunInboxEvents(createCommands);
+            dao.createMessages(messagesToCreate);
         });
     }
 
@@ -878,16 +872,16 @@ final class DexEngineImpl implements DexEngine {
                 IntervalFunction.ofExponentialBackoff(
                         Duration.ofSeconds(5), 1.5, Duration.ofMinutes(30));
 
-        final List<UnlockWorkflowRunInboxEventsCommand> unlockCommands = events.stream()
+        final List<UnlockWorkflowMessagesCommand> unlockCommands = events.stream()
                 .map(abandonCommand -> {
                     final Duration visibilityDelay = Duration.ofMillis(
                             abandonDelayIntervalFunction.apply(abandonCommand.task().attempt() + 1));
 
-                    return new UnlockWorkflowRunInboxEventsCommand(abandonCommand.task().workflowRunId(), visibilityDelay);
+                    return new UnlockWorkflowMessagesCommand(abandonCommand.task().workflowRunId(), visibilityDelay);
                 })
                 .toList();
 
-        final int unlockedEvents = dao.unlockRunInboxEvents(this.config.instanceId(), unlockCommands);
+        final int unlockedEvents = dao.unlockMessages(this.config.instanceId(), unlockCommands);
         assert unlockedEvents > 1;
 
         final int unlockedWorkflowRuns = dao.unlockWorkflowTasks(
@@ -940,7 +934,7 @@ final class DexEngineImpl implements DexEngine {
         }
 
         final var createHistoryEntryCommands = new ArrayList<CreateWorkflowRunHistoryEntryCommand>(events.size() * 2);
-        final var createInboxEntryCommands = new ArrayList<CreateWorkflowRunInboxEntryCommand>(events.size() * 2);
+        final var messagesToCreate = new ArrayList<WorkflowMessage>(events.size() * 2);
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>();
         final var continuedAsNewRunIds = new ArrayList<UUID>();
         final var createActivityTaskCommands = new ArrayList<CreateActivityTaskCommand>();
@@ -975,18 +969,10 @@ final class DexEngineImpl implements DexEngine {
                                 newEvent));
             }
 
-            for (final WorkflowEvent timerElapsedEvent : run.pendingTimerElapsedEvents()) {
-                createInboxEntryCommands.add(
-                        new CreateWorkflowRunInboxEntryCommand(
-                                run.id(),
-                                toInstant(timerElapsedEvent.getTimestamp()),
-                                timerElapsedEvent));
-            }
-
             final var now = Timestamps.now();
             final var nowInstant = toInstant(now);
 
-            for (final WorkflowRunMessage message : run.pendingWorkflowMessages()) {
+            for (final WorkflowMessage message : run.pendingMessages()) {
                 // If the outbound message is a RunCreated event, the recipient
                 // workflow run will need to be created first.
                 boolean shouldCreateWorkflowRun = message.event().hasRunCreated();
@@ -1017,11 +1003,7 @@ final class DexEngineImpl implements DexEngine {
                                     nowInstant));
                 }
 
-                createInboxEntryCommands.add(
-                        new CreateWorkflowRunInboxEntryCommand(
-                                message.recipientRunId(),
-                                toInstant(message.event().getTimestamp()),
-                                message.event()));
+                messagesToCreate.add(message);
             }
 
             for (final WorkflowEvent newEvent : run.pendingActivityTaskCreatedEvents()) {
@@ -1042,10 +1024,9 @@ final class DexEngineImpl implements DexEngine {
             // work such as child runs and activity tasks.
             if (run.status().isTerminal()) {
                 for (final UUID childRunId : run.pendingChildRunIds()) {
-                    createInboxEntryCommands.add(
-                            new CreateWorkflowRunInboxEntryCommand(
+                    messagesToCreate.add(
+                            new WorkflowMessage(
                                     childRunId,
-                                    /* visibleFrom */ null,
                                     WorkflowEvent.newBuilder()
                                             .setId(-1)
                                             .setTimestamp(now)
@@ -1091,11 +1072,11 @@ final class DexEngineImpl implements DexEngine {
                     createdRunIdByRequestId.size(), createWorkflowRunCommands.size());
         }
 
-        if (!createInboxEntryCommands.isEmpty()) {
-            final int createdInboxEvents = workflowDao.createRunInboxEvents(createInboxEntryCommands);
-            assert createdInboxEvents == createInboxEntryCommands.size()
-                    : "Created inbox events: actual=%d, expected=%d".formatted(
-                    createdInboxEvents, createInboxEntryCommands.size());
+        if (!messagesToCreate.isEmpty()) {
+            final int createdMessages = workflowDao.createMessages(messagesToCreate);
+            assert createdMessages == messagesToCreate.size()
+                    : "Created messages: actual=%d, expected=%d".formatted(
+                    createdMessages, messagesToCreate.size());
         }
 
         if (!createActivityTaskCommands.isEmpty()) {
@@ -1111,20 +1092,20 @@ final class DexEngineImpl implements DexEngine {
             activityDao.deleteActivityTasks(activityTasksToDelete);
         }
 
-        // Delete *all* inbox events for terminated runs,
-        // or only locked events for non-terminated runs.
-        // The latter is crucial since new events could have
-        // been added to inboxes in the meantime.
-        final int deletedInboxEvents = workflowDao.deleteRunInboxEvents(
+        // Delete *all* messages for terminated runs,
+        // or only locked messages for non-terminated runs.
+        // The latter is crucial since new messages could have
+        // been added in the meantime.
+        final int deletedMessages = workflowDao.deleteMessages(
                 this.config.instanceId(),
                 actionableRuns.stream()
-                        .map(run -> new DeleteInboxEventsCommand(
+                        .map(run -> new DeleteWorkflowMessagesCommand(
                                 run.id(),
                                 /* onlyLocked */ !run.status().isTerminal()))
                         .toList());
-        assert deletedInboxEvents >= updatedRunIds.size()
-                : "Deleted inbox events: actual=%d, expectedAtLeast=%d".formatted(
-                deletedInboxEvents, updatedRunIds.size());
+        assert deletedMessages >= updatedRunIds.size()
+                : "Deleted messages: actual=%d, expectedAtLeast=%d".formatted(
+                deletedMessages, updatedRunIds.size());
 
         if (!completedRuns.isEmpty()) {
             engineEvents.add(new WorkflowRunsCompletedEvent(completedRuns));
@@ -1165,7 +1146,7 @@ final class DexEngineImpl implements DexEngine {
             final ActivityDao activityDao,
             final Collection<ActivityTaskCompletedEvent> events) {
         final var tasksToDelete = new ArrayList<ActivityTask>(events.size());
-        final var createInboxEntryCommandByTaskId = new LinkedHashMap<ActivityTaskId, CreateWorkflowRunInboxEntryCommand>(events.size());
+        final var workflowMessageByTaskId = new LinkedHashMap<ActivityTaskId, WorkflowMessage>(events.size());
 
         for (final ActivityTaskCompletedEvent event : events) {
             tasksToDelete.add(event.task());
@@ -1175,11 +1156,10 @@ final class DexEngineImpl implements DexEngine {
             if (event.result() != null) {
                 taskCompletedBuilder.setResult(event.result());
             }
-            createInboxEntryCommandByTaskId.put(
+            workflowMessageByTaskId.put(
                     event.task().id(),
-                    new CreateWorkflowRunInboxEntryCommand(
+                    new WorkflowMessage(
                             event.task().id().workflowRunId(),
-                            null,
                             WorkflowEvent.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(toProtoTimestamp(event.timestamp()))
@@ -1189,7 +1169,7 @@ final class DexEngineImpl implements DexEngine {
 
         final List<ActivityTaskId> deletedTaskIds = activityDao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
         if (deletedTaskIds.size() != tasksToDelete.size()) {
-            createInboxEntryCommandByTaskId.keySet().removeIf(taskId -> {
+            workflowMessageByTaskId.keySet().removeIf(taskId -> {
                 if (!deletedTaskIds.contains(taskId)) {
                     LOGGER.warn("""
                             A successfully completed activity task with ID {} could not be deleted, \
@@ -1204,11 +1184,11 @@ final class DexEngineImpl implements DexEngine {
             });
         }
 
-        if (!createInboxEntryCommandByTaskId.isEmpty()) {
-            final int createdInboxEvents = workflowDao.createRunInboxEvents(createInboxEntryCommandByTaskId.sequencedValues());
-            assert createdInboxEvents == createInboxEntryCommandByTaskId.size()
-                    : "Created inbox events: actual=%d, expected=%d".formatted(
-                    createdInboxEvents, createInboxEntryCommandByTaskId.size());
+        if (!workflowMessageByTaskId.isEmpty()) {
+            final int createdMessages = workflowDao.createMessages(workflowMessageByTaskId.sequencedValues());
+            assert createdMessages == workflowMessageByTaskId.size()
+                    : "Created workflow messages: actual=%d, expected=%d".formatted(
+                    createdMessages, workflowMessageByTaskId.size());
         }
     }
 
@@ -1217,7 +1197,7 @@ final class DexEngineImpl implements DexEngine {
             final ActivityDao activityDao,
             final Collection<ActivityTaskFailedEvent> events) {
         final var tasksToDelete = new ArrayList<ActivityTask>(events.size());
-        final var createInboxEntyCommandByTaskId = new LinkedHashMap<ActivityTaskId, CreateWorkflowRunInboxEntryCommand>(events.size());
+        final var workflowMessageByTaskId = new LinkedHashMap<ActivityTaskId, WorkflowMessage>(events.size());
         final var retriesToSchedule = new ArrayList<ScheduleActivityTaskRetryCommand>();
 
         for (final ActivityTaskFailedEvent event : events) {
@@ -1234,11 +1214,10 @@ final class DexEngineImpl implements DexEngine {
             if (isTerminal || hasExceededMaxAttempts) {
                 tasksToDelete.add(task);
 
-                createInboxEntyCommandByTaskId.put(
+                workflowMessageByTaskId.put(
                         task.id(),
-                        new CreateWorkflowRunInboxEntryCommand(
+                        new WorkflowMessage(
                                 task.id().workflowRunId(),
-                                /* visibleFrom */ null,
                                 WorkflowEvent.newBuilder()
                                         .setId(-1)
                                         .setTimestamp(toProtoTimestamp(event.timestamp()))
@@ -1261,7 +1240,7 @@ final class DexEngineImpl implements DexEngine {
         if (!tasksToDelete.isEmpty()) {
             final List<ActivityTaskId> deletedTaskIds = activityDao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
             if (deletedTaskIds.size() != tasksToDelete.size()) {
-                createInboxEntyCommandByTaskId.keySet().removeIf(taskId -> {
+                workflowMessageByTaskId.keySet().removeIf(taskId -> {
                     if (!deletedTaskIds.contains(taskId)) {
                         LOGGER.warn("""
                                 A terminally failed activity task with ID {} could not be deleted, \
@@ -1277,11 +1256,11 @@ final class DexEngineImpl implements DexEngine {
             }
         }
 
-        if (!createInboxEntyCommandByTaskId.isEmpty()) {
-            final int createdInboxEvents = workflowDao.createRunInboxEvents(createInboxEntyCommandByTaskId.sequencedValues());
-            assert createdInboxEvents == createInboxEntyCommandByTaskId.size()
-                    : "Created inbox events: actual=%d, expected=%d".formatted(
-                    createdInboxEvents, createInboxEntyCommandByTaskId.size());
+        if (!workflowMessageByTaskId.isEmpty()) {
+            final int createdWorkflowMessages = workflowDao.createMessages(workflowMessageByTaskId.sequencedValues());
+            assert createdWorkflowMessages == workflowMessageByTaskId.size()
+                    : "Created workflow messages: actual=%d, expected=%d".formatted(
+                    createdWorkflowMessages, workflowMessageByTaskId.size());
         }
 
         if (!retriesToSchedule.isEmpty()) {

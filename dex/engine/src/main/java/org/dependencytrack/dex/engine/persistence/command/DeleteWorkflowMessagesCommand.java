@@ -20,5 +20,5 @@ package org.dependencytrack.dex.engine.persistence.command;
 
 import java.util.UUID;
 
-public record DeleteInboxEventsCommand(UUID workflowRunId, boolean onlyLocked) {
+public record DeleteWorkflowMessagesCommand(UUID workflowRunId, boolean onlyLocked) {
 }

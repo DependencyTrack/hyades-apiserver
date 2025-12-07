@@ -75,8 +75,7 @@ final class WorkflowRunState {
     private final List<WorkflowEvent> eventHistory;
     private final List<WorkflowEvent> newEvents;
     private final List<WorkflowEvent> pendingActivityTaskCreatedEvents;
-    private final List<WorkflowEvent> pendingTimerElapsedEvents;
-    private final List<WorkflowRunMessage> pendingMessages;
+    private final List<WorkflowMessage> pendingMessages;
     private final Map<Integer, UUID> pendingChildRunIdByEventId;
     private final Map<Integer, ActivityTaskId> pendingActivityTaskIdByEventId;
     private @Nullable WorkflowEvent createdEvent;
@@ -102,7 +101,6 @@ final class WorkflowRunState {
         this.eventHistory = new ArrayList<>(eventHistory.size());
         this.newEvents = new ArrayList<>();
         this.pendingActivityTaskCreatedEvents = new ArrayList<>();
-        this.pendingTimerElapsedEvents = new ArrayList<>();
         this.pendingMessages = new ArrayList<>();
         this.pendingChildRunIdByEventId = new HashMap<>();
         this.pendingActivityTaskIdByEventId = new HashMap<>();
@@ -153,11 +151,7 @@ final class WorkflowRunState {
         return pendingActivityTaskCreatedEvents;
     }
 
-    List<WorkflowEvent> pendingTimerElapsedEvents() {
-        return pendingTimerElapsedEvents;
-    }
-
-    List<WorkflowRunMessage> pendingWorkflowMessages() {
+    List<WorkflowMessage> pendingMessages() {
         return pendingMessages;
     }
 
@@ -398,7 +392,7 @@ final class WorkflowRunState {
                 throw new IllegalStateException("Unexpected command status: " + command.status());
             }
 
-            pendingMessages.add(new WorkflowRunMessage(parentRunId, childRunEventBuilder.build()));
+            pendingMessages.add(new WorkflowMessage(parentRunId, childRunEventBuilder.build()));
         }
 
         // Record completion of the run in the history.
@@ -413,11 +407,13 @@ final class WorkflowRunState {
         if (command.failure() != null) {
             subjectBuilder.setFailure(command.failure());
         }
-        applyEvent(WorkflowEvent.newBuilder()
-                .setId(command.eventId())
-                .setTimestamp(Timestamps.now())
-                .setRunCompleted(subjectBuilder.build())
-                .build(), /* isNew */ true);
+        applyEvent(
+                WorkflowEvent.newBuilder()
+                        .setId(command.eventId())
+                        .setTimestamp(Timestamps.now())
+                        .setRunCompleted(subjectBuilder.build())
+                        .build(),
+                /* isNew */ true);
     }
 
     private void processContinueAsNewCommand(final ContinueRunAsNewCommand command) {
@@ -446,15 +442,15 @@ final class WorkflowRunState {
         this.eventHistory.clear();
         this.newEvents.clear();
         this.pendingActivityTaskCreatedEvents.clear();
-        this.pendingTimerElapsedEvents.clear();
         this.pendingMessages.clear();
-        this.pendingMessages.add(new WorkflowRunMessage(
-                this.id,
-                WorkflowEvent.newBuilder()
-                        .setId(-1)
-                        .setTimestamp(Timestamps.now())
-                        .setRunCreated(newRunCreatedBuilder)
-                        .build()));
+        this.pendingMessages.add(
+                new WorkflowMessage(
+                        this.id,
+                        WorkflowEvent.newBuilder()
+                                .setId(-1)
+                                .setTimestamp(Timestamps.now())
+                                .setRunCreated(newRunCreatedBuilder)
+                                .build()));
     }
 
     private void processRecordSideEffectResultCommand(final RecordSideEffectResultCommand command) {
@@ -464,11 +460,12 @@ final class WorkflowRunState {
             subjectBuilder.setResult(command.result());
         }
 
-        applyEvent(WorkflowEvent.newBuilder()
-                .setId(command.eventId())
-                .setTimestamp(Timestamps.now())
-                .setSideEffectExecuted(subjectBuilder.build())
-                .build());
+        applyEvent(
+                WorkflowEvent.newBuilder()
+                        .setId(command.eventId())
+                        .setTimestamp(Timestamps.now())
+                        .setSideEffectExecuted(subjectBuilder.build())
+                        .build());
     }
 
     private void processCreateActivityTaskCommand(final CreateActivityTaskCommand command) {
@@ -532,40 +529,50 @@ final class WorkflowRunState {
         }
         runCreatedBuilder.setParentRun(parentRunBuilder.build());
 
-        applyEvent(WorkflowEvent.newBuilder()
-                .setId(command.eventId())
-                .setTimestamp(Timestamps.now())
-                .setChildRunCreated(childRunCreatedBuilder.build())
-                .build(), /* isNew */ true);
-
-        pendingMessages.add(new WorkflowRunMessage(
-                childRunId,
+        applyEvent(
                 WorkflowEvent.newBuilder()
-                        .setId(-1)
+                        .setId(command.eventId())
                         .setTimestamp(Timestamps.now())
-                        .setRunCreated(runCreatedBuilder.build())
-                        .build()));
+                        .setChildRunCreated(childRunCreatedBuilder.build())
+                        .build(),
+                /* isNew */ true);
+
+        pendingMessages.add(
+                new WorkflowMessage(
+                        childRunId,
+                        WorkflowEvent.newBuilder()
+                                .setId(-1)
+                                .setTimestamp(Timestamps.now())
+                                .setRunCreated(runCreatedBuilder.build())
+                                .build()));
     }
 
     private void processCreateTimerCommand(final CreateTimerCommand command) {
         final Timestamp elapseAt = toProtoTimestamp(command.elapseAt());
 
-        applyEvent(WorkflowEvent.newBuilder()
-                .setId(command.eventId())
-                .setTimestamp(Timestamps.now())
-                .setTimerCreated(TimerCreated.newBuilder()
-                        .setName(command.name())
-                        .setElapseAt(elapseAt)
-                        .build())
-                .build(), /* isNew */ true);
+        applyEvent(
+                WorkflowEvent.newBuilder()
+                        .setId(command.eventId())
+                        .setTimestamp(Timestamps.now())
+                        .setTimerCreated(TimerCreated.newBuilder()
+                                .setName(command.name())
+                                .setElapseAt(elapseAt)
+                                .build())
+                        .build(),
+                /* isNew */ true);
 
-        pendingTimerElapsedEvents.add(WorkflowEvent.newBuilder()
-                .setId(command.elapsedEventId())
-                .setTimestamp(elapseAt)
-                .setTimerElapsed(TimerElapsed.newBuilder()
-                        .setTimerCreatedEventId(command.eventId())
-                        .build())
-                .build());
+        pendingMessages.add(
+                new WorkflowMessage(
+                        this.id,
+                        WorkflowEvent.newBuilder()
+                                .setId(command.elapsedEventId())
+                                .setTimestamp(elapseAt)
+                                .setTimerElapsed(
+                                        TimerElapsed.newBuilder()
+                                                .setTimerCreatedEventId(command.eventId())
+                                                .build())
+                                .build(),
+                        command.elapseAt()));
     }
 
     private void setStatus(final WorkflowRunStatus newStatus) {

@@ -53,6 +53,7 @@ create table dex_workflow_history (
   workflow_run_id uuid
 , sequence_number int
 , event bytea not null
+, subject text not null
 , constraint dex_workflow_history_pk primary key (workflow_run_id, sequence_number)
 , constraint dex_workflow_history_workflow_run_fk foreign key (workflow_run_id) references dex_workflow_run (id) on delete cascade deferrable initially deferred
 ) partition by hash (workflow_run_id);
@@ -73,6 +74,7 @@ create table dex_workflow_inbox (
 , locked_by text
 , dequeue_count smallint
 , event bytea not null
+, subject text not null
 , constraint dex_workflow_inbox_pk primary key (id)
 ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 80);
 
