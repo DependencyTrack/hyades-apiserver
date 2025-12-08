@@ -190,7 +190,7 @@ begin
   end if;
 
   execute format($q$
-    create table %I partition of dex_workflow_task for values in (%L)
+    create unlogged table %I partition of dex_workflow_task for values in (%L)
       with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 85);
   $q$, partition_name, queue_name);
 
