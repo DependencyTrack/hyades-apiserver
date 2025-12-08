@@ -151,10 +151,13 @@ final class ActivityTaskScheduler implements Closeable {
                  where status = 'ACTIVE'
                    and queue.capacity - (
                          select count(*)
-                           from dex_activity_task
-                          where queue_name = queue.name
-                            and status = 'QUEUED'
-                          limit cte_candidate.capacity
+                           from (
+                             select 1
+                               from dex_activity_task
+                              where queue_name = queue.name
+                                and status = 'QUEUED'
+                              limit cte_candidate.capacity
+                           ) as limited
                        ) > 0
                 """);
 
@@ -168,10 +171,13 @@ final class ActivityTaskScheduler implements Closeable {
                 with
                 cte_queue_depth as (
                   select count(*) as depth
-                    from dex_activity_task
-                   where queue_name = :queueName
-                     and status = 'QUEUED'
-                   limit :capacity
+                    from (
+                      select 1
+                        from dex_activity_task
+                       where queue_name = :queueName
+                         and status = 'QUEUED'
+                       limit :capacity
+                    ) as limited
                 ),
                 cte_eligible_task as (
                   select workflow_run_id

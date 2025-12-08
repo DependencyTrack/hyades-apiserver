@@ -150,9 +150,12 @@ final class WorkflowTaskScheduler implements Closeable {
                  where status = 'ACTIVE'
                    and queue.capacity - (
                          select count(*)
-                           from dex_workflow_task
-                          where queue_name = queue.name
-                          limit cte_candidate.capacity
+                           from (
+                             select 1
+                               from dex_workflow_task
+                              where queue_name = queue.name
+                              limit cte_candidate.capacity
+                           ) as limited
                        ) > 0
                 """);
 
@@ -166,9 +169,12 @@ final class WorkflowTaskScheduler implements Closeable {
                 with
                 cte_queue_depth as (
                   select count(*) as depth
-                    from dex_workflow_task
-                   where queue_name = :queueName
-                   limit :capacity
+                    from (
+                      select 1
+                        from dex_workflow_task
+                       where queue_name = :queueName
+                       limit :capacity
+                    ) as limited
                 ),
                 cte_eligible_run as (
                   select id
@@ -199,8 +205,7 @@ final class WorkflowTaskScheduler implements Closeable {
                          not exists(
                            select 1
                              from dex_workflow_run as other
-                            where other.task_queue_name = run.task_queue_name
-                              and other.concurrency_key = run.concurrency_key
+                            where other.concurrency_key = run.concurrency_key
                               and other.status = 'CREATED'
                               and (other.priority, other.id) > (run.priority, run.id)
                          )
@@ -208,8 +213,7 @@ final class WorkflowTaskScheduler implements Closeable {
                          and not exists(
                            select 1
                              from dex_workflow_run as executing
-                            where executing.task_queue_name = run.task_queue_name
-                              and executing.concurrency_key = run.concurrency_key
+                            where executing.concurrency_key = run.concurrency_key
                               and executing.status in ('RUNNING', 'SUSPENDED')
                          )
                        )
