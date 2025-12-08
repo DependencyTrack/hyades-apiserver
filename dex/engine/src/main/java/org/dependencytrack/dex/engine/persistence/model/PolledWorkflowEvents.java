@@ -25,6 +25,6 @@ import java.util.List;
 public record PolledWorkflowEvents(
         List<WorkflowEvent> history,
         List<WorkflowEvent> inbox,
-        int maxHistoryEventSequenceNumber,
-        int maxInboxEventDequeueCount) {
+        int maxHistorySequenceNumber,
+        List<Long> inboxMessageIds) {
 }

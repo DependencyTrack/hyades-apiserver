@@ -71,8 +71,6 @@ create table dex_workflow_inbox (
   id bigint generated always as identity
 , workflow_run_id uuid not null
 , visible_from timestamptz(3) not null default now()
-, locked_by text
-, dequeue_count smallint
 , event bytea not null
 , subject text not null
 , constraint dex_workflow_inbox_pk primary key (id)

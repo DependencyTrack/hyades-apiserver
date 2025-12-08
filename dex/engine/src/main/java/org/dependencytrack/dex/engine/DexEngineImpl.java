@@ -67,7 +67,6 @@ import org.dependencytrack.dex.engine.persistence.command.DeleteWorkflowMessages
 import org.dependencytrack.dex.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskCommand;
 import org.dependencytrack.dex.engine.persistence.command.ScheduleActivityTaskRetryCommand;
-import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowMessagesCommand;
 import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunCommand;
 import org.dependencytrack.dex.engine.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
@@ -855,13 +854,13 @@ final class DexEngineImpl implements DexEngine {
                                 polledTask.runId(),
                                 new CachedWorkflowRunHistory(
                                         history,
-                                        polledEvents.maxHistoryEventSequenceNumber()));
+                                        polledEvents.maxHistorySequenceNumber()));
 
                         return WorkflowTask.of(
                                 polledTask,
                                 history,
                                 polledEvents.inbox(),
-                                polledEvents.maxInboxEventDequeueCount());
+                                polledEvents.inboxMessageIds());
                     })
                     .toList();
         });
@@ -870,23 +869,6 @@ final class DexEngineImpl implements DexEngine {
     private void abandonWorkflowTasksInternal(
             final WorkflowDao dao,
             final Collection<WorkflowTaskAbandonedEvent> events) {
-        // TODO: Make this configurable on a per-workflow basis.
-        final IntervalFunction abandonDelayIntervalFunction =
-                IntervalFunction.ofExponentialBackoff(
-                        Duration.ofSeconds(5), 1.5, Duration.ofMinutes(30));
-
-        final List<UnlockWorkflowMessagesCommand> unlockCommands = events.stream()
-                .map(abandonCommand -> {
-                    final Duration visibilityDelay = Duration.ofMillis(
-                            abandonDelayIntervalFunction.apply(abandonCommand.task().attempt() + 1));
-
-                    return new UnlockWorkflowMessagesCommand(abandonCommand.task().workflowRunId(), visibilityDelay);
-                })
-                .toList();
-
-        final int unlockedEvents = dao.unlockMessages(this.config.instanceId(), unlockCommands);
-        assert unlockedEvents > 1;
-
         final int unlockedWorkflowRuns = dao.unlockWorkflowTasks(
                 this.config.instanceId(),
                 events.stream()
@@ -1133,15 +1115,18 @@ final class DexEngineImpl implements DexEngine {
         }
 
         // Delete *all* messages for terminated runs,
-        // or only locked messages for non-terminated runs.
+        // or only actually processed messages for non-terminated runs.
         // The latter is crucial since new messages could have
         // been added in the meantime.
         final int deletedMessages = workflowDao.deleteMessages(
                 this.config.instanceId(),
-                actionableRuns.stream()
-                        .map(run -> new DeleteWorkflowMessagesCommand(
-                                run.id(),
-                                /* onlyLocked */ !run.status().isTerminal()))
+                events.stream()
+                        .filter(event -> updatedRunIds.contains(event.workflowRunState().id()))
+                        .map(event -> new DeleteWorkflowMessagesCommand(
+                                event.workflowRunState().id(),
+                                !event.workflowRunState().status().isTerminal()
+                                        ? event.task().inboxMessageIds()
+                                        : null))
                         .toList());
         assert deletedMessages >= updatedRunIds.size()
                 : "Deleted messages: actual=%d, expectedAtLeast=%d".formatted(

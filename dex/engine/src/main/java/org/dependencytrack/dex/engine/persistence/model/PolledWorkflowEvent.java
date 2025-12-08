@@ -27,7 +27,7 @@ public record PolledWorkflowEvent(
         UUID workflowRunId,
         WorkflowEvent event,
         int historySequenceNumber,
-        int inboxDequeueCount) {
+        long inboxMessageId) {
 
     public enum EventType {
         HISTORY,

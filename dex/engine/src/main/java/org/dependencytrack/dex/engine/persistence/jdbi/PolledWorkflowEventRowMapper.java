@@ -51,7 +51,7 @@ final class PolledWorkflowEventRowMapper implements RowMapper<PolledWorkflowEven
                 rs.getObject("workflow_run_id", UUID.class),
                 eventColumnMapper.map(rs, "event", ctx),
                 rs.getInt("sequence_number"),
-                rs.getInt("dequeue_count"));
+                rs.getInt("message_id"));
     }
 
 }

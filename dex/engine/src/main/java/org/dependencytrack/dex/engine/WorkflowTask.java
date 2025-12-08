@@ -37,16 +37,16 @@ public record WorkflowTask(
         @Nullable String concurrencyKey,
         int priority,
         @Nullable Map<String, String> labels,
-        int attempt,
         List<WorkflowEvent> history,
         List<WorkflowEvent> inbox,
+        List<Long> inboxMessageIds,
         TaskLock lock) implements Task {
 
     static WorkflowTask of(
             final PolledWorkflowTask polledTask,
             final List<WorkflowEvent> history,
             final List<WorkflowEvent> inbox,
-            final int attempt) {
+            final List<Long> inboxMessageIds) {
         return new WorkflowTask(
                 polledTask.runId(),
                 polledTask.workflowName(),
@@ -56,9 +56,9 @@ public record WorkflowTask(
                 polledTask.concurrencyKey(),
                 polledTask.priority(),
                 polledTask.labels(),
-                attempt,
                 history,
                 inbox,
+                inboxMessageIds,
                 new TaskLock(
                         polledTask.lockedUntil(),
                         polledTask.lockVersion())
@@ -69,8 +69,7 @@ public record WorkflowTask(
     public Set<Tag> meterTags() {
         return Set.of(
                 Tag.of("workflowName", workflowName),
-                Tag.of("workflowVersion", String.valueOf(workflowVersion)),
-                Tag.of("workflowInstanceId", String.valueOf(workflowInstanceId)));
+                Tag.of("workflowVersion", String.valueOf(workflowVersion)));
     }
 
 }

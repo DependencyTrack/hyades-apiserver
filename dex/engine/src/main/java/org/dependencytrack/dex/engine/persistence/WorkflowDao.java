@@ -31,7 +31,6 @@ import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunComma
 import org.dependencytrack.dex.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
 import org.dependencytrack.dex.engine.persistence.command.DeleteWorkflowMessagesCommand;
 import org.dependencytrack.dex.engine.persistence.command.PollWorkflowTaskCommand;
-import org.dependencytrack.dex.engine.persistence.command.UnlockWorkflowMessagesCommand;
 import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunCommand;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
@@ -59,6 +58,7 @@ import java.util.NoSuchElementException;
 import java.util.SequencedCollection;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
@@ -560,104 +560,100 @@ public final class WorkflowDao extends AbstractDao {
             Collection<GetWorkflowRunHistoryRequest> requests) {
         final Query query = jdbiHandle.createQuery("""
                 with
+                cte_req as (
+                  select *
+                    from unnest(:runIds, :historyOffsets)
+                      as t(run_id, history_offset)
+                ),
                 cte_history as (
-                    select history.workflow_run_id
-                         , event
-                         , sequence_number
-                      from dex_workflow_history as history
-                     inner join unnest(:historyRequestRunIds, :historyRequestOffsets) as request(run_id, "offset")
-                        on request.run_id = history.workflow_run_id
-                       and request."offset" < history.sequence_number
-                     order by sequence_number
+                  select workflow_run_id
+                       , event
+                       , sequence_number
+                    from dex_workflow_history as history
+                   inner join cte_req
+                      on history.workflow_run_id = cte_req.run_id
+                     and history.sequence_number > cte_req.history_offset
+                   order by workflow_run_id
+                          , sequence_number
                 ),
-                cte_inbox_poll_candidate as (
-                    select id
-                      from dex_workflow_inbox
-                     where workflow_run_id = any(:historyRequestRunIds)
-                       and visible_from <= now()
-                     order by id
-                       for no key update
-                      skip locked
-                ),
-                cte_polled_inbox as (
-                    update dex_workflow_inbox as inbox
-                       set locked_by = :workerInstanceId
-                         , dequeue_count = coalesce(dequeue_count, 0) + 1
-                      from cte_inbox_poll_candidate
-                     where cte_inbox_poll_candidate.id = inbox.id
-                    returning inbox.workflow_run_id
-                            , inbox.event
-                            , inbox.dequeue_count
+                cte_inbox as (
+                  select id
+                       , workflow_run_id
+                       , event
+                    from dex_workflow_inbox
+                   where workflow_run_id in (select run_id from cte_req)
+                     and visible_from <= now()
+                   order by id
                 )
                 select 'HISTORY' as event_type
                      , workflow_run_id
                      , event
                      , sequence_number
-                     , null as dequeue_count
+                     , null as message_id
                   from cte_history
                  union all
                 select 'INBOX' as event_type
                      , workflow_run_id
                      , event
                      , null as sequence_number
-                     , dequeue_count
-                  from cte_polled_inbox
+                     , id as message_id
+                  from cte_inbox
                 """);
 
-        final var historyRequestRunIds = new UUID[requests.size()];
-        final var historyRequestOffsets = new int[requests.size()];
+        final var runIds = new UUID[requests.size()];
+        final var historyOffsets = new int[requests.size()];
 
         int i = 0;
         for (final GetWorkflowRunHistoryRequest request : requests) {
-            historyRequestRunIds[i] = request.runId();
-            historyRequestOffsets[i] = request.offset();
+            runIds[i] = request.runId();
+            historyOffsets[i] = request.offset();
             i++;
         }
 
         final List<PolledWorkflowEvent> polledEvents = query
                 .bind("workerInstanceId", workerInstanceId.toString())
-                .bind("historyRequestRunIds", historyRequestRunIds)
-                .bind("historyRequestOffsets", historyRequestOffsets)
+                .bind("runIds", runIds)
+                .bind("historyOffsets", historyOffsets)
                 .mapTo(PolledWorkflowEvent.class)
                 .list();
 
         final var historyByRunId = new HashMap<UUID, List<WorkflowEvent>>(requests.size());
         final var inboxByRunId = new HashMap<UUID, List<WorkflowEvent>>(requests.size());
-        final var maxHistoryEventSequenceNumberByRunId = new HashMap<UUID, Integer>(requests.size());
-        final var maxInboxEventDequeueCountByRunId = new HashMap<UUID, Integer>(requests.size());
+        final var maxHistorySequenceNumberByRunId = new HashMap<UUID, Integer>(requests.size());
+        final var inboxMessageIdsByRunId = new HashMap<UUID, List<Long>>(requests.size());
 
         for (final PolledWorkflowEvent polledEvent : polledEvents) {
             switch (polledEvent.eventType()) {
                 case HISTORY -> {
-                    historyByRunId.computeIfAbsent(
-                            polledEvent.workflowRunId(), ignored -> new ArrayList<>()).add(polledEvent.event());
+                    final List<WorkflowEvent> history = historyByRunId.computeIfAbsent(
+                            polledEvent.workflowRunId(), ignored -> new ArrayList<>());
+                    history.add(polledEvent.event());
 
-                    maxHistoryEventSequenceNumberByRunId.compute(
+                    maxHistorySequenceNumberByRunId.compute(
                             polledEvent.workflowRunId(),
                             (ignored, previousMax) -> (previousMax == null || previousMax < polledEvent.historySequenceNumber())
                                     ? polledEvent.historySequenceNumber()
                                     : previousMax);
                 }
                 case INBOX -> {
-                    inboxByRunId.computeIfAbsent(
-                            polledEvent.workflowRunId(), ignored -> new ArrayList<>()).add(polledEvent.event());
+                    final List<WorkflowEvent> inbox = inboxByRunId.computeIfAbsent(
+                            polledEvent.workflowRunId(), ignored -> new ArrayList<>());
+                    inbox.add(polledEvent.event());
 
-                    maxInboxEventDequeueCountByRunId.compute(
-                            polledEvent.workflowRunId(),
-                            (ignored, previousMax) -> (previousMax == null || previousMax < polledEvent.inboxDequeueCount())
-                                    ? polledEvent.inboxDequeueCount()
-                                    : previousMax);
+                    final List<Long> messageIds = inboxMessageIdsByRunId.computeIfAbsent(
+                            polledEvent.workflowRunId(), ignored -> new ArrayList<>());
+                    messageIds.add(polledEvent.inboxMessageId());
                 }
             }
         }
 
         final var polledEventsByRunId = new HashMap<UUID, PolledWorkflowEvents>(requests.size());
-        for (final UUID runId : historyRequestRunIds) {
+        for (final UUID runId : runIds) {
             polledEventsByRunId.put(runId, new PolledWorkflowEvents(
                     historyByRunId.getOrDefault(runId, Collections.emptyList()),
                     inboxByRunId.getOrDefault(runId, Collections.emptyList()),
-                    maxHistoryEventSequenceNumberByRunId.getOrDefault(runId, -1),
-                    maxInboxEventDequeueCountByRunId.getOrDefault(runId, 0)));
+                    maxHistorySequenceNumberByRunId.getOrDefault(runId, -1),
+                    inboxMessageIdsByRunId.getOrDefault(runId, Collections.emptyList())));
         }
 
         return polledEventsByRunId;
@@ -680,60 +676,39 @@ public final class WorkflowDao extends AbstractDao {
                 .one();
     }
 
-    public int unlockMessages(
-            UUID workerInstanceId,
-            Collection<UnlockWorkflowMessagesCommand> commands) {
-        final Update update = jdbiHandle.createUpdate("""
-                update dex_workflow_inbox
-                   set locked_by = null
-                     , visible_from = now() + t.visibility_delay
-                  from unnest(:runIds, :visibilityDelays) as t(run_id, visibility_delay)
-                 where workflow_run_id = t.run_id
-                   and locked_by = :workerInstanceId
-                """);
-
-        final var runIds = new UUID[commands.size()];
-        final var visibilityDelays = new Duration[commands.size()];
-
-        int i = 0;
-        for (final UnlockWorkflowMessagesCommand command : commands) {
-            runIds[i] = command.workflowRunId();
-            visibilityDelays[i] = command.visibilityDelay();
-            i++;
-        }
-
-        return update
-                .bind("workerInstanceId", workerInstanceId.toString())
-                .bind("runIds", runIds)
-                .bind("visibilityDelays", visibilityDelays)
-                .execute();
-    }
-
     public int deleteMessages(
             UUID workerInstanceId,
             Collection<DeleteWorkflowMessagesCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
+                with cte_cmd as (
+                  select run_id
+                       , cast(string_to_array(message_id_array, ',') as bigint[]) as message_ids
+                    from unnest(:runIds, :messageIdArrays)
+                      as t(run_id, message_id_array)
+                )
                 delete
                   from dex_workflow_inbox as inbox
-                 using unnest(:workflowRunIds, :onlyLockeds) as delete_command (workflow_run_id, only_locked)
-                 where inbox.workflow_run_id = delete_command.workflow_run_id
-                   and (not delete_command.only_locked
-                         or inbox.locked_by = :workerInstanceId)
+                 using cte_cmd
+                 where inbox.workflow_run_id = cte_cmd.run_id
+                   and (cte_cmd.message_ids is null
+                        or inbox.id = any(cte_cmd.message_ids))
                 """);
 
         final var runIds = new UUID[commands.size()];
-        final var onlyLockeds = new boolean[commands.size()];
+        final var messageIdArrays = new @Nullable String[commands.size()];
 
         int i = 0;
         for (final DeleteWorkflowMessagesCommand command : commands) {
             runIds[i] = command.workflowRunId();
-            onlyLockeds[i] = command.onlyLocked();
+            messageIdArrays[i] = command.messageIds() != null
+                    ? command.messageIds().stream().map(String::valueOf).collect(Collectors.joining(","))
+                    : null;
             i++;
         }
 
         return update
-                .bind("workflowRunIds", runIds)
-                .bind("onlyLockeds", onlyLockeds)
+                .bind("runIds", runIds)
+                .bind("messageIdArrays", messageIdArrays)
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .execute();
     }
