@@ -525,7 +525,12 @@ public final class WorkflowDao extends AbstractDao {
                 , event
                 , subject
                 )
-                select * from unnest(:runIds, :visibleFroms, :events, :subjects)
+                select run_id
+                     , coalesce(visible_from, now())
+                     , event
+                     , subject
+                  from unnest(:runIds, :visibleFroms, :events, :subjects)
+                    as t(run_id, visible_from, event, subject)
                 """);
 
         final var runIds = new UUID[messages.size()];
@@ -569,7 +574,7 @@ public final class WorkflowDao extends AbstractDao {
                     select id
                       from dex_workflow_inbox
                      where workflow_run_id = any(:historyRequestRunIds)
-                       and (visible_from is null or visible_from <= now())
+                       and visible_from <= now()
                      order by id
                        for no key update
                       skip locked

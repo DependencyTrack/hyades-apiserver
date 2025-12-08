@@ -70,7 +70,7 @@ create table dex_workflow_history_p07 partition of dex_workflow_history for valu
 create table dex_workflow_inbox (
   id bigint generated always as identity
 , workflow_run_id uuid not null
-, visible_from timestamptz(3)
+, visible_from timestamptz(3) not null default now()
 , locked_by text
 , dequeue_count smallint
 , event bytea not null
@@ -100,7 +100,7 @@ create table dex_activity_task (
 , argument bytea
 , retry_policy bytea not null
 , attempt smallint not null default 1
-, visible_from timestamptz(3)
+, visible_from timestamptz(3) not null default now()
 , locked_by text
 , locked_until timestamptz(3)
 , lock_version smallint not null default 0
@@ -155,6 +155,11 @@ create index dex_workflow_run_completed_at_idx
 
 create index dex_workflow_inbox_workflow_run_id_idx
     on dex_workflow_inbox (workflow_run_id);
+
+-- Index to support polling of the activity task scheduler.
+create index dex_activity_task_scheduler_poll_idx
+    on dex_activity_task (visible_from, priority desc, created_at)
+ where status != 'QUEUED';
 
 -- Index to support polling of activity task workers.
 create index dex_activity_task_poll_idx

@@ -188,7 +188,7 @@ final class WorkflowTaskScheduler implements Closeable {
                        select 1
                          from dex_workflow_inbox as inbox
                         where inbox.workflow_run_id = run.id
-                          and (visible_from is null or visible_from <= now())
+                          and visible_from <= now()
                      )
                      -- Only consider runs for which no task is already queued.
                      and not exists(

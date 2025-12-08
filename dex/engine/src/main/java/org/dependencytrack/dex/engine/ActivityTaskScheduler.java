@@ -187,7 +187,7 @@ final class ActivityTaskScheduler implements Closeable {
                      -- Only consider tasks that are not already queued.
                      and status != 'QUEUED'
                      -- Only consider tasks that are visible.
-                     and (visible_from is null or visible_from <= now())
+                     and visible_from <= now()
                    order by priority desc
                           , created_at
                    limit greatest(0, :capacity - (select depth from cte_queue_depth))
