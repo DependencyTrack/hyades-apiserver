@@ -115,7 +115,7 @@ create table dex_activity_task (
 
 -- Index to support polling of the workflow task scheduler.
 create index dex_workflow_run_task_scheduler_poll_idx
-    on dex_workflow_run (priority desc, id)
+    on dex_workflow_run (task_queue_name, priority desc, id)
  where status in ('CREATED', 'RUNNING', 'SUSPENDED');
 
 -- Index to support polling of workflow task workers.
