@@ -1992,4 +1992,172 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         }
     }
 
+    @Test
+    public void testEvaluateProjectWithFuncComponentIsDirectDependencyOfComponent() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("acme-lib-b");
+        qm.persist(componentB);
+
+        final var componentC = new Component();
+        componentC.setProject(project);
+        componentC.setName("acme-lib-c");
+        qm.persist(componentC);
+
+        //  /-> A -> B -> C
+        project.setDirectDependencies("[%s]".formatted(
+                new ComponentIdentity(componentA).toJSON())
+        );
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        componentB.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentC).toJSON()));
+        qm.persist(project);
+        qm.persist(componentA);
+        qm.persist(componentB);
+
+        final var policyEngine = new CelPolicyEngine();
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        // Is component introduced strictly directly through A?
+        qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        component.is_direct_dependency_of(v1.Component{name: "acme-lib-a"})
+                        """, PolicyViolation.Type.OPERATIONAL);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
+        assertThat(qm.getAllPolicyViolations(componentC)).isEmpty();
+    }
+
+    @Test
+    public void testEvaluateProjectWithFuncComponentIsDirectDependencyOfExclusiveComponent() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("acme-lib-b");
+        qm.persist(componentB);
+
+        final var componentC = new Component();
+        componentC.setProject(project);
+        componentC.setName("acme-lib-c");
+        qm.persist(componentC);
+
+        final var componentD = new Component();
+        componentD.setProject(project);
+        componentD.setName("acme-lib-d");
+        qm.persist(componentD);
+
+        final var componentE = new Component();
+        componentE.setProject(project);
+        componentE.setName("acme-lib-e");
+        qm.persist(componentE);
+
+
+        //  /-> A -> B -> C
+        // *         ^
+        //  \------> D -> E
+        project.setDirectDependencies("[%s, %s]".formatted(
+                new ComponentIdentity(componentA).toJSON(),
+                new ComponentIdentity(componentD).toJSON())
+        );
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        componentB.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentC).toJSON()));
+        componentD.setDirectDependencies("[%s, %s]".formatted(new ComponentIdentity(componentE).toJSON(),
+                new ComponentIdentity(componentB).toJSON()));
+        qm.persist(project);
+        qm.persist(componentA);
+        qm.persist(componentB);
+        qm.persist(componentD);
+
+        final var policyEngine = new CelPolicyEngine();
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        // Is component introduced exclusively and directly through A?
+        PolicyCondition condition = qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        component.is_direct_dependency_of(v1.Component{name: "acme-lib-a"})
+                        && component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-a"})
+                        """, PolicyViolation.Type.OPERATIONAL);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentC)).isEmpty();
+
+        // Is component introduced exclusively and directly through D?
+        condition.setValue("""
+                component.is_direct_dependency_of(v1.Component{name: "acme-lib-d"})
+                && component.is_exclusive_dependency_of(v1.Component{name: "acme-lib-d"})
+                """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentD)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentE)).hasSize(1);
+    }
+
+    @Test
+    public void testEvaluateProjectWithFuncComponentIsDirectDependencyOfComponentWithInMemoryFilter() {
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0");
+        qm.persist(project);
+
+        final var componentA = new Component();
+        componentA.setProject(project);
+        componentA.setName("acme-lib-a");
+        componentA.setVersion("v1.9.0");
+        qm.persist(componentA);
+
+        final var componentB = new Component();
+        componentB.setProject(project);
+        componentB.setName("acme-lib-b");
+        qm.persist(componentB);
+
+        //  /-> A -> B
+        project.setDirectDependencies("[%s]".formatted(
+                new ComponentIdentity(componentA).toJSON())
+        );
+        componentA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentB).toJSON()));
+        qm.persist(project);
+        qm.persist(componentA);
+
+        final var policyEngine = new CelPolicyEngine();
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+
+        // Is component introduced directly through A with in-memory filter of vers range?
+        PolicyCondition condition = qm.createPolicyCondition(policy,
+                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                        component.is_direct_dependency_of(v1.Component{
+                            name: "acme-lib-a",
+                            version: "vers:golang/>=v2.0.0"
+                        })
+                        """, PolicyViolation.Type.OPERATIONAL);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
+
+        condition.setValue("""
+                        component.is_direct_dependency_of(v1.Component{
+                            name: "acme-lib-a",
+                            version: "vers:golang/>=v1.0.0|<v2.0.0"
+                        })
+                        """);
+        policyEngine.evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
+        assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
+    }
 }
