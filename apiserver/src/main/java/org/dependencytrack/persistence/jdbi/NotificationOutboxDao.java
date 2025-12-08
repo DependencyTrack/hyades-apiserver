@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.sqlobject.SqlObject;
 

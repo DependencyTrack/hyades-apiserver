@@ -84,7 +84,7 @@ class OsvVulnDataSourceFactoryTest {
     void createShouldReturnNullWhenDisabled() throws Exception {
         final var configRegistry = new MockConfigRegistry();
         configRegistry.setValue(CONFIG_ENABLED, false);
-        configRegistry.setValue(CONFIG_DATA_URL, null);
+        configRegistry.setValue(CONFIG_DATA_URL, URI.create("http://localhost:6666").toURL());
         configRegistry.setValue(CONFIG_ECOSYSTEMS, List.of("Go", "Maven", "npm", "NuGet", "PyPI"));
 
         try (final var dataSourceFactory = new OsvVulnDataSourceFactory()) {
@@ -110,10 +110,9 @@ class OsvVulnDataSourceFactoryTest {
     }
 
     @Test
-    void createShouldThrowWhenApiUrlIsNull() {
+    void createShouldThrowWhenApiUrlIsNull() throws Exception {
         final var configRegistry = new MockConfigRegistry();
         configRegistry.setValue(CONFIG_ENABLED, true);
-        configRegistry.setValue(CONFIG_DATA_URL, null);
         configRegistry.setValue(CONFIG_ECOSYSTEMS, List.of("Go", "Maven", "npm", "NuGet", "PyPI"));
 
         try (final var dataSourceFactory = new OsvVulnDataSourceFactory()) {
