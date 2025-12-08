@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
+import alpine.model.ConfigProperty;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
@@ -59,6 +60,7 @@ import javax.naming.AuthenticationException;
 import java.security.Principal;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BADGE_ENABLED;
+import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BASE_URL;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
@@ -203,7 +205,13 @@ public class BadgeResource extends AbstractApiResource {
                 final ProjectMetrics metrics = withJdbiHandle(handle ->
                         handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
                 final Badger badger = new Badger();
-                return Response.ok(badger.generateVulnerabilities(metrics)).build();
+
+                String linkToProjectVuln = null;
+                final ConfigProperty baseUrl = qm.getConfigProperty(GENERAL_BASE_URL.getGroupName(), GENERAL_BASE_URL.getPropertyName());
+                if (baseUrl != null && baseUrl.getPropertyValue() != null) {
+                    linkToProjectVuln = baseUrl.getPropertyValue() + "/projects/" + project.getUuid() + "/findings";
+                }
+                return Response.ok(badger.generateVulnerabilities(metrics, linkToProjectVuln)).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -252,7 +260,13 @@ public class BadgeResource extends AbstractApiResource {
                 final ProjectMetrics metrics = withJdbiHandle(handle ->
                         handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
                 final Badger badger = new Badger();
-                return Response.ok(badger.generateVulnerabilities(metrics)).build();
+
+                String linkToProjectVuln = null;
+                final ConfigProperty baseUrl = qm.getConfigProperty(GENERAL_BASE_URL.getGroupName(), GENERAL_BASE_URL.getPropertyName());
+                if (baseUrl != null && baseUrl.getPropertyValue() != null) {
+                    linkToProjectVuln = baseUrl.getPropertyValue() + "/projects/" + project.getUuid() + "/findings";
+                }
+                return Response.ok(badger.generateVulnerabilities(metrics, linkToProjectVuln)).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -299,7 +313,13 @@ public class BadgeResource extends AbstractApiResource {
                 final ProjectMetrics metrics = withJdbiHandle(handle ->
                         handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
                 final Badger badger = new Badger();
-                return Response.ok(badger.generateViolations(metrics)).build();
+
+                String linkToProjectViolations = null;
+                final ConfigProperty baseUrl = qm.getConfigProperty(GENERAL_BASE_URL.getGroupName(), GENERAL_BASE_URL.getPropertyName());
+                if (baseUrl != null && baseUrl.getPropertyValue() != null) {
+                    linkToProjectViolations = baseUrl.getPropertyValue() + "/projects/" + project.getUuid() + "/policyViolations";
+                }
+                return Response.ok(badger.generateViolations(metrics, linkToProjectViolations)).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -348,7 +368,13 @@ public class BadgeResource extends AbstractApiResource {
                 final ProjectMetrics metrics = withJdbiHandle(handle ->
                         handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
                 final Badger badger = new Badger();
-                return Response.ok(badger.generateViolations(metrics)).build();
+
+                String linkToProjectViolations = null;
+                final ConfigProperty baseUrl = qm.getConfigProperty(GENERAL_BASE_URL.getGroupName(), GENERAL_BASE_URL.getPropertyName());
+                if (baseUrl != null && baseUrl.getPropertyValue() != null) {
+                    linkToProjectViolations = baseUrl.getPropertyValue() + "/projects/" + project.getUuid() + "/policyViolations";
+                }
+                return Response.ok(badger.generateViolations(metrics, linkToProjectViolations)).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
