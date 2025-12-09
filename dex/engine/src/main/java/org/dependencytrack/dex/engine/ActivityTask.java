@@ -18,13 +18,10 @@
  */
 package org.dependencytrack.dex.engine;
 
-import io.micrometer.core.instrument.Tag;
 import org.dependencytrack.dex.api.RetryPolicy;
 import org.dependencytrack.dex.engine.persistence.model.PolledActivityTask;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
-
-import java.util.Set;
 
 public final class ActivityTask implements Task {
 
@@ -66,8 +63,8 @@ public final class ActivityTask implements Task {
     }
 
     @Override
-    public Set<Tag> meterTags() {
-        return Set.of(Tag.of("activityName", activityName));
+    public String queueName() {
+        return id.queueName();
     }
 
     public String activityName() {

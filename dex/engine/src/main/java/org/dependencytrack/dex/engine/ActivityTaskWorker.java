@@ -44,6 +44,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
     private final Set<ActivityContextImpl> activeContexts;
 
     ActivityTaskWorker(
+            final String name,
             final DexEngineImpl engine,
             final Duration minPollInterval,
             final IntervalFunction pollBackoffIntervalFunction,
@@ -51,7 +52,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
             final String queueName,
             final int maxConcurrency,
             final MeterRegistry meterRegistry) {
-        super(minPollInterval, pollBackoffIntervalFunction, maxConcurrency, meterRegistry);
+        super(name, minPollInterval, pollBackoffIntervalFunction, maxConcurrency, meterRegistry);
         this.engine = requireNonNull(engine, "engine must not be null");
         this.metadataRegistry = requireNonNull(metadataRegistry, "metadataRegistry must not be null");
         this.queueName = requireNonNull(queueName, "queueName must not be null");

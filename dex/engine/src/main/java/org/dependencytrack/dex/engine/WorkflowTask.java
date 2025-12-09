@@ -18,14 +18,12 @@
  */
 package org.dependencytrack.dex.engine;
 
-import io.micrometer.core.instrument.Tag;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 public record WorkflowTask(
@@ -63,13 +61,6 @@ public record WorkflowTask(
                         polledTask.lockedUntil(),
                         polledTask.lockVersion())
         );
-    }
-
-    @Override
-    public Set<Tag> meterTags() {
-        return Set.of(
-                Tag.of("workflowName", workflowName),
-                Tag.of("workflowVersion", String.valueOf(workflowVersion)));
     }
 
 }

@@ -18,12 +18,8 @@
  */
 package org.dependencytrack.dex.engine;
 
-import io.micrometer.core.instrument.Tag;
-
-import java.util.Set;
-
 public sealed interface Task permits ActivityTask, WorkflowTask {
 
-    Set<Tag> meterTags();
+    String queueName();
 
 }

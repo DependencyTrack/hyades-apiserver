@@ -44,6 +44,7 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
     private final List<PollWorkflowTaskCommand> pollCommands;
 
     WorkflowTaskWorker(
+            final String name,
             final DexEngineImpl engine,
             final MetadataRegistry metadataRegistry,
             final String queueName,
@@ -51,7 +52,7 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
             final IntervalFunction pollBackoffIntervalFunction,
             final int maxConcurrency,
             final MeterRegistry meterRegistry) {
-        super(minPollInterval, pollBackoffIntervalFunction, maxConcurrency, meterRegistry);
+        super(name, minPollInterval, pollBackoffIntervalFunction, maxConcurrency, meterRegistry);
         this.engine = requireNonNull(engine, "engine must not be null");
         this.metadataRegistry = requireNonNull(metadataRegistry, "metadataRegistry must not be null");
         this.queueName = requireNonNull(queueName, "queueName must not be null");

@@ -423,6 +423,7 @@ final class DexEngineImpl implements DexEngine {
         }
 
         final var worker = new ActivityTaskWorker(
+                options.name(),
                 this,
                 options.minPollInterval(),
                 options.pollBackoffFunction(),
@@ -448,6 +449,7 @@ final class DexEngineImpl implements DexEngine {
         }
 
         final var worker = new WorkflowTaskWorker(
+                options.name(),
                 this,
                 metadataRegistry,
                 options.queueName(),

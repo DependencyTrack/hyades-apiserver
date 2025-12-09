@@ -49,6 +49,7 @@ import static java.util.Objects.requireNonNull;
 
 abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
 
+    private final String name;
     private final long minPollIntervalMillis;
     private final IntervalFunction pollBackoffFunction;
     private final Semaphore semaphore;
@@ -66,10 +67,12 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
     private @Nullable MeterProvider<Timer> processLatencyTimer;
 
     AbstractTaskWorker(
+            final String name,
             final Duration minPollInterval,
             final IntervalFunction pollBackoffFunction,
             final int maxConcurrency,
             final MeterRegistry meterRegistry) {
+        this.name = name;
         this.minPollIntervalMillis = requireNonNull(minPollInterval, "minPollInterval must not be null").toMillis();
         this.pollBackoffFunction = requireNonNull(pollBackoffFunction, "pollBackoffFunction must not be null");
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry must not be null");
@@ -92,7 +95,7 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
                 .name("%s-Poller".formatted(getClass().getSimpleName()), 0)
                 .unstarted(this::pollAndDispatch);
 
-        final var taskExecutorName = "%s-Executor".formatted(getClass().getSimpleName());
+        final var taskExecutorName = "%s-%s-Executor".formatted(getClass().getSimpleName(), name);
         taskExecutor = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual()
                         .name(taskExecutorName, 0)
@@ -111,7 +114,6 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
                 .register(meterRegistry);
         polledTasksDistribution = DistributionSummary
                 .builder("dt.dex.engine.task.worker.tasks.polled")
-                .publishPercentileHistogram()
                 .tags(commonMeterTags)
                 .withRegistry(meterRegistry);
         processedCounter = Counter
@@ -240,7 +242,7 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
                 final Map<Set<Tag>, Long> taskCountByMeterTags =
                         polledTasks.stream().collect(
                                 Collectors.groupingBy(
-                                        Task::meterTags,
+                                        this::meterTags,
                                         Collectors.counting()));
                 for (final Map.Entry<Set<Tag>, Long> entry : taskCountByMeterTags.entrySet()) {
                     polledTasksDistribution
@@ -286,11 +288,11 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
                 process(task);
 
                 processedCounter
-                        .withTags(task.meterTags())
+                        .withTags()
                         .increment();
             } finally {
                 processLatencySample.stop(
-                        processLatencyTimer.withTags(task.meterTags()));
+                        processLatencyTimer.withTags(meterTags(task)));
             }
         } catch (InterruptedException e) {
             logger.warn("Interrupted while waiting for semaphore permit", e);
@@ -322,6 +324,12 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
         } finally {
             statusLock.unlock();
         }
+    }
+
+    private Set<Tag> meterTags(final Task task) {
+        return Set.of(
+                Tag.of("taskType", task.getClass().getSimpleName()),
+                Tag.of("queueName", task.queueName()));
     }
 
 }
