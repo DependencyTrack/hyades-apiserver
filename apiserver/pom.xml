@@ -27,7 +27,7 @@
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.kotlin-stdlib.version>2.2.21</lib.kotlin-stdlib.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
-        <lib.swagger.version>2.2.40</lib.swagger.version>
+        <lib.swagger.version>2.2.41</lib.swagger.version>
         <lib.swagger-parser.version>2.1.35</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.woodstox.version>7.1.1</lib.woodstox.version>
