@@ -18,11 +18,12 @@
  */
 package org.dependencytrack.dex.engine.support;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,8 +36,6 @@ import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
@@ -82,7 +81,8 @@ public final class Buffer<T> implements Closeable {
     private final BlockingQueue<BufferedItem<T>> itemsQueue;
     private final Duration itemsQueueTimeout;
     private final List<BufferedItem<T>> currentBatch;
-    private final ScheduledExecutorService flushExecutor;
+    private final Thread flushThread;
+    private final BlockingQueue<Boolean> flushRequestQueue;
     private final Duration flushInterval;
     private final ReentrantLock flushLock;
     private final ReentrantLock statusLock;
@@ -90,6 +90,7 @@ public final class Buffer<T> implements Closeable {
     private Status status = Status.CREATED;
     private @Nullable DistributionSummary batchSizeDistribution;
     private @Nullable Timer itemWaitLatencyTimer;
+    private @Nullable Counter flushCounter;
     private @Nullable Timer flushLatencyTimer;
 
     public Buffer(
@@ -111,11 +112,13 @@ public final class Buffer<T> implements Closeable {
         this.name = name;
         this.batchConsumer = batchConsumer;
         this.maxBatchSize = maxBatchSize;
-        this.itemsQueue = new ArrayBlockingQueue<>(maxBatchSize);
+        this.itemsQueue = new ArrayBlockingQueue<>(maxBatchSize * 3);
         this.itemsQueueTimeout = itemsQueueTimeout;
         this.currentBatch = new ArrayList<>(maxBatchSize);
-        this.flushExecutor = Executors.newSingleThreadScheduledExecutor(
-                Thread.ofPlatform().name("DexEngine-Buffer-" + name).factory());
+        this.flushThread = Thread.ofPlatform()
+                .name("DexEngine-Buffer-" + name)
+                .unstarted(this::flushLoop);
+        this.flushRequestQueue = new ArrayBlockingQueue<>(1);
         this.flushInterval = flushInterval;
         this.flushLock = new ReentrantLock();
         this.statusLock = new ReentrantLock();
@@ -137,28 +140,24 @@ public final class Buffer<T> implements Closeable {
                 .publishPercentileHistogram()
                 .tags(commonMeterTags)
                 .register(meterRegistry);
+        Gauge
+                .builder("dt.dex.engine.buffer.items.queued", itemsQueue::size)
+                .tags(commonMeterTags)
+                .register(meterRegistry);
         itemWaitLatencyTimer = Timer
                 .builder("dt.dex.engine.buffer.item.wait.latency")
+                .tags(commonMeterTags)
+                .register(meterRegistry);
+        flushCounter = Counter
+                .builder("dt.dex.engine.buffer.flushes")
                 .tags(commonMeterTags)
                 .register(meterRegistry);
         flushLatencyTimer = Timer
                 .builder("dt.dex.engine.buffer.flush.latency")
                 .tags(commonMeterTags)
                 .register(meterRegistry);
-        new ExecutorServiceMetrics(flushExecutor, "dt.dex.engine.buffer.%s".formatted(name), null)
-                .bindTo(meterRegistry);
 
-        flushExecutor.scheduleAtFixedRate(
-                () -> {
-                    try {
-                        maybeFlush();
-                    } catch (RuntimeException e) {
-                        LOGGER.error("Failed to flush buffer", e);
-                    }
-                },
-                flushInterval.toMillis(),
-                flushInterval.toMillis(),
-                TimeUnit.MILLISECONDS);
+        flushThread.start();
 
         setStatus(Status.RUNNING);
     }
@@ -168,13 +167,23 @@ public final class Buffer<T> implements Closeable {
         LOGGER.debug("{}: Closing", name);
         setStatus(Status.STOPPING);
 
-        LOGGER.debug("{}: Waiting for flush executor to stop", name);
-        flushExecutor.close();
+        if (flushThread.isAlive()) {
+            LOGGER.debug("{}: Waiting for flush executor to stop", name);
+            try {
+                flushThread.join(Duration.ofSeconds(5));
+            } catch (InterruptedException ignored) {
+                LOGGER.warn("{}: Interrupted while waiting for flush thread to stop", name);
+                Thread.currentThread().interrupt();
+                flushThread.interrupt();
+            }
+        }
         setStatus(Status.STOPPED);
 
         // Flush one last time, in case new items were added to the buffer while
         // the executor was shutting down.
-        maybeFlush();
+        while (!itemsQueue.isEmpty()) {
+            maybeFlush();
+        }
     }
 
     public CompletableFuture<Void> add(final T item) throws InterruptedException, TimeoutException {
@@ -192,9 +201,32 @@ public final class Buffer<T> implements Closeable {
             throw new TimeoutException("Timed out while waiting for buffer queue to accept the item");
         }
 
-        // TODO: Flush NOW when capacity is reached?
+        if (itemsQueue.size() >= maxBatchSize) {
+            // Request a flush to be performed, but don't block
+            // if the queue already has a pending request.
+            boolean ignored = flushRequestQueue.offer(true);
+        }
 
         return future;
+    }
+
+    private void flushLoop() {
+        while (status == Status.RUNNING && !Thread.currentThread().isInterrupted()) {
+            try {
+                // Block until either a flush is explicitly requested, or the flush interval elapses.
+                flushRequestQueue.poll(flushInterval.toMillis(), TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                LOGGER.debug("{}: Interrupted while waiting for next flush to be due", name);
+                break;
+            }
+
+            try {
+                maybeFlush();
+            } catch (RuntimeException e) {
+                LOGGER.error("{}: An unexpected error occurred during flush", name, e);
+            }
+        }
     }
 
     private void maybeFlush() {
@@ -229,6 +261,7 @@ public final class Buffer<T> implements Closeable {
                             TimeUnit.NANOSECONDS);
                 }
             } finally {
+                flushCounter.increment();
                 flushLatencySample.stop(flushLatencyTimer);
                 currentBatch.clear();
             }
