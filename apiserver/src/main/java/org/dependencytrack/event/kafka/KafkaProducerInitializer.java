@@ -80,7 +80,7 @@ public class KafkaProducerInitializer implements ServletContextListener {
             // Workaround for tests, as we can't use dependency injection in JerseyTest.
             // Analog to how it's done for instantiation of PersistenceManagerFactory:
             // https://github.com/stevespringett/Alpine/blob/alpine-parent-2.2.0/alpine-server/src/main/java/alpine/server/persistence/PersistenceManagerFactory.java#L127-L135
-            PRODUCER = new MockProducer<>(true, new ByteArraySerializer(), new ByteArraySerializer());
+            PRODUCER = new MockProducer<>(true, null, new ByteArraySerializer(), new ByteArraySerializer());
         }
 
         return PRODUCER;

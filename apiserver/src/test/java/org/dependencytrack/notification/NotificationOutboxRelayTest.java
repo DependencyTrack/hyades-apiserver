@@ -49,6 +49,7 @@ public class NotificationOutboxRelayTest extends PersistenceCapableTest {
 
         mockProducer = new MockProducer<>(
                 /* autoComplete */ false,
+                /* partitioner */ null,
                 new ByteArraySerializer(),
                 new ByteArraySerializer());
         relay = new NotificationOutboxRelay(
