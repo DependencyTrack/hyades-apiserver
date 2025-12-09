@@ -23,7 +23,7 @@
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>11.0.1</lib.cyclonedx-java.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <lib.kafka.version>3.9.1</lib.kafka.version>
+        <lib.kafka.version>4.1.1</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.kotlin-stdlib.version>2.2.21</lib.kotlin-stdlib.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
