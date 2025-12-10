@@ -59,7 +59,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -137,7 +136,7 @@ public class DexEngineImplBenchmarkTest {
         statsPrinterExecutor = Executors.newSingleThreadScheduledExecutor();
         statsPrinterExecutor.scheduleAtFixedRate(new StatsReporter(meterRegistry), 3, 5, TimeUnit.SECONDS);
 
-        final var engineConfig = new DexEngineConfig(UUID.randomUUID(), dataSource);
+        final var engineConfig = new DexEngineConfig(dataSource);
         engineConfig.retention().setWorkerEnabled(false);
         engineConfig.runHistoryCache().setEvictAfterAccess(Duration.ofMinutes(1));
         engineConfig.runHistoryCache().setMaxSize(10_000);

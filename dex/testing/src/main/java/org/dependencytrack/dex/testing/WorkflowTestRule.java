@@ -69,7 +69,7 @@ public final class WorkflowTestRule implements TestRule {
             public void evaluate() throws Throwable {
                 new MigrationExecutor(dataSource).execute();
 
-                final var engineConfig = new DexEngineConfig(UUID.randomUUID(), dataSource);
+                final var engineConfig = new DexEngineConfig(dataSource);
                 if (configCustomizer != null) {
                     configCustomizer.accept(engineConfig);
                 }

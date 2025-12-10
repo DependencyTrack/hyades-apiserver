@@ -24,6 +24,9 @@ import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
 
 import javax.sql.DataSource;
+import java.io.UncheckedIOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.UUID;
 
@@ -171,7 +174,7 @@ public class DexEngineConfig {
 
     }
 
-    private final UUID instanceId;
+    private final String instanceId;
     private final DataSource dataSource;
     private final CacheConfig runHistoryCache = new CacheConfig();
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
@@ -184,15 +187,15 @@ public class DexEngineConfig {
     private MeterRegistry meterRegistry = new SimpleMeterRegistry();
     private PageTokenEncoder pageTokenEncoder = new SimplePageTokenEncoder();
 
-    public DexEngineConfig(final UUID instanceId, final DataSource dataSource) {
-        this.instanceId = requireNonNull(instanceId, "instanceId must not be null");
+    public DexEngineConfig(final DataSource dataSource) {
+        this.instanceId = generateInstanceId();
         this.dataSource = requireNonNull(dataSource, "dataSource must not be null");
     }
 
     /**
      * @return ID that uniquely identifies this instance of the engine.
      */
-    public UUID instanceId() {
+    public String instanceId() {
         return instanceId;
     }
 
@@ -257,6 +260,17 @@ public class DexEngineConfig {
 
     public void setPageTokenEncoder(final PageTokenEncoder pageTokenEncoder) {
         this.pageTokenEncoder = requireNonNull(pageTokenEncoder, "pageTokenEncoder must not be null");
+    }
+
+    private static String generateInstanceId() {
+        final String hostName;
+        try {
+            hostName = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        return "%s-%s".formatted(hostName, UUID.randomUUID().toString().substring(0, 8));
     }
 
 }

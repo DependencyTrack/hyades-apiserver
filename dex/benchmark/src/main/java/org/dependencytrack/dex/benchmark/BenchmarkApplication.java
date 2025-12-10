@@ -82,8 +82,9 @@ public class BenchmarkApplication {
             }
         });
 
-        final var dexEngineConfig = new DexEngineConfig(UUID.randomUUID(), hikariDataSource);
+        final var dexEngineConfig = new DexEngineConfig(hikariDataSource);
         dexEngineConfig.taskEventBuffer().setMaxBatchSize(250);
+        dexEngineConfig.taskEventBuffer().setFlushInterval(Duration.ofMillis(50));
         dexEngineConfig.setMeterRegistry(meterRegistry);
 
         final var dexEngineFactory = ServiceLoader.load(DexEngineFactory.class).findFirst().orElseThrow();

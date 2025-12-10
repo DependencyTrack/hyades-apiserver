@@ -324,7 +324,7 @@ public final class WorkflowDao extends AbstractDao {
     }
 
     public List<UUID> updateAndUnlockRuns(
-            UUID workerInstanceId,
+            String engineInstanceId,
             Collection<UpdateAndUnlockRunCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 with
@@ -339,7 +339,7 @@ public final class WorkflowDao extends AbstractDao {
                    using cte_cmd
                    where task.queue_name = cte_cmd.queue_name
                      and task.workflow_run_id = cte_cmd.id
-                     and task.locked_by = :workerInstanceId
+                     and task.locked_by = :engineInstanceId
                      and task.lock_version = cte_cmd.lock_version
                   returning task.workflow_run_id
                           , task.queue_name
@@ -380,7 +380,7 @@ public final class WorkflowDao extends AbstractDao {
         }
 
         return update
-                .bind("workerInstanceId", workerInstanceId.toString())
+                .bind("engineInstanceId", engineInstanceId)
                 .bind("ids", ids)
                 .bind("queueNames", queueNames)
                 .bind("statuses", statuses)
@@ -409,7 +409,7 @@ public final class WorkflowDao extends AbstractDao {
     }
 
     public Map<UUID, PolledWorkflowTask> pollAndLockWorkflowTasks(
-            UUID workerInstanceId,
+            String engineInstanceId,
             String queueName,
             Collection<PollWorkflowTaskCommand> commands,
             int limit) {
@@ -431,7 +431,7 @@ public final class WorkflowDao extends AbstractDao {
                 ),
                 cte_locked as (
                   update dex_workflow_task as task
-                     set locked_by = :workerInstanceId
+                     set locked_by = :engineInstanceId
                        , locked_until = now() + (
                            select t.lock_timeout
                              from unnest(:workflowNames, :lockTimeouts) as t(workflow_name, lock_timeout)
@@ -474,7 +474,7 @@ public final class WorkflowDao extends AbstractDao {
         }
 
         return query
-                .bind("workerInstanceId", workerInstanceId.toString())
+                .bind("engineInstanceId", engineInstanceId)
                 .bind("queueName", queueName)
                 .bind("workflowNames", workflowNames)
                 .bind("lockTimeouts", lockTimeouts)
@@ -483,7 +483,7 @@ public final class WorkflowDao extends AbstractDao {
                 .collectToMap(PolledWorkflowTask::runId, Function.identity());
     }
 
-    public int unlockWorkflowTasks(UUID workerInstanceId, Collection<WorkflowTask> tasks) {
+    public int unlockWorkflowTasks(String engineInstanceId, Collection<WorkflowTask> tasks) {
         final Update update = jdbiHandle.createUpdate("""
                 update dex_workflow_task as task
                    set locked_by = null
@@ -493,7 +493,7 @@ public final class WorkflowDao extends AbstractDao {
                     as t(queue_name, run_id, lock_version)
                  where task.queue_name = t.queue_name
                    and task.workflow_run_id = t.run_id
-                   and task.locked_by = :workerInstanceId
+                   and task.locked_by = :engineInstanceId
                    and task.lock_version = t.lock_version
                 """);
 
@@ -510,7 +510,7 @@ public final class WorkflowDao extends AbstractDao {
         }
 
         return update
-                .bind("workerInstanceId", workerInstanceId.toString())
+                .bind("engineInstanceId", engineInstanceId)
                 .bind("queueNames", queueNames)
                 .bind("runIds", runIds)
                 .bind("lockVersions", lockVersions)
@@ -555,9 +555,7 @@ public final class WorkflowDao extends AbstractDao {
                 .execute();
     }
 
-    public Map<UUID, PolledWorkflowEvents> pollRunEvents(
-            UUID workerInstanceId,
-            Collection<GetWorkflowRunHistoryRequest> requests) {
+    public Map<UUID, PolledWorkflowEvents> pollRunEvents(Collection<GetWorkflowRunHistoryRequest> requests) {
         final Query query = jdbiHandle.createQuery("""
                 with
                 cte_req as (
@@ -611,7 +609,6 @@ public final class WorkflowDao extends AbstractDao {
         }
 
         final List<PolledWorkflowEvent> polledEvents = query
-                .bind("workerInstanceId", workerInstanceId.toString())
                 .bind("runIds", runIds)
                 .bind("historyOffsets", historyOffsets)
                 .mapTo(PolledWorkflowEvent.class)
@@ -676,9 +673,7 @@ public final class WorkflowDao extends AbstractDao {
                 .one();
     }
 
-    public int deleteMessages(
-            UUID workerInstanceId,
-            Collection<DeleteWorkflowMessagesCommand> commands) {
+    public int deleteMessages(Collection<DeleteWorkflowMessagesCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 with cte_cmd as (
                   select run_id
@@ -709,7 +704,6 @@ public final class WorkflowDao extends AbstractDao {
         return update
                 .bind("runIds", runIds)
                 .bind("messageIdArrays", messageIdArrays)
-                .bind("workerInstanceId", workerInstanceId.toString())
                 .execute();
     }
 

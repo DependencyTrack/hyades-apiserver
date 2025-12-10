@@ -22,6 +22,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
@@ -176,6 +177,11 @@ final class DexEngineImpl implements DexEngine {
 
         setStatus(Status.STARTING);
         LOGGER.debug("Starting");
+
+        Gauge
+                .builder("dt.dex.engine.info", () -> 1)
+                .tag("instanceId", config.instanceId())
+                .register(config.meterRegistry());
 
         LOGGER.debug("Initializing history cache");
         final var runHistoryCacheBuilder = Caffeine.newBuilder()
@@ -833,8 +839,7 @@ final class DexEngineImpl implements DexEngine {
                 }
             }
 
-            final Map<UUID, PolledWorkflowEvents> polledEventsByRunId =
-                    dao.pollRunEvents(config.instanceId(), historyRequests);
+            final Map<UUID, PolledWorkflowEvents> polledEventsByRunId = dao.pollRunEvents(historyRequests);
 
             return polledTaskByRunId.values().stream()
                     .map(polledTask -> {
@@ -1121,7 +1126,6 @@ final class DexEngineImpl implements DexEngine {
         // The latter is crucial since new messages could have
         // been added in the meantime.
         final int deletedMessages = workflowDao.deleteMessages(
-                this.config.instanceId(),
                 events.stream()
                         .filter(event -> updatedRunIds.contains(event.workflowRunState().id()))
                         .map(event -> new DeleteWorkflowMessagesCommand(
@@ -1160,7 +1164,6 @@ final class DexEngineImpl implements DexEngine {
             final ActivityDao activityDao,
             final Collection<ActivityTaskAbandonedEvent> events) {
         final int abandonedTasks = activityDao.unlockActivityTasks(
-                this.config.instanceId(),
                 events.stream()
                         .map(ActivityTaskAbandonedEvent::task)
                         .toList());
@@ -1194,7 +1197,7 @@ final class DexEngineImpl implements DexEngine {
                                     .build()));
         }
 
-        final List<ActivityTaskId> deletedTaskIds = activityDao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
+        final List<ActivityTaskId> deletedTaskIds = activityDao.deleteLockedActivityTasks(tasksToDelete);
         if (deletedTaskIds.size() != tasksToDelete.size()) {
             workflowMessageByTaskId.keySet().removeIf(taskId -> {
                 if (!deletedTaskIds.contains(taskId)) {
@@ -1265,7 +1268,7 @@ final class DexEngineImpl implements DexEngine {
         }
 
         if (!tasksToDelete.isEmpty()) {
-            final List<ActivityTaskId> deletedTaskIds = activityDao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
+            final List<ActivityTaskId> deletedTaskIds = activityDao.deleteLockedActivityTasks(tasksToDelete);
             if (deletedTaskIds.size() != tasksToDelete.size()) {
                 workflowMessageByTaskId.keySet().removeIf(taskId -> {
                     if (!deletedTaskIds.contains(taskId)) {
@@ -1332,7 +1335,7 @@ final class DexEngineImpl implements DexEngine {
                      where task.queue_name = t.queue_name
                        and task.workflow_run_id = t.workflow_run_id
                        and task.created_event_id = t.created_event_id
-                       and task.locked_by = :workerInstanceId
+                       and task.locked_by = :engineInstanceId
                        and task.lock_version = t.lock_version
                     returning task.queue_name
                             , task.workflow_run_id
@@ -1358,7 +1361,7 @@ final class DexEngineImpl implements DexEngine {
             }
 
             return update
-                    .bind("workerInstanceId", config.instanceId().toString())
+                    .bind("engineInstanceId", config.instanceId())
                     .bind("queueNames", queueNames)
                     .bind("workflowRunIds", workflowRunIds)
                     .bind("createdEventIds", createdEventIds)

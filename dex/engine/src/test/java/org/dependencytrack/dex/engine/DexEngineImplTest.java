@@ -104,7 +104,7 @@ class DexEngineImplTest {
         dataSource.setPassword(postgresContainer.getPassword());
         dataSource.setDatabaseName(postgresContainer.getDatabaseName());
 
-        final var config = new DexEngineConfig(UUID.randomUUID(), dataSource);
+        final var config = new DexEngineConfig(dataSource);
 
         engine = new DexEngineImpl(config);
         engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, WORKFLOW_TASK_QUEUE, 10));

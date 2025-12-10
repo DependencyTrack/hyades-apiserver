@@ -20,8 +20,6 @@ package org.dependencytrack.dex;
 
 import io.micrometer.core.instrument.Metrics;
 import io.smallrye.config.SmallRyeConfig;
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.dex.DexEngineConfigMapping.TaskWorkerConfigMapping;
@@ -37,10 +35,11 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.util.ServiceLoader;
-import java.util.UUID;
 
 /**
  * @since 5.7.0
@@ -116,7 +115,7 @@ public final class DexEngineInitializer implements ServletContextListener {
     private DexEngineConfig createEngineConfig(DexEngineConfigMapping configMapping) {
         final DataSource dataSource = dataSourceRegistry.get(configMapping.dataSource().name());
 
-        final var engineConfig = new DexEngineConfig(UUID.randomUUID(), dataSource);
+        final var engineConfig = new DexEngineConfig(dataSource);
 
         engineConfig.workflowTaskScheduler().setEnabled(configMapping.workflowTaskScheduler().enabled());
         engineConfig.workflowTaskScheduler().setPollInterval(configMapping.workflowTaskScheduler().pollInterval());
