@@ -265,6 +265,12 @@ public final class Buffer<T> implements Closeable {
                 flushLatencySample.stop(flushLatencyTimer);
                 currentBatch.clear();
             }
+
+            if (itemsQueue.size() >= maxBatchSize) {
+                // Request another flush if there's still at least
+                // a full batch worth of items queued.
+                boolean ignored = flushRequestQueue.offer(true);
+            }
         } finally {
             flushLock.unlock();
         }

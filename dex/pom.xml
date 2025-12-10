@@ -39,6 +39,7 @@
         <module>engine-migration</module>
         <module>engine</module>
         <module>testing</module>
+        <module>benchmark</module>
     </modules>
 
     <properties>

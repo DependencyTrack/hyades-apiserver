@@ -126,6 +126,11 @@ create unique index dex_workflow_run_workflow_instance_id_idx
  where workflow_instance_id is not null
    and status in ('CREATED', 'RUNNING', 'SUSPENDED');
 
+-- Index to support workflow run lookups by parent ID.
+create index dex_workflow_run_parent_id_idx
+    on dex_workflow_run (parent_id)
+ where parent_id is not null;
+
 -- Index to support identification of executing runs for a concurrency key.
 create unique index dex_workflow_run_concurrency_key_executing_idx
     on dex_workflow_run (concurrency_key)
