@@ -21,7 +21,10 @@ package org.dependencytrack.dex.benchmark;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmInfoMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
 import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
@@ -39,11 +42,11 @@ import org.dependencytrack.dex.engine.migration.MigrationExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.sql.DataSource;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.ServiceLoader;
-import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -54,35 +57,12 @@ public class BenchmarkApplication {
     private static final Logger LOGGER = LoggerFactory.getLogger(BenchmarkApplication.class);
 
     public static void main(String[] args) throws Exception {
-        final var hikariConfig = new HikariConfig();
-        hikariConfig.setDriverClassName(org.postgresql.Driver.class.getName());
-        hikariConfig.setJdbcUrl("jdbc:postgresql://localhost:5432/dex");
-        hikariConfig.setUsername("dex");
-        hikariConfig.setPassword("dex");
-        hikariConfig.setMaximumPoolSize(10);
-        hikariConfig.setMinimumIdle(5);
-        final var hikariDataSource = new HikariDataSource(hikariConfig);
+        final PrometheusMeterRegistry meterRegistry = createMeterRegistry();
+        final DataSource dataSource = createDataSource(meterRegistry);
 
-        new MigrationExecutor(hikariDataSource).execute();
+        new MigrationExecutor(dataSource).execute();
 
-        final var meterRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-        new JvmInfoMetrics().bindTo(meterRegistry);
-        meterRegistry.config().meterFilter(new MeterFilter() {
-            @Override
-            public DistributionStatisticConfig configure(
-                    Meter.Id id,
-                    DistributionStatisticConfig config) {
-                if (id.getName().startsWith("dt.dex.")) {
-                    return DistributionStatisticConfig.builder()
-                            .percentilesHistogram(true)
-                            .build()
-                            .merge(config);
-                }
-                return config;
-            }
-        });
-
-        final var dexEngineConfig = new DexEngineConfig(hikariDataSource);
+        final var dexEngineConfig = new DexEngineConfig(dataSource);
         dexEngineConfig.taskEventBuffer().setMaxBatchSize(250);
         dexEngineConfig.taskEventBuffer().setFlushInterval(Duration.ofMillis(50));
         dexEngineConfig.setMeterRegistry(meterRegistry);
@@ -120,26 +100,78 @@ public class BenchmarkApplication {
         dexEngine.registerActivityWorker(new ActivityTaskWorkerOptions("bar-worker", "bar", 50));
         dexEngine.registerActivityWorker(new ActivityTaskWorkerOptions("baz-worker", "baz", 50));
 
-        final var foo = new ArrayList<CreateWorkflowRunRequest<?>>();
-        for (int i = 0; i < 250_000; i++) {
-            foo.add(new CreateWorkflowRunRequest<>(DummyWorkflow.class));
-        }
-        dexEngine.createRuns(foo);
+        createWorkflowRuns(dexEngine, 250_000, 25_000);
 
         dexEngine.start();
 
-        publishMetrics(meterRegistry);
+        scheduleMetricsPublishing(meterRegistry);
 
         Thread.currentThread().join();
     }
 
-    private static void publishMetrics(final PrometheusMeterRegistry meterRegistry) {
+    private static DataSource createDataSource(MeterRegistry meterRegistry) {
+        final var hikariConfig = new HikariConfig();
+        hikariConfig.setDriverClassName(org.postgresql.Driver.class.getName());
+        hikariConfig.setJdbcUrl("jdbc:postgresql://localhost:5432/dex");
+        hikariConfig.setUsername("dex");
+        hikariConfig.setPassword("dex");
+        hikariConfig.setMaximumPoolSize(10);
+        hikariConfig.setMinimumIdle(5);
+        hikariConfig.setMetricRegistry(meterRegistry);
+
+        return new HikariDataSource(hikariConfig);
+    }
+
+    private static PrometheusMeterRegistry createMeterRegistry() {
+        final var meterRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+
+        new JvmInfoMetrics().bindTo(meterRegistry);
+        new JvmGcMetrics().bindTo(meterRegistry);
+        new JvmMemoryMetrics().bindTo(meterRegistry);
+
+        meterRegistry.config().meterFilter(new MeterFilter() {
+            @Override
+            public DistributionStatisticConfig configure(
+                    Meter.Id id,
+                    DistributionStatisticConfig config) {
+                if (id.getName().startsWith("dt.dex.")) {
+                    return DistributionStatisticConfig.builder()
+                            .percentilesHistogram(true)
+                            .build()
+                            .merge(config);
+                }
+                return config;
+            }
+        });
+
+        return meterRegistry;
+    }
+
+    private static void createWorkflowRuns(DexEngine dexEngine, int total, int batchSize) {
+        LOGGER.info("Creating {} workflow runs", total);
+
+        for (int i = 0; i < total; i += batchSize) {
+            final int currentBatchSize = Math.min(batchSize, total - batchSize);
+            final var currentBatch = new ArrayList<CreateWorkflowRunRequest<?>>(currentBatchSize);
+
+            for (int j = 0; j < currentBatchSize; j++) {
+                currentBatch.add(new CreateWorkflowRunRequest<>(DummyWorkflow.class));
+            }
+
+            LOGGER.info("Creating batch of {} workflow runs", currentBatchSize);
+            dexEngine.createRuns(currentBatch);
+        }
+    }
+
+    private static void scheduleMetricsPublishing(PrometheusMeterRegistry meterRegistry) {
         final var pushGateway = PushGateway.builder()
                 .registry(meterRegistry.getPrometheusRegistry())
                 .address("localhost:9091")
                 .build();
 
         final var pushExecutor = Executors.newSingleThreadScheduledExecutor();
+        Runtime.getRuntime().addShutdownHook(new Thread(pushExecutor::close));
+
         pushExecutor.scheduleWithFixedDelay(
                 () -> {
                     try {
@@ -151,8 +183,6 @@ public class BenchmarkApplication {
                 3_000,
                 15_000,
                 TimeUnit.MILLISECONDS);
-
-        Runtime.getRuntime().addShutdownHook(new Thread(pushExecutor::close));
     }
 
 }
