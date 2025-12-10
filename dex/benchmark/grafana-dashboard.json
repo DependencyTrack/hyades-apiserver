@@ -1,61 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_POSTGRES",
-      "label": "Postgres",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "grafana-postgresql-datasource",
-      "pluginName": "PostgreSQL"
-    },
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__elements": {},
-  "__requires": [
-    {
-      "type": "panel",
-      "id": "barchart",
-      "name": "Bar chart",
-      "version": ""
-    },
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "12.1.1"
-    },
-    {
-      "type": "datasource",
-      "id": "grafana-postgresql-datasource",
-      "name": "PostgreSQL",
-      "version": "12.1.1"
-    },
-    {
-      "type": "panel",
-      "id": "piechart",
-      "name": "Pie chart",
-      "version": ""
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -75,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 2,
   "links": [],
   "panels": [
     {
@@ -94,7 +37,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "P44368ADAD746BC27"
       },
       "fieldConfig": {
         "defaults": {
@@ -150,7 +93,7 @@
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
+            "uid": "P44368ADAD746BC27"
           },
           "editorMode": "code",
           "format": "table",
@@ -182,7 +125,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -265,7 +208,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "sum by (status) (rate(dt_dex_engine_runs_completed_total[1m]))",
@@ -276,7 +219,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "",
@@ -293,7 +236,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "P44368ADAD746BC27"
       },
       "fieldConfig": {
         "defaults": {
@@ -376,7 +319,7 @@
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
+            "uid": "P44368ADAD746BC27"
           },
           "editorMode": "code",
           "format": "table",
@@ -447,7 +390,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "P44368ADAD746BC27"
       },
       "fieldConfig": {
         "defaults": {
@@ -527,7 +470,7 @@
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
+            "uid": "P44368ADAD746BC27"
           },
           "editorMode": "code",
           "format": "table",
@@ -610,7 +553,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -691,20 +634,20 @@
       "pluginVersion": "12.1.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "editorMode": "code",
           "expr": "rate(dt_dex_engine_workflow_tasks_scheduled_total[1m])",
           "legendFormat": "workflow",
           "range": true,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          }
+          "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "rate(dt_dex_engine_activity_tasks_scheduled_total[1m])",
@@ -721,7 +664,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -802,20 +745,20 @@
       "pluginVersion": "12.1.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum by (le, queueName) (rate(dt_dex_engine_workflow_task_scheduling_latency_seconds_bucket[1m])))",
           "legendFormat": "{{queueName}} p99",
           "range": true,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          }
+          "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.90, sum by (le, queueName) (rate(dt_dex_engine_workflow_task_scheduling_latency_seconds_bucket[1m])))",
@@ -828,7 +771,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.75, sum by (le, queueName) (rate(dt_dex_engine_workflow_scheduling_latency_seconds_bucket[1m])))",
@@ -841,7 +784,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.50, sum by (le, queueName) (rate(dt_dex_engine_workflow_task_scheduling_latency_seconds_bucket[1m])))",
@@ -858,7 +801,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -939,20 +882,20 @@
       "pluginVersion": "12.1.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum by (le, queueName) (rate(dt_dex_engine_activity_task_scheduling_latency_seconds_bucket[1m])))",
           "legendFormat": "{{queueName}} p99",
           "range": true,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          }
+          "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.90, sum by (le, queueName) (rate(dt_dex_engine_activity_task_scheduling_latency_seconds_bucket[1m])))",
@@ -965,7 +908,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.75, sum by (le, queueName) (rate(dt_dex_engine_activity_task_scheduling_latency_seconds_bucket[1m])))",
@@ -978,7 +921,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.50, sum by (le, queueName) (rate(dt_dex_engine_activity_task_scheduling_latency_seconds_bucket[1m])))",
@@ -1008,7 +951,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1089,15 +1032,15 @@
       "pluginVersion": "12.1.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "editorMode": "code",
           "expr": "sum by (workerType) (rate(dt_dex_engine_task_worker_polls_total[1m]))",
           "legendFormat": "__auto",
           "range": true,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          }
+          "refId": "A"
         }
       ],
       "title": "Worker Poll Rate",
@@ -1106,7 +1049,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1187,20 +1130,20 @@
       "pluginVersion": "12.1.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum by (le, workerType) (rate(dt_dex_engine_task_worker_poll_latency_seconds_bucket{workerType=\"WorkflowTaskWorker\"}[1m])))",
           "legendFormat": "p99",
           "range": true,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          }
+          "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.90, sum by (le, workerType) (rate(dt_dex_engine_task_worker_poll_latency_seconds_bucket{workerType=\"WorkflowTaskWorker\"}[1m])))",
@@ -1213,7 +1156,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.75, sum by (le, workerType) (rate(dt_dex_engine_task_worker_poll_latency_seconds_bucket{workerType=\"WorkflowTaskWorker\"}[1m])))",
@@ -1226,7 +1169,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.50, sum by (le, workerType) (rate(dt_dex_engine_task_worker_poll_latency_seconds_bucket{workerType=\"WorkflowTaskWorker\"}[1m])))",
@@ -1243,7 +1186,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1324,20 +1267,20 @@
       "pluginVersion": "12.1.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum by (le, workerType) (rate(dt_dex_engine_task_worker_poll_latency_seconds_bucket{workerType=\"ActivityTaskWorker\"}[1m])))",
           "legendFormat": "p99",
           "range": true,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          }
+          "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.90, sum by (le, workerType) (rate(dt_dex_engine_task_worker_poll_latency_seconds_bucket{workerType=\"ActivityTaskWorker\"}[1m])))",
@@ -1350,7 +1293,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.75, sum by (le, workerType) (rate(dt_dex_engine_task_worker_poll_latency_seconds_bucket{workerType=\"ActivityTaskWorker\"}[1m])))",
@@ -1363,7 +1306,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.50, sum by (le, workerType) (rate(dt_dex_engine_task_worker_poll_latency_seconds_bucket{workerType=\"ActivityTaskWorker\"}[1m])))",
@@ -1380,7 +1323,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1461,15 +1404,15 @@
       "pluginVersion": "12.1.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "editorMode": "code",
           "expr": "sum by (workerType) (rate(dt_dex_engine_task_worker_tasks_processed_total[1m]))",
           "legendFormat": "__auto",
           "range": true,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          }
+          "refId": "A"
         }
       ],
       "title": "Worker Task Processing Rate",
@@ -1478,7 +1421,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1559,20 +1502,20 @@
       "pluginVersion": "12.1.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum by (le) (rate(dt_dex_engine_task_worker_process_latency_seconds_bucket{workerType=\"WorkflowTaskWorker\"}[1m])))",
           "legendFormat": "p99",
           "range": true,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          }
+          "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.90, sum by (le) (rate(dt_dex_engine_task_worker_process_latency_seconds_bucket{workerType=\"WorkflowTaskWorker\"}[1m])))",
@@ -1585,7 +1528,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.75, sum by (le) (rate(dt_dex_engine_task_worker_process_latency_seconds_bucket{workerType=\"WorkflowTaskWorker\"}[1m])))",
@@ -1598,7 +1541,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.50, sum by (le) (rate(dt_dex_engine_task_worker_process_latency_seconds_bucket{workerType=\"WorkflowTaskWorker\"}[1m])))",
@@ -1615,7 +1558,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1696,20 +1639,20 @@
       "pluginVersion": "12.1.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum by (le) (rate(dt_dex_engine_task_worker_process_latency_seconds_bucket{workerType=\"ActivityTaskWorker\"}[1m])))",
           "legendFormat": "p99",
           "range": true,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          }
+          "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.90, sum by (le) (rate(dt_dex_engine_task_worker_process_latency_seconds_bucket{workerType=\"ActivityTaskWorker\"}[1m])))",
@@ -1722,7 +1665,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.75, sum by (le) (rate(dt_dex_engine_task_worker_process_latency_seconds_bucket{workerType=\"ActivityTaskWorker\"}[1m])))",
@@ -1735,7 +1678,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.50, sum by (le) (rate(dt_dex_engine_task_worker_process_latency_seconds_bucket{workerType=\"ActivityTaskWorker\"}[1m])))",
@@ -1765,7 +1708,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1848,7 +1791,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum by (le, buffer) (rate(dt_dex_engine_buffer_item_wait_latency_seconds_bucket[1m]))) > 0",
@@ -1860,7 +1803,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.90, sum by (le, buffer) (rate(dt_dex_engine_buffer_item_wait_latency_seconds_bucket[1m]))) > 0",
@@ -1873,7 +1816,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.75, sum by (le, buffer) (rate(dt_dex_engine_buffer_item_wait_latency_seconds_bucket[1m]))) > 0",
@@ -1890,7 +1833,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1973,7 +1916,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum by (le, buffer) (rate(dt_dex_engine_buffer_flush_latency_seconds_bucket[1m]))) > 0",
@@ -1985,7 +1928,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.90, sum by (le, buffer) (rate(dt_dex_engine_buffer_flush_latency_seconds_bucket[1m]))) > 0",
@@ -1998,7 +1941,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.75, sum by (le, buffer) (rate(dt_dex_engine_buffer_flush_latency_seconds_bucket[1m]))) > 0",
@@ -2015,7 +1958,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -2098,7 +2041,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "sum by (buffer) (rate(dt_dex_engine_buffer_flushes_total[1m])) > 0",
@@ -2114,7 +2057,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -2197,7 +2140,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum by (le, buffer) (rate(dt_dex_engine_buffer_flush_batch_size_bucket[1m]))) > 0",
@@ -2209,7 +2152,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.90, sum by (le, buffer) (rate(dt_dex_engine_buffer_flush_batch_size_bucket[1m]))) > 0",
@@ -2222,7 +2165,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.75, sum by (le, buffer) (rate(dt_dex_engine_buffer_flush_batch_size_bucket[1m]))) > 0",
@@ -2239,7 +2182,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -2321,7 +2264,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "sum by (buffer) (dt_dex_engine_buffer_items_queued)",
@@ -2335,6 +2278,7 @@
       "type": "timeseries"
     }
   ],
+  "preload": false,
   "refresh": "5s",
   "schemaVersion": 41,
   "tags": [],
@@ -2348,7 +2292,7 @@
   "timepicker": {},
   "timezone": "utc",
   "title": "dex",
-  "uid": "e4adcc8d-3d35-4dd1-a447-e83b97321500",
-  "version": 17,
+  "uid": "e4adcc8d-3d35-4dd1-a447-e83b97321501",
+  "version": 1,
   "weekStart": "monday"
 }
