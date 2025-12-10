@@ -127,7 +127,7 @@
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>6.0.1</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
-        <lib.micrometer.version>1.16.0</lib.micrometer.version>
+        <lib.micrometer.version>1.16.1</lib.micrometer.version>
         <lib.microprofile-config.version>3.1</lib.microprofile-config.version>
         <lib.microprofile-health.version>4.0.1</lib.microprofile-health.version>
         <lib.minio.version>8.6.0</lib.minio.version>
