@@ -87,7 +87,7 @@ public final class Buffer<T> implements Closeable {
     private final ReentrantLock flushLock;
     private final ReentrantLock statusLock;
     private final MeterRegistry meterRegistry;
-    private Status status = Status.CREATED;
+    private volatile Status status = Status.CREATED;
     private @Nullable DistributionSummary batchSizeDistribution;
     private @Nullable Timer itemWaitLatencyTimer;
     private @Nullable Counter flushCounter;
@@ -266,14 +266,7 @@ public final class Buffer<T> implements Closeable {
                 }
             } finally {
                 flushCounter.increment();
-                final long flushLatencyNanos = flushLatencySample.stop(flushLatencyTimer);
-                if (flushLatencyNanos > TimeUnit.SECONDS.toNanos(1)) {
-                    LOGGER.warn(
-                            "{}: Flush of {} items took a long time to complete ({}ms)",
-                            name,
-                            currentBatch.size(),
-                            TimeUnit.NANOSECONDS.toMillis(flushLatencyNanos));
-                }
+                flushLatencySample.stop(flushLatencyTimer);
                 currentBatch.clear();
             }
 

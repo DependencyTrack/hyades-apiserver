@@ -156,7 +156,7 @@ final class DexEngineImpl implements DexEngine {
     private final Map<String, TaskWorker> taskWorkerByName = new HashMap<>();
     private final List<WorkflowRunsCompletedEventListener> runsCompletedEventListeners = new ArrayList<>();
 
-    private Status status = Status.CREATED;
+    private volatile Status status = Status.CREATED;
     private @Nullable WorkflowTaskScheduler workflowTaskScheduler;
     private @Nullable ActivityTaskScheduler activityTaskScheduler;
     private @Nullable ExecutorService eventListenerExecutor;
