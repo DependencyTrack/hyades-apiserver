@@ -144,6 +144,7 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
             try {
                 final boolean terminated = pollThread.join(Duration.ofSeconds(10));
                 if (!terminated) {
+                    logger.warn("Poll thread did not stop in time; Interrupting it");
                     pollThread.interrupt();
                 }
             } catch (InterruptedException e) {
@@ -154,9 +155,21 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
         }
         if (taskExecutor != null) {
             logger.debug("Waiting for task executor to stop");
-            taskExecutor.close();
-            taskExecutor = null;
+            taskExecutor.shutdown();
+
+            try {
+                final boolean terminated = taskExecutor.awaitTermination(30, TimeUnit.SECONDS);
+                if (!terminated) {
+                    logger.warn("Task executor did not stop in time; Interrupting it");
+                    taskExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                logger.warn("Interrupted while waiting for task executor to stop", e);
+                Thread.currentThread().interrupt();
+                taskExecutor.shutdownNow();
+            }
         }
+
 
         setStatus(Status.STOPPED);
     }
