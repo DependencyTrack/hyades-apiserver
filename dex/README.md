@@ -19,3 +19,7 @@ API surfaces more obvious, and prevent internals from leaking into the API.
 It is not intended that there exist other API implementations outside of `engine`.
 
 The [Java module system](https://dev.java/learn/modules/intro/) is used to enforce strong encapsulation.
+
+## Documentation
+
+- [Common Patterns](docs/PATTERNS.md)
