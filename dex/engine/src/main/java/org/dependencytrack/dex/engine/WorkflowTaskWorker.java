@@ -32,7 +32,6 @@ import org.dependencytrack.dex.proto.event.v1.WorkflowTaskStarted;
 import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.TimeoutException;
 
 import static java.util.Objects.requireNonNull;
 
@@ -148,28 +147,13 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
                         .setWorkflowTaskCompleted(WorkflowTaskCompleted.getDefaultInstance())
                         .build());
 
-        try {
-            // TODO: Retry on TimeoutException.
-            engine.onTaskEvent(new WorkflowTaskCompletedEvent(task, workflowRunState)).join();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.warn("Interrupted while waiting for task completion to be acknowledged", e);
-        } catch (TimeoutException e) {
-            throw new RuntimeException("Timed out while waiting for task completion to be acknowledged", e);
-        }
+
+        engine.onTaskEvent(new WorkflowTaskCompletedEvent(task, workflowRunState));
     }
 
     @Override
     void abandon(final WorkflowTask task) {
-        try {
-            // TODO: Retry on TimeoutException
-            engine.onTaskEvent(new WorkflowTaskAbandonedEvent(task)).join();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.warn("Interrupted while waiting for task abandonment to be acknowledged", e);
-        } catch (TimeoutException e) {
-            throw new RuntimeException("Timed out while waiting for task abandonment to be acknowledged", e);
-        }
+        engine.onTaskEvent(new WorkflowTaskAbandonedEvent(task));
     }
 
 }

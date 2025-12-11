@@ -108,8 +108,10 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -782,8 +784,33 @@ final class DexEngineImpl implements DexEngine {
         });
     }
 
-    CompletableFuture<Void> onTaskEvent(final TaskEvent taskEvent) throws InterruptedException, TimeoutException {
-        return taskEventBuffer.add(taskEvent);
+    void onTaskEvent(final TaskEvent taskEvent) {
+        final CompletableFuture<Void> future;
+        try {
+            future = taskEventBuffer.add(taskEvent);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "Interrupted while waiting for buffer to accept task event", e);
+        } catch (TimeoutException e) {
+            // TODO: Retry
+            throw new IllegalStateException(
+                    "Timed out while waiting for buffer to accept task event", e);
+        }
+
+        try {
+            // TODO: Find appropriate timeout.
+            future.get(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "Interrupted while waiting for task event to be processed", e);
+        } catch (TimeoutException e) {
+            throw new IllegalStateException(
+                    "Timed out while waiting for task event to be processed", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException(e.getCause());
+        }
     }
 
     private void flushExternalEvents(final List<ExternalEvent> externalEvents) {

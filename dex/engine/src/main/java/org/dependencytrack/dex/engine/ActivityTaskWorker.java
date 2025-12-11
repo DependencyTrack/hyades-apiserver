@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeoutException;
 
 import static java.util.Objects.requireNonNull;
 
@@ -87,25 +86,9 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
             final Object activityResult = activityMetadata.executor().execute(ctx, arg);
             final Payload result = activityMetadata.resultConverter().convertToPayload(activityResult);
 
-            try {
-                // TODO: Retry on TimeoutException
-                engine.onTaskEvent(new ActivityTaskCompletedEvent(task, result)).join();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                logger.warn("Interrupted while waiting for task completion to be acknowledged", e);
-            } catch (TimeoutException e) {
-                throw new RuntimeException("Timed out while waiting for task completion to be acknowledged", e);
-            }
+            engine.onTaskEvent(new ActivityTaskCompletedEvent(task, result));
         } catch (Exception e) {
-            try {
-                // TODO: Retry on TimeoutException
-                engine.onTaskEvent(new ActivityTaskFailedEvent(task, e)).join();
-            } catch (InterruptedException ex) {
-                Thread.currentThread().interrupt();
-                logger.warn("Interrupted while waiting for task failure to be acknowledged", ex);
-            } catch (TimeoutException ex) {
-                throw new RuntimeException("Timed out while waiting for task failure to be acknowledged", ex);
-            }
+            engine.onTaskEvent(new ActivityTaskFailedEvent(task, e));
         } finally {
             activeContexts.remove(ctx);
         }
@@ -113,15 +96,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
 
     @Override
     void abandon(final ActivityTask task) {
-        try {
-            // TODO: Retry on TimeoutException
-            engine.onTaskEvent(new ActivityTaskAbandonedEvent(task)).join();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.warn("Interrupted while waiting for task abandonment to be acknowledged", e);
-        } catch (TimeoutException e) {
-            throw new RuntimeException("Timed out while waiting for task abandonment to be acknowledged", e);
-        }
+        engine.onTaskEvent(new ActivityTaskAbandonedEvent(task));
     }
 
     @Override
