@@ -319,6 +319,12 @@ final class DexEngineImpl implements DexEngine {
             externalEventBuffer = null;
         }
 
+        if (activityTaskHeartbeatBuffer != null) {
+            LOGGER.debug("Waiting for activity task heartbeat buffer to stop");
+            activityTaskHeartbeatBuffer.close();
+            activityTaskHeartbeatBuffer = null;
+        }
+
         if (taskEventBuffer != null) {
             LOGGER.debug("Waiting for task event buffer to stop");
             taskEventBuffer.close();
