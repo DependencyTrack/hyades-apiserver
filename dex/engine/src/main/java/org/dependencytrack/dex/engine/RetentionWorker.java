@@ -103,7 +103,7 @@ final class RetentionWorker implements Closeable {
             final int runsDeleted = update
                     .bind("retentionDuration", retentionDuration)
                     .execute();
-            LOGGER.debug("Deleted {} workflow run(s)", runsDeleted);
+            LOGGER.info("Deleted {} workflow run(s)", runsDeleted);
         });
     }
 

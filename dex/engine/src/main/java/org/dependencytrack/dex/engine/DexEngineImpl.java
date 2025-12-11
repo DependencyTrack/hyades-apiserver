@@ -209,7 +209,8 @@ final class DexEngineImpl implements DexEngine {
             workflowTaskScheduler = new WorkflowTaskScheduler(
                     jdbi,
                     config.meterRegistry(),
-                    config.workflowTaskScheduler().pollInterval());
+                    config.workflowTaskScheduler().pollInterval(),
+                    config.workflowTaskScheduler().pollBackoffFunction());
             workflowTaskScheduler.start();
         }
 
@@ -218,7 +219,8 @@ final class DexEngineImpl implements DexEngine {
             activityTaskScheduler = new ActivityTaskScheduler(
                     jdbi,
                     config.meterRegistry(),
-                    config.activityTaskScheduler().pollInterval());
+                    config.activityTaskScheduler().pollInterval(),
+                    config.activityTaskScheduler().pollBackoffFunction());
             activityTaskScheduler.start();
         }
 

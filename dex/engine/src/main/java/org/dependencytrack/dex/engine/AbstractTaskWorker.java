@@ -149,6 +149,7 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
             } catch (InterruptedException e) {
                 logger.warn("Interrupted waiting for poll thread to stop", e);
                 Thread.currentThread().interrupt();
+                pollThread.interrupt();
             }
         }
         if (taskExecutor != null) {
@@ -220,6 +221,7 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
                 }
 
                 logger.debug("Polling for up to {} tasks", tasksToPoll);
+                lastPolledAtMillis = System.currentTimeMillis();
                 pollsCounter.increment();
 
                 final List<T> polledTasks;

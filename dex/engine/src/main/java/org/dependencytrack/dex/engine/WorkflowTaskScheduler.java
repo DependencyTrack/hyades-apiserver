@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.dex.engine;
 
+import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -37,9 +38,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import static org.dependencytrack.dex.engine.support.LockSupport.tryAcquireAdvisoryLock;
 
@@ -50,21 +48,32 @@ final class WorkflowTaskScheduler implements Closeable {
 
     private final Jdbi jdbi;
     private final MeterRegistry meterRegistry;
-    private final Duration pollInterval;
-    private @Nullable ScheduledExecutorService executor;
+    private final long pollIntervalMillis;
+    private final IntervalFunction pollBackoffFunction;
+    private final Thread pollThread;
+    private volatile boolean stopped = false;
+    private @Nullable Counter pollsCounter;
     private @Nullable MeterProvider<Timer> taskSchedulingLatencyTimer;
     private @Nullable MeterProvider<Counter> tasksScheduledCounter;
 
     WorkflowTaskScheduler(
             final Jdbi jdbi,
             final MeterRegistry meterRegistry,
-            final Duration pollInterval) {
+            final Duration pollInterval,
+            final IntervalFunction pollBackoffFunction) {
         this.jdbi = jdbi;
         this.meterRegistry = meterRegistry;
-        this.pollInterval = pollInterval;
+        this.pollIntervalMillis = pollInterval.toMillis();
+        this.pollBackoffFunction = pollBackoffFunction;
+        this.pollThread = Thread.ofPlatform()
+                .name(getClass().getSimpleName())
+                .unstarted(this::pollLoop);
     }
 
     void start() {
+        pollsCounter = Counter
+                .builder("dt.dex.engine.workflow.task.scheduler.polls")
+                .register(meterRegistry);
         taskSchedulingLatencyTimer = Timer
                 .builder("dt.dex.engine.workflow.task.scheduling.latency")
                 .withRegistry(meterRegistry);
@@ -72,40 +81,101 @@ final class WorkflowTaskScheduler implements Closeable {
                 .builder("dt.dex.engine.workflow.tasks.scheduled")
                 .withRegistry(meterRegistry);
 
-        executor = Executors.newSingleThreadScheduledExecutor(
-                Thread.ofPlatform()
-                        .name(WorkflowTaskScheduler.class.getSimpleName())
-                        .factory());
-        executor.scheduleWithFixedDelay(
-                () -> {
-                    try {
-                        scheduleWorkflowTasks();
-                    } catch (RuntimeException e) {
-                        LOGGER.error("Failed to schedule workflow tasks", e);
-                    }
-                },
-                100,
-                pollInterval.toMillis(),
-                TimeUnit.MILLISECONDS);
+        pollThread.start();
     }
 
     @Override
     public void close() {
-        if (executor != null) {
-            executor.close();
+        if (pollThread.isAlive()) {
+            LOGGER.debug("Waiting for poll thread to stop");
+            stopped = true;
+
+            try {
+                final boolean terminated = pollThread.join(Duration.ofSeconds(3));
+                if (!terminated) {
+                    pollThread.interrupt();
+                }
+            } catch (InterruptedException e) {
+                LOGGER.warn("Interrupted waiting for poll thread to stop", e);
+                Thread.currentThread().interrupt();
+                pollThread.interrupt();
+            }
         }
     }
 
-    private void scheduleWorkflowTasks() {
-        jdbi.useTransaction(handle -> {
+    private void pollLoop() {
+        long nowMillis;
+        long lastPolledAtMillis = 0;
+        long nextPollAtMillis;
+        long nextPollDueInMillis;
+        int pollsWithoutSchedules = 0;
+        int consecutiveErrors = 0;
+
+        while (!stopped && !Thread.currentThread().isInterrupted()) {
+            if (pollsWithoutSchedules < 3 && consecutiveErrors == 0) {
+                nowMillis = System.currentTimeMillis();
+                nextPollAtMillis = lastPolledAtMillis + pollIntervalMillis;
+                nextPollDueInMillis = nextPollAtMillis > nowMillis
+                        ? nextPollAtMillis - nowMillis
+                        : 0;
+            } else {
+                final int backoffAttempts = Math.max(pollsWithoutSchedules - 2, consecutiveErrors);
+                nextPollDueInMillis = Math.max(
+                        pollBackoffFunction.apply(backoffAttempts),
+                        pollIntervalMillis);
+                LOGGER.debug(
+                        "Backing off for {}ms (attempt={}, pollsWithoutSchedules={}, consecutiveErrors={})",
+                        nextPollDueInMillis,
+                        backoffAttempts,
+                        pollsWithoutSchedules,
+                        consecutiveErrors);
+            }
+
+            if (nextPollDueInMillis > 0) {
+                LOGGER.debug("Waiting for next poll to be due in {}ms", nextPollDueInMillis);
+                try {
+                    Thread.sleep(nextPollDueInMillis);
+                } catch (InterruptedException e) {
+                    LOGGER.debug("Interrupted while waiting for next poll to be due");
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+
+            lastPolledAtMillis = System.currentTimeMillis();
+            pollsCounter.increment();
+
+            try {
+                final PollResult pollResult = poll();
+                if (poll() == PollResult.TASKS_SCHEDULED) {
+                    pollsWithoutSchedules = 0;
+                } else if (pollResult == PollResult.NO_TASKS_SCHEDULED) {
+                    pollsWithoutSchedules++;
+                }
+                consecutiveErrors = 0;
+            } catch (RuntimeException e) {
+                consecutiveErrors++;
+                LOGGER.error("Unexpected error occurred while scheduling activity tasks", e);
+            }
+        }
+    }
+
+    private enum PollResult {
+        TASKS_SCHEDULED,
+        NO_TASKS_SCHEDULED,
+        SKIPPED
+    }
+
+    private PollResult poll() {
+        return jdbi.inTransaction(handle -> {
             if (!tryAcquireAdvisoryLock(handle, ADVISORY_LOCK_ID)) {
-                return;
+                return PollResult.SKIPPED;
             }
 
             final List<Queue> queues = getActiveQueuesWithCapacity(handle);
             if (queues.isEmpty()) {
                 LOGGER.debug("No active queues with capacity");
-                return;
+                return PollResult.NO_TASKS_SCHEDULED;
             }
 
             for (final Queue queue : queues) {
@@ -118,6 +188,8 @@ final class WorkflowTaskScheduler implements Closeable {
                                     .withTag("queueName", queue.name));
                 }
             }
+
+            return PollResult.TASKS_SCHEDULED;
         });
     }
 

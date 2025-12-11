@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.dex.engine.api;
 
+import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.dependencytrack.common.pagination.PageTokenEncoder;
@@ -30,6 +31,7 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.UUID;
 
+import static io.github.resilience4j.core.IntervalFunction.ofExponentialRandomBackoff;
 import static java.util.Objects.requireNonNull;
 
 public class DexEngineConfig {
@@ -49,7 +51,7 @@ public class DexEngineConfig {
             return flushInterval;
         }
 
-        public void setFlushInterval(final Duration flushInterval) {
+        public void setFlushInterval(Duration flushInterval) {
             this.flushInterval = flushInterval;
         }
 
@@ -60,7 +62,7 @@ public class DexEngineConfig {
             return maxBatchSize;
         }
 
-        public void setMaxBatchSize(final int maxBatchSize) {
+        public void setMaxBatchSize(int maxBatchSize) {
             this.maxBatchSize = maxBatchSize;
         }
 
@@ -109,7 +111,7 @@ public class DexEngineConfig {
             return duration;
         }
 
-        public void setDuration(final Duration duration) {
+        public void setDuration(Duration duration) {
             this.duration = duration;
         }
 
@@ -120,7 +122,7 @@ public class DexEngineConfig {
             return workerEnabled;
         }
 
-        public void setWorkerEnabled(final boolean workerEnabled) {
+        public void setWorkerEnabled(boolean workerEnabled) {
             this.workerEnabled = workerEnabled;
         }
 
@@ -131,7 +133,7 @@ public class DexEngineConfig {
             return workerInitialDelay;
         }
 
-        public void setWorkerInitialDelay(final Duration workerInitialDelay) {
+        public void setWorkerInitialDelay(Duration workerInitialDelay) {
             this.workerInitialDelay = workerInitialDelay;
         }
 
@@ -142,7 +144,7 @@ public class DexEngineConfig {
             return workerInterval;
         }
 
-        public void setWorkerInterval(final Duration workerInterval) {
+        public void setWorkerInterval(Duration workerInterval) {
             this.workerInterval = workerInterval;
         }
 
@@ -152,6 +154,7 @@ public class DexEngineConfig {
 
         private boolean enabled = true;
         private Duration pollInterval = Duration.ofMillis(100);
+        private IntervalFunction pollBackoffFunction = ofExponentialRandomBackoff(100L, 2.0, 0.3, 3000L);
 
         private TaskSchedulerConfig() {
         }
@@ -160,7 +163,7 @@ public class DexEngineConfig {
             return enabled;
         }
 
-        public void setEnabled(final boolean enabled) {
+        public void setEnabled(boolean enabled) {
             this.enabled = enabled;
         }
 
@@ -168,8 +171,16 @@ public class DexEngineConfig {
             return pollInterval;
         }
 
-        public void setPollInterval(final Duration pollInterval) {
+        public void setPollInterval(Duration pollInterval) {
             this.pollInterval = pollInterval;
+        }
+
+        public IntervalFunction pollBackoffFunction() {
+            return pollBackoffFunction;
+        }
+
+        public void setPollBackoffFunction(IntervalFunction pollBackoffFunction) {
+            this.pollBackoffFunction = pollBackoffFunction;
         }
 
     }
@@ -187,7 +198,7 @@ public class DexEngineConfig {
     private MeterRegistry meterRegistry = new SimpleMeterRegistry();
     private PageTokenEncoder pageTokenEncoder = new SimplePageTokenEncoder();
 
-    public DexEngineConfig(final DataSource dataSource) {
+    public DexEngineConfig(DataSource dataSource) {
         this.instanceId = generateInstanceId();
         this.dataSource = requireNonNull(dataSource, "dataSource must not be null");
     }
@@ -250,7 +261,7 @@ public class DexEngineConfig {
         return meterRegistry;
     }
 
-    public void setMeterRegistry(final MeterRegistry meterRegistry) {
+    public void setMeterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry must not be null");
     }
 
@@ -258,7 +269,7 @@ public class DexEngineConfig {
         return pageTokenEncoder;
     }
 
-    public void setPageTokenEncoder(final PageTokenEncoder pageTokenEncoder) {
+    public void setPageTokenEncoder(PageTokenEncoder pageTokenEncoder) {
         this.pageTokenEncoder = requireNonNull(pageTokenEncoder, "pageTokenEncoder must not be null");
     }
 
