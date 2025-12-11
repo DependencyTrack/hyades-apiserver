@@ -168,9 +168,13 @@ public final class Buffer<T> implements Closeable {
         setStatus(Status.STOPPING);
 
         if (flushThread.isAlive()) {
-            LOGGER.debug("{}: Waiting for flush executor to stop", name);
+            LOGGER.debug("{}: Waiting for flush thread to stop", name);
             try {
-                flushThread.join(Duration.ofSeconds(5));
+                final boolean terminated = flushThread.join(Duration.ofSeconds(3));
+                if (!terminated) {
+                    LOGGER.warn("{}: Flush thread did not stop in time; Interrupting it", name);
+                    flushThread.interrupt();
+                }
             } catch (InterruptedException ignored) {
                 LOGGER.warn("{}: Interrupted while waiting for flush thread to stop", name);
                 Thread.currentThread().interrupt();

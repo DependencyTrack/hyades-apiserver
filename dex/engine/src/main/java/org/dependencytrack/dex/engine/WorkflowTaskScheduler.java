@@ -93,6 +93,7 @@ final class WorkflowTaskScheduler implements Closeable {
             try {
                 final boolean terminated = pollThread.join(Duration.ofSeconds(3));
                 if (!terminated) {
+                    LOGGER.warn("Poll thread did not terminate in time; Interrupting it");
                     pollThread.interrupt();
                 }
             } catch (InterruptedException e) {
