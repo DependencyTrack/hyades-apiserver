@@ -270,8 +270,13 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
 
                 for (final T polledTask : polledTasks) {
                     submittedFutures.add(
-                            taskExecutor.submit(
-                                    () -> executeTask(polledTask, permitAcquiredLatch)));
+                            taskExecutor.submit(() -> {
+                                try {
+                                    executeTask(polledTask, permitAcquiredLatch);
+                                } catch (RuntimeException e) {
+                                    logger.error("Unexpected error occurred during task execution", e);
+                                }
+                            }));
                 }
 
                 try {
