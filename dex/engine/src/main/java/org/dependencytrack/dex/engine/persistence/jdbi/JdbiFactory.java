@@ -24,7 +24,6 @@ import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.persistence.model.PolledActivityTask;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
-import org.dependencytrack.dex.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunHistoryEntry;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.proto.common.v1.RetryPolicy;
@@ -90,9 +89,6 @@ public final class JdbiFactory {
                 .registerRowMapper(
                         TaskQueue.class,
                         new TaskQueueRowMapper())
-                .registerRowMapper(
-                        WorkflowRunCountByNameAndStatusRow.class,
-                        new WorkflowRunCountByNameAndStatusRowMapper())
                 .registerRowMapper(
                         WorkflowRunHistoryEntry.class,
                         new WorkflowRunHistoryEntryRowMapper())

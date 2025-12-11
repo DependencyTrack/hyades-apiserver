@@ -61,10 +61,6 @@ public final class Buffer<T> implements Closeable {
             return allowedTransitions.contains(newStatus.ordinal());
         }
 
-        private boolean isRunningOrStopping() {
-            return equals(RUNNING) || equals(STOPPING);
-        }
-
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Buffer.class);
@@ -94,21 +90,21 @@ public final class Buffer<T> implements Closeable {
     private @Nullable Timer flushLatencyTimer;
 
     public Buffer(
-            final String name,
-            final Consumer<List<T>> batchConsumer,
-            final Duration flushInterval,
-            final int maxBatchSize,
-            final MeterRegistry meterRegistry) {
+            String name,
+            Consumer<List<T>> batchConsumer,
+            Duration flushInterval,
+            int maxBatchSize,
+            MeterRegistry meterRegistry) {
         this(name, batchConsumer, flushInterval, maxBatchSize, Duration.ofSeconds(5), meterRegistry);
     }
 
     Buffer(
-            final String name,
-            final Consumer<List<T>> batchConsumer,
-            final Duration flushInterval,
-            final int maxBatchSize,
-            final Duration itemsQueueTimeout,
-            final MeterRegistry meterRegistry) {
+            String name,
+            Consumer<List<T>> batchConsumer,
+            Duration flushInterval,
+            int maxBatchSize,
+            Duration itemsQueueTimeout,
+            MeterRegistry meterRegistry) {
         this.name = name;
         this.batchConsumer = batchConsumer;
         this.maxBatchSize = maxBatchSize;
@@ -117,7 +113,13 @@ public final class Buffer<T> implements Closeable {
         this.currentBatch = new ArrayList<>(maxBatchSize);
         this.flushThread = Thread.ofPlatform()
                 .name("DexEngine-Buffer-" + name)
-                .unstarted(this::flushLoop);
+                .unstarted(() -> {
+                    try {
+                        flushLoop();
+                    } catch (RuntimeException e) {
+                        LOGGER.error("Unexpected error occurred in flush loop", e);
+                    }
+                });
         this.flushRequestQueue = new ArrayBlockingQueue<>(1);
         this.flushInterval = flushInterval;
         this.flushLock = new ReentrantLock();
@@ -190,8 +192,8 @@ public final class Buffer<T> implements Closeable {
         }
     }
 
-    public CompletableFuture<Void> add(final T item) throws InterruptedException, TimeoutException {
-        if (!status.isRunningOrStopping()) {
+    public CompletableFuture<Void> add(T item) throws InterruptedException, TimeoutException {
+        if (status != Status.RUNNING) {
             throw new IllegalStateException("Cannot accept new items in current status: " + status);
         }
 
@@ -280,7 +282,7 @@ public final class Buffer<T> implements Closeable {
         }
     }
 
-    private void setStatus(final Status newStatus) {
+    private void setStatus(Status newStatus) {
         statusLock.lock();
         try {
             if (this.status == newStatus) {

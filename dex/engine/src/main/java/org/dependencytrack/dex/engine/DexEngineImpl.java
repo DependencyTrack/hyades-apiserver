@@ -72,7 +72,6 @@ import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunComm
 import org.dependencytrack.dex.engine.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
-import org.dependencytrack.dex.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.engine.persistence.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.engine.support.Buffer;
@@ -173,10 +172,6 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     public void start() {
-        if (status == Status.RUNNING) {
-            return;
-        }
-
         setStatus(Status.STARTING);
         LOGGER.debug("Starting");
 
@@ -307,7 +302,7 @@ final class DexEngineImpl implements DexEngine {
             workflowTaskScheduler = null;
         }
 
-        if (taskWorkerByName != null) {
+        if (!taskWorkerByName.isEmpty()) {
             for (final Map.Entry<String, TaskWorker> entry : taskWorkerByName.entrySet()) {
                 LOGGER.debug("Waiting for task worker {} to stop", entry.getKey());
                 entry.getValue().close();
@@ -1497,10 +1492,6 @@ final class DexEngineImpl implements DexEngine {
         }
     }
 
-    public List<WorkflowRunCountByNameAndStatusRow> getRunStats() {
-        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunCountByNameAndStatus());
-    }
-
     MetadataRegistry executorMetadataRegistry() {
         return metadataRegistry;
     }
@@ -1525,10 +1516,6 @@ final class DexEngineImpl implements DexEngine {
 
             config.meterRegistry().counter("dt.dex.engine.runs.completed", tags).increment();
         }
-    }
-
-    Status status() {
-        return status;
     }
 
     private void setStatus(final Status newStatus) {

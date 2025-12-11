@@ -91,7 +91,7 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
     public void start() {
         setStatus(Status.STARTING);
 
-        pollThread = Thread.ofVirtual()
+        pollThread = Thread.ofPlatform()
                 .name("%s-Poller".formatted(getClass().getSimpleName()), 0)
                 .unstarted(this::pollAndDispatch);
 
@@ -139,7 +139,7 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
     public void close() {
         setStatus(Status.STOPPING);
 
-        if (pollThread != null) {
+        if (pollThread != null && pollThread.isAlive()) {
             logger.debug("Waiting for poll thread to stop");
             try {
                 final boolean terminated = pollThread.join(Duration.ofSeconds(10));

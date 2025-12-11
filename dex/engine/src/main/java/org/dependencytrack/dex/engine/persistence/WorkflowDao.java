@@ -35,7 +35,6 @@ import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunComm
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
-import org.dependencytrack.dex.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.engine.persistence.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
@@ -306,21 +305,6 @@ public final class WorkflowDao extends AbstractDao {
                         rs.getObject("request_id", UUID.class),
                         rs.getObject("run_id", UUID.class)))
                 .collectToMap(Map.Entry::getKey, Map.Entry::getValue);
-    }
-
-    public List<WorkflowRunCountByNameAndStatusRow> getRunCountByNameAndStatus() {
-        final Query query = jdbiHandle.createQuery("""
-                select workflow_name
-                     , status
-                     , count(*)
-                  from dex_workflow_run
-                 group by workflow_name
-                        , status
-                """);
-
-        return query
-                .mapTo(WorkflowRunCountByNameAndStatusRow.class)
-                .list();
     }
 
     public List<UUID> updateAndUnlockRuns(
