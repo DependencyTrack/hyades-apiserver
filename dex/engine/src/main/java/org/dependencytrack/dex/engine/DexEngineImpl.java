@@ -800,7 +800,7 @@ final class DexEngineImpl implements DexEngine {
 
         try {
             // TODO: Find appropriate timeout.
-            future.get(5, TimeUnit.SECONDS);
+            future.get(15, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(

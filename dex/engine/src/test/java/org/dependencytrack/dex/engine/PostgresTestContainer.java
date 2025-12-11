@@ -29,17 +29,20 @@ import java.lang.management.ManagementFactory;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Map;
 
 public final class PostgresTestContainer extends PostgreSQLContainer<PostgresTestContainer> {
 
     @SuppressWarnings("resource")
     public PostgresTestContainer() {
         super(DockerImageName.parse("postgres:14-alpine"));
+        withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off");
         withUsername("dex");
         withPassword("dex");
         withDatabaseName("dex");
-        withLabel("owner", "dex-engine-" + /* JVM name */ ManagementFactory.getRuntimeMXBean().getName());
+        withLabel("owner", "dex-" + /* JVM name */ ManagementFactory.getRuntimeMXBean().getName());
         withUrlParam("reWriteBatchedInserts", "true");
+        withTmpFs(Map.of("/var/lib/postgresql/data", "rw"));
 
         // Uncomment this to see queries executed by Postgres:
         //   withLogConsumer(new Slf4jLogConsumer(LoggerFactory.getLogger(PostgresTestContainer.class)));

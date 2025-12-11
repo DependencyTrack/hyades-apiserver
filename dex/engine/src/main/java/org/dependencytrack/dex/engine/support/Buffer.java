@@ -112,7 +112,7 @@ public final class Buffer<T> implements Closeable {
         this.name = name;
         this.batchConsumer = batchConsumer;
         this.maxBatchSize = maxBatchSize;
-        this.itemsQueue = new ArrayBlockingQueue<>(maxBatchSize * 3);
+        this.itemsQueue = new ArrayBlockingQueue<>(maxBatchSize * 2);
         this.itemsQueueTimeout = itemsQueueTimeout;
         this.currentBatch = new ArrayList<>(maxBatchSize);
         this.flushThread = Thread.ofPlatform()
@@ -266,7 +266,14 @@ public final class Buffer<T> implements Closeable {
                 }
             } finally {
                 flushCounter.increment();
-                flushLatencySample.stop(flushLatencyTimer);
+                final long flushLatencyNanos = flushLatencySample.stop(flushLatencyTimer);
+                if (flushLatencyNanos > TimeUnit.SECONDS.toNanos(1)) {
+                    LOGGER.warn(
+                            "{}: Flush of {} items took a long time to complete ({}ms)",
+                            name,
+                            currentBatch.size(),
+                            TimeUnit.NANOSECONDS.toMillis(flushLatencyNanos));
+                }
                 currentBatch.clear();
             }
 
