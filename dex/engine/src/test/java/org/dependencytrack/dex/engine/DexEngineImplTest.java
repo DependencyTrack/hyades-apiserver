@@ -105,6 +105,11 @@ class DexEngineImplTest {
         dataSource.setDatabaseName(postgresContainer.getDatabaseName());
 
         final var config = new DexEngineConfig(dataSource);
+        config.activityTaskScheduler().setPollInterval(Duration.ofMillis(10));
+        config.activityTaskScheduler().setPollBackoffFunction(IntervalFunction.of(10));
+        config.workflowTaskScheduler().setPollInterval(Duration.ofMillis(10));
+        config.workflowTaskScheduler().setPollBackoffFunction(IntervalFunction.of(10));
+        config.taskEventBuffer().setFlushInterval(Duration.ofMillis(10));
 
         engine = new DexEngineImpl(config);
         engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, WORKFLOW_TASK_QUEUE, 10));
@@ -697,7 +702,7 @@ class DexEngineImplTest {
     }
 
     @Test
-    void shouldWaitForExternalEvent() {
+    void shouldWaitForExternalEvent() throws Exception {
         registerWorkflow("test", (ctx, arg) -> {
             ctx.waitForExternalEvent("foo-123", voidConverter(), Duration.ofSeconds(30)).await();
             return null;
@@ -714,7 +719,7 @@ class DexEngineImplTest {
                     assertThat(run.updatedAt()).isNotNull();
                 });
 
-        engine.sendExternalEvent(new ExternalEvent(runId, "foo-123", null)).join();
+        engine.sendExternalEvent(new ExternalEvent(runId, "foo-123", null)).get(1, TimeUnit.SECONDS);
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -1524,15 +1529,15 @@ class DexEngineImplTest {
     private void registerWorkflowWorker(final String name, final int maxConcurrency) {
         engine.registerWorkflowWorker(
                 new WorkflowTaskWorkerOptions(name, WORKFLOW_TASK_QUEUE, maxConcurrency)
-                        .withMinPollInterval(Duration.ofMillis(25))
-                        .withPollBackoffFunction(IntervalFunction.of(1)));
+                        .withMinPollInterval(Duration.ofMillis(10))
+                        .withPollBackoffFunction(IntervalFunction.of(10)));
     }
 
     private void registerActivityWorker(final String name, final int maxConcurrency) {
         engine.registerActivityWorker(
                 new ActivityTaskWorkerOptions(name, ACTIVITY_TASK_QUEUE, maxConcurrency)
-                        .withMinPollInterval(Duration.ofMillis(25))
-                        .withPollBackoffFunction(IntervalFunction.of(1)));
+                        .withMinPollInterval(Duration.ofMillis(10))
+                        .withPollBackoffFunction(IntervalFunction.of(10)));
     }
 
     private WorkflowRunMetadata awaitRunStatus(
@@ -1555,7 +1560,7 @@ class DexEngineImplTest {
     }
 
     private WorkflowRunMetadata awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
-        return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(15));
+        return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(10));
     }
 
 }
