@@ -42,7 +42,7 @@ class BufferTest {
         final var buffer = new Buffer<@NonNull String>(
                 "test",
                 flushedItems::addAll,
-                Duration.ofMillis(100),
+                Duration.ofMillis(10),
                 /* maxBatchSize */ 10,
                 new SimpleMeterRegistry());
 
@@ -50,7 +50,7 @@ class BufferTest {
             buffer.start();
 
             final CompletableFuture<Void> future = buffer.add("foo");
-            future.get(500, TimeUnit.MILLISECONDS);
+            future.get(100, TimeUnit.MILLISECONDS);
 
             assertThat(flushedItems).containsOnly("foo");
         }
@@ -70,7 +70,7 @@ class BufferTest {
 
         try (buffer) {
             assertThatExceptionOfType(IllegalStateException.class)
-                    .isThrownBy(() -> buffer.add("foo"))
+                    .isThrownBy(() -> buffer.add("foo").get(100, TimeUnit.MILLISECONDS))
                     .withMessage("Cannot accept new items in current status: CREATED");
         }
     }
@@ -91,11 +91,9 @@ class BufferTest {
             buffer.start();
 
             buffer.add("foo");
-            buffer.add("bar");
-            buffer.add("baz");
+            buffer.add("bar").get(100, TimeUnit.MILLISECONDS);
 
             assertThat(flushedBatches).containsExactly(List.of("foo", "bar"));
-            // baz remains queued until flush interval elapses.
         }
     }
 
