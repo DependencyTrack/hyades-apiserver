@@ -117,7 +117,7 @@
         <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
         <lib.httpclient5.version>5.5.1</lib.httpclient5.version>
         <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
-        <lib.java-uuid-generator.version>5.1.1</lib.java-uuid-generator.version>
+        <lib.java-uuid-generator.version>5.2.0</lib.java-uuid-generator.version>
         <lib.jackson.version>2.20.1</lib.jackson.version>
         <lib.jdbi.version>3.50.0</lib.jdbi.version>
         <lib.jersey.version>3.1.11</lib.jersey.version>
