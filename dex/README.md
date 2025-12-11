@@ -22,4 +22,5 @@ The [Java module system](https://dev.java/learn/modules/intro/) is used to enfor
 
 ## Documentation
 
+- [Concepts](docs/CONCEPTS.md)
 - [Common Patterns](docs/PATTERNS.md)
