@@ -162,9 +162,9 @@ public final class Buffer<T> implements Closeable {
                 .tags(commonMeterTags)
                 .register(meterRegistry);
 
-        flushThread.start();
-
         setStatus(Status.RUNNING);
+
+        flushThread.start();
     }
 
     @Override
