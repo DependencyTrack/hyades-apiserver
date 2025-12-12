@@ -46,10 +46,11 @@ public final class Buffer<T> implements Closeable {
 
     public enum Status {
 
-        CREATED(1, 2), // 0
-        RUNNING(2),    // 1
-        STOPPING(3),   // 2
-        STOPPED;       // 3
+        CREATED(1, 3), // 0
+        STARTING(2),   // 1
+        RUNNING(3),    // 2
+        STOPPING(4),   // 3
+        STOPPED;       // 4
 
         private final Set<Integer> allowedTransitions;
 
@@ -136,6 +137,8 @@ public final class Buffer<T> implements Closeable {
     }
 
     public void start() {
+        setStatus(Status.STARTING);
+
         final List<Tag> commonMeterTags = List.of(Tag.of("buffer", name));
         batchSizeDistribution = DistributionSummary
                 .builder("dt.dex.engine.buffer.flush.batch.size")
@@ -188,8 +191,11 @@ public final class Buffer<T> implements Closeable {
         // Flush one last time, in case new items were added to the buffer while
         // the executor was shutting down.
         while (!itemsQueue.isEmpty()) {
+            LOGGER.debug("{}: Flushing because {} items are still queued", name, itemsQueue.size());
             maybeFlush();
         }
+
+        LOGGER.debug("{}: Closed", name);
     }
 
     public CompletableFuture<Void> add(T item) throws InterruptedException, TimeoutException {
@@ -210,6 +216,7 @@ public final class Buffer<T> implements Closeable {
         if (itemsQueue.size() >= maxBatchSize) {
             // Request a flush to be performed, but don't block
             // if the queue already has a pending request.
+            LOGGER.debug("{}: Requesting another flush because {} items are still queued", name, itemsQueue.size());
             boolean ignored = flushRequestQueue.offer(true);
         }
 
@@ -220,7 +227,10 @@ public final class Buffer<T> implements Closeable {
         while (status == Status.RUNNING && !Thread.currentThread().isInterrupted()) {
             try {
                 // Block until either a flush is explicitly requested, or the flush interval elapses.
-                flushRequestQueue.poll(flushInterval.toMillis(), TimeUnit.MILLISECONDS);
+                final Boolean request = flushRequestQueue.poll(flushInterval.toMillis(), TimeUnit.MILLISECONDS);
+                if (request != null) {
+                    LOGGER.debug("{}: Cutting flush interval short because a flush was explicitly requested", name);
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 LOGGER.debug("{}: Interrupted while waiting for next flush to be due", name);
@@ -233,10 +243,25 @@ public final class Buffer<T> implements Closeable {
                 LOGGER.error("{}: An unexpected error occurred during flush", name, e);
             }
         }
+
+        LOGGER.debug("{}: Flush loop exited normally", name);
     }
 
     private void maybeFlush() {
-        flushLock.lock();
+        final boolean lockAcquired;
+        try {
+            lockAcquired = flushLock.tryLock(100, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOGGER.debug("{}: Interrupted while waiting for flush lock to be acquired", name, e);
+            return;
+        }
+
+        if (!lockAcquired) {
+            LOGGER.warn("{}: Flush lock could not be acquired", name);
+            return;
+        }
+
         try {
             if (itemsQueue.isEmpty()) {
                 LOGGER.debug("{}: Buffer is empty; Nothing to flush", name);
