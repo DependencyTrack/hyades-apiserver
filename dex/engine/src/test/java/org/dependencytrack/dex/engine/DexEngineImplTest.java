@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.dex.engine;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import io.github.resilience4j.core.IntervalFunction;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.api.ActivityExecutor;
@@ -56,7 +58,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -92,17 +93,20 @@ class DexEngineImplTest {
     private static final String WORKFLOW_TASK_QUEUE = "default";
     private static final String ACTIVITY_TASK_QUEUE = "default";
 
+    private HikariDataSource dataSource;
     private DexEngineImpl engine;
 
     @BeforeEach
     void beforeEach() {
         postgresContainer.truncateTables();
 
-        final var dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(postgresContainer.getJdbcUrl());
-        dataSource.setUser(postgresContainer.getUsername());
-        dataSource.setPassword(postgresContainer.getPassword());
-        dataSource.setDatabaseName(postgresContainer.getDatabaseName());
+        final var hikariConfig = new HikariConfig();
+        hikariConfig.setJdbcUrl(postgresContainer.getJdbcUrl());
+        hikariConfig.setUsername(postgresContainer.getUsername());
+        hikariConfig.setPassword(postgresContainer.getPassword());
+        hikariConfig.setMaximumPoolSize(5);
+
+        dataSource = new HikariDataSource(hikariConfig);
 
         final var config = new DexEngineConfig(dataSource);
         config.activityTaskScheduler().setPollInterval(Duration.ofMillis(10));
@@ -124,6 +128,9 @@ class DexEngineImplTest {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }
+        if (dataSource != null) {
+            dataSource.close();
         }
     }
 

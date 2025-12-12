@@ -92,13 +92,13 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
         setStatus(Status.STARTING);
 
         pollThread = Thread.ofPlatform()
-                .name("%s-Poller".formatted(getClass().getSimpleName()), 0)
+                .name("%s-Poller-".formatted(getClass().getSimpleName()), 0)
                 .unstarted(this::pollAndDispatch);
 
         final var taskExecutorName = "%s-%s-Executor".formatted(getClass().getSimpleName(), name);
         taskExecutor = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual()
-                        .name(taskExecutorName, 0)
+                        .name(taskExecutorName + "-", 0)
                         .factory());
 
         new ExecutorServiceMetrics(taskExecutor, taskExecutorName, null).bindTo(meterRegistry);

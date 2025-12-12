@@ -113,7 +113,7 @@ public final class Buffer<T> implements Closeable {
         this.itemsQueueTimeout = itemsQueueTimeout;
         this.currentBatch = new ArrayList<>(maxBatchSize);
         this.flushThread = Thread.ofPlatform()
-                .name("DexEngine-Buffer-" + name)
+                .name("DexEngine-Buffer-%s-".formatted(name), 0)
                 .unstarted(() -> {
                     try {
                         flushLoop();
