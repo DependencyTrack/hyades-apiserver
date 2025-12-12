@@ -105,6 +105,7 @@ class DexEngineImplTest {
         hikariConfig.setUsername(postgresContainer.getUsername());
         hikariConfig.setPassword(postgresContainer.getPassword());
         hikariConfig.setMaximumPoolSize(5);
+        hikariConfig.setConnectionTimeout(1000);
 
         dataSource = new HikariDataSource(hikariConfig);
 
