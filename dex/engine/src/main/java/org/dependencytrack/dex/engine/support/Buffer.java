@@ -117,7 +117,7 @@ public final class Buffer<T> implements Closeable {
                 .unstarted(() -> {
                     try {
                         flushLoop();
-                    } catch (RuntimeException e) {
+                    } catch (Throwable e) {
                         LOGGER.error("Unexpected error occurred in flush loop", e);
                     }
                 });
