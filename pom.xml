@@ -34,6 +34,7 @@
         <module>support/smallrye-config-source-memory</module>
         <module>api</module>
         <module>alpine</module>
+        <module>dex</module>
         <module>proto</module>
         <module>plugin/api</module>
         <module>plugin/file-storage-local</module>
@@ -466,8 +467,7 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.14.1</version>
                     <configuration>
-                        <source>21</source>
-                        <target>21</target>
+                        <release>21</release>
                         <compilerArgs>
                             <arg>-Xlint:all</arg>
                             <arg>-Xlint:-processing</arg>

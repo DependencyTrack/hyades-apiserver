@@ -20,17 +20,23 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.model.WorkflowState;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
+import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
@@ -43,15 +49,34 @@ import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 
 public class WorkflowResourceTest extends ResourceTest {
+
+    private static final DexEngine DEX_ENGINE_MOCK = mock(DexEngine.class);
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(WorkflowResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
-                    .register(MultiPartFeature.class));
+                    .register(MultiPartFeature.class)
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bind(DEX_ENGINE_MOCK).to(DexEngine.class);
+                        }
+                    }));
+
+    @After
+    @Override
+    public void after() {
+        reset(DEX_ENGINE_MOCK);
+        super.after();
+    }
 
     @Test
     public void getWorkflowStatusOk() {
@@ -123,4 +148,34 @@ public class WorkflowResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_NOT_FOUND);
         assertThat(getPlainTextBody(response)).isEqualTo("Provided token " + randomUuid + " does not exist.");
     }
+
+    @Test
+    public void shouldReturnMovedPermanentlyWhenWorkflowRunWasFoundButCanNotBeConverted() {
+        final WorkflowRunMetadata runMetadata = new WorkflowRunMetadata(
+                UUID.fromString("f5cd00be-417d-4df5-b351-0499d498c9c1"),
+                "test-workflow",
+                1,
+                null,
+                WorkflowRunStatus.RUNNING,
+                null,
+                0,
+                null,
+                null,
+                Instant.ofEpochMilli(666666),
+                Instant.ofEpochMilli(777777),
+                Instant.ofEpochMilli(777777),
+                null);
+
+        doReturn(runMetadata).when(DEX_ENGINE_MOCK).getRunMetadata(
+                eq(UUID.fromString("f5cd00be-417d-4df5-b351-0499d498c9c1")));
+
+        final Response response = jersey.target(V1_WORKFLOW + "/token/f5cd00be-417d-4df5-b351-0499d498c9c1/status")
+                .property(ClientProperties.FOLLOW_REDIRECTS, false)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(301);
+        assertThat(response.getLocation().getPath()).isEqualTo("/api/v2/workflow-runs/f5cd00be-417d-4df5-b351-0499d498c9c1");
+    }
+
 }
