@@ -30,11 +30,15 @@ abstract class AbstractDao {
 
     final Handle jdbiHandle;
 
-    AbstractDao(final Handle jdbiHandle) {
+    AbstractDao(Handle jdbiHandle) {
         this.jdbiHandle = jdbiHandle;
     }
 
-    <T extends PageToken> @Nullable String encodePageToken(final @Nullable T token) {
+    public Handle getJdbiHandle() {
+        return jdbiHandle;
+    }
+
+    <T extends PageToken> @Nullable String encodePageToken(@Nullable T token) {
         if (token == null) {
             return null;
         }
@@ -47,7 +51,7 @@ abstract class AbstractDao {
         return encoder.encode(token);
     }
 
-    <T extends PageToken> @Nullable T decodePageToken(final @Nullable String token, final Class<T> tokenClass) {
+    <T extends PageToken> @Nullable T decodePageToken(@Nullable String token, Class<T> tokenClass) {
         if (token == null) {
             return null;
         }

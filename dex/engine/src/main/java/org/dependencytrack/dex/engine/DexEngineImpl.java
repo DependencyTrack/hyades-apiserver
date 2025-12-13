@@ -22,10 +22,11 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
-import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.api.ActivityExecutor;
 import org.dependencytrack.dex.api.RetryPolicy;
@@ -120,10 +121,6 @@ import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toInstant;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toProtoTimestamp;
 
-// TODO: Add metrics for:
-//   - Workflow runs created
-//   - Activities created
-//   - Activities completed/failed
 final class DexEngineImpl implements DexEngine {
 
     enum Status {
@@ -136,11 +133,11 @@ final class DexEngineImpl implements DexEngine {
 
         private final Set<Integer> allowedTransitions;
 
-        Status(final Integer... allowedTransitions) {
+        Status(Integer... allowedTransitions) {
             this.allowedTransitions = Set.of(allowedTransitions);
         }
 
-        private boolean canTransitionTo(final Status newStatus) {
+        private boolean canTransitionTo(Status newStatus) {
             return allowedTransitions.contains(newStatus.ordinal());
         }
 
@@ -154,6 +151,8 @@ final class DexEngineImpl implements DexEngine {
     private final MetadataRegistry metadataRegistry = new MetadataRegistry();
     private final Map<String, TaskWorker> taskWorkerByName = new HashMap<>();
     private final List<WorkflowRunsCompletedEventListener> runsCompletedEventListeners = new ArrayList<>();
+    private final MeterProvider<Counter> runsCreatedCounter;
+    private final MeterProvider<Counter> runsCompletedCounter;
 
     private volatile Status status = Status.CREATED;
     private @Nullable WorkflowTaskScheduler workflowTaskScheduler;
@@ -165,9 +164,16 @@ final class DexEngineImpl implements DexEngine {
     private @Nullable RetentionWorker retentionWorker;
     private @Nullable Cache<UUID, CachedWorkflowRunHistory> runHistoryCache;
 
-    DexEngineImpl(final DexEngineConfig config) {
+    DexEngineImpl(DexEngineConfig config) {
         this.config = requireNonNull(config);
         this.jdbi = JdbiFactory.create(config.dataSource(), config.pageTokenEncoder());
+        this.runsCreatedCounter = Counter
+                .builder("dt.dex.engine.runs.created")
+                .withRegistry(config.meterRegistry());
+        this.runsCompletedCounter = Counter
+                .builder("dt.dex.engine.runs.completed")
+                .withRegistry(config.meterRegistry());
+
     }
 
     @Override
@@ -197,9 +203,9 @@ final class DexEngineImpl implements DexEngine {
 
         LOGGER.debug("Starting event listener executor");
         eventListenerExecutor = Executors.newSingleThreadExecutor(
-                Thread.ofPlatform().name("DexEngine-EventListener").factory());
-        new ExecutorServiceMetrics(eventListenerExecutor, "DexEngine-EventListener", null)
-                .bindTo(config.meterRegistry());
+                Thread.ofPlatform()
+                        .name("DexEngine-EventListener")
+                        .factory());
 
         if (config.workflowTaskScheduler().isEnabled()) {
             LOGGER.debug("Starting workflow task scheduler");
@@ -369,22 +375,22 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     public <A, R> void registerWorkflow(
-            final WorkflowExecutor<A, R> workflowExecutor,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
-            final Duration lockTimeout) {
+            WorkflowExecutor<A, R> workflowExecutor,
+            PayloadConverter<A> argumentConverter,
+            PayloadConverter<R> resultConverter,
+            Duration lockTimeout) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         metadataRegistry.registerWorkflow(workflowExecutor, argumentConverter, resultConverter, lockTimeout);
     }
 
     <A, R> void registerWorkflowInternal(
-            final String workflowName,
-            final int workflowVersion,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
-            final String defaultTaskQueueName,
-            final Duration lockTimeout,
-            final WorkflowExecutor<A, R> workflowExecutor) {
+            String workflowName,
+            int workflowVersion,
+            PayloadConverter<A> argumentConverter,
+            PayloadConverter<R> resultConverter,
+            String defaultTaskQueueName,
+            Duration lockTimeout,
+            WorkflowExecutor<A, R> workflowExecutor) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         metadataRegistry.registerWorkflow(
                 workflowName,
@@ -398,21 +404,21 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     public <A, R> void registerActivity(
-            final ActivityExecutor<A, R> activityExecutor,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
-            final Duration lockTimeout) {
+            ActivityExecutor<A, R> activityExecutor,
+            PayloadConverter<A> argumentConverter,
+            PayloadConverter<R> resultConverter,
+            Duration lockTimeout) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         metadataRegistry.registerActivity(activityExecutor, argumentConverter, resultConverter, lockTimeout);
     }
 
     <A, R> void registerActivityInternal(
-            final String activityName,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
-            final String defaultTaskQueueName,
-            final Duration lockTimeout,
-            final ActivityExecutor<A, R> activityExecutor) {
+            String activityName,
+            PayloadConverter<A> argumentConverter,
+            PayloadConverter<R> resultConverter,
+            String defaultTaskQueueName,
+            Duration lockTimeout,
+            ActivityExecutor<A, R> activityExecutor) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         metadataRegistry.registerActivity(
                 activityName,
@@ -424,7 +430,7 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public void registerActivityWorker(final ActivityTaskWorkerOptions options) {
+    public void registerActivityWorker(ActivityTaskWorkerOptions options) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
 
         final boolean queueExists = jdbi.withHandle(
@@ -450,7 +456,7 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public void registerWorkflowWorker(final WorkflowTaskWorkerOptions options) {
+    public void registerWorkflowWorker(WorkflowTaskWorkerOptions options) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
 
         final boolean queueExists = jdbi.withHandle(
@@ -476,7 +482,7 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public void addEventListener(final DexEngineEventListener<?> listener) {
+    public void addEventListener(DexEngineEventListener<?> listener) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         requireNonNull(listener, "listener must not be null");
         switch (listener) {
@@ -486,7 +492,7 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<CreateWorkflowRunResponse> createRuns(final Collection<CreateWorkflowRunRequest<?>> requests) {
+    public List<CreateWorkflowRunResponse> createRuns(Collection<CreateWorkflowRunRequest<?>> requests) {
         final var now = Timestamps.now();
         final var nowInstant = toInstant(now);
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>(requests.size());
@@ -561,6 +567,20 @@ final class DexEngineImpl implements DexEngine {
                         command -> createdRunIdByRequestId.containsValue(command.recipientRunId()));
             }
 
+            handle.afterCommit(() -> {
+                for (final CreateWorkflowRunRequest<?> request : requests) {
+                    if (createdRunIdByRequestId.containsKey(request.requestId())) {
+                        continue;
+                    }
+
+                    final var tags = List.of(
+                            Tag.of("workflowName", request.workflowName()),
+                            Tag.of("workflowVersion", String.valueOf(request.workflowVersion())));
+
+                    runsCreatedCounter.withTags(tags).increment();
+                }
+            });
+
             final int createdMessages = dao.createMessages(messagesToCreate);
             assert createdMessages == messagesToCreate.size()
                     : "Created messages: actual=%d, expected=%d".formatted(
@@ -574,7 +594,7 @@ final class DexEngineImpl implements DexEngine {
 
 
     @Override
-    public @Nullable WorkflowRun getRun(final UUID id) {
+    public @Nullable WorkflowRun getRun(UUID id) {
         final List<WorkflowEvent> eventHistory = jdbi.withHandle(handle -> {
             final var dao = new WorkflowRunDao(handle);
             final var events = new ArrayList<WorkflowEvent>();
@@ -618,7 +638,7 @@ final class DexEngineImpl implements DexEngine {
                 runState.eventHistory());
     }
 
-    public @Nullable WorkflowRunMetadata getRunMetadata(final UUID runId) {
+    public @Nullable WorkflowRunMetadata getRunMetadata(UUID runId) {
         final WorkflowRunMetadataRow metadataRow = jdbi.withHandle(
                 handle -> new WorkflowDao(handle).getRunMetadataById(runId));
         if (metadataRow == null) {
@@ -642,12 +662,12 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public Page<WorkflowRunMetadata> listRuns(final ListWorkflowRunsRequest request) {
+    public Page<WorkflowRunMetadata> listRuns(ListWorkflowRunsRequest request) {
         return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRuns(request));
     }
 
     @Override
-    public void requestRunCancellation(final UUID runId, final String reason) {
+    public void requestRunCancellation(UUID runId, String reason) {
         final var cancellationEvent = WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
@@ -678,7 +698,7 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public void requestRunSuspension(final UUID runId) {
+    public void requestRunSuspension(UUID runId) {
         final var suspensionEvent = WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
@@ -709,7 +729,7 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public void requestRunResumption(final UUID runId) {
+    public void requestRunResumption(UUID runId) {
         final var resumeEvent = WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
@@ -740,12 +760,12 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public Page<WorkflowEvent> listRunEvents(final ListWorkflowRunEventsRequest request) {
+    public Page<WorkflowEvent> listRunEvents(ListWorkflowRunEventsRequest request) {
         return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRunEvents(request));
     }
 
     @Override
-    public CompletableFuture<Void> sendExternalEvent(final ExternalEvent externalEvent) {
+    public CompletableFuture<Void> sendExternalEvent(ExternalEvent externalEvent) {
         requireStatusAnyOf(Status.RUNNING);
 
         try {
@@ -756,7 +776,7 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public boolean createTaskQueue(final CreateTaskQueueRequest request) {
+    public boolean createTaskQueue(CreateTaskQueueRequest request) {
         return jdbi.inTransaction(handle -> switch (request.type()) {
             case ACTIVITY -> new ActivityDao(handle).createActivityTaskQueue(request);
             case WORKFLOW -> new WorkflowDao(handle).createWorkflowTaskQueue(request);
@@ -764,7 +784,7 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public boolean updateTaskQueue(final UpdateTaskQueueRequest request) {
+    public boolean updateTaskQueue(UpdateTaskQueueRequest request) {
         return jdbi.inTransaction(handle -> switch (request.type()) {
             case ACTIVITY -> new ActivityDao(handle).updateActivityTaskQueue(request);
             case WORKFLOW -> new WorkflowDao(handle).updateWorkflowTaskQueue(request);
@@ -772,14 +792,14 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public Page<TaskQueue> listTaskQueues(final ListTaskQueuesRequest request) {
+    public Page<TaskQueue> listTaskQueues(ListTaskQueuesRequest request) {
         return jdbi.withHandle(handle -> switch (request.type()) {
             case ACTIVITY -> new ActivityDao(handle).listActivityTaskQueues(request);
             case WORKFLOW -> new WorkflowDao(handle).listWorkflowTaskQueues(request);
         });
     }
 
-    void onTaskEvent(final TaskEvent taskEvent) {
+    void onTaskEvent(TaskEvent taskEvent) {
         final CompletableFuture<Void> future;
         try {
             future = taskEventBuffer.add(taskEvent);
@@ -808,7 +828,7 @@ final class DexEngineImpl implements DexEngine {
         }
     }
 
-    private void flushExternalEvents(final List<ExternalEvent> externalEvents) {
+    private void flushExternalEvents(List<ExternalEvent> externalEvents) {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
             final var now = Timestamps.now();
@@ -836,9 +856,9 @@ final class DexEngineImpl implements DexEngine {
     }
 
     List<WorkflowTask> pollWorkflowTasks(
-            final String queueName,
-            final Collection<PollWorkflowTaskCommand> commands,
-            final int limit) {
+            String queueName,
+            Collection<PollWorkflowTaskCommand> commands,
+            int limit) {
         return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
@@ -904,8 +924,8 @@ final class DexEngineImpl implements DexEngine {
     }
 
     private void abandonWorkflowTasksInternal(
-            final WorkflowDao dao,
-            final Collection<WorkflowTaskAbandonedEvent> events) {
+            WorkflowDao dao,
+            Collection<WorkflowTaskAbandonedEvent> events) {
         final int unlockedWorkflowRuns = dao.unlockWorkflowTasks(
                 this.config.instanceId(),
                 events.stream()
@@ -915,10 +935,9 @@ final class DexEngineImpl implements DexEngine {
     }
 
     private void completeWorkflowTasksInternal(
-            final WorkflowDao workflowDao,
-            final ActivityDao activityDao,
-            final Collection<WorkflowTaskCompletedEvent> events,
-            final Collection<DexEngineEvent> engineEvents) {
+            WorkflowDao workflowDao,
+            ActivityDao activityDao,
+            Collection<WorkflowTaskCompletedEvent> events) {
         final List<WorkflowRunState> actionableRuns = events.stream()
                 .map(WorkflowTaskCompletedEvent::workflowRunState)
                 .collect(Collectors.toList());
@@ -1088,14 +1107,27 @@ final class DexEngineImpl implements DexEngine {
         }
 
         if (!createWorkflowRunCommands.isEmpty()) {
-            final Collection<UUID> createdRunIds = workflowDao.createRuns(createWorkflowRunCommands).values();
+            final Map<UUID, UUID> createdRunIdByRequestId = workflowDao.createRuns(createWorkflowRunCommands);
+            workflowDao.getJdbiHandle().afterCommit(() -> {
+                for (final CreateWorkflowRunCommand cmd : createWorkflowRunCommands) {
+                    if (!createdRunIdByRequestId.containsKey(cmd.requestId())) {
+                        continue;
+                    }
+
+                    final var tags = List.of(
+                            Tag.of("workflowName", cmd.workflowName()),
+                            Tag.of("workflowVersion", String.valueOf(cmd.workflowVersion())));
+
+                    runsCreatedCounter.withTags(tags).increment();
+                }
+            });
 
             // When another workflow run with identical instance ID already exists in non-terminal
             // state, a new run will not be created. Since runs are created due to a parent workflow
             // spawning a child workflow, we need to inform the parent about this failure.
             //
             // This scenario should be pretty rare but needs to be dealt with nonetheless.
-            if (createdRunIds.size() != createWorkflowRunCommands.size()) {
+            if (createdRunIdByRequestId.size() != createWorkflowRunCommands.size()) {
                 final ListIterator<WorkflowMessage> messageIterator = messagesToCreate.listIterator();
                 while (messageIterator.hasNext()) {
                     final WorkflowMessage pendingMessage = messageIterator.next();
@@ -1106,7 +1138,7 @@ final class DexEngineImpl implements DexEngine {
                         continue;
                     }
 
-                    if (createdRunIds.contains(pendingMessage.recipientRunId())) {
+                    if (createdRunIdByRequestId.containsValue(pendingMessage.recipientRunId())) {
                         // The message is addressed to a run that was successfully created; Nothing to do.
                         continue;
                     }
@@ -1169,14 +1201,16 @@ final class DexEngineImpl implements DexEngine {
                 deletedMessages, updatedRunIds.size());
 
         if (!completedRuns.isEmpty()) {
-            engineEvents.add(new WorkflowRunsCompletedEvent(completedRuns));
+            workflowDao.getJdbiHandle().afterCommit(
+                    () -> maybeNotifyEventListeners(
+                            List.of(new WorkflowRunsCompletedEvent(completedRuns))));
         }
     }
 
     List<ActivityTask> pollActivityTasks(
-            final String queueName,
-            final Collection<PollActivityTaskCommand> commands,
-            final int limit) {
+            String queueName,
+            Collection<PollActivityTaskCommand> commands,
+            int limit) {
         return jdbi.inTransaction(handle -> {
             final var activityDao = new ActivityDao(handle);
 
@@ -1191,8 +1225,8 @@ final class DexEngineImpl implements DexEngine {
     }
 
     private void abandonActivityTasksInternal(
-            final ActivityDao activityDao,
-            final Collection<ActivityTaskAbandonedEvent> events) {
+            ActivityDao activityDao,
+            Collection<ActivityTaskAbandonedEvent> events) {
         final int abandonedTasks = activityDao.unlockActivityTasks(
                 events.stream()
                         .map(ActivityTaskAbandonedEvent::task)
@@ -1202,9 +1236,9 @@ final class DexEngineImpl implements DexEngine {
     }
 
     private void completeActivityTasksInternal(
-            final WorkflowDao workflowDao,
-            final ActivityDao activityDao,
-            final Collection<ActivityTaskCompletedEvent> events) {
+            WorkflowDao workflowDao,
+            ActivityDao activityDao,
+            Collection<ActivityTaskCompletedEvent> events) {
         final var tasksToDelete = new ArrayList<ActivityTask>(events.size());
         final var workflowMessageByTaskId = new LinkedHashMap<ActivityTaskId, WorkflowMessage>(events.size());
 
@@ -1253,9 +1287,9 @@ final class DexEngineImpl implements DexEngine {
     }
 
     private void failActivityTasksInternal(
-            final WorkflowDao workflowDao,
-            final ActivityDao activityDao,
-            final Collection<ActivityTaskFailedEvent> events) {
+            WorkflowDao workflowDao,
+            ActivityDao activityDao,
+            Collection<ActivityTaskFailedEvent> events) {
         final var tasksToDelete = new ArrayList<ActivityTask>(events.size());
         final var workflowMessageByTaskId = new LinkedHashMap<ActivityTaskId, WorkflowMessage>(events.size());
         final var retriesToSchedule = new ArrayList<ScheduleActivityTaskRetryCommand>();
@@ -1334,9 +1368,9 @@ final class DexEngineImpl implements DexEngine {
     }
 
     CompletableFuture<TaskLock> heartbeatActivityTask(
-            final ActivityTaskId taskId,
-            final TaskLock taskLock,
-            final Duration lockTimeout) {
+            ActivityTaskId taskId,
+            TaskLock taskLock,
+            Duration lockTimeout) {
         final var future = new CompletableFuture<TaskLock>();
         final var heartbeat = new ActivityTaskHeartbeat(taskId, taskLock, lockTimeout, future);
 
@@ -1352,7 +1386,7 @@ final class DexEngineImpl implements DexEngine {
         return future;
     }
 
-    private void processActivityTaskHeartbeats(final List<ActivityTaskHeartbeat> heartbeats) {
+    private void processActivityTaskHeartbeats(List<ActivityTaskHeartbeat> heartbeats) {
         // TODO: Complete all futures exceptionally when transaction fails.
         final Map<ActivityTaskId, TaskLock> lockByTaskId = jdbi.inTransaction(handle -> {
             final Update update = handle.createUpdate("""
@@ -1427,9 +1461,7 @@ final class DexEngineImpl implements DexEngine {
         }
     }
 
-    private void flushTaskEvents(final List<TaskEvent> taskEvents) {
-        final var engineEvents = new ArrayList<DexEngineEvent>();
-
+    private void flushTaskEvents(List<TaskEvent> taskEvents) {
         final var activityTaskAbandonedEvents = new ArrayList<ActivityTaskAbandonedEvent>();
         final var completeActivityTaskCommands = new ArrayList<ActivityTaskCompletedEvent>();
         final var failActivityTaskCommands = new ArrayList<ActivityTaskFailedEvent>();
@@ -1463,11 +1495,9 @@ final class DexEngineImpl implements DexEngine {
                 abandonWorkflowTasksInternal(workflowDao, abandonWorkflowTaskCommands);
             }
             if (!completeWorkflowTaskCommands.isEmpty()) {
-                completeWorkflowTasksInternal(workflowDao, activityDao, completeWorkflowTaskCommands, engineEvents);
+                completeWorkflowTasksInternal(workflowDao, activityDao, completeWorkflowTaskCommands);
             }
         });
-
-        maybeNotifyEventListeners(engineEvents);
     }
 
     private void maybeNotifyEventListeners(final Collection<DexEngineEvent> events) {
@@ -1496,7 +1526,7 @@ final class DexEngineImpl implements DexEngine {
         return metadataRegistry;
     }
 
-    private void invalidateCompletedRunsHistoryCache(final WorkflowRunsCompletedEvent event) {
+    private void invalidateCompletedRunsHistoryCache(WorkflowRunsCompletedEvent event) {
         if (runHistoryCache == null) {
             return;
         }
@@ -1507,18 +1537,18 @@ final class DexEngineImpl implements DexEngine {
                         .collect(Collectors.toSet()));
     }
 
-    private void recordCompletedRunsMetrics(final WorkflowRunsCompletedEvent event) {
+    private void recordCompletedRunsMetrics(WorkflowRunsCompletedEvent event) {
         for (final WorkflowRunMetadata completedRun : event.completedRuns()) {
             final var tags = List.of(
                     Tag.of("workflowName", completedRun.workflowName()),
                     Tag.of("workflowVersion", String.valueOf(completedRun.workflowVersion())),
                     Tag.of("status", completedRun.status().toString()));
 
-            config.meterRegistry().counter("dt.dex.engine.runs.completed", tags).increment();
+            runsCompletedCounter.withTags(tags).increment();
         }
     }
 
-    private void setStatus(final Status newStatus) {
+    private void setStatus(Status newStatus) {
         statusLock.lock();
         try {
             if (this.status == newStatus) {
@@ -1538,7 +1568,7 @@ final class DexEngineImpl implements DexEngine {
         }
     }
 
-    private void requireStatusAnyOf(final Status... expectedStatuses) {
+    private void requireStatusAnyOf(Status... expectedStatuses) {
         for (final Status expectedStatus : expectedStatuses) {
             if (this.status == expectedStatus) {
                 return;
@@ -1549,7 +1579,7 @@ final class DexEngineImpl implements DexEngine {
                 "Engine must be in state any of %s, but is %s".formatted(expectedStatuses, this.status));
     }
 
-    private static Duration getRetryDelay(final RetryPolicy retryPolicy, final int attempt) {
+    private static Duration getRetryDelay(RetryPolicy retryPolicy, int attempt) {
         final var intervalFunc = IntervalFunction.ofExponentialRandomBackoff(
                 retryPolicy.initialDelay(),
                 retryPolicy.delayMultiplier(),
