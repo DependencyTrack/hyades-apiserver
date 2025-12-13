@@ -253,6 +253,8 @@ final class WorkflowTaskScheduler implements Closeable {
                   select id
                        , workflow_name
                        , priority
+                       , sticky_to
+                       , sticky_until
                     from dex_workflow_run as run
                    where task_queue_name = :queueName
                      and status in ('CREATED', 'RUNNING', 'SUSPENDED')
@@ -295,11 +297,20 @@ final class WorkflowTaskScheduler implements Closeable {
                           , id
                    limit greatest(0, :capacity - (select depth from cte_queue_depth))
                 )
-                insert into dex_workflow_task (queue_name, workflow_run_id, workflow_name, priority)
+                insert into dex_workflow_task (
+                  queue_name
+                , workflow_run_id
+                , workflow_name
+                , priority
+                , sticky_to
+                , sticky_until
+                )
                 select :queueName
                      , id
                      , workflow_name
                      , priority
+                     , sticky_to
+                     , sticky_until
                   from cte_eligible_run
                 on conflict (queue_name, workflow_run_id) do nothing
                 returning workflow_name

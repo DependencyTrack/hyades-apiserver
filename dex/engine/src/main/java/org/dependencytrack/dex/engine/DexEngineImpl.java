@@ -865,11 +865,6 @@ final class DexEngineImpl implements DexEngine {
         return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            // TODO: We could introduce stickyness to workflow runs, such that the same run will be processed
-            //  by the same worker instance for at least a certain amount of time.
-            //  This would makes caches more efficient. Currently each instance collaborating on processing
-            //  a given workflow run will maintain its own cache.
-
             final Map<UUID, PolledWorkflowTask> polledTaskByRunId =
                     dao.pollAndLockWorkflowTasks(this.config.instanceId(), queueName, commands, limit);
             if (polledTaskByRunId.isEmpty()) {

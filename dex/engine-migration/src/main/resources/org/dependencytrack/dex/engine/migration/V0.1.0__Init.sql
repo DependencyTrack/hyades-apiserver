@@ -25,6 +25,8 @@ create table dex_workflow_run (
 , concurrency_key text
 , priority smallint not null default 0
 , labels jsonb
+, sticky_to text
+, sticky_until timestamptz(3)
 , created_at timestamptz(3) not null
 , updated_at timestamptz(3)
 , started_at timestamptz(3)
@@ -45,6 +47,8 @@ create table dex_workflow_task (
 , workflow_run_id uuid
 , workflow_name text not null
 , priority smallint not null
+, sticky_to text
+, sticky_until timestamptz(3)
 , locked_by text
 , locked_until timestamptz(3)
 , lock_version smallint not null default 0
@@ -190,7 +194,7 @@ comment on index dex_workflow_run_completed_at_idx
      is 'Support retention enforcement of completed workflow runs';
 
 create index dex_workflow_task_poll_idx
-    on dex_workflow_task (priority desc, workflow_run_id);
+    on dex_workflow_task (sticky_to, priority desc, workflow_run_id);
 
 comment on index dex_workflow_task_poll_idx
      is 'Support polling of workflow task workers';
