@@ -158,10 +158,6 @@ public class Application {
     private static PrometheusMeterRegistry createMeterRegistry() {
         final var meterRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
 
-        new JvmInfoMetrics().bindTo(meterRegistry);
-        new JvmGcMetrics().bindTo(meterRegistry);
-        new JvmMemoryMetrics().bindTo(meterRegistry);
-
         meterRegistry.config().meterFilter(new MeterFilter() {
             @Override
             public DistributionStatisticConfig configure(
@@ -176,6 +172,10 @@ public class Application {
                 return config;
             }
         });
+
+        new JvmInfoMetrics().bindTo(meterRegistry);
+        new JvmGcMetrics().bindTo(meterRegistry);
+        new JvmMemoryMetrics().bindTo(meterRegistry);
 
         return meterRegistry;
     }
