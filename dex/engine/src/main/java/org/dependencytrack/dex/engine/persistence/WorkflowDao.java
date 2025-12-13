@@ -507,27 +507,23 @@ public final class WorkflowDao extends AbstractDao {
                   workflow_run_id
                 , visible_from
                 , event
-                , subject
                 )
                 select run_id
                      , coalesce(visible_from, now())
                      , event
-                     , subject
-                  from unnest(:runIds, :visibleFroms, :events, :subjects)
-                    as t(run_id, visible_from, event, subject)
+                  from unnest(:runIds, :visibleFroms, :events)
+                    as t(run_id, visible_from, event)
                 """);
 
         final var runIds = new UUID[messages.size()];
         final var visibleFroms = new @Nullable Instant[messages.size()];
         final var events = new byte[messages.size()][];
-        final var subjects = new String[messages.size()];
 
         int i = 0;
         for (final WorkflowMessage message : messages) {
             runIds[i] = message.recipientRunId();
             visibleFroms[i] = message.visibleFrom();
             events[i] = message.event().toByteArray();
-            subjects[i] = message.event().getSubjectCase().name();
             i++;
         }
 
@@ -535,7 +531,6 @@ public final class WorkflowDao extends AbstractDao {
                 .bind("runIds", runIds)
                 .bind("visibleFroms", visibleFroms)
                 .bind("events", events)
-                .bind("subjects", subjects)
                 .execute();
     }
 
@@ -640,21 +635,18 @@ public final class WorkflowDao extends AbstractDao {
         return polledEventsByRunId;
     }
 
-    public boolean hasMessageWithSubject(UUID runId, WorkflowEvent.SubjectCase subject) {
+    public List<WorkflowEvent> getMessages(UUID runId) {
         final Query query = jdbiHandle.createQuery("""
-                select exists (
-                  select 1
-                    from dex_workflow_inbox
-                   where workflow_run_id = :runId
-                     and subject = :subject
-                )
+                select event
+                  from dex_workflow_inbox
+                 where workflow_run_id = :runId
+                 order by id
                 """);
 
         return query
                 .bind("runId", runId)
-                .bind("subject", subject.name())
-                .mapTo(boolean.class)
-                .one();
+                .mapTo(WorkflowEvent.class)
+                .list();
     }
 
     public int deleteMessages(Collection<DeleteWorkflowMessagesCommand> commands) {
@@ -697,22 +689,19 @@ public final class WorkflowDao extends AbstractDao {
                   workflow_run_id
                 , sequence_number
                 , event
-                , subject
                 )
-                select * from unnest(:runIds, :sequenceNumbers, :events, :subjects)
+                select * from unnest(:runIds, :sequenceNumbers, :events)
                 """);
 
         final var runIds = new UUID[commands.size()];
         final var sequenceNumbers = new int[commands.size()];
         final var events = new byte[commands.size()][];
-        final var subjects = new String[commands.size()];
 
         int i = 0;
         for (final CreateWorkflowRunHistoryEntryCommand command : commands) {
             runIds[i] = command.workflowRunId();
             sequenceNumbers[i] = command.sequenceNumber();
             events[i] = command.event().toByteArray();
-            subjects[i] = command.event().getSubjectCase().name();
             i++;
         }
 
@@ -720,7 +709,6 @@ public final class WorkflowDao extends AbstractDao {
                 .bind("runIds", runIds)
                 .bind("sequenceNumbers", sequenceNumbers)
                 .bind("events", events)
-                .bind("subjects", subjects)
                 .execute();
     }
 

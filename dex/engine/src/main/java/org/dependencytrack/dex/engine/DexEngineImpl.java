@@ -686,7 +686,8 @@ final class DexEngineImpl implements DexEngine {
                 throw new IllegalStateException("Workflow run %s is already in terminal status".formatted(runId));
             }
 
-            final boolean hasPendingCancellation = dao.hasMessageWithSubject(runId, WorkflowEvent.SubjectCase.RUN_CANCELED);
+            final boolean hasPendingCancellation = dao.getMessages(runId).stream().anyMatch(
+                    event -> event.getSubjectCase() == WorkflowEvent.SubjectCase.RUN_CANCELED);
             if (hasPendingCancellation) {
                 throw new IllegalStateException("Cancellation of workflow run %s already pending".formatted(runId));
             }
@@ -717,7 +718,8 @@ final class DexEngineImpl implements DexEngine {
                 throw new IllegalStateException("Workflow run %s is already suspended".formatted(runId));
             }
 
-            final boolean hasPendingSuspension = dao.hasMessageWithSubject(runId, WorkflowEvent.SubjectCase.RUN_SUSPENDED);
+            final boolean hasPendingSuspension = dao.getMessages(runId).stream().anyMatch(
+                    event -> event.getSubjectCase() == WorkflowEvent.SubjectCase.RUN_SUSPENDED);
             if (hasPendingSuspension) {
                 throw new IllegalStateException("Suspension of workflow run %s is already pending".formatted(runId));
             }
@@ -748,7 +750,8 @@ final class DexEngineImpl implements DexEngine {
                 throw new IllegalStateException("Workflow run %s can not be resumed because it is not suspended".formatted(runId));
             }
 
-            final boolean hasPendingResumption = dao.hasMessageWithSubject(runId, WorkflowEvent.SubjectCase.RUN_RESUMED);
+            final boolean hasPendingResumption = dao.getMessages(runId).stream().anyMatch(
+                    event -> event.getSubjectCase() == WorkflowEvent.SubjectCase.RUN_RESUMED);
             if (hasPendingResumption) {
                 throw new IllegalStateException("Resumption of workflow run %s is already pending".formatted(runId));
             }
@@ -1153,7 +1156,7 @@ final class DexEngineImpl implements DexEngine {
                             .setTimestamp(now)
                             .setChildRunFailed(
                                     ChildRunFailed.newBuilder()
-                                            .setChildRunCreatedEventId(pendingMessage.event().getId())
+                                            .setChildRunCreatedEventId(parentRun.getChildRunCreatedEventId())
                                             .setFailure(FailureConverter.toFailure(exception))
                                             .build())
                             .build();
