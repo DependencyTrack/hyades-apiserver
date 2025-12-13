@@ -4,8 +4,9 @@ scrape_configs:
   scrape_interval: 15s
   static_configs:
   - targets: ["postgres-exporter:9187"]
-- job_name: pushgateway
+- job_name: dex-engine
   scrape_interval: 15s
-  static_configs:
-  - targets: ["prometheus-pushgateway:9091"]
-  honor_labels: true
+  dns_sd_configs:
+  - names: [ "dex-engine" ]
+    type: A
+    port: 8080

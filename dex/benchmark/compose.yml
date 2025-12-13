@@ -2,16 +2,58 @@
 name: dex-benchmark
 
 services:
+  dex-init:
+    image: dependencytrack/dex-benchmark:local
+    command: init
+    build:
+      dockerfile: src/main/docker/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+  dex-engine:
+    image: dependencytrack/dex-benchmark:local
+    command: start-engine
+    build:
+      dockerfile: src/main/docker/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dex-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  dex-create-runs:
+    image: dependencytrack/dex-benchmark:local
+    command: create-runs
+    build:
+      dockerfile: src/main/docker/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dex-init:
+        condition: service_completed_successfully
+    environment:
+      RUNS_COUNT: "100000"
+      BATCH_SIZE: "25000"
+    restart: no
+
   postgres:
-    image: postgres:14-alpine
+    image: postgres:18-alpine
     # Configuration is derived from PGTune (https://pgtune.leopard.in.ua/),
     # using the following system parameters:
-    # - DB Version:     14
+    #
+    # - DB Version:     18
     # - OS Type:        Linux
     # - DB Type:        Online Transaction Processing System
     # - Total Memory:   4GB
     # - Number of CPUs: 4
     # - Data Storage:   SSD
+    #
+    # This represents a fairly standard medium-sized database server.
+    # To better simulate large-scale deployments, increase the available
+    # resources as needed.
     command: >-
       -c shared_buffers=1GB
       -c effective_cache_size=3GB
@@ -23,11 +65,12 @@ services:
       -c huge_pages=off
       -c min_wal_size=2GB
       -c max_wal_size=8GB
-      -c wal_compression=on
       -c max_worker_processes=4
       -c max_parallel_workers_per_gather=2
       -c max_parallel_workers=4
       -c max_parallel_maintenance_workers=2
+      -c wal_compression=lz4
+      -c default_toast_compression=lz4
     environment:
       POSTGRES_DB: "dex"
       POSTGRES_USER: "dex"

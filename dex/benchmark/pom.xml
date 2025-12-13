@@ -47,7 +47,7 @@
 
         <dependency>
             <groupId>io.prometheus</groupId>
-            <artifactId>prometheus-metrics-exporter-pushgateway</artifactId>
+            <artifactId>prometheus-metrics-exporter-httpserver</artifactId>
             <version>1.3.10</version>
         </dependency>
 
@@ -70,9 +70,10 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.dependencytrack.dex.benchmark.BenchmarkApplication</mainClass>
+                                    <mainClass>org.dependencytrack.dex.benchmark.Application</mainClass>
                                 </transformer>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
