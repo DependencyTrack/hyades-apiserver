@@ -118,7 +118,6 @@ import java.util.stream.Collectors;
 
 import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.dex.engine.support.LockSupport.releaseAllLeases;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toInstant;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toProtoTimestamp;
 
@@ -156,6 +155,7 @@ final class DexEngineImpl implements DexEngine {
     private final MeterProvider<Counter> runsCompletedCounter;
 
     private volatile Status status = Status.CREATED;
+    private @Nullable LeaderElection leaderElection;
     private @Nullable WorkflowTaskScheduler workflowTaskScheduler;
     private @Nullable ActivityTaskScheduler activityTaskScheduler;
     private @Nullable ExecutorService eventListenerExecutor;
@@ -208,11 +208,20 @@ final class DexEngineImpl implements DexEngine {
                         .name("DexEngine-EventListener")
                         .factory());
 
+        LOGGER.debug("Starting leader election");
+        leaderElection = new LeaderElection(
+                config.instanceId(),
+                jdbi,
+                Duration.ofSeconds(30),
+                Duration.ofSeconds(15),
+                config.meterRegistry());
+        leaderElection.start();
+
         if (config.workflowTaskScheduler().isEnabled()) {
             LOGGER.debug("Starting workflow task scheduler");
             workflowTaskScheduler = new WorkflowTaskScheduler(
-                    config.instanceId(),
                     jdbi,
+                    leaderElection::isLeader,
                     config.meterRegistry(),
                     config.workflowTaskScheduler().pollInterval(),
                     config.workflowTaskScheduler().pollBackoffFunction());
@@ -222,8 +231,8 @@ final class DexEngineImpl implements DexEngine {
         if (config.activityTaskScheduler().isEnabled()) {
             LOGGER.debug("Starting activity task scheduler");
             activityTaskScheduler = new ActivityTaskScheduler(
-                    config.instanceId(),
                     jdbi,
+                    leaderElection::isLeader,
                     config.meterRegistry(),
                     config.activityTaskScheduler().pollInterval(),
                     config.activityTaskScheduler().pollBackoffFunction());
@@ -267,6 +276,7 @@ final class DexEngineImpl implements DexEngine {
             LOGGER.debug("Starting retention worker");
             retentionWorker = new RetentionWorker(
                     jdbi,
+                    leaderElection::isLeader,
                     config.retention().duration(),
                     config.retention().workerInitialDelay(),
                     config.retention().workerInterval());
@@ -337,6 +347,12 @@ final class DexEngineImpl implements DexEngine {
             taskEventBuffer = null;
         }
 
+        if (leaderElection != null) {
+            LOGGER.debug("Stopping leader election");
+            leaderElection.close();
+            leaderElection = null;
+        }
+
         if (eventListenerExecutor != null) {
             eventListenerExecutor.close();
             eventListenerExecutor = null;
@@ -346,13 +362,6 @@ final class DexEngineImpl implements DexEngine {
         if (runHistoryCache != null) {
             runHistoryCache.invalidateAll();
             runHistoryCache = null;
-        }
-
-        try {
-            LOGGER.debug("Releasing leases");
-            jdbi.useTransaction(handle -> releaseAllLeases(handle, config.instanceId()));
-        } catch (RuntimeException e) {
-            LOGGER.warn("Failed to release leases", e);
         }
 
         setStatus(Status.STOPPED);

@@ -38,17 +38,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.List;
-
-import static org.dependencytrack.dex.engine.support.LockSupport.tryAcquireLease;
+import java.util.function.Supplier;
 
 final class ActivityTaskScheduler implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ActivityTaskScheduler.class);
-    private static final String LEASE_NAME = "activity-task-scheduler";
-    private static final Duration LEASE_DURATION = Duration.ofSeconds(15);
 
-    private final String instanceId;
     private final Jdbi jdbi;
+    private final Supplier<Boolean> leadershipSupplier;
     private final MeterRegistry meterRegistry;
     private final long pollIntervalMillis;
     private final IntervalFunction pollBackoffFunction;
@@ -59,13 +56,13 @@ final class ActivityTaskScheduler implements Closeable {
     private @Nullable MeterProvider<Counter> tasksScheduledCounter;
 
     ActivityTaskScheduler(
-            String instanceId,
             Jdbi jdbi,
+            Supplier<Boolean> leadershipSupplier,
             MeterRegistry meterRegistry,
             Duration pollIntervalMillis,
             IntervalFunction pollBackoffFunction) {
-        this.instanceId = instanceId;
         this.jdbi = jdbi;
+        this.leadershipSupplier = leadershipSupplier;
         this.meterRegistry = meterRegistry;
         this.pollIntervalMillis = pollIntervalMillis.toMillis();
         this.pollBackoffFunction = pollBackoffFunction;
@@ -172,14 +169,10 @@ final class ActivityTaskScheduler implements Closeable {
     }
 
     private PollResult poll() {
-        final boolean leaseAcquired = jdbi.inTransaction(
-                handle -> tryAcquireLease(handle, LEASE_NAME, instanceId, LEASE_DURATION));
-        if (!leaseAcquired) {
-            LOGGER.info("Lease is held by another instance");
+        if (!leadershipSupplier.get()) {
+            LOGGER.debug("Not the leader; Skipping poll");
             return PollResult.SKIPPED;
         }
-
-        LOGGER.info("Lease acquired");
 
         return jdbi.inTransaction(handle -> {
             final List<Queue> queues = getActiveQueuesWithCapacity(handle);

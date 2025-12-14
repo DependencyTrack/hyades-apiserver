@@ -29,8 +29,7 @@ import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import static org.dependencytrack.dex.engine.support.LockSupport.tryAcquireAdvisoryLock;
+import java.util.function.Supplier;
 
 final class RetentionWorker implements Closeable {
 
@@ -38,6 +37,7 @@ final class RetentionWorker implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(RetentionWorker.class);
 
     private final Jdbi jdbi;
+    private final Supplier<Boolean> leadershipSupplier;
     private final Duration retentionDuration;
     private final Duration initialDelay;
     private final Duration interval;
@@ -45,10 +45,12 @@ final class RetentionWorker implements Closeable {
 
     RetentionWorker(
             final Jdbi jdbi,
+            final Supplier<Boolean> leadershipSupplier,
             final Duration retentionDuration,
             final Duration initialDelay,
             final Duration interval) {
         this.jdbi = jdbi;
+        this.leadershipSupplier = leadershipSupplier;
         this.retentionDuration = retentionDuration;
         this.initialDelay = initialDelay;
         this.interval = interval;
@@ -80,13 +82,12 @@ final class RetentionWorker implements Closeable {
     }
 
     private void enforceRetention() {
-        jdbi.useTransaction(handle -> {
-            final boolean lockAcquired = tryAcquireAdvisoryLock(handle, ADVISORY_LOCK_ID);
-            if (!lockAcquired) {
-                LOGGER.debug("Lock is held by another instance");
-                return;
-            }
+        if (!leadershipSupplier.get()) {
+            LOGGER.debug("Not the leader; Skipping");
+            return;
+        }
 
+        jdbi.useTransaction(handle -> {
             final Update update = handle.createUpdate("""
                     with cte_candidates as (
                       select id

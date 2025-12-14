@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.support;
+package org.dependencytrack.dex.engine.persistence;
 
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.Query;
@@ -26,33 +26,18 @@ import java.time.Duration;
 
 import static java.util.Objects.requireNonNull;
 
-public final class LockSupport {
+public final class LeaseDao extends AbstractDao {
 
-    private LockSupport() {
+    public LeaseDao(Handle jdbiHandle) {
+        super(jdbiHandle);
     }
 
-    public static boolean tryAcquireAdvisoryLock(Handle handle, long lockId) {
-        requireNonNull(handle, "handle must not be null");
-        if (!handle.isInTransaction()) {
-            throw new IllegalStateException("Not in a database transaction");
-        }
-
-        final Query query = handle.createQuery("""
-                select pg_try_advisory_xact_lock(:lockId)
-                """);
-
-        return query
-                .bind("lockId", lockId)
-                .mapTo(boolean.class)
-                .one();
-    }
-
-    public static boolean tryAcquireLease(Handle handle, String name, String instanceId, Duration duration) {
-        requireNonNull(handle, "handle must not be null");
+    public boolean tryAcquireLease(String name, String instanceId, Duration duration) {
         requireNonNull(name, "name must not be null");
         requireNonNull(instanceId, "instanceId must not be null");
+        requireNonNull(duration, "duration must not be null");
 
-        final Query query = handle.createQuery("""
+        final Query query = jdbiHandle.createQuery("""
                 with cte_acquisition as (
                   insert into dex_lease (name, acquired_by, acquired_at, expires_at)
                   values (:name, :instanceId, now(), now() + :duration)
@@ -60,7 +45,8 @@ public final class LockSupport {
                   set acquired_by = :instanceId
                     , acquired_at = now()
                     , expires_at = now() + :duration
-                  where dex_lease.expires_at <= now()
+                  where dex_lease.acquired_by = :instanceId
+                     or dex_lease.expires_at <= now()
                   returning acquired_by
                 )
                 select acquired_by
@@ -84,17 +70,21 @@ public final class LockSupport {
         return instanceId.equals(leaseHolder);
     }
 
-    public static void releaseAllLeases(Handle handle, String instanceId) {
-        requireNonNull(handle, "handle must not be null");
+    public boolean releaseLease(String name, String instanceId) {
+        requireNonNull(name, "name must not be null");
         requireNonNull(instanceId, "instanceId must not be null");
 
-        final Update update = handle.createUpdate("""
+        final Update update = jdbiHandle.createUpdate("""
                 delete
                   from dex_lease
-                 where acquired_by = :instanceId
+                 where name = :name
+                   and acquired_by = :instanceId
                 """);
 
-        update.bind("instanceId", instanceId).execute();
+        return update
+                .bind("name", name)
+                .bind("instanceId", instanceId)
+                .execute() > 0;
     }
 
 }
