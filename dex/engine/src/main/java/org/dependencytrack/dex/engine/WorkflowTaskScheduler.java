@@ -174,29 +174,27 @@ final class WorkflowTaskScheduler implements Closeable {
             return PollResult.SKIPPED;
         }
 
-        return jdbi.inTransaction(handle -> {
-            final List<Queue> queues = getActiveQueuesWithCapacity(handle);
-            if (queues.isEmpty()) {
-                LOGGER.debug("No active queues with capacity");
-                return PollResult.NO_TASKS_SCHEDULED;
-            }
+        final List<Queue> queues = jdbi.withHandle(this::getActiveQueuesWithCapacity);
+        if (queues.isEmpty()) {
+            LOGGER.debug("No active queues with capacity");
+            return PollResult.NO_TASKS_SCHEDULED;
+        }
 
-            boolean didScheduleTasks = false;
-            for (final Queue queue : queues) {
-                final Timer.Sample latencySample = Timer.start();
-                try (var ignored = MDC.putCloseable("queueName", queue.name())) {
-                    didScheduleTasks |= processQueue(handle, queue);
-                } finally {
-                    latencySample.stop(
-                            taskSchedulingLatencyTimer
-                                    .withTag("queueName", queue.name));
-                }
+        boolean didScheduleTasks = false;
+        for (final Queue queue : queues) {
+            final Timer.Sample latencySample = Timer.start();
+            try (var ignored = MDC.putCloseable("queueName", queue.name())) {
+                didScheduleTasks |= jdbi.inTransaction(handle -> processQueue(handle, queue));
+            } finally {
+                latencySample.stop(
+                        taskSchedulingLatencyTimer
+                                .withTag("queueName", queue.name));
             }
+        }
 
-            return didScheduleTasks
-                    ? PollResult.TASKS_SCHEDULED
-                    : PollResult.NO_TASKS_SCHEDULED;
-        });
+        return didScheduleTasks
+                ? PollResult.TASKS_SCHEDULED
+                : PollResult.NO_TASKS_SCHEDULED;
     }
 
     private record Queue(String name, int capacity) {
