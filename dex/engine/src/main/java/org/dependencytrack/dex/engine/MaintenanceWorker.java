@@ -31,27 +31,29 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-final class RetentionWorker implements Closeable {
+final class MaintenanceWorker implements Closeable {
 
-    private static final long ADVISORY_LOCK_ID = 3218488535236088498L;
-    private static final Logger LOGGER = LoggerFactory.getLogger(RetentionWorker.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MaintenanceWorker.class);
 
     private final Jdbi jdbi;
     private final Supplier<Boolean> leadershipSupplier;
-    private final Duration retentionDuration;
+    private final Duration runRetentionDuration;
+    private final int runDeletionBatchSize;
     private final Duration initialDelay;
     private final Duration interval;
     private @Nullable ScheduledExecutorService executor;
 
-    RetentionWorker(
-            final Jdbi jdbi,
-            final Supplier<Boolean> leadershipSupplier,
-            final Duration retentionDuration,
-            final Duration initialDelay,
-            final Duration interval) {
+    MaintenanceWorker(
+            Jdbi jdbi,
+            Supplier<Boolean> leadershipSupplier,
+            Duration runRetentionDuration,
+            int runDeletionBatchSize,
+            Duration initialDelay,
+            Duration interval) {
         this.jdbi = jdbi;
         this.leadershipSupplier = leadershipSupplier;
-        this.retentionDuration = retentionDuration;
+        this.runRetentionDuration = runRetentionDuration;
+        this.runDeletionBatchSize = runDeletionBatchSize;
         this.initialDelay = initialDelay;
         this.interval = interval;
     }
@@ -59,14 +61,14 @@ final class RetentionWorker implements Closeable {
     void start() {
         executor = Executors.newSingleThreadScheduledExecutor(
                 Thread.ofPlatform()
-                        .name(RetentionWorker.class.getSimpleName())
+                        .name(MaintenanceWorker.class.getSimpleName())
                         .factory());
         executor.scheduleAtFixedRate(
                 () -> {
                     try {
-                        enforceRetention();
+                        enforceRunRetention();
                     } catch (RuntimeException e) {
-                        LOGGER.error("Failed to enforce retention", e);
+                        LOGGER.error("Failed to perform maintenance", e);
                     }
                 },
                 initialDelay.toMillis(),
@@ -81,11 +83,13 @@ final class RetentionWorker implements Closeable {
         }
     }
 
-    private void enforceRetention() {
+    private void enforceRunRetention() {
         if (!leadershipSupplier.get()) {
             LOGGER.debug("Not the leader; Skipping");
             return;
         }
+
+        LOGGER.debug("Enforcing run retention");
 
         jdbi.useTransaction(handle -> {
             final Update update = handle.createUpdate("""
@@ -94,17 +98,24 @@ final class RetentionWorker implements Closeable {
                         from dex_workflow_run
                        where completed_at < (NOW() - (:retentionDuration))
                        order by completed_at
-                       limit 100 -- TODO: Make configurable.
+                       limit :batchSize
                          for no key update
+                        skip locked
                     )
                     delete from dex_workflow_run
                      where id in (select id from cte_candidates)
                     """);
 
             final int runsDeleted = update
-                    .bind("retentionDuration", retentionDuration)
+                    .bind("retentionDuration", runRetentionDuration)
+                    .bind("batchSize", runDeletionBatchSize)
                     .execute();
-            LOGGER.info("Deleted {} workflow run(s)", runsDeleted);
+
+            if (runsDeleted > 0) {
+                LOGGER.info("Deleted {} completed workflow run(s)", runsDeleted);
+            } else {
+                LOGGER.debug("No completed workflow runs deleted");
+            }
         });
     }
 

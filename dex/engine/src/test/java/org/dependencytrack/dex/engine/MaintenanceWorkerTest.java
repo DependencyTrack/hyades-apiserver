@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 @Testcontainers
-class RetentionWorkerTest {
+class MaintenanceWorkerTest {
 
     @Container
     private static final PostgresTestContainer postgresContainer = new PostgresTestContainer();
@@ -71,8 +71,15 @@ class RetentionWorkerTest {
                     """);
         });
 
-        try (final var worker = new RetentionWorker(
-                jdbi, () -> true, /* retentionDays */ Duration.ofDays(3), Duration.ZERO, Duration.ofMillis(100))) {
+        final var worker = new MaintenanceWorker(
+                jdbi,
+                /* leadershipSupplier */ () -> true,
+                /* runRetentionDuration */ Duration.ofDays(3),
+                /* runRetentionBatchSize */ 10,
+                /* initialDelay */ Duration.ZERO,
+                /* interval */ Duration.ofMillis(100));
+
+        try (worker) {
             worker.start();
 
             await()

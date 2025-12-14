@@ -99,7 +99,7 @@ by the `dex_lease` table with the following schema:
 | expires_at  | timestamptz(3) | not null    |
 
 Every node in the cluster will regularly (default: 15s) try to acquire the leadership lease
-for a given period of time (default: 30s).
+for a given period of time (default: 30s). This design is inspired by Kubernetes controllers. 
 
 A lease is acquired by inserting into the `dex_lease` table. Concurrency-safe conflict
 resolution is performed using PostgreSQL's `insert into ... on conflict do update` mechanism:

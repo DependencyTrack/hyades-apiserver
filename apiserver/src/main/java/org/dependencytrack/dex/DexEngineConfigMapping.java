@@ -47,6 +47,9 @@ public interface DexEngineConfigMapping {
     MigrationConfigMapping migration();
 
     @Valid
+    LeaderElectionConfigMapping leaderElection();
+
+    @Valid
     TaskSchedulerConfigMapping workflowTaskScheduler();
 
     @Valid
@@ -57,7 +60,7 @@ public interface DexEngineConfigMapping {
     Map<String, @Valid TaskWorkerConfigMapping> activityTaskWorker();
 
     @Valid
-    RetentionConfigMapping retention();
+    MaintenanceConfigMapping maintenance();
 
     @Valid
     BufferConfigMapping externalEventBuffer();
@@ -86,13 +89,29 @@ public interface DexEngineConfigMapping {
 
     }
 
+    interface LeaderElectionConfigMapping {
+
+        @WithName("lease-duration-ms")
+        @WithDefault("30000")
+        @Positive
+        long leaseDurationMillis();
+
+        @WithName("lease-check-interval-ms")
+        @WithDefault("15000")
+        @Positive
+        long leaseCheckIntervalMillis();
+
+    }
+
     interface TaskSchedulerConfigMapping {
 
-        @WithDefault("true")
-        boolean enabled();
+        @WithName("poll-interval-ms")
+        @WithDefault("100")
+        @Positive
+        long pollIntervalMillis();
 
-        @WithDefault("PT1S")
-        Duration pollInterval();
+        @Valid
+        BackoffConfigMapping pollBackoff();
 
     }
 
@@ -107,29 +126,43 @@ public interface DexEngineConfigMapping {
         @Positive
         int maxConcurrency();
 
-        @WithDefault("PT0.1S")
-        Duration minPollInterval();
+        @WithName("min-poll-interval-ms")
+        @WithDefault("100")
+        long minPollIntervalMillis();
 
         @Valid
         BackoffConfigMapping pollBackoff();
 
     }
 
-    interface RetentionConfigMapping {
-
-        @WithDefault("true")
-        boolean enabled();
+    interface MaintenanceConfigMapping {
 
         @WithDefault("P1D")
         @Positive
-        Duration duration();
+        Duration runRetentionDuration();
+
+        @WithDefault("1000")
+        @Positive
+        int runDeletionBatchSize();
+
+        @WithName("worker-initial-delay-ms")
+        @WithDefault("60000")
+        @Positive
+        long workerInitialDelayMillis();
+
+        @WithName("worker-interval-ms")
+        @WithDefault("900000")
+        @Positive
+        long workerIntervalMillis();
 
     }
 
     interface BufferConfigMapping {
 
-        @WithDefault("PT0.1S")
-        Duration flushInterval();
+        @WithName("flush-interval-ms")
+        @WithDefault("100")
+        @Positive
+        long flushIntervalMillis();
 
         @WithDefault("100")
         @Positive
@@ -139,8 +172,10 @@ public interface DexEngineConfigMapping {
 
     interface CacheConfigMapping {
 
-        @WithDefault("PT5M")
-        Duration ttl();
+        @WithName("ttl-ms")
+        @WithDefault("300000")
+        @Positive
+        long ttlMillis();
 
         @WithDefault("1000")
         @Positive
@@ -150,8 +185,10 @@ public interface DexEngineConfigMapping {
 
     interface BackoffConfigMapping {
 
-        @WithDefault("PT0.1S")
-        Duration initialDelay();
+        @WithName("initial-delay-ms")
+        @WithDefault("100")
+        @Positive
+        long initialDelayMillis();
 
         @WithDefault("1.5")
         @Positive
@@ -161,15 +198,17 @@ public interface DexEngineConfigMapping {
         @Positive
         double randomizationFactor();
 
-        @WithDefault("PT3S")
-        Duration maxDelay();
+        @WithName("max-delay-ms")
+        @WithDefault("3000")
+        @Positive
+        long maxDelayMillis();
 
         default IntervalFunction asIntervalFunction() {
             return IntervalFunction.ofExponentialRandomBackoff(
-                    initialDelay(),
+                    initialDelayMillis(),
                     multiplier(),
                     randomizationFactor(),
-                    maxDelay());
+                    maxDelayMillis());
         }
 
     }

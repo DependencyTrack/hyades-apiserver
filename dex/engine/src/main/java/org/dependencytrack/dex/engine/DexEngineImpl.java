@@ -155,14 +155,14 @@ final class DexEngineImpl implements DexEngine {
     private final MeterProvider<Counter> runsCompletedCounter;
 
     private volatile Status status = Status.CREATED;
-    private @Nullable LeaderElection leaderElection;
+    private @Nullable DexEngineLeaderElection leaderElection;
     private @Nullable WorkflowTaskScheduler workflowTaskScheduler;
     private @Nullable ActivityTaskScheduler activityTaskScheduler;
     private @Nullable ExecutorService eventListenerExecutor;
     private @Nullable Buffer<ExternalEvent> externalEventBuffer;
     private @Nullable Buffer<TaskEvent> taskEventBuffer;
     private @Nullable Buffer<ActivityTaskHeartbeat> activityTaskHeartbeatBuffer;
-    private @Nullable RetentionWorker retentionWorker;
+    private @Nullable MaintenanceWorker maintenanceWorker;
     private @Nullable Cache<UUID, CachedWorkflowRunHistory> runHistoryCache;
 
     DexEngineImpl(DexEngineConfig config) {
@@ -209,7 +209,7 @@ final class DexEngineImpl implements DexEngine {
                         .factory());
 
         LOGGER.debug("Starting leader election");
-        leaderElection = new LeaderElection(
+        leaderElection = new DexEngineLeaderElection(
                 config.instanceId(),
                 jdbi,
                 config.leaderElection().leaseDuration(),
@@ -217,27 +217,23 @@ final class DexEngineImpl implements DexEngine {
                 config.meterRegistry());
         leaderElection.start();
 
-        if (config.workflowTaskScheduler().isEnabled()) {
-            LOGGER.debug("Starting workflow task scheduler");
-            workflowTaskScheduler = new WorkflowTaskScheduler(
-                    jdbi,
-                    leaderElection::isLeader,
-                    config.meterRegistry(),
-                    config.workflowTaskScheduler().pollInterval(),
-                    config.workflowTaskScheduler().pollBackoffFunction());
-            workflowTaskScheduler.start();
-        }
+        LOGGER.debug("Starting workflow task scheduler");
+        workflowTaskScheduler = new WorkflowTaskScheduler(
+                jdbi,
+                leaderElection::isLeader,
+                config.meterRegistry(),
+                config.workflowTaskScheduler().pollInterval(),
+                config.workflowTaskScheduler().pollBackoffFunction());
+        workflowTaskScheduler.start();
 
-        if (config.activityTaskScheduler().isEnabled()) {
-            LOGGER.debug("Starting activity task scheduler");
-            activityTaskScheduler = new ActivityTaskScheduler(
-                    jdbi,
-                    leaderElection::isLeader,
-                    config.meterRegistry(),
-                    config.activityTaskScheduler().pollInterval(),
-                    config.activityTaskScheduler().pollBackoffFunction());
-            activityTaskScheduler.start();
-        }
+        LOGGER.debug("Starting activity task scheduler");
+        activityTaskScheduler = new ActivityTaskScheduler(
+                jdbi,
+                leaderElection::isLeader,
+                config.meterRegistry(),
+                config.activityTaskScheduler().pollInterval(),
+                config.activityTaskScheduler().pollBackoffFunction());
+        activityTaskScheduler.start();
 
         LOGGER.debug("Starting external event buffer");
         externalEventBuffer = new Buffer<>(
@@ -272,18 +268,15 @@ final class DexEngineImpl implements DexEngine {
                 config.meterRegistry());
         activityTaskHeartbeatBuffer.start();
 
-        if (config.retention().isWorkerEnabled()) {
-            LOGGER.debug("Starting retention worker");
-            retentionWorker = new RetentionWorker(
-                    jdbi,
-                    leaderElection::isLeader,
-                    config.retention().duration(),
-                    config.retention().workerInitialDelay(),
-                    config.retention().workerInterval());
-            retentionWorker.start();
-        } else {
-            LOGGER.debug("Retention worker is disabled");
-        }
+        LOGGER.debug("Starting maintenance worker");
+        maintenanceWorker = new MaintenanceWorker(
+                jdbi,
+                leaderElection::isLeader,
+                config.maintenance().runRetentionDuration(),
+                config.maintenance().runDeletionBatchSize(),
+                config.maintenance().workerInitialDelay(),
+                config.maintenance().workerInterval());
+        maintenanceWorker.start();
 
         for (final Map.Entry<String, TaskWorker> entry : taskWorkerByName.entrySet()) {
             LOGGER.debug("Starting task worker {}", entry.getKey());
@@ -303,10 +296,10 @@ final class DexEngineImpl implements DexEngine {
         setStatus(Status.STOPPING);
         LOGGER.debug("Stopping");
 
-        if (retentionWorker != null) {
-            LOGGER.debug("Waiting for retention worker to stop");
-            retentionWorker.close();
-            retentionWorker = null;
+        if (maintenanceWorker != null) {
+            LOGGER.debug("Waiting for maintenance worker to stop");
+            maintenanceWorker.close();
+            maintenanceWorker = null;
         }
 
         if (activityTaskScheduler != null) {

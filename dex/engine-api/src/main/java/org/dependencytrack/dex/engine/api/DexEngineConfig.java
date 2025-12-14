@@ -126,40 +126,40 @@ public class DexEngineConfig {
 
     }
 
-    public static class RetentionConfig {
+    public static class MaintenanceConfig {
 
-        private Duration duration = Duration.ofDays(1);
-        private boolean workerEnabled = true;
+        private Duration runRetentionDuration = Duration.ofDays(1);
+        private int runDeletionBatchSize = 1000;
         private Duration workerInitialDelay = Duration.ofMinutes(1);
         private Duration workerInterval = Duration.ofMinutes(30);
 
-        private RetentionConfig() {
+        private MaintenanceConfig() {
         }
 
         /**
          * @return Duration to retain completed workflow runs for.
          */
-        public Duration duration() {
-            return duration;
+        public Duration runRetentionDuration() {
+            return runRetentionDuration;
         }
 
-        public void setDuration(Duration duration) {
-            this.duration = duration;
+        public void setRunRetentionDuration(Duration runRetentionDuration) {
+            this.runRetentionDuration = runRetentionDuration;
         }
 
         /**
-         * @return Whether the retention worker shall be enabled in this instance.
+         * @return The number of completed workflow runs to delete in a single execution.
          */
-        public boolean isWorkerEnabled() {
-            return workerEnabled;
+        public int runDeletionBatchSize() {
+            return runDeletionBatchSize;
         }
 
-        public void setWorkerEnabled(boolean workerEnabled) {
-            this.workerEnabled = workerEnabled;
+        public void setRunDeletionBatchSize(int runDeletionBatchSize) {
+            this.runDeletionBatchSize = runDeletionBatchSize;
         }
 
         /**
-         * @return Initial delay before the retention worker first runs.
+         * @return Initial delay before the maintenance worker first runs.
          */
         public Duration workerInitialDelay() {
             return workerInitialDelay;
@@ -170,7 +170,7 @@ public class DexEngineConfig {
         }
 
         /**
-         * @return Interval at which the retention worker will run.
+         * @return Interval at which the maintenance worker will run.
          */
         public Duration workerInterval() {
             return workerInterval;
@@ -184,19 +184,10 @@ public class DexEngineConfig {
 
     public static class TaskSchedulerConfig {
 
-        private boolean enabled = true;
         private Duration pollInterval = Duration.ofMillis(100);
         private IntervalFunction pollBackoffFunction = ofExponentialRandomBackoff(100L, 2.0, 0.3, 3000L);
 
         private TaskSchedulerConfig() {
-        }
-
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
         }
 
         public Duration pollInterval() {
@@ -224,7 +215,7 @@ public class DexEngineConfig {
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
     private final BufferConfig taskEventsBufferConfig = new BufferConfig();
     private final BufferConfig activityTaskHeartbeatBufferConfig = new BufferConfig();
-    private final RetentionConfig retentionConfig = new RetentionConfig();
+    private final MaintenanceConfig maintenanceConfig = new MaintenanceConfig();
     private final TaskSchedulerConfig workflowTaskSchedulerConfig = new TaskSchedulerConfig();
     private final TaskSchedulerConfig activityTaskSchedulerConfig = new TaskSchedulerConfig();
 
@@ -277,10 +268,10 @@ public class DexEngineConfig {
     }
 
     /**
-     * @return Config for workflow run retention.
+     * @return Maintenance config.
      */
-    public RetentionConfig retention() {
-        return retentionConfig;
+    public MaintenanceConfig maintenance() {
+        return maintenanceConfig;
     }
 
     public TaskSchedulerConfig workflowTaskScheduler() {

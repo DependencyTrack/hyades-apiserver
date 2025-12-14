@@ -20,6 +20,8 @@ package org.dependencytrack.dex;
 
 import io.micrometer.core.instrument.Metrics;
 import io.smallrye.config.SmallRyeConfig;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.dex.DexEngineConfigMapping.TaskWorkerConfigMapping;
@@ -35,10 +37,9 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import javax.sql.DataSource;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ServiceLoader;
 
 /**
@@ -117,25 +118,30 @@ public final class DexEngineInitializer implements ServletContextListener {
 
         final var engineConfig = new DexEngineConfig(dataSource);
 
-        engineConfig.workflowTaskScheduler().setEnabled(configMapping.workflowTaskScheduler().enabled());
-        engineConfig.workflowTaskScheduler().setPollInterval(configMapping.workflowTaskScheduler().pollInterval());
+        engineConfig.leaderElection().setLeaseDuration(Duration.ofMillis(configMapping.leaderElection().leaseDurationMillis()));
+        engineConfig.leaderElection().setLeaseCheckInterval(Duration.ofMillis(configMapping.leaderElection().leaseCheckIntervalMillis()));
 
-        engineConfig.activityTaskScheduler().setEnabled(configMapping.activityTaskScheduler().enabled());
-        engineConfig.activityTaskScheduler().setPollInterval(configMapping.activityTaskScheduler().pollInterval());
+        engineConfig.workflowTaskScheduler().setPollInterval(Duration.ofMillis(configMapping.workflowTaskScheduler().pollIntervalMillis()));
+        engineConfig.workflowTaskScheduler().setPollBackoffFunction(configMapping.workflowTaskScheduler().pollBackoff().asIntervalFunction());
 
-        engineConfig.retention().setWorkerEnabled(configMapping.retention().enabled());
-        engineConfig.retention().setDuration(configMapping.retention().duration());
+        engineConfig.activityTaskScheduler().setPollInterval(Duration.ofMillis(configMapping.activityTaskScheduler().pollIntervalMillis()));
+        engineConfig.activityTaskScheduler().setPollBackoffFunction(configMapping.activityTaskScheduler().pollBackoff().asIntervalFunction());
 
-        engineConfig.taskEventBuffer().setFlushInterval(configMapping.taskEventBuffer().flushInterval());
+        engineConfig.maintenance().setRunRetentionDuration(configMapping.maintenance().runRetentionDuration());
+        engineConfig.maintenance().setRunDeletionBatchSize(configMapping.maintenance().runDeletionBatchSize());
+        engineConfig.maintenance().setWorkerInitialDelay(Duration.ofMillis(configMapping.maintenance().workerInitialDelayMillis()));
+        engineConfig.maintenance().setWorkerInterval(Duration.ofMillis(configMapping.maintenance().workerIntervalMillis()));
+
+        engineConfig.taskEventBuffer().setFlushInterval(Duration.ofMillis(configMapping.taskEventBuffer().flushIntervalMillis()));
         engineConfig.taskEventBuffer().setMaxBatchSize(configMapping.taskEventBuffer().maxSize());
 
-        engineConfig.externalEventBuffer().setFlushInterval(configMapping.externalEventBuffer().flushInterval());
+        engineConfig.externalEventBuffer().setFlushInterval(Duration.ofMillis(configMapping.externalEventBuffer().flushIntervalMillis()));
         engineConfig.externalEventBuffer().setMaxBatchSize(configMapping.externalEventBuffer().maxSize());
 
-        engineConfig.activityTaskHeartbeatBuffer().setFlushInterval(configMapping.activityTaskHeartbeatBuffer().flushInterval());
+        engineConfig.activityTaskHeartbeatBuffer().setFlushInterval(Duration.ofMillis(configMapping.activityTaskHeartbeatBuffer().flushIntervalMillis()));
         engineConfig.activityTaskHeartbeatBuffer().setMaxBatchSize(configMapping.activityTaskHeartbeatBuffer().maxSize());
 
-        engineConfig.runHistoryCache().setEvictAfterAccess(configMapping.runHistoryCache().ttl());
+        engineConfig.runHistoryCache().setEvictAfterAccess(Duration.ofMillis(configMapping.runHistoryCache().ttlMillis()));
         engineConfig.runHistoryCache().setMaxSize(configMapping.runHistoryCache().maxSize());
 
         engineConfig.setPageTokenEncoder(new EncryptedPageTokenEncoder());
@@ -172,7 +178,7 @@ public final class DexEngineInitializer implements ServletContextListener {
                     name, config.queueName(), config.maxConcurrency());
             engine.registerWorkflowWorker(
                     new WorkflowTaskWorkerOptions(name, config.queueName(), config.maxConcurrency())
-                            .withMinPollInterval(config.minPollInterval())
+                            .withMinPollInterval(Duration.ofMillis(config.minPollIntervalMillis()))
                             .withPollBackoffFunction(config.pollBackoff().asIntervalFunction()));
         }
 
@@ -190,7 +196,7 @@ public final class DexEngineInitializer implements ServletContextListener {
                     name, config.queueName(), config.maxConcurrency());
             engine.registerActivityWorker(
                     new ActivityTaskWorkerOptions(name, config.queueName(), config.maxConcurrency())
-                            .withMinPollInterval(config.minPollInterval())
+                            .withMinPollInterval(Duration.ofMillis(config.minPollIntervalMillis()))
                             .withPollBackoffFunction(config.pollBackoff().asIntervalFunction()));
         }
     }

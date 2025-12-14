@@ -33,10 +33,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-final class LeaderElection implements Closeable {
+final class DexEngineLeaderElection implements Closeable {
 
     private static final String LEASE_NAME = "leadership";
-    private static final Logger LOGGER = LoggerFactory.getLogger(LeaderElection.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DexEngineLeaderElection.class);
 
     private final String instanceId;
     private final Jdbi jdbi;
@@ -49,7 +49,7 @@ final class LeaderElection implements Closeable {
     private @Nullable Counter leadershipLostCounter;
     private volatile boolean isLeader;
 
-    LeaderElection(
+    DexEngineLeaderElection(
             String instanceId,
             Jdbi jdbi,
             Duration leaseDuration,
@@ -122,11 +122,11 @@ final class LeaderElection implements Closeable {
                             LEASE_NAME, instanceId, leaseDuration));
 
             if (leaseAcquired && !isLeader) {
-                LOGGER.debug("Leadership lease acquired");
+                LOGGER.info("Leadership lease acquired");
                 leadershipAcquiredCounter.increment();
                 isLeader = true;
             } else if (!leaseAcquired && isLeader) {
-                LOGGER.debug("Leadership lease lost");
+                LOGGER.info("Leadership lease lost");
                 leadershipLostCounter.increment();
                 isLeader = false;
             } else if (leaseAcquired) {
