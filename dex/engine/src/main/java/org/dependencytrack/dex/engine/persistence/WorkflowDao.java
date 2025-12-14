@@ -413,7 +413,11 @@ public final class WorkflowDao extends AbstractDao {
                       on queue.name = task.queue_name
                    where task.queue_name = :queueName
                      and queue.status = 'ACTIVE'
-                     and (task.sticky_to is null or (task.sticky_to = :engineInstanceId and task.sticky_until >= now()))
+                     and (
+                           task.sticky_to is null
+                           or task.sticky_until < now()
+                           or (task.sticky_to = :engineInstanceId and task.sticky_until >= now())
+                         )
                      and (task.locked_until is null or task.locked_until <= now())
                    order by task.priority desc
                           , task.workflow_run_id

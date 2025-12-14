@@ -205,7 +205,7 @@ comment on index dex_workflow_run_completed_at_idx
      is 'Support retention enforcement of completed workflow runs';
 
 create index dex_workflow_task_poll_idx
-    on dex_workflow_task (sticky_to, priority desc, workflow_run_id);
+    on dex_workflow_task (sticky_to, sticky_until, priority desc, workflow_run_id);
 
 comment on index dex_workflow_task_poll_idx
      is 'Support polling of workflow task workers';
