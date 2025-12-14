@@ -1,3 +1,14 @@
+create unlogged table dex_lease (
+  name text
+, acquired_by text not null
+, acquired_at timestamptz(3) not null
+, expires_at timestamptz(3) not null
+, constraint dex_lease_pk primary key (name)
+);
+
+comment on table dex_lease
+     is 'Leases for leader election';
+
 create table dex_workflow_task_queue (
   name text
 , partition_name text not null

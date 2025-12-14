@@ -39,13 +39,15 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.util.List;
 
-import static org.dependencytrack.dex.engine.support.LockSupport.tryAcquireAdvisoryLock;
+import static org.dependencytrack.dex.engine.support.LockSupport.tryAcquireLease;
 
 final class WorkflowTaskScheduler implements Closeable {
 
-    private static final long ADVISORY_LOCK_ID = 936942697589618032L;
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowTaskScheduler.class);
+    private static final String LEASE_NAME = "workflow-task-scheduler";
+    private static final Duration LEASE_DURATION = Duration.ofSeconds(15);
 
+    private final String instanceId;
     private final Jdbi jdbi;
     private final MeterRegistry meterRegistry;
     private final long pollIntervalMillis;
@@ -57,10 +59,12 @@ final class WorkflowTaskScheduler implements Closeable {
     private @Nullable MeterProvider<Counter> tasksScheduledCounter;
 
     WorkflowTaskScheduler(
-            final Jdbi jdbi,
-            final MeterRegistry meterRegistry,
-            final Duration pollInterval,
-            final IntervalFunction pollBackoffFunction) {
+            String instanceId,
+            Jdbi jdbi,
+            MeterRegistry meterRegistry,
+            Duration pollInterval,
+            IntervalFunction pollBackoffFunction) {
+        this.instanceId = instanceId;
         this.jdbi = jdbi;
         this.meterRegistry = meterRegistry;
         this.pollIntervalMillis = pollInterval.toMillis();
@@ -148,9 +152,9 @@ final class WorkflowTaskScheduler implements Closeable {
 
             try {
                 final PollResult pollResult = poll();
-                if (poll() == PollResult.TASKS_SCHEDULED) {
+                if (pollResult == PollResult.TASKS_SCHEDULED) {
                     pollsWithoutSchedules = 0;
-                } else if (pollResult == PollResult.NO_TASKS_SCHEDULED) {
+                } else {
                     pollsWithoutSchedules++;
                 }
                 consecutiveErrors = 0;
@@ -168,21 +172,25 @@ final class WorkflowTaskScheduler implements Closeable {
     }
 
     private PollResult poll() {
-        return jdbi.inTransaction(handle -> {
-            if (!tryAcquireAdvisoryLock(handle, ADVISORY_LOCK_ID)) {
-                return PollResult.SKIPPED;
-            }
+        final boolean leaseAcquired = jdbi.inTransaction(
+                handle -> tryAcquireLease(handle, LEASE_NAME, instanceId, LEASE_DURATION));
+        if (!leaseAcquired) {
+            LOGGER.debug("Lease is held by another instance");
+            return PollResult.SKIPPED;
+        }
 
+        return jdbi.inTransaction(handle -> {
             final List<Queue> queues = getActiveQueuesWithCapacity(handle);
             if (queues.isEmpty()) {
                 LOGGER.debug("No active queues with capacity");
                 return PollResult.NO_TASKS_SCHEDULED;
             }
 
+            boolean didScheduleTasks = false;
             for (final Queue queue : queues) {
                 final Timer.Sample latencySample = Timer.start();
                 try (var ignored = MDC.putCloseable("queueName", queue.name())) {
-                    processQueue(handle, queue);
+                    didScheduleTasks |= processQueue(handle, queue);
                 } finally {
                     latencySample.stop(
                             taskSchedulingLatencyTimer
@@ -190,7 +198,9 @@ final class WorkflowTaskScheduler implements Closeable {
                 }
             }
 
-            return PollResult.TASKS_SCHEDULED;
+            return didScheduleTasks
+                    ? PollResult.TASKS_SCHEDULED
+                    : PollResult.NO_TASKS_SCHEDULED;
         });
     }
 
@@ -199,7 +209,7 @@ final class WorkflowTaskScheduler implements Closeable {
         private static class RowMapper implements org.jdbi.v3.core.mapper.RowMapper<Queue> {
 
             @Override
-            public Queue map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+            public Queue map(ResultSet rs, StatementContext ctx) throws SQLException {
                 return new Queue(rs.getString("name"), rs.getInt("capacity"));
             }
 
@@ -207,7 +217,7 @@ final class WorkflowTaskScheduler implements Closeable {
 
     }
 
-    private List<Queue> getActiveQueuesWithCapacity(final Handle handle) {
+    private List<Queue> getActiveQueuesWithCapacity(Handle handle) {
         final Query query = handle.createQuery("""
                 with cte_candidate as (
                   select name
@@ -237,7 +247,7 @@ final class WorkflowTaskScheduler implements Closeable {
                 .list();
     }
 
-    private void processQueue(final Handle handle, final Queue queue) {
+    private boolean processQueue(Handle handle, Queue queue) {
         final Update update = handle.createUpdate("""
                 with
                 cte_queue_depth as (
@@ -323,11 +333,15 @@ final class WorkflowTaskScheduler implements Closeable {
                 .mapTo(String.class)
                 .list();
 
-        for (final String workflowName : scheduledWorkflowNames) {
-            tasksScheduledCounter
-                    .withTag("workflowName", workflowName)
-                    .increment();
-        }
+        handle.afterCommit(() -> {
+            for (final String workflowName : scheduledWorkflowNames) {
+                tasksScheduledCounter
+                        .withTag("workflowName", workflowName)
+                        .increment();
+            }
+        });
+
+        return !scheduledWorkflowNames.isEmpty();
     }
 
 }

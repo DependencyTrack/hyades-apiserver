@@ -17,11 +17,4 @@
 FROM eclipse-temurin:25-alpine
 WORKDIR /
 COPY ./target/dex-benchmark.jar /app.jar
-ENTRYPOINT [
-  "java",
-  "--sun-misc-unsafe-memory-access=allow",
-  "--add-opens",
-  "java.base/java.util.concurrent=ALL-UNNAMED",
-  "-jar",
-  "/app.jar"
-]
+ENTRYPOINT ["java", "--sun-misc-unsafe-memory-access=allow", "--add-opens", "java.base/java.util.concurrent=ALL-UNNAMED", "-jar", "/app.jar"]

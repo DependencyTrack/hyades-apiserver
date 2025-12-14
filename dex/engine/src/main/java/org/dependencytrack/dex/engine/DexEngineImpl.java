@@ -118,6 +118,7 @@ import java.util.stream.Collectors;
 
 import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.dex.engine.support.LockSupport.releaseAllLeases;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toInstant;
 import static org.dependencytrack.dex.engine.support.ProtobufUtil.toProtoTimestamp;
 
@@ -210,6 +211,7 @@ final class DexEngineImpl implements DexEngine {
         if (config.workflowTaskScheduler().isEnabled()) {
             LOGGER.debug("Starting workflow task scheduler");
             workflowTaskScheduler = new WorkflowTaskScheduler(
+                    config.instanceId(),
                     jdbi,
                     config.meterRegistry(),
                     config.workflowTaskScheduler().pollInterval(),
@@ -220,6 +222,7 @@ final class DexEngineImpl implements DexEngine {
         if (config.activityTaskScheduler().isEnabled()) {
             LOGGER.debug("Starting activity task scheduler");
             activityTaskScheduler = new ActivityTaskScheduler(
+                    config.instanceId(),
                     jdbi,
                     config.meterRegistry(),
                     config.activityTaskScheduler().pollInterval(),
@@ -343,6 +346,13 @@ final class DexEngineImpl implements DexEngine {
         if (runHistoryCache != null) {
             runHistoryCache.invalidateAll();
             runHistoryCache = null;
+        }
+
+        try {
+            LOGGER.debug("Releasing leases");
+            jdbi.useTransaction(handle -> releaseAllLeases(handle, config.instanceId()));
+        } catch (RuntimeException e) {
+            LOGGER.warn("Failed to release leases", e);
         }
 
         setStatus(Status.STOPPED);

@@ -39,13 +39,15 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.util.List;
 
-import static org.dependencytrack.dex.engine.support.LockSupport.tryAcquireAdvisoryLock;
+import static org.dependencytrack.dex.engine.support.LockSupport.tryAcquireLease;
 
 final class ActivityTaskScheduler implements Closeable {
 
-    private static final long ADVISORY_LOCK_ID = 2299953353083674283L;
     private static final Logger LOGGER = LoggerFactory.getLogger(ActivityTaskScheduler.class);
+    private static final String LEASE_NAME = "activity-task-scheduler";
+    private static final Duration LEASE_DURATION = Duration.ofSeconds(15);
 
+    private final String instanceId;
     private final Jdbi jdbi;
     private final MeterRegistry meterRegistry;
     private final long pollIntervalMillis;
@@ -57,10 +59,12 @@ final class ActivityTaskScheduler implements Closeable {
     private @Nullable MeterProvider<Counter> tasksScheduledCounter;
 
     ActivityTaskScheduler(
-            final Jdbi jdbi,
-            final MeterRegistry meterRegistry,
-            final Duration pollIntervalMillis,
-            final IntervalFunction pollBackoffFunction) {
+            String instanceId,
+            Jdbi jdbi,
+            MeterRegistry meterRegistry,
+            Duration pollIntervalMillis,
+            IntervalFunction pollBackoffFunction) {
+        this.instanceId = instanceId;
         this.jdbi = jdbi;
         this.meterRegistry = meterRegistry;
         this.pollIntervalMillis = pollIntervalMillis.toMillis();
@@ -150,7 +154,7 @@ final class ActivityTaskScheduler implements Closeable {
                 final PollResult pollResult = poll();
                 if (pollResult == PollResult.TASKS_SCHEDULED) {
                     pollsWithoutSchedules = 0;
-                } else if (pollResult == PollResult.NO_TASKS_SCHEDULED) {
+                } else {
                     pollsWithoutSchedules++;
                 }
                 consecutiveErrors = 0;
@@ -168,22 +172,27 @@ final class ActivityTaskScheduler implements Closeable {
     }
 
     private PollResult poll() {
-        return jdbi.inTransaction(handle -> {
-            if (!tryAcquireAdvisoryLock(handle, ADVISORY_LOCK_ID)) {
-                LOGGER.debug("Lock is held by another instance");
-                return PollResult.SKIPPED;
-            }
+        final boolean leaseAcquired = jdbi.inTransaction(
+                handle -> tryAcquireLease(handle, LEASE_NAME, instanceId, LEASE_DURATION));
+        if (!leaseAcquired) {
+            LOGGER.info("Lease is held by another instance");
+            return PollResult.SKIPPED;
+        }
 
+        LOGGER.info("Lease acquired");
+
+        return jdbi.inTransaction(handle -> {
             final List<Queue> queues = getActiveQueuesWithCapacity(handle);
             if (queues.isEmpty()) {
                 LOGGER.debug("No updated queues");
                 return PollResult.NO_TASKS_SCHEDULED;
             }
 
+            boolean didScheduleTasks = false;
             for (final Queue queue : queues) {
                 final Timer.Sample latencySample = Timer.start();
                 try (var ignored = MDC.putCloseable("queueName", queue.name())) {
-                    processQueue(handle, queue);
+                    didScheduleTasks |= processQueue(handle, queue);
                 } finally {
                     latencySample.stop(
                             taskSchedulingLatencyTimer
@@ -191,7 +200,9 @@ final class ActivityTaskScheduler implements Closeable {
                 }
             }
 
-            return PollResult.TASKS_SCHEDULED;
+            return didScheduleTasks
+                    ? PollResult.TASKS_SCHEDULED
+                    : PollResult.NO_TASKS_SCHEDULED;
         });
     }
 
@@ -200,7 +211,7 @@ final class ActivityTaskScheduler implements Closeable {
         private static class RowMapper implements org.jdbi.v3.core.mapper.RowMapper<Queue> {
 
             @Override
-            public Queue map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+            public Queue map(ResultSet rs, StatementContext ctx) throws SQLException {
                 return new Queue(rs.getString("name"), rs.getInt("capacity"));
             }
 
@@ -208,7 +219,7 @@ final class ActivityTaskScheduler implements Closeable {
 
     }
 
-    private List<Queue> getActiveQueuesWithCapacity(final Handle handle) {
+    private List<Queue> getActiveQueuesWithCapacity(Handle handle) {
         final Query query = handle.createQuery("""
                 with cte_candidate as (
                   select name
@@ -239,7 +250,7 @@ final class ActivityTaskScheduler implements Closeable {
                 .list();
     }
 
-    private void processQueue(final Handle handle, final Queue queue) {
+    private boolean processQueue(Handle handle, Queue queue) {
         final Update update = handle.createUpdate("""
                 with
                 cte_queue_depth as (
@@ -264,6 +275,12 @@ final class ActivityTaskScheduler implements Closeable {
                    order by priority desc
                           , created_at
                    limit greatest(0, :capacity - (select depth from cte_queue_depth))
+                   -- Prevent deadlocks caused by workers concurrently
+                   -- polling this table. Note that workflow tasks do not
+                   -- have this problem because schedulers and workers poll
+                   -- different tables.
+                     for no key update
+                    skip locked
                 )
                 update dex_activity_task as wat
                    set status = 'QUEUED'
@@ -281,11 +298,16 @@ final class ActivityTaskScheduler implements Closeable {
                 .executeAndReturnGeneratedKeys()
                 .mapTo(String.class)
                 .list();
-        for (final String activityName : scheduledActivityNames) {
-            tasksScheduledCounter
-                    .withTag("activityName", activityName)
-                    .increment();
-        }
+
+        handle.afterCommit(() -> {
+            for (final String activityName : scheduledActivityNames) {
+                tasksScheduledCounter
+                        .withTag("activityName", activityName)
+                        .increment();
+            }
+        });
+
+        return !scheduledActivityNames.isEmpty();
     }
 
 }
