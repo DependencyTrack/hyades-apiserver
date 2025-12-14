@@ -122,17 +122,17 @@ final class LeaderElection implements Closeable {
                             LEASE_NAME, instanceId, leaseDuration));
 
             if (leaseAcquired && !isLeader) {
-                LOGGER.info("Leadership lease acquired");
+                LOGGER.debug("Leadership lease acquired");
                 leadershipAcquiredCounter.increment();
                 isLeader = true;
             } else if (!leaseAcquired && isLeader) {
-                LOGGER.info("Leadership lease lost");
+                LOGGER.debug("Leadership lease lost");
                 leadershipLostCounter.increment();
                 isLeader = false;
             } else if (leaseAcquired) {
-                LOGGER.info("Leadership lease renewed");
+                LOGGER.debug("Leadership lease renewed");
             } else {
-                LOGGER.info("Leadership lease held by another instance");
+                LOGGER.debug("Leadership lease held by another instance");
             }
         } catch (RuntimeException e) {
             if (isLeader) {

@@ -80,3 +80,59 @@ Workers leverage [virtual threads](https://docs.oracle.com/en/java/javase/21/cor
 for task execution. This enables higher degrees of concurrency while keeping resource footprint low.
 Worker concurrency is still constrained (using Semaphores), but it's not necessary to maintain pools of
 heavyweight platform threads.
+
+## Leader Election
+
+Certain operations are intended to only be performed by a single node in a cluster. For example:
+
+* Task scheduling
+* Retention enforcement
+
+dex utilises a simple lease-based leader election mechanism that is backed
+by the `dex_lease` table with the following schema:
+
+| Column      | Type           | Constraints |
+|:------------|:---------------|:------------|
+| name        | text           | pk          |
+| acquired_by | text           | not null    |
+| acquired_at | timestamptz(3) | not null    |
+| expires_at  | timestamptz(3) | not null    |
+
+Every node in the cluster will regularly (default: 15s) try to acquire the leadership lease
+for a given period of time (default: 30s).
+
+A lease is acquired by inserting into the `dex_lease` table. Concurrency-safe conflict
+resolution is performed using PostgreSQL's `insert into ... on conflict do update` mechanism:
+
+```sql
+insert into dex_lease (name, acquired_by, acquired_at, expires_at)
+values ('leadership', 'instanceA', now(), now() + interval '30 seconds')
+on conflict (name) do update
+set acquired_by = excluded.acquired_by
+  , acquired_at = excluded.acquired_at
+  , expires_at = excluded.expires_at
+where dex_lease.acquired_by = excluded.acquired_by
+   or dex_lease.expires_at <= now()
+```
+
+The above query atomically creates or extends the lease for `instanceA`,
+depending on whether the lease is still held by it, or the previous lease
+has expired.
+
+Nodes that fail to attempt lease acquisition, e.g. due to timeouts,
+will assume their lease to be *lost*. This is to prevent the likelihood
+of [split-brain](https://en.wikipedia.org/wiki/Split-brain_(computing)).
+It should be noted though that the worst symptom of split-brain for dex
+is an increase is potentially expensive operations. Correctness is not affected.
+
+During graceful shutdown, nodes simply release their leadership lease:
+
+```sql
+delete
+  from dex_lease
+ where name = 'leadership'
+   and acquired_by = 'instanceA'
+```
+
+The `dex_lease` table is [`unlogged`](https://www.postgresql.org/docs/current/sql-createtable.html#SQL-CREATETABLE-UNLOGGED)
+and thus does not cause WAL writes. This is possible because leases are ephemeral by design.

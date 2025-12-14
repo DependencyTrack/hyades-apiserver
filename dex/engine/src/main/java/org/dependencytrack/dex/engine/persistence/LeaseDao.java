@@ -42,10 +42,10 @@ public final class LeaseDao extends AbstractDao {
                   insert into dex_lease (name, acquired_by, acquired_at, expires_at)
                   values (:name, :instanceId, now(), now() + :duration)
                   on conflict (name) do update
-                  set acquired_by = :instanceId
-                    , acquired_at = now()
-                    , expires_at = now() + :duration
-                  where dex_lease.acquired_by = :instanceId
+                  set acquired_by = excluded.acquired_by
+                    , acquired_at = excluded.acquired_at
+                    , expires_at = excluded.expires_at
+                  where dex_lease.acquired_by = excluded.acquired_by
                      or dex_lease.expires_at <= now()
                   returning acquired_by
                 )

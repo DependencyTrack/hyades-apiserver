@@ -94,6 +94,38 @@ public class DexEngineConfig {
 
     }
 
+    public static class LeaderElectionConfig {
+
+        private Duration leaseDuration = Duration.ofSeconds(30);
+        private Duration leaseCheckInterval = Duration.ofSeconds(15);
+
+        private LeaderElectionConfig() {
+        }
+
+        /**
+         * @return The duration for which leadership leases are valid for.
+         */
+        public Duration leaseDuration() {
+            return leaseDuration;
+        }
+
+        public void setLeaseDuration(Duration leaseDuration) {
+            this.leaseDuration = leaseDuration;
+        }
+
+        /**
+         * @return The interval at which leadership leases will be checked for.
+         */
+        public Duration leaseCheckInterval() {
+            return leaseCheckInterval;
+        }
+
+        public void setLeaseCheckInterval(Duration leaseCheckInterval) {
+            this.leaseCheckInterval = leaseCheckInterval;
+        }
+
+    }
+
     public static class RetentionConfig {
 
         private Duration duration = Duration.ofDays(1);
@@ -187,7 +219,8 @@ public class DexEngineConfig {
 
     private final String instanceId;
     private final DataSource dataSource;
-    private final CacheConfig runHistoryCache = new CacheConfig();
+    private final LeaderElectionConfig leaderElectionConfig = new LeaderElectionConfig();
+    private final CacheConfig runHistoryCacheConfig = new CacheConfig();
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
     private final BufferConfig taskEventsBufferConfig = new BufferConfig();
     private final BufferConfig activityTaskHeartbeatBufferConfig = new BufferConfig();
@@ -217,8 +250,12 @@ public class DexEngineConfig {
         return dataSource;
     }
 
+    public LeaderElectionConfig leaderElection() {
+        return leaderElectionConfig;
+    }
+
     public CacheConfig runHistoryCache() {
-        return runHistoryCache;
+        return runHistoryCacheConfig;
     }
 
     /**

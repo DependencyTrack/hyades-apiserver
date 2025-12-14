@@ -212,8 +212,8 @@ final class DexEngineImpl implements DexEngine {
         leaderElection = new LeaderElection(
                 config.instanceId(),
                 jdbi,
-                Duration.ofSeconds(30),
-                Duration.ofSeconds(15),
+                config.leaderElection().leaseDuration(),
+                config.leaderElection().leaseCheckInterval(),
                 config.meterRegistry());
         leaderElection.start();
 
