@@ -118,7 +118,7 @@
         <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
         <lib.httpclient5.version>5.5.1</lib.httpclient5.version>
         <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
-        <lib.java-uuid-generator.version>5.1.1</lib.java-uuid-generator.version>
+        <lib.java-uuid-generator.version>5.2.0</lib.java-uuid-generator.version>
         <lib.jackson.version>2.20.1</lib.jackson.version>
         <lib.jdbi.version>3.50.0</lib.jdbi.version>
         <lib.jersey.version>3.1.11</lib.jersey.version>
@@ -133,7 +133,7 @@
         <lib.microprofile-health.version>4.0.1</lib.microprofile-health.version>
         <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.20.0</lib.mockito.version>
-        <lib.okhttp.version>5.3.0</lib.okhttp.version>
+        <lib.okhttp.version>5.3.2</lib.okhttp.version>
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.pebble.version>4.0.0</lib.pebble.version>
@@ -145,7 +145,7 @@
         <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
         <lib.tink.version>1.19.0</lib.tink.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
-        <lib.wiremock.version>3.13.1</lib.wiremock.version>
+        <lib.wiremock.version>3.13.2</lib.wiremock.version>
         <lib.zstd-jni.version>1.5.7-6</lib.zstd-jni.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>1</unitTestForkCount>
