@@ -29,7 +29,7 @@
             <plugin>
                 <groupId>io.github.ascopes</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
-                <version>4.0.2</version>
+                <version>4.1.1</version>
                 <configuration>
                     <protocVersion>${lib.protobuf-java.version}</protocVersion>
                     <sourceDirectories>
@@ -52,7 +52,7 @@
                     <dependency>
                         <groupId>org.codehaus.plexus</groupId>
                         <artifactId>plexus-utils</artifactId>
-                        <version>4.0.2</version>
+                        <version>4.1.1</version>
                     </dependency>
                 </dependencies>
             </plugin>
