@@ -18,123 +18,140 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.event.LdapSyncEvent;
-import alpine.event.framework.Event;
-import alpine.server.tasks.LdapSyncTask;
 import com.asahaf.javacron.Schedule;
-import org.dependencytrack.event.CsafMirrorEvent;
-import org.dependencytrack.event.DefectDojoUploadEventAbstract;
-import org.dependencytrack.event.EpssMirrorEvent;
-import org.dependencytrack.event.FortifySscUploadEventAbstract;
-import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
-import org.dependencytrack.event.IntegrityMetaInitializerEvent;
-import org.dependencytrack.event.InternalComponentIdentificationEvent;
-import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
-import org.dependencytrack.event.NistMirrorEvent;
-import org.dependencytrack.event.OsvMirrorEvent;
-import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
-import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
-import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
-import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
-import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
-import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
-import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
-import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
-import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
-import org.dependencytrack.event.maintenance.VulnerabilityScanMaintenanceEvent;
-import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
-import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.tasks.maintenance.ComponentMetadataMaintenanceTask;
-import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
-import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
-import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
-import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
-import org.dependencytrack.tasks.maintenance.VulnerabilityScanMaintenanceTask;
-import org.dependencytrack.tasks.maintenance.WorkflowMaintenanceTask;
-import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
-import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
-import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
+import java.io.Closeable;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_ENABLED;
-import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABLED;
-import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_ENABLED;
-import static org.dependencytrack.util.TaskUtil.getCronScheduleForTask;
+import static java.util.Objects.requireNonNull;
 
 /**
  * @author Steve Springett
  * @since 3.0.0
  */
-public final class TaskScheduler extends BaseTaskScheduler {
+public final class TaskScheduler implements Closeable {
 
-    // Holds an instance of TaskScheduler
-    private static final TaskScheduler INSTANCE = new TaskScheduler();
+    private static class ScheduledTask {
 
-    /**
-     * Private constructor.
-     */
-    private TaskScheduler() {
-        final Map<Event, Schedule> eventScheduleMap = Map.ofEntries(
-                Map.entry(new VulnerabilityPolicyFetchEvent(), getCronScheduleForTask(VulnerabilityPolicyFetchTask.class)),
-                Map.entry(new LdapSyncEvent(), getCronScheduleForTask(LdapSyncTask.class)),
-                Map.entry(new NistMirrorEvent(), getCronScheduleForTask(NistMirrorTask.class)),
-                Map.entry(new OsvMirrorEvent(), getCronScheduleForTask(OsvMirrorTask.class)),
-                Map.entry(new CsafMirrorEvent(), getCronScheduleForTask(CsafMirrorTask.class)),
-                Map.entry(new GitHubAdvisoryMirrorEvent(), getCronScheduleForTask(GitHubAdvisoryMirrorTask.class)),
-                Map.entry(new EpssMirrorEvent(), getCronScheduleForTask(EpssMirrorTask.class)),
-                Map.entry(new PortfolioMetricsUpdateEvent(), getCronScheduleForTask(PortfolioMetricsUpdateTask.class)),
-                Map.entry(new VulnerabilityMetricsUpdateEvent(), getCronScheduleForTask(VulnerabilityMetricsUpdateTask.class)),
-                Map.entry(new InternalComponentIdentificationEvent(), getCronScheduleForTask(InternalComponentIdentificationTask.class)),
-                Map.entry(new PortfolioVulnerabilityAnalysisEvent(), getCronScheduleForTask(VulnerabilityAnalysisTask.class)),
-                Map.entry(new PortfolioRepositoryMetaAnalysisEvent(), getCronScheduleForTask(RepositoryMetaAnalysisTask.class)),
-                Map.entry(new IntegrityMetaInitializerEvent(), getCronScheduleForTask(IntegrityMetaInitializerTask.class)),
-                Map.entry(new ComponentMetadataMaintenanceEvent(), getCronScheduleForTask(ComponentMetadataMaintenanceTask.class)),
-                Map.entry(new MetricsMaintenanceEvent(), getCronScheduleForTask(MetricsMaintenanceTask.class)),
-                Map.entry(new TagMaintenanceEvent(), getCronScheduleForTask(TagMaintenanceTask.class)),
-                Map.entry(new VulnerabilityDatabaseMaintenanceEvent(), getCronScheduleForTask(VulnerabilityDatabaseMaintenanceTask.class)),
-                Map.entry(new VulnerabilityScanMaintenanceEvent(), getCronScheduleForTask(VulnerabilityScanMaintenanceTask.class)),
-                Map.entry(new WorkflowMaintenanceEvent(), getCronScheduleForTask(WorkflowMaintenanceTask.class)),
-                Map.entry(new ProjectMaintenanceEvent(), getCronScheduleForTask(ProjectMaintenanceTask.class)));
+        private final String id;
+        private final Schedule schedule;
+        private final Runnable runnable;
+        private ScheduledFuture<?> future;
 
-        Map<Event, Schedule> configurableTasksMap = new HashMap<>();
-        if (isTaskEnabled(FORTIFY_SSC_ENABLED)) {
-            configurableTasksMap.put(new FortifySscUploadEventAbstract(), getCronScheduleForTask(FortifySscUploadTask.class));
-        }
-        if (isTaskEnabled(DEFECTDOJO_ENABLED)) {
-            configurableTasksMap.put(new DefectDojoUploadEventAbstract(), getCronScheduleForTask(DefectDojoUploadTask.class));
-        }
-        if (isTaskEnabled(KENNA_ENABLED)) {
-            configurableTasksMap.put(new KennaSecurityUploadEventAbstract(), getCronScheduleForTask(KennaSecurityUploadTask.class));
+        private ScheduledTask(String id, Schedule schedule, Runnable runnable) {
+            this.id = requireNonNull(id, "id must not be null");
+            this.schedule = requireNonNull(schedule, "schedule must not be null");
+            this.runnable = requireNonNull(runnable, "runnable must not be null");
         }
 
-        final Map<Event, Schedule> mergedEventScheduleMap = Stream.concat(
-                        eventScheduleMap.entrySet().stream(),
-                        configurableTasksMap.entrySet().stream())
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue));
-
-        scheduleTask(mergedEventScheduleMap);
     }
 
-    /**
-     * Return an instance of the TaskScheduler instance.
-     *
-     * @return a TaskScheduler instance
-     */
-    public static TaskScheduler getInstance() {
-        return INSTANCE;
+    private static final Logger LOGGER = LoggerFactory.getLogger(TaskScheduler.class);
+
+    private final ScheduledExecutorService executor;
+    private final Map<String, ScheduledTask> scheduledTaskById;
+    private final AtomicBoolean running = new AtomicBoolean(false);
+
+    TaskScheduler() {
+        this.executor = Executors.newSingleThreadScheduledExecutor(
+                Thread.ofPlatform()
+                        .name("TaskScheduler-", 0)
+                        .factory());
+        this.scheduledTaskById = new ConcurrentHashMap<>();
     }
 
-    private boolean isTaskEnabled(final ConfigPropertyConstants enabledConstraint) {
-        try (final var qm = new QueryManager()) {
-            return qm.isEnabled(enabledConstraint);
+    public void start() {
+        if (!running.compareAndSet(false, true)) {
+            throw new IllegalStateException("Scheduler is already running");
         }
     }
+
+    public TaskScheduler schedule(String id, Schedule schedule, Runnable runnable) {
+        if (!running.get()) {
+            throw new IllegalStateException("Scheduler must be running to schedule tasks");
+        }
+
+        final var task = new ScheduledTask(id, schedule, runnable);
+
+        if (scheduledTaskById.putIfAbsent(id, task) != null) {
+            throw new IllegalStateException("A task with ID %s has already been scheduled".formatted(id));
+        }
+
+        scheduleNextExecution(task);
+
+        return this;
+    }
+
+    @Override
+    public void close() {
+        if (!running.compareAndSet(true, false)) {
+            throw new IllegalStateException("Scheduler is already stopped");
+        }
+
+        for (final ScheduledTask task : scheduledTaskById.values()) {
+            if (task.future != null && !task.future.isDone()) {
+                LOGGER.debug("Cancelling future for task {}", task.id);
+                task.future.cancel(false);
+            }
+        }
+
+        scheduledTaskById.clear();
+        executor.close();
+    }
+
+    boolean isRunning() {
+        return running.get();
+    }
+
+    Set<String> scheduledTaskIds() {
+        return Set.copyOf(scheduledTaskById.keySet());
+    }
+
+    private void execute(ScheduledTask task) {
+        if (!running.get()) {
+            LOGGER.debug("Not executing task {} because scheduler is stopped", task.id);
+            return;
+        }
+
+        LOGGER.debug("Executing task {}", task.id);
+        try {
+            task.runnable.run();
+        } catch (Throwable t) {
+            LOGGER.error("Failed to execute task {}", task.id, t);
+        } finally {
+            scheduleNextExecution(task);
+        }
+    }
+
+    private void scheduleNextExecution(ScheduledTask task) {
+        if (!running.get()) {
+            LOGGER.debug("Not scheduling next execution for task {} because scheduler is stopped", task.id);
+            return;
+        }
+
+        final var now = Instant.now();
+        final var nextExecutionAt = task.schedule.next(Date.from(now)).toInstant();
+        final long nextExecutionInMillis = Math.max(
+                ChronoUnit.MILLIS.between(now, nextExecutionAt), 0);
+
+        task.future = executor.schedule(
+                () -> execute(task),
+                nextExecutionInMillis,
+                TimeUnit.MILLISECONDS);
+
+        LOGGER.debug("Next execution of task {} scheduled for {}", task.id, nextExecutionAt);
+    }
+
 }
