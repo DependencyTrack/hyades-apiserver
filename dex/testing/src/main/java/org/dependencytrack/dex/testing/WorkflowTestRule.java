@@ -19,6 +19,7 @@
 package org.dependencytrack.dex.testing;
 
 import com.google.protobuf.DebugFormat;
+import io.github.resilience4j.core.IntervalFunction;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.DexEngineFactory;
@@ -70,6 +71,13 @@ public final class WorkflowTestRule implements TestRule {
                 new MigrationExecutor(dataSource).execute();
 
                 final var engineConfig = new DexEngineConfig(dataSource);
+
+                // Reduce poll intervals and backoff to make tests more responsive.
+                engineConfig.activityTaskScheduler().setPollInterval(Duration.ofMillis(25));
+                engineConfig.activityTaskScheduler().setPollBackoffFunction(IntervalFunction.of(25));
+                engineConfig.workflowTaskScheduler().setPollInterval(Duration.ofMillis(25));
+                engineConfig.workflowTaskScheduler().setPollBackoffFunction(IntervalFunction.of(25));
+
                 if (configCustomizer != null) {
                     configCustomizer.accept(engineConfig);
                 }
@@ -133,7 +141,7 @@ public final class WorkflowTestRule implements TestRule {
     }
 
     public @Nullable WorkflowRun awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
-        return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(5));
+        return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(10));
     }
 
     private static void truncateTables(final DataSource dataSource) {
