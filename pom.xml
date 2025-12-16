@@ -135,7 +135,7 @@
         <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.20.0</lib.mockito.version>
         <lib.okhttp.version>5.3.2</lib.okhttp.version>
-        <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
+        <lib.open-vulnerability-clients.version>9.0.2</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.pebble.version>4.0.0</lib.pebble.version>
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
