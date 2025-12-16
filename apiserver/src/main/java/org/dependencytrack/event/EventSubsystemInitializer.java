@@ -50,7 +50,6 @@ import org.dependencytrack.tasks.NistMirrorTask;
 import org.dependencytrack.tasks.OsvMirrorTask;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.RepositoryMetaAnalysisTask;
-import org.dependencytrack.tasks.TaskScheduler;
 import org.dependencytrack.tasks.VexUploadProcessingTask;
 import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
 import org.dependencytrack.tasks.maintenance.ComponentMetadataMaintenanceTask;
@@ -130,8 +129,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE_ST.subscribe(VulnerabilityScanMaintenanceEvent.class, VulnerabilityScanMaintenanceTask.class);
         EVENT_SERVICE_ST.subscribe(WorkflowMaintenanceEvent.class, WorkflowMaintenanceTask.class);
         EVENT_SERVICE_ST.subscribe(ProjectMaintenanceEvent.class, ProjectMaintenanceTask.class);
-
-        TaskScheduler.getInstance();
     }
 
     /**
@@ -140,7 +137,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
     @Override
     public void contextDestroyed(final ServletContextEvent event) {
         LOGGER.info("Shutting down asynchronous event subsystem");
-        TaskScheduler.getInstance().shutdown();
 
         EVENT_SERVICE.unsubscribe(BomUploadProcessingTask.class);
         EVENT_SERVICE.unsubscribe(VexUploadProcessingTask.class);
