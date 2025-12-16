@@ -29,18 +29,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.dex.engine.api.DexEngine;
-import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
@@ -57,12 +52,6 @@ import java.util.UUID;
 public class WorkflowResource {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowResource.class);
-
-    @Context
-    private UriInfo uriInfo;
-
-    @Inject
-    private DexEngine dexEngine;
 
     @GET
     @Path("/token/{uuid}/status")
@@ -84,31 +73,6 @@ public class WorkflowResource {
     public Response getWorkflowStates(
             @Parameter(description = "The UUID of the token to query", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        if (dexEngine != null) {
-            final WorkflowRunMetadata runMetadata =
-                    dexEngine.getRunMetadata(UUID.fromString(uuid));
-            if (runMetadata != null) {
-                // TODO: Check if workflow was previously implemented using legacy
-                //  state tracking. If yes, map the new run metadata to legacy
-                //  WorkflowState object(s) to allow smooth transition for clients.
-
-                return Response
-                        .status(Response.Status.MOVED_PERMANENTLY)
-                        .location(uriInfo.getBaseUriBuilder()
-                                .path("/api/v2/workflow-runs/{id}")
-                                .build(uuid))
-                        .build();
-            }
-
-            // For the transitional period, workflows can exist in either the dedicated
-            // dex engine, or the legacy workflow state tracking mechanism.
-            //
-            // The fact that nothing was found in the dex engine is not sufficient
-            // to justify a 404.
-            //
-            // TODO: Change this when legacy state tracking is removed.
-        }
-
         List<WorkflowState> workflowStates;
         try (final var qm = new QueryManager()) {
             workflowStates = qm.getAllWorkflowStatesForAToken(UUID.fromString(uuid));

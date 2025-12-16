@@ -24,16 +24,11 @@ import jakarta.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.dex.engine.api.DexEngine;
-import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
-import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.model.WorkflowState;
-import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
@@ -44,25 +39,14 @@ import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 
 public class EventResourceTest extends ResourceTest {
-
-    private static final DexEngine DEX_ENGINE_MOCK = mock(DexEngine.class);
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(EventResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class)
-                    .register(new AbstractBinder() {
-                        @Override
-                        protected void configure() {
-                            bind(DEX_ENGINE_MOCK).to(DexEngine.class);
-                        }
-                    }));
+                    .register(AuthenticationFeature.class));
 
     @Test
     public void isTokenBeingProcessedTrueTest() {
@@ -87,11 +71,11 @@ public class EventResourceTest extends ResourceTest {
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         final String jsonResponse = getPlainTextBody(response);
-        assertThatJson(jsonResponse).isEqualTo(/* language=JSON */ """
-                {
-                  "processing": true
-                }
-                """);
+        assertThatJson(jsonResponse).isEqualTo("""
+                        {
+                            "processing": true
+                        }
+                        """);
     }
 
     @Test
@@ -117,9 +101,9 @@ public class EventResourceTest extends ResourceTest {
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         final String jsonResponse = getPlainTextBody(response);
-        assertThatJson(jsonResponse).isEqualTo(/* language=JSON */ """
+        assertThatJson(jsonResponse).isEqualTo("""
                 {
-                  "processing": false
+                    "processing": false
                 }
                 """);
     }
@@ -131,73 +115,11 @@ public class EventResourceTest extends ResourceTest {
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         final String jsonResponse = getPlainTextBody(response);
-        assertThatJson(jsonResponse).isEqualTo(/* language=JSON */ """
-                {
-                  "processing": false
-                }
-                """);
-    }
-
-    @Test
-    public void isTokenBeingProcessedShouldReturnTrueWhenWorkflowRunExistsAndHasNonTerminalStatus() {
-        final var runMetadata = new WorkflowRunMetadata(
-                UUID.fromString("97282c4b-70fc-4169-be01-35e7bbe4c9e8"),
-                "dummy",
-                1,
-                null,
-                WorkflowRunStatus.CREATED,
-                null,
-                0,
-                null,
-                null,
-                Instant.ofEpochMilli(666666),
-                null,
-                null,
-                null);
-
-        doReturn(runMetadata).when(DEX_ENGINE_MOCK).getRunMetadata(
-                eq(UUID.fromString("97282c4b-70fc-4169-be01-35e7bbe4c9e8")));
-
-        final Response response = jersey.target(V1_EVENT + "/token/97282c4b-70fc-4169-be01-35e7bbe4c9e8").request()
-                .header(X_API_KEY, apiKey)
-                .get();
-        assertThat(response.getStatus()).isEqualTo(200);
-        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
-                {
-                  "processing": true
-                }
-                """);
-    }
-
-    @Test
-    public void isTokenBeingProcessedShouldReturnFalseWhenWorkflowRunExistsAndHasTerminalStatus() {
-        final var runMetadata = new WorkflowRunMetadata(
-                UUID.fromString("97282c4b-70fc-4169-be01-35e7bbe4c9e8"),
-                "dummy",
-                1,
-                null,
-                WorkflowRunStatus.COMPLETED,
-                null,
-                0,
-                null,
-                null,
-                Instant.ofEpochMilli(666666),
-                Instant.ofEpochMilli(888888),
-                Instant.ofEpochMilli(777777),
-                Instant.ofEpochMilli(888888));
-
-        doReturn(runMetadata).when(DEX_ENGINE_MOCK).getRunMetadata(
-                eq(UUID.fromString("97282c4b-70fc-4169-be01-35e7bbe4c9e8")));
-
-        final Response response = jersey.target(V1_EVENT + "/token/97282c4b-70fc-4169-be01-35e7bbe4c9e8").request()
-                .header(X_API_KEY, apiKey)
-                .get();
-        assertThat(response.getStatus()).isEqualTo(200);
-        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
-                {
-                  "processing": false
-                }
-                """);
+        assertThatJson(jsonResponse).isEqualTo("""
+                        {
+                            "processing": false
+                        }
+                        """);
     }
 
 }

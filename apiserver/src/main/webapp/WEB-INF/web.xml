@@ -54,9 +54,6 @@
         <listener-class>org.dependencytrack.event.kafka.processor.ProcessorInitializer</listener-class>
     </listener>
     <listener>
-        <listener-class>org.dependencytrack.dex.DexEngineInitializer</listener-class>
-    </listener>
-    <listener>
         <listener-class>org.dependencytrack.event.PurlMigrator</listener-class>
     </listener>
 
@@ -125,10 +122,7 @@
         </init-param>
         <init-param>
             <param-name>jersey.config.server.provider.classnames</param-name>
-            <param-value>
-                org.dependencytrack.dex.DexEngineBinder,
-                org.glassfish.jersey.media.multipart.MultiPartFeature
-            </param-value>
+            <param-value>org.glassfish.jersey.media.multipart.MultiPartFeature</param-value>
         </init-param>
         <init-param>
             <param-name>jersey.config.beanValidation.enableOutputValidationErrorEntity.server</param-name>

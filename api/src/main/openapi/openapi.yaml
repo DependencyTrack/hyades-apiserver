@@ -36,11 +36,6 @@ tags:
   description: Endpoints related to advisories
 - name: Components
   description: Endpoints related to components
-- name: Dex
-  description: |-
-    Endpoints related to durable execution.
-    These endpoints are internal and should not be used by 3rd party clients.
-    Structure, format and behaviour may change without further notice.
 - name: Extensions
   description: Endpoints related to extensions
 - name: Metrics
@@ -51,6 +46,8 @@ tags:
   description: Endpoints related to secrets
 - name: Teams
   description: Endpoints related to teams
+- name: Workflows
+  description: Endpoints related to workflows
 
 paths:
   /advisories:
@@ -95,6 +92,8 @@ paths:
     $ref: "./paths/teams__name_.yaml"
   /team-memberships:
     $ref: "./paths/team-memberships.yaml"
+  /workflows/{token}:
+    $ref: "./paths/workflows__token__.yaml"
 
 components:
   securitySchemes:
