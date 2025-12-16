@@ -48,32 +48,6 @@
             <plugin>
                 <groupId>io.github.ascopes</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
-                <version>4.0.2</version>
-                <configuration>
-                    <protocVersion>${lib.protobuf-java.version}</protocVersion>
-                    <sourceDirectories>
-                        <sourceDirectory>${project.basedir}/src/main/proto</sourceDirectory>
-                    </sourceDirectories>
-                </configuration>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <!--
-                  https://github.com/ascopes/protobuf-maven-plugin/issues/472
-                  https://issues.apache.org/jira/browse/MBUILDCACHE-115
-                -->
-                <dependencies>
-                    <dependency>
-                        <groupId>org.codehaus.plexus</groupId>
-                        <artifactId>plexus-utils</artifactId>
-                        <version>4.0.2</version>
-                    </dependency>
-                </dependencies>
             </plugin>
         </plugins>
     </build>

@@ -29,21 +29,6 @@
             <plugin>
                 <groupId>io.github.ascopes</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
-                <version>4.1.1</version>
-                <configuration>
-                    <protocVersion>${lib.protobuf-java.version}</protocVersion>
-                    <sourceDirectories>
-                        <sourceDirectory>${project.basedir}/src/main/proto</sourceDirectory>
-                    </sourceDirectories>
-                </configuration>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

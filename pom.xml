@@ -115,6 +115,7 @@
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
+        <lib.flyway.version>11.19.0</lib.flyway.version>
         <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
         <lib.httpclient5.version>5.5.1</lib.httpclient5.version>
         <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
@@ -259,6 +260,14 @@
                 <groupId>org.jdbi</groupId>
                 <artifactId>jdbi3-bom</artifactId>
                 <version>${lib.jdbi.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.dropwizard.flywaydb</groupId>
+                <artifactId>flyway-bom</artifactId>
+                <version>${lib.flyway.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -523,6 +532,26 @@
                             <version>1.7.36</version>
                         </dependency>
                     </dependencies>
+                </plugin>
+
+                <plugin>
+                    <groupId>io.github.ascopes</groupId>
+                    <artifactId>protobuf-maven-plugin</artifactId>
+                    <version>4.1.1</version>
+                    <configuration>
+                        <protocVersion>${lib.protobuf-java.version}</protocVersion>
+                        <sourceDirectories>
+                            <sourceDirectory>${project.basedir}/src/main/proto</sourceDirectory>
+                        </sourceDirectories>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <phase>generate-sources</phase>
+                            <goals>
+                                <goal>generate</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
