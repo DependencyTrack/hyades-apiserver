@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.dex.testing;
 
+import io.github.resilience4j.core.IntervalFunction;
 import org.dependencytrack.dex.api.ActivityContext;
 import org.dependencytrack.dex.api.ActivityExecutor;
 import org.dependencytrack.dex.api.WorkflowContext;
@@ -73,10 +74,18 @@ public class WorkflowTestRuleTest {
                 voidConverter(),
                 stringConverter(),
                 Duration.ofSeconds(3));
+
         engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "default", 10));
         engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "default", 10));
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", "default", 1));
-        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", "default", 1));
+
+        engine.registerWorkflowWorker(
+                new WorkflowTaskWorkerOptions("workflow-worker", "default", 1)
+                        .withMinPollInterval(Duration.ofMillis(25))
+                        .withPollBackoffFunction(IntervalFunction.of(25)));
+        engine.registerActivityWorker(
+                new ActivityTaskWorkerOptions("activity-worker", "default", 1)
+                        .withMinPollInterval(Duration.ofMillis(25))
+                        .withPollBackoffFunction(IntervalFunction.of(25)));
 
         engine.start();
 
@@ -90,6 +99,9 @@ public class WorkflowTestRuleTest {
 
     @Test
     public void shouldSupportMockedActivities() {
+        final var activityMock = mock(TestActivity.class);
+        doReturn("mocked").when(activityMock).execute(any(ActivityContext.class), isNull());
+
         final DexEngine engine = workflowTestRule.getEngine();
 
         engine.registerWorkflow(
@@ -97,19 +109,23 @@ public class WorkflowTestRuleTest {
                 voidConverter(),
                 stringConverter(),
                 Duration.ofSeconds(3));
-        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "default", 10));
-        engine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("workflow-worker", "default", 1));
-
-        final var activityMock = mock(TestActivity.class);
-        doReturn("mocked").when(activityMock).execute(any(ActivityContext.class), isNull());
-
         engine.registerActivity(
                 activityMock,
                 voidConverter(),
                 stringConverter(),
                 Duration.ofSeconds(3));
+
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "default", 10));
         engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "default", 10));
-        engine.registerActivityWorker(new ActivityTaskWorkerOptions("activity-worker", "default", 1));
+
+        engine.registerWorkflowWorker(
+                new WorkflowTaskWorkerOptions("workflow-worker", "default", 1)
+                        .withMinPollInterval(Duration.ofMillis(25))
+                        .withPollBackoffFunction(IntervalFunction.of(25)));
+        engine.registerActivityWorker(
+                new ActivityTaskWorkerOptions("activity-worker", "default", 1)
+                        .withMinPollInterval(Duration.ofMillis(25))
+                        .withPollBackoffFunction(IntervalFunction.of(25)));
 
         engine.start();
 
