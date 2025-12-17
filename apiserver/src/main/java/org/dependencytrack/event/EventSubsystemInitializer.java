@@ -26,6 +26,10 @@ import alpine.event.framework.SingleThreadedEventService;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.csaf.CsafDocumentImportEvent;
+import org.dependencytrack.csaf.CsafDocumentImportTask;
+import org.dependencytrack.csaf.CsafProviderDiscoveryEvent;
+import org.dependencytrack.csaf.CsafProviderDiscoveryTask;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
@@ -36,7 +40,6 @@ import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.CallbackTask;
 import org.dependencytrack.tasks.CloneProjectTask;
-import org.dependencytrack.tasks.CsafMirrorTask;
 import org.dependencytrack.tasks.DefectDojoUploadTask;
 import org.dependencytrack.tasks.EpssMirrorTask;
 import org.dependencytrack.tasks.FortifySscUploadTask;
@@ -98,7 +101,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(LdapSyncEvent.class, LdapSyncTaskWrapper.class);
         EVENT_SERVICE.subscribe(GitHubAdvisoryMirrorEvent.class, GitHubAdvisoryMirrorTask.class);
         EVENT_SERVICE.subscribe(OsvMirrorEvent.class, OsvMirrorTask.class);
-        EVENT_SERVICE.subscribe(CsafMirrorEvent.class, CsafMirrorTask.class);
         EVENT_SERVICE.subscribe(ProjectVulnerabilityAnalysisEvent.class, VulnerabilityAnalysisTask.class);
         EVENT_SERVICE.subscribe(PortfolioVulnerabilityAnalysisEvent.class, VulnerabilityAnalysisTask.class);
         EVENT_SERVICE.subscribe(ProjectRepositoryMetaAnalysisEvent.class, RepositoryMetaAnalysisTask.class);
@@ -119,6 +121,8 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(ProjectPolicyEvaluationEvent.class, PolicyEvaluationTask.class);
         EVENT_SERVICE.subscribe(IntegrityMetaInitializerEvent.class, IntegrityMetaInitializerTask.class);
         EVENT_SERVICE.subscribe(IntegrityAnalysisEvent.class, IntegrityAnalysisTask.class);
+        EVENT_SERVICE.subscribe(CsafProviderDiscoveryEvent.class, CsafProviderDiscoveryTask.class);
+        EVENT_SERVICE.subscribe(CsafDocumentImportEvent.class, CsafDocumentImportTask.class);
 
         // Execute maintenance tasks on the single-threaded event service.
         // This way, they are not blocked by, and don't block, actual processing tasks on the main event service.
@@ -143,7 +147,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(LdapSyncTaskWrapper.class);
         EVENT_SERVICE.unsubscribe(GitHubAdvisoryMirrorTask.class);
         EVENT_SERVICE.unsubscribe(OsvMirrorTask.class);
-        EVENT_SERVICE.unsubscribe(CsafMirrorTask.class);
         EVENT_SERVICE.unsubscribe(VulnerabilityAnalysisTask.class);
         EVENT_SERVICE.unsubscribe(RepositoryMetaAnalysisTask.class);
         EVENT_SERVICE.unsubscribe(ProjectMetricsUpdateTask.class);
@@ -161,6 +164,8 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(IntegrityMetaInitializerTask.class);
         EVENT_SERVICE.unsubscribe(IntegrityAnalysisTask.class);
         EVENT_SERVICE.unsubscribe(VulnerabilityPolicyFetchTask.class);
+        EVENT_SERVICE.unsubscribe(CsafProviderDiscoveryTask.class);
+        EVENT_SERVICE.unsubscribe(CsafDocumentImportTask.class);
         try {
             EVENT_SERVICE.shutdown(DRAIN_TIMEOUT_DURATION);
         } catch (TimeoutException e) {

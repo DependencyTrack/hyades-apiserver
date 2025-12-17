@@ -16,19 +16,20 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.exception;
+package org.dependencytrack.csaf;
+
+import alpine.event.framework.SingletonCapableEvent;
+
+import java.util.UUID;
 
 /**
  * @since 5.7.0
  */
-public final class AlreadyExistsException extends RuntimeException {
+public class CsafDocumentImportEvent extends SingletonCapableEvent {
 
-    public AlreadyExistsException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public AlreadyExistsException(String message) {
-        super(message);
+    public CsafDocumentImportEvent() {
+        setChainIdentifier(UUID.fromString("31979220-ad64-41b0-b447-0f738682e205"));
+        setSingleton(true);
     }
 
 }

@@ -460,4 +460,81 @@
         </sql>
     </changeSet>
 
+    <changeSet id="v5.7.0-23" author="nscuro">
+        <createTable tableName="CSAF_AGGREGATOR">
+            <column name="ID" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="CSAF_AGGREGATOR_PK"/>
+            </column>
+            <column name="URL" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAMESPACE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAME" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ENABLED" type="BOOL">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LAST_DISCOVERY_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+        </createTable>
+
+        <createTable tableName="CSAF_PROVIDER">
+            <column name="ID" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="CSAF_PROVIDER_PK"/>
+            </column>
+            <column name="URL" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAMESPACE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAME" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ENABLED" type="BOOL">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DISCOVERED_FROM" type="UUID"/>
+            <column name="DISCOVERED_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="LATEST_DOCUMENT_RELEASE_DATE" type="TIMESTAMPTZ(3)"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="CSAF_PROVIDER"
+                baseColumnNames="DISCOVERED_FROM"
+                constraintName="CSAF_PROVIDER_DISCOVERED_FROM_FK"
+                referencedTableName="CSAF_AGGREGATOR"
+                referencedColumnNames="ID"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="CSAF_AGGREGATOR" indexName="CSAF_AGGREGATOR_URL_IDX" unique="true">
+            <column name="URL"/>
+        </createIndex>
+
+        <createIndex tableName="CSAF_PROVIDER" indexName="CSAF_PROVIDER_URL_IDX" unique="true">
+            <column name="URL"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.7.0-24" author="nscuro">
+        <sql>
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE ("GROUPNAME", "PROPERTYNAME") IN (
+               ('vuln.datasource', 'extension.csaf.enabled')
+             , ('vuln.datasource', 'extension.csaf.sources')
+             );
+        </sql>
+    </changeSet>
+
 </databaseChangeLog>

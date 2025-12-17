@@ -20,6 +20,7 @@ package org.dependencytrack.common.pagination;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -77,6 +78,11 @@ public record Page<T>(
 
     public Page(List<T> items, @Nullable String nextPageToken) {
         this(items, nextPageToken, null);
+    }
+
+    public static <T> Page<T> empty() {
+        return new Page<T>(Collections.emptyList())
+                .withTotalCount(0, TotalCount.Type.EXACT);
     }
 
     public Page<T> withTotalCount(long value, TotalCount.Type type) {

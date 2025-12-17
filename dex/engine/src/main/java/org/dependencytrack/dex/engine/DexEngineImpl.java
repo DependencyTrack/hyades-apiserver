@@ -28,6 +28,7 @@ import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.common.pagination.PageIterator;
 import org.dependencytrack.dex.api.ActivityExecutor;
 import org.dependencytrack.dex.api.RetryPolicy;
 import org.dependencytrack.dex.api.WorkflowExecutor;
@@ -609,20 +610,12 @@ final class DexEngineImpl implements DexEngine {
     public @Nullable WorkflowRun getRun(UUID id) {
         final List<WorkflowEvent> eventHistory = jdbi.withHandle(handle -> {
             final var dao = new WorkflowRunDao(handle);
-            final var events = new ArrayList<WorkflowEvent>();
 
-            Page<WorkflowEvent> eventsPage;
-            String nextPageToken = null;
-            do {
-                eventsPage = dao.listRunEvents(
-                        new ListWorkflowRunEventsRequest(id)
-                                .withPageToken(nextPageToken)
-                                .withLimit(25));
-                nextPageToken = eventsPage.nextPageToken();
-                events.addAll(eventsPage.items());
-            } while (nextPageToken != null);
-
-            return events;
+            return PageIterator.stream(
+                            pageToken -> dao.listRunEvents(
+                                    new ListWorkflowRunEventsRequest(id)
+                                            .withPageToken(pageToken)))
+                    .toList();
         });
         if (eventHistory.isEmpty()) {
             return null;

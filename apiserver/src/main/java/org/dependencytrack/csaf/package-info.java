@@ -16,19 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.exception;
+@NullMarked
+package org.dependencytrack.csaf;
 
-/**
- * @since 5.7.0
- */
-public final class AlreadyExistsException extends RuntimeException {
-
-    public AlreadyExistsException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public AlreadyExistsException(String message) {
-        super(message);
-    }
-
-}
+import org.jspecify.annotations.NullMarked;

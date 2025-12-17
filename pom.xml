@@ -40,7 +40,6 @@
         <module>plugin/file-storage-local</module>
         <module>plugin/file-storage-memory</module>
         <module>plugin/file-storage-s3</module>
-        <module>plugin/vuln-data-source-csaf</module>
         <module>plugin/vuln-data-source-github</module>
         <module>plugin/vuln-data-source-nvd</module>
         <module>plugin/vuln-data-source-osv</module>
@@ -111,6 +110,7 @@
         <lib.caffeine.version>3.2.3</lib.caffeine.version>
         <lib.cel-java.version>0.5.3</lib.cel-java.version>
         <lib.cpe-parser.version>3.0.1</lib.cpe-parser.version>
+        <lib.csaf-retrieval.version>0.5.1</lib.csaf-retrieval.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
         <lib.datanucleus-api-jdo.version>6.0.5</lib.datanucleus-api-jdo.version>
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
@@ -194,6 +194,18 @@
                 <groupId>us.springett</groupId>
                 <artifactId>cpe-parser</artifactId>
                 <version>${lib.cpe-parser.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.csaf</groupId>
+                <artifactId>csaf-retrieval-jvm</artifactId>
+                <version>${lib.csaf-retrieval.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-jdk14</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>

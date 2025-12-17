@@ -30,12 +30,13 @@ import javax.jdo.annotations.Element;
 import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Join;
-import javax.jdo.annotations.Order;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Model for a security advisory which is fetched from an external source. It usually contains
@@ -124,8 +125,7 @@ public class Advisory implements Serializable {
     @Persistent(table = "ADVISORIES_VULNERABILITIES")
     @Join(column = "ADVISORY_ID", foreignKey = "ADVISORIES_VULNERABILITIES_ADVISORY_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Element(column = "VULNERABILITY_ID", foreignKey = "ADVISORIES_VULNERABILITIES_VULNERABILITY_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Order(extensions = @javax.jdo.annotations.Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
-    private java.util.List<Vulnerability> vulnerabilities;
+    private Set<Vulnerability> vulnerabilities;
 
     public Advisory() {
         // no args for jdo
@@ -211,25 +211,19 @@ public class Advisory implements Serializable {
         this.lastFetched = lastFetched;
     }
 
-    public java.util.List<Vulnerability> getVulnerabilities() {
+    public Set<Vulnerability> getVulnerabilities() {
         return vulnerabilities;
     }
 
-    public void setVulnerabilities(java.util.List<Vulnerability> vulnerabilities) {
+    public void setVulnerabilities(Set<Vulnerability> vulnerabilities) {
         this.vulnerabilities = vulnerabilities;
     }
 
     public void addVulnerability(Vulnerability vulnerability) {
         if (this.vulnerabilities == null) {
-            this.vulnerabilities = new java.util.ArrayList<>();
+            this.vulnerabilities = new HashSet<>();
         }
         this.vulnerabilities.add(vulnerability);
-    }
-
-    public void removeVulnerability(Vulnerability vulnerability) {
-        if (this.vulnerabilities != null) {
-            this.vulnerabilities.remove(vulnerability);
-        }
     }
 
     @Override

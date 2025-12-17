@@ -18,273 +18,381 @@
  */
 package org.dependencytrack.resources.v2;
 
-import alpine.common.logging.Logger;
+import alpine.event.framework.Event;
 import alpine.server.auth.PermissionRequired;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.api.v2.CsafApi;
-import org.dependencytrack.api.v2.model.CsafSourceUpdateRequest;
-import org.dependencytrack.api.v2.model.ListCsafSourcesResponse;
+import org.dependencytrack.api.v2.model.CreateCsafAggregatorRequest;
+import org.dependencytrack.api.v2.model.CreateCsafProviderRequest;
+import org.dependencytrack.api.v2.model.ListCsafAggregatorsResponse;
+import org.dependencytrack.api.v2.model.ListCsafProvidersResponse;
+import org.dependencytrack.api.v2.model.UpdateCsafAggregatorRequest;
+import org.dependencytrack.api.v2.model.UpdateCsafProviderRequest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.datasource.vuln.csaf.CsafSource;
-import org.dependencytrack.datasource.vuln.csaf.CsafVulnDataSourceConfigs;
-import org.dependencytrack.datasource.vuln.csaf.SourcesManager;
-import org.dependencytrack.event.CsafMirrorEvent;
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.csaf.CsafAggregator;
+import org.dependencytrack.csaf.CsafAggregatorDao;
+import org.dependencytrack.csaf.CsafProvider;
+import org.dependencytrack.csaf.CsafProviderDao;
+import org.dependencytrack.csaf.CsafProviderDiscoveryEvent;
+import org.dependencytrack.csaf.ListCsafAggregatorsQuery;
+import org.dependencytrack.csaf.ListCsafProvidersQuery;
 import org.dependencytrack.exception.AlreadyExistsException;
-import org.dependencytrack.model.validation.ValidDomainValidator;
-import org.dependencytrack.model.validation.ValidURLValidator;
-import org.dependencytrack.plugin.ConfigRegistryImpl;
 import org.dependencytrack.resources.AbstractApiResource;
-import org.dependencytrack.tasks.CsafMirrorTask;
-import org.jetbrains.annotations.Nullable;
+import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.function.Predicate;
+import java.util.UUID;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
- * Resource for CSAF data source management.
+ * Resource for CSAF data provider management.
+ *
+ * @since 5.7.0
  */
 @Path("/")
 public class CsafResource extends AbstractApiResource implements CsafApi {
-    private static final Logger LOGGER = Logger.getLogger(CsafResource.class);
 
-    private static final ValidDomainValidator DOMAIN_VALIDATOR = new ValidDomainValidator();
-    private static final ValidURLValidator URL_VALIDATOR = new ValidURLValidator();
+    private static final Logger LOGGER = LoggerFactory.getLogger(CsafResource.class);
 
     @Override
-    @PermissionRequired(Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE)
-    public Response triggerCsafMirror() {
-        LOGGER.info("Triggering CSAF mirror task manually");
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_CREATE
+    })
+    public Response createCsafAggregator(CreateCsafAggregatorRequest request) {
+        final var aggregator = new CsafAggregator(
+                request.getUrl(),
+                request.getNamespace(),
+                request.getName());
+        aggregator.setEnabled(request.getEnabled());
 
-        var mirror = new CsafMirrorTask();
-        mirror.inform(new CsafMirrorEvent());
+        final CsafAggregator createdAggregator = inJdbiTransaction(
+                getAlpineRequest(),
+                handle -> handle.attach(CsafAggregatorDao.class).create(aggregator));
 
+        LOGGER.info(
+                SecurityMarkers.SECURITY_AUDIT,
+                "Created CSAF aggregator '{}'",
+                createdAggregator.getNamespace());
+
+        return Response
+                .created(
+                        getUriInfo().getBaseUriBuilder()
+                                .path("/csaf-aggregators")
+                                .path(createdAggregator.getId().toString())
+                                .build())
+                .entity(convert(createdAggregator))
+                .build();
+    }
+
+    @Override
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_READ
+    })
+    public Response getCsafAggregator(UUID id) {
+        final CsafAggregator aggregator = withJdbiHandle(
+                getAlpineRequest(),
+                handle -> handle.attach(CsafAggregatorDao.class).getById(id));
+        if (aggregator == null) {
+            throw new NotFoundException();
+        }
+
+        return Response.ok(convert(aggregator)).build();
+    }
+
+    @Override
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE
+    })
+    public Response updateCsafAggregator(UUID id, UpdateCsafAggregatorRequest request) {
+        final CsafAggregator updatedAggregator = inJdbiTransaction(getAlpineRequest(), handle -> {
+            final var dao = handle.attach(CsafAggregatorDao.class);
+
+            final CsafAggregator aggregator = dao.getById(id, /* forUpdate */ true);
+            if (aggregator == null) {
+                throw new NotFoundException();
+            }
+
+            boolean modified = false;
+            if (aggregator.isEnabled() != request.getEnabled()) {
+                aggregator.setEnabled(request.getEnabled());
+                modified = true;
+            }
+
+            if (!modified) {
+                return null;
+            }
+
+            return dao.update(aggregator);
+        });
+
+        if (updatedAggregator == null) {
+            return Response.notModified().build();
+        }
+
+        LOGGER.info(
+                SecurityMarkers.SECURITY_AUDIT,
+                "Updated CSAF aggregator '{}'",
+                updatedAggregator.getNamespace());
+        return Response.ok(convert(updatedAggregator)).build();
+    }
+
+    @Override
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_DELETE
+    })
+    public Response deleteCsafAggregator(UUID id) {
+        final CsafAggregator aggregator = inJdbiTransaction(
+                getAlpineRequest(),
+                handle -> handle.attach(CsafAggregatorDao.class).deleteById(id));
+
+        if (aggregator != null) {
+            LOGGER.info(
+                    SecurityMarkers.SECURITY_AUDIT,
+                    "Deleted CSAF aggregator '{}'",
+                    aggregator.getNamespace());
+        }
+
+        return Response.noContent().build();
+    }
+
+    @Override
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_READ
+    })
+    public Response listCsafAggregators(String searchText, String pageToken, Integer limit) {
+        final Page<CsafAggregator> aggregatorsPage = withJdbiHandle(
+                getAlpineRequest(),
+                handle -> handle.attach(CsafAggregatorDao.class).list(
+                        new ListCsafAggregatorsQuery()
+                                .withSearchText(searchText)
+                                .withPageToken(pageToken)
+                                .withLimit(limit)));
+
+        final var responseItems = aggregatorsPage.items().stream()
+                .map(this::convert)
+                .toList();
+
+        final var response = ListCsafAggregatorsResponse.builder()
+                .aggregators(responseItems)
+                .pagination(createPaginationMetadata(getUriInfo(), aggregatorsPage))
+                .build();
+
+        return Response.ok(response).build();
+    }
+
+    @Override
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE
+    })
+    public Response triggerCsafProviderDiscovery(UUID id) {
+        final CsafAggregator aggregator = withJdbiHandle(
+                getAlpineRequest(),
+                handle -> handle.attach(CsafAggregatorDao.class).getById(id));
+        if (aggregator == null) {
+            throw new NotFoundException();
+        }
+
+        if (!aggregator.isEnabled()) {
+            throw new BadRequestException();
+        }
+
+        Event.dispatch(new CsafProviderDiscoveryEvent(aggregator));
+
+        LOGGER.info(
+                SecurityMarkers.SECURITY_AUDIT,
+                "Triggered provider discovery for CSAF aggregator '{}'",
+                aggregator.getNamespace());
         return Response.accepted().build();
     }
 
     @Override
-    @PermissionRequired(Permissions.Constants.VULNERABILITY_MANAGEMENT_READ)
-    public Response listCsafSources(String type, Boolean discovered, String searchText) {
-        // Determine filter based on type parameter
-        final Boolean isAggregatorFilter;
-        final boolean isDiscoveredFilter;
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_CREATE
+    })
+    public Response createCsafProvider(CreateCsafProviderRequest request) {
+        final var provider = new CsafProvider(
+                request.getUrl(),
+                request.getNamespace(),
+                request.getName());
+        provider.setEnabled(request.getEnabled());
 
-        if ("aggregator".equalsIgnoreCase(type)) {
-            isAggregatorFilter = true;
-        } else if ("provider".equalsIgnoreCase(type)) {
-            isAggregatorFilter = false;
-        } else {
-            isAggregatorFilter = null;
+        final CsafProvider createdProvider = inJdbiTransaction(
+                getAlpineRequest(),
+                handle -> handle.attach(CsafProviderDao.class).create(provider));
+        if (createdProvider == null) {
+            throw new AlreadyExistsException("", null);
         }
-        isDiscoveredFilter = discovered != null && discovered;
 
-        var pluginSources = getPluginCsafSourcesFromConfig(
-                source -> (isAggregatorFilter == null || source.isAggregator() == isAggregatorFilter)
-                        && (source.isDiscovered() == isDiscoveredFilter)
-                        && ((searchText == null || searchText.isEmpty())
-                                || (source.getName().toLowerCase().contains(searchText.toLowerCase()) ||
-                                        source.getUrl().toLowerCase().contains(searchText.toLowerCase()))));
-
-        // Convert plugin sources to API sources
-        var apiSources = pluginSources.stream()
-                .map(this::mapToApiSource)
-                .toList();
+        LOGGER.info(
+                SecurityMarkers.SECURITY_AUDIT,
+                "Created CSAF provider '{}'",
+                createdProvider.getNamespace());
 
         return Response
-                .ok(ListCsafSourcesResponse.builder()
-                        .data(apiSources)
-                        .build())
-                .header(TOTAL_COUNT_HEADER, apiSources.size())
+                .created(
+                        getUriInfo().getBaseUriBuilder()
+                                .path("/csaf-providers")
+                                .path(createdProvider.getId().toString())
+                                .build())
+                .entity(convert(provider))
                 .build();
     }
 
     @Override
-    @PermissionRequired(Permissions.Constants.VULNERABILITY_MANAGEMENT_CREATE)
-    public Response createCsafSource(org.dependencytrack.api.v2.model.CsafSource apiSource) {
-        // Convert API source to plugin source
-        var pluginSource = mapToPluginSource(apiSource);
-
-        // Validate URL (which can either be a domain or a full URL)
-        if (!DOMAIN_VALIDATOR.isValid(pluginSource.getUrl(), null) &&
-                !URL_VALIDATOR.isValid(pluginSource.getUrl(), null)) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("Invalid domain or url").build();
-        }
-
-        // Fetch existing sources
-        var sources = new ArrayList<>(getPluginCsafSourcesFromConfig(filter -> true));
-
-        // Ensure that the new source does not already exist, by the URL
-        if (sources.stream().anyMatch(s -> s.getUrl().equalsIgnoreCase(pluginSource.getUrl()))) {
-            throw new AlreadyExistsException("A CSAF source with the specified URL already exists", null);
-        }
-
-        // Compute globally unique ID
-        int newId = sources.stream()
-                .mapToInt(CsafSource::getId)
-                .max()
-                .orElse(-1) + 1;
-
-        // Set properties
-        pluginSource.setId(newId);
-        pluginSource.setDomain(DOMAIN_VALIDATOR.isValid(pluginSource.getUrl(), null));
-        sources.add(pluginSource);
-
-        // Update config
-        updateSourcesInConfig(sources);
-
-        return Response.status(Response.Status.CREATED).entity(mapToApiSource(pluginSource)).build();
-    }
-
-    @Override
-    @PermissionRequired(Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE)
-    public Response updateCsafSource(CsafSourceUpdateRequest apiSource) {
-        // Validate URL (which can either be a domain or a full URL)
-        if (!DOMAIN_VALIDATOR.isValid(apiSource.getUrl(), null) &&
-                !URL_VALIDATOR.isValid(apiSource.getUrl(), null)) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("Invalid domain or url").build();
-        }
-
-        // Fetch an existing source and look for the one to update
-        var sources = getPluginCsafSourcesFromConfig(filter -> true);
-        var existingSource = getCsafSourceByIdFromConfig(sources, apiSource.getId());
-        if (existingSource == null) {
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_READ
+    })
+    public Response getCsafProvider(UUID id) {
+        final CsafProvider provider = withJdbiHandle(
+                getAlpineRequest(),
+                handle -> handle.attach(CsafProviderDao.class).getById(id));
+        if (provider == null) {
             throw new NotFoundException();
         }
 
-        // Update the existing source with values from the update request
-        existingSource.setName(apiSource.getName());
-        existingSource.setEnabled(apiSource.getEnabled() != null && apiSource.getEnabled());
-        existingSource.setUrl(apiSource.getUrl());
-        existingSource.setAggregator(apiSource.getAggregator() != null && apiSource.getAggregator());
-        existingSource.setDomain(DOMAIN_VALIDATOR.isValid(apiSource.getUrl(), null));
-        
-        // Update discovered - default to false if not provided
-        existingSource.setDiscovered(apiSource.getDiscovered() != null && apiSource.getDiscovered());
-        
-        // Update lastFetched - convert from OffsetDateTime to Instant (allows null for reset)
-        existingSource.setLastFetched(apiSource.getLastFetched() != null 
-                ? Instant.ofEpochMilli(apiSource.getLastFetched())
-                : null);
-
-        // Update config
-        updateSourcesInConfig(sources);
-
-        return Response.ok(mapToApiSource(existingSource)).build();
+        return Response.ok(convert(provider)).build();
     }
 
     @Override
-    @PermissionRequired(Permissions.Constants.VULNERABILITY_MANAGEMENT_DELETE)
-    public Response deleteCsafSource(Integer csafSourceId) {
-        // Fetch existing sources and look for the one to delete
-        var sources = new ArrayList<>(getPluginCsafSourcesFromConfig(null));
-        var source = getCsafSourceByIdFromConfig(sources, csafSourceId);
-        if (source == null) {
-            throw new NotFoundException();
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE
+    })
+    public Response updateCsafProvider(UUID id, UpdateCsafProviderRequest request) {
+        final CsafProvider updatedProvider = inJdbiTransaction(getAlpineRequest(), handle -> {
+            final var dao = handle.attach(CsafProviderDao.class);
+
+            final CsafProvider provider = dao.getById(id, /* forUpdate */ true);
+            if (provider == null) {
+                throw new NotFoundException();
+            }
+
+            boolean modified = false;
+            if (provider.isEnabled() != request.getEnabled()) {
+                provider.setEnabled(request.getEnabled());
+                modified = true;
+            }
+
+            if (!modified) {
+                return null;
+            }
+
+            return dao.update(provider);
+        });
+
+        if (updatedProvider == null) {
+            return Response.notModified().build();
         }
 
-        // Remove the source from the list
-        sources.remove(source);
-
-        // Update config
-        updateSourcesInConfig(sources);
-
-        return Response.status(Response.Status.NO_CONTENT).build();
+        LOGGER.info(
+                SecurityMarkers.SECURITY_AUDIT,
+                "Updated CSAF provider '{}'",
+                updatedProvider.getNamespace());
+        return Response.ok(convert(updatedProvider)).build();
     }
 
-    /**
-     * Converts a Plugin {@link CsafSource} to an
-     * API {@link org.dependencytrack.api.v2.model.CsafSource}.
-     */
-    private org.dependencytrack.api.v2.model.CsafSource mapToApiSource(
-            CsafSource pluginSource) {
-        return org.dependencytrack.api.v2.model.CsafSource.builder()
-                .id(pluginSource.getId())
-                .name(pluginSource.getName())
-                .url(pluginSource.getUrl())
-                .aggregator(pluginSource.isAggregator())
-                .discovered(pluginSource.isDiscovered())
-                .enabled(pluginSource.isEnabled())
-                .domain(pluginSource.isDomain())
-                .lastFetched(pluginSource.getLastFetched() != null 
-                        ? pluginSource.getLastFetched().toEpochMilli()
+    @Override
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_DELETE
+    })
+    public Response deleteCsafProvider(UUID id) {
+        final CsafProvider provider = inJdbiTransaction(
+                getAlpineRequest(),
+                handle -> handle.attach(CsafProviderDao.class).deleteById(id));
+
+        if (provider != null) {
+            LOGGER.info(
+                    SecurityMarkers.SECURITY_AUDIT,
+                    "Deleted CSAF provider '{}'",
+                    provider.getNamespace());
+        }
+
+        return Response.noContent().build();
+    }
+
+    @Override
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_READ
+    })
+    public Response listCsafProviders(
+            Boolean discovered,
+            String searchText,
+            String pageToken,
+            Integer limit) {
+        final Page<CsafProvider> sourcesPage = withJdbiHandle(
+                getAlpineRequest(),
+                handle -> handle.attach(CsafProviderDao.class).list(
+                        new ListCsafProvidersQuery()
+                                .withDiscovered(discovered)
+                                .withSearchText(searchText)
+                                .withPageToken(pageToken)
+                                .withLimit(limit)));
+
+        final var responseItems = sourcesPage.items().stream()
+                .map(this::convert)
+                .toList();
+
+        final var response = ListCsafProvidersResponse.builder()
+                .providers(responseItems)
+                .pagination(createPaginationMetadata(getUriInfo(), sourcesPage))
+                .build();
+
+        return Response.ok(response).build();
+    }
+
+    private org.dependencytrack.api.v2.model.CsafAggregator convert(CsafAggregator aggregator) {
+        return org.dependencytrack.api.v2.model.CsafAggregator.builder()
+                .id(aggregator.getId())
+                .namespace(aggregator.getNamespace())
+                .name(aggregator.getName())
+                .url(aggregator.getUrl())
+                .enabled(aggregator.isEnabled())
+                .lastDiscoveryAt(aggregator.getLastDiscoveryAt() != null
+                        ? aggregator.getLastDiscoveryAt().toEpochMilli()
+                        : null)
+                .createdAt(aggregator.getCreatedAt().toEpochMilli())
+                .updatedAt(aggregator.getUpdatedAt() != null
+                        ? aggregator.getUpdatedAt().toEpochMilli()
                         : null)
                 .build();
     }
 
-    /**
-     * Converts an API {@link org.dependencytrack.api.v2.model.CsafSource} to a Plugin
-     * {@link CsafSource}.
-     */
-    private CsafSource mapToPluginSource(
-            org.dependencytrack.api.v2.model.CsafSource apiSource) {
-        var pluginSource = new CsafSource();
-        pluginSource.setId(apiSource.getId() != null ? apiSource.getId() : 0);
-        pluginSource.setName(apiSource.getName());
-        pluginSource.setUrl(apiSource.getUrl());
-        pluginSource.setAggregator(apiSource.getAggregator() != null && apiSource.getAggregator());
-        pluginSource.setDiscovered(apiSource.getDiscovered() != null && apiSource.getDiscovered());
-        pluginSource.setEnabled(apiSource.getEnabled() != null && apiSource.getEnabled());
-        pluginSource.setDomain(apiSource.getDomain() != null && apiSource.getDomain());
-        if (apiSource.getLastFetched() != null) {
-            pluginSource.setLastFetched(Instant.ofEpochMilli(apiSource.getLastFetched()));
-        }
-        return pluginSource;
-    }
-
-    /**
-     * Returns a list of CSAF sources (plugin model) from the configuration, filtered by the provided predicate.
-     *
-     * @param filter the predicate to filter the sources
-     * @return a list of plugin CSAF sources
-     */
-    private static List<CsafSource> getPluginCsafSourcesFromConfig(
-            @Nullable Predicate<CsafSource> filter) {
-        if (filter == null) {
-            filter = s -> true;
-        }
-
-        try {
-            var config = ConfigRegistryImpl.forExtension("vuln.datasource", "csaf");
-            var sourcesConfig = config.getValue(CsafVulnDataSourceConfigs.CONFIG_SOURCES);
-            return SourcesManager
-                    .deserializeSources(new ObjectMapper().registerModule(new JavaTimeModule()), sourcesConfig).stream()
-                    .filter(filter).toList();
-        } catch (NoSuchElementException e) {
-            return new ArrayList<>();
-        }
-    }
-
-    /**
-     * Returns a CSAF source by its ID from the configuration.
-     *
-     * @param id the ID of the CSAF source
-     * @return the CSAF source, or null if not found
-     */
-    @javax.annotation.Nullable
-    static CsafSource getCsafSourceByIdFromConfig(List<CsafSource> sources, int id) {
-        // Fetch existing aggregators and look for the specific one
-        return sources.stream()
-                .filter(s -> s.getId() == id)
-                .findFirst().orElse(null);
-    }
-
-    /**
-     * Updates the CSAF sources in the configuration.
-     *
-     * @param sources the list of CSAF sources to set in the configuration.
-     */
-    static void updateSourcesInConfig(List<CsafSource> sources) {
-        var config = ConfigRegistryImpl.forExtension("vuln.datasource", "csaf");
-        config.setValue(
-                CsafVulnDataSourceConfigs.CONFIG_SOURCES,
-                SourcesManager.serializeSources(new ObjectMapper().registerModule(new JavaTimeModule()), sources)
-        );
+    private org.dependencytrack.api.v2.model.CsafProvider convert(CsafProvider provider) {
+        return org.dependencytrack.api.v2.model.CsafProvider.builder()
+                .id(provider.getId())
+                .namespace(provider.getNamespace())
+                .name(provider.getName())
+                .url(provider.getUrl())
+                .enabled(provider.isEnabled())
+                .discoveredFrom(provider.getDiscoveredFrom())
+                .discoveredAt(provider.getDiscoveredAt() != null
+                        ? provider.getDiscoveredAt().toEpochMilli()
+                        : null)
+                .latestDocumentReleaseDate(provider.getLatestDocumentReleaseDate() != null
+                        ? provider.getLatestDocumentReleaseDate().toEpochMilli()
+                        : null)
+                .createdAt(provider.getCreatedAt().toEpochMilli())
+                .updatedAt(provider.getUpdatedAt() != null
+                        ? provider.getUpdatedAt().toEpochMilli()
+                        : null)
+                .build();
     }
 
 }

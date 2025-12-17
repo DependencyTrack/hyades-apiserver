@@ -127,17 +127,6 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>vuln-data-source-csaf</artifactId>
-            <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-jdk14</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
             <artifactId>vuln-data-source-github</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -247,6 +236,11 @@
             <groupId>org.cyclonedx</groupId>
             <artifactId>cyclonedx-core-java</artifactId>
             <version>${lib.cyclonedx-java.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.csaf</groupId>
+            <artifactId>csaf-retrieval-jvm</artifactId>
         </dependency>
 
         <dependency>
