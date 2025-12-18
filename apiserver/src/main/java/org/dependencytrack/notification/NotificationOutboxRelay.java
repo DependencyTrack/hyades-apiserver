@@ -30,9 +30,10 @@ import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.persistence.jdbi.NotificationOutboxDao;
-import org.dependencytrack.proto.notification.v1.Notification;
 import org.jdbi.v3.core.Handle;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +52,7 @@ import java.util.concurrent.TimeoutException;
 
 import static io.github.resilience4j.core.IntervalFunction.ofExponentialRandomBackoff;
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.notification.ModelConverter.convert;
+import static org.dependencytrack.notification.NotificationModelConverter.convert;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 
 /**
@@ -74,19 +75,19 @@ final class NotificationOutboxRelay implements Closeable {
     private final int batchSize;
     private final BlockingQueue<Notification> currentBatch;
     private final IntervalFunction backoffIntervalFunction;
-    private ScheduledExecutorService executorService;
-    private MeterProvider<Timer> cycleLatencyTimer;
-    private MeterProvider<Counter> cycleCounter;
-    private Timer pollLatencyTimer;
-    private Timer sendLatencyTimer;
-    private MeterProvider<DistributionSummary> sentDistribution;
+    private @Nullable ScheduledExecutorService executorService;
+    private @Nullable MeterProvider<Timer> cycleLatencyTimer;
+    private @Nullable MeterProvider<Counter> cycleCounter;
+    private @Nullable Timer pollLatencyTimer;
+    private @Nullable Timer sendLatencyTimer;
+    private @Nullable MeterProvider<DistributionSummary> sentDistribution;
 
     public NotificationOutboxRelay(
-            final KafkaEventDispatcher delegateDispatcher,
-            final MeterRegistry meterRegistry,
-            final boolean routerEnabled,
-            final long pollIntervalMillis,
-            final int batchSize) {
+            KafkaEventDispatcher delegateDispatcher,
+            MeterRegistry meterRegistry,
+            boolean routerEnabled,
+            long pollIntervalMillis,
+            int batchSize) {
         this.delegateDispatcher = requireNonNull(delegateDispatcher, "delegate dispatcher must not be null");
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry must not be null");
         if (pollIntervalMillis <= 0) {
@@ -164,7 +165,7 @@ final class NotificationOutboxRelay implements Closeable {
         }
     }
 
-    private void run(final int failureBackoffCount) {
+    private void run(int failureBackoffCount) {
         final Timer.Sample cycleLatencySample = Timer.start();
         try {
             final RelayCycleOutcome cycleOutcome = executeRelayCycle();
@@ -257,7 +258,7 @@ final class NotificationOutboxRelay implements Closeable {
         });
     }
 
-    private boolean tryAcquireAdvisoryLock(final Handle handle) {
+    private boolean tryAcquireAdvisoryLock(Handle handle) {
         return handle.createQuery("""
                         SELECT pg_try_advisory_xact_lock(:lockId)
                         """)
@@ -266,7 +267,7 @@ final class NotificationOutboxRelay implements Closeable {
                 .one();
     }
 
-    private void sendAll(final Collection<Notification> notifications) {
+    private void sendAll(Collection<Notification> notifications) {
         @SuppressWarnings("removal") final List<CompletableFuture<RecordMetadata>> futures =
                 delegateDispatcher.dispatchAllNotificationProtos(notifications);
 

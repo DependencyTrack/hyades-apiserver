@@ -26,8 +26,12 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
-import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
-import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.notification.api.TestNotificationFactory;
+import org.dependencytrack.notification.proto.v1.BomConsumedOrProcessedSubject;
+import org.dependencytrack.notification.proto.v1.Group;
+import org.dependencytrack.notification.proto.v1.Level;
+import org.dependencytrack.notification.proto.v1.Notification;
+import org.dependencytrack.notification.proto.v1.Scope;
 import org.jdbi.v3.core.Handle;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -39,7 +43,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.notification.ModelConverter.convert;
+import static org.dependencytrack.notification.NotificationModelConverter.convert;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 @RunWith(JUnitParamsRunner.class)
@@ -111,7 +115,7 @@ public class NotificationRouterTest extends PersistenceCapableTest {
         disabledRule.setEnabled(false);
         qm.persist(disabledRule);
 
-        final Notification notification = TestNotificationFactory.createBomConsumedTestNotification();
+        final Notification notification = org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification();
 
         // Only the enabled rule should have matched.
         assertThat(router.route(List.of(notification))).satisfiesExactly(task -> {
@@ -153,11 +157,11 @@ public class NotificationRouterTest extends PersistenceCapableTest {
 
         // Create a notification for project A.
         final Notification.Builder notificationBuilder =
-                TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
+                org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
         final BomConsumedOrProcessedSubject.Builder subjectBuilder =
                 notificationBuilder.getSubject().unpack(BomConsumedOrProcessedSubject.class).toBuilder();
         subjectBuilder.setProject(
-                org.dependencytrack.proto.notification.v1.Project.newBuilder()
+                org.dependencytrack.notification.proto.v1.Project.newBuilder()
                         .setUuid(projectA.getUuid().toString())
                         .setName(projectA.getName())
                         .build());
@@ -210,11 +214,11 @@ public class NotificationRouterTest extends PersistenceCapableTest {
 
         // Create a notification for the child project.
         final Notification.Builder notificationBuilder =
-                TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
+                org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
         final BomConsumedOrProcessedSubject.Builder subjectBuilder =
                 notificationBuilder.getSubject().unpack(BomConsumedOrProcessedSubject.class).toBuilder();
         subjectBuilder.setProject(
-                org.dependencytrack.proto.notification.v1.Project.newBuilder()
+                org.dependencytrack.notification.proto.v1.Project.newBuilder()
                         .setUuid(childProject.getUuid().toString())
                         .setName(childProject.getName())
                         .build());
@@ -263,11 +267,11 @@ public class NotificationRouterTest extends PersistenceCapableTest {
 
         // Create a notification for the project tagged with tag A.
         final Notification.Builder notificationBuilder =
-                TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
+                org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
         final BomConsumedOrProcessedSubject.Builder subjectBuilder =
                 notificationBuilder.getSubject().unpack(BomConsumedOrProcessedSubject.class).toBuilder();
         subjectBuilder.setProject(
-                org.dependencytrack.proto.notification.v1.Project.newBuilder()
+                org.dependencytrack.notification.proto.v1.Project.newBuilder()
                         .setUuid(project.getUuid().toString())
                         .setName(project.getName())
                         .addTags(tagA.getName())
@@ -302,7 +306,7 @@ public class NotificationRouterTest extends PersistenceCapableTest {
         ruleB.setEnabled(true);
         qm.persist(ruleB);
 
-        final Notification notification = TestNotificationFactory.createBomConsumedTestNotification();
+        final Notification notification = org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification();
 
         assertThat(router.route(List.of(notification))).satisfiesExactlyInAnyOrder(
                 task -> {
@@ -321,9 +325,9 @@ public class NotificationRouterTest extends PersistenceCapableTest {
     private List<Notification> routeShouldHandleAllNotificationTypesParams() {
         final var notifications = new ArrayList<Notification>();
 
-        for (final NotificationScope scope : NotificationScope.values()) {
-            for (final NotificationGroup group : NotificationGroup.values()) {
-                for (final NotificationLevel level : NotificationLevel.values()) {
+        for (final var scope : Scope.values()) {
+            for (final var group : Group.values()) {
+                for (final var level : Level.values()) {
                     final Notification notification = TestNotificationFactory.createTestNotification(scope, group, level);
                     if (notification != null) {
                         notifications.add(notification);

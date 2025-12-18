@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.persistence.jdbi.mapping;
 
-import org.dependencytrack.proto.notification.v1.Component;
-import org.dependencytrack.proto.notification.v1.NewVulnerableDependencySubject;
-import org.dependencytrack.proto.notification.v1.Project;
-import org.dependencytrack.proto.notification.v1.Vulnerability;
+import org.dependencytrack.notification.proto.v1.Component;
+import org.dependencytrack.notification.proto.v1.NewVulnerableDependencySubject;
+import org.dependencytrack.notification.proto.v1.Project;
+import org.dependencytrack.notification.proto.v1.Vulnerability;
 import org.jdbi.v3.core.result.RowReducer;
 import org.jdbi.v3.core.result.RowView;
 

@@ -21,7 +21,7 @@ package org.dependencytrack.persistence.command;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.ViolationAnalysisState;
-import org.dependencytrack.proto.notification.v1.Group;
+import org.dependencytrack.notification.proto.v1.Group;
 
 import java.util.Collections;
 import java.util.Set;

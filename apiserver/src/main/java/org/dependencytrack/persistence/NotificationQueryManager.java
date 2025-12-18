@@ -28,8 +28,8 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.publisher.PublisherClass;
-import org.dependencytrack.proto.notification.v1.Notification;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;

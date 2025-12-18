@@ -52,10 +52,10 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_USER_CREATED;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_USER_DELETED;
-import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_SYSTEM;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_USER_CREATED;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_USER_DELETED;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_SYSTEM;
 
 public class UserResourceAuthenticatedTest extends ResourceTest {
 

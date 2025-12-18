@@ -60,10 +60,10 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.notification.proto.v1.BomValidationFailedSubject;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.plugin.PluginManagerTestUtil;
-import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
@@ -108,9 +108,9 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_VALIDATION_FAILED;
-import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_VALIDATION_FAILED;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 @RunWith(JUnitParamsRunner.class)

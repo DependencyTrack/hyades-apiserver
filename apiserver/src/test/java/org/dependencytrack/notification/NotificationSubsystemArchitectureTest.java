@@ -25,7 +25,7 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.junit.ArchUnitRunner;
 import com.tngtech.archunit.lang.ArchRule;
-import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.junit.runner.RunWith;
 
 import static com.tngtech.archunit.core.domain.JavaAccess.Predicates.target;
@@ -57,8 +57,8 @@ public class NotificationSubsystemArchitectureTest {
     @ArchTest
     public static final ArchRule mustNotModifyCoreNotificationFieldsOutsideOfNotificationFactory =
             noClasses()
-                    .that().areNotAssignableTo(NotificationFactory.class)
-                    .and().areNotAssignableTo(TestNotificationFactory.class)
+                    .that().areNotAssignableTo(org.dependencytrack.notification.api.NotificationFactory.class)
+                    .and().areNotAssignableTo(org.dependencytrack.notification.api.TestNotificationFactory.class)
                     // Workaround for the fact that ArchUnit's callMethod() predicate
                     // does not yet inspect lambda code: https://github.com/TNG/ArchUnit/issues/981
                     .should().accessTargetWhere(target(owner(equivalentTo(Notification.Builder.class)))
@@ -72,7 +72,6 @@ public class NotificationSubsystemArchitectureTest {
             noClasses()
                     .that().resideInAPackage("org.dependencytrack.notification..")
                     .and().areNotAssignableTo(JdoNotificationEmitter.class)
-                    .and().areNotAssignableTo(NotificationEmitter.class)
                     .should().dependOnClassesThat().areAssignableTo(AbstractAlpineQueryManager.class)
                     .orShould().dependOnClassesThat().resideInAPackage("javax.jdo..")
                     .because("""

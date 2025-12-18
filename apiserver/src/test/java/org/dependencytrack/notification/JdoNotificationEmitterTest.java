@@ -20,7 +20,7 @@ package org.dependencytrack.notification;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -28,11 +28,11 @@ import java.util.ArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.notification.TestNotificationFactory.createBomConsumedTestNotification;
+import static org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification;
 
 public class JdoNotificationEmitterTest extends PersistenceCapableTest {
 
-    private NotificationEmitter emitter;
+    private org.dependencytrack.notification.api.emission.NotificationEmitter emitter;
 
     @Before
     @Override

@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.persistence.jdbi.mapping;
 
-import org.dependencytrack.proto.notification.v1.Component;
+import org.dependencytrack.notification.proto.v1.Component;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 

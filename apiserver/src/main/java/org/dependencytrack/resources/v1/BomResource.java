@@ -62,7 +62,9 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdbiNotificationEmitter;
+import org.dependencytrack.notification.JdoNotificationEmitter;
+import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
@@ -96,8 +98,8 @@ import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
-import static org.dependencytrack.notification.NotificationFactory.createBomValidationFailedNotification;
-import static org.dependencytrack.notification.NotificationFactory.createProjectCreatedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createBomValidationFailedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createProjectCreatedNotification;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 /**
@@ -378,8 +380,9 @@ public class BomResource extends AbstractApiResource {
                                     null, null, request.isLatestProjectVersion(), true);
                             Principal principal = getPrincipal();
                             qm.updateNewProjectACL(project, principal);
-                            NotificationEmitter.using(qm).emit(
-                                    createProjectCreatedNotification(project));
+                            new JdoNotificationEmitter(qm).emit(
+                                    createProjectCreatedNotification(
+                                            NotificationModelConverter.convert(project)));
                         } else {
                             final var response = Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                             return new ProcessingResult(response, null);
@@ -500,8 +503,9 @@ public class BomResource extends AbstractApiResource {
                             project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, tags, parent, null, null, isLatest, true);
                             Principal principal = getPrincipal();
                             qm.updateNewProjectACL(project, principal);
-                            NotificationEmitter.using(qm).emit(
-                                    createProjectCreatedNotification(project));
+                            new JdoNotificationEmitter(qm).emit(
+                                    createProjectCreatedNotification(
+                                            NotificationModelConverter.convert(project)));
                         } else {
                             final var response = Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                             return new ProcessingResult(response, null);
@@ -645,8 +649,10 @@ public class BomResource extends AbstractApiResource {
             // NB: Usage of a separate DB connection is intended here,
             // as the active transaction will be rolled back when the
             // below exception is thrown.
-            useJdbiTransaction(handle -> NotificationEmitter.using(handle).emit(
-                    createBomValidationFailedNotification(project, e.getValidationErrors())));
+            useJdbiTransaction(handle -> new JdbiNotificationEmitter(handle).emit(
+                    createBomValidationFailedNotification(
+                            NotificationModelConverter.convert(project),
+                            e.getValidationErrors())));
 
             throw new WebApplicationException(problemDetails.toResponse());
         } catch (RuntimeException e) {

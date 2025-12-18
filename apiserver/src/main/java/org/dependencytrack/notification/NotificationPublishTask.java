@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.notification;
 
-import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.notification.proto.v1.Notification;
 
 /**
  * Unit of work for publishing a notification.

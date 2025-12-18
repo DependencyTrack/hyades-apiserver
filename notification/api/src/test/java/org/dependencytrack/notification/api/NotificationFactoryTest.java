@@ -16,25 +16,25 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.notification;
+package org.dependencytrack.notification.api;
 
-import org.dependencytrack.proto.notification.v1.Notification;
-import org.junit.Test;
+import org.dependencytrack.notification.proto.v1.Notification;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.notification.NotificationFactory.newNotificationBuilder;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_CONSUMED;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_UNSPECIFIED;
-import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
-import static org.dependencytrack.proto.notification.v1.Level.LEVEL_UNSPECIFIED;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_UNSPECIFIED;
+import static org.dependencytrack.notification.api.NotificationFactory.newNotificationBuilder;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_CONSUMED;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_UNSPECIFIED;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_UNSPECIFIED;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_UNSPECIFIED;
 
-public class NotificationFactoryTest {
+class NotificationFactoryTest {
 
     @Test
-    public void newNotificationBuilderShouldPopulateRequiredFields() {
+    void newNotificationBuilderShouldPopulateRequiredFields() {
         final Notification.Builder builder = newNotificationBuilder(
                 SCOPE_PORTFOLIO, GROUP_BOM_CONSUMED, LEVEL_INFORMATIONAL);
         assertThat(builder.getId()).isNotBlank();
@@ -45,7 +45,7 @@ public class NotificationFactoryTest {
     }
 
     @Test
-    public void newNotificationBuilderShouldThrowWhenScopeIsNull() {
+    void newNotificationBuilderShouldThrowWhenScopeIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
                 .isThrownBy(() -> newNotificationBuilder(
                         null, GROUP_BOM_CONSUMED, LEVEL_INFORMATIONAL))
@@ -53,7 +53,7 @@ public class NotificationFactoryTest {
     }
 
     @Test
-    public void newNotificationBuilderShouldThrowWhenScopeIsInvalid() {
+    void newNotificationBuilderShouldThrowWhenScopeIsInvalid() {
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> newNotificationBuilder(
                         SCOPE_UNSPECIFIED, GROUP_BOM_CONSUMED, LEVEL_INFORMATIONAL))
@@ -61,7 +61,7 @@ public class NotificationFactoryTest {
     }
 
     @Test
-    public void newNotificationBuilderShouldThrowWhenGroupIsNull() {
+    void newNotificationBuilderShouldThrowWhenGroupIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
                 .isThrownBy(() -> newNotificationBuilder(
                         SCOPE_PORTFOLIO, null, LEVEL_INFORMATIONAL))
@@ -69,7 +69,7 @@ public class NotificationFactoryTest {
     }
 
     @Test
-    public void newNotificationBuilderShouldThrowWhenGroupIsInvalid() {
+    void newNotificationBuilderShouldThrowWhenGroupIsInvalid() {
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> newNotificationBuilder(
                         SCOPE_PORTFOLIO, GROUP_UNSPECIFIED, LEVEL_INFORMATIONAL))
@@ -77,7 +77,7 @@ public class NotificationFactoryTest {
     }
 
     @Test
-    public void newNotificationBuilderShouldThrowWhenLevelIsNull() {
+    void newNotificationBuilderShouldThrowWhenLevelIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
                 .isThrownBy(() -> newNotificationBuilder(
                         SCOPE_PORTFOLIO, GROUP_BOM_CONSUMED, null))
@@ -85,7 +85,7 @@ public class NotificationFactoryTest {
     }
 
     @Test
-    public void newNotificationBuilderShouldThrowWhenLevelIsInvalid() {
+    void newNotificationBuilderShouldThrowWhenLevelIsInvalid() {
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> newNotificationBuilder(
                         SCOPE_PORTFOLIO, GROUP_BOM_CONSUMED, LEVEL_UNSPECIFIED))

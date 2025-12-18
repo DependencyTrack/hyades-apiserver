@@ -62,7 +62,8 @@ import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdoNotificationEmitter;
+import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
@@ -88,7 +89,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNullElseGet;
-import static org.dependencytrack.notification.NotificationFactory.createProjectCreatedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createProjectCreatedNotification;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.PersistenceUtil.isPersistent;
@@ -571,8 +572,9 @@ public class ProjectResource extends AbstractApiResource {
                     throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
                 }
 
-                NotificationEmitter.using(qm).emit(
-                        createProjectCreatedNotification(project));
+                new JdoNotificationEmitter(qm).emit(
+                        createProjectCreatedNotification(
+                                NotificationModelConverter.convert(project)));
 
                 return project;
             });

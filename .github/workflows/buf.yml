@@ -36,6 +36,8 @@ jobs:
           path: proto/src/main/proto
         - name: dex
           path: dex/proto/src/main/proto
+        - name: notification
+          path: notification/proto/src/main/proto
     steps:
     - name: Checkout Repository
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # tag=v6.0.1

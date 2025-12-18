@@ -35,6 +35,7 @@
         <module>alpine</module>
         <module>dex</module>
         <module>proto</module>
+        <module>notification</module>
         <module>plugin/api</module>
         <module>plugin/file-storage-local</module>
         <module>plugin/file-storage-memory</module>

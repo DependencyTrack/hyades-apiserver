@@ -63,7 +63,8 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdoNotificationEmitter;
+import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
@@ -81,8 +82,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.dependencytrack.notification.NotificationFactory.createUserCreatedNotification;
-import static org.dependencytrack.notification.NotificationFactory.createUserDeletedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createUserCreatedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createUserDeletedNotification;
 
 /**
  * JAX-RS resources for processing users.
@@ -212,7 +213,7 @@ public class UserResource extends AlpineResource {
     })
     @AuthenticationNotRequired
     public Response forceChangePassword(@FormParam("username") String username, @FormParam("password") String password,
-            @FormParam("newPassword") String newPassword, @FormParam("confirmPassword") String confirmPassword) {
+                                        @FormParam("newPassword") String newPassword, @FormParam("confirmPassword") String confirmPassword) {
         final Authenticator auth = new Authenticator(username, password);
         AtomicReference<Principal> principal = new AtomicReference<>();
         try (QueryManager qm = new QueryManager()) {
@@ -453,7 +454,9 @@ public class UserResource extends AlpineResource {
                 if (user == null) {
                     user = qm.createLdapUser(jsonUser.getUsername());
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user created: " + jsonUser.getUsername());
-                    NotificationEmitter.using(qm).emit(createUserCreatedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserCreatedNotification(
+                                    NotificationModelConverter.convert(user)));
                     return Response.status(Response.Status.CREATED).entity(user).build();
                 } else {
                     return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
@@ -481,7 +484,9 @@ public class UserResource extends AlpineResource {
             return qm.callInTransaction(() -> {
                 final LdapUser user = qm.getLdapUser(jsonUser.getUsername());
                 if (user != null) {
-                    NotificationEmitter.using(qm).emit(createUserDeletedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserDeletedNotification(
+                                    NotificationModelConverter.convert(user)));
                     qm.delete(user);
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user deleted: " + jsonUser.getUsername());
                     return Response.status(Response.Status.NO_CONTENT).build();
@@ -536,7 +541,9 @@ public class UserResource extends AlpineResource {
                             String.valueOf(PasswordService.createHash(jsonUser.getNewPassword().toCharArray())),
                             jsonUser.isForcePasswordChange(), jsonUser.isNonExpiryPassword(), jsonUser.isSuspended());
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user created: " + jsonUser.getUsername());
-                    NotificationEmitter.using(qm).emit(createUserCreatedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserCreatedNotification(
+                                    NotificationModelConverter.convert(user)));
                     return Response.status(Response.Status.CREATED).entity(user).build();
                 } else {
                     return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
@@ -613,7 +620,9 @@ public class UserResource extends AlpineResource {
             return qm.callInTransaction(() -> {
                 final ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
                 if (user != null) {
-                    NotificationEmitter.using(qm).emit(createUserDeletedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserDeletedNotification(
+                                    NotificationModelConverter.convert(user)));
                     qm.delete(user);
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user deleted: " + jsonUser.getUsername());
                     return Response.status(Response.Status.NO_CONTENT).build();
@@ -653,7 +662,9 @@ public class UserResource extends AlpineResource {
                 if (user == null) {
                     user = qm.createOidcUser(jsonUser.getUsername());
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user created: " + jsonUser.getUsername());
-                    NotificationEmitter.using(qm).emit(createUserCreatedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserCreatedNotification(
+                                    NotificationModelConverter.convert(user)));
                     return Response.status(Response.Status.CREATED).entity(user).build();
                 } else {
                     return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
@@ -681,7 +692,9 @@ public class UserResource extends AlpineResource {
             return qm.callInTransaction(() -> {
                 final OidcUser user = qm.getOidcUser(jsonUser.getUsername());
                 if (user != null) {
-                    NotificationEmitter.using(qm).emit(createUserDeletedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserDeletedNotification(
+                                    NotificationModelConverter.convert(user)));
                     qm.delete(user);
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user deleted: " + jsonUser.getUsername());
                     return Response.status(Response.Status.NO_CONTENT).build();
@@ -799,7 +812,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user or team(s) could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
     public Response setUserTeams(
             @Parameter(description = "Username and list of UUIDs to assign to user", required = true) @Valid TeamsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
@@ -863,7 +876,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user, role, or project could not be found", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class)))
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
     public Response assignProjectRoleToUser(
             @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {
@@ -909,9 +922,9 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "204", description = "The specified role was successfully removed from the user"),
             @ApiResponse(responseCode = "304", description = "The user is not a member of the specified role for the project"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404",description = "The user, role, or project could not be found",content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class)))
+            @ApiResponse(responseCode = "404", description = "The user, role, or project could not be found", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class)))
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
     public Response removeProjectRoleFromUser(
             @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {

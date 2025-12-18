@@ -29,7 +29,8 @@ import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdoNotificationEmitter;
+import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 
 import javax.jdo.PersistenceManager;
@@ -38,7 +39,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import static org.dependencytrack.notification.NotificationFactory.createVulnerabilityAnalysisDecisionChangeNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityAnalysisDecisionChangeNotification;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 
 public class AnalysisQueryManager extends QueryManager implements IQueryManager {
@@ -149,9 +150,14 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
 
             if (!command.options().contains(MakeAnalysisCommand.Option.OMIT_NOTIFICATION)
                     && (stateChanged || suppressionChanged)) {
-                NotificationEmitter.using(this).emit(
+                new JdoNotificationEmitter(this).emit(
                         createVulnerabilityAnalysisDecisionChangeNotification(
-                                analysis, stateChanged, suppressionChanged));
+                                NotificationModelConverter.convert(analysis.getProject()),
+                                NotificationModelConverter.convert(analysis.getComponent()),
+                                NotificationModelConverter.convert(analysis.getVulnerability()),
+                                NotificationModelConverter.convert(analysis),
+                                stateChanged,
+                                suppressionChanged));
             }
 
             return analysis.getId();
