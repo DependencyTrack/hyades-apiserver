@@ -437,4 +437,26 @@
                 onDelete="CASCADE"/>
     </changeSet>
 
+    <changeSet id="v5.7.0-22" author="nscuro">
+        <sql splitStatements="true">
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE ("GROUPNAME", "PROPERTYNAME") IN (
+               ('vuln-source', 'github.advisories.enabled')
+             , ('vuln-source', 'github.advisories.alias.sync.enabled')
+             , ('vuln-source', 'github.advisories.access.token')
+             , ('vuln-source', 'google.osv.base.url')
+             , ('vuln-source', 'google.osv.enabled')
+             , ('vuln-source', 'google.osv.alias.sync.enabled')
+             , ('integrations', 'fortify.ssc.sync.cadence')
+             , ('integrations', 'defectdojo.sync.cadence')
+             , ('integrations', 'kenna.sync.cadence')
+             );
+
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" IN ('search-indexes', 'task-scheduler');
+        </sql>
+    </changeSet>
+
 </databaseChangeLog>
