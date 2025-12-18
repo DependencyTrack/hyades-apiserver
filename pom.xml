@@ -30,7 +30,6 @@
         <module>common</module>
         <module>support/datanucleus-plugin</module>
         <module>support/liquibase</module>
-        <module>support/secret-management</module>
         <module>support/smallrye-config-source-memory</module>
         <module>api</module>
         <module>alpine</module>
@@ -45,6 +44,7 @@
         <module>plugin/vuln-data-source-nvd</module>
         <module>plugin/vuln-data-source-osv</module>
         <module>persistence-migration</module>
+        <module>secret-management</module>
         <module>apiserver</module>
         <module>coverage-report</module>
     </modules>
