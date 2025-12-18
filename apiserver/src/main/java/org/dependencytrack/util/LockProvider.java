@@ -56,21 +56,6 @@ public class LockProvider {
         return executor.executeWithLock(task, lockConfiguration).getResult();
     }
 
-    public static void executeWithLockWaiting(final WaitingLockConfiguration lockConfiguration, final Task task) throws Throwable {
-        executeWithLockWaiting(lockConfiguration, () -> {
-            task.call();
-            return null;
-        });
-    }
-
-    public static <T> T executeWithLockWaiting(final WaitingLockConfiguration lockConfiguration, final TaskWithResult<T> task) throws Throwable {
-        final JdbcLockProvider jdbcLockProvider = getJdbcLockProviderInstance();
-        final var waitingLockProvider = new WaitingLockProvider(jdbcLockProvider,
-                lockConfiguration.getPollInterval(), lockConfiguration.getWaitTimeout());
-        final var executor = new DefaultLockingTaskExecutor(waitingLockProvider);
-        return executor.executeWithLock(task, lockConfiguration).getResult();
-    }
-
     /**
      * @since 5.6.0
      */
@@ -81,7 +66,7 @@ public class LockProvider {
 
     private static JdbcLockProvider getJdbcLockProviderInstance() {
         if (instance == null || Config.isUnitTestsEnabled()) {
-            return new JdbcLockProvider(DataSourceRegistry.getInstance().getDefault());
+            instance = new JdbcLockProvider(DataSourceRegistry.getInstance().getDefault());
         }
         return instance;
     }

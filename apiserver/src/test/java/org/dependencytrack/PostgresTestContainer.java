@@ -18,7 +18,6 @@
  */
 package org.dependencytrack;
 
-import alpine.server.util.DbUtil;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import org.dependencytrack.support.liquibase.MigrationExecutor;
 import org.postgresql.ds.PGSimpleDataSource;
@@ -27,7 +26,6 @@ import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.TestcontainersConfiguration;
 
 import java.lang.management.ManagementFactory;
-import java.sql.Connection;
 import java.util.Map;
 
 public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestContainer> {
@@ -68,13 +66,6 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
         dataSource.setPassword(getPassword());
 
         try {
-            try (final Connection connection = dataSource.getConnection()) {
-                // Ensure that DbUtil#isPostgreSQL will work as expected.
-                // Some legacy code ported over from v4 still uses this.
-                // TODO: Remove once DbUtil#isPostgreSQL is no longer used.
-                DbUtil.initPlatformName(connection);
-            }
-
             new MigrationExecutor(dataSource, "migration/changelog-main.xml").executeMigration();
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute migrations", e);

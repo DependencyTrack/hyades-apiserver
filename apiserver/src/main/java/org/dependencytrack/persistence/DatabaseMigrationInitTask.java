@@ -18,12 +18,9 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.server.util.DbUtil;
 import org.dependencytrack.init.InitTask;
 import org.dependencytrack.init.InitTaskContext;
 import org.dependencytrack.support.liquibase.MigrationExecutor;
-
-import java.sql.Connection;
 
 /**
  * @since 5.6.0
@@ -42,16 +39,6 @@ public final class DatabaseMigrationInitTask implements InitTask {
 
     @Override
     public void execute(InitTaskContext ctx) throws Exception {
-        try (final Connection connection = ctx.dataSource().getConnection()) {
-            // Ensure that DbUtil#isPostgreSQL will work as expected.
-            // Some legacy code ported over from v4 still uses this.
-            //
-            // NB: This was previously done in alpine.server.upgrade.UpgradeExecutor.
-            //
-            // TODO: Remove once DbUtil#isPostgreSQL is no longer used.
-            DbUtil.initPlatformName(connection);
-        }
-
         new MigrationExecutor(ctx.dataSource(), "migration/changelog-main.xml").executeMigration();
     }
 

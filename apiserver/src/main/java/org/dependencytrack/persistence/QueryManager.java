@@ -33,7 +33,6 @@ import alpine.persistence.NotSortableException;
 import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
-import alpine.server.util.DbUtil;
 import com.github.packageurl.PackageURL;
 import com.google.common.collect.Lists;
 import io.github.resilience4j.retry.Retry;
@@ -1695,17 +1694,7 @@ public class QueryManager extends AlpineQueryManager {
             return "";
         }
 
-        final String clauseTemplate;
-        if (DbUtil.isMssql()) {
-            clauseTemplate = "OFFSET %d ROWS FETCH NEXT %d ROWS ONLY";
-        } else if (DbUtil.isMysql()) {
-            // NB: Order of limit and offset is different for MySQL...
-            return "LIMIT %s OFFSET %s".formatted(pagination.getLimit(), pagination.getOffset());
-        } else {
-            clauseTemplate = "OFFSET %d FETCH NEXT %d ROWS ONLY";
-        }
-
-        return clauseTemplate.formatted(pagination.getOffset(), pagination.getLimit());
+        return "OFFSET %d FETCH NEXT %d ROWS ONLY".formatted(pagination.getOffset(), pagination.getLimit());
     }
 
     /**

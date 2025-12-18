@@ -85,7 +85,7 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>persistence-migration</artifactId>
+            <artifactId>migration</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

@@ -71,19 +71,6 @@ public final class PersistenceUtil {
             return false;
         }
 
-        public <V> boolean applyIfNonNullAndChanged(final String fieldName, final Function<T, V> getter, final Consumer<V> setter) {
-            final V existingValue = getter.apply(existingObject);
-            final V newValue = getter.apply(newObject);
-
-            if (newValue != null && !Objects.equals(existingValue, newValue)) {
-                diffs.put(fieldName, new Diff(existingValue, newValue));
-                setter.accept(newValue);
-                return true;
-            }
-
-            return false;
-        }
-
         public Map<String, Diff> getDiffs() {
             return unmodifiableMap(diffs);
         }
