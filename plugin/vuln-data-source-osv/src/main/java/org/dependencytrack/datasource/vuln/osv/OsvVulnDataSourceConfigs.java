@@ -29,9 +29,9 @@ import java.util.List;
 /**
  * @since 5.7.0
  */
-final class OsvVulnDataSourceConfigs {
+public final class OsvVulnDataSourceConfigs {
 
-    static final RuntimeConfigDefinition<Boolean> CONFIG_ENABLED;
+    public static final RuntimeConfigDefinition<Boolean> CONFIG_ENABLED;
     static final RuntimeConfigDefinition<URL> CONFIG_DATA_URL;
     static final RuntimeConfigDefinition<List<String>> CONFIG_ECOSYSTEMS;
     static final RuntimeConfigDefinition<Boolean> CONFIG_ALIAS_SYNC_ENABLED;
