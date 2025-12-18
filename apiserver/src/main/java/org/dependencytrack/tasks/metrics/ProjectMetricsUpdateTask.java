@@ -22,17 +22,18 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
-import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.slf4j.MDC;
 
 import java.time.Duration;
 import java.util.UUID;
 
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 /**
  * A {@link Subscriber} task that updates {@link Project} metrics.
@@ -64,7 +65,7 @@ public class ProjectMetricsUpdateTask implements Subscriber {
         LOGGER.debug("Executing metrics update");
         final long startTimeNs = System.nanoTime();
         try {
-            Metrics.updateProjectMetrics(uuid);
+            useJdbiTransaction(handle -> handle.attach(MetricsDao.class).updateProjectMetrics(uuid));
         } finally {
             LOGGER.debug("Completed metrics update in %s".formatted(Duration.ofNanos(System.nanoTime() - startTimeNs)));
         }

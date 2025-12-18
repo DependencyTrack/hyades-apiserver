@@ -20,7 +20,6 @@ package org.dependencytrack.init;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -53,10 +52,8 @@ public final class InitTaskServletContextListener implements ServletContextListe
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (!config.getValue(ConfigKey.INIT_TASKS_ENABLED.getPropertyName(), Boolean.class)) {
-            LOGGER.debug(
-                    "Not executing init tasks because {} is disabled",
-                    ConfigKey.INIT_TASKS_ENABLED.getPropertyName());
+        if (!config.getValue("init.tasks.enabled", boolean.class)) {
+            LOGGER.debug("Not executing init tasks because init.tasks.enabled is disabled");
             return;
         }
 
@@ -70,10 +67,8 @@ public final class InitTaskServletContextListener implements ServletContextListe
             dataSourceRegistry.close(dataSourceName);
         }
 
-        if (config.getValue(ConfigKey.INIT_AND_EXIT.getPropertyName(), Boolean.class)) {
-            LOGGER.info(
-                    "Exiting because {} is enabled",
-                    ConfigKey.INIT_AND_EXIT.getPropertyName());
+        if (config.getValue("init.and.exit", boolean.class)) {
+            LOGGER.info("Exiting because init.and.exit is enabled");
             System.exit(0);
         }
     }

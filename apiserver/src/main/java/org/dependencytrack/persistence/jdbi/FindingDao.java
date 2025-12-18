@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import alpine.server.util.DbUtil;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Finding;
@@ -507,20 +506,14 @@ public interface FindingDao {
                 queryFilter.append(" AND (");
             }
             String value = filter;
-            if (DbUtil.isPostgreSQL()) {
-                queryFilter.append(column).append(fromValue ? " >= " : " <= ");
-                if (isDate) {
-                    queryFilter.append("TO_TIMESTAMP(:").append(paramName).append(", 'YYYY-MM-DD HH24:MI:SS')");
-                    value += (fromValue ? " 00:00:00" : " 23:59:59");
-                } else {
-                    queryFilter.append("CAST(:").append(paramName).append(" AS NUMERIC)");
-                }
+            queryFilter.append(column).append(fromValue ? " >= " : " <= ");
+            if (isDate) {
+                queryFilter.append("TO_TIMESTAMP(:").append(paramName).append(", 'YYYY-MM-DD HH24:MI:SS')");
+                value += (fromValue ? " 00:00:00" : " 23:59:59");
             } else {
-                queryFilter.append(column).append(fromValue ? " >= :" : " <= :").append(paramName);
-                if (isDate) {
-                    value += (fromValue ? " 00:00:00" : " 23:59:59");
-                }
+                queryFilter.append("CAST(:").append(paramName).append(" AS NUMERIC)");
             }
+
             params.put(paramName, value);
             queryFilter.append(")");
         }

@@ -30,6 +30,7 @@ import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
+import org.jdbi.v3.sqlobject.statement.SqlCall;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
@@ -39,6 +40,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * @since 5.6.0
@@ -57,17 +59,17 @@ public interface MetricsDao extends SqlObject {
         final var decodedPageToken = pageTokenEncoder.decode(pageToken, ListVulnerabilityMetricsPageToken.class);
 
         final Query query = getHandle().createQuery(/* language=InjectedFreeMarker */ """
-                <#-- @ftlvariable name="year" type="Boolean" -->
-                <#-- @ftlvariable name="month" type="Boolean" -->
-                SELECT *
-                FROM "VULNERABILITYMETRICS"
-                WHERE TRUE
-                <#if year && month>
-                    AND ("YEAR", "MONTH") > (:year, :month)
-                </#if>
-                ORDER BY "YEAR" ASC, "MONTH" ASC
-                LIMIT :limit
-            """);
+                    <#-- @ftlvariable name="year" type="Boolean" -->
+                    <#-- @ftlvariable name="month" type="Boolean" -->
+                    SELECT *
+                    FROM "VULNERABILITYMETRICS"
+                    WHERE TRUE
+                    <#if year && month>
+                        AND ("YEAR", "MONTH") > (:year, :month)
+                    </#if>
+                    ORDER BY "YEAR" ASC, "MONTH" ASC
+                    LIMIT :limit
+                """);
 
         final List<ListVulnerabilityMetricsRow> rows = query
                 .bind("year", decodedPageToken != null
@@ -272,6 +274,11 @@ public interface MetricsDao extends SqlObject {
     @RegisterBeanMapper(ProjectMetrics.class)
     List<ProjectMetrics> getMostRecentProjectMetrics(@Bind Collection<Long> projectIds);
 
+    @SqlCall("""
+            CALL "UPDATE_PROJECT_METRICS"(:uuid)
+            """)
+    void updateProjectMetrics(@Bind UUID uuid);
+
     @SqlQuery("""
             SELECT *, "RISKSCORE" AS inherited_risk_score
             FROM "DEPENDENCYMETRICS"
@@ -281,6 +288,11 @@ public interface MetricsDao extends SqlObject {
             """)
     @RegisterBeanMapper(DependencyMetrics.class)
     DependencyMetrics getMostRecentDependencyMetrics(@Bind long componentId);
+
+    @SqlCall("""
+            CALL "UPDATE_COMPONENT_METRICS"(:uuid)
+            """)
+    void updateComponentMetrics(@Bind UUID uuid);
 
     @SqlQuery("""
             SELECT metrics.*, metrics."RISKSCORE" AS inherited_risk_score
