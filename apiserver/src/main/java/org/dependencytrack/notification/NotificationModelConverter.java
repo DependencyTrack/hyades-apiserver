@@ -22,19 +22,20 @@ import alpine.model.User;
 import com.google.protobuf.util.Timestamps;
 import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.notification.proto.v1.Bom;
+import org.dependencytrack.notification.proto.v1.Component;
+import org.dependencytrack.notification.proto.v1.Group;
+import org.dependencytrack.notification.proto.v1.Level;
+import org.dependencytrack.notification.proto.v1.Policy;
+import org.dependencytrack.notification.proto.v1.PolicyCondition;
+import org.dependencytrack.notification.proto.v1.PolicyViolation;
+import org.dependencytrack.notification.proto.v1.PolicyViolationAnalysis;
+import org.dependencytrack.notification.proto.v1.Project;
+import org.dependencytrack.notification.proto.v1.Scope;
+import org.dependencytrack.notification.proto.v1.UserSubject;
+import org.dependencytrack.notification.proto.v1.Vulnerability;
+import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysis;
 import org.dependencytrack.parser.common.resolver.CweResolver;
-import org.dependencytrack.proto.notification.v1.Component;
-import org.dependencytrack.proto.notification.v1.Group;
-import org.dependencytrack.proto.notification.v1.Level;
-import org.dependencytrack.proto.notification.v1.Policy;
-import org.dependencytrack.proto.notification.v1.PolicyCondition;
-import org.dependencytrack.proto.notification.v1.PolicyViolation;
-import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysis;
-import org.dependencytrack.proto.notification.v1.Project;
-import org.dependencytrack.proto.notification.v1.Scope;
-import org.dependencytrack.proto.notification.v1.UserSubject;
-import org.dependencytrack.proto.notification.v1.Vulnerability;
-import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysis;
 
 import java.util.Objects;
 
@@ -43,12 +44,37 @@ import static org.dependencytrack.util.VulnerabilityUtil.getUniqueAliases;
 /**
  * @since 5.7.0
  */
-public final class ModelConverter {
+public final class NotificationModelConverter {
 
-    private ModelConverter() {
+    private NotificationModelConverter() {
     }
 
-    static NotificationGroup convert(final Group protoGroup) {
+    public static Group convert(NotificationGroup group) {
+        return switch (group) {
+            case ANALYZER -> Group.GROUP_ANALYZER;
+            case BOM_CONSUMED -> Group.GROUP_BOM_CONSUMED;
+            case BOM_PROCESSED -> Group.GROUP_BOM_PROCESSED;
+            case BOM_PROCESSING_FAILED -> Group.GROUP_BOM_PROCESSING_FAILED;
+            case BOM_VALIDATION_FAILED -> Group.GROUP_BOM_VALIDATION_FAILED;
+            case CONFIGURATION -> Group.GROUP_CONFIGURATION;
+            case DATASOURCE_MIRRORING -> Group.GROUP_DATASOURCE_MIRRORING;
+            case FILE_SYSTEM -> Group.GROUP_FILE_SYSTEM;
+            case INTEGRATION -> Group.GROUP_INTEGRATION;
+            case NEW_VULNERABILITY -> Group.GROUP_NEW_VULNERABILITY;
+            case NEW_VULNERABLE_DEPENDENCY -> Group.GROUP_NEW_VULNERABLE_DEPENDENCY;
+            case POLICY_VIOLATION -> Group.GROUP_POLICY_VIOLATION;
+            case PROJECT_AUDIT_CHANGE -> Group.GROUP_PROJECT_AUDIT_CHANGE;
+            case PROJECT_CREATED -> Group.GROUP_PROJECT_CREATED;
+            case PROJECT_VULN_ANALYSIS_COMPLETE -> Group.GROUP_PROJECT_VULN_ANALYSIS_COMPLETE;
+            case REPOSITORY -> Group.GROUP_REPOSITORY;
+            case USER_CREATED -> Group.GROUP_USER_CREATED;
+            case USER_DELETED -> Group.GROUP_USER_DELETED;
+            case VEX_CONSUMED -> Group.GROUP_VEX_CONSUMED;
+            case VEX_PROCESSED -> Group.GROUP_VEX_PROCESSED;
+        };
+    }
+
+    static NotificationGroup convert(Group protoGroup) {
         return switch (protoGroup) {
             case GROUP_ANALYZER -> NotificationGroup.ANALYZER;
             case GROUP_BOM_CONSUMED -> NotificationGroup.BOM_CONSUMED;
@@ -74,7 +100,15 @@ public final class ModelConverter {
         };
     }
 
-    static NotificationLevel convert(final Level protoLevel) {
+    public static Level convert(NotificationLevel level) {
+        return switch (level) {
+            case ERROR -> Level.LEVEL_ERROR;
+            case INFORMATIONAL -> Level.LEVEL_INFORMATIONAL;
+            case WARNING -> Level.LEVEL_WARNING;
+        };
+    }
+
+    static NotificationLevel convert(Level protoLevel) {
         return switch (protoLevel) {
             case LEVEL_ERROR -> NotificationLevel.ERROR;
             case LEVEL_INFORMATIONAL -> NotificationLevel.INFORMATIONAL;
@@ -83,7 +117,14 @@ public final class ModelConverter {
         };
     }
 
-    static NotificationScope convert(final Scope protoScope) {
+    public static Scope convert(NotificationScope scope) {
+        return switch (scope) {
+            case PORTFOLIO -> Scope.SCOPE_PORTFOLIO;
+            case SYSTEM -> Scope.SCOPE_SYSTEM;
+        };
+    }
+
+    static NotificationScope convert(Scope protoScope) {
         return switch (protoScope) {
             case SCOPE_PORTFOLIO -> NotificationScope.PORTFOLIO;
             case SCOPE_SYSTEM -> NotificationScope.SYSTEM;
@@ -91,7 +132,7 @@ public final class ModelConverter {
         };
     }
 
-    public static Component convert(final org.dependencytrack.model.Component component) {
+    public static Component convert(org.dependencytrack.model.Component component) {
         final Component.Builder builder = Component.newBuilder()
                 .setUuid(component.getUuid().toString())
                 .setName(component.getName());
@@ -119,7 +160,7 @@ public final class ModelConverter {
         return builder.build();
     }
 
-    public static Policy convert(final org.dependencytrack.model.Policy policy) {
+    public static Policy convert(org.dependencytrack.model.Policy policy) {
         return Policy.newBuilder()
                 .setUuid(policy.getUuid().toString())
                 .setName(policy.getName())
@@ -127,7 +168,7 @@ public final class ModelConverter {
                 .build();
     }
 
-    public static PolicyCondition convert(final org.dependencytrack.model.PolicyCondition condition) {
+    public static PolicyCondition convert(org.dependencytrack.model.PolicyCondition condition) {
         return PolicyCondition.newBuilder()
                 .setUuid(condition.getUuid().toString())
                 .setPolicy(convert(condition.getPolicy()))
@@ -137,7 +178,7 @@ public final class ModelConverter {
                 .build();
     }
 
-    public static PolicyViolation convert(final org.dependencytrack.model.PolicyViolation violation) {
+    public static PolicyViolation convert(org.dependencytrack.model.PolicyViolation violation) {
         return PolicyViolation.newBuilder()
                 .setUuid(violation.getUuid().toString())
                 .setCondition(convert(violation.getPolicyCondition()))
@@ -146,7 +187,7 @@ public final class ModelConverter {
                 .build();
     }
 
-    public static PolicyViolationAnalysis convert(final org.dependencytrack.model.ViolationAnalysis analysis) {
+    public static PolicyViolationAnalysis convert(org.dependencytrack.model.ViolationAnalysis analysis) {
         return PolicyViolationAnalysis.newBuilder()
                 .setProject(convert(analysis.getProject()))
                 .setComponent(convert(analysis.getComponent()))
@@ -156,7 +197,7 @@ public final class ModelConverter {
                 .build();
     }
 
-    public static Project convert(final org.dependencytrack.model.Project project) {
+    public static Project convert(org.dependencytrack.model.Project project) {
         final Project.Builder builder = Project.newBuilder()
                 .setUuid(project.getUuid().toString())
                 .setName(project.getName())
@@ -180,7 +221,7 @@ public final class ModelConverter {
         return builder.build();
     }
 
-    static UserSubject convert(final User user) {
+    public static UserSubject convert(User user) {
         final var builder = UserSubject.newBuilder()
                 .setUsername(user.getUsername());
         if (user.getEmail() != null) {
@@ -189,7 +230,19 @@ public final class ModelConverter {
         return builder.build();
     }
 
-    public static Vulnerability convert(final org.dependencytrack.model.Vulnerability vuln) {
+    public static Bom convert(final org.dependencytrack.model.Vex vex) {
+        final var builder = Bom.newBuilder()
+                .setContent("(Omitted)");
+        if (vex.getVexFormat() != null) {
+            builder.setFormat(vex.getVexFormat());
+        }
+        if (vex.getSpecVersion() != null) {
+            builder.setSpecVersion(vex.getSpecVersion());
+        }
+        return builder.build();
+    }
+
+    public static Vulnerability convert(org.dependencytrack.model.Vulnerability vuln) {
         final Vulnerability.Builder builder = Vulnerability.newBuilder()
                 .setUuid(vuln.getUuid().toString())
                 .setVulnId(vuln.getVulnId())
@@ -261,7 +314,7 @@ public final class ModelConverter {
         return builder.build();
     }
 
-    static VulnerabilityAnalysis convert(final org.dependencytrack.model.Analysis analysis) {
+    public static VulnerabilityAnalysis convert(org.dependencytrack.model.Analysis analysis) {
         return VulnerabilityAnalysis.newBuilder()
                 .setProject(convert(analysis.getProject()))
                 .setComponent(convert(analysis.getComponent()))

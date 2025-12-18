@@ -198,7 +198,14 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         qm.persist(projectChildComponent);
 
         // Create a VEX for projectChild.
-        final Vex vex = qm.createVex(projectChild, new Date(), Vex.Format.CYCLONEDX, "1.3", 1, "serialNumber");
+        final var vex = new Vex();
+        vex.setProject(projectChild);
+        vex.setImported(new Date());
+        vex.setVexFormat(Vex.Format.CYCLONEDX);
+        vex.setSpecVersion("1.3");
+        vex.setVexVersion(1);
+        vex.setSerialNumber("serialNumber");
+        qm.persist(vex);
 
         // Create a notification rule and associate projectChild with it.
         final NotificationPublisher notificationPublisher = qm.createNotificationPublisher("name", "description", "publisherClass", "templateContent", "templateMimeType", true);

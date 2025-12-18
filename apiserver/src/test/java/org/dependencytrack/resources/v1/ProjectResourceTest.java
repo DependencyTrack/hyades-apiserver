@@ -106,11 +106,11 @@ import java.util.stream.Stream;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_PROJECT_CREATED;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_CREATED;
-import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 

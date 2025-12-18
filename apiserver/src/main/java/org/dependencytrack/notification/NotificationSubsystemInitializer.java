@@ -24,6 +24,7 @@ import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,10 +36,10 @@ public final class NotificationSubsystemInitializer implements ServletContextLis
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationSubsystemInitializer.class);
 
     private final Config config = ConfigProvider.getConfig();
-    private NotificationOutboxRelay relay;
+    private @Nullable NotificationOutboxRelay relay;
 
     @Override
-    public void contextInitialized(final ServletContextEvent event) {
+    public void contextInitialized(ServletContextEvent event) {
         if (!config.getValue("notification.outbox-relay.enabled", boolean.class)) {
             LOGGER.info("Not starting outbox relay because it is disabled");
             return;
@@ -55,7 +56,7 @@ public final class NotificationSubsystemInitializer implements ServletContextLis
     }
 
     @Override
-    public void contextDestroyed(final ServletContextEvent event) {
+    public void contextDestroyed(ServletContextEvent event) {
         if (relay != null) {
             LOGGER.info("Stopping outbox relay");
             relay.close();

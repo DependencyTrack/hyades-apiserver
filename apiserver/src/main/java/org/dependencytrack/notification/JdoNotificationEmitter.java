@@ -19,8 +19,10 @@
 package org.dependencytrack.notification;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import org.dependencytrack.notification.api.emission.NotificationEmitter;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.notification.v1.Notification;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.datastore.JDOConnection;
@@ -34,21 +36,25 @@ import static java.util.Objects.requireNonNull;
  *
  * @since 5.7.0
  */
-final class JdoNotificationEmitter extends JdbcNotificationEmitter {
+public final class JdoNotificationEmitter extends JdbcNotificationEmitter {
 
     private final PersistenceManager pm;
 
-    JdoNotificationEmitter(final PersistenceManager pm, final MeterRegistry meterRegistry) {
+    JdoNotificationEmitter(PersistenceManager pm, MeterRegistry meterRegistry) {
         super(null, meterRegistry);
         this.pm = requireNonNull(pm, "pm must not be null");
     }
 
-    JdoNotificationEmitter(final QueryManager qm, final MeterRegistry meterRegistry) {
+    JdoNotificationEmitter(QueryManager qm, MeterRegistry meterRegistry) {
         this(requireNonNull(qm, "qm must not be null").getPersistenceManager(), meterRegistry);
     }
 
+    public JdoNotificationEmitter(QueryManager qm) {
+        this(qm, Metrics.globalRegistry);
+    }
+
     @Override
-    public void emitAll(final Collection<Notification> notifications) {
+    public void emitAll(Collection<Notification> notifications) {
         // JDO requires the JDOConnection to be closed when direct access to
         // the underlying native JDBC connection is no longer required.
         final JDOConnection jdoConnection = pm.getDataStoreConnection();

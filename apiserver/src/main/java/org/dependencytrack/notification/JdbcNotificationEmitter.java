@@ -25,10 +25,12 @@ import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
-import org.dependencytrack.proto.notification.v1.Group;
-import org.dependencytrack.proto.notification.v1.Level;
-import org.dependencytrack.proto.notification.v1.Notification;
-import org.dependencytrack.proto.notification.v1.Scope;
+import org.dependencytrack.notification.api.emission.NotificationEmitter;
+import org.dependencytrack.notification.proto.v1.Group;
+import org.dependencytrack.notification.proto.v1.Level;
+import org.dependencytrack.notification.proto.v1.Notification;
+import org.dependencytrack.notification.proto.v1.Scope;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,10 +43,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.notification.ModelConverter.convert;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_UNSPECIFIED;
-import static org.dependencytrack.proto.notification.v1.Level.LEVEL_UNSPECIFIED;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_UNSPECIFIED;
+import static org.dependencytrack.notification.NotificationModelConverter.convert;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_UNSPECIFIED;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_UNSPECIFIED;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_UNSPECIFIED;
 
 /**
  * A {@link NotificationEmitter} that uses the JDBC API for database interactions.
@@ -55,13 +57,13 @@ class JdbcNotificationEmitter implements NotificationEmitter {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private final Connection connection;
+    private final @Nullable Connection connection;
     private final Timer emitLatencyTimer;
     private final MeterProvider<DistributionSummary> emittedDistribution;
 
     JdbcNotificationEmitter(
-            final Connection connection,
-            final MeterRegistry meterRegistry) {
+            @Nullable Connection connection,
+            MeterRegistry meterRegistry) {
         this.connection = connection;
         requireNonNull(meterRegistry, "meterRegistry must not be null");
         this.emitLatencyTimer = Timer
@@ -74,11 +76,13 @@ class JdbcNotificationEmitter implements NotificationEmitter {
     }
 
     @Override
-    public void emitAll(final Collection<Notification> notifications) {
+    public void emitAll(Collection<Notification> notifications) {
+        requireNonNull(connection, "connection must not be null");
+        
         emitAll(connection, notifications);
     }
 
-    void emitAll(final Connection connection, final Collection<Notification> notifications) {
+    void emitAll(Connection connection, Collection<Notification> notifications) {
         requireNonNull(connection, "connection must not be null");
         requireNonNull(notifications, "notifications must not be null");
 
@@ -183,7 +187,7 @@ class JdbcNotificationEmitter implements NotificationEmitter {
                 TimeUnit.NANOSECONDS.toMillis(emitLatencyNanos));
     }
 
-    private static void validateRequiredFields(final Notification notification) {
+    private static void validateRequiredFields(Notification notification) {
         if (notification.getId().isEmpty()) {
             throw new IllegalArgumentException("Missing ID");
         }

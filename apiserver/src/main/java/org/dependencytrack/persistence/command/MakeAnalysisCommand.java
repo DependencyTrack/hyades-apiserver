@@ -23,7 +23,7 @@ import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.proto.notification.v1.Group;
+import org.dependencytrack.notification.proto.v1.Group;
 
 import java.util.Collections;
 import java.util.Set;

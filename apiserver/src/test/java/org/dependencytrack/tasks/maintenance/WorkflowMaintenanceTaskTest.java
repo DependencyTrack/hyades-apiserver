@@ -26,7 +26,7 @@ import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
+import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -41,9 +41,9 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_RETENTION_HOURS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
-import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_PROCESSING_FAILED;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 
 public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
 

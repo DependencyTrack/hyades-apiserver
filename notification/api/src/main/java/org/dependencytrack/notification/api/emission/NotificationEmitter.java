@@ -16,12 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.notification;
+package org.dependencytrack.notification.api.emission;
 
-import io.micrometer.core.instrument.Metrics;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.notification.v1.Notification;
-import org.jdbi.v3.core.Handle;
+import org.dependencytrack.notification.proto.v1.Notification;
 
 import java.util.Collection;
 import java.util.List;
@@ -45,14 +42,6 @@ public interface NotificationEmitter {
      */
     default void emit(Notification notification) {
         emitAll(List.of(notification));
-    }
-
-    static NotificationEmitter using(final QueryManager qm) {
-        return new JdoNotificationEmitter(qm, Metrics.globalRegistry);
-    }
-
-    static NotificationEmitter using(final Handle jdbiHandle) {
-        return new JdbiNotificationEmitter(jdbiHandle, Metrics.globalRegistry);
     }
 
 }

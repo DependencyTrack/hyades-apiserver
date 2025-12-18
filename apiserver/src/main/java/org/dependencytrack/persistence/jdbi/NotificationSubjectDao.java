@@ -20,6 +20,16 @@ package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.notification.proto.v1.BomConsumedOrProcessedSubject;
+import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
+import org.dependencytrack.notification.proto.v1.Component;
+import org.dependencytrack.notification.proto.v1.ComponentVulnAnalysisCompleteSubject;
+import org.dependencytrack.notification.proto.v1.NewVulnerabilitySubject;
+import org.dependencytrack.notification.proto.v1.NewVulnerableDependencySubject;
+import org.dependencytrack.notification.proto.v1.Project;
+import org.dependencytrack.notification.proto.v1.ProjectVulnAnalysisCompleteSubject;
+import org.dependencytrack.notification.proto.v1.Vulnerability;
+import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationBomRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationComponentRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationProjectRowMapper;
@@ -29,16 +39,6 @@ import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectNewVulner
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectNewVulnerableDependencyRowReducer;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectProjectAuditChangeRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationVulnerabilityRowMapper;
-import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
-import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
-import org.dependencytrack.proto.notification.v1.Component;
-import org.dependencytrack.proto.notification.v1.ComponentVulnAnalysisCompleteSubject;
-import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
-import org.dependencytrack.proto.notification.v1.NewVulnerableDependencySubject;
-import org.dependencytrack.proto.notification.v1.Project;
-import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
-import org.dependencytrack.proto.notification.v1.Vulnerability;
-import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.jdbi.v3.core.mapper.JoinRowMapper;
 import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
@@ -54,8 +54,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED;
-import static org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_FAILED;
+import static org.dependencytrack.notification.proto.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_COMPLETED;
+import static org.dependencytrack.notification.proto.v1.ProjectVulnAnalysisStatus.PROJECT_VULN_ANALYSIS_STATUS_FAILED;
 
 @RegisterRowMappers({
         @RegisterRowMapper(NotificationBomRowMapper.class),

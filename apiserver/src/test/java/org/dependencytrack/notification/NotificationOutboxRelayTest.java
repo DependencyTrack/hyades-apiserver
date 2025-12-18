@@ -24,7 +24,8 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
-import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.notification.api.TestNotificationFactory;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -74,9 +75,9 @@ public class NotificationOutboxRelayTest extends PersistenceCapableTest {
 
     @Test
     public void shouldRelayNotification() {
-        final Notification notification = TestNotificationFactory.createBomConsumedTestNotification();
+        final Notification notification = org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification();
 
-        NotificationEmitter.using(qm).emit(notification);
+        new JdoNotificationEmitter(qm).emit(notification);
 
         relay.start();
 
@@ -103,7 +104,7 @@ public class NotificationOutboxRelayTest extends PersistenceCapableTest {
     public void shouldRetryOnFailedSend() {
         final Notification notification = TestNotificationFactory.createBomConsumedTestNotification();
 
-        NotificationEmitter.using(qm).emit(notification);
+        new JdoNotificationEmitter(qm).emit(notification);
 
         relay.start();
 

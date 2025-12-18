@@ -53,7 +53,8 @@ import org.dependencytrack.model.VulnerabilityScan.TargetType;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdoNotificationEmitter;
+import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
@@ -103,9 +104,9 @@ import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TIME_SPAN;
-import static org.dependencytrack.notification.NotificationFactory.createBomConsumedNotification;
-import static org.dependencytrack.notification.NotificationFactory.createBomProcessedNotification;
-import static org.dependencytrack.notification.NotificationFactory.createBomProcessingFailedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createBomConsumedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createBomProcessedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createBomProcessingFailedNotification;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertComponents;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertDependencyGraph;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertServices;
@@ -1105,25 +1106,35 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private void dispatchBomConsumedNotification(final Context ctx) {
         try (final var qm = new QueryManager()) {
-            NotificationEmitter.using(qm).emit(
+            new JdoNotificationEmitter(qm).emit(
                     createBomConsumedNotification(
-                            ctx.project, ctx.bomFormat, ctx.bomSpecVersion, ctx.token));
+                            NotificationModelConverter.convert(ctx.project),
+                            ctx.bomFormat.getFormatShortName(),
+                            ctx.bomSpecVersion,
+                            ctx.token.toString()));
         }
     }
 
     private void dispatchBomProcessedNotification(final Context ctx) {
         try (final var qm = new QueryManager()) {
-            NotificationEmitter.using(qm).emit(
+            new JdoNotificationEmitter(qm).emit(
                     createBomProcessedNotification(
-                            ctx.project, ctx.bomFormat, ctx.bomSpecVersion, ctx.token));
+                            NotificationModelConverter.convert(ctx.project),
+                            ctx.bomFormat.getFormatShortName(),
+                            ctx.bomSpecVersion,
+                            ctx.token.toString()));
         }
     }
 
     private void dispatchBomProcessingFailedNotification(
             final QueryManager qm, final Context ctx, final Throwable throwable) {
-        NotificationEmitter.using(qm).emit(
+        new JdoNotificationEmitter(qm).emit(
                 createBomProcessingFailedNotification(
-                        ctx.project, ctx.bomFormat, ctx.bomSpecVersion, throwable, ctx.token));
+                        NotificationModelConverter.convert(ctx.project),
+                        ctx.bomFormat.getFormatShortName(),
+                        ctx.bomSpecVersion,
+                        ctx.token.toString(),
+                        throwable.getMessage()));
     }
 
     private static List<ComponentVulnerabilityAnalysisEvent> createVulnAnalysisEvents(

@@ -72,7 +72,6 @@ import org.dependencytrack.model.Role;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.UserProjectRole;
-import org.dependencytrack.model.Vex;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.VulnIdAndSource;
 import org.dependencytrack.model.Vulnerability;
@@ -86,12 +85,12 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.EffectivePermissionDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
-import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
@@ -143,7 +142,6 @@ public class QueryManager extends AlpineQueryManager {
     private RepositoryQueryManager repositoryQueryManager;
     private RoleQueryManager roleQueryManager;
     private ServiceComponentQueryManager serviceComponentQueryManager;
-    private VexQueryManager vexQueryManager;
     private VulnerabilityQueryManager vulnerabilityQueryManager;
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
     private WorkflowStateQueryManager workflowStateQueryManager;
@@ -311,18 +309,6 @@ public class QueryManager extends AlpineQueryManager {
             bomQueryManager = (request == null) ? new BomQueryManager(getPersistenceManager()) : new BomQueryManager(getPersistenceManager(), request);
         }
         return bomQueryManager;
-    }
-
-    /**
-     * Lazy instantiation of VexQueryManager.
-     *
-     * @return a VexQueryManager object
-     */
-    private VexQueryManager getVexQueryManager() {
-        if (vexQueryManager == null) {
-            vexQueryManager = (request == null) ? new VexQueryManager(getPersistenceManager()) : new VexQueryManager(getPersistenceManager(), request);
-        }
-        return vexQueryManager;
     }
 
     /**
@@ -616,10 +602,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<Bom> getAllBoms(Project project) {
         return getBomQueryManager().getAllBoms(project);
-    }
-
-    public Vex createVex(Project project, Date imported, Vex.Format format, String specVersion, Integer vexVersion, String serialNumber) {
-        return getVexQueryManager().createVex(project, imported, format, specVersion, vexVersion, serialNumber);
     }
 
     public PaginatedResult getComponentByHash(String hash) {
