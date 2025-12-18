@@ -442,15 +442,16 @@
             DELETE
               FROM "CONFIGPROPERTY"
              WHERE ("GROUPNAME", "PROPERTYNAME") IN (
-               ('vuln-source', 'github.advisories.enabled')
-             , ('vuln-source', 'github.advisories.alias.sync.enabled')
+               ('integrations', 'defectdojo.sync.cadence')
+             , ('integrations', 'fortify.ssc.sync.cadence')
+             , ('integrations', 'kenna.sync.cadence')
+             , ('scanner', 'npmaudit.enabled')
              , ('vuln-source', 'github.advisories.access.token')
+             , ('vuln-source', 'github.advisories.alias.sync.enabled')
+             , ('vuln-source', 'github.advisories.enabled')
+             , ('vuln-source', 'google.osv.alias.sync.enabled')
              , ('vuln-source', 'google.osv.base.url')
              , ('vuln-source', 'google.osv.enabled')
-             , ('vuln-source', 'google.osv.alias.sync.enabled')
-             , ('integrations', 'fortify.ssc.sync.cadence')
-             , ('integrations', 'defectdojo.sync.cadence')
-             , ('integrations', 'kenna.sync.cadence')
              );
 
             DELETE

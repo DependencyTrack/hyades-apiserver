@@ -56,7 +56,6 @@ public enum ConfigPropertyConstants {
     SCANNER_INTERNAL_FUZZY_ENABLED("scanner", "internal.fuzzy.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable non-exact fuzzy matching using the internal analyzer", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_INTERNAL_FUZZY_EXCLUDE_PURL("scanner", "internal.fuzzy.exclude.purl", "true", PropertyType.BOOLEAN, "Flag to enable/disable fuzzy matching on components that have a Package URL (PURL) defined", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_INTERNAL_FUZZY_EXCLUDE_INTERNAL("scanner", "internal.fuzzy.exclude.internal", "true", PropertyType.BOOLEAN, "Flag to enable/disable fuzzy matching on components that are marked internal.", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_NPMAUDIT_ENABLED("scanner", "npmaudit.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable NPM Audit", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_OSSINDEX_ENABLED("scanner", "ossindex.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable Sonatype OSS Index", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_OSSINDEX_API_USERNAME("scanner", "ossindex.api.username", null, PropertyType.STRING, "The API username used for OSS Index authentication", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_OSSINDEX_API_TOKEN("scanner", "ossindex.api.token", null, PropertyType.ENCRYPTEDSTRING, "The API token used for OSS Index authentication", ConfigPropertyAccessMode.READ_WRITE),
