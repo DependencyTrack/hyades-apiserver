@@ -53,20 +53,17 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.TeamDao;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.problems.TeamAlreadyExistsProblemDetails;
 import org.dependencytrack.resources.v1.vo.TeamSelfResponse;
 import org.dependencytrack.resources.v1.vo.VisibleTeams;
-import org.jdbi.v3.core.Handle;
 import org.owasp.security.logging.SecurityMarkers;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.datanucleus.PropertyNames.PROPERTY_RETAIN_VALUES;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
 /**
@@ -237,11 +234,8 @@ public class TeamResource extends AlpineResource {
             return qm.callInTransaction(() -> {
                 final Team team = qm.getObjectByUuid(Team.class, jsonTeam.getUuid(), Team.FetchGroup.ALL.name());
                 if (team != null) {
-                    String teamName = team.getName();
-                    try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
-                        final var teamDao = jdbiHandle.attach(TeamDao.class);
-                        teamDao.deleteTeam(team.getId());
-                    }
+                    final String teamName = team.getName();
+                    qm.delete(team);
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Team deleted: " + teamName);
                     return Response.status(Response.Status.NO_CONTENT).build();
                 } else {

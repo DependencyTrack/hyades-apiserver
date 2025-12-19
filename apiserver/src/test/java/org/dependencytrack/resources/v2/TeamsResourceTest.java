@@ -70,10 +70,14 @@ public class TeamsResourceTest extends ResourceTest {
                     }
                   ],
                   "_pagination": {
-                      "links": {
-                        "self": "${json-unit.any-string}",
-                        "next": "${json-unit.any-string}"
-                      }
+                    "links": {
+                      "self": "${json-unit.any-string}",
+                      "next": "${json-unit.any-string}"
+                    },
+                    "total": {
+                      "count": 3,
+                      "type": "EXACT"
+                    }
                   }
                 }
                 """);
@@ -101,6 +105,10 @@ public class TeamsResourceTest extends ResourceTest {
                   "_pagination": {
                     "links": {
                       "self": "${json-unit.any-string}"
+                    },
+                    "total": {
+                      "count": 3,
+                      "type": "EXACT"
                     }
                   }
                 }
@@ -290,6 +298,10 @@ public class TeamsResourceTest extends ResourceTest {
                       "links": {
                         "self": "${json-unit.any-string}",
                         "next": "${json-unit.any-string}"
+                      },
+                      "total": {
+                        "count": 3,
+                        "type": "EXACT"
                       }
                   }
                 }
@@ -317,6 +329,10 @@ public class TeamsResourceTest extends ResourceTest {
                   "_pagination": {
                     "links": {
                       "self": "${json-unit.any-string}"
+                    },
+                    "total": {
+                      "count": 3,
+                      "type": "EXACT"
                     }
                   }
                 }
@@ -350,6 +366,10 @@ public class TeamsResourceTest extends ResourceTest {
                   "_pagination": {
                     "links": {
                       "self": "${json-unit.any-string}"
+                    },
+                    "total": {
+                      "count": 1,
+                      "type": "EXACT"
                     }
                   }
                 }
@@ -383,6 +403,10 @@ public class TeamsResourceTest extends ResourceTest {
                   "_pagination": {
                     "links": {
                       "self": "${json-unit.any-string}"
+                    },
+                    "total": {
+                      "count": 1,
+                      "type": "EXACT"
                     }
                   }
                 }
