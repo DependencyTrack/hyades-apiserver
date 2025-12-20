@@ -19,6 +19,7 @@
 package org.dependencytrack.dex.engine.persistence;
 
 import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.common.pagination.Page.TotalCount;
 import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.common.pagination.SortDirection;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
@@ -55,8 +56,7 @@ public final class WorkflowRunDao extends AbstractDao {
             @Nullable Long lastCompletedAt,
             ListWorkflowRunsRequest.SortBy sortBy,
             SortDirection sortDirection,
-            int totalCount,
-            Page.TotalCount.Type totalCountType) implements PageToken {
+            TotalCount totalCount) implements PageToken {
     }
 
     public Page<WorkflowRunMetadata> listRuns(final ListWorkflowRunsRequest request) {
@@ -113,8 +113,7 @@ public final class WorkflowRunDao extends AbstractDao {
 
         final var decodedPageToken = decodePageToken(request.pageToken(), ListRunsPageToken.class);
 
-        int totalCount;
-        Page.TotalCount.Type totalCountType;
+        TotalCount totalCount;
         UUID lastId = null;
         Instant lastCreatedAt = null;
         Instant lastCompletedAt = null;
@@ -123,7 +122,6 @@ public final class WorkflowRunDao extends AbstractDao {
 
         if (decodedPageToken != null) {
             totalCount = decodedPageToken.totalCount();
-            totalCountType = decodedPageToken.totalCountType();
             lastId = decodedPageToken.lastId();
             lastCreatedAt = Instant.ofEpochMilli(decodedPageToken.lastCreatedAt());
             lastCompletedAt = decodedPageToken.lastCompletedAt() != null
@@ -149,16 +147,16 @@ public final class WorkflowRunDao extends AbstractDao {
                          limit 501
                       ) as t
                     """);
-            totalCount = totalCountQuery
+            final long totalCountValue = totalCountQuery
                     .define("whereConditions", whereConditions)
                     .bindMap(queryParams)
-                    .mapTo(int.class)
+                    .mapTo(long.class)
                     .one();
-            totalCountType = totalCount > 500
-                    ? Page.TotalCount.Type.AT_LEAST
-                    : Page.TotalCount.Type.EXACT;
-            totalCount = Math.min(totalCount, 500);
-
+            totalCount = new TotalCount(
+                    Math.min(totalCountValue, 500),
+                    totalCountValue > 500
+                            ? TotalCount.Type.AT_LEAST
+                            : TotalCount.Type.EXACT);
             sortBy = request.sortBy() == null
                     ? ListWorkflowRunsRequest.SortBy.ID
                     : request.sortBy();
@@ -214,7 +212,7 @@ public final class WorkflowRunDao extends AbstractDao {
                     order by id desc
                   </#if>
                 </#if>
-                 limit :limit
+                 limit (:limit + 1)
                 """);
 
         final List<WorkflowRunMetadata> rows = query
@@ -222,7 +220,7 @@ public final class WorkflowRunDao extends AbstractDao {
                 .bind("lastId", lastId)
                 .bind("lastCreatedAt", lastCreatedAt)
                 .bind("lastCompletedAt", lastCompletedAt)
-                .bind("limit", request.limit() + 1)
+                .bind("limit", request.limit())
                 .define("whereConditions", whereConditions)
                 .define("sortBy", sortBy)
                 .define("sortDirection", sortDirection)
@@ -257,12 +255,10 @@ public final class WorkflowRunDao extends AbstractDao {
                         : null,
                 sortBy,
                 sortDirection,
-                totalCount,
-                totalCountType)
+                totalCount)
                 : null;
 
-        return new Page<>(resultItems, encodePageToken(nextPageToken))
-                .withTotalCount(totalCount, totalCountType);
+        return new Page<>(resultItems, encodePageToken(nextPageToken), totalCount);
     }
 
     record ListRunHistoryPageToken(int lastSequenceNumber) implements PageToken {

@@ -17,7 +17,10 @@
 get:
   operationId: getTeam
   summary: Get a team
-  description: Returns detailed information about a given team
+  description: |-
+    Returns detailed information about a given team.
+    
+    Requires permission `ACCESS_MANAGEMENT`.
   tags:
   - Teams
   parameters:
@@ -47,7 +50,10 @@ get:
 delete:
   operationId: deleteTeam
   summary: Delete team
-  description: Delete a team
+  description: |-
+    Deletes a team.
+    
+    Requires permission `ACCESS_MANAGEMENT`.
   tags:
   - Teams
   parameters:
