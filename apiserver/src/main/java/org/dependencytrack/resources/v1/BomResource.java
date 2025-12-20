@@ -714,7 +714,7 @@ public class BomResource extends AbstractApiResource {
                     .map(org.dependencytrack.model.Tag::getName)
                     .anyMatch(validationModeTags::contains);
             return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
-                   || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
+                    || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
         }
     }
 }

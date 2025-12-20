@@ -1,3 +1,6 @@
+{#- @pebvariable name="notification" type="org.dependencytrack.notification.proto.v1.Notification" -#}
+{#- @pebvariable name="subjectJson" type="String" -#}
+{#- @pebvariable name="timestamp" type="String" -#}
 {
   "notification": {
     "id": "{{ notification.id | escape(strategy="json") }}",
