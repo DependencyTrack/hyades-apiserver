@@ -15,10 +15,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
+allOf:
+- $ref: "./paginated-response.yaml"
 properties:
-  data:
+  advisories:
     type: array
     items:
       $ref: "./list-project-advisories-response-item.yaml"
 required:
-  - data
+- advisories
+- _pagination

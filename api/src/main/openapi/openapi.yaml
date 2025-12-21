@@ -106,14 +106,10 @@ tags:
 paths:
   /advisories:
     $ref: "./paths/advisories.yaml"
-  /advisories/{advisoryId}:
-    $ref: "./paths/advisories__advisoryid_.yaml"
-  /advisories/seen/{advisoryId}:
-    $ref: "./paths/advisories_seen__advisoryid_.yaml"
-  /advisories/project/{uuid}:
-    $ref: "./paths/advisories_project__uuid_.yaml"
-  /advisories/project/{uuid}/advisory/{advisoryId}:
-    $ref: "./paths/advisories_project__uuid__advisory__advisoryid_.yaml"
+  /advisories/{id}:
+    $ref: "./paths/advisories__id_.yaml"
+  /advisories/{id}/mark-seen:
+    $ref: "./paths/advisories__id__mark-seen.yaml"
   /components:
     $ref: "./paths/components.yaml"
   /csaf-aggregators:
@@ -132,14 +128,18 @@ paths:
     $ref: "./paths/extension-points__name__extensions.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/configs:
     $ref: "./paths/extension-points__name__extensions__name__configs.yaml"
-  /projects/{uuid}/clone:
-    $ref: "./paths/projects__uuid__clone.yaml"
-  /projects/{uuid}/components:
-    $ref: "./paths/projects_uuid_components.yaml"
   /metrics/portfolio/current:
     $ref: "./paths/metrics_portfolio_current.yaml"
   /metrics/vulnerabilities:
     $ref: "./paths/metrics_vulnerabilities.yaml"
+  /projects/{uuid}/advisories:
+    $ref: "./paths/projects__uuid__advisories.yaml"
+  /projects/{projectUuid}/advisories/{advisoryId}/findings:
+    $ref: "./paths/projects__projectUuid__advisories__advisoryId__findings.yaml"
+  /projects/{uuid}/clone:
+    $ref: "./paths/projects__uuid__clone.yaml"
+  /projects/{uuid}/components:
+    $ref: "./paths/projects_uuid_components.yaml"
   /secrets:
     $ref: "./paths/secrets.yaml"
   /secrets/{name}:

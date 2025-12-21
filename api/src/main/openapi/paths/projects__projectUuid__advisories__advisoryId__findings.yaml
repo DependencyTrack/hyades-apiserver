@@ -15,32 +15,33 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 get:
-  operationId: getAdvisoriesByProject
-  summary: List advisories by project
+  operationId: getFindingsByProjectAdvisory
+  summary: List findings by project and advisory
   description: Requires permission <strong>VIEW_VULNERABILITY</strong>
   tags:
-    - Advisories
+  - Advisories
   parameters:
-    - name: uuid
-      in: path
-      description: The UUID of the project
-      required: true
-      schema:
-        type: string
-        format: uuid
+  - name: projectUuid
+    in: path
+    description: The UUID of the project
+    required: true
+    schema:
+      type: string
+      format: uuid
+  - name: advisoryId
+    in: path
+    description: The advisory ID
+    required: true
+    schema:
+      type: string
+      format: uuid
   responses:
     "200":
-      description: List of advisories for the project
-      headers:
-        X-Total-Count:
-          description: The total number of advisories
-          schema:
-            type: integer
-            format: int64
+      description: List of findings for the project and advisory
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/list-project-advisories-response.yaml"
+            $ref: "../components/schemas/list-project-advisory-findings-response.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":

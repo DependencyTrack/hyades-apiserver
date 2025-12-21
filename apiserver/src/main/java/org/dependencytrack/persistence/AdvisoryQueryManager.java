@@ -73,7 +73,7 @@ public class AdvisoryQueryManager extends QueryManager implements IQueryManager 
         advisory.setUrl(transientAdvisory.getUrl());
         advisory.setContent(transientAdvisory.getContent());
         advisory.setLastFetched(transientAdvisory.getLastFetched());
-        advisory.setSeen(transientAdvisory.isSeen());
+        advisory.setSeenAt(transientAdvisory.getSeenAt());
         return pm.makePersistent(advisory);
     }
 
@@ -83,7 +83,7 @@ public class AdvisoryQueryManager extends QueryManager implements IQueryManager 
             applyIfChanged(existing, advisory, Advisory::getTitle, existing::setTitle);
             applyIfChanged(existing, advisory, Advisory::getUrl, existing::setUrl);
             applyIfChanged(existing, advisory, Advisory::getContent, existing::setContent);
-            applyIfChanged(existing, advisory, Advisory::isSeen, existing::setSeen);
+            applyIfChanged(existing, advisory, Advisory::getSeenAt, existing::setSeenAt);
             applyIfChanged(existing, advisory, Advisory::getVersion, existing::setVersion);
             applyIfChanged(existing, advisory, Advisory::getFormat, existing::setFormat);
             applyIfChanged(existing, advisory, Advisory::getLastFetched, existing::setLastFetched);

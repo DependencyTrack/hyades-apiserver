@@ -15,25 +15,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
+allOf:
+- $ref: "./list-advisories-response-item.yaml"
 properties:
-  entity:
-    $ref: "./list-advisories-response-item.yaml"
-  affected_projects:
-    type: array
-    items:
-      $ref: "./advisory-project.yaml"
-    description: List of projects affected by this advisory
-  num_affected_components:
-    type: integer
-    format: int64
-    description: The number of affected components
-  vulnerabilities:
-    type: array
-    items:
-      $ref: "./advisory-vulnerability.yaml"
-    description: List of vulnerabilities associated with this advisory
+  content:
+    type: string
+    nullable: true
+    description: The full content of the advisory document
 required:
-  - entity
-  - affected_projects
-  - num_affected_components
-  - vulnerabilities
+- content

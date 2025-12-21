@@ -28,7 +28,6 @@ import jakarta.validation.constraints.Pattern;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.ForeignKeyAction;
-import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Join;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
@@ -37,6 +36,7 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Model for a security advisory which is fetched from an external source. It usually contains
@@ -52,8 +52,9 @@ public class Advisory implements Serializable {
      * The internal database id of the advisory.
      */
     @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
-    private long id;
+    @Persistent(customValueStrategy = "uuid-v7")
+    @Column(name = "ID", sqlType = "UUID")
+    private UUID id;
 
     /**
      * A machine-readable name of the advisory. In CSAF documents this is the "document.tracking.id" field.
@@ -107,13 +108,9 @@ public class Advisory implements Serializable {
     @Column(name = "CONTENT", jdbcType = "CLOB")
     private String content;
 
-    /**
-     * Whether the advisory has been marked as "seen" in the UI. This is a hint for users
-     * to identify new advisories since their last visit.
-     */
     @Persistent
-    @Column(name = "SEEN")
-    private boolean seen;
+    @Column(name = "SEEN_AT")
+    private Instant seenAt;
 
     /**
      * The time when the advisory was last fetched from the external source.
@@ -127,15 +124,11 @@ public class Advisory implements Serializable {
     @Element(column = "VULNERABILITY_ID", foreignKey = "ADVISORIES_VULNERABILITIES_VULNERABILITY_FK", deleteAction = ForeignKeyAction.CASCADE)
     private Set<Vulnerability> vulnerabilities;
 
-    public Advisory() {
-        // no args for jdo
-    }
-
-    public long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -195,12 +188,12 @@ public class Advisory implements Serializable {
         this.content = content;
     }
 
-    public boolean isSeen() {
-        return seen;
+    public Instant getSeenAt() {
+        return seenAt;
     }
 
-    public void setSeen(boolean seen) {
-        this.seen = seen;
+    public void setSeenAt(Instant seenAt) {
+        this.seenAt = seenAt;
     }
 
     public Instant getLastFetched() {
@@ -235,7 +228,7 @@ public class Advisory implements Serializable {
                 ", publisher='" + publisher + '\'' +
                 ", name='" + name + '\'' +
                 ", version='" + version + '\'' +
-                ", seen=" + seen +
+                ", seenAt=" + seenAt +
                 ", lastFetched=" + lastFetched +
                 '}';
     }
