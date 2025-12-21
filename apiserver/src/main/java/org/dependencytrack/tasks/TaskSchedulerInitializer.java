@@ -23,7 +23,8 @@ import alpine.event.framework.Event;
 import alpine.server.tasks.LdapSyncTask;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import org.dependencytrack.event.CsafMirrorEvent;
+import org.dependencytrack.csaf.CsafDocumentImportEvent;
+import org.dependencytrack.csaf.CsafDocumentImportTask;
 import org.dependencytrack.event.DefectDojoUploadEventAbstract;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
@@ -92,9 +93,9 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         getCronScheduleForTask(ComponentMetadataMaintenanceTask.class),
                         () -> Event.dispatch(new ComponentMetadataMaintenanceEvent()))
                 .schedule(
-                        "CSAF Mirror",
-                        getCronScheduleForTask(CsafMirrorTask.class),
-                        () -> Event.dispatch(new CsafMirrorEvent()))
+                        "CSAF Document Import",
+                        getCronScheduleForTask(CsafDocumentImportTask.class),
+                        () -> Event.dispatch(new CsafDocumentImportEvent()))
                 .schedule(
                         "Defect Dojo Upload",
                         getCronScheduleForTask(DefectDojoUploadTask.class),

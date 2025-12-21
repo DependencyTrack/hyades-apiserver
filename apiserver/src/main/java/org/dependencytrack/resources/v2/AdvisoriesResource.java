@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v2;
 
-import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
 import io.csaf.retrieval.RetrievedDocument;
 import jakarta.ws.rs.NotFoundException;
@@ -34,12 +33,9 @@ import org.dependencytrack.api.v2.model.ListProjectAdvisoriesResponseItem;
 import org.dependencytrack.api.v2.model.ListProjectAdvisoryFindingsResponseItem;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.pagination.Page;
-import org.dependencytrack.datasource.vuln.csaf.CsafSource;
-import org.dependencytrack.datasource.vuln.csaf.ModelConverter;
+import org.dependencytrack.csaf.CsafModelConverter;
 import org.dependencytrack.model.Advisory;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.VulnerableSoftware;
-import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
@@ -49,8 +45,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.net.URI;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -65,7 +61,6 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction
  */
 @Path("/")
 public class AdvisoriesResource extends AbstractApiResource implements AdvisoriesApi {
-    private static final Logger LOGGER = Logger.getLogger(AdvisoriesResource.class);
 
     @Override
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
@@ -116,7 +111,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
     public Response uploadAdvisory(
             String format,
             InputStream _fileInputStream) {
-        try (var qm = new QueryManager(); var uploadBuffer = new ByteArrayOutputStream()) {
+        try (var qm = new QueryManager(getAlpineRequest()); var uploadBuffer = new ByteArrayOutputStream()) {
             _fileInputStream.transferTo(uploadBuffer);
             String content = uploadBuffer.toString();
             // TODO(oxisto): retrieve URL from form data again
@@ -143,54 +138,33 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
      * @return a JAX-RS Response indicating success or error
      */
     private Response processCsafDocument(String content, String fileName, QueryManager qm) {
+        final var result = RetrievedDocument.fromJson(content, fileName);
+        if (result.isFailure()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("The uploaded file is not a valid CSAF document: " +
+                            (result.exceptionOrNull() != null
+                                    ? result.exceptionOrNull().getMessage()
+                                    : null))
+                    .build();
+        }
+
         return qm.callInTransaction(() -> {
-            final var result = RetrievedDocument.fromJson(content, fileName);
-            if (result.isFailure()) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity("The uploaded file is not a valid CSAF document: " +
-                                (result.exceptionOrNull() != null
-                                        ? result.exceptionOrNull().getMessage()
-                                        : null))
-                        .build();
-            }
-            assert result.getOrNull() != null;
-            final var doc = result.getOrNull().getJson();
-            final var publisher = doc.getDocument().getPublisher().getNamespace().toString();
-
             // Create a new advisory that we have already "seen" and was just fetched
-            final var advisory = new Advisory();
-            advisory.setTitle(doc.getDocument().getTitle());
-            advisory.setUrl(fileName);
-            advisory.setContent(content);
-            advisory.setLastFetched(Instant.now());
-            advisory.setPublisher(publisher);
-            advisory.setName(doc.getDocument().getTracking().getId());
-            advisory.setVersion(doc.getDocument().getTracking().getVersion());
-            advisory.setFormat("CSAF");
-            advisory.setSeen(true);
+            final Advisory transientAdvisory = CsafModelConverter.convert(result.getOrNull());
+            transientAdvisory.setLastFetched(Instant.now());
+            transientAdvisory.setSeen(true);
 
-            // Create a pseudo-source populated by the information we have
-            var manual = new CsafSource();
-            manual.setDomain(true);
-            manual.setUrl(URI.create(publisher).getHost());
-            manual.setName(publisher);
+            final Advisory persistentAdvisory = qm.synchronizeAdvisory(transientAdvisory);
 
-            final var bov = ModelConverter.convert(result, manual);
-            for (final var v : bov.getVulnerabilitiesList()) {
-                final Vulnerability vuln = BovModelConverter.convert(bov, v, true);
-                final List<VulnerableSoftware> vsList = BovModelConverter
-                        .extractVulnerableSoftware(bov);
+            if (transientAdvisory.getVulnerabilities() != null) {
+                final var persistentVulns = new HashSet<Vulnerability>(
+                        transientAdvisory.getVulnerabilities().size());
+                for (final Vulnerability vuln : transientAdvisory.getVulnerabilities()) {
+                    persistentVulns.add(qm.synchronizeVulnerability(vuln, false));
+                }
 
-                LOGGER.debug("Synchronizing vulnerability " + vuln.getVulnId());
-                final Vulnerability persistentVuln = qm.synchronizeVulnerability(vuln, false);
-                qm.synchronizeVulnerableSoftware(persistentVuln, vsList, Vulnerability.Source.CSAF);
-
-                advisory.addVulnerability(persistentVuln);
+                persistentAdvisory.setVulnerabilities(persistentVulns);
             }
-
-            // Sync the document into the database, replacing an older version with the same
-            // combination of tracking ID and publisher namespace if necessary
-            qm.synchronizeAdvisory(advisory);
 
             return Response.ok("File uploaded successfully: " + fileName).build();
         });
@@ -199,7 +173,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
     @Override
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE)
     public Response deleteAdvisory(String advisoryId) {
-        try (final var qm = new QueryManager()) {
+        try (final var qm = new QueryManager(getAlpineRequest())) {
             return qm.callInTransaction(() -> {
                 try {
                     final Advisory entity = qm.getObjectById(Advisory.class, advisoryId);
@@ -220,7 +194,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
     @Override
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE)
     public Response markAdvisoryAsSeen(String advisoryId) {
-        return inJdbiTransaction(handle -> {
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
             final var advisoryDao = handle.attach(AdvisoryDao.class);
             final long id;
             try {
@@ -257,7 +231,7 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
     @Override
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_READ)
     public Response getAdvisoryById(Long advisoryId) {
-        return inJdbiTransaction(handle -> {
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
             final var advisoryDao = handle.attach(AdvisoryDao.class);
             final var advisory = advisoryDao.getAdvisoryById(advisoryId);
             if (advisory == null) {

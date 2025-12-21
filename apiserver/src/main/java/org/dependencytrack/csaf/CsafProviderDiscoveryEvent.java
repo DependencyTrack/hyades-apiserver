@@ -16,19 +16,29 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.exception;
+package org.dependencytrack.csaf;
+
+import alpine.event.framework.SingletonCapableEvent;
+
+import java.util.UUID;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
  */
-public final class AlreadyExistsException extends RuntimeException {
+public class CsafProviderDiscoveryEvent extends SingletonCapableEvent {
 
-    public AlreadyExistsException(String message, Throwable cause) {
-        super(message, cause);
+    private final CsafAggregator aggregator;
+
+    public CsafProviderDiscoveryEvent(CsafAggregator aggregator) {
+        this.aggregator = requireNonNull(aggregator, "aggregator must not be null");
+        setChainIdentifier(UUID.nameUUIDFromBytes(aggregator.getName().getBytes()));
+        setSingleton(true);
     }
 
-    public AlreadyExistsException(String message) {
-        super(message);
+    public CsafAggregator getAggregator() {
+        return aggregator;
     }
 
 }

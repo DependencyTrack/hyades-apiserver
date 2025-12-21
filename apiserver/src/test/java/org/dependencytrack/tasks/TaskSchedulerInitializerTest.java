@@ -32,7 +32,7 @@ public class TaskSchedulerInitializerTest {
         initializer.contextInitialized(null);
 
         assertThat(scheduler.scheduledTaskIds()).containsExactlyInAnyOrder(
-                "CSAF Mirror",
+                "CSAF Document Import",
                 "Component Metadata Maintenance",
                 "Defect Dojo Upload",
                 "EPSS Mirror",

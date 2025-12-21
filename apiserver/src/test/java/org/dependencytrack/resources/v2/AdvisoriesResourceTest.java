@@ -151,7 +151,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
         // Create an unseen advisory
-        final Advisory advisory = new Advisory();
+        Advisory advisory = new Advisory();
         advisory.setTitle("Unseen Advisory");
         advisory.setUrl("https://example.com/advisory");
         advisory.setContent("{\"test\":\"content\"}");
@@ -161,7 +161,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         advisory.setVersion("1.0");
         advisory.setFormat("CSAF");
         advisory.setSeen(false);
-        qm.synchronizeAdvisory(advisory);
+        advisory = qm.synchronizeAdvisory(advisory);
 
         final long advisoryId = advisory.getId();
 
@@ -183,7 +183,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
 
         // Create an advisory
-        final Advisory advisory = new Advisory();
+        Advisory advisory = new Advisory();
         advisory.setTitle("Single Advisory");
         advisory.setUrl("https://example.com/single");
         advisory.setContent("{\"test\":\"single\"}");
@@ -193,7 +193,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         advisory.setVersion("1.0");
         advisory.setFormat("CSAF");
         advisory.setSeen(true);
-        qm.synchronizeAdvisory(advisory);
+        advisory = qm.synchronizeAdvisory(advisory);
 
         final long advisoryId = advisory.getId();
 
@@ -232,7 +232,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
         // Create an advisory to delete
-        final Advisory advisory = new Advisory();
+        Advisory advisory = new Advisory();
         advisory.setTitle("Advisory to Delete");
         advisory.setUrl("https://example.com/advisory");
         advisory.setContent("{\"test\":\"content\"}");
@@ -242,7 +242,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         advisory.setVersion("1.0");
         advisory.setFormat("CSAF");
         advisory.setSeen(false);
-        qm.synchronizeAdvisory(advisory);
+        advisory = qm.synchronizeAdvisory(advisory);
 
         final long advisoryId = advisory.getId();
 

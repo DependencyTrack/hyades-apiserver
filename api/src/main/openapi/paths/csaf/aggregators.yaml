@@ -1,0 +1,86 @@
+# This file is part of Dependency-Track.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) OWASP Foundation. All Rights Reserved.
+get:
+  operationId: listCsafAggregators
+  summary: List CSAF aggregators
+  description: |-
+    Returns a paginated list of CSAF aggregators, sorted by namespace in ascending order.
+    
+    Always reports `EXACT` total counts.
+    
+    Requires the `SYSTEM_CONFIGURATION` or `SYSTEM_CONFIGURATION_READ` permission.
+  tags:
+  - CSAF
+  parameters:
+  - name: search_text
+    in: query
+    description: >-
+      Search text to filter aggregators.
+      Has "contains" semantics on the `namespace`, `name`, and `url` fields.
+      Is treated case-insensitively.
+    schema:
+      type: string
+  - $ref: "../../components/parameters/page-token.yaml"
+  - $ref: "../../components/parameters/pagination-limit.yaml"
+  responses:
+    "200":
+      description: Paginated list of CSAF aggregators
+      content:
+        application/json:
+          schema:
+            $ref: "../../components/schemas/csaf/list-csaf-aggregators-response.yaml"
+    "401":
+      $ref: "../../components/responses/generic-unauthorized-error.yaml"
+    "403":
+      $ref: "../../components/responses/generic-forbidden-error.yaml"
+    default:
+      $ref: "../../components/responses/generic-error.yaml"
+
+post:
+  operationId: createCsafAggregator
+  summary: Create a new CSAF aggregator
+  description: |-
+    Requires the `SYSTEM_CONFIGURATION` or `SYSTEM_CONFIGURATION_CREATE` permission.
+  tags:
+  - CSAF
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: "../../components/schemas/csaf/create-csaf-aggregator-request.yaml"
+  responses:
+    "201":
+      description: CSAF aggregator created
+      content:
+        application/json:
+          schema:
+            $ref: "../../components/schemas/csaf/csaf-aggregator.yaml"
+    "400":
+      $ref: "../../components/responses/invalid-request-error.yaml"
+    "401":
+      $ref: "../../components/responses/generic-unauthorized-error.yaml"
+    "403":
+      $ref: "../../components/responses/generic-forbidden-error.yaml"
+    "409":
+      description: A CSAF aggregator with the specified URL already exists
+      content:
+        application/problem+json:
+          schema:
+            $ref: "../../components/schemas/problem-details.yaml"
+    default:
+      $ref: "../../components/responses/generic-error.yaml"
