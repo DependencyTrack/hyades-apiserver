@@ -22,9 +22,11 @@ import io.csaf.retrieval.RetrievedDocument;
 import io.csaf.schema.generated.Csaf;
 import kotlinx.serialization.json.Json;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao;
-import org.dependencytrack.persistence.jdbi.AdvisoryDao.AdvisoryDetailRow;
+import org.dependencytrack.persistence.jdbi.AdvisoryDao.ListAdvisoriesRow;
+import org.dependencytrack.persistence.jdbi.query.ListAdvisoriesQuery;
 import org.jdbi.v3.core.Handle;
 import org.junit.Test;
 
@@ -80,16 +82,16 @@ public class CsafDocumentImportTaskTest extends PersistenceCapableTest {
         final var task = new CsafDocumentImportTask(clientMock);
         task.inform(new CsafDocumentImportEvent());
 
-        final List<AdvisoryDetailRow> advisories = advisoryDao.getAllAdvisories(null, null);
-        assertThat(advisories).satisfiesExactly(advisory -> {
+        final Page<ListAdvisoriesRow> advisories = advisoryDao.list(new ListAdvisoriesQuery());
+        assertThat(advisories.items()).satisfiesExactly(advisory -> {
             assertThat(advisory.publisher()).isEqualTo("https://csaf.io");
             assertThat(advisory.name()).isEqualTo("OASIS_CSAF_TC-CSAF_2.0-2021-6-1-04-11");
             assertThat(advisory.title()).isEqualTo("Mandatory test: Missing Definition of Product Group ID (valid example 1)");
             assertThat(advisory.version()).isEqualTo("1");
             assertThat(advisory.format()).isEqualTo("CSAF");
-            assertThat(advisory.url()).isEqualTo("https://example.com/csaf/advisory.json");
+            assertThat(advisory.url()).asString().isEqualTo("https://example.com/csaf/advisory.json");
             assertThat(advisory.lastFetched()).isNotNull();
-            assertThat(advisory.seen()).isFalse();
+            assertThat(advisory.seenAt()).isNull();
         });
 
         final List<Vulnerability> vulns = qm.getVulnerabilities().getList(Vulnerability.class);

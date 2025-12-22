@@ -14,52 +14,23 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
-get:
-  operationId: getAdvisoryById
-  summary: Get advisory details
-  description: Requires permission <strong>VULNERABILITY_ANALYSIS_READ</strong>
-  tags:
-    - Advisories
-  parameters:
-    - name: advisoryId
-      in: path
-      description: The ID of the advisory to view
-      required: true
-      schema:
-        type: integer
-        format: int64
-  responses:
-    "200":
-      description: Advisory details
-      content:
-        application/json:
-          schema:
-            $ref: "../components/schemas/get-advisory-response.yaml"
-    "401":
-      $ref: "../components/responses/generic-unauthorized-error.yaml"
-    "403":
-      $ref: "../components/responses/generic-forbidden-error.yaml"
-    "404":
-      $ref: "../components/responses/generic-not-found-error.yaml"
-    default:
-      $ref: "../components/responses/generic-error.yaml"
-
-delete:
-  operationId: deleteAdvisory
-  summary: Delete advisory
+post:
+  operationId: markAdvisoryAsSeen
+  summary: Mark advisory as seen
   description: Requires permission <strong>VULNERABILITY_ANALYSIS_UPDATE</strong>
   tags:
-    - Advisories
+  - Advisories
   parameters:
-    - name: advisoryId
-      in: path
-      description: The ID of the advisory to delete
-      required: true
-      schema:
-        type: string
+  - name: id
+    in: path
+    description: The ID of the advisory to mark as seen
+    required: true
+    schema:
+      type: string
+      format: uuid
   responses:
     "204":
-      description: Advisory Deleted
+      description: Advisory Marked as Seen
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":

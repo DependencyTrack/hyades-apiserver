@@ -17,31 +17,32 @@
 get:
   operationId: listAdvisories
   summary: List all advisories
-  description: Requires permission <strong>VIEW_VULNERABILITY</strong>
+  description: |-
+    Returns a paginated list of advisories, sorted by name in ascending order.
+
+    Always reports `EXACT` total counts.
+
+    Requires the `VULNERABILITY_MANAGEMENT` or `VULNERABILITY_MANAGEMENT_READ` permission.
   tags:
-    - Advisories
+  - Advisories
   parameters:
-    - name: format
-      in: query
-      description: Filter advisories by format (e.g., CSAF)
-      required: false
-      schema:
-        type: string
-    - name: search_text
-      in: query
-      description: Search text to filter advisories
-      required: false
-      schema:
-        type: string
+  - name: format
+    in: query
+    description: Filter advisories by format (e.g., CSAF)
+    required: false
+    schema:
+      type: string
+  - name: search_text
+    in: query
+    description: Search text to filter advisories
+    required: false
+    schema:
+      type: string
+  - $ref: "../components/parameters/page-token.yaml"
+  - $ref: "../components/parameters/pagination-limit.yaml"
   responses:
     "200":
-      description: List of advisories
-      headers:
-        X-Total-Count:
-          description: The total number of advisories
-          schema:
-            type: integer
-            format: int64
+      description: Paginated list of advisories
       content:
         application/json:
           schema:

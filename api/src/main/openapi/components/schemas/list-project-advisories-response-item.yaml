@@ -16,27 +16,44 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  name:
-    type: string
-    description: The name/title of the advisory
-  project_uuid:
+  id:
     type: string
     format: uuid
-    description: The project UUID
+    description: The unique identifier of the advisory
+  publisher:
+    type: string
+    description: The publisher of the advisory
+  name:
+    type: string
+    description: The name/tracking ID of the advisory
+  version:
+    type: string
+    description: The version of the advisory
+  title:
+    type: string
+    description: The title of the advisory
   url:
     type: string
+    format: uri
     description: The URL of the advisory
-  document_id:
+  seen_at:
+    $ref: "./timestamp.yaml"
+  last_fetched:
+    $ref: "./timestamp.yaml"
+  format:
+    type: string
+    description: The format of the advisory (e.g., CSAF)
+  findings_count:
     type: integer
-    format: int32
-    description: The advisory document ID
-  findings_per_doc:
-    type: integer
-    format: int32
+    format: int64
     description: The number of findings for this advisory in the project
 required:
-  - name
-  - project_uuid
-  - url
-  - document_id
-  - findings_per_doc
+- id
+- publisher
+- name
+- version
+- title
+- url
+- last_fetched
+- format
+- findings_count

@@ -17,20 +17,9 @@
 type: object
 properties:
   id:
-    type: integer
-    format: int64
+    type: string
+    format: uuid
     description: The unique identifier of the advisory
-  title:
-    type: string
-    description: The title of the advisory
-  url:
-    type: string
-    description: The URL of the advisory
-  seen:
-    type: boolean
-    description: Whether the advisory has been marked as seen
-  last_fetched:
-    $ref: "./timestamp.yaml"
   publisher:
     type: string
     description: The publisher of the advisory
@@ -40,21 +29,32 @@ properties:
   version:
     type: string
     description: The version of the advisory
+  title:
+    type: string
+    description: The title of the advisory
+  url:
+    type: string
+    format: uri
+    description: The URL of the advisory
+  seen_at:
+    $ref: "./timestamp.yaml"
+  last_fetched:
+    $ref: "./timestamp.yaml"
   format:
     type: string
     description: The format of the advisory (e.g., CSAF)
-  affected_components:
+  affected_component_count:
     type: integer
     format: int32
-    description: The number of affected components
-  affected_projects:
+    description: >-
+      The number of affected components. Reports counts up to 1001.
+      A number of 1001 should be interpreted as "more than 1000 components".
+  affected_project_count:
     type: integer
     format: int32
-    description: The number of affected projects
-  content:
-    type: string
-    nullable: true
-    description: The full content of the advisory document
+    description: >-
+      The number of affected projects. Reports counts up to 1001.
+      A number of 1001 should be interpreted as "more than 1000 projects".
 required:
   - id
   - title
@@ -64,5 +64,5 @@ required:
   - publisher
   - name
   - version
-  - affected_components
-  - affected_projects
+  - affected_component_count
+  - affected_project_count
