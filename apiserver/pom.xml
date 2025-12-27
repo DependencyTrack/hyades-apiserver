@@ -26,7 +26,6 @@
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.kotlin-stdlib.version>2.2.21</lib.kotlin-stdlib.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
-        <lib.swagger.version>2.2.41</lib.swagger.version>
         <lib.swagger-parser.version>2.1.37</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.woodstox.version>7.1.1</lib.woodstox.version>
@@ -95,6 +94,11 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>plugin-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>plugin-runtime</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -263,12 +267,10 @@
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-jaxrs2-jakarta</artifactId>
-            <version>${lib.swagger.version}</version>
         </dependency>
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-annotations-jakarta</artifactId>
-            <version>${lib.swagger.version}</version>
         </dependency>
         <dependency>
             <groupId>io.swagger.parser.v3</groupId>

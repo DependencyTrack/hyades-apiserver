@@ -19,8 +19,8 @@
 package org.dependencytrack.filestorage.local;
 
 import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.config.MockConfigRegistry;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
+import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +34,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.filestorage.local.LocalFileStorageConfigs.CONFIG_DIRECTORY;
 
 class LocalFileStorageTest {
 
@@ -65,7 +64,7 @@ class LocalFileStorageTest {
     void shouldStoreGetAndDeleteFile() throws Exception {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
+                "directory", tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -91,7 +90,7 @@ class LocalFileStorageTest {
     void storeShouldOverwriteExistingFile() throws Exception {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
+                "directory", tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -107,7 +106,7 @@ class LocalFileStorageTest {
     void storeShouldThrowWhenFileNameAttemptsTraversal() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
+                "directory", tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -123,7 +122,7 @@ class LocalFileStorageTest {
     void storeShouldThrowWhenFileHasInvalidName() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
+                "directory", tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -137,7 +136,7 @@ class LocalFileStorageTest {
     void getShouldThrowWhenFileLocationHasInvalidScheme() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
+                "directory", tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -154,7 +153,7 @@ class LocalFileStorageTest {
     void getShouldThrowWhenFileNameAttemptsTraversal() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
+                "directory", tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -174,7 +173,7 @@ class LocalFileStorageTest {
     void getShouldThrowWhenFileDoesNotExist() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
+                "directory", tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -191,7 +190,7 @@ class LocalFileStorageTest {
     void deleteShouldReturnFalseWhenFileDoesNotExist() throws Exception {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
+                "directory", tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -207,7 +206,7 @@ class LocalFileStorageTest {
     void deleteShouldThrowWhenFileLocationHasInvalidScheme() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
+                "directory", tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
