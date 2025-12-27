@@ -22,7 +22,6 @@
         <lib.commons-compress.version>1.28.0</lib.commons-compress.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>11.0.1</lib.cyclonedx-java.version>
-        <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
         <lib.kafka.version>4.1.1</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.kotlin-stdlib.version>2.2.21</lib.kotlin-stdlib.version>
@@ -441,11 +440,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.glassfish.jersey.connectors</groupId>
-            <artifactId>jersey-grizzly-connector</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
@@ -571,8 +565,9 @@
                     <argLine>
                         @{argLine}
                         -Xmx512m
-                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.net=ALL-UNNAMED
                         --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
                         -javaagent:${settings.localRepository}/org/mockito/mockito-core/${lib.mockito.version}/mockito-core-${lib.mockito.version}.jar
                         -Xshare:off
                     </argLine>
@@ -773,8 +768,8 @@
             </plugin>
 
             <plugin>
-                <groupId>org.eclipse.jetty.ee10</groupId>
-                <artifactId>jetty-ee10-maven-plugin</artifactId>
+                <groupId>org.eclipse.jetty.ee11</groupId>
+                <artifactId>jetty-ee11-maven-plugin</artifactId>
                 <version>${lib.jetty.version}</version>
                 <configuration>
                     <webApp>
@@ -829,8 +824,8 @@
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.eclipse.jetty.ee10</groupId>
-                        <artifactId>jetty-ee10-maven-plugin</artifactId>
+                        <groupId>org.eclipse.jetty.ee11</groupId>
+                        <artifactId>jetty-ee11-maven-plugin</artifactId>
                         <executions>
                             <execution>
                                 <phase>verify</phase>

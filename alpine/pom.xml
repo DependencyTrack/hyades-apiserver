@@ -81,7 +81,6 @@
         <lib.commons.io.version>2.21.0</lib.commons.io.version>
         <lib.commons.lang3.version>3.20.0</lib.commons.lang3.version>
         <lib.h2.version>2.4.240</lib.h2.version>
-        <lib.jaxb-runtime.version>4.0.6</lib.jaxb-runtime.version>
         <lib.jsonwebtoken.version>0.13.0</lib.jsonwebtoken.version>
         <lib.logback.version>1.5.23</lib.logback.version>
         <lib.logstash-logback-encoder.version>8.1</lib.logstash-logback-encoder.version>
@@ -110,12 +109,6 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-collections4</artifactId>
                 <version>${lib.commons.collections4.version}</version>
-            </dependency>
-            <!-- JAXB -->
-            <dependency>
-                <groupId>org.glassfish.jaxb</groupId>
-                <artifactId>jaxb-runtime</artifactId>
-                <version>${lib.jaxb-runtime.version}</version>
             </dependency>
             <!-- JSON API specification and default implementation -->
             <dependency>
