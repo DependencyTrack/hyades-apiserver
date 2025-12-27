@@ -33,6 +33,7 @@ import org.glassfish.jersey.media.multipart.MultiPartFeature;
 
 import static org.glassfish.jersey.server.ServerProperties.PROVIDER_PACKAGES;
 import static org.glassfish.jersey.server.ServerProperties.PROVIDER_SCANNING_RECURSIVE;
+import static org.glassfish.jersey.server.ServerProperties.WADL_FEATURE_DISABLE;
 
 /**
  * @since 5.6.0
@@ -45,6 +46,7 @@ public final class ResourceConfig extends org.glassfish.jersey.server.ResourceCo
         // specific features that do not necessarily overlap with v1.
         property(PROVIDER_PACKAGES, getClass().getPackageName());
         property(PROVIDER_SCANNING_RECURSIVE, true);
+        property(WADL_FEATURE_DISABLE, true);
 
         register(ApiFilter.class);
         register(AuthenticationFeature.class);

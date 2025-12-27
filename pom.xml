@@ -119,11 +119,11 @@
         <lib.flyway.version>11.19.0</lib.flyway.version>
         <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
         <lib.httpclient5.version>5.6</lib.httpclient5.version>
-        <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
+        <lib.jakarta-ee.version>11.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.2.0</lib.java-uuid-generator.version>
         <lib.jackson.version>2.20.1</lib.jackson.version>
         <lib.jdbi.version>3.50.0</lib.jdbi.version>
-        <lib.jersey.version>3.1.11</lib.jersey.version>
+        <lib.jersey.version>4.0.0</lib.jersey.version>
         <lib.jetty.version>12.1.5</lib.jetty.version>
         <lib.json-unit.version>5.1.0</lib.json-unit.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
@@ -301,8 +301,8 @@
                 <type>pom</type>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.jetty.ee10</groupId>
-                <artifactId>jetty-ee10-bom</artifactId>
+                <groupId>org.eclipse.jetty.ee11</groupId>
+                <artifactId>jetty-ee11-bom</artifactId>
                 <version>${lib.jetty.version}</version>
                 <scope>import</scope>
                 <type>pom</type>

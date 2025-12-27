@@ -18,12 +18,13 @@
  */
 package org.dependencytrack;
 
+import jakarta.ws.rs.client.WebTarget;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.dependencytrack.resources.v2.OpenApiValidationClientResponseFilter;
 import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
-import org.glassfish.jersey.grizzly.connector.GrizzlyConnectorProvider;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.test.DeploymentContext;
@@ -34,7 +35,6 @@ import org.glassfish.jersey.test.spi.TestContainerException;
 import org.glassfish.jersey.test.spi.TestContainerFactory;
 import org.junit.rules.ExternalResource;
 
-import jakarta.ws.rs.client.WebTarget;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -57,10 +57,11 @@ public class JerseyTestRule extends ExternalResource {
 
             @Override
             protected void configureClient(final ClientConfig config) {
-                // Prevent InaccessibleObjectException with JDK >= 16 when performing PATCH requests
-                // using the default HttpUrlConnection connector provider.
-                // See https://github.com/eclipse-ee4j/jersey/issues/4825
-                config.connectorProvider(new GrizzlyConnectorProvider());
+                config.connectorProvider(
+                        new HttpUrlConnectorProvider()
+                                // Required for PATCH support.
+                                // See https://github.com/eclipse-ee4j/jersey/issues/4825
+                                .useSetMethodWorkaround());
 
                 if (isV2) {
                     config.register(OpenApiValidationClientResponseFilter.class);
