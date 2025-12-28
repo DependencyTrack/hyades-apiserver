@@ -21,8 +21,8 @@ package org.dependencytrack.filestorage.s3;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.config.MockConfigRegistry;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
+import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,10 +39,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_ACCESS_KEY;
-import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_BUCKET;
-import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_ENDPOINT;
-import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_SECRET_KEY;
 
 class S3FileStorageTest {
 
@@ -91,10 +87,10 @@ class S3FileStorageTest {
     @Test
     void initShouldThrowWhenBucketDoesNotExist() {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
-                Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
-                Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
-                Map.entry(CONFIG_SECRET_KEY.name(), minioContainer.getPassword()),
-                Map.entry(CONFIG_BUCKET.name(), "does-not-exist")));
+                Map.entry("endpoint", minioContainer.getS3URL()),
+                Map.entry("access.key", minioContainer.getUserName()),
+                Map.entry("secret.key", minioContainer.getPassword()),
+                Map.entry("bucket", "does-not-exist")));
 
         try (final var storageFactory = new S3FileStorageFactory()) {
             assertThatExceptionOfType(IllegalStateException.class)
@@ -106,10 +102,10 @@ class S3FileStorageTest {
     @Test
     void initShouldThrowWhenBucketExistenceCheckFailed() {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
-                Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
-                Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
-                Map.entry(CONFIG_SECRET_KEY.name(), minioContainer.getPassword()),
-                Map.entry(CONFIG_BUCKET.name(), "does-not-exist")));
+                Map.entry("endpoint", minioContainer.getS3URL()),
+                Map.entry("access.key", minioContainer.getUserName()),
+                Map.entry("secret.key", minioContainer.getPassword()),
+                Map.entry("bucket", "does-not-exist")));
 
         try (final var storageFactory = new S3FileStorageFactory()) {
             minioContainer.stop();
@@ -123,10 +119,10 @@ class S3FileStorageTest {
     @Test
     void shouldStoreAndGetAndDeleteFile() throws Exception {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
-                Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
-                Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
-                Map.entry(CONFIG_SECRET_KEY.name(), minioContainer.getPassword()),
-                Map.entry(CONFIG_BUCKET.name(), "test")));
+                Map.entry("endpoint", minioContainer.getS3URL()),
+                Map.entry("access.key", minioContainer.getUserName()),
+                Map.entry("secret.key", minioContainer.getPassword()),
+                Map.entry("bucket", "test")));
 
         try (final var storageFactory = new S3FileStorageFactory()) {
             storageFactory.init(new ExtensionContext(configRegistry));
@@ -150,10 +146,10 @@ class S3FileStorageTest {
     @Test
     void storeShouldOverwriteExistingFile() throws Exception {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
-                Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
-                Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
-                Map.entry(CONFIG_SECRET_KEY.name(), minioContainer.getPassword()),
-                Map.entry(CONFIG_BUCKET.name(), "test")));
+                Map.entry("endpoint", minioContainer.getS3URL()),
+                Map.entry("access.key", minioContainer.getUserName()),
+                Map.entry("secret.key", minioContainer.getPassword()),
+                Map.entry("bucket", "test")));
 
         try (final var storageFactory = new S3FileStorageFactory()) {
             storageFactory.init(new ExtensionContext(configRegistry));
@@ -171,10 +167,10 @@ class S3FileStorageTest {
     @Test
     void storeShouldThrowWhenFileHasInvalidName() {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
-                Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
-                Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
-                Map.entry(CONFIG_SECRET_KEY.name(), minioContainer.getPassword()),
-                Map.entry(CONFIG_BUCKET.name(), "test")));
+                Map.entry("endpoint", minioContainer.getS3URL()),
+                Map.entry("access.key", minioContainer.getUserName()),
+                Map.entry("secret.key", minioContainer.getPassword()),
+                Map.entry("bucket", "test")));
 
         try (final var storageFactory = new S3FileStorageFactory()) {
             storageFactory.init(new ExtensionContext(configRegistry));
@@ -192,10 +188,10 @@ class S3FileStorageTest {
     @Test
     void storeShouldThrowWhenHostIsUnavailable() {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
-                Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
-                Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
-                Map.entry(CONFIG_SECRET_KEY.name(), minioContainer.getPassword()),
-                Map.entry(CONFIG_BUCKET.name(), "test")));
+                Map.entry("endpoint", minioContainer.getS3URL()),
+                Map.entry("access.key", minioContainer.getUserName()),
+                Map.entry("secret.key", minioContainer.getPassword()),
+                Map.entry("bucket", "test")));
 
         try (final var storageFactory = new S3FileStorageFactory()) {
             storageFactory.init(new ExtensionContext(configRegistry));
@@ -212,10 +208,10 @@ class S3FileStorageTest {
     @Test
     void getShouldThrowWhenFileDoesNotExist() {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
-                Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
-                Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
-                Map.entry(CONFIG_SECRET_KEY.name(), minioContainer.getPassword()),
-                Map.entry(CONFIG_BUCKET.name(), "test")));
+                Map.entry("endpoint", minioContainer.getS3URL()),
+                Map.entry("access.key", minioContainer.getUserName()),
+                Map.entry("secret.key", minioContainer.getPassword()),
+                Map.entry("bucket", "test")));
 
         try (final var storageFactory = new S3FileStorageFactory()) {
             storageFactory.init(new ExtensionContext(configRegistry));
@@ -234,10 +230,10 @@ class S3FileStorageTest {
     @Test
     void getShouldThrowWhenHostIsUnavailable() throws Exception {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
-                Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
-                Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
-                Map.entry(CONFIG_SECRET_KEY.name(), minioContainer.getPassword()),
-                Map.entry(CONFIG_BUCKET.name(), "test")));
+                Map.entry("endpoint", minioContainer.getS3URL()),
+                Map.entry("access.key", minioContainer.getUserName()),
+                Map.entry("secret.key", minioContainer.getPassword()),
+                Map.entry("bucket", "test")));
 
         try (final var storageFactory = new S3FileStorageFactory()) {
             storageFactory.init(new ExtensionContext(configRegistry));
@@ -257,10 +253,10 @@ class S3FileStorageTest {
     @Test
     void deleteShouldReturnTrueWhenFileDoesNotExist() throws Exception {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
-                Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
-                Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
-                Map.entry(CONFIG_SECRET_KEY.name(), minioContainer.getPassword()),
-                Map.entry(CONFIG_BUCKET.name(), "test")));
+                Map.entry("endpoint", minioContainer.getS3URL()),
+                Map.entry("access.key", minioContainer.getUserName()),
+                Map.entry("secret.key", minioContainer.getPassword()),
+                Map.entry("bucket", "test")));
 
         try (final var storageFactory = new S3FileStorageFactory()) {
             storageFactory.init(new ExtensionContext(configRegistry));
@@ -277,10 +273,10 @@ class S3FileStorageTest {
     @Test
     void deleteShouldThrowWhenHostIsUnavailable() throws Exception {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
-                Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
-                Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
-                Map.entry(CONFIG_SECRET_KEY.name(), minioContainer.getPassword()),
-                Map.entry(CONFIG_BUCKET.name(), "test")));
+                Map.entry("endpoint", minioContainer.getS3URL()),
+                Map.entry("access.key", minioContainer.getUserName()),
+                Map.entry("secret.key", minioContainer.getPassword()),
+                Map.entry("bucket", "test")));
 
         try (final var storageFactory = new S3FileStorageFactory()) {
             storageFactory.init(new ExtensionContext(configRegistry));

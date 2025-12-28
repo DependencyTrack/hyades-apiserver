@@ -576,4 +576,32 @@
             <column name="SEEN_AT" type="TIMESTAMPTZ(3)"/>
         </addColumn>
     </changeSet>
+
+    <changeSet id="v5.7.0-27" author="nscuro">
+        <createTable tableName="EXTENSION_RUNTIME_CONFIG">
+            <column name="EXTENSION_POINT" type="TEXT"/>
+            <column name="EXTENSION" type="TEXT"/>
+            <column name="CONFIG" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="EXTENSION_RUNTIME_CONFIG"
+                columnNames="EXTENSION_POINT, EXTENSION"
+                constraintName="EXTENSION_RUNTIME_CONFIG_PK"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-28" author="nscuro">
+        <sql>
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = 'vuln.datasource'
+               AND "PROPERTYNAME" LIKE 'extension.%';
+        </sql>
+    </changeSet>
 </databaseChangeLog>

@@ -34,7 +34,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -60,7 +59,7 @@ final class NvdVulnDataSource implements VulnDataSource {
     private static final Logger LOGGER = LoggerFactory.getLogger(NvdVulnDataSource.class);
 
     private final WatermarkManager watermarkManager;
-    private final URL feedsUrl;
+    private final String feedsUrl;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final List<NvdDataFeed> feeds;
@@ -76,7 +75,7 @@ final class NvdVulnDataSource implements VulnDataSource {
             final WatermarkManager watermarkManager,
             final ObjectMapper objectMapper,
             final HttpClient httpClient,
-            final URL feedsUrl) {
+            final String feedsUrl) {
         this.watermarkManager = watermarkManager;
         this.objectMapper = objectMapper;
         this.httpClient = httpClient;

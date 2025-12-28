@@ -24,25 +24,19 @@ import io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityAdvisory
 import org.apache.hc.client5.http.impl.async.HttpAsyncClients;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
-import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
+import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSourceFactory;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URL;
+import java.net.URI;
 import java.time.Clock;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.SequencedCollection;
 
 import static io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityAdvisoryClientBuilder.aGitHubSecurityAdvisoryClient;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_ALIAS_SYNC_ENABLED;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_API_TOKEN;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_API_URL;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_ENABLED;
 
 /**
  * @since 5.7.0
@@ -71,15 +65,6 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
     }
 
     @Override
-    public SequencedCollection<RuntimeConfigDefinition<?>> runtimeConfigs() {
-        return List.of(
-                CONFIG_ENABLED,
-                CONFIG_ALIAS_SYNC_ENABLED,
-                CONFIG_API_URL,
-                CONFIG_API_TOKEN);
-    }
-
-    @Override
     public void init(final ExtensionContext ctx) {
         this.configRegistry = ctx.configRegistry();
         this.kvStore = ctx.kvStore();
@@ -91,32 +76,41 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
 
     @Override
     public boolean isDataSourceEnabled() {
-        return this.configRegistry.getOptionalValue(CONFIG_ENABLED).orElse(false);
+        return configRegistry.getRuntimeConfig(GitHubVulnDataSourceConfig.class).getEnabled();
     }
 
     @Override
     public VulnDataSource create() {
-        if (!isDataSourceEnabled()) {
+        final var config = configRegistry.getRuntimeConfig(GitHubVulnDataSourceConfig.class);
+        if (!config.getEnabled()) {
             LOGGER.info("Disabled; Not creating an instance");
             return null;
         }
 
-        final URL apiUrl = this.configRegistry.getValue(CONFIG_API_URL);
-        final String apiToken = this.configRegistry.getValue(CONFIG_API_TOKEN);
         final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), this.kvStore);
-        final boolean isAliasSyncEnabled = this.configRegistry.getOptionalValue(CONFIG_ALIAS_SYNC_ENABLED).orElse(false);
 
         final GitHubSecurityAdvisoryClientBuilder clientBuilder = aGitHubSecurityAdvisoryClient()
                 .withHttpClientSupplier(httpClientSupplier)
-                .withEndpoint(apiUrl.toString())
-                .withApiKey(apiToken);
+                .withEndpoint(config.getApiUrl().toString())
+                .withApiKey(config.getApiToken());
         if (watermarkManager.getWatermark() != null) {
             clientBuilder.withUpdatedSinceFilter(
                     ZonedDateTime.ofInstant(watermarkManager.getWatermark(), ZoneOffset.UTC));
         }
         final GitHubSecurityAdvisoryClient client = clientBuilder.build();
 
-        return new GitHubVulnDataSource(watermarkManager, client, isAliasSyncEnabled);
+        return new GitHubVulnDataSource(watermarkManager, client, config.getAliasSyncEnabled());
+    }
+
+    @Override
+    public RuntimeConfigSpec runtimeConfigSpec() {
+        final var defaultConfig = new GitHubVulnDataSourceConfig()
+                .withEnabled(false)
+                .withAliasSyncEnabled(true)
+                .withApiUrl(URI.create("https://api.github.com/graphql"))
+                .withApiToken("{{ secret('GITHUB_TOKEN') }}");
+
+        return new RuntimeConfigSpec(defaultConfig);
     }
 
 }

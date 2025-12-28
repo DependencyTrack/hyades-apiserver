@@ -22,23 +22,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
-import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
+import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSourceFactory;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URL;
+import java.net.URI;
 import java.net.http.HttpClient;
-import java.util.Collections;
-import java.util.List;
-import java.util.SequencedCollection;
-
-import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ALIAS_SYNC_ENABLED;
-import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_DATA_URL;
-import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ECOSYSTEMS;
-import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ENABLED;
+import java.util.Set;
 
 /**
  * @since 5.7.0
@@ -68,15 +61,6 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
     }
 
     @Override
-    public SequencedCollection<RuntimeConfigDefinition<?>> runtimeConfigs() {
-        return List.of(
-                CONFIG_ENABLED,
-                CONFIG_DATA_URL,
-                CONFIG_ECOSYSTEMS,
-                CONFIG_ALIAS_SYNC_ENABLED);
-    }
-
-    @Override
     public void init(ExtensionContext ctx) {
         this.configRegistry = ctx.configRegistry();
         this.kvStore = ctx.kvStore();
@@ -88,25 +72,38 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
     }
 
     @Override
+    public RuntimeConfigSpec runtimeConfigSpec() {
+        final var defaultConfig = new OSVVulnDataSourceConfig()
+                .withEnabled(false)
+                .withAliasSyncEnabled(false)
+                .withDataUrl(URI.create("https://storage.googleapis.com/osv-vulnerabilities"))
+                .withEcosystems(Set.of("Go", "Maven", "npm", "NuGet", "PyPI"));
+
+        return new RuntimeConfigSpec(defaultConfig);
+    }
+
+    @Override
     public boolean isDataSourceEnabled() {
-        return this.configRegistry.getOptionalValue(CONFIG_ENABLED).orElse(false);
+        return configRegistry.getRuntimeConfig(OSVVulnDataSourceConfig.class).getEnabled();
     }
 
     @Override
     public VulnDataSource create() {
-        if (!configRegistry.getOptionalValue(CONFIG_ENABLED).orElse(false)) {
+        final var config = configRegistry.getRuntimeConfig(OSVVulnDataSourceConfig.class);
+        if (!config.getEnabled()) {
             LOGGER.info("Disabled; Not creating an instance");
             return null;
         }
 
-        final URL dataUrl = configRegistry.getValue(CONFIG_DATA_URL);
-        final List<String> ecosystems = configRegistry
-                .getOptionalValue(CONFIG_ECOSYSTEMS)
-                .orElseGet(Collections::emptyList);
-        final var watermarkManager = WatermarkManager.create(ecosystems, kvStore);
-        final boolean isAliasSyncEnabled = this.configRegistry.getOptionalValue(CONFIG_ALIAS_SYNC_ENABLED).orElse(false);
+        final var watermarkManager = WatermarkManager.create(config.getEcosystems(), kvStore);
 
-        return new OsvVulnDataSource(watermarkManager, objectMapper, dataUrl, ecosystems, httpClient, isAliasSyncEnabled);
+        return new OsvVulnDataSource(
+                watermarkManager,
+                objectMapper,
+                config.getDataUrl().toString(),
+                config.getEcosystems(),
+                httpClient,
+                config.getAliasSyncEnabled());
     }
 
     @Override

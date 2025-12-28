@@ -18,217 +18,95 @@
  */
 package org.dependencytrack.plugin;
 
-import alpine.model.ConfigProperty;
-import alpine.model.IConfigProperty.PropertyType;
-import alpine.security.crypto.DataEncryption;
-import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
-import org.dependencytrack.plugin.api.config.ConfigDefinition;
-import org.dependencytrack.plugin.api.config.ConfigRegistry;
-import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
-import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
-import org.eclipse.microprofile.config.ConfigProvider;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.dependencytrack.config.templating.ConfigTemplateRenderer;
+import org.dependencytrack.persistence.jdbi.ExtensionConfigDao;
+import org.dependencytrack.plugin.api.config.DeploymentConfig;
+import org.dependencytrack.plugin.api.config.MutableConfigRegistry;
+import org.dependencytrack.plugin.api.config.RuntimeConfig;
+import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
+import org.eclipse.microprofile.config.Config;
+import org.jspecify.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * @since 5.6.0
  */
-public final class ConfigRegistryImpl implements ConfigRegistry {
+public final class ConfigRegistryImpl implements MutableConfigRegistry {
 
     private final String extensionPointName;
     private final String extensionName;
+    private final DeploymentConfig deploymentConfig;
+    private final @Nullable RuntimeConfigSpec runtimeConfigSpec;
+    private final @Nullable RuntimeConfigMapper runtimeConfigMapper;
+    private final @Nullable ConfigTemplateRenderer configTemplateRenderer;
 
-    private ConfigRegistryImpl(final String extensionPointName, final String extensionName) {
-        this.extensionPointName = extensionPointName;
-        this.extensionName = extensionName;
-    }
-
-    /**
-     * Create a {@link ConfigRegistryImpl} for accessing extension point configuration.
-     *
-     * @param extensionPointName Name of the extension point.
-     * @return A {@link ConfigRegistryImpl} scoped to {@code extensionPointName}.
-     */
-    static ConfigRegistryImpl forExtensionPoint(final String extensionPointName) {
-        return new ConfigRegistryImpl(requireNonNull(extensionPointName), null);
-    }
-
-    /**
-     * Create a {@link ConfigRegistryImpl} for accessing extension configuration.
-     *
-     * @param extensionPointName Name of the extension point.
-     * @param extensionName      Name of the extension.
-     * @return A {@link ConfigRegistryImpl} scoped to {@code extensionPointName} and {@code extensionName}.
-     */
-    public static ConfigRegistryImpl forExtension(final String extensionPointName, final String extensionName) {
-        return new ConfigRegistryImpl(requireNonNull(extensionPointName), requireNonNull(extensionName));
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    public void createWithDefaultsIfNotExist(final Collection<RuntimeConfigDefinition<?>> configs) {
-        requireNonNull(extensionName, "extensionName must not be null");
-
-        if (configs == null || configs.isEmpty()) {
-            return;
-        }
-
-        final var configPropertiesToCreate = new ArrayList<ConfigProperty>(configs.size());
-        for (final RuntimeConfigDefinition config : configs) {
-            final Map.Entry<String, String> groupAndName = namespacedConfigGroupAndName(config);
-            final String groupName = groupAndName.getKey();
-            final String propertyName = groupAndName.getValue();
-
-            final String valueString = config.type().toString(config.defaultValue());
-            final String valueToStore;
-
-            if (config.isSecret() && valueString != null) {
-                try {
-                    valueToStore = new DataEncryption().encryptAsString(valueString);
-                } catch (Exception e) {
-                    throw new IllegalStateException(
-                            "Failed to encrypt value of config %s".formatted(config.name()), e);
-                }
-            } else {
-                valueToStore = valueString;
-            }
-
-            final var configProperty = new ConfigProperty();
-            configProperty.setGroupName(groupName);
-            configProperty.setPropertyName(propertyName);
-            configProperty.setPropertyType(
-                    config.isSecret()
-                            ? PropertyType.ENCRYPTEDSTRING
-                            : PropertyType.STRING);
-            configProperty.setDescription(config.description());
-            configProperty.setPropertyValue(valueToStore);
-            configPropertiesToCreate.add(configProperty);
-        }
-
-        useJdbiTransaction(handle -> handle.attach(
-                ConfigPropertyDao.class).maybeCreateAll(configPropertiesToCreate));
+    ConfigRegistryImpl(
+            Config config,
+            String extensionPointName,
+            String extensionName,
+            @Nullable RuntimeConfigSpec runtimeConfigSpec,
+            @Nullable RuntimeConfigMapper runtimeConfigMapper,
+            @Nullable ConfigTemplateRenderer configTemplateRenderer) {
+        this.extensionPointName = requireNonNull(extensionPointName, "extensionPointName must not be null");
+        this.extensionName = requireNonNull(extensionName, "extensionName must not be null");
+        this.deploymentConfig = new DeploymentConfigImpl(config, extensionPointName, extensionName);
+        this.runtimeConfigSpec = runtimeConfigSpec;
+        this.runtimeConfigMapper = runtimeConfigMapper;
+        this.configTemplateRenderer = configTemplateRenderer;
     }
 
     @Override
-    public <T> Optional<T> getOptionalValue(final ConfigDefinition<T> config) {
-        return switch (config) {
-            case DeploymentConfigDefinition<T> it -> getDeploymentConfigValue(it);
-            case RuntimeConfigDefinition<T> it -> getRuntimeConfigValue(it);
-            case null -> throw new NullPointerException("config must not be null");
-        };
+    public DeploymentConfig getDeploymentConfig() {
+        return deploymentConfig;
     }
 
     @Override
-    public <T> void setValue(final RuntimeConfigDefinition<T> config, final T value) {
-        requireNonNull(config, "config must not be null");
+    public @Nullable RuntimeConfig getRuntimeConfig() {
+        if (runtimeConfigSpec == null) {
+            return null;
+        }
+        requireNonNull(runtimeConfigMapper, "runtimeConfigMapper is not initialized");
+        requireNonNull(configTemplateRenderer, "configTemplateRenderer is not initialized");
 
-        if (config.isRequired() && value == null) {
-            throw new IllegalArgumentException(
-                    "Config %s is defined as required, but value is null".formatted(config.name()));
+        final String configJson = withJdbiHandle(
+                handle -> handle.attach(ExtensionConfigDao.class).getConfig(
+                        extensionPointName, extensionName));
+        if (configJson == null) {
+            return null;
         }
 
-        final Map.Entry<String, String> groupAndName = namespacedConfigGroupAndName(config);
-        final String groupName = groupAndName.getKey();
-        final String propertyName = groupAndName.getValue();
+        final JsonNode configJsonNode = runtimeConfigMapper.validateJson(configJson, runtimeConfigSpec);
 
-        final String valueString = config.type().toString(value);
-        final String valueToStore;
-        if (config.isSecret() && value != null) {
-            try {
-                valueToStore = new DataEncryption().encryptAsString(valueString);
-            } catch (Exception e) {
-                throw new IllegalStateException(
-                        "Failed to encrypt value of config %s".formatted(config.name()), e);
-            }
-        } else {
-            valueToStore = valueString;
-        }
+        configTemplateRenderer.renderJson(configJsonNode);
 
-        useJdbiTransaction(handle -> {
-            final var dao = handle.attach(ConfigPropertyDao.class);
-
-            final boolean updated = dao.setValue(groupName, propertyName, valueToStore);
-            if (!updated) {
-                throw new NoSuchElementException("Config %s does not exist".formatted(config.name()));
-            }
-        });
+        return runtimeConfigMapper.convert(configJsonNode, runtimeConfigSpec.configClass());
     }
 
-    private <T> Optional<T> getDeploymentConfigValue(final DeploymentConfigDefinition<T> config) {
-        final String value = ConfigProvider.getConfig().getOptionalValue(
-                namespacedConfigName(config), String.class).orElse(null);
-        if (value == null) {
-            if (config.isRequired()) {
-                throw new IllegalStateException("""
-                        Config %s is defined as required, but no value has been found\
-                        """.formatted(config.name()));
-            }
+    @Override
+    public boolean setRuntimeConfig(RuntimeConfig config) {
+        requireNonNull(runtimeConfigSpec, "runtimeConfigSpec is not initialized");
+        requireNonNull(runtimeConfigMapper, "runtimeConfigMapper is not initialized");
+        requireNonNull(config, "runtimeConfig must not be null");
 
-            return Optional.empty();
+        if (!runtimeConfigSpec.configClass().isInstance(config)) {
+            throw new IllegalArgumentException("""
+                    The provided config of type %s is not an instance of the \
+                    extension's declared config type %s\
+                    """.formatted(config.getClass().getName(), runtimeConfigSpec.configClass().getName()));
         }
 
-        return Optional.of(config.type().fromString(value));
-    }
+        runtimeConfigMapper.validate(config, runtimeConfigSpec);
 
-    private <T> Optional<T> getRuntimeConfigValue(final RuntimeConfigDefinition<T> config) {
-        final Map.Entry<String, String> groupAndName = namespacedConfigGroupAndName(config);
-        final String groupName = groupAndName.getKey();
-        final String propertyName = groupAndName.getValue();
+        final String configJson = runtimeConfigMapper.serialize(config);
 
-        final ConfigProperty property = withJdbiHandle(
-                handle -> handle.attach(ConfigPropertyDao.class).getOptional(groupName, propertyName)).orElse(null);
-        if (property == null || property.getPropertyValue() == null) {
-            if (config.isRequired()) {
-                throw new IllegalStateException("""
-                        Config %s is defined as required, but no value has been found\
-                        """.formatted(config.name()));
-            }
-
-            return Optional.empty();
-        }
-
-        if (!config.isSecret()) {
-            final T value = config.type().fromString(property.getPropertyValue());
-            return Optional.of(value);
-        }
-
-        final boolean isEncrypted = property.getPropertyType() == PropertyType.ENCRYPTEDSTRING;
-        if (!isEncrypted) {
-            throw new IllegalStateException("""
-                    Config %s is defined as secret, but its value is not encrypted\
-                    """.formatted(config.name()));
-        }
-
-        try {
-            final String decryptedValue = new DataEncryption().decryptAsString(property.getPropertyValue());
-            final T value = config.type().fromString(decryptedValue);
-            return Optional.of(value);
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to decrypt value of config %s".formatted(config.name()), e);
-        }
-    }
-
-    private String namespacedConfigName(final DeploymentConfigDefinition<?> config) {
-        if (extensionName == null) {
-            return "%s.%s".formatted(extensionPointName, config.name());
-        }
-
-        return "%s.extension.%s.%s".formatted(extensionPointName, extensionName, config.name());
-    }
-
-    private Map.Entry<String, String> namespacedConfigGroupAndName(final RuntimeConfigDefinition<?> config) {
-        if (extensionName == null) {
-            return Map.entry(extensionPointName, config.name());
-        }
-
-        return Map.entry(extensionPointName, "extension.%s.%s".formatted(extensionName, config.name()));
+        return inJdbiTransaction(
+                handle -> handle.attach(ExtensionConfigDao.class).saveConfig(
+                        extensionPointName, extensionName, configJson));
     }
 
 }
