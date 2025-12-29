@@ -29,6 +29,7 @@ import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.StringJoiner;
 import java.util.UUID;
 
 import static io.github.resilience4j.core.IntervalFunction.ofExponentialRandomBackoff;
@@ -66,6 +67,14 @@ public class DexEngineConfig {
             this.maxBatchSize = maxBatchSize;
         }
 
+        @Override
+        public String toString() {
+            return new StringJoiner(", ", getClass().getSimpleName() + "[", "]")
+                    .add("flushInterval=" + flushInterval)
+                    .add("maxBatchSize=" + maxBatchSize)
+                    .toString();
+        }
+
     }
 
     public static class CacheConfig {
@@ -90,6 +99,14 @@ public class DexEngineConfig {
 
         public void setMaxSize(int maxSize) {
             this.maxSize = maxSize;
+        }
+
+        @Override
+        public String toString() {
+            return new StringJoiner(", ", getClass().getSimpleName() + "[", "]")
+                    .add("evictAfterAccess=" + evictAfterAccess)
+                    .add("maxSize=" + maxSize)
+                    .toString();
         }
 
     }
@@ -122,6 +139,14 @@ public class DexEngineConfig {
 
         public void setLeaseCheckInterval(Duration leaseCheckInterval) {
             this.leaseCheckInterval = leaseCheckInterval;
+        }
+
+        @Override
+        public String toString() {
+            return new StringJoiner(", ", getClass().getSimpleName() + "[", "]")
+                    .add("leaseDuration=" + leaseDuration)
+                    .add("leaseCheckInterval=" + leaseCheckInterval)
+                    .toString();
         }
 
     }
@@ -180,6 +205,16 @@ public class DexEngineConfig {
             this.workerInterval = workerInterval;
         }
 
+        @Override
+        public String toString() {
+            return new StringJoiner(", ", getClass().getSimpleName() + "[", "]")
+                    .add("runRetentionDuration=" + runRetentionDuration)
+                    .add("runDeletionBatchSize=" + runDeletionBatchSize)
+                    .add("workerInitialDelay=" + workerInitialDelay)
+                    .add("workerInterval=" + workerInterval)
+                    .toString();
+        }
+
     }
 
     public static class TaskSchedulerConfig {
@@ -204,6 +239,14 @@ public class DexEngineConfig {
 
         public void setPollBackoffFunction(IntervalFunction pollBackoffFunction) {
             this.pollBackoffFunction = pollBackoffFunction;
+        }
+
+        @Override
+        public String toString() {
+            return new StringJoiner(", ", getClass().getSimpleName() + "[", "]")
+                    .add("pollInterval=" + pollInterval)
+                    .add("pollBackoffFunction=" + pollBackoffFunction)
+                    .toString();
         }
 
     }
@@ -299,6 +342,24 @@ public class DexEngineConfig {
 
     public void setPageTokenEncoder(PageTokenEncoder pageTokenEncoder) {
         this.pageTokenEncoder = requireNonNull(pageTokenEncoder, "pageTokenEncoder must not be null");
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", getClass().getSimpleName() + "[", "]")
+                .add("instanceId='" + instanceId + "'")
+                .add("dataSource=" + dataSource)
+                .add("leaderElectionConfig=" + leaderElectionConfig)
+                .add("runHistoryCacheConfig=" + runHistoryCacheConfig)
+                .add("externalEventBufferConfig=" + externalEventBufferConfig)
+                .add("taskEventsBufferConfig=" + taskEventsBufferConfig)
+                .add("activityTaskHeartbeatBufferConfig=" + activityTaskHeartbeatBufferConfig)
+                .add("maintenanceConfig=" + maintenanceConfig)
+                .add("workflowTaskSchedulerConfig=" + workflowTaskSchedulerConfig)
+                .add("activityTaskSchedulerConfig=" + activityTaskSchedulerConfig)
+                .add("meterRegistry=" + meterRegistry)
+                .add("pageTokenEncoder=" + pageTokenEncoder)
+                .toString();
     }
 
     private static String generateInstanceId() {

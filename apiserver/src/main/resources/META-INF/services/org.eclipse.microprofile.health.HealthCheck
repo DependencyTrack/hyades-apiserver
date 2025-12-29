@@ -1,1 +1,2 @@
+org.dependencytrack.dex.DexEngineHealthCheck
 org.dependencytrack.event.kafka.processor.ProcessorsHealthCheck
