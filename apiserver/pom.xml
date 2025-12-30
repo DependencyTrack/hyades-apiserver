@@ -31,7 +31,7 @@
         <lib.woodstox.version>7.1.1</lib.woodstox.version>
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>7.4.0</lib.net.javacrumbs.shedlock.version>
+        <lib.net.javacrumbs.shedlock.version>7.5.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
 
         <!-- CycloneDX CLI -->
