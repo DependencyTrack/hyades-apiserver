@@ -21,15 +21,15 @@ package org.dependencytrack.resources.v2;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.net.URI;
 import java.util.UUID;
@@ -39,8 +39,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class ProjectsResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(new ResourceConfig());
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(new ResourceConfig());
 
     @Test
     public void listProjectComponents() {
@@ -143,13 +143,13 @@ public class ProjectsResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
 
         response = jersey.target("/projects/" + noAccessProject.getUuid() + "/components")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "title" : "Project access denied",
@@ -168,7 +168,7 @@ public class ProjectsResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "type":"about:blank",

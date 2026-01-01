@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.model;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class CweTest {
 
@@ -27,13 +27,13 @@ public class CweTest {
     public void testCweId() {
         Cwe cwe = new Cwe();
         cwe.setCweId(79);
-        Assert.assertEquals(79, cwe.getCweId());
+        Assertions.assertEquals(79, cwe.getCweId());
     }
 
     @Test
     public void testName() {
         Cwe cwe = new Cwe();
         cwe.setName("Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')");
-        Assert.assertEquals("Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')", cwe.getName());
+        Assertions.assertEquals("Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')", cwe.getName());
     }
 } 

@@ -19,15 +19,15 @@
 package alpine.test.config;
 
 import org.eclipse.microprofile.config.ConfigProvider;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ConfigPropertyRuleTest {
+class ConfigPropertyExtensionTest {
 
-    @Rule
-    public ConfigPropertyRule rule = new ConfigPropertyRule()
+    @RegisterExtension
+    static ConfigPropertyExtension extension = new ConfigPropertyExtension()
             .withProperty("foo.bar", "baz")
             .withProperty("oof.rab", "${foo.bar}");
 
@@ -35,7 +35,7 @@ public class ConfigPropertyRuleTest {
     @WithConfigProperty(value = {
             "local.foo.bar=local-baz",
             "lacol.oof.rab=${local.foo.bar}"})
-    public void test() {
+    void test() {
         assertEquals("baz", ConfigProvider.getConfig().getValue("foo.bar", String.class));
         assertEquals("baz", ConfigProvider.getConfig().getValue("oof.rab", String.class));
         assertEquals("local-baz", ConfigProvider.getConfig().getValue("local.foo.bar", String.class));

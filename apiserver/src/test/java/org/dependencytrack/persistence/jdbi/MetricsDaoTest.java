@@ -23,9 +23,9 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.ProjectMetrics;
 import org.jdbi.v3.core.Handle;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -44,7 +44,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
     private MetricsDao metricsDao;
     private MetricsTestDao metricsTestDao;
 
-    @Before
+    @BeforeEach
     public void before() throws Exception {
         super.before();
         jdbiHandle = openJdbiHandle();
@@ -52,7 +52,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         metricsTestDao = jdbiHandle.attach(MetricsTestDao.class);
     }
 
-    @After
+    @AfterEach
     public void after() {
         if (jdbiHandle != null) {
             jdbiHandle.close();

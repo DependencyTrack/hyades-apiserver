@@ -20,9 +20,9 @@ package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.jdbi.v3.core.Handle;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
@@ -38,14 +38,14 @@ public class WorkflowDaoTest extends PersistenceCapableTest {
     private WorkflowDao workflowDao;
     private final UUID workflowUuid = UUID.randomUUID();
 
-    @Before
+    @BeforeEach
     public void before() throws Exception {
         super.before();
         jdbiHandle = openJdbiHandle();
         workflowDao = jdbiHandle.attach(WorkflowDao.class);
     }
 
-    @After
+    @AfterEach
     public void after() {
         if (jdbiHandle != null) {
             jdbiHandle.close();

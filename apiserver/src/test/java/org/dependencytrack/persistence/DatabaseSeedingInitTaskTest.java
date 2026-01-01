@@ -34,8 +34,8 @@ import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.eclipse.microprofile.config.ConfigProvider;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 
 import java.util.List;
@@ -46,7 +46,7 @@ public class DatabaseSeedingInitTaskTest extends PersistenceCapableTest {
 
     private PGSimpleDataSource dataSource;
 
-    @Before
+    @BeforeEach
     public void before() throws Exception {
         super.before();
 

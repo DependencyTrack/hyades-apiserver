@@ -39,8 +39,8 @@ import org.cyclonedx.proto.v1_6.Service;
 import org.cyclonedx.proto.v1_6.Tool;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.DataClassification;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -53,7 +53,7 @@ public class ModelConverterProtoTest {
     private OrganizationalContact cdxContact;
     private ExternalReference cdxExternalReference;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         modelConverter = new ModelConverterProto();
         cdxContact = OrganizationalContact.newBuilder()

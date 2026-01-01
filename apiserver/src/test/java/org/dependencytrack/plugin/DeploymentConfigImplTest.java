@@ -20,7 +20,7 @@ package org.dependencytrack.plugin;
 
 import org.dependencytrack.plugin.api.config.DeploymentConfig;
 import org.eclipse.microprofile.config.Config;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.eq;

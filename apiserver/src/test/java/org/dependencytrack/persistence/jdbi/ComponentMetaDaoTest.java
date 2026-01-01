@@ -26,15 +26,15 @@ import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Date;
 
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_PASSED;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_UNKNOWN;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class ComponentMetaDaoTest extends PersistenceCapableTest {
 

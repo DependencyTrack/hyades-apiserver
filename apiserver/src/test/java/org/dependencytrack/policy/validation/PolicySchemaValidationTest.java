@@ -25,15 +25,15 @@ import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
+import static org.apache.commons.io.IOUtils.resourceToString;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.testcontainers.shaded.org.apache.commons.io.IOUtils.resourceToString;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PolicySchemaValidationTest {
 

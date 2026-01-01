@@ -28,7 +28,9 @@ import org.dependencytrack.persistence.jdbi.AdvisoryDao;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao.ListAdvisoriesRow;
 import org.dependencytrack.persistence.jdbi.query.ListAdvisoriesQuery;
 import org.jdbi.v3.core.Handle;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -49,6 +51,7 @@ public class CsafDocumentImportTaskTest extends PersistenceCapableTest {
     private AdvisoryDao advisoryDao;
     private CsafProviderDao providerDao;
 
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();
@@ -58,6 +61,7 @@ public class CsafDocumentImportTaskTest extends PersistenceCapableTest {
         providerDao = jdbiHandle.attach(CsafProviderDao.class);
     }
 
+    @AfterEach
     @Override
     public void after() {
         if (jdbiHandle != null) {

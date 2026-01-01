@@ -25,7 +25,7 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.util.PurlUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 

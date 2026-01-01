@@ -20,17 +20,18 @@ package org.dependencytrack.resources.v1;
 
 import alpine.model.IConfigProperty;
 import alpine.server.filters.ApiFilter;
-import org.dependencytrack.JerseyTestRule;
+import jakarta.ws.rs.core.Response;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import jakarta.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
@@ -43,11 +44,12 @@ import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BADGE_EN
 
 public class BadgeResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(BadgeResource.class)
                     .register(ApiFilter.class));
 
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();
@@ -62,9 +64,9 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -74,9 +76,9 @@ public class BadgeResourceTest extends ResourceTest {
         Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -86,9 +88,9 @@ public class BadgeResourceTest extends ResourceTest {
         Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid()).request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -98,7 +100,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -107,7 +109,7 @@ public class BadgeResourceTest extends ResourceTest {
         Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid()).request()
                 .get(Response.class);
-        Assert.assertEquals(401, response.getStatus(), 0);
+        Assertions.assertEquals(401, response.getStatus(), 0);
     }
 
     @Test
@@ -117,7 +119,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
     }
 
     @Test
@@ -139,9 +141,9 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -162,9 +164,9 @@ public class BadgeResourceTest extends ResourceTest {
         Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -185,7 +187,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
     }
 
     @Test
@@ -196,9 +198,9 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -208,9 +210,9 @@ public class BadgeResourceTest extends ResourceTest {
         qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0").request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     public void projectVulnerabilitiesByNameAndVersionMissingAuthenticationWithUnauthenticatedAccessEnabledTest() {
@@ -220,9 +222,9 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -232,7 +234,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -243,7 +245,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -252,7 +254,7 @@ public class BadgeResourceTest extends ResourceTest {
         qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0").request()
                 .get(Response.class);
-        Assert.assertEquals(401, response.getStatus(), 0);
+        Assertions.assertEquals(401, response.getStatus(), 0);
     }
 
     @Test
@@ -262,7 +264,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
     }
 
     @Test
@@ -284,9 +286,9 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -307,9 +309,9 @@ public class BadgeResourceTest extends ResourceTest {
         Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -330,7 +332,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
     }
 
     @Test
@@ -341,9 +343,9 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -353,9 +355,9 @@ public class BadgeResourceTest extends ResourceTest {
         Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -366,9 +368,9 @@ public class BadgeResourceTest extends ResourceTest {
         Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid())
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -378,7 +380,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -387,7 +389,7 @@ public class BadgeResourceTest extends ResourceTest {
         Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid()).request()
                 .get(Response.class);
-        Assert.assertEquals(401, response.getStatus(), 0);
+        Assertions.assertEquals(401, response.getStatus(), 0);
     }
 
     @Test
@@ -397,7 +399,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
     }
 
     @Test
@@ -419,9 +421,9 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -442,9 +444,9 @@ public class BadgeResourceTest extends ResourceTest {
         Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -465,7 +467,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
     }
 
     @Test
@@ -476,9 +478,9 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -488,9 +490,9 @@ public class BadgeResourceTest extends ResourceTest {
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -501,9 +503,9 @@ public class BadgeResourceTest extends ResourceTest {
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -513,7 +515,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -524,7 +526,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -533,7 +535,7 @@ public class BadgeResourceTest extends ResourceTest {
         qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0").request()
                 .get(Response.class);
-        Assert.assertEquals(401, response.getStatus(), 0);
+        Assertions.assertEquals(401, response.getStatus(), 0);
     }
 
     @Test
@@ -543,7 +545,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
     }
 
     @Test
@@ -563,9 +565,9 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -584,9 +586,9 @@ public class BadgeResourceTest extends ResourceTest {
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assert.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
+        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
     }
 
     @Test
@@ -607,7 +609,7 @@ public class BadgeResourceTest extends ResourceTest {
                 .queryParam(API_KEY, apiKey)
                 .request()
                 .get(Response.class);
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
     }
 
     private boolean isLikelySvg(String body) {

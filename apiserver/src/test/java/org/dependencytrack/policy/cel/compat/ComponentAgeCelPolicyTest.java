@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.policy.cel.compat;
 
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.FetchStatus;
@@ -29,8 +27,8 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -38,10 +36,9 @@ import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(JUnitParamsRunner.class)
 public class ComponentAgeCelPolicyTest extends PersistenceCapableTest {
 
-    private Object[] parameters() {
+    private static Object[] parameters() {
         return new Object[]{
                 new Object[]{Instant.now().minus(Duration.ofDays(667)), PolicyCondition.Operator.NUMERIC_GREATER_THAN, "P666D", true},
                 new Object[]{Instant.now().minus(Duration.ofDays(667)), PolicyCondition.Operator.NUMERIC_GREATER_THAN_OR_EQUAL, "P666D", true},
@@ -73,8 +70,8 @@ public class ComponentAgeCelPolicyTest extends PersistenceCapableTest {
         };
     }
 
-    @Test
-    @Parameters(method = "parameters")
+    @ParameterizedTest
+    @MethodSource("parameters")
     public void evaluateTest(Instant publishedDate, PolicyCondition.Operator operator, String ageValue, boolean shouldViolate) {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         final var condition = qm.createPolicyCondition(policy, PolicyCondition.Subject.AGE, operator, ageValue);

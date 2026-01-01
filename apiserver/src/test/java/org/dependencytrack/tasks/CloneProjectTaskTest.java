@@ -22,7 +22,7 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.Date;

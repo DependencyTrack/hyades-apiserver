@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.event;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
@@ -28,13 +28,13 @@ public class KennaSecurityUploadEventTest {
     @Test
     public void testDefaultConstructor() {
         KennaSecurityUploadEventAbstract event = new KennaSecurityUploadEventAbstract();
-        Assert.assertNull(event.getProjectUuid());
+        Assertions.assertNull(event.getProjectUuid());
     }
 
     @Test
     public void testProjectConstructor() {
         UUID uuid = UUID.randomUUID();
         KennaSecurityUploadEventAbstract event = new KennaSecurityUploadEventAbstract(uuid);
-        Assert.assertEquals(uuid, event.getProjectUuid());
+        Assertions.assertEquals(uuid, event.getProjectUuid());
     }
 }

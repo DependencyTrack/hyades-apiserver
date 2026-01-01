@@ -21,7 +21,7 @@ package org.dependencytrack.dex.engine;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import org.dependencytrack.dex.engine.migration.MigrationExecutor;
 import org.postgresql.ds.PGSimpleDataSource;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.TestcontainersConfiguration;
 
@@ -31,7 +31,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
 
-public final class PostgresTestContainer extends PostgreSQLContainer<PostgresTestContainer> {
+public final class PostgresTestContainer extends PostgreSQLContainer {
 
     @SuppressWarnings("resource")
     public PostgresTestContainer() {

@@ -23,23 +23,23 @@ import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
-import org.dependencytrack.JerseyTestRule;
-import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Role;
-import org.dependencytrack.persistence.DatabaseSeedingInitTask;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.JerseyTestExtension;
+import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Role;
+import org.dependencytrack.persistence.DatabaseSeedingInitTask;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -49,13 +49,13 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransactio
 
 public class PermissionResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(PermissionResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class));
 
-    @Before
+    @BeforeEach
     public void before() throws Exception {
         super.before();
 
@@ -67,13 +67,13 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(44, json.size());
-        Assert.assertEquals("ACCESS_MANAGEMENT", json.getJsonObject(0).getString("name"));
-        Assert.assertEquals("Allows the management of users, teams, and API keys", json.getJsonObject(0).getString("description"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(44, json.size());
+        Assertions.assertEquals("ACCESS_MANAGEMENT", json.getJsonObject(0).getString("name"));
+        Assertions.assertEquals("Allows the management of users, teams, and API keys", json.getJsonObject(0).getString("description"));
     }
 
     @Test
@@ -84,12 +84,12 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/user/" + username).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("user1", json.getString("username"));
-        Assert.assertEquals(1, json.getJsonArray("permissions").size());
-        Assert.assertEquals("PORTFOLIO_MANAGEMENT", json.getJsonArray("permissions").getJsonObject(0).getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("user1", json.getString("username"));
+        Assertions.assertEquals(1, json.getJsonArray("permissions").size());
+        Assertions.assertEquals("PORTFOLIO_MANAGEMENT", json.getJsonArray("permissions").getJsonObject(0).getString("name"));
     }
 
     @Test
@@ -97,10 +97,10 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/user/blah").request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The user could not be found.", body);
+        Assertions.assertEquals("The user could not be found.", body);
     }
 
     @Test
@@ -111,10 +111,10 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/BLAH/user/" + username).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The permission could not be found.", body);
+        Assertions.assertEquals("The permission could not be found.", body);
     }
 
     @Test
@@ -128,8 +128,8 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/user/" + username).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
@@ -143,11 +143,11 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/user/" + username).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("user1", json.getString("username"));
-        Assert.assertEquals(0, json.getJsonArray("permissions").size());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("user1", json.getString("username"));
+        Assertions.assertEquals(0, json.getJsonArray("permissions").size());
     }
 
     @Test
@@ -155,10 +155,10 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/user/blah").request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The user could not be found.", body);
+        Assertions.assertEquals("The user could not be found.", body);
     }
 
     @Test
@@ -169,10 +169,10 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/BLAH/user/" + username).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The permission could not be found.", body);
+        Assertions.assertEquals("The permission could not be found.", body);
     }
 
     @Test
@@ -182,8 +182,8 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/BOM_UPLOAD/user/" + username).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
@@ -194,12 +194,12 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/team/" + teamUuid).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("team1", json.getString("name"));
-        Assert.assertEquals(1, json.getJsonArray("permissions").size());
-        Assert.assertEquals("PORTFOLIO_MANAGEMENT", json.getJsonArray("permissions").getJsonObject(0).getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("team1", json.getString("name"));
+        Assertions.assertEquals(1, json.getJsonArray("permissions").size());
+        Assertions.assertEquals("PORTFOLIO_MANAGEMENT", json.getJsonArray("permissions").getJsonObject(0).getString("name"));
     }
 
     @Test
@@ -207,10 +207,10 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/team/" + UUID.randomUUID().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The team could not be found.", body);
+        Assertions.assertEquals("The team could not be found.", body);
     }
 
     @Test
@@ -221,10 +221,10 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/BLAH/team/" + teamUuid).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The permission could not be found.", body);
+        Assertions.assertEquals("The permission could not be found.", body);
     }
 
     @Test
@@ -238,8 +238,8 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/team/" + teamUuid).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
@@ -253,11 +253,11 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/team/" + teamUuid).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("team1", json.getString("name"));
-        Assert.assertEquals(0, json.getJsonArray("permissions").size());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("team1", json.getString("name"));
+        Assertions.assertEquals(0, json.getJsonArray("permissions").size());
     }
 
     @Test
@@ -265,10 +265,10 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/team/" + UUID.randomUUID().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The team could not be found.", body);
+        Assertions.assertEquals("The team could not be found.", body);
     }
 
     @Test
@@ -279,10 +279,10 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/BLAH/team/" + teamUuid).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The permission could not be found.", body);
+        Assertions.assertEquals("The permission could not be found.", body);
     }
 
     @Test
@@ -292,8 +292,8 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(V1_PERMISSION + "/BOM_UPLOAD/team/" + teamUuid).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
@@ -327,35 +327,35 @@ public class PermissionResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(permissionRequest1.toString(), MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus());
+        Assertions.assertEquals(200, response.getStatus());
 
         JsonObject jsonResponse = parseJsonObject(response);
 
-        Assert.assertNotNull("JSON response should not be null", jsonResponse);
-        Assert.assertEquals(permissionSet1.size(), jsonResponse.getJsonArray("permissions").size());
+        Assertions.assertNotNull(jsonResponse, "JSON response should not be null");
+        Assertions.assertEquals(permissionSet1.size(), jsonResponse.getJsonArray("permissions").size());
 
         ManagedUser user = qm.getManagedUser(username);
         List<Permission> userPermissions = user.getPermissions();
 
-        Assert.assertEquals("User should have 3 permissions assigned", userPermissions.size(), 3);
-        Assert.assertTrue("User should have all permissions assigned: " + userPermissions,
-                userPermissions.equals(permissionSet1));
+        Assertions.assertEquals(userPermissions.size(), 3, "User should have 3 permissions assigned");
+        Assertions.assertTrue(userPermissions.equals(permissionSet1),
+                "User should have all permissions assigned: " + userPermissions);
 
         // Test replacement.
         response = jersey.target(endpoint)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(permissionRequest2.toString(), MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus());
+        Assertions.assertEquals(200, response.getStatus());
 
         // Refresh
         user = qm.getManagedUser(username);
         userPermissions = user.getPermissions();
 
-        Assert.assertTrue("User should not have any of the old permissions assigned",
-                Collections.disjoint(userPermissions, permissionSet1));
-        Assert.assertTrue("User should have all new permissions assigned: " + userPermissions,
-                userPermissions.containsAll(permissionSet2));
+        Assertions.assertTrue(Collections.disjoint(userPermissions, permissionSet1),
+                "User should not have any of the old permissions assigned");
+        Assertions.assertTrue(userPermissions.containsAll(permissionSet2),
+                "User should have all new permissions assigned: " + userPermissions);
 
     }
 
@@ -377,18 +377,18 @@ public class PermissionResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(requestBody.toString(), MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus());
+        Assertions.assertEquals(400, response.getStatus());
 
         JsonObject jsonResponse = parseJsonObject(response);
         String detail = jsonResponse.get("detail").toString();
-        Assert.assertNotNull(jsonResponse);
+        Assertions.assertNotNull(jsonResponse);
 
         List<String> allPerms = qm.getPermissions().stream()
                 .map(Permission::getName)
                 .toList();
 
         // Verify that the request was parsed correctly but contained invalid permissions.
-        Assert.assertTrue(allPerms.stream().allMatch(perm -> detail.contains(perm)));
+        Assertions.assertTrue(allPerms.stream().allMatch(perm -> detail.contains(perm)));
     }
 
     @Test
@@ -422,35 +422,35 @@ public class PermissionResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(permissionRequet1.toString(), MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus());
+        Assertions.assertEquals(200, response.getStatus());
 
         JsonObject jsonResponse = parseJsonObject(response);
 
-        Assert.assertNotNull("JSON response should not be null", jsonResponse);
-        Assert.assertEquals(permissionSet1.size(), jsonResponse.getJsonArray("permissions").size());
+        Assertions.assertNotNull(jsonResponse, "JSON response should not be null");
+        Assertions.assertEquals(permissionSet1.size(), jsonResponse.getJsonArray("permissions").size());
 
         Team team = qm.getObjectByUuid(Team.class, teamUuid);
         List<Permission> userPermissions = team.getPermissions();
 
-        Assert.assertEquals("User should have 3 permissions assigned", userPermissions.size(), 3);
-        Assert.assertTrue("User should have all permissions assigned: " + userPermissions,
-                userPermissions.equals(permissionSet1));
+        Assertions.assertEquals(userPermissions.size(), 3, "User should have 3 permissions assigned");
+        Assertions.assertTrue(userPermissions.equals(permissionSet1),
+                "User should have all permissions assigned: " + userPermissions);
 
         // Test replacement.
         response = jersey.target(endpoint)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(permissionRequet2.toString(), MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus());
+        Assertions.assertEquals(200, response.getStatus());
 
         // Refresh.
         team = qm.getObjectByUuid(Team.class, teamUuid);
         userPermissions = team.getPermissions();
 
-        Assert.assertTrue("User should not have any of the old permissions assigned",
-                Collections.disjoint(userPermissions, permissionSet1));
-        Assert.assertTrue("User should have all new permissions assigned: " + userPermissions,
-                userPermissions.containsAll(permissionSet2));
+        Assertions.assertTrue(Collections.disjoint(userPermissions, permissionSet1),
+                "User should not have any of the old permissions assigned");
+        Assertions.assertTrue(userPermissions.containsAll(permissionSet2),
+                "User should have all new permissions assigned: " + userPermissions);
     }
 
     @Test
@@ -461,12 +461,12 @@ public class PermissionResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
 
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Test Role", json.getString("name"));
-        Assert.assertEquals(1, json.getJsonArray("permissions").size());
-        Assert.assertEquals("PORTFOLIO_MANAGEMENT",
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Test Role", json.getString("name"));
+        Assertions.assertEquals(1, json.getJsonArray("permissions").size());
+        Assertions.assertEquals("PORTFOLIO_MANAGEMENT",
                 json.getJsonArray("permissions").getJsonObject(0).getString("name"));
     }
 
@@ -476,10 +476,10 @@ public class PermissionResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
 
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The role could not be found.", body);
+        Assertions.assertEquals("The role could not be found.", body);
     }
 
     @Test
@@ -490,10 +490,10 @@ public class PermissionResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
 
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The permission could not be found.", body);
+        Assertions.assertEquals("The permission could not be found.", body);
     }
 
     @Test
@@ -506,8 +506,8 @@ public class PermissionResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(null, MediaType.APPLICATION_JSON));
 
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
@@ -520,11 +520,11 @@ public class PermissionResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .delete();
 
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Test Role", json.getString("name"));
-        Assert.assertEquals(0, json.getJsonArray("permissions").size());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Test Role", json.getString("name"));
+        Assertions.assertEquals(0, json.getJsonArray("permissions").size());
     }
 
     @Test
@@ -533,10 +533,10 @@ public class PermissionResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .delete();
 
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The role could not be found.", body);
+        Assertions.assertEquals("The role could not be found.", body);
     }
 
     @Test
@@ -547,10 +547,10 @@ public class PermissionResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .delete();
 
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The permission could not be found.", body);
+        Assertions.assertEquals("The permission could not be found.", body);
     }
 
     @Test
@@ -561,7 +561,7 @@ public class PermissionResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .delete();
 
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 }

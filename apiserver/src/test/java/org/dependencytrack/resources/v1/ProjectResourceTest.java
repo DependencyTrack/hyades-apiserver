@@ -35,7 +35,7 @@ import jakarta.ws.rs.HttpMethod;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
@@ -79,10 +79,10 @@ import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.hamcrest.CoreMatchers;
 import org.json.JSONArray;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -116,13 +116,13 @@ import static org.hamcrest.Matchers.not;
 
 public class ProjectResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(ProjectResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class));
 
-    @After
+    @AfterEach
     @Override
     public void after() {
         EventService.getInstance().unsubscribe(CloneProjectTask.class);
@@ -138,13 +138,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1000), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1000), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(100, json.size());
-        Assert.assertEquals("Acme Example", json.getJsonObject(0).getString("name"));
-        Assert.assertEquals("999", json.getJsonObject(0).getString("version"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(100, json.size());
+        Assertions.assertEquals("Acme Example", json.getJsonObject(0).getString("name"));
+        Assertions.assertEquals("999", json.getJsonObject(0).getString("version"));
     }
 
     @Test
@@ -185,8 +185,8 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
         assertThatJson(getPlainTextBody(response)).isEqualTo("""
                 [ {
                    "publisher" : "projectPublisher",
@@ -238,13 +238,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals("1", response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals("1", response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(1, json.size());
-        Assert.assertEquals("acme-app-a", json.getJsonObject(0).getString("name"));
-        Assert.assertEquals("1.0.0", json.getJsonObject(0).getString("version"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(1, json.size());
+        Assertions.assertEquals("acme-app-a", json.getJsonObject(0).getString("name"));
+        Assertions.assertEquals("1.0.0", json.getJsonObject(0).getString("version"));
     }
 
     @Test
@@ -386,13 +386,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(1, json.size());
-        Assert.assertEquals("Acme Example 7", json.getJsonObject(0).getString("name"));
-        Assert.assertEquals("7", json.getJsonObject(0).getString("version"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(1, json.size());
+        Assertions.assertEquals("Acme Example 7", json.getJsonObject(0).getString("name"));
+        Assertions.assertEquals("7", json.getJsonObject(0).getString("version"));
     }
 
     @Test
@@ -405,13 +405,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1000), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1000), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(100, json.size());
-        Assert.assertEquals("Acme Example", json.getJsonObject(0).getString("name"));
-        Assert.assertEquals("999", json.getJsonObject(0).getString("version"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(100, json.size());
+        Assertions.assertEquals("Acme Example", json.getJsonObject(0).getString("name"));
+        Assertions.assertEquals("999", json.getJsonObject(0).getString("version"));
     }
 
     @Test
@@ -423,13 +423,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(1, json.size());
-        Assert.assertEquals("Acme Example B", json.getJsonObject(0).getString("name"));
-        Assert.assertEquals("LIBRARY", json.getJsonObject(0).getString("classifier"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(1, json.size());
+        Assertions.assertEquals("Acme Example B", json.getJsonObject(0).getString("name"));
+        Assertions.assertEquals("LIBRARY", json.getJsonObject(0).getString("classifier"));
     }
 
     @Test
@@ -447,13 +447,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(1, json.size());
-        Assert.assertEquals("Acme Example", json.getJsonObject(0).getString("name"));
-        Assert.assertEquals(10, json.getJsonObject(0).getJsonObject("metrics").getInt("low"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(1, json.size());
+        Assertions.assertEquals("Acme Example", json.getJsonObject(0).getString("name"));
+        Assertions.assertEquals(10, json.getJsonObject(0).getJsonObject("metrics").getInt("low"));
     }
 
     @Test
@@ -466,11 +466,11 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(0), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(0), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(0, json.size());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(0, json.size());
     }
 
     @Test
@@ -487,11 +487,11 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(500), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(500), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(100, json.size());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(100, json.size());
     }
 
     @Test
@@ -505,7 +505,6 @@ public class ProjectResourceTest extends ResourceTest {
         projectB.setName("acme-app-b");
         projectB.setInactiveSince(new Date());
         qm.persist(projectB);
-
 
         // Should return both when onlyRoot=false.
         var response = jersey.target(V1_PROJECT)
@@ -562,16 +561,16 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Acme Example", json.getString("name"));
-        Assert.assertEquals("10", json.getString("version"));
-        Assert.assertEquals(500, json.getJsonArray("versions").size());
-        Assert.assertNotNull(json.getJsonArray("versions").getJsonObject(100).getString("uuid"));
-        Assert.assertNotEquals("", json.getJsonArray("versions").getJsonObject(100).getString("uuid"));
-        Assert.assertEquals("100", json.getJsonArray("versions").getJsonObject(100).getString("version"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Acme Example", json.getString("name"));
+        Assertions.assertEquals("10", json.getString("version"));
+        Assertions.assertEquals(500, json.getJsonArray("versions").size());
+        Assertions.assertNotNull(json.getJsonArray("versions").getJsonObject(100).getString("uuid"));
+        Assertions.assertNotEquals("", json.getJsonArray("versions").getJsonObject(100).getString("uuid"));
+        Assertions.assertEquals("100", json.getJsonArray("versions").getJsonObject(100).getString("version"));
     }
 
     @Test
@@ -626,11 +625,11 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(2), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(2), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getJsonObject(0).getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getJsonObject(0).getString("name"));
     }
 
     @Test
@@ -643,11 +642,11 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(2), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(2), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("DEF", json.getJsonObject(0).getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("DEF", json.getJsonObject(0).getString("name"));
     }
 
     @Test
@@ -1652,7 +1651,6 @@ public class ProjectResourceTest extends ResourceTest {
                 """.formatted(team.getName()));
     }
 
-
     @Test
     public void getProjectChildrenConciseWithLatestMetricsTest() {
         final var parentProject = new Project();
@@ -1848,10 +1846,10 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The project could not be found.", body);
+        Assertions.assertEquals("The project could not be found.", body);
     }
 
     @Test
@@ -1865,11 +1863,11 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getJsonObject(0).getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getJsonObject(0).getString("name"));
     }
 
     @Test
@@ -1883,11 +1881,11 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getJsonObject(0).getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getJsonObject(0).getString("name"));
     }
 
     @Test
@@ -1901,11 +1899,11 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(0), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(0), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(0, json.size());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(0, json.size());
     }
 
     @Test
@@ -1948,13 +1946,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertEquals(201, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Acme Example", json.getString("name"));
-        Assert.assertEquals("1.0", json.getString("version"));
-        Assert.assertEquals("Test project", json.getString("description"));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Acme Example", json.getString("name"));
+        Assertions.assertEquals("1.0", json.getString("version"));
+        Assertions.assertEquals("Test project", json.getString("description"));
+        Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
 
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
             assertThat(notification).isNotNull();
@@ -1974,14 +1972,14 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertEquals(201, response.getStatus(), 0);
         response = jersey.target(V1_PROJECT)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(409, response.getStatus(), 0);
+        Assertions.assertEquals(409, response.getStatus(), 0);
         String body = getPlainTextBody(response);
-        Assert.assertEquals("A project with the specified name already exists.", body);
+        Assertions.assertEquals("A project with the specified name already exists.", body);
     }
 
     @Test
@@ -2052,7 +2050,7 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertEquals(400, response.getStatus(), 0);
     }
 
     @Test
@@ -2123,12 +2121,12 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getString("name"));
-        Assert.assertEquals("1.0", json.getString("version"));
-        Assert.assertEquals("Test project", json.getString("description"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getString("name"));
+        Assertions.assertEquals("1.0", json.getString("version"));
+        Assertions.assertEquals("Test project", json.getString("description"));
     }
 
     @Test
@@ -2194,17 +2192,17 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(jsonProject, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         var json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(p1.getName(), json.getString("name"));
-        Assert.assertEquals(p1.getVersion(), json.getString("version"));
-        Assert.assertFalse(json.containsKey("description"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(p1.getName(), json.getString("name"));
+        Assertions.assertEquals(p1.getVersion(), json.getString("version"));
+        Assertions.assertFalse(json.containsKey("description"));
         var jsonTags = json.getJsonArray("tags");
-        Assert.assertEquals(3, jsonTags.size());
-        Assert.assertEquals("tag1", jsonTags.get(0).asJsonObject().getString("name"));
-        Assert.assertEquals("tag2", jsonTags.get(1).asJsonObject().getString("name"));
-        Assert.assertEquals("tag3", jsonTags.get(2).asJsonObject().getString("name"));
+        Assertions.assertEquals(3, jsonTags.size());
+        Assertions.assertEquals("tag1", jsonTags.get(0).asJsonObject().getString("name"));
+        Assertions.assertEquals("tag2", jsonTags.get(1).asJsonObject().getString("name"));
+        Assertions.assertEquals("tag3", jsonTags.get(2).asJsonObject().getString("name"));
 
         // and update again with the same tags ... issue #1165
         response = jersey.target(V1_PROJECT)
@@ -2213,10 +2211,10 @@ public class ProjectResourceTest extends ResourceTest {
                 .post(Entity.entity(jsonProject, MediaType.APPLICATION_JSON));
         json = parseJsonObject(response);
         jsonTags = json.getJsonArray("tags");
-        Assert.assertEquals(3, jsonTags.size());
-        Assert.assertEquals("tag1", jsonTags.get(0).asJsonObject().getString("name"));
-        Assert.assertEquals("tag2", jsonTags.get(1).asJsonObject().getString("name"));
-        Assert.assertEquals("tag3", jsonTags.get(2).asJsonObject().getString("name"));
+        Assertions.assertEquals(3, jsonTags.size());
+        Assertions.assertEquals("tag1", jsonTags.get(0).asJsonObject().getString("name"));
+        Assertions.assertEquals("tag2", jsonTags.get(1).asJsonObject().getString("name"));
+        Assertions.assertEquals("tag3", jsonTags.get(2).asJsonObject().getString("name"));
 
         // and finally delete one of the tags
         jsonProject.getTags().removeIf(tag -> "tag1".equals(tag.getName()));
@@ -2226,9 +2224,9 @@ public class ProjectResourceTest extends ResourceTest {
                 .post(Entity.entity(jsonProject, MediaType.APPLICATION_JSON));
         json = parseJsonObject(response);
         jsonTags = json.getJsonArray("tags");
-        Assert.assertEquals(2, jsonTags.size());
-        Assert.assertEquals("tag2", jsonTags.get(0).asJsonObject().getString("name"));
-        Assert.assertEquals("tag3", jsonTags.get(1).asJsonObject().getString("name"));
+        Assertions.assertEquals(2, jsonTags.size());
+        Assertions.assertEquals("tag2", jsonTags.get(0).asJsonObject().getString("name"));
+        Assertions.assertEquals("tag3", jsonTags.get(1).asJsonObject().getString("name"));
     }
 
     @Test
@@ -2239,7 +2237,7 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertEquals(400, response.getStatus(), 0);
     }
 
     @Test
@@ -2252,9 +2250,9 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(409, response.getStatus(), 0);
+        Assertions.assertEquals(409, response.getStatus(), 0);
         String body = getPlainTextBody(response);
-        Assert.assertEquals("A project with the specified name and version already exists.", body);
+        Assertions.assertEquals("A project with the specified name and version already exists.", body);
     }
 
     @Test
@@ -2335,7 +2333,7 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(204, response.getStatus(), 0);
+        Assertions.assertEquals(204, response.getStatus(), 0);
     }
 
     @Test
@@ -2345,7 +2343,7 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -2390,8 +2388,8 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method("PATCH", Entity.json(jsonProject));
-        Assert.assertEquals(Response.Status.NOT_MODIFIED.getStatusCode(), response.getStatus());
-        Assert.assertEquals(p1, qm.getObjectByUuid(Project.class, p1.getUuid()));
+        Assertions.assertEquals(Response.Status.NOT_MODIFIED.getStatusCode(), response.getStatus());
+        Assertions.assertEquals(p1, qm.getObjectByUuid(Project.class, p1.getUuid()));
     }
 
     @Test
@@ -2406,8 +2404,8 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method("PATCH", Entity.json(jsonProject));
-        Assert.assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
-        Assert.assertEquals(p1, qm.getObjectByUuid(Project.class, p1.getUuid()));
+        Assertions.assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
+        Assertions.assertEquals(p1, qm.getObjectByUuid(Project.class, p1.getUuid()));
     }
 
     @Test
@@ -2417,7 +2415,7 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method("PATCH", Entity.json(new Project()));
-        Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+        Assertions.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
     }
 
     @Test
@@ -2511,17 +2509,17 @@ public class ProjectResourceTest extends ResourceTest {
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method("PATCH", Entity.json(jsonProject));
 
-        Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         final var json = parseJsonObject(response);
         final var patchedExternalReferences = json.getJsonArray("externalReferences");
-        Assert.assertEquals(2, patchedExternalReferences.size());
+        Assertions.assertEquals(2, patchedExternalReferences.size());
         final var patchedRef1 = patchedExternalReferences.getJsonObject(0);
         final var patchedRef2 = patchedExternalReferences.getJsonObject(1);
-        Assert.assertEquals("vcs", patchedRef1.getString("type"));
-        Assert.assertEquals("https://github.com/DependencyTrack/awesomeness", patchedRef1.getString("url"));
-        Assert.assertEquals("website", patchedRef2.getString("type"));
-        Assert.assertEquals("https://dependencytrack.org", patchedRef2.getString("url"));
-        Assert.assertEquals("Worth a visit!", patchedRef2.getString("comment"));
+        Assertions.assertEquals("vcs", patchedRef1.getString("type"));
+        Assertions.assertEquals("https://github.com/DependencyTrack/awesomeness", patchedRef1.getString("url"));
+        Assertions.assertEquals("website", patchedRef2.getString("type"));
+        Assertions.assertEquals("https://dependencytrack.org", patchedRef2.getString("url"));
+        Assertions.assertEquals("Worth a visit!", patchedRef2.getString("comment"));
     }
 
     @Test
@@ -2633,7 +2631,7 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method("PATCH", Entity.json(jsonProject));
-        Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertThatJson(getPlainTextBody(response))
                 .withMatcher("projectUuid", equalTo(p1.getUuid().toString()))
                 .isEqualTo("""
@@ -2687,12 +2685,12 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getJsonObject(0).getString("name"));
-        Assert.assertThrows(IndexOutOfBoundsException.class, () -> json.getJsonObject(1));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getJsonObject(0).getString("name"));
+        Assertions.assertThrows(IndexOutOfBoundsException.class, () -> json.getJsonObject(1));
     }
 
     @Test
@@ -2705,12 +2703,12 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(2), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(2), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("DEF", json.getJsonObject(0).getString("name"));
-        Assert.assertEquals("GHI", json.getJsonObject(1).getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("DEF", json.getJsonObject(0).getString("name"));
+        Assertions.assertEquals("GHI", json.getJsonObject(1).getString("name"));
     }
 
     @Test
@@ -2725,7 +2723,7 @@ public class ProjectResourceTest extends ResourceTest {
         tmpProject.setInactiveSince(null);
 
         tmpProject.setParent(child);
-        Assert.assertThrows(IllegalArgumentException.class, () -> qm.updateProject(tmpProject, true));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> qm.updateProject(tmpProject, true));
     }
 
     @Test
@@ -2739,9 +2737,8 @@ public class ProjectResourceTest extends ResourceTest {
         tmpProject.setUuid(parent.getUuid());
         tmpProject.setInactiveSince(new Date());
 
-        Assert.assertThrows(IllegalArgumentException.class, () -> qm.updateProject(tmpProject, true));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> qm.updateProject(tmpProject, true));
     }
-
 
     @Test
     public void createProjectWithoutVersionDuplicateTest() {
@@ -2751,14 +2748,14 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertEquals(201, response.getStatus(), 0);
         response = jersey.target(V1_PROJECT)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(409, response.getStatus(), 0);
+        Assertions.assertEquals(409, response.getStatus(), 0);
         String body = getPlainTextBody(response);
-        Assert.assertEquals("A project with the specified name already exists.", body);
+        Assertions.assertEquals("A project with the specified name already exists.", body);
     }
 
     @Test
@@ -2772,7 +2769,7 @@ public class ProjectResourceTest extends ResourceTest {
         tmpProject.setInactiveSince(parent.getInactiveSince());
         tmpProject.setParent(parent);
 
-        Assert.assertThrows(IllegalArgumentException.class, () -> qm.updateProject(tmpProject, true));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> qm.updateProject(tmpProject, true));
     }
 
     @Test
@@ -2787,11 +2784,11 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
 
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getJsonObject(0).getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getJsonObject(0).getString("name"));
     }
 
     @Test
@@ -2963,9 +2960,9 @@ public class ProjectResourceTest extends ResourceTest {
 
         assertThat(response.getStatus()).isEqualTo(202);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertNotNull(json.getString("token"));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
+        Assertions.assertNotNull(json);
+        Assertions.assertNotNull(json.getString("token"));
+        Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
         UUID uuid = UUID.fromString(json.getString("token"));
 
         await("Cloning completion")
@@ -3168,9 +3165,9 @@ public class ProjectResourceTest extends ResourceTest {
                         """.formatted(accessProject.getUuid())));
         assertThat(response.getStatus()).isEqualTo(202);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertNotNull(json.getString("token"));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
+        Assertions.assertNotNull(json);
+        Assertions.assertNotNull(json.getString("token"));
+        Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
     }
 
     @Test
@@ -3184,23 +3181,23 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
 
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getString("name"));
-        Assert.assertEquals(3, json.getJsonArray("versions").size());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getString("name"));
+        Assertions.assertEquals(3, json.getJsonArray("versions").size());
 
-        Assert.assertNotNull(json.getJsonArray("versions").getJsonObject(0).getJsonString("uuid").getString());
-        Assert.assertEquals("1.0", json.getJsonArray("versions").getJsonObject(0).getJsonString("version").getString());
-        Assert.assertTrue(json.getJsonArray("versions").getJsonObject(0).getBoolean("active"));
+        Assertions.assertNotNull(json.getJsonArray("versions").getJsonObject(0).getJsonString("uuid").getString());
+        Assertions.assertEquals("1.0", json.getJsonArray("versions").getJsonObject(0).getJsonString("version").getString());
+        Assertions.assertTrue(json.getJsonArray("versions").getJsonObject(0).getBoolean("active"));
 
-        Assert.assertNotNull(json.getJsonArray("versions").getJsonObject(1).getJsonString("uuid").getString());
-        Assert.assertEquals("2.0", json.getJsonArray("versions").getJsonObject(1).getJsonString("version").getString());
-        Assert.assertTrue(json.getJsonArray("versions").getJsonObject(0).getBoolean("active"));
+        Assertions.assertNotNull(json.getJsonArray("versions").getJsonObject(1).getJsonString("uuid").getString());
+        Assertions.assertEquals("2.0", json.getJsonArray("versions").getJsonObject(1).getJsonString("version").getString());
+        Assertions.assertTrue(json.getJsonArray("versions").getJsonObject(0).getBoolean("active"));
 
-        Assert.assertNotNull(json.getJsonArray("versions").getJsonObject(2).getJsonString("uuid").getString());
-        Assert.assertEquals("3.0", json.getJsonArray("versions").getJsonObject(2).getJsonString("version").getString());
-        Assert.assertTrue(json.getJsonArray("versions").getJsonObject(0).getBoolean("active"));
+        Assertions.assertNotNull(json.getJsonArray("versions").getJsonObject(2).getJsonString("uuid").getString());
+        Assertions.assertEquals("3.0", json.getJsonArray("versions").getJsonObject(2).getJsonString("version").getString());
+        Assertions.assertTrue(json.getJsonArray("versions").getJsonObject(0).getBoolean("active"));
     }
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/4048
@@ -3423,10 +3420,10 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertEquals(201, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
         // ensure initial value is false when not specified
-        Assert.assertFalse(json.getBoolean("isLatest"));
+        Assertions.assertFalse(json.getBoolean("isLatest"));
 
         project.setVersion("2.0");
         project.setIsLatest(true);
@@ -3434,10 +3431,10 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertEquals(201, response.getStatus(), 0);
         json = parseJsonObject(response);
         // ensure value of latest version is true when specified
-        Assert.assertTrue(json.getBoolean("isLatest"));
+        Assertions.assertTrue(json.getBoolean("isLatest"));
         String v20uuid = json.getString("uuid");
 
         project.setVersion("2.1");
@@ -3445,12 +3442,12 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertEquals(201, response.getStatus(), 0);
         json = parseJsonObject(response);
         // ensure value of latest version is true when specified
-        Assert.assertTrue(json.getBoolean("isLatest"));
+        Assertions.assertTrue(json.getBoolean("isLatest"));
         // ensure v2.0 is no longer latest
-        Assert.assertFalse(qm.getProject(v20uuid).isLatest());
+        Assertions.assertFalse(qm.getProject(v20uuid).isLatest());
     }
 
     @Test
@@ -3478,9 +3475,9 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertEquals(201, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertTrue(json.getBoolean("isLatest"));
+        Assertions.assertTrue(json.getBoolean("isLatest"));
 
         project.setName(noAccessProject.getName());
         project.setVersion("3.0.0");
@@ -3488,7 +3485,7 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
     }
 
     @Test
@@ -3500,10 +3497,10 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertEquals(201, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
         // ensure initial value is false when not specified
-        Assert.assertTrue(json.getBoolean("active"));
+        Assertions.assertTrue(json.getBoolean("active"));
 
         project.setVersion("2.0");
         project.setInactiveSince(new Date());
@@ -3511,10 +3508,10 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertEquals(201, response.getStatus(), 0);
         json = parseJsonObject(response);
         // ensure value of latest version is true when specified
-        Assert.assertFalse(json.getBoolean("active"));
+        Assertions.assertFalse(json.getBoolean("active"));
     }
 
     @Test
@@ -3530,9 +3527,9 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(jsonProject, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertTrue(json.getBoolean("isLatest"));
+        Assertions.assertTrue(json.getBoolean("isLatest"));
 
         // add another project version, "forget" to make it latest
         final Project newProject = qm.createProject("ABC", null, "1.0.1", null, null, null,
@@ -3544,12 +3541,12 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(jsonProject, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         json = parseJsonObject(response);
         // ensure is now latest
-        Assert.assertTrue(json.getBoolean("isLatest"));
+        Assertions.assertTrue(json.getBoolean("isLatest"));
         // ensure old is no longer latest
-        Assert.assertFalse(qm.getProject(project.getName(), project.getVersion()).isLatest());
+        Assertions.assertFalse(qm.getProject(project.getName(), project.getVersion()).isLatest());
     }
 
     @Test
@@ -3577,13 +3574,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(jsonProject, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
         // ensure is now latest
-        Assert.assertTrue(json.getBoolean("isLatest"));
+        Assertions.assertTrue(json.getBoolean("isLatest"));
         // ensure old is no longer latest (bypass db cache)
         qm.getPersistenceManager().refreshAll();
-        Assert.assertFalse(qm.getProject(accessLatestProject.getName(), accessLatestProject.getVersion()).isLatest());
+        Assertions.assertFalse(qm.getProject(accessLatestProject.getName(), accessLatestProject.getVersion()).isLatest());
     }
 
     @Test
@@ -3610,9 +3607,9 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(jsonProject, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
         // ensure old is still latest
-        Assert.assertTrue(qm.getProject(noAccessLatestProject.getName(), noAccessLatestProject.getVersion()).isLatest());
+        Assertions.assertTrue(qm.getProject(noAccessLatestProject.getName(), noAccessLatestProject.getVersion()).isLatest());
     }
 
     @Test
@@ -3629,9 +3626,9 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method(HttpMethod.PATCH, Entity.json(jsonProject));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertTrue(json.getBoolean("isLatest"));
+        Assertions.assertTrue(json.getBoolean("isLatest"));
 
         // add another project version, "forget" to make it latest
         final Project newProject = qm.createProject("ABC", null, "1.0.1", null, null, null,
@@ -3644,12 +3641,12 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method(HttpMethod.PATCH, Entity.json(jsonProject));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         json = parseJsonObject(response);
         // ensure is now latest
-        Assert.assertTrue(json.getBoolean("isLatest"));
+        Assertions.assertTrue(json.getBoolean("isLatest"));
         // ensure old is no longer latest
-        Assert.assertFalse(qm.getProject(project.getName(), project.getVersion()).isLatest());
+        Assertions.assertFalse(qm.getProject(project.getName(), project.getVersion()).isLatest());
     }
 
     @Test
@@ -3678,13 +3675,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method(HttpMethod.PATCH, Entity.json(jsonProject));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
         // ensure is now latest
-        Assert.assertTrue(json.getBoolean("isLatest"));
+        Assertions.assertTrue(json.getBoolean("isLatest"));
         // ensure old is no longer latest (bypass db cache)
         qm.getPersistenceManager().refreshAll();
-        Assert.assertFalse(qm.getProject(accessLatestProject.getName(), accessLatestProject.getVersion()).isLatest());
+        Assertions.assertFalse(qm.getProject(accessLatestProject.getName(), accessLatestProject.getVersion()).isLatest());
     }
 
     @Test
@@ -3712,10 +3709,10 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method(HttpMethod.PATCH, Entity.json(jsonProject));
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
         // ensure old is still latest
         qm.getPersistenceManager().refreshAll();
-        Assert.assertTrue(qm.getProject(noAccessLatestProject.getName(), noAccessLatestProject.getVersion()).isLatest());
+        Assertions.assertTrue(qm.getProject(noAccessLatestProject.getName(), noAccessLatestProject.getVersion()).isLatest());
     }
 
     @Test
@@ -3739,9 +3736,9 @@ public class ProjectResourceTest extends ResourceTest {
                         """.formatted(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(202);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertNotNull(json.getString("token"));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
+        Assertions.assertNotNull(json);
+        Assertions.assertNotNull(json.getString("token"));
+        Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
 
         await("Cloning completion")
                 .atMost(Duration.ofSeconds(15))
@@ -3767,11 +3764,11 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Acme Example", json.getString("name"));
-        Assert.assertEquals("1.0.2", json.getString("version"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Acme Example", json.getString("name"));
+        Assertions.assertEquals("1.0.2", json.getString("version"));
     }
 
     @Test
@@ -3791,11 +3788,11 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("acme-app-a", json.getString("name"));
-        Assert.assertEquals("1.0.2", json.getString("version"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("acme-app-a", json.getString("name"));
+        Assertions.assertEquals("1.0.2", json.getString("version"));
     }
 
     @Test
@@ -3810,7 +3807,7 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assertions.assertEquals(403, response.getStatus(), 0);
     }
 
     @Test
@@ -4145,7 +4142,7 @@ public class ProjectResourceTest extends ResourceTest {
                           "active": false
                         }
                         """));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         assertThatJson(getPlainTextBody(response))
                 .isEqualTo(/* language=JSON */ """
                         {
@@ -4176,7 +4173,7 @@ public class ProjectResourceTest extends ResourceTest {
                           "active": true
                         }
                         """));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         assertThatJson(getPlainTextBody(response))
                 .isEqualTo(/* language=JSON */ """
                         {
@@ -4206,7 +4203,7 @@ public class ProjectResourceTest extends ResourceTest {
                           "active": false
                         }
                         """.formatted(project.getUuid())));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         assertThatJson(getPlainTextBody(response))
                 .isEqualTo(/* language=JSON */ """
                         {
@@ -4238,7 +4235,7 @@ public class ProjectResourceTest extends ResourceTest {
                           "active": true
                         }
                         """.formatted(project.getUuid())));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         assertThatJson(getPlainTextBody(response))
                 .isEqualTo(/* language=JSON */ """
                         {

@@ -21,8 +21,8 @@ package org.dependencytrack.integrations.fortifyssc;
 import alpine.model.IConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Project;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -34,8 +34,8 @@ public class FortifySscUploaderTest extends PersistenceCapableTest {
     @Test
     public void testIntegrationMetadata() {
         FortifySscUploader extension = new FortifySscUploader();
-        Assert.assertEquals("Fortify SSC", extension.name());
-        Assert.assertEquals("Pushes Dependency-Track findings to Software Security Center", extension.description());
+        Assertions.assertEquals("Fortify SSC", extension.name());
+        Assertions.assertEquals("Pushes Dependency-Track findings to Software Security Center", extension.description());
     }
 
     @Test
@@ -58,8 +58,8 @@ public class FortifySscUploaderTest extends PersistenceCapableTest {
         );
         FortifySscUploader extension = new FortifySscUploader();
         extension.setQueryManager(qm);
-        Assert.assertTrue(extension.isEnabled());
-        Assert.assertTrue(extension.isProjectConfigured(project));
+        Assertions.assertTrue(extension.isEnabled());
+        Assertions.assertTrue(extension.isProjectConfigured(project));
     }
 
     @Test
@@ -67,8 +67,8 @@ public class FortifySscUploaderTest extends PersistenceCapableTest {
         Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, null, false);
         FortifySscUploader extension = new FortifySscUploader();
         extension.setQueryManager(qm);
-        Assert.assertFalse(extension.isEnabled());
-        Assert.assertFalse(extension.isProjectConfigured(project));
+        Assertions.assertFalse(extension.isEnabled());
+        Assertions.assertFalse(extension.isProjectConfigured(project));
     }
 
     @Test
@@ -77,6 +77,6 @@ public class FortifySscUploaderTest extends PersistenceCapableTest {
         FortifySscUploader extension = new FortifySscUploader();
         extension.setQueryManager(qm);
         InputStream in = extension.process(project, new ArrayList<>());
-        Assert.assertTrue(in != null && in.available() > 0);
+        Assertions.assertTrue(in != null && in.available() > 0);
     }
 }

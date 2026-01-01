@@ -28,7 +28,7 @@ import java.lang.annotation.Target;
  * @since 5.7.0
  */
 @Retention(value = RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
+@Target({ElementType.METHOD, ElementType.TYPE})
 @Documented
 public @interface WithConfigProperty {
 

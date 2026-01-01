@@ -38,7 +38,7 @@ import io.swagger.v3.parser.core.models.ParseOptions;
 import jakarta.ws.rs.client.ClientRequestContext;
 import jakarta.ws.rs.client.ClientResponseContext;
 import jakarta.ws.rs.client.ClientResponseFilter;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -85,7 +85,7 @@ public class OpenApiValidationClientResponseFilter implements ClientResponseFilt
         final Operation operationDef = findOpenApiOperation(requestContext);
         if (operationDef == null) {
             // Undocumented request?
-            Assert.fail("No OpenAPI operation found for %s %s".formatted(
+            Assertions.fail("No OpenAPI operation found for %s %s".formatted(
                     requestContext.getMethod(), requestContext.getUri()));
         }
 

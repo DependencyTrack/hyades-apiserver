@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.parser.cyclonedx;
 
+import org.apache.commons.io.IOUtils;
 import org.assertj.core.api.Assertions;
 import org.cyclonedx.parsers.BomParserFactory;
 import org.dependencytrack.PersistenceCapableTest;
@@ -28,9 +29,7 @@ import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
-import org.junit.Assert;
-import org.junit.Test;
-import org.testcontainers.shaded.org.apache.commons.io.IOUtils;
+import org.junit.jupiter.api.Test;
 
 import javax.jdo.Query;
 import java.util.Arrays;
@@ -121,7 +120,7 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
         final Query<Analysis> query = qm.getPersistenceManager().newQuery(Analysis.class, "project == :project");
         var analyses = (List<Analysis>) query.execute(project);
         // CVE-2020-256[49|50|51] are not audited otherwise analyses.size would have been equal to sources.size()+3
-        Assert.assertEquals(sources.size(), analyses.size());
+        org.junit.jupiter.api.Assertions.assertEquals(sources.size(), analyses.size());
         Assertions.assertThat(analyses).allSatisfy(analysis -> {
             Assertions.assertThat(analysis.getVulnerability().getVulnId()).isNotEqualTo("CVE-2020-25649");
             Assertions.assertThat(analysis.getVulnerability().getVulnId()).isNotEqualTo("CVE-2020-25650");

@@ -22,8 +22,8 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.util.PersistenceUtil.Diff;
 import org.dependencytrack.util.PersistenceUtil.Differ;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Transaction;
@@ -39,7 +39,7 @@ public class PersistenceUtilTest extends PersistenceCapableTest {
 
     private PersistenceManager pm;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         pm = qm.getPersistenceManager();
     }

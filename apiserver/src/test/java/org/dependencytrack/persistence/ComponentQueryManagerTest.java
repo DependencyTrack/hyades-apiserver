@@ -21,7 +21,7 @@ package org.dependencytrack.persistence;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 

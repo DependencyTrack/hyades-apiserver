@@ -27,11 +27,11 @@ import org.dependencytrack.dex.engine.api.WorkflowRun;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.migration.MigrationExecutor;
 import org.jspecify.annotations.Nullable;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.postgresql.ds.PGSimpleDataSource;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -44,7 +44,14 @@ import java.util.function.Consumer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-public final class WorkflowTestRule implements TestRule {
+/**
+ * A JUnit Jupiter extension for testing Dex workflows.
+ * <p>
+ * This extension sets up a {@link DexEngine} instance for each test, executes
+ * database migrations, and handles cleanup after each test. It provides utility
+ * methods for waiting on workflow run statuses and accessing the engine.
+ */
+public final class WorkflowTestExtension implements BeforeEachCallback, AfterEachCallback {
 
     private static final DexEngineFactory ENGINE_FACTORY =
             ServiceLoader.load(DexEngineFactory.class).findFirst().orElseThrow();
@@ -55,42 +62,39 @@ public final class WorkflowTestRule implements TestRule {
 
     private @Nullable Consumer<DexEngineConfig> configCustomizer;
 
-    public WorkflowTestRule(final DataSource dataSource) {
+    public WorkflowTestExtension(final DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
-    public WorkflowTestRule(final PostgreSQLContainer<?> postgresContainer) {
+    public WorkflowTestExtension(final PostgreSQLContainer postgresContainer) {
         this(createDataSource(postgresContainer));
     }
 
     @Override
-    public Statement apply(final Statement statement, final Description description) {
-        return new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                new MigrationExecutor(dataSource).execute();
+    public void beforeEach(ExtensionContext context) {
+        new MigrationExecutor(dataSource).execute();
 
-                final var engineConfig = new DexEngineConfig(dataSource);
+        final var engineConfig = new DexEngineConfig(dataSource);
 
-                // Reduce poll intervals and backoff to make tests more responsive.
-                engineConfig.activityTaskScheduler().setPollInterval(Duration.ofMillis(25));
-                engineConfig.activityTaskScheduler().setPollBackoffFunction(IntervalFunction.of(25));
-                engineConfig.workflowTaskScheduler().setPollInterval(Duration.ofMillis(25));
-                engineConfig.workflowTaskScheduler().setPollBackoffFunction(IntervalFunction.of(25));
+        // Reduce poll intervals and backoff to make tests more responsive.
+        engineConfig.activityTaskScheduler().setPollInterval(Duration.ofMillis(25));
+        engineConfig.activityTaskScheduler().setPollBackoffFunction(IntervalFunction.of(25));
+        engineConfig.workflowTaskScheduler().setPollInterval(Duration.ofMillis(25));
+        engineConfig.workflowTaskScheduler().setPollBackoffFunction(IntervalFunction.of(25));
 
-                if (configCustomizer != null) {
-                    configCustomizer.accept(engineConfig);
-                }
+        if (configCustomizer != null) {
+            configCustomizer.accept(engineConfig);
+        }
 
-                engine = ENGINE_FACTORY.create(engineConfig);
-                try {
-                    statement.evaluate();
-                } finally {
-                    engine.close();
-                    truncateTables(dataSource);
-                }
-            }
-        };
+        engine = ENGINE_FACTORY.create(engineConfig);
+    }
+
+    @Override
+    public void afterEach(ExtensionContext context) throws Exception {
+        if (engine != null) {
+            engine.close();
+        }
+        truncateTables(dataSource);
     }
 
     public DexEngine getEngine() {
@@ -101,7 +105,7 @@ public final class WorkflowTestRule implements TestRule {
         return engine;
     }
 
-    public WorkflowTestRule withConfigCustomizer(final @Nullable Consumer<DexEngineConfig> configCustomizer) {
+    public WorkflowTestExtension withConfigCustomizer(final @Nullable Consumer<DexEngineConfig> configCustomizer) {
         this.configCustomizer = configCustomizer;
         return this;
     }
@@ -183,7 +187,7 @@ public final class WorkflowTestRule implements TestRule {
         }
     }
 
-    private static DataSource createDataSource(final PostgreSQLContainer<?> postgresContainer) {
+    private static DataSource createDataSource(final PostgreSQLContainer postgresContainer) {
         final var dataSource = new PGSimpleDataSource();
         dataSource.setUrl(postgresContainer.getJdbcUrl());
         dataSource.setUser(postgresContainer.getUsername());

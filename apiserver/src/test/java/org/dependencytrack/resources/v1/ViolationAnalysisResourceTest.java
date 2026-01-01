@@ -28,7 +28,7 @@ import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import net.jcip.annotations.NotThreadSafe;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
@@ -44,8 +44,8 @@ import org.dependencytrack.model.ViolationAnalysisComment;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.resources.v1.vo.ViolationAnalysisRequest;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Date;
 import java.util.UUID;
@@ -60,8 +60,8 @@ import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 @NotThreadSafe
 public class ViolationAnalysisResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(ViolationAnalysisResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)

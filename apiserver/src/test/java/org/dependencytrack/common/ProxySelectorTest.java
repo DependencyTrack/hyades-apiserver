@@ -19,7 +19,7 @@
 package org.dependencytrack.common;
 
 import alpine.common.util.ProxyConfig;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.Proxy;
 import java.net.URI;

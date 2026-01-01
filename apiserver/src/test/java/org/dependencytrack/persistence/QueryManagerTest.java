@@ -22,17 +22,13 @@ import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
-
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collections;
 import java.util.List;
@@ -47,7 +43,6 @@ import java.util.function.Function;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-@RunWith(JUnitParamsRunner.class)
 public class QueryManagerTest extends PersistenceCapableTest {
 
     @Test
@@ -107,15 +102,15 @@ public class QueryManagerTest extends PersistenceCapableTest {
     }
 
     @SuppressWarnings("unused")
-    private Object[] parametersForTestGetEffectivePermissionsRoles() {
+    private static Object[] parametersForTestGetEffectivePermissionsRoles() {
         return new Object[] {
             new Object[] { false, Collections.emptySet() },
             new Object[] { true, Set.of("VIEW_PORTFOLIO") }
         };
     }
 
-    @Test
-    @Parameters
+    @ParameterizedTest
+    @MethodSource("parametersForTestGetEffectivePermissionsRoles")
     public void testGetEffectivePermissionsRoles(boolean hasRole, Set<String> expected) {
         final ManagedUser mgdUser = qm.createManagedUser("mgduser", "mgduser", "mgduser@localhost",
                 TEST_PASSWORD_HASH, true, false, false);
@@ -136,8 +131,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
                 TEST_PASSWORD_HASH, true, false, false);
         var oidcUser = qm.createOidcUser("oidcuser");
 
-        BiFunction<String, List<Permissions>, Team> teamCreator = (name, permissions) -> {
-            return qm.callInTransaction(() -> {
+        BiFunction<String, List<Permissions>, Team> teamCreator = (name, permissions) -> qm.callInTransaction(() -> {
                 var team = qm.createTeam(name);
                 team.setPermissions(permissions.stream()
                         .map(permission -> qm.createPermission(permission.name(), permission.getDescription()))
@@ -145,7 +139,6 @@ public class QueryManagerTest extends PersistenceCapableTest {
 
                 return qm.persist(team);
             });
-        };
 
         var team1 = teamCreator.apply("Effective Permissions Test Team 1", List.of(
                 Permissions.PORTFOLIO_MANAGEMENT,
@@ -183,8 +176,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
         qm.addUserToTeam(mgdUser, noAccessTeam);
         qm.addUserToTeam(oidcUser, noAccessTeam);
 
-        BiFunction<String, String, Project> projectCreator = (name, version) -> {
-            return qm.callInTransaction(() -> {
+        BiFunction<String, String, Project> projectCreator = (name, version) -> qm.callInTransaction(() -> {
                 var project = new Project();
                 project.setName(name);
                 project.setDescription("Project for testing effective permissions");
@@ -194,7 +186,6 @@ public class QueryManagerTest extends PersistenceCapableTest {
 
                 return qm.persist(project);
             });
-        };
 
         var project1 = projectCreator.apply("test-project-1", "v0.1.0");
         var project2 = projectCreator.apply("test-project-2", "v0.1.1");

@@ -19,7 +19,7 @@
 package org.dependencytrack.integrations.defectdojo;
 
 import alpine.model.IConfigProperty;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import jakarta.ws.rs.core.MediaType;
 import org.apache.http.HttpHeaders;
 import org.dependencytrack.PersistenceCapableTest;
@@ -30,10 +30,10 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.jdbi.FindingDao;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.InputStream;
 import java.util.List;
@@ -47,9 +47,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_API_KEY;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABLED;
@@ -59,14 +57,16 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class DefectDojoUploaderTest extends PersistenceCapableTest {
 
-    @Rule
-    public WireMockRule wireMockRule = new WireMockRule(options().dynamicPort());
+    @RegisterExtension
+    private static final WireMockExtension wireMock =
+            WireMockExtension.newInstance().options(options().dynamicPort())
+                    .build();
 
     @Test
     public void testIntegrationMetadata() {
         DefectDojoUploader extension = new DefectDojoUploader();
-        Assert.assertEquals("DefectDojo", extension.name());
-        Assert.assertEquals("Pushes Dependency-Track findings to DefectDojo", extension.description());
+        Assertions.assertEquals("DefectDojo", extension.name());
+        Assertions.assertEquals("Pushes Dependency-Track findings to DefectDojo", extension.description());
     }
 
     @Test
@@ -89,8 +89,8 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         );
         DefectDojoUploader extension = new DefectDojoUploader();
         extension.setQueryManager(qm);
-        Assert.assertTrue(extension.isEnabled());
-        Assert.assertTrue(extension.isProjectConfigured(project));
+        Assertions.assertTrue(extension.isEnabled());
+        Assertions.assertTrue(extension.isProjectConfigured(project));
     }
 
     @Test
@@ -98,8 +98,8 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, null, false);
         DefectDojoUploader extension = new DefectDojoUploader();
         extension.setQueryManager(qm);
-        Assert.assertFalse(extension.isEnabled());
-        Assert.assertFalse(extension.isProjectConfigured(project));
+        Assertions.assertFalse(extension.isEnabled());
+        Assertions.assertFalse(extension.isProjectConfigured(project));
     }
 
     @Test
@@ -114,7 +114,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         qm.createConfigProperty(
                 DEFECTDOJO_URL.getGroupName(),
                 DEFECTDOJO_URL.getPropertyName(),
-                wireMockRule.baseUrl(),
+                wireMock.baseUrl(),
                 DEFECTDOJO_URL.getPropertyType(),
                 null
         );
@@ -133,7 +133,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                 null
         );
 
-        stubFor(post(urlPathEqualTo("/api/v2/import-scan/"))
+        wireMock.stubFor(post(urlPathEqualTo("/api/v2/import-scan/"))
                 .willReturn(aResponse()
                         .withStatus(201)));
 
@@ -167,7 +167,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         final InputStream inputStream = uploader.process(project, findings);
         uploader.upload(project, inputStream);
 
-        verify(postRequestedFor(urlPathEqualTo("/api/v2/import-scan/"))
+        wireMock.verify(postRequestedFor(urlPathEqualTo("/api/v2/import-scan/"))
                 .withHeader(HttpHeaders.AUTHORIZATION, equalTo("Token dojoApiKey"))
                 .withAnyRequestBodyPart(aMultipart()
                         .withName("engagement")
@@ -250,7 +250,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         qm.createConfigProperty(
                 DEFECTDOJO_URL.getGroupName(),
                 DEFECTDOJO_URL.getPropertyName(),
-                wireMockRule.baseUrl(),
+                wireMock.baseUrl(),
                 DEFECTDOJO_URL.getPropertyType(),
                 null
         );
@@ -269,7 +269,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                 null
         );
 
-        stubFor(get(urlPathEqualTo("/api/v2/tests/"))
+        wireMock.stubFor(get(urlPathEqualTo("/api/v2/tests/"))
                 .withQueryParam("engagement", equalTo("666"))
                 .withQueryParam("limit", equalTo("100"))
                 .withHeader(HttpHeaders.AUTHORIZATION, equalTo("Token dojoApiKey"))
@@ -338,9 +338,9 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                                   ],
                                   "prefetch": {}
                                 }
-                                """.formatted(wireMockRule.baseUrl()))));
+                                """.formatted(wireMock.baseUrl()))));
 
-        stubFor(get(urlPathEqualTo("/api/v2/tests/"))
+        wireMock.stubFor(get(urlPathEqualTo("/api/v2/tests/"))
                 .withQueryParam("engagement", equalTo("666"))
                 .withQueryParam("limit", equalTo("100"))
                 .withQueryParam("offset", equalTo("100"))
@@ -383,9 +383,9 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                                    ],
                                    "prefetch": {}
                                  }
-                                """.formatted(wireMockRule.baseUrl()))));
+                                """.formatted(wireMock.baseUrl()))));
 
-        stubFor(post(urlPathEqualTo("/api/v2/reimport-scan/"))
+        wireMock.stubFor(post(urlPathEqualTo("/api/v2/reimport-scan/"))
                 .willReturn(aResponse()
                         .withStatus(201)));
 
@@ -419,9 +419,9 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         final InputStream inputStream = uploader.process(project, findings);
         uploader.upload(project, inputStream);
 
-        verify(2, getRequestedFor(urlPathEqualTo("/api/v2/tests/")));
+        wireMock.verify(2, getRequestedFor(urlPathEqualTo("/api/v2/tests/")));
 
-        verify(postRequestedFor(urlPathEqualTo("/api/v2/reimport-scan/"))
+        wireMock.verify(postRequestedFor(urlPathEqualTo("/api/v2/reimport-scan/"))
                 .withHeader(HttpHeaders.AUTHORIZATION, equalTo("Token dojoApiKey"))
                 .withAnyRequestBodyPart(aMultipart()
                         .withName("engagement")
@@ -507,7 +507,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         qm.createConfigProperty(
                 DEFECTDOJO_URL.getGroupName(),
                 DEFECTDOJO_URL.getPropertyName(),
-                wireMockRule.baseUrl(),
+                wireMock.baseUrl(),
                 DEFECTDOJO_URL.getPropertyType(),
                 null
         );
@@ -526,7 +526,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                 null
         );
 
-        stubFor(get(urlPathEqualTo("/api/v2/tests/"))
+        wireMock.stubFor(get(urlPathEqualTo("/api/v2/tests/"))
                 .withQueryParam("engagement", equalTo("666"))
                 .withQueryParam("limit", equalTo("100"))
                 .withHeader(HttpHeaders.AUTHORIZATION, equalTo("Token dojoApiKey"))
@@ -571,7 +571,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                                  }
                                 """)));
 
-        stubFor(post(urlPathEqualTo("/api/v2/reimport-scan/"))
+        wireMock.stubFor(post(urlPathEqualTo("/api/v2/reimport-scan/"))
                 .willReturn(aResponse()
                         .withStatus(201)));
 
@@ -599,9 +599,9 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         final InputStream inputStream = uploader.process(project, findings);
         uploader.upload(project, inputStream);
 
-        verify(1, getRequestedFor(urlPathEqualTo("/api/v2/tests/")));
+        wireMock.verify(1, getRequestedFor(urlPathEqualTo("/api/v2/tests/")));
 
-        verify(postRequestedFor(urlPathEqualTo("/api/v2/reimport-scan/"))
+        wireMock.verify(postRequestedFor(urlPathEqualTo("/api/v2/reimport-scan/"))
                 .withHeader(HttpHeaders.AUTHORIZATION, equalTo("Token dojoApiKey"))
                 .withAnyRequestBodyPart(aMultipart()
                         .withName("file")
@@ -635,7 +635,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         qm.createConfigProperty(
                 DEFECTDOJO_URL.getGroupName(),
                 DEFECTDOJO_URL.getPropertyName(),
-                wireMockRule.baseUrl(),
+                wireMock.baseUrl(),
                 DEFECTDOJO_URL.getPropertyType(),
                 null
         );
@@ -654,7 +654,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                 null
         );
 
-        stubFor(get(urlPathEqualTo("/api/v2/tests/"))
+        wireMock.stubFor(get(urlPathEqualTo("/api/v2/tests/"))
                 .withQueryParam("engagement", equalTo("666"))
                 .withQueryParam("limit", equalTo("100"))
                 .withHeader(HttpHeaders.AUTHORIZATION, equalTo("Token dojoApiKey"))
@@ -671,7 +671,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                                  }
                                 """)));
 
-        stubFor(post(urlPathEqualTo("/api/v2/import-scan/"))
+        wireMock.stubFor(post(urlPathEqualTo("/api/v2/import-scan/"))
                 .willReturn(aResponse()
                         .withStatus(201)));
 
@@ -697,9 +697,9 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         final InputStream inputStream = uploader.process(project, findings);
         uploader.upload(project, inputStream);
 
-        verify(1, getRequestedFor(urlPathEqualTo("/api/v2/tests/")));
+        wireMock.verify(1, getRequestedFor(urlPathEqualTo("/api/v2/tests/")));
 
-        verify(postRequestedFor(urlPathEqualTo("/api/v2/import-scan/"))
+        wireMock.verify(postRequestedFor(urlPathEqualTo("/api/v2/import-scan/"))
                 .withHeader(HttpHeaders.AUTHORIZATION, equalTo("Token dojoApiKey"))
                 .withAnyRequestBodyPart(aMultipart()
                         .withName("file")
@@ -728,7 +728,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
      * for instructions on how to set it up.
      */
     @Test
-    @Ignore
+    @Disabled
     public void testUploadIntegration() {
         final var baseUrl = "http://localhost:8080";
         final var apiKey = "";

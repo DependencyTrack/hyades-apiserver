@@ -25,8 +25,8 @@ import alpine.model.Team;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -40,35 +40,35 @@ public class NotificationRuleTest {
     public void testId() {
         NotificationRule rule = new NotificationRule();
         rule.setId(111);
-        Assert.assertEquals(111L, rule.getId());
+        Assertions.assertEquals(111L, rule.getId());
     }
 
     @Test
     public void testName() {
         NotificationRule rule = new NotificationRule();
         rule.setName("Test Name");
-        Assert.assertEquals("Test Name", rule.getName());
+        Assertions.assertEquals("Test Name", rule.getName());
     }
 
     @Test
     public void testEnabled() {
         NotificationRule rule = new NotificationRule();
         rule.setEnabled(true);
-        Assert.assertTrue(rule.isEnabled());
+        Assertions.assertTrue(rule.isEnabled());
     }
 
     @Test
     public void testScope() {
         NotificationRule rule = new NotificationRule();
         rule.setScope(NotificationScope.PORTFOLIO);
-        Assert.assertEquals(NotificationScope.PORTFOLIO, rule.getScope());
+        Assertions.assertEquals(NotificationScope.PORTFOLIO, rule.getScope());
     }
 
     @Test
     public void testNotificationLevel() {
         NotificationRule rule = new NotificationRule();
         rule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
-        Assert.assertEquals(NotificationLevel.INFORMATIONAL, rule.getNotificationLevel());
+        Assertions.assertEquals(NotificationLevel.INFORMATIONAL, rule.getNotificationLevel());
     }
 
     @Test
@@ -78,15 +78,15 @@ public class NotificationRuleTest {
         projects.add(project);
         NotificationRule rule = new NotificationRule();
         rule.setProjects(projects);
-        Assert.assertEquals(1, rule.getProjects().size());
-        Assert.assertEquals(project, rule.getProjects().get(0));
+        Assertions.assertEquals(1, rule.getProjects().size());
+        Assertions.assertEquals(project, rule.getProjects().get(0));
     }
 
     @Test
     public void testMessage() {
         NotificationRule rule = new NotificationRule();
         rule.setMessage("Test Message");
-        Assert.assertEquals("Test Message", rule.getMessage());
+        Assertions.assertEquals("Test Message", rule.getMessage());
     }
 
     @Test
@@ -96,7 +96,7 @@ public class NotificationRuleTest {
         groups.add(NotificationGroup.NEW_VULNERABILITY);
         NotificationRule rule = new NotificationRule();
         rule.setNotifyOn(groups);
-        Assert.assertEquals(2, rule.getNotifyOn().size());
+        Assertions.assertEquals(2, rule.getNotifyOn().size());
     }
 
     @Test
@@ -104,14 +104,14 @@ public class NotificationRuleTest {
         NotificationPublisher publisher = new NotificationPublisher();
         NotificationRule rule = new NotificationRule();
         rule.setPublisher(publisher);
-        Assert.assertEquals(publisher, rule.getPublisher());
+        Assertions.assertEquals(publisher, rule.getPublisher());
     }
 
     @Test
     public void testPublisherConfig() {
         NotificationRule rule = new NotificationRule();
         rule.setPublisherConfig("{ \"config\": \"configured\" }");
-        Assert.assertEquals("{ \"config\": \"configured\" }", rule.getPublisherConfig());
+        Assertions.assertEquals("{ \"config\": \"configured\" }", rule.getPublisherConfig());
     }
 
     @Test
@@ -119,7 +119,7 @@ public class NotificationRuleTest {
         UUID uuid = UUID.randomUUID();
         NotificationRule rule = new NotificationRule();
         rule.setUuid(uuid);
-        Assert.assertEquals(uuid.toString(), rule.getUuid().toString());
+        Assertions.assertEquals(uuid.toString(), rule.getUuid().toString());
     }
 
     @Test
@@ -129,10 +129,10 @@ public class NotificationRuleTest {
         teams.add(team);
         NotificationRule rule = new NotificationRule();
         rule.setTeams(teams);
-        Assert.assertEquals(1, rule.getTeams().size());
+        Assertions.assertEquals(1, rule.getTeams().size());
         var ruleTeam = rule.getTeams().stream().findFirst().orElse(null);
-        Assert.assertNotNull(ruleTeam);
-        Assert.assertEquals(team, ruleTeam);
+        Assertions.assertNotNull(ruleTeam);
+        Assertions.assertEquals(team, ruleTeam);
     }
 
     @Test
@@ -146,11 +146,11 @@ public class NotificationRuleTest {
         teams.add(team);
         NotificationRule rule = new NotificationRule();
         rule.setTeams(teams);
-        Assert.assertEquals(1, rule.getTeams().size());
+        Assertions.assertEquals(1, rule.getTeams().size());
         var ruleTeam = rule.getTeams().stream().findFirst().orElse(null);
-        Assert.assertNotNull(ruleTeam);
-        Assert.assertEquals(team, ruleTeam);
-        Assert.assertEquals(managedUser, ruleTeam.getManagedUsers().get(0));
+        Assertions.assertNotNull(ruleTeam);
+        Assertions.assertEquals(team, ruleTeam);
+        Assertions.assertEquals(managedUser, ruleTeam.getManagedUsers().get(0));
     }
 
     @Test
@@ -164,11 +164,11 @@ public class NotificationRuleTest {
         teams.add(team);
         NotificationRule rule = new NotificationRule();
         rule.setTeams(teams);
-        Assert.assertEquals(1, rule.getTeams().size());
+        Assertions.assertEquals(1, rule.getTeams().size());
         var ruleTeam = rule.getTeams().stream().findFirst().orElse(null);
-        Assert.assertNotNull(ruleTeam);
-        Assert.assertEquals(team, ruleTeam);
-        Assert.assertEquals(ldapUser, ruleTeam.getLdapUsers().get(0));
+        Assertions.assertNotNull(ruleTeam);
+        Assertions.assertEquals(team, ruleTeam);
+        Assertions.assertEquals(ldapUser, ruleTeam.getLdapUsers().get(0));
     }
 
     @Test
@@ -182,17 +182,17 @@ public class NotificationRuleTest {
         teams.add(team);
         NotificationRule rule = new NotificationRule();
         rule.setTeams(teams);
-        Assert.assertEquals(1, rule.getTeams().size());
+        Assertions.assertEquals(1, rule.getTeams().size());
         var ruleTeam = rule.getTeams().stream().findFirst().orElse(null);
-        Assert.assertNotNull(ruleTeam);
-        Assert.assertEquals(team, ruleTeam);
-        Assert.assertEquals(oidcUser, ruleTeam.getOidcUsers().get(0));
+        Assertions.assertNotNull(ruleTeam);
+        Assertions.assertEquals(team, ruleTeam);
+        Assertions.assertEquals(oidcUser, ruleTeam.getOidcUsers().get(0));
     }
 
     @Test
     public void testLogSuccessfulPublish() {
         NotificationRule rule = new NotificationRule();
         rule.setLogSuccessfulPublish(true);
-        Assert.assertTrue(rule.isLogSuccessfulPublish());
+        Assertions.assertTrue(rule.isLogSuccessfulPublish());
     }
 }

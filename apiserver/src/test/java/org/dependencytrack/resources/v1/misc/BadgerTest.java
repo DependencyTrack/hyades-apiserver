@@ -20,8 +20,8 @@ package org.dependencytrack.resources.v1.misc;
 
 import org.apache.commons.io.FileUtils;
 import org.dependencytrack.model.ProjectMetrics;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,14 +34,14 @@ public class BadgerTest {
     public void generateVulnerabilitiesWithoutMetricsGenerateExpectedSvg() throws Exception {
         Badger badger = new Badger();
         String svg = badger.generateVulnerabilities(null, null);
-        Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns-nometrics.svg")));
+        Assertions.assertEquals(strip(svg), strip(expectedSvg("project-vulns-nometrics.svg")));
     }
 
     @Test
     public void generateVulnerabilitiesWithoutMetricsGenerateExpectedSvgClickable() throws Exception {
         Badger badger = new Badger();
         String svg = badger.generateVulnerabilities(null, "test.url.com");
-        Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns-nometrics-href.svg")));
+        Assertions.assertEquals(strip(svg), strip(expectedSvg("project-vulns-nometrics-href.svg")));
     }
 
     @Test
@@ -50,7 +50,7 @@ public class BadgerTest {
         metrics.setVulnerabilities(0);
         Badger badger = new Badger();
         String svg = badger.generateVulnerabilities(metrics, null);
-        Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns-none.svg")));
+        Assertions.assertEquals(strip(svg), strip(expectedSvg("project-vulns-none.svg")));
     }
 
     @Test
@@ -59,7 +59,7 @@ public class BadgerTest {
         metrics.setVulnerabilities(0);
         Badger badger = new Badger();
         String svg = badger.generateVulnerabilities(metrics, "test.url.com");
-        Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns-none-href.svg")));
+        Assertions.assertEquals(strip(svg), strip(expectedSvg("project-vulns-none-href.svg")));
     }
 
     @Test
@@ -73,7 +73,7 @@ public class BadgerTest {
         metrics.setUnassigned(5);
         Badger badger = new Badger();
         String svg = badger.generateVulnerabilities(metrics, null);
-        Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns.svg")));
+        Assertions.assertEquals(strip(svg), strip(expectedSvg("project-vulns.svg")));
     }
 
     @Test
@@ -87,21 +87,21 @@ public class BadgerTest {
         metrics.setUnassigned(5);
         Badger badger = new Badger();
         String svg = badger.generateVulnerabilities(metrics, "test.url.com");
-        Assert.assertEquals(strip(svg), strip(expectedSvg("project-vulns-href.svg")));
+        Assertions.assertEquals(strip(svg), strip(expectedSvg("project-vulns-href.svg")));
     }
 
     @Test
     public void generateViolationsWithoutMetricsGenerateExpectedSvg() throws Exception {
         Badger badger = new Badger();
         String svg = badger.generateViolations(null, null);
-        Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations-nometrics.svg")));
+        Assertions.assertEquals(strip(svg), strip(expectedSvg("project-violations-nometrics.svg")));
     }
 
     @Test
     public void generateViolationsWithoutMetricsGenerateExpectedSvgClickable() throws Exception {
         Badger badger = new Badger();
         String svg = badger.generateViolations(null, "test.url.com");
-        Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations-nometrics-href.svg")));
+        Assertions.assertEquals(strip(svg), strip(expectedSvg("project-violations-nometrics-href.svg")));
     }
 
     @Test
@@ -110,7 +110,7 @@ public class BadgerTest {
         metrics.setPolicyViolationsTotal(0);
         Badger badger = new Badger();
         String svg = badger.generateViolations(metrics, null);
-        Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations-none.svg")));
+        Assertions.assertEquals(strip(svg), strip(expectedSvg("project-violations-none.svg")));
     }
 
     @Test
@@ -119,7 +119,7 @@ public class BadgerTest {
         metrics.setPolicyViolationsTotal(0);
         Badger badger = new Badger();
         String svg = badger.generateViolations(metrics, "test.url.com");
-        Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations-none-href.svg")));
+        Assertions.assertEquals(strip(svg), strip(expectedSvg("project-violations-none-href.svg")));
     }
 
     @Test
@@ -131,7 +131,7 @@ public class BadgerTest {
         metrics.setPolicyViolationsInfo(3);
         Badger badger = new Badger();
         String svg = badger.generateViolations(metrics, null);
-        Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations.svg")));
+        Assertions.assertEquals(strip(svg), strip(expectedSvg("project-violations.svg")));
     }
 
     @Test
@@ -143,7 +143,7 @@ public class BadgerTest {
         metrics.setPolicyViolationsInfo(3);
         Badger badger = new Badger();
         String svg = badger.generateViolations(metrics, "test.url.com");
-        Assert.assertEquals(strip(svg), strip(expectedSvg("project-violations-href.svg")));
+        Assertions.assertEquals(strip(svg), strip(expectedSvg("project-violations-href.svg")));
     }
 
     private String expectedSvg(String filename) throws Exception {

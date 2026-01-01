@@ -21,8 +21,8 @@ package org.dependencytrack.notification;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.notification.proto.v1.Notification;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 
@@ -34,7 +34,7 @@ public class JdoNotificationEmitterTest extends PersistenceCapableTest {
 
     private org.dependencytrack.notification.api.emission.NotificationEmitter emitter;
 
-    @Before
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();

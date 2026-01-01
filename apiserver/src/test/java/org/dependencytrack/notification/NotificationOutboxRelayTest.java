@@ -26,8 +26,9 @@ import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.notification.api.TestNotificationFactory;
 import org.dependencytrack.notification.proto.v1.Notification;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
@@ -43,7 +44,7 @@ public class NotificationOutboxRelayTest extends PersistenceCapableTest {
     private MockProducer<byte[], byte[]> mockProducer;
     private NotificationOutboxRelay relay;
 
-    @Before
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();
@@ -61,6 +62,7 @@ public class NotificationOutboxRelayTest extends PersistenceCapableTest {
                 /* batchSize */ 10);
     }
 
+    @AfterEach
     @Override
     public void after() {
         if (relay != null) {

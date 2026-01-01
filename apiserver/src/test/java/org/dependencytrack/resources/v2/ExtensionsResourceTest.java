@@ -20,7 +20,7 @@ package org.dependencytrack.resources.v2;
 
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.persistence.jdbi.ExtensionConfigDao;
@@ -34,9 +34,9 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigSchemaSource;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.jspecify.annotations.NonNull;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Collections;
 import java.util.List;
@@ -54,8 +54,8 @@ public class ExtensionsResourceTest extends ResourceTest {
 
     private static final PluginManager PLUGIN_MANAGER_MOCK = mock(PluginManager.class);
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig()
                     .register(new AbstractBinder() {
                         @Override
@@ -64,7 +64,7 @@ public class ExtensionsResourceTest extends ResourceTest {
                         }
                     }));
 
-    @After
+    @AfterEach
     public void after() {
         reset(PLUGIN_MANAGER_MOCK);
         super.after();

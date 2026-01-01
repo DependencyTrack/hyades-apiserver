@@ -36,9 +36,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.postgresql.ds.PGSimpleDataSource;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.nio.file.Files;
@@ -61,8 +61,8 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 class DatabaseSecretManagerTest {
 
     @Container
-    private static final PostgreSQLContainer<?> postgresContainer =
-            new PostgreSQLContainer<>(DockerImageName.parse("postgres:14-alpine"));
+    private static final PostgreSQLContainer postgresContainer =
+            new PostgreSQLContainer(DockerImageName.parse("postgres:14-alpine"));
 
     @TempDir
     private static Path tempDir;

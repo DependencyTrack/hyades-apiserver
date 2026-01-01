@@ -21,7 +21,8 @@ package org.dependencytrack.persistence;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.jdo.Query;
 import java.util.List;
@@ -36,6 +37,7 @@ public class ProjectHierarchyMaintenanceTest extends PersistenceCapableTest {
     private Project grandChildProjectA;
     private Project grandChildProjectB;
 
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();

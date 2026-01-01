@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.policy.cel.compat;
 
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
@@ -29,14 +27,13 @@ import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(JUnitParamsRunner.class)
 public class CweConditionTest extends PersistenceCapableTest {
-    private Object[] parameters() {
+    private static Object[] parameters() {
         return new Object[]{
                 new Object[]{Policy.Operator.ANY, Policy.ViolationState.INFO, PolicyCondition.Operator.CONTAINS_ANY,
                         "CWE-123", 123, 0, true, PolicyViolation.Type.SECURITY, Policy.ViolationState.INFO},
@@ -49,8 +46,8 @@ public class CweConditionTest extends PersistenceCapableTest {
         };
     }
 
-    @Test
-    @Parameters(method = "parameters")
+    @ParameterizedTest
+    @MethodSource("parameters")
     public void testSingleCwe(Policy.Operator policyOperator, Policy.ViolationState violationState,
                               PolicyCondition.Operator conditionOperator, String inputConditionCwe, int inputCweId, int inputCweId2,
                               boolean expectViolation, PolicyViolation.Type actualType, Policy.ViolationState actualViolationState) {

@@ -27,7 +27,7 @@ import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
@@ -43,9 +43,9 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.util.KafkaTestUtil;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.jdo.JDOObjectNotFoundException;
 import java.time.Instant;
@@ -65,8 +65,8 @@ import static org.hamcrest.Matchers.equalTo;
 
 public class ComponentResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(ComponentResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class));
@@ -76,7 +76,7 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(405, response.getStatus()); // No longer prohibited in DT 4.0+
+        Assertions.assertEquals(405, response.getStatus()); // No longer prohibited in DT 4.0+
     }
 
     @Test
@@ -88,21 +88,21 @@ public class ComponentResourceTest extends ResourceTest {
         component = qm.createComponent(component, false);
         Response response = jersey.target(V1_COMPONENT + "/" + component.getUuid())
                 .request().header(X_API_KEY, apiKey).get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getString("name"));
     }
 
     @Test
     public void getComponentByInvalidUuidTest() {
         Response response = jersey.target(V1_COMPONENT + "/" + UUID.randomUUID())
                 .request().header(X_API_KEY, apiKey).get(Response.class);
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The component could not be found.", body);
+        Assertions.assertEquals("The component could not be found.", body);
     }
 
     @Test
@@ -159,16 +159,16 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT + "/" + component.getUuid())
                 .queryParam("includeRepositoryMetaData", true)
                 .request().header(X_API_KEY, apiKey).get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getString("name"));
-        Assert.assertEquals("MAVEN", json.getJsonObject("repositoryMeta").getString("repositoryType"));
-        Assert.assertEquals("org.acme", json.getJsonObject("repositoryMeta").getString("namespace"));
-        Assert.assertEquals("abc", json.getJsonObject("repositoryMeta").getString("name"));
-        Assert.assertEquals("2.0.0", json.getJsonObject("repositoryMeta").getString("latestVersion"));
-        Assert.assertEquals(lastCheck.getTime(), json.getJsonObject("repositoryMeta").getJsonNumber("lastCheck").longValue());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getString("name"));
+        Assertions.assertEquals("MAVEN", json.getJsonObject("repositoryMeta").getString("repositoryType"));
+        Assertions.assertEquals("org.acme", json.getJsonObject("repositoryMeta").getString("namespace"));
+        Assertions.assertEquals("abc", json.getJsonObject("repositoryMeta").getString("name"));
+        Assertions.assertEquals("2.0.0", json.getJsonObject("repositoryMeta").getString("latestVersion"));
+        Assertions.assertEquals(lastCheck.getTime(), json.getJsonObject("repositoryMeta").getJsonNumber("lastCheck").longValue());
     }
 
     @Test
@@ -208,21 +208,20 @@ public class ComponentResourceTest extends ResourceTest {
                 .queryParam("includeRepositoryMetaData", true)
                 .queryParam("includeIntegrityMetaData", true)
                 .request().header(X_API_KEY, apiKey).get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getString("name"));
-        Assert.assertEquals("MAVEN", json.getJsonObject("repositoryMeta").getString("repositoryType"));
-        Assert.assertEquals("org.acme", json.getJsonObject("repositoryMeta").getString("namespace"));
-        Assert.assertEquals("abc", json.getJsonObject("repositoryMeta").getString("name"));
-        Assert.assertEquals("2.0.0", json.getJsonObject("repositoryMeta").getString("latestVersion"));
-        Assert.assertEquals(lastCheck.getTime(), json.getJsonObject("repositoryMeta").getJsonNumber("lastCheck").longValue());
-        Assert.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonObject("componentMetaInformation").getJsonNumber("publishedDate").longValue() / 1000)).toString());
-        Assert.assertEquals(HASH_MATCH_PASSED.toString(), json.getJsonObject("componentMetaInformation").getString("integrityMatchStatus"));
-        Assert.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonObject("componentMetaInformation").getJsonNumber("lastFetched").longValue() / 1000)).toString());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getString("name"));
+        Assertions.assertEquals("MAVEN", json.getJsonObject("repositoryMeta").getString("repositoryType"));
+        Assertions.assertEquals("org.acme", json.getJsonObject("repositoryMeta").getString("namespace"));
+        Assertions.assertEquals("abc", json.getJsonObject("repositoryMeta").getString("name"));
+        Assertions.assertEquals("2.0.0", json.getJsonObject("repositoryMeta").getString("latestVersion"));
+        Assertions.assertEquals(lastCheck.getTime(), json.getJsonObject("repositoryMeta").getJsonNumber("lastCheck").longValue());
+        Assertions.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonObject("componentMetaInformation").getJsonNumber("publishedDate").longValue() / 1000)).toString());
+        Assertions.assertEquals(HASH_MATCH_PASSED.toString(), json.getJsonObject("componentMetaInformation").getString("integrityMatchStatus"));
+        Assertions.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonObject("componentMetaInformation").getJsonNumber("lastFetched").longValue() / 1000)).toString());
     }
-
 
     @Test
     public void integrityCheckStatusPassTest() {
@@ -245,14 +244,14 @@ public class ComponentResourceTest extends ResourceTest {
         component = qm.createComponent(component, false);
         Response response = jersey.target(V1_COMPONENT + "/" + component.getUuid() + "/integritycheckstatus")
                 .request().header(X_API_KEY, apiKey).get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(HASH_MATCH_PASSED.name(), json.getString("md5HashMatchStatus"));
-        Assert.assertEquals(HASH_MATCH_PASSED.name(), json.getString("integrityCheckStatus"));
-        Assert.assertEquals(HASH_MATCH_PASSED.name(), json.getString("sha512HashMatchStatus"));
-        Assert.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonNumber("updatedAt").longValue() / 1000)).toString());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(HASH_MATCH_PASSED.name(), json.getString("md5HashMatchStatus"));
+        Assertions.assertEquals(HASH_MATCH_PASSED.name(), json.getString("integrityCheckStatus"));
+        Assertions.assertEquals(HASH_MATCH_PASSED.name(), json.getString("sha512HashMatchStatus"));
+        Assertions.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonNumber("updatedAt").longValue() / 1000)).toString());
     }
 
     @Test
@@ -276,14 +275,14 @@ public class ComponentResourceTest extends ResourceTest {
         component = qm.createComponent(component, false);
         Response response = jersey.target(V1_COMPONENT + "/" + component.getUuid() + "/integritycheckstatus")
                 .request().header(X_API_KEY, apiKey).get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(HASH_MATCH_FAILED.name(), json.getString("md5HashMatchStatus"));
-        Assert.assertEquals(HASH_MATCH_FAILED.name(), json.getString("integrityCheckStatus"));
-        Assert.assertEquals(HASH_MATCH_FAILED.name(), json.getString("sha512HashMatchStatus"));
-        Assert.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonNumber("updatedAt").longValue() / 1000)).toString());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(HASH_MATCH_FAILED.name(), json.getString("md5HashMatchStatus"));
+        Assertions.assertEquals(HASH_MATCH_FAILED.name(), json.getString("integrityCheckStatus"));
+        Assertions.assertEquals(HASH_MATCH_FAILED.name(), json.getString("sha512HashMatchStatus"));
+        Assertions.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonNumber("updatedAt").longValue() / 1000)).toString());
     }
 
     @Test
@@ -354,14 +353,14 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT + "/integritymetadata")
                 .queryParam("purl", component.getPurl())
                 .request().header(X_API_KEY, apiKey).get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("https://repo1.maven.org/maven2/io/micrometer/micrometer-registry-prometheus/1.9.4/micrometer-registry-prometheus-1.9.4.jar", json.getString("repositoryUrl"));
-        Assert.assertEquals("45e5bdba87362b16852ec279c254eb57", json.getString("md5"));
-        Assert.assertEquals("45e5bdba87362b16852ec279c254eb57", json.getString("sha1"));
-        Assert.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonNumber("publishedAt").longValue() / 1000)).toString());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("https://repo1.maven.org/maven2/io/micrometer/micrometer-registry-prometheus/1.9.4/micrometer-registry-prometheus-1.9.4.jar", json.getString("repositoryUrl"));
+        Assertions.assertEquals("45e5bdba87362b16852ec279c254eb57", json.getString("md5"));
+        Assertions.assertEquals("45e5bdba87362b16852ec279c254eb57", json.getString("sha1"));
+        Assertions.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonNumber("publishedAt").longValue() / 1000)).toString());
     }
 
     @Test
@@ -376,7 +375,7 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT + "/integritymetadata")
                 .queryParam("purl", component.getPurl())
                 .request().header(X_API_KEY, apiKey).get(Response.class);
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -391,7 +390,7 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT + "/integritymetadata")
                 .queryParam("purl", "component.getPurl()")
                 .request().header(X_API_KEY, apiKey).get(Response.class);
-        Assert.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertEquals(400, response.getStatus(), 0);
     }
 
     @Test
@@ -524,14 +523,14 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid() + "/dependencyGraph/" + component1_1_1.getUuid())
                 .request().header(X_API_KEY, apiKey).get();
         JsonObject json = parseJsonObject(response);
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
 
-        Assert.assertTrue(json.get(component1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
-        Assert.assertEquals("2.0.0", json.get(component1.getUuid().toString()).asJsonObject().get("repositoryMeta").asJsonObject().getString("latestVersion"));
-        Assert.assertTrue(json.get(component1_1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
-        Assert.assertEquals("3.0.0", json.get(component1_1.getUuid().toString()).asJsonObject().get("repositoryMeta").asJsonObject().getString("latestVersion"));
-        Assert.assertFalse(json.get(component1_1_1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
-        Assert.assertEquals("4.0.0", json.get(component1_1_1.getUuid().toString()).asJsonObject().get("repositoryMeta").asJsonObject().getString("latestVersion"));
+        Assertions.assertTrue(json.get(component1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
+        Assertions.assertEquals("2.0.0", json.get(component1.getUuid().toString()).asJsonObject().get("repositoryMeta").asJsonObject().getString("latestVersion"));
+        Assertions.assertTrue(json.get(component1_1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
+        Assertions.assertEquals("3.0.0", json.get(component1_1.getUuid().toString()).asJsonObject().get("repositoryMeta").asJsonObject().getString("latestVersion"));
+        Assertions.assertFalse(json.get(component1_1_1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
+        Assertions.assertEquals("4.0.0", json.get(component1_1_1.getUuid().toString()).asJsonObject().get("repositoryMeta").asJsonObject().getString("latestVersion"));
     }
 
     @Test
@@ -670,19 +669,19 @@ public class ComponentResourceTest extends ResourceTest {
         component = qm.createComponent(component, false);
         Response response = jersey.target(V1_COMPONENT + "/hash/" + component.getSha1())
                 .request().header(X_API_KEY, apiKey).get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(response.getHeaderString(TOTAL_COUNT_HEADER), "1");
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(response.getHeaderString(TOTAL_COUNT_HEADER), "1");
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getJsonObject(0).getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getJsonObject(0).getString("name"));
     }
 
     @Test
     public void getComponentByInvalidHashTest() {
         Response response = jersey.target(V1_COMPONENT + "/hash/c5a8829aa3da800216b933e265dd0b97eb6f9341")
                 .request().header(X_API_KEY, apiKey).get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(response.getHeaderString(TOTAL_COUNT_HEADER), "0");
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(response.getHeaderString(TOTAL_COUNT_HEADER), "0");
     }
 
     @Test
@@ -701,13 +700,13 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(component, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertEquals(201, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("My Component", json.getString("name"));
-        Assert.assertEquals("1.0", json.getString("version"));
-        Assert.assertEquals("SampleAuthor" ,json.getJsonArray("authors").getJsonObject(0).getString("name"));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("My Component", json.getString("name"));
+        Assertions.assertEquals("1.0", json.getString("version"));
+        Assertions.assertEquals("SampleAuthor" ,json.getJsonArray("authors").getJsonObject(0).getString("name"));
+        Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
@@ -741,20 +740,20 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(component, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertEquals(201, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("My Component", json.getString("name"));
-        Assert.assertEquals("1.0", json.getString("version"));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
-        Assert.assertEquals(component.getSha1(), json.getString("sha1"));
-        Assert.assertEquals(component.getSha256(), json.getString("sha256"));
-        Assert.assertEquals(component.getSha3_256(), json.getString("sha3_256"));
-        Assert.assertEquals(component.getSha384(), json.getString("sha384"));
-        Assert.assertEquals(component.getSha3_384(), json.getString("sha3_384"));
-        Assert.assertEquals(component.getSha512(), json.getString("sha512"));
-        Assert.assertEquals(component.getSha3_512(), json.getString("sha3_512"));
-        Assert.assertEquals(component.getMd5(), json.getString("md5"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("My Component", json.getString("name"));
+        Assertions.assertEquals("1.0", json.getString("version"));
+        Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
+        Assertions.assertEquals(component.getSha1(), json.getString("sha1"));
+        Assertions.assertEquals(component.getSha256(), json.getString("sha256"));
+        Assertions.assertEquals(component.getSha3_256(), json.getString("sha3_256"));
+        Assertions.assertEquals(component.getSha384(), json.getString("sha384"));
+        Assertions.assertEquals(component.getSha3_384(), json.getString("sha3_384"));
+        Assertions.assertEquals(component.getSha512(), json.getString("sha512"));
+        Assertions.assertEquals(component.getSha3_512(), json.getString("sha3_512"));
+        Assertions.assertEquals(component.getMd5(), json.getString("md5"));
     }
 
     @Test
@@ -814,13 +813,13 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(jsonComponent, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("My Component", json.getString("name"));
-        Assert.assertEquals("1.0", json.getString("version"));
-        Assert.assertEquals("Test component", json.getString("description"));
-        Assert.assertEquals(1, json.getJsonArray("externalReferences").size());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("My Component", json.getString("name"));
+        Assertions.assertEquals("1.0", json.getString("version"));
+        Assertions.assertEquals("Test component", json.getString("description"));
+        Assertions.assertEquals(1, json.getJsonArray("externalReferences").size());
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
@@ -847,7 +846,7 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(component, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertEquals(400, response.getStatus(), 0);
     }
 
     @Test
@@ -950,7 +949,7 @@ public class ComponentResourceTest extends ResourceTest {
         IntegrityAnalysis integrityResponse = qm.persist(analysis);
         Response response = jersey.target(V1_COMPONENT + "/" + component.getUuid().toString())
                 .request().header(X_API_KEY, apiKey).delete();
-        Assert.assertEquals(204, response.getStatus(), 0);
+        Assertions.assertEquals(204, response.getStatus(), 0);
         assertThatExceptionOfType(JDOObjectNotFoundException.class)
                 .isThrownBy(() -> qm.getObjectById(IntegrityAnalysis.class, integrityResponse.getId()));
     }
@@ -965,7 +964,7 @@ public class ComponentResourceTest extends ResourceTest {
         qm.createComponent(component, false);
         Response response = jersey.target(V1_COMPONENT + "/" + UUID.randomUUID())
                 .request().header(X_API_KEY, apiKey).delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -1006,7 +1005,7 @@ public class ComponentResourceTest extends ResourceTest {
     public void internalComponentIdentificationTest() {
         Response response = jersey.target(V1_COMPONENT + "/internal/identify")
                 .request().header(X_API_KEY, apiKey).get();
-        Assert.assertEquals(204, response.getStatus(), 0);
+        Assertions.assertEquals(204, response.getStatus(), 0);
     }
 
     @Test
@@ -1058,16 +1057,16 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid() + "/dependencyGraph/" + component1_1_1.getUuid())
                 .request().header(X_API_KEY, apiKey).get();
         JsonObject json = parseJsonObject(response);
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
 
-        Assert.assertTrue(json.get(component1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
-        Assert.assertTrue(json.get(component1_1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
-        Assert.assertFalse(json.get(component1_1_1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
-        Assert.assertFalse(json.get(component2.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
-        Assert.assertFalse(json.get(component2_1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
-        Assert.assertFalse(json.get(component2_1_1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
+        Assertions.assertTrue(json.get(component1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
+        Assertions.assertTrue(json.get(component1_1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
+        Assertions.assertFalse(json.get(component1_1_1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
+        Assertions.assertFalse(json.get(component2.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
+        Assertions.assertFalse(json.get(component2_1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
+        Assertions.assertFalse(json.get(component2_1_1.getUuid().toString()).asJsonObject().getBoolean("expandDependencyGraph"));
         Component finalComponent2_1_1_1 = component2_1_1_1;
-        Assert.assertThrows(NullPointerException.class, () -> json.get(finalComponent2_1_1_1.getUuid().toString()).asJsonObject().asJsonObject());
+        Assertions.assertThrows(NullPointerException.class, () -> json.get(finalComponent2_1_1_1.getUuid().toString()).asJsonObject().asJsonObject());
     }
 
     @Test
@@ -1080,7 +1079,7 @@ public class ComponentResourceTest extends ResourceTest {
         component = qm.createComponent(component, false);
         Response response = jersey.target(V1_COMPONENT + "/project/" + UUID.randomUUID() + "/dependencyGraph/" + component.getUuid())
                 .request().header(X_API_KEY, apiKey).get();
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -1088,7 +1087,7 @@ public class ComponentResourceTest extends ResourceTest {
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid() + "/dependencyGraph/" + UUID.randomUUID())
                 .request().header(X_API_KEY, apiKey).get();
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -1102,8 +1101,8 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid() + "/dependencyGraph/" + component.getUuid())
                 .request().header(X_API_KEY, apiKey).get();
         JsonObject json = parseJsonObject(response);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(0, json.size());
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(0, json.size());
     }
 
     @Test
@@ -1119,13 +1118,13 @@ public class ComponentResourceTest extends ResourceTest {
         Response responseWithComponent = jersey.target(V1_COMPONENT + "/project/" + projectWithComponent.getUuid() + "/dependencyGraph/" + component.getUuid())
                 .request().header(X_API_KEY, apiKey).get();
         JsonObject jsonWithComponent = parseJsonObject(responseWithComponent);
-        Assert.assertEquals(200, responseWithComponent.getStatus(), 0);
-        Assert.assertEquals(1, jsonWithComponent.size());
+        Assertions.assertEquals(200, responseWithComponent.getStatus(), 0);
+        Assertions.assertEquals(1, jsonWithComponent.size());
         Response responseWithoutComponent = jersey.target(V1_COMPONENT + "/project/" + projectWithoutComponent.getUuid() + "/dependencyGraph/" + component.getUuid())
                 .request().header(X_API_KEY, apiKey).get();
         JsonObject jsonWithoutComponent = parseJsonObject(responseWithoutComponent);
-        Assert.assertEquals(200, responseWithoutComponent.getStatus(), 0);
-        Assert.assertEquals(0, jsonWithoutComponent.size());
+        Assertions.assertEquals(200, responseWithoutComponent.getStatus(), 0);
+        Assertions.assertEquals(0, jsonWithoutComponent.size());
     }
 
     @Test

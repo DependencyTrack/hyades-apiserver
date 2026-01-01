@@ -26,8 +26,8 @@ import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Objects;
@@ -42,7 +42,7 @@ public class KafkaEventDispatcherTest {
     private MockProducer<byte[], byte[]> mockProducer;
     private KafkaEventDispatcher eventDispatcher;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         mockProducer = new MockProducer<>(false, null, new ByteArraySerializer(), new ByteArraySerializer());
         eventDispatcher = new KafkaEventDispatcher(mockProducer);

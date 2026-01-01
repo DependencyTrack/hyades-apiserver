@@ -27,9 +27,9 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao.ListAdvisoriesRow;
 import org.dependencytrack.persistence.jdbi.query.ListAdvisoriesQuery;
 import org.jdbi.v3.core.Handle;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.Date;
@@ -43,14 +43,14 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
     private Handle jdbiHandle;
     private AdvisoryDao advisoryDao;
 
-    @Before
+    @BeforeEach
     public void before() throws Exception {
         super.before();
         jdbiHandle = openJdbiHandle();
         advisoryDao = jdbiHandle.attach(AdvisoryDao.class);
     }
 
-    @After
+    @AfterEach
     public void after() {
         if (jdbiHandle != null) {
             jdbiHandle.close();

@@ -19,8 +19,8 @@
 package org.dependencytrack.event;
 
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
@@ -33,6 +33,6 @@ public class CloneProjectEventTest {
                 true, true, true, true, true,
                 true, true, false);
         CloneProjectEvent event = new CloneProjectEvent(request);
-        Assert.assertEquals(request, event.getRequest());
+        Assertions.assertEquals(request, event.getRequest());
     }
 }

@@ -21,12 +21,12 @@ package org.dependencytrack.common;
 import alpine.Config;
 import io.jsonwebtoken.lang.Assert;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class HttpClientPoolTest {
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() {
         Config.enableUnitTests();
     }

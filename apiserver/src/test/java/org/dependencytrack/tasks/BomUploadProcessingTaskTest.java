@@ -59,10 +59,12 @@ import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
+import uk.org.webcompere.systemstubs.jupiter.SystemStub;
+import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
 import javax.jdo.JDOObjectNotFoundException;
 import java.io.ByteArrayInputStream;
@@ -110,14 +112,15 @@ import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
+@ExtendWith(SystemStubsExtension.class)
 public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
-    @Rule
+    @SystemStub
     public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
             .set("FILE_STORAGE_EXTENSION_MEMORY_ENABLED", "true")
             .set("FILE_STORAGE_DEFAULT_EXTENSION", "memory");
 
-    @Before
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();
@@ -1689,12 +1692,10 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertBomProcessedNotification();
 
         qm.getPersistenceManager().evictAll();
-        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
-            assertThat(component.getName()).isEqualTo("-");
-        });
-        assertThat(qm.getAllServiceComponents(project)).satisfiesExactly(service -> {
-            assertThat(service.getName()).isEqualTo("-");
-        });
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component ->
+            assertThat(component.getName()).isEqualTo("-"));
+        assertThat(qm.getAllServiceComponents(project)).satisfiesExactly(service ->
+            assertThat(service.getName()).isEqualTo("-"));
     }
 
     @Test
@@ -1829,7 +1830,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertBomProcessedNotification();
 
         qm.getPersistenceManager().evictAll();
-        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component ->
             assertThat(component.getOccurrences()).satisfiesExactlyInAnyOrder(
                     occurrence -> {
                         assertThat(occurrence.getLocation()).isEqualTo("/foo/bar/baz");
@@ -1844,8 +1845,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                         assertThat(occurrence.getOffset()).isEqualTo(666);
                         assertThat(occurrence.getSymbol()).isEqualTo("someSymbol");
                         assertThat(occurrence.getCreatedAt()).isNotNull();
-                    });
-        });
+                    }));
     }
 
     @Test
@@ -1906,7 +1906,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertBomProcessedNotification();
 
         qm.getPersistenceManager().evictAll();
-        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component ->
             assertThat(component.getOccurrences()).satisfiesExactlyInAnyOrder(
                     occurrence -> {
                         assertThat(occurrence.getId()).isEqualTo(existingOccurrenceB.getId());
@@ -1922,8 +1922,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                         assertThat(occurrence.getOffset()).isNull();
                         assertThat(occurrence.getSymbol()).isNull();
                         assertThat(occurrence.getCreatedAt()).isNotNull();
-                    });
-        });
+                    }));
     }
 
     private void assertBomProcessedNotification() throws Exception {

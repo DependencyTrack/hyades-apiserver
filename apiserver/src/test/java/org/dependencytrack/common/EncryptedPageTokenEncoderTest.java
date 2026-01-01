@@ -22,8 +22,8 @@ import alpine.security.crypto.DataEncryption;
 import org.dependencytrack.common.pagination.InvalidPageTokenException;
 import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.common.pagination.PageTokenEncoder;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.Base64;
 
@@ -34,7 +34,7 @@ public class EncryptedPageTokenEncoderTest {
 
     private static PageTokenEncoder encoder;
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeEach() {
         encoder = new EncryptedPageTokenEncoder(new DataEncryption());
     }
