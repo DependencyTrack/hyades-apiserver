@@ -22,7 +22,7 @@ on:
     - .github/workflows/ci-openapi.yaml
     - api/src/main/openapi/**
     - api/src/main/spectral/**
-    - dev/scripts/openapi-lint.sh
+    - Makefile
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -39,8 +39,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # tag=v6.0.1
     - name: Lint OpenAPI Spec
-      run: |-
-        ./dev/scripts/openapi-lint.sh
+      run: make lint-openapi
 
   breaking-changes:
     name: Breaking Changes
