@@ -24,7 +24,6 @@
         <lib.cyclonedx-java.version>11.0.1</lib.cyclonedx-java.version>
         <lib.kafka.version>4.1.1</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
-        <lib.kotlin-stdlib.version>2.3.0</lib.kotlin-stdlib.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
         <lib.swagger-parser.version>2.1.37</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
@@ -49,13 +48,6 @@
                 <version>${project.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
-            </dependency>
-
-            <!-- Managed dependencies to exclude/override vulnerable version of kotlin-stdlib-jdk8 -->
-            <dependency>
-                <groupId>org.jetbrains.kotlin</groupId>
-                <artifactId>kotlin-stdlib-jdk8</artifactId>
-                <version>${lib.kotlin-stdlib.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
