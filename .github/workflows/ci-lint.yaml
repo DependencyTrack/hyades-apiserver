@@ -53,4 +53,4 @@ jobs:
           java-version: '21'
           cache: 'maven'
       - name: Lint
-        run: mvn validate
+        run: make lint-java
