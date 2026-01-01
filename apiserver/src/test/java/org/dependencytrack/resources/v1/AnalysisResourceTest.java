@@ -31,7 +31,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import net.jcip.annotations.NotThreadSafe;
 import org.apache.http.HttpStatus;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.AnalysisJustification;
@@ -48,8 +48,8 @@ import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
 import org.dependencytrack.resources.v1.vo.AnalysisRequest;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -67,8 +67,8 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 @NotThreadSafe
 public class AnalysisResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(AnalysisResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)

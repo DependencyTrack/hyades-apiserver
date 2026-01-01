@@ -25,8 +25,8 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.util.KafkaTestUtil.generateBomFromJson;
@@ -40,7 +40,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     private VulnDataSource dataSourceMock;
     private NistMirrorTask task;
 
-    @Before
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();

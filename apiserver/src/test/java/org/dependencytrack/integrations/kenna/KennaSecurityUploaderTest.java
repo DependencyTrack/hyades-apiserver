@@ -20,8 +20,8 @@ package org.dependencytrack.integrations.kenna;
 
 import alpine.model.IConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
 
@@ -33,8 +33,8 @@ public class KennaSecurityUploaderTest extends PersistenceCapableTest {
     @Test
     public void testIntegrationMetadata() {
         KennaSecurityUploader extension = new KennaSecurityUploader();
-        Assert.assertEquals("Kenna Security", extension.name());
-        Assert.assertEquals("Pushes Dependency-Track findings to Kenna Security", extension.description());
+        Assertions.assertEquals("Kenna Security", extension.name());
+        Assertions.assertEquals("Pushes Dependency-Track findings to Kenna Security", extension.description());
     }
 
     @Test
@@ -55,14 +55,14 @@ public class KennaSecurityUploaderTest extends PersistenceCapableTest {
         );
         KennaSecurityUploader extension = new KennaSecurityUploader();
         extension.setQueryManager(qm);
-        Assert.assertTrue(extension.isEnabled());
+        Assertions.assertTrue(extension.isEnabled());
     }
 
     @Test
     public void testIntegrationDisabledCases() {
         KennaSecurityUploader extension = new KennaSecurityUploader();
         extension.setQueryManager(qm);
-        Assert.assertFalse(extension.isEnabled());
+        Assertions.assertFalse(extension.isEnabled());
     }
 
     @Test
@@ -70,6 +70,6 @@ public class KennaSecurityUploaderTest extends PersistenceCapableTest {
         KennaSecurityUploader extension = new KennaSecurityUploader();
         extension.setQueryManager(qm);
         InputStream in = extension.process();
-        Assert.assertTrue(in != null && in.available() > 0);
+        Assertions.assertTrue(in != null && in.available() > 0);
     }
 }

@@ -34,10 +34,11 @@ import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.jspecify.annotations.Nullable;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
@@ -51,18 +52,19 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
+@Testcontainers
 public class WorkflowTestRuleTest {
 
-    @ClassRule
-    public static final PostgreSQLContainer<?> POSTGRES_CONTAINER =
-            new PostgreSQLContainer<>(DockerImageName.parse("postgres:14-alpine"));
+    @Container
+    private static final PostgreSQLContainer POSTGRES_CONTAINER =
+            new PostgreSQLContainer(DockerImageName.parse("postgres:14-alpine"));
 
-    @Rule
-    public final WorkflowTestRule workflowTestRule = new WorkflowTestRule(POSTGRES_CONTAINER);
+    @RegisterExtension
+    WorkflowTestExtension workflowTest = new WorkflowTestExtension(POSTGRES_CONTAINER);
 
     @Test
     public void shouldExecuteWorkflow() {
-        final DexEngine engine = workflowTestRule.getEngine();
+        final DexEngine engine = workflowTest.getEngine();
 
         engine.registerWorkflow(
                 new TestWorkflow(),
@@ -91,7 +93,7 @@ public class WorkflowTestRuleTest {
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>(TestWorkflow.class));
 
-        final WorkflowRun run = workflowTestRule.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+        final WorkflowRun run = workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
         assertThat(run).isNotNull();
         assertThat(run.result()).isNotNull();
         assertThat(stringConverter().convertFromPayload(run.result())).isEqualTo("foo-bar");
@@ -102,7 +104,7 @@ public class WorkflowTestRuleTest {
         final var activityMock = mock(TestActivity.class);
         doReturn("mocked").when(activityMock).execute(any(ActivityContext.class), isNull());
 
-        final DexEngine engine = workflowTestRule.getEngine();
+        final DexEngine engine = workflowTest.getEngine();
 
         engine.registerWorkflow(
                 new TestWorkflow(),
@@ -131,7 +133,7 @@ public class WorkflowTestRuleTest {
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>(TestWorkflow.class));
 
-        final WorkflowRun run = workflowTestRule.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+        final WorkflowRun run = workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
         assertThat(run).isNotNull();
         assertThat(run.result()).isNotNull();
         assertThat(stringConverter().convertFromPayload(run.result())).isEqualTo("foo-mocked");

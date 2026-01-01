@@ -18,16 +18,16 @@
  */
 package org.dependencytrack.plugin;
 
-import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.ConfigPropertyExtension;
 import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.Plugin;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.SequencedCollection;
 
@@ -39,10 +39,10 @@ public class PluginManagerTest extends PersistenceCapableTest {
     interface UnknownExtensionPoint extends ExtensionPoint {
     }
 
-    @Rule
-    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
+    @RegisterExtension
+    private static final ConfigPropertyExtension configProperties = new ConfigPropertyExtension();
 
-    @Before
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();
@@ -171,7 +171,7 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
         pluginManager.unloadPlugins();
 
-        configPropertyRule.setProperty("test.default.extension", "does.not.exist");
+        configProperties.setProperty("test.default.extension", "does.not.exist");
 
         assertThatExceptionOfType(NoSuchExtensionException.class)
                 .isThrownBy(pluginManager::loadPlugins)

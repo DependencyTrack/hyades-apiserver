@@ -22,8 +22,12 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
+import jakarta.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.OrganizationalContact;
@@ -31,13 +35,9 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonReader;
-import jakarta.ws.rs.core.Response;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Date;
@@ -49,8 +49,8 @@ import static org.hamcrest.Matchers.equalTo;
 
 public class ComponentResourcePostgresTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(ComponentResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class));

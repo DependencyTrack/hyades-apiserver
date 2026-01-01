@@ -19,9 +19,9 @@
 package org.dependencytrack.tasks;
 
 import com.asahaf.javacron.Schedule;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,13 +33,13 @@ public class TaskSchedulerTest  {
 
     private TaskScheduler scheduler;
 
-    @Before
+    @BeforeEach
     public void beforeEach() {
         scheduler = new TaskScheduler();
         scheduler.start();
     }
 
-    @After
+    @AfterEach
     public void afterEach() {
         if (scheduler != null) {
             scheduler.close();

@@ -20,8 +20,8 @@ package org.dependencytrack.persistence;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
@@ -32,7 +32,7 @@ public class NotificationQueryManagerTest extends PersistenceCapableTest {
         useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultNotificationPublishers);
 
         var publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
-        Assert.assertEquals("SlackPublisher", publisher.getPublisherClass());
+        Assertions.assertEquals("SlackPublisher", publisher.getPublisherClass());
     }
 
     @Test
@@ -40,13 +40,13 @@ public class NotificationQueryManagerTest extends PersistenceCapableTest {
         useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultNotificationPublishers);
         
         var publisher = qm.getDefaultNotificationPublisherByName(DefaultNotificationPublishers.SLACK.getPublisherName());
-        Assert.assertEquals("Slack", publisher.getName());
-        Assert.assertEquals("SlackPublisher", publisher.getPublisherClass());
+        Assertions.assertEquals("Slack", publisher.getName());
+        Assertions.assertEquals("SlackPublisher", publisher.getPublisherClass());
 
         publisher.setPublisherClass("UpdatedClassName");
         qm.updateNotificationPublisher(publisher);
         publisher = qm.getDefaultNotificationPublisherByName(DefaultNotificationPublishers.SLACK.getPublisherName());
-        Assert.assertEquals("Slack", publisher.getName());
-        Assert.assertEquals("UpdatedClassName", publisher.getPublisherClass());
+        Assertions.assertEquals("Slack", publisher.getName());
+        Assertions.assertEquals("UpdatedClassName", publisher.getPublisherClass());
     }
 }

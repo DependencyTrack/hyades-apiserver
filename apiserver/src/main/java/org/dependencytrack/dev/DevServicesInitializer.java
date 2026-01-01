@@ -96,7 +96,7 @@ public class DevServicesInitializer implements ServletContextListener {
             final Method addFixedExposedPortMethod = genericContainerClass.getDeclaredMethod("addFixedExposedPort", int.class, int.class);
             addFixedExposedPortMethod.setAccessible(true);
 
-            final Class<?> postgresContainerClass = Class.forName("org.testcontainers.containers.PostgreSQLContainer");
+            final Class<?> postgresContainerClass = Class.forName("org.testcontainers.postgresql.PostgreSQLContainer");
             final Constructor<?> postgresContainerConstructor = postgresContainerClass.getDeclaredConstructor(String.class);
             postgresContainer = (AutoCloseable) postgresContainerConstructor.newInstance(config.getValue(DEV_SERVICES_IMAGE_POSTGRES.getPropertyName(), String.class));
             postgresContainerClass.getMethod("withUsername", String.class).invoke(postgresContainer, postgresUsername);

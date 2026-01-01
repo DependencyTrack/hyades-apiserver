@@ -22,8 +22,8 @@ import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.cache.CachingSecretManager;
 import org.eclipse.microprofile.config.Config;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -32,7 +32,7 @@ import static org.mockito.Mockito.verify;
 
 public class SecretManagerInitializerTest {
 
-    @After
+    @AfterEach
     public void afterEach() {
         if (SecretManagerInitializer.INSTANCE != null) {
             SecretManagerInitializer.INSTANCE.close();

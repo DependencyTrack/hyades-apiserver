@@ -28,9 +28,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.postgresql.ds.PGSimpleDataSource;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import javax.sql.DataSource;
 import java.util.HashMap;
@@ -44,8 +44,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 class DataSourceRegistryTest {
 
     @Container
-    private static final PostgreSQLContainer<?> postgresContainer =
-            new PostgreSQLContainer<>("postgres:14-alpine");
+    private static final PostgreSQLContainer postgresContainer =
+            new PostgreSQLContainer("postgres:14-alpine");
 
     private DataSourceRegistry registry;
 

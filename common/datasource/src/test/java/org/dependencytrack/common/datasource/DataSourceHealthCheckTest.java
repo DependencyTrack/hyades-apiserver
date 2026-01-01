@@ -26,9 +26,9 @@ import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.util.Map;
 
@@ -38,8 +38,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DataSourceHealthCheckTest {
 
     @Container
-    private static final PostgreSQLContainer<?> postgresContainer =
-            new PostgreSQLContainer<>("postgres:14-alpine");
+    private static final PostgreSQLContainer postgresContainer =
+            new PostgreSQLContainer("postgres:14-alpine");
 
     private HikariDataSource dataSource;
     private DataSourceRegistry dataSourceRegistry;

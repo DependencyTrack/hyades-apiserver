@@ -19,13 +19,6 @@
 package org.dependencytrack.resources.v2.exception;
 
 import alpine.server.auth.AuthenticationNotRequired;
-import net.javacrumbs.jsonunit.core.Option;
-import org.dependencytrack.JerseyTestRule;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.resources.v2.ResourceConfig;
-import org.junit.ClassRule;
-import org.junit.Test;
-
 import jakarta.validation.constraints.Pattern;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -34,6 +27,12 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import net.javacrumbs.jsonunit.core.Option;
+import org.dependencytrack.JerseyTestExtension;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.resources.v2.ResourceConfig;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,8 +40,8 @@ import static org.dependencytrack.resources.v2.OpenApiValidationClientResponseFi
 
 public class ConstraintViolationExceptionMapperTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig()
                     .register(JsonProcessingExceptionMapperTest.TestResource.class));
 

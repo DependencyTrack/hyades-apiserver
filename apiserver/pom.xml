@@ -28,7 +28,6 @@
         <lib.swagger-parser.version>2.1.37</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.woodstox.version>7.1.1</lib.woodstox.version>
-        <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
         <lib.net.javacrumbs.shedlock.version>7.5.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
@@ -415,19 +414,6 @@
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp-jvm</artifactId>
         </dependency>
-
-        <!-- Test Dependencies -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>pl.pragmatists</groupId>
-            <artifactId>JUnitParams</artifactId>
-            <version>${lib.junit-params.version}</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.glassfish.jersey.test-framework.providers</groupId>
             <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
@@ -439,14 +425,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.stefanbirkner</groupId>
-            <artifactId>system-rules</artifactId>
-            <version>${lib.system-rules.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>com.tngtech.archunit</groupId>
-            <artifactId>archunit-junit4</artifactId>
+            <artifactId>archunit-junit5</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -460,18 +440,27 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>uk.org.webcompere</groupId>
+            <artifactId>system-stubs-jupiter</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>kafka</artifactId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>minio</artifactId>
+            <artifactId>testcontainers-kafka</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
+            <artifactId>testcontainers-minio</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -570,13 +559,6 @@
                         <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
                     </systemPropertyVariables>
                 </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.apache.maven.surefire</groupId>
-                        <artifactId>surefire-junit4</artifactId>
-                        <version>3.5.4</version>
-                    </dependency>
-                </dependencies>
             </plugin>
 
             <plugin>
@@ -794,24 +776,14 @@
                 </dependency>
                 <dependency>
                     <groupId>org.testcontainers</groupId>
-                    <artifactId>postgresql</artifactId>
+                    <artifactId>testcontainers-postgresql</artifactId>
                     <version>${lib.testcontainers.version}</version>
                     <scope>compile</scope>
                 </dependency>
                 <dependency>
                     <groupId>org.testcontainers</groupId>
-                    <artifactId>kafka</artifactId>
+                    <artifactId>testcontainers-kafka</artifactId>
                     <version>${lib.testcontainers.version}</version>
-                    <scope>compile</scope>
-                </dependency>
-                <dependency>
-                    <!--
-                        Unfortunately required by testcontainers:
-                        https://github.com/testcontainers/testcontainers-java/issues/970
-                    -->
-                    <groupId>junit</groupId>
-                    <artifactId>junit</artifactId>
-                    <version>${lib.junit4.version}</version>
                     <scope>compile</scope>
                 </dependency>
             </dependencies>

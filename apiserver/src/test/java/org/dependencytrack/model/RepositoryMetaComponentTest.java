@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.model;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Date;
 
@@ -29,35 +29,35 @@ public class RepositoryMetaComponentTest {
     public void testId() {
         RepositoryMetaComponent rmc = new RepositoryMetaComponent();
         rmc.setId(111L);
-        Assert.assertEquals(111L, rmc.getId());
+        Assertions.assertEquals(111L, rmc.getId());
     }
 
     @Test
     public void testRepositoryType() {
         RepositoryMetaComponent rmc = new RepositoryMetaComponent();
         rmc.setRepositoryType(RepositoryType.MAVEN);
-        Assert.assertEquals(RepositoryType.MAVEN, rmc.getRepositoryType());
+        Assertions.assertEquals(RepositoryType.MAVEN, rmc.getRepositoryType());
     }
 
     @Test
     public void testNamespace() {
         RepositoryMetaComponent rmc = new RepositoryMetaComponent();
         rmc.setNamespace("My Namespace");
-        Assert.assertEquals("My Namespace", rmc.getNamespace());
+        Assertions.assertEquals("My Namespace", rmc.getNamespace());
     } 
 
     @Test
     public void testName() {
         RepositoryMetaComponent rmc = new RepositoryMetaComponent();
         rmc.setName("My Name");
-        Assert.assertEquals("My Name", rmc.getName());
+        Assertions.assertEquals("My Name", rmc.getName());
     } 
     
     @Test
     public void testLatestVersion() {
         RepositoryMetaComponent rmc = new RepositoryMetaComponent();
         rmc.setLatestVersion("2.0.0");
-        Assert.assertEquals("2.0.0", rmc.getLatestVersion());
+        Assertions.assertEquals("2.0.0", rmc.getLatestVersion());
     } 
 
     @Test
@@ -65,7 +65,7 @@ public class RepositoryMetaComponentTest {
         Date date = new Date();
         RepositoryMetaComponent rmc = new RepositoryMetaComponent();
         rmc.setPublished(date);
-        Assert.assertEquals(date, rmc.getPublished());
+        Assertions.assertEquals(date, rmc.getPublished());
     }
 
     @Test
@@ -73,6 +73,6 @@ public class RepositoryMetaComponentTest {
         Date date = new Date();
         RepositoryMetaComponent rmc = new RepositoryMetaComponent();
         rmc.setLastCheck(date);
-        Assert.assertEquals(date, rmc.getLastCheck());
+        Assertions.assertEquals(date, rmc.getLastCheck());
     }
 } 

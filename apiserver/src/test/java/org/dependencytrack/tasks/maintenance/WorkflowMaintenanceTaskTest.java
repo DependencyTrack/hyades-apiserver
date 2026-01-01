@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.tasks.maintenance;
 
-import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.ConfigPropertyExtension;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.model.Project;
@@ -27,8 +27,8 @@ import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.jdo.JDOObjectNotFoundException;
 import java.time.Instant;
@@ -47,9 +47,10 @@ import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 
 public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
 
-    @Rule
-    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule()
-            .withProperty("tmp.delay.bom.processed.notification", "true");
+    @RegisterExtension
+    private static final ConfigPropertyExtension configProperties =
+            new ConfigPropertyExtension()
+                    .withProperty("tmp.delay.bom.processed.notification", "true");
 
     @Test
     public void testWithTransitionToTimedOut() {

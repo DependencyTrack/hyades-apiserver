@@ -20,17 +20,16 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
-import org.dependencytrack.JerseyTestRule;
-import org.dependencytrack.ResourceTest;
-import org.dependencytrack.parser.common.resolver.CweDictionary;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.JerseyTestExtension;
+import org.dependencytrack.ResourceTest;
+import org.dependencytrack.parser.common.resolver.CweDictionary;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.HashSet;
 
@@ -38,8 +37,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class CweResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(CweResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class));
@@ -49,13 +48,13 @@ public class CweResourceTest extends ResourceTest {
         Response response = jersey.target(V1_CWE).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1426), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1426), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(100, json.size());
-        Assert.assertEquals(1, json.getJsonObject(0).getInt("cweId"));
-        Assert.assertEquals("DEPRECATED: Location", json.getJsonObject(0).getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(100, json.size());
+        Assertions.assertEquals(1, json.getJsonObject(0).getInt("cweId"));
+        Assertions.assertEquals("DEPRECATED: Location", json.getJsonObject(0).getString("name"));
     }
 
     @Test
@@ -88,11 +87,11 @@ public class CweResourceTest extends ResourceTest {
         Response response = jersey.target(V1_CWE + "/79").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(79, json.getInt("cweId"));
-        Assert.assertEquals("Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')", json.getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(79, json.getInt("cweId"));
+        Assertions.assertEquals("Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')", json.getString("name"));
     }
 }

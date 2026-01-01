@@ -25,8 +25,8 @@ import org.jdbi.v3.core.mapper.MappingException;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.UseRowReducer;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -60,7 +60,7 @@ public class PaginatedResultRowReducerTest extends PersistenceCapableTest {
 
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         for (int i = 0; i < 10; i++) {
             final var project = new Project();

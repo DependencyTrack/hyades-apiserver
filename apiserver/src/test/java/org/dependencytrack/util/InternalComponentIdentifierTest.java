@@ -20,28 +20,24 @@ package org.dependencytrack.util;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_COMPONENTS_GROUPS_REGEX;
 import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_COMPONENTS_NAMES_REGEX;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@RunWith(Parameterized.class)
 public class InternalComponentIdentifierTest extends PersistenceCapableTest {
 
-    private final String groupsRegexProperty;
-    private final String componentGroup;
-    private final String namesRegexProperty;
-    private final String componentName;
-    private final boolean shouldBeInternal;
+    private String groupsRegexProperty;
+    private String componentGroup;
+    private String namesRegexProperty;
+    private String componentName;
+    private boolean shouldBeInternal;
 
-    @Parameterized.Parameters(name = "[{index}] groupsRegexProperty={0} componentGroup={1} " +
-            "namesRegexProperty={2} componentName={3} shouldBeInternal={4}")
     public static Collection<?> testParameters() {
         return Arrays.asList(new Object[][]{
                 // neither regexes nor group / name provided
@@ -69,7 +65,7 @@ public class InternalComponentIdentifierTest extends PersistenceCapableTest {
         });
     }
 
-    public InternalComponentIdentifierTest(final String groupsRegexProperty, final String componentGroup,
+    public void initInternalComponentIdentifierTest(final String groupsRegexProperty, final String componentGroup,
                                            final String namesRegexProperty, final String componentName,
                                            final boolean shouldBeInternal) {
         this.groupsRegexProperty = groupsRegexProperty;
@@ -79,8 +75,11 @@ public class InternalComponentIdentifierTest extends PersistenceCapableTest {
         this.shouldBeInternal = shouldBeInternal;
     }
 
-    @Test
-    public void testIsInternal() {
+    @MethodSource("testParameters")
+    @ParameterizedTest(name = "[{index}] groupsRegexProperty={0} componentGroup={1} " +
+            "namesRegexProperty={2} componentName={3} shouldBeInternal={4}")
+    public void testIsInternal(final String groupsRegexProperty, final String componentGroup, final String namesRegexProperty, final String componentName, final boolean shouldBeInternal) {
+        initInternalComponentIdentifierTest(groupsRegexProperty, componentGroup, namesRegexProperty, componentName, shouldBeInternal);
         qm.createConfigProperty(
                 INTERNAL_COMPONENTS_GROUPS_REGEX.getGroupName(),
                 INTERNAL_COMPONENTS_GROUPS_REGEX.getPropertyName(),

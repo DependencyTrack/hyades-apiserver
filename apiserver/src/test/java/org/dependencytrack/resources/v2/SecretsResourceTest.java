@@ -21,15 +21,16 @@ package org.dependencytrack.resources.v2;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.secret.management.SecretAlreadyExistsException;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretMetadata;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import java.time.Instant;
@@ -52,8 +53,8 @@ public class SecretsResourceTest extends ResourceTest {
 
     private static final SecretManager SECRET_MANAGER_MOCK = mock(SecretManager.class);
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig()
                     .register(new AbstractBinder() {
                         @Override
@@ -62,6 +63,7 @@ public class SecretsResourceTest extends ResourceTest {
                         }
                     }));
 
+    @AfterEach
     @Override
     public void after() {
         Mockito.reset(SECRET_MANAGER_MOCK);

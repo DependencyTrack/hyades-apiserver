@@ -20,7 +20,7 @@ package org.dependencytrack.persistence.converter;
 
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 

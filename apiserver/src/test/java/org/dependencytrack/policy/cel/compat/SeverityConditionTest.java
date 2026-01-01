@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.policy.cel.compat;
 
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
@@ -32,17 +30,17 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(JUnitParamsRunner.class)
 public class SeverityConditionTest extends PersistenceCapableTest {
 
-    private Object[] parameters() {
+    private static Object[] parameters() {
         return new Object[]{
                 // IS with exact match
                 new Object[]{Operator.IS, "CRITICAL", "CRITICAL", true},
@@ -59,8 +57,8 @@ public class SeverityConditionTest extends PersistenceCapableTest {
         };
     }
 
-    @Test
-    @Parameters(method = "parameters")
+    @ParameterizedTest
+    @MethodSource("parameters")
     public void testCondition(final Operator operator, final String conditionSeverity, final String actualSeverity, final boolean expectViolation) {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, ViolationState.INFO);
         qm.createPolicyCondition(policy, Subject.SEVERITY, operator, conditionSeverity);

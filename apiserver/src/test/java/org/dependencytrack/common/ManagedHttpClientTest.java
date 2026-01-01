@@ -21,8 +21,8 @@ package org.dependencytrack.common;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ManagedHttpClientTest {
 
@@ -33,7 +33,7 @@ public class ManagedHttpClientTest {
         clientBuilder.setConnectionManager(connectionManager);
         CloseableHttpClient client = clientBuilder.build();
         ManagedHttpClient managedHttpClient = new ManagedHttpClient(client, connectionManager);
-        Assert.assertSame(client, managedHttpClient.getHttpClient());
-        Assert.assertSame(connectionManager, managedHttpClient.getConnectionManager());
+        Assertions.assertSame(client, managedHttpClient.getHttpClient());
+        Assertions.assertSame(connectionManager, managedHttpClient.getConnectionManager());
     }
 }

@@ -33,20 +33,25 @@ import org.glassfish.jersey.test.ServletDeploymentContext;
 import org.glassfish.jersey.test.TestProperties;
 import org.glassfish.jersey.test.spi.TestContainerException;
 import org.glassfish.jersey.test.spi.TestContainerFactory;
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * @since 4.11.0
+ * @since 5.7.0
  */
-public class JerseyTestRule extends ExternalResource {
+public class JerseyTestExtension implements BeforeAllCallback, AfterAllCallback, BeforeEachCallback, AfterEachCallback {
 
     private final JerseyTest jerseyTest;
+    private boolean isSetUp = false;
 
-    public JerseyTestRule(final ResourceConfig resourceConfig) {
+    public JerseyTestExtension(final ResourceConfig resourceConfig) {
         final boolean isV2 = isV2(resourceConfig);
         this.jerseyTest = new JerseyTest() {
 
@@ -89,17 +94,25 @@ public class JerseyTestRule extends ExternalResource {
     }
 
     @Override
-    protected void before() throws Throwable {
+    public void beforeAll(ExtensionContext context) throws Exception {
         jerseyTest.setUp();
+        isSetUp = true;
     }
 
     @Override
-    protected void after() {
-        try {
+    public void afterAll(ExtensionContext context) throws Exception {
+        if (isSetUp) {
             jerseyTest.tearDown();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            isSetUp = false;
         }
+    }
+
+    @Override
+    public void beforeEach(ExtensionContext context) {
+    }
+
+    @Override
+    public void afterEach(ExtensionContext context) {
     }
 
     public WebTarget target() {

@@ -19,7 +19,7 @@
 package org.dependencytrack.model;
 
 import org.dependencytrack.PersistenceCapableTest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

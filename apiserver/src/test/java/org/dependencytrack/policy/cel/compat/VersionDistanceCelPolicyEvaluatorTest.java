@@ -28,9 +28,8 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -38,10 +37,8 @@ import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(Parameterized.class)
 public class VersionDistanceCelPolicyEvaluatorTest extends PersistenceCapableTest {
 
-    @Parameterized.Parameters(name = "[{index}] version={0} latestVersion={1} operator={2} distance={3} shouldViolate={4}")
     public static Collection<?> testParameters() {
         return Arrays.asList(new Object[][]{
                 {"1.0.0", "1.0.0", Operator.NUMERIC_GREATER_THAN_OR_EQUAL, "{\"epoch\": \"1\", \"major\": \"1\", \"minor\": \"?\", \"patch\": \"?\" }", false},
@@ -103,13 +100,13 @@ public class VersionDistanceCelPolicyEvaluatorTest extends PersistenceCapableTes
         });
     }
 
-    private final String version;
-    private final String latestVersion;
-    private final Operator operator;
-    private final String versionDistance;
-    private final boolean shouldViolate;
+    private String version;
+    private String latestVersion;
+    private Operator operator;
+    private String versionDistance;
+    private boolean shouldViolate;
 
-    public VersionDistanceCelPolicyEvaluatorTest(final String version, String latestVersion,
+    public void initVersionDistanceCelPolicyEvaluatorTest(final String version, String latestVersion,
                                                  Operator operator, String versionDistance, boolean shouldViolate) {
         this.version = version;
         this.latestVersion = latestVersion;
@@ -118,8 +115,10 @@ public class VersionDistanceCelPolicyEvaluatorTest extends PersistenceCapableTes
         this.shouldViolate = shouldViolate;
     }
 
-    @Test
-    public void evaluateTest() {
+    @MethodSource("testParameters")
+    @ParameterizedTest(name = "[{index}] version={0} latestVersion={1} operator={2} distance={3} shouldViolate={4}")
+    public void evaluateTest(final String version, String latestVersion, Operator operator, String versionDistance, boolean shouldViolate) {
+        initVersionDistanceCelPolicyEvaluatorTest(version, latestVersion, operator, versionDistance, shouldViolate);
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         final var condition = qm.createPolicyCondition(policy, Subject.VERSION_DISTANCE, operator, versionDistance);
 

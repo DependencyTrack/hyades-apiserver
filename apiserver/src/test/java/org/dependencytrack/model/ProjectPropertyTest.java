@@ -19,8 +19,8 @@
 package org.dependencytrack.model;
 
 import alpine.model.IConfigProperty;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ProjectPropertyTest {
 
@@ -28,7 +28,7 @@ public class ProjectPropertyTest {
     public void testId() {
         ProjectProperty property = new ProjectProperty();
         property.setId(111L);
-        Assert.assertEquals(111L, property.getId());
+        Assertions.assertEquals(111L, property.getId());
     } 
 
     @Test
@@ -36,41 +36,41 @@ public class ProjectPropertyTest {
         Project project = new Project();
         ProjectProperty property = new ProjectProperty();
         property.setProject(project);
-        Assert.assertEquals(project, property.getProject());
+        Assertions.assertEquals(project, property.getProject());
     }
 
     @Test
     public void testGroupName() {
         ProjectProperty property = new ProjectProperty();
         property.setGroupName("Group Name");
-        Assert.assertEquals("Group Name", property.getGroupName());
+        Assertions.assertEquals("Group Name", property.getGroupName());
     } 
 
     @Test
     public void testPropertyName() {
         ProjectProperty property = new ProjectProperty();
         property.setPropertyName("Property Name");
-        Assert.assertEquals("Property Name", property.getPropertyName());
+        Assertions.assertEquals("Property Name", property.getPropertyName());
     }
 
     @Test
     public void testPropertyValue() {
         ProjectProperty property = new ProjectProperty();
         property.setPropertyValue("Property Value");
-        Assert.assertEquals("Property Value", property.getPropertyValue());
+        Assertions.assertEquals("Property Value", property.getPropertyValue());
     }
 
     @Test
     public void testPropertyType() {
         ProjectProperty property = new ProjectProperty();
         property.setPropertyType(IConfigProperty.PropertyType.STRING);
-        Assert.assertEquals(IConfigProperty.PropertyType.STRING, property.getPropertyType());
+        Assertions.assertEquals(IConfigProperty.PropertyType.STRING, property.getPropertyType());
     } 
 
     @Test
     public void testDescription() {
         ProjectProperty property = new ProjectProperty();
         property.setDescription("Property Description");
-        Assert.assertEquals("Property Description", property.getDescription());
+        Assertions.assertEquals("Property Description", property.getDescription());
     }
 } 

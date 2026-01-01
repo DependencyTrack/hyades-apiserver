@@ -32,7 +32,7 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.model.Project;
@@ -40,10 +40,10 @@ import org.dependencytrack.model.Role;
 import org.dependencytrack.resources.v1.vo.ModifyUserProjectRoleRequest;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_USER_CREATED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_USER_DELETED;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
@@ -59,8 +59,8 @@ import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_SYSTEM;
 
 public class UserResourceAuthenticatedTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(UserResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class));
@@ -68,7 +68,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     private ManagedUser testUser;
     private String jwt;
 
-    @Before
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();
@@ -85,12 +85,12 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/managed").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1001), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1001), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(1001, json.size()); // There's already a built-in managed user in ResourceTest
-        Assert.assertEquals("managed-user-0", json.getJsonObject(0).getString("username"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(1001, json.size()); // There's already a built-in managed user in ResourceTest
+        Assertions.assertEquals("managed-user-0", json.getJsonObject(0).getString("username"));
     }
 
     @Test
@@ -101,12 +101,12 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/ldap").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(1000), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(1000), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(1000, json.size());
-        Assert.assertEquals("ldap-user-0", json.getJsonObject(0).getString("username"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(1000, json.size());
+        Assertions.assertEquals("ldap-user-0", json.getJsonObject(0).getString("username"));
     }
 
     @Test
@@ -114,11 +114,11 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/self").request()
                 .header("Authorization", "Bearer " + jwt)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("testuser", json.getString("username"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("testuser", json.getString("username"));
     }
 
     @Test
@@ -126,7 +126,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/self").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(401, response.getStatus(), 0);
+        Assertions.assertEquals(401, response.getStatus(), 0);
     }
 
     @Test
@@ -138,12 +138,12 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/self").request()
                 .header("Authorization", "Bearer " + jwt)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Captain BlackBeard", json.getString("fullname"));
-        Assert.assertEquals("blackbeard@example.com", json.getString("email"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Captain BlackBeard", json.getString("fullname"));
+        Assertions.assertEquals("blackbeard@example.com", json.getString("email"));
     }
 
     @Test
@@ -155,9 +155,9 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/self").request()
                 .header("Authorization", "Bearer " + jwt)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertEquals(400, response.getStatus(), 0);
         String body = getPlainTextBody(response);
-        Assert.assertEquals("Full name is required.", body);
+        Assertions.assertEquals("Full name is required.", body);
     }
 
     @Test
@@ -169,9 +169,9 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/self").request()
                 .header("Authorization", "Bearer " + jwt)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertEquals(400, response.getStatus(), 0);
         String body = getPlainTextBody(response);
-        Assert.assertEquals("Email address is required.", body);
+        Assertions.assertEquals("Email address is required.", body);
     }
 
     @Test
@@ -181,7 +181,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/self").request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(401, response.getStatus(), 0);
+        Assertions.assertEquals(401, response.getStatus(), 0);
     }
 
     @Test
@@ -195,12 +195,12 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/self").request()
                 .header("Authorization", "Bearer " + jwt)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Captain BlackBeard", json.getString("fullname"));
-        Assert.assertEquals("blackbeard@example.com", json.getString("email"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Captain BlackBeard", json.getString("fullname"));
+        Assertions.assertEquals("blackbeard@example.com", json.getString("email"));
     }
 
     @Test
@@ -214,9 +214,9 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/self").request()
                 .header("Authorization", "Bearer " + jwt)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertEquals(400, response.getStatus(), 0);
         String body = getPlainTextBody(response);
-        Assert.assertEquals("Passwords do not match.", body);
+        Assertions.assertEquals("Passwords do not match.", body);
     }
 
     @Test
@@ -226,11 +226,11 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/ldap").request()
                 .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("blackbeard", json.getString("username"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("blackbeard", json.getString("username"));
 
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
             assertThat(notification.getScope()).isEqualTo(SCOPE_SYSTEM);
@@ -248,10 +248,12 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/ldap").request()
                 .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertEquals(400, response.getStatus(), 0);
         String body = getPlainTextBody(response);
-        Assert.assertEquals("Username cannot be null or blank.", body);
-        assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 0, Duration.ofSeconds(5));
+        Assertions.assertEquals("Username cannot be null or blank.", body);
+        await()
+                .atMost(Duration.ofSeconds(5))
+                        .untilAsserted(() -> assertThat(kafkaMockProducer.history()).hasSize(0));
     }
 
     @Test
@@ -262,9 +264,9 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/ldap").request()
                 .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(409, response.getStatus(), 0);
+        Assertions.assertEquals(409, response.getStatus(), 0);
         String body = getPlainTextBody(response);
-        Assert.assertEquals("A user with the same username already exists. Cannot create new user.", body);
+        Assertions.assertEquals("A user with the same username already exists. Cannot create new user.", body);
     }
 
     @Test
@@ -277,7 +279,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true) // HACK
                 .method("DELETE", Entity.entity(user, MediaType.APPLICATION_JSON)); // HACK
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
-        Assert.assertEquals(204, response.getStatus(), 0);
+        Assertions.assertEquals(204, response.getStatus(), 0);
 
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
             assertThat(notification.getScope()).isEqualTo(SCOPE_SYSTEM);
@@ -299,13 +301,13 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/managed").request()
                 .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Captain BlackBeard", json.getString("fullname"));
-        Assert.assertEquals("blackbeard@example.com", json.getString("email"));
-        Assert.assertEquals("blackbeard", json.getString("username"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Captain BlackBeard", json.getString("fullname"));
+        Assertions.assertEquals("blackbeard@example.com", json.getString("email"));
+        Assertions.assertEquals("blackbeard", json.getString("username"));
 
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
             assertThat(notification.getScope()).isEqualTo(SCOPE_SYSTEM);
@@ -327,10 +329,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/managed").request()
                 .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("Username cannot be null or blank.", body);
+        Assertions.assertEquals("Username cannot be null or blank.", body);
     }
 
     @Test
@@ -344,10 +346,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/managed").request()
                 .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The users full name is missing.", body);
+        Assertions.assertEquals("The users full name is missing.", body);
     }
 
     @Test
@@ -361,10 +363,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/managed").request()
                 .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The users email address is missing.", body);
+        Assertions.assertEquals("The users email address is missing.", body);
     }
 
     @Test
@@ -378,10 +380,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/managed").request()
                 .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("A password must be set.", body);
+        Assertions.assertEquals("A password must be set.", body);
     }
 
     @Test
@@ -395,10 +397,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/managed").request()
                 .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The passwords do not match.", body);
+        Assertions.assertEquals("The passwords do not match.", body);
     }
 
     @Test
@@ -413,10 +415,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/managed").request()
                 .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(409, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(409, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("A user with the same username already exists. Cannot create new user.", body);
+        Assertions.assertEquals("A user with the same username already exists. Cannot create new user.", body);
     }
 
     @Test
@@ -432,15 +434,15 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/managed").request()
                 .header("Authorization", "Bearer " + jwt)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Dr BlackBeard, Ph.D.", json.getString("fullname"));
-        Assert.assertEquals("blackbeard@example.com", json.getString("email"));
-        Assert.assertTrue(json.getBoolean("forcePasswordChange"));
-        Assert.assertTrue(json.getBoolean("nonExpiryPassword"));
-        Assert.assertTrue(json.getBoolean("suspended"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Dr BlackBeard, Ph.D.", json.getString("fullname"));
+        Assertions.assertEquals("blackbeard@example.com", json.getString("email"));
+        Assertions.assertTrue(json.getBoolean("forcePasswordChange"));
+        Assertions.assertTrue(json.getBoolean("nonExpiryPassword"));
+        Assertions.assertTrue(json.getBoolean("suspended"));
     }
 
     @Test
@@ -456,10 +458,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/managed").request()
                 .header("Authorization", "Bearer " + jwt)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The users full name is missing.", body);
+        Assertions.assertEquals("The users full name is missing.", body);
     }
 
     @Test
@@ -475,10 +477,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/managed").request()
                 .header("Authorization", "Bearer " + jwt)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(400, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The users email address is missing.", body);
+        Assertions.assertEquals("The users email address is missing.", body);
     }
 
     @Test
@@ -494,10 +496,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/managed").request()
                 .header("Authorization", "Bearer " + jwt)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The user could not be found.", body);
+        Assertions.assertEquals("The user could not be found.", body);
     }
 
     @Test
@@ -510,7 +512,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true) // HACK
                 .method("DELETE", Entity.entity(user, MediaType.APPLICATION_JSON)); // HACK
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
-        Assert.assertEquals(204, response.getStatus(), 0);
+        Assertions.assertEquals(204, response.getStatus(), 0);
 
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
             assertThat(notification.getScope()).isEqualTo(SCOPE_SYSTEM);
@@ -528,11 +530,11 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/oidc").request()
                 .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("blackbeard", json.getString("username"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("blackbeard", json.getString("username"));
 
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
             assertThat(notification.getScope()).isEqualTo(SCOPE_SYSTEM);
@@ -551,9 +553,9 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/oidc").request()
                 .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(409, response.getStatus(), 0);
+        Assertions.assertEquals(409, response.getStatus(), 0);
         String body = getPlainTextBody(response);
-        Assert.assertEquals("A user with the same username already exists. Cannot create new user.", body);
+        Assertions.assertEquals("A user with the same username already exists. Cannot create new user.", body);
     }
 
     @Test
@@ -566,7 +568,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true) // HACK
                 .method("DELETE", Entity.entity(user, MediaType.APPLICATION_JSON)); // HACK
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
-        Assert.assertEquals(204, response.getStatus(), 0);
+        Assertions.assertEquals(204, response.getStatus(), 0);
     }
 
     @Test
@@ -580,15 +582,15 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/blackbeard/membership").request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(ido, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Captain BlackBeard", json.getString("fullname"));
-        Assert.assertEquals("blackbeard@example.com", json.getString("email"));
-        Assert.assertFalse(json.getBoolean("forcePasswordChange"));
-        Assert.assertFalse(json.getBoolean("nonExpiryPassword"));
-        Assert.assertFalse(json.getBoolean("suspended"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Captain BlackBeard", json.getString("fullname"));
+        Assertions.assertEquals("blackbeard@example.com", json.getString("email"));
+        Assertions.assertFalse(json.getBoolean("forcePasswordChange"));
+        Assertions.assertFalse(json.getBoolean("nonExpiryPassword"));
+        Assertions.assertFalse(json.getBoolean("suspended"));
     }
 
     @Test
@@ -601,10 +603,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/blackbeard/membership").request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(ido, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The team could not be found.", body);
+        Assertions.assertEquals("The team could not be found.", body);
     }
 
     @Test
@@ -617,10 +619,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/blackbeard/membership").request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(ido, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The user could not be found.", body);
+        Assertions.assertEquals("The user could not be found.", body);
     }
 
     @Test
@@ -633,8 +635,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Response response = jersey.target(V1_USER + "/blackbeard/membership").request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(ido, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
         // TODO: Possible bug in Jersey? The response entity is set in the resource, but blank in the actual response.
         //Assert.assertEquals("The user is already a member of the specified team.", body);
@@ -652,7 +654,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true) // HACK
                 .method("DELETE", Entity.entity(ido, MediaType.APPLICATION_JSON)); // HACK
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
     }
 
     @Test
@@ -691,13 +693,13 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .put(Entity.entity(teamRequest1.toString(), MediaType.APPLICATION_JSON));
 
-        Assert.assertEquals(200, response.getStatus());
+        Assertions.assertEquals(200, response.getStatus());
 
         User user = qm.getManagedUser("blackbeard");
         List<Team> userTeams = user.getTeams();
 
-        Assert.assertEquals(userTeams.size(), teamSet1.size());
-        Assert.assertTrue(userTeams.containsAll(teamSet1));
+        Assertions.assertEquals(userTeams.size(), teamSet1.size());
+        Assertions.assertTrue(userTeams.containsAll(teamSet1));
 
         response = jersey.target(endpoint).request()
                 .header(X_API_KEY, apiKey)
@@ -707,10 +709,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         user = qm.getUser("blackbeard");
         userTeams = user.getTeams();
 
-        Assert.assertEquals(200, response.getStatus());
-        Assert.assertEquals(userTeams.size(), teamSet2.size());
-        Assert.assertTrue(Collections.disjoint(userTeams, teamSet1));
-        Assert.assertTrue(userTeams.containsAll(teamSet2));
+        Assertions.assertEquals(200, response.getStatus());
+        Assertions.assertEquals(userTeams.size(), teamSet2.size());
+        Assertions.assertTrue(Collections.disjoint(userTeams, teamSet1));
+        Assertions.assertTrue(userTeams.containsAll(teamSet2));
     }
 
     @Test
@@ -734,14 +736,14 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .put(Entity.entity(badTeamBody.toString(), MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus());
+        Assertions.assertEquals(400, response.getStatus());
 
         // unknown user
         response = jersey.target(endpoint).request()
                 .header(X_API_KEY, apiKey)
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .put(Entity.entity(unknownUserBody.toString(), MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus());
+        Assertions.assertEquals(404, response.getStatus());
 
     }
 
@@ -767,10 +769,10 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
 
         // Assert
-        Assert.assertEquals(200, response.getStatus());
+        Assertions.assertEquals(200, response.getStatus());
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("roleuser", json.getString("username"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("roleuser", json.getString("username"));
         // Optionally, check if the user has the role for the project in the DB
     }
 
@@ -784,7 +786,6 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Role role = qm.createRole("Test Role 2", Collections.emptyList());
         qm.addRoleToUser(user, role, project);
 
-
         ModifyUserProjectRoleRequest request = new ModifyUserProjectRoleRequest(
                 user.getUsername(),
                 role.getUuid().toString(),
@@ -795,7 +796,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
 
-        Assert.assertEquals(304, response.getStatus());
+        Assertions.assertEquals(304, response.getStatus());
     }
 
     @Test
@@ -819,7 +820,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .method("DELETE", Entity.entity(request, MediaType.APPLICATION_JSON));
 
-        Assert.assertEquals(204, response.getStatus());
+        Assertions.assertEquals(204, response.getStatus());
     }
 
     @Test
@@ -842,6 +843,6 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .method("DELETE", Entity.entity(request, MediaType.APPLICATION_JSON));
 
-        Assert.assertEquals(304, response.getStatus());
+        Assertions.assertEquals(304, response.getStatus());
     }
 }

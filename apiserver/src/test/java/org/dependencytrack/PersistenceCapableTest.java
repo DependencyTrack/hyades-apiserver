@@ -29,11 +29,11 @@ import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.dependencytrack.support.config.source.memory.MemoryConfigSource;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.sql.Connection;
 import java.sql.Statement;
@@ -49,7 +49,7 @@ public abstract class PersistenceCapableTest {
     protected static final String TEST_PASSWORD_HASH = new String(
         PasswordService.createHash("testuser".toCharArray()));
 
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         Config.enableUnitTests();
 
@@ -63,7 +63,7 @@ public abstract class PersistenceCapableTest {
         new PersistenceManagerFactory().contextInitialized(null);
     }
 
-    @Before
+    @BeforeEach
     public void before() throws Exception {
         truncateTables(postgresContainer);
 
@@ -72,7 +72,7 @@ public abstract class PersistenceCapableTest {
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
     }
 
-    @After
+    @AfterEach
     public void after() {
         // Ensure that any events dispatched during the test are drained
         // to prevent them from impacting other tests.
@@ -99,7 +99,7 @@ public abstract class PersistenceCapableTest {
         KafkaProducerInitializer.tearDown();
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() {
         PersistenceManagerFactory.tearDown();
         DataSourceRegistry.getInstance().closeAll();
@@ -109,7 +109,7 @@ public abstract class PersistenceCapableTest {
         }
     }
 
-    protected static void truncateTables(final PostgreSQLContainer<?> postgresContainer) throws Exception {
+    protected static void truncateTables(final PostgreSQLContainer postgresContainer) throws Exception {
         // Truncate all tables to ensure each test starts from a clean slate.
         // https://stackoverflow.com/a/63227261
         try (final Connection connection = postgresContainer.createConnection("");

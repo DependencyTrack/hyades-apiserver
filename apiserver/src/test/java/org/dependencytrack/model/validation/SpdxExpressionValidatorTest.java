@@ -18,13 +18,13 @@
  */
 package org.dependencytrack.model.validation;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +36,7 @@ public class SpdxExpressionValidatorTest {
     private record TestRecord(@ValidSpdxExpression String expression) {
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         final ValidatorFactory validatorFactory = Validation.buildDefaultValidatorFactory();
         validator = validatorFactory.getValidator();

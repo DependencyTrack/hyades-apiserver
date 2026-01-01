@@ -28,7 +28,7 @@ import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
@@ -40,10 +40,10 @@ import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -61,13 +61,13 @@ import static org.hamcrest.Matchers.equalTo;
 
 public class NotificationRuleResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(NotificationRuleResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class));
 
-    @Before
+    @BeforeEach
     public void before() throws Exception {
         super.before();
 
@@ -83,18 +83,18 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(3), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(3), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(3, json.size());
-        Assert.assertEquals("Rule 1", json.getJsonObject(0).getString("name"));
-        Assert.assertTrue(json.getJsonObject(0).getBoolean("enabled"));
-        Assert.assertEquals("PORTFOLIO", json.getJsonObject(0).getString("scope"));
-        Assert.assertEquals("INFORMATIONAL", json.getJsonObject(0).getString("notificationLevel"));
-        Assert.assertEquals(0, json.getJsonObject(0).getJsonArray("notifyOn").size());
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getJsonObject(0).getString("uuid")));
-        Assert.assertEquals("Slack", json.getJsonObject(0).getJsonObject("publisher").getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(3, json.size());
+        Assertions.assertEquals("Rule 1", json.getJsonObject(0).getString("name"));
+        Assertions.assertTrue(json.getJsonObject(0).getBoolean("enabled"));
+        Assertions.assertEquals("PORTFOLIO", json.getJsonObject(0).getString("scope"));
+        Assertions.assertEquals("INFORMATIONAL", json.getJsonObject(0).getString("notificationLevel"));
+        Assertions.assertEquals(0, json.getJsonObject(0).getJsonArray("notifyOn").size());
+        Assertions.assertTrue(UuidUtil.isValidUUID(json.getJsonObject(0).getString("uuid")));
+        Assertions.assertEquals("Slack", json.getJsonObject(0).getJsonObject("publisher").getString("name"));
     }
 
     @Test
@@ -111,16 +111,16 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(rule, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
+        Assertions.assertEquals(201, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Example Rule", json.getString("name"));
-        Assert.assertTrue(json.getBoolean("enabled"));
-        Assert.assertEquals("SYSTEM", json.getString("scope"));
-        Assert.assertEquals("WARNING", json.getString("notificationLevel"));
-        Assert.assertEquals(0, json.getJsonArray("notifyOn").size());
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
-        Assert.assertEquals("Slack", json.getJsonObject("publisher").getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Example Rule", json.getString("name"));
+        Assertions.assertTrue(json.getBoolean("enabled"));
+        Assertions.assertEquals("SYSTEM", json.getString("scope"));
+        Assertions.assertEquals("WARNING", json.getString("notificationLevel"));
+        Assertions.assertEquals(0, json.getJsonArray("notifyOn").size());
+        Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
+        Assertions.assertEquals("Slack", json.getJsonObject("publisher").getString("name"));
     }
 
     @Test
@@ -138,10 +138,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(rule, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The UUID of the notification publisher could not be found.", body);
+        Assertions.assertEquals("The UUID of the notification publisher could not be found.", body);
     }
 
     @Test
@@ -153,16 +153,16 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(rule, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Example Rule", json.getString("name"));
-        Assert.assertTrue(json.getBoolean("enabled"));
-        Assert.assertEquals("PORTFOLIO", json.getString("scope"));
-        Assert.assertEquals("INFORMATIONAL", json.getString("notificationLevel"));
-        Assert.assertEquals("NEW_VULNERABILITY", json.getJsonArray("notifyOn").getString(0));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
-        Assert.assertEquals("Slack", json.getJsonObject("publisher").getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Example Rule", json.getString("name"));
+        Assertions.assertTrue(json.getBoolean("enabled"));
+        Assertions.assertEquals("PORTFOLIO", json.getString("scope"));
+        Assertions.assertEquals("INFORMATIONAL", json.getString("notificationLevel"));
+        Assertions.assertEquals("NEW_VULNERABILITY", json.getJsonArray("notifyOn").getString(0));
+        Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
+        Assertions.assertEquals("Slack", json.getJsonObject("publisher").getString("name"));
     }
 
     @Test
@@ -174,10 +174,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(rule, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The UUID of the notification rule could not be found.", body);
+        Assertions.assertEquals("The UUID of the notification rule could not be found.", body);
     }
 
     @Test
@@ -190,7 +190,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true) // HACK
                 .method("DELETE", Entity.entity(rule, MediaType.APPLICATION_JSON)); // HACK
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
-        Assert.assertEquals(204, response.getStatus(), 0);
+        Assertions.assertEquals(204, response.getStatus(), 0);
     }
 
     @Test
@@ -201,13 +201,13 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Example Rule", json.getString("name"));
-        Assert.assertEquals(1, json.getJsonArray("projects").size());
-        Assert.assertEquals("Acme Example", json.getJsonArray("projects").getJsonObject(0).getString("name"));
-        Assert.assertEquals(project.getUuid().toString(), json.getJsonArray("projects").getJsonObject(0).getString("uuid"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Example Rule", json.getString("name"));
+        Assertions.assertEquals(1, json.getJsonArray("projects").size());
+        Assertions.assertEquals("Acme Example", json.getJsonArray("projects").getJsonObject(0).getString("name"));
+        Assertions.assertEquals(project.getUuid().toString(), json.getJsonArray("projects").getJsonObject(0).getString("uuid"));
     }
 
     @Test
@@ -217,10 +217,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The notification rule could not be found.", body);
+        Assertions.assertEquals("The notification rule could not be found.", body);
     }
 
     @Test
@@ -231,10 +231,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(406, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(406, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("Project limitations are only possible on notification rules with PORTFOLIO scope.", body);
+        Assertions.assertEquals("Project limitations are only possible on notification rules with PORTFOLIO scope.", body);
     }
 
     @Test
@@ -244,10 +244,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + UUID.randomUUID().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The project could not be found.", body);
+        Assertions.assertEquals("The project could not be found.", body);
     }
 
     @Test
@@ -262,8 +262,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
@@ -312,8 +312,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
@@ -323,10 +323,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The notification rule could not be found.", body);
+        Assertions.assertEquals("The notification rule could not be found.", body);
     }
 
     @Test
@@ -337,10 +337,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(406, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(406, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("Project limitations are only possible on notification rules with PORTFOLIO scope.", body);
+        Assertions.assertEquals("Project limitations are only possible on notification rules with PORTFOLIO scope.", body);
     }
 
     @Test
@@ -350,10 +350,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + UUID.randomUUID().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The project could not be found.", body);
+        Assertions.assertEquals("The project could not be found.", body);
     }
 
     @Test
@@ -364,8 +364,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
@@ -411,13 +411,13 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Example Rule", json.getString("name"));
-        Assert.assertEquals(1, json.getJsonArray("teams").size());
-        Assert.assertEquals("Team Example", json.getJsonArray("teams").getJsonObject(0).getString("name"));
-        Assert.assertEquals(team.getUuid().toString(), json.getJsonArray("teams").getJsonObject(0).getString("uuid"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Example Rule", json.getString("name"));
+        Assertions.assertEquals(1, json.getJsonArray("teams").size());
+        Assertions.assertEquals("Team Example", json.getJsonArray("teams").getJsonObject(0).getString("name"));
+        Assertions.assertEquals(team.getUuid().toString(), json.getJsonArray("teams").getJsonObject(0).getString("uuid"));
     }
 
     @Test
@@ -427,10 +427,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The notification rule could not be found.", body);
+        Assertions.assertEquals("The notification rule could not be found.", body);
     }
 
     @Test
@@ -440,12 +440,11 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + UUID.randomUUID().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The team could not be found.", body);
+        Assertions.assertEquals("The team could not be found.", body);
     }
-
 
     @Test
     public void addTeamToRuleDuplicateTeamTest() {
@@ -459,8 +458,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
@@ -471,10 +470,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(406, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(406, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("Team subscriptions are only possible on notification rules with EMAIL publisher.", body);
+        Assertions.assertEquals("Team subscriptions are only possible on notification rules with EMAIL publisher.", body);
     }
 
     @Test
@@ -533,8 +532,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
@@ -544,10 +543,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The notification rule could not be found.", body);
+        Assertions.assertEquals("The notification rule could not be found.", body);
     }
 
     @Test
@@ -557,10 +556,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + UUID.randomUUID().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The team could not be found.", body);
+        Assertions.assertEquals("The team could not be found.", body);
     }
 
     @Test
@@ -571,8 +570,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
@@ -583,10 +582,10 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(406, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(406, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("Team subscriptions are only possible on notification rules with EMAIL publisher.", body);
+        Assertions.assertEquals("Team subscriptions are only possible on notification rules with EMAIL publisher.", body);
     }
 
     @Test

@@ -20,8 +20,6 @@ package org.dependencytrack.notification;
 
 import com.google.protobuf.Any;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Project;
@@ -33,8 +31,11 @@ import org.dependencytrack.notification.proto.v1.Level;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.proto.v1.Scope;
 import org.jdbi.v3.core.Handle;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,12 +47,12 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.dependencytrack.notification.NotificationModelConverter.convert;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
-@RunWith(JUnitParamsRunner.class)
 public class NotificationRouterTest extends PersistenceCapableTest {
 
     private Handle jdbiHandle;
     private NotificationRouter router;
 
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();
@@ -60,6 +61,7 @@ public class NotificationRouterTest extends PersistenceCapableTest {
         router = new NotificationRouter(jdbiHandle, new SimpleMeterRegistry());
     }
 
+    @AfterEach
     @Override
     public void after() {
         if (jdbiHandle != null) {
@@ -322,7 +324,7 @@ public class NotificationRouterTest extends PersistenceCapableTest {
     }
 
     @SuppressWarnings("unused")
-    private List<Notification> routeShouldHandleAllNotificationTypesParams() {
+    private static List<Notification> routeShouldHandleAllNotificationTypesParams() {
         final var notifications = new ArrayList<Notification>();
 
         for (final var scope : Scope.values()) {
@@ -339,8 +341,8 @@ public class NotificationRouterTest extends PersistenceCapableTest {
         return notifications;
     }
 
-    @Test
-    @Parameters(method = "routeShouldHandleAllNotificationTypesParams")
+    @ParameterizedTest
+    @MethodSource("routeShouldHandleAllNotificationTypesParams")
     public void routeShouldHandleAllNotificationTypes(final Notification notification) {
         final var rule = new NotificationRule();
         rule.setName("foo");

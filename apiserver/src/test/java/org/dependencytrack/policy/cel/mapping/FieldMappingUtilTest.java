@@ -24,7 +24,7 @@ import org.dependencytrack.proto.policy.v1.Component;
 import org.dependencytrack.proto.policy.v1.License;
 import org.dependencytrack.proto.policy.v1.Project;
 import org.dependencytrack.proto.policy.v1.Vulnerability;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.jdo.PersistenceManagerFactory;
 import javax.jdo.metadata.ColumnMetadata;

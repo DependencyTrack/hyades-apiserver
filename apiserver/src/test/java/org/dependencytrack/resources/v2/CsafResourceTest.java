@@ -22,17 +22,17 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.csaf.CsafAggregator;
 import org.dependencytrack.csaf.CsafAggregatorDao;
 import org.dependencytrack.csaf.CsafProvider;
 import org.dependencytrack.csaf.CsafProviderDao;
 import org.jdbi.v3.core.Handle;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.net.URI;
 import java.time.Instant;
@@ -47,14 +47,14 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 public class CsafResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(new ResourceConfig());
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(new ResourceConfig());
 
     private Handle jdbiHandle;
     private CsafAggregatorDao aggregatorDao;
     private CsafProviderDao providerDao;
 
-    @Before
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();
@@ -64,7 +64,7 @@ public class CsafResourceTest extends ResourceTest {
         providerDao = jdbiHandle.attach(CsafProviderDao.class);
     }
 
-    @After
+    @AfterEach
     @Override
     public void after() {
         if (jdbiHandle != null) {

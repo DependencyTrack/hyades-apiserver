@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.util;
 
-import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.ConfigPropertyExtension;
 import alpine.test.config.WithConfigProperty;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Map;
 
@@ -29,8 +29,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class ConfigUtilTest {
 
-    @Rule
-    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
+    @RegisterExtension
+    private static final ConfigPropertyExtension configProperties = new ConfigPropertyExtension();
 
     @Test
     public void testGetPassThroughPropertiesEmpty() {

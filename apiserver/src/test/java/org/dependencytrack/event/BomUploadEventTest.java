@@ -20,8 +20,8 @@ package org.dependencytrack.event;
 
 import org.dependencytrack.model.Project;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class BomUploadEventTest {
 
@@ -30,7 +30,7 @@ public class BomUploadEventTest {
         Project project = new Project();
         FileMetadata fileMetadata = FileMetadata.getDefaultInstance();
         BomUploadEvent event = new BomUploadEvent(project, FileMetadata.getDefaultInstance());
-        Assert.assertEquals(project, event.getProject());
-        Assert.assertEquals(fileMetadata, event.getFileMetadata());
+        Assertions.assertEquals(project, event.getProject());
+        Assertions.assertEquals(fileMetadata, event.getFileMetadata());
     }
 }

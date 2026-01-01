@@ -22,7 +22,7 @@ import alpine.model.Team;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.jdo.Query;
 import java.util.Arrays;

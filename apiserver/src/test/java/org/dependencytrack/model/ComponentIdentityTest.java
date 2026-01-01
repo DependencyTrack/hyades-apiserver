@@ -19,18 +19,15 @@
 package org.dependencytrack.model;
 
 import com.github.packageurl.PackageURL;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(JUnitParamsRunner.class)
 public class ComponentIdentityTest {
 
     @SuppressWarnings("unused")
-    private Object[] testEqualsAndHashCodeParams() throws Exception {
+    private static Object[] testEqualsAndHashCodeParams() throws Exception {
         return new Object[]{
                 // Equal
                 new Object[]{
@@ -155,8 +152,8 @@ public class ComponentIdentityTest {
         };
     }
 
-    @Test
-    @Parameters(method = "testEqualsAndHashCodeParams")
+    @ParameterizedTest
+    @MethodSource("testEqualsAndHashCodeParams")
     public void testEqualsAndHashCode(final ComponentIdentity left, final ComponentIdentity right, final boolean expectEqual) {
         if (expectEqual) {
             assertThat(left).isEqualTo(right);

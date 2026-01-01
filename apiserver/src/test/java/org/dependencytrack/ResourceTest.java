@@ -38,10 +38,10 @@ import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.dependencytrack.support.config.source.memory.MemoryConfigSource;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.StringReader;
 import java.time.Duration;
@@ -111,7 +111,7 @@ public abstract class ResourceTest {
     protected Team team;
     protected String apiKey;
 
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         Config.enableUnitTests();
 
@@ -125,7 +125,7 @@ public abstract class ResourceTest {
         new PersistenceManagerFactory().contextInitialized(null);
     }
 
-    @Before
+    @BeforeEach
     public void before() throws Exception {
         truncateTables(postgresContainer);
 
@@ -136,7 +136,7 @@ public abstract class ResourceTest {
         this.apiKey = qm.createApiKey(team).getKey();
     }
 
-    @After
+    @AfterEach
     public void after() {
         // Ensure that any events dispatched during the test are drained
         // to prevent them from impacting other tests.
@@ -162,7 +162,7 @@ public abstract class ResourceTest {
         KafkaProducerInitializer.tearDown();
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() {
         PersistenceManagerFactory.tearDown();
         DataSourceRegistry.getInstance().closeAll();

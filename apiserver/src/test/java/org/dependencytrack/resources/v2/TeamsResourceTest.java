@@ -24,11 +24,11 @@ import alpine.model.User;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.net.URI;
 import java.util.List;
@@ -38,8 +38,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TeamsResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(new ResourceConfig());
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(new ResourceConfig());
 
     @Test
     public void listTeamsShouldReturnPaginatedTeams() {

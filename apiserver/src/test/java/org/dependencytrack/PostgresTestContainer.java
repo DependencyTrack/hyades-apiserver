@@ -21,14 +21,14 @@ package org.dependencytrack;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import org.dependencytrack.support.liquibase.MigrationExecutor;
 import org.postgresql.ds.PGSimpleDataSource;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.TestcontainersConfiguration;
 
 import java.lang.management.ManagementFactory;
 import java.util.Map;
 
-public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestContainer> {
+public class PostgresTestContainer extends PostgreSQLContainer {
 
     @SuppressWarnings("resource")
     public PostgresTestContainer() {

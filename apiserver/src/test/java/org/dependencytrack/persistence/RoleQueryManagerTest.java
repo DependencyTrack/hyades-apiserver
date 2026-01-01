@@ -18,12 +18,14 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.model.ManagedUser;
+import alpine.model.Permission;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.model.UserProjectRole;
-
-import alpine.model.ManagedUser;
-import alpine.model.Permission;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -33,18 +35,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.dependencytrack.PersistenceCapableTest;
-import org.junit.Assert;
-import org.junit.Test;
-
 public class RoleQueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testCreateRoleWithEmptyPermissions() {
         Role role = qm.createRole("empty-role", new ArrayList<>());
-        Assert.assertNotNull(role);
-        Assert.assertEquals("empty-role", role.getName());
-        Assert.assertTrue(role.getPermissions().isEmpty());
+        Assertions.assertNotNull(role);
+        Assertions.assertEquals("empty-role", role.getName());
+        Assertions.assertTrue(role.getPermissions().isEmpty());
     }
 
     @Test
@@ -55,11 +53,11 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         List<Permission> permissions = Arrays.asList(readPermission, writePermission);
         Role role = qm.createRole("role-with-permissions", permissions);
 
-        Assert.assertNotNull(role);
-        Assert.assertEquals("role-with-permissions", role.getName());
-        Assert.assertEquals(2, role.getPermissions().size());
-        Assert.assertTrue(role.getPermissions().contains(readPermission));
-        Assert.assertTrue(role.getPermissions().contains(writePermission));
+        Assertions.assertNotNull(role);
+        Assertions.assertEquals("role-with-permissions", role.getName());
+        Assertions.assertEquals(2, role.getPermissions().size());
+        Assertions.assertTrue(role.getPermissions().contains(readPermission));
+        Assertions.assertTrue(role.getPermissions().contains(writePermission));
     }
 
     @Test
@@ -73,16 +71,16 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
         List<Role> actualRoles = qm.getRoles();
 
-        Assert.assertNotNull(actualRoles);
-        Assert.assertFalse(actualRoles.isEmpty());
-        Assert.assertEquals(expectedRoles, actualRoles);
+        Assertions.assertNotNull(actualRoles);
+        Assertions.assertFalse(actualRoles.isEmpty());
+        Assertions.assertEquals(expectedRoles, actualRoles);
     }
 
     @Test
     public void testGetRolesReturnsEmptyList() {
         List<Role> roles = qm.getRoles();
-        Assert.assertNotNull(roles);
-        Assert.assertTrue(roles.isEmpty());
+        Assertions.assertNotNull(roles);
+        Assertions.assertTrue(roles.isEmpty());
     }
 
     @Test
@@ -91,15 +89,15 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         String uuid = role.getUuid().toString();
 
         Role fetchedRole = qm.getRole(uuid);
-        Assert.assertNotNull(fetchedRole);
-        Assert.assertEquals(role, fetchedRole);
+        Assertions.assertNotNull(fetchedRole);
+        Assertions.assertEquals(role, fetchedRole);
     }
 
     @Test
     public void testGetRoleByUuidNotFound() {
         UUID nonExistentUuid = UUID.randomUUID();
         Role fetchedRole = qm.getRole(nonExistentUuid.toString());
-        Assert.assertNull(fetchedRole);
+        Assertions.assertNull(fetchedRole);
     }
 
     @Test
@@ -111,10 +109,10 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
         qm.addRoleToUser(testUser, maintainerRole, testProject);
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 qm.getRoles().size(),
                 1);
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 qm.getRoles().get(0).getName(),
                 maintainerRole.getName());
     }
@@ -127,7 +125,7 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         final Role maintainerRole = qm.createRole("maintainer", new ArrayList<Permission>());
 
         qm.addRoleToUser(testUser, maintainerRole, testProject);
-        Assert.assertTrue(qm.removeRoleFromUser(testUser, maintainerRole, testProject));
+        Assertions.assertTrue(qm.removeRoleFromUser(testUser, maintainerRole, testProject));
     }
 
     @Test
@@ -141,8 +139,8 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
         List<UserProjectRole> actualRoles = qm.getUserRoles(testUser.getUsername());
 
-        Assert.assertEquals(actualRoles.size(), 1);
-        Assert.assertEquals(expectedRole.toString(), actualRoles.get(0).getRole().toString());
+        Assertions.assertEquals(actualRoles.size(), 1);
+        Assertions.assertEquals(expectedRole.toString(), actualRoles.get(0).getRole().toString());
     }
 
     @Test
@@ -171,9 +169,9 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         expectedProjects.sort((p1, p2) -> p1.getName().compareTo(p2.getName()));
         actualProjects.sort((p1, p2) -> p1.getName().compareTo(p2.getName()));
 
-        Assert.assertEquals(expectedProjects.size(), actualProjects.size());
+        Assertions.assertEquals(expectedProjects.size(), actualProjects.size());
         for (int i = 0; i < expectedProjects.size(); i++) {
-            Assert.assertEquals(expectedProjects.get(i).getName(), actualProjects.get(i).getName());
+            Assertions.assertEquals(expectedProjects.get(i).getName(), actualProjects.get(i).getName());
         }
     }
 
@@ -184,7 +182,7 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
         Role actualRole = qm.updateRole(maintainerRole);
 
-        Assert.assertEquals(maintainerRole, actualRole);
+        Assertions.assertEquals(maintainerRole, actualRole);
     }
 
     @Test
@@ -210,8 +208,8 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
         List<Permission> actualPermissions = qm.getUnassignedRolePermissions(assistantRegionalManagerRole);
 
-        Assert.assertEquals(actualPermissions.size(), 1);
-        Assert.assertEquals(expectedPermissionsList.get(0), actualPermissions.get(0));
+        Assertions.assertEquals(actualPermissions.size(), 1);
+        Assertions.assertEquals(expectedPermissionsList.get(0), actualPermissions.get(0));
     }
 
 }

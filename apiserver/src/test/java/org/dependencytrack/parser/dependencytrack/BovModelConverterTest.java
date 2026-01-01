@@ -28,7 +28,7 @@ import org.cyclonedx.proto.v1_6.VulnerabilityRating;
 import org.cyclonedx.proto.v1_6.VulnerabilityReference;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Vulnerability;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.List;

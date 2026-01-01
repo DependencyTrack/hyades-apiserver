@@ -22,7 +22,7 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.init.InitTaskContext;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.eclipse.microprofile.config.ConfigProvider;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 
 import java.time.LocalDate;

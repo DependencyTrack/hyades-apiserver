@@ -21,7 +21,9 @@ package org.dependencytrack.csaf;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.common.pagination.PageIterator;
 import org.jdbi.v3.core.Handle;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.List;
@@ -40,6 +42,7 @@ public class CsafProviderDiscoveryTaskTest extends PersistenceCapableTest {
     private CsafAggregatorDao aggregatorDao;
     private CsafProviderDao providerDao;
 
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();
@@ -49,6 +52,7 @@ public class CsafProviderDiscoveryTaskTest extends PersistenceCapableTest {
         providerDao = jdbiHandle.attach(CsafProviderDao.class);
     }
 
+    @AfterEach
     @Override
     public void after() {
         if (jdbiHandle != null) {
