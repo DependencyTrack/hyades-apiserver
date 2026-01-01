@@ -105,6 +105,18 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>dex-engine</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>dex-testing</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>file-storage-local</artifactId>
             <version>${project.version}</version>
         </dependency>
