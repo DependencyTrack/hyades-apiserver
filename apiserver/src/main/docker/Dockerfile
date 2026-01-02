@@ -70,7 +70,7 @@ RUN mkdir -p ${APP_DIR} ${DATA_DIR} \
     && adduser -S -D -G dtrack -H -h ${DATA_DIR} -g "dtrack user" -s /bin/false -u ${UID} dtrack \
     && chown -R dtrack:0 ${DATA_DIR} ${APP_DIR} \
     && chmod -R g=u ${DATA_DIR} ${APP_DIR} \
-    && apk add --no-cache gcompat tzdata wget
+    && apk add --no-cache gcompat tzdata curl
 
 WORKDIR ${APP_DIR}
 USER ${UID}
@@ -98,7 +98,7 @@ EXPOSE 8080
 # Add a healthcheck using the Dependency-Track version API
 HEALTHCHECK --interval=30s --start-period=60s --timeout=3s CMD [ \
     "/bin/sh", "-c", \
-    "wget -t 1 -T 3 --proxy off -q -O /dev/null http://127.0.0.1:8080${CONTEXT}health" \
+    "curl -f -s --max-time 3 --noproxy '*' -o /dev/null http://127.0.0.1:8080${CONTEXT}health" \
 ]
 
 # metadata labels
