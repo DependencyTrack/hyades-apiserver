@@ -32,10 +32,10 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
  */
 final class NotificationRuleContactsSupplier implements Supplier<Set<NotificationRuleContact>> {
 
-    private final long ruleId;
+    private final String ruleName;
 
-    NotificationRuleContactsSupplier(long ruleId) {
-        this.ruleId = ruleId;
+    NotificationRuleContactsSupplier(String ruleName) {
+        this.ruleName = ruleName;
     }
 
     @Override
@@ -45,18 +45,20 @@ final class NotificationRuleContactsSupplier implements Supplier<Set<Notificatio
                     SELECT DISTINCT
                            "USERNAME"
                          , "EMAIL"
-                      FROM "NOTIFICATIONRULE_TEAMS" AS nrt
+                      FROM "NOTIFICATIONRULE" AS r
+                     INNER JOIN "NOTIFICATIONRULE_TEAMS" AS nrt
+                        ON nrt."NOTIFICATIONRULE_ID" = r."ID"
                      INNER JOIN "TEAM" AS t
                         ON t."ID" = nrt."TEAM_ID"
                      INNER JOIN "USERS_TEAMS" AS ut
                         ON ut."TEAM_ID" = t."ID"
                      INNER JOIN "USER" AS u
                         ON u."ID" = ut."USER_ID"
-                     WHERE nrt."NOTIFICATIONRULE_ID" = :ruleId
+                     WHERE r."NAME" = :ruleName
                     """);
 
             return query
-                    .bind("ruleId", ruleId)
+                    .bind("ruleName", ruleName)
                     .map(ConstructorMapper.of(NotificationRuleContact.class))
                     .set();
         });

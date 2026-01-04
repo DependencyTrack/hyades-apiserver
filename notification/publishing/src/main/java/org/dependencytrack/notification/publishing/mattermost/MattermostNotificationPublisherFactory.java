@@ -21,7 +21,7 @@ package org.dependencytrack.notification.publishing.mattermost;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
-import org.dependencytrack.notification.publishing.http.HttpNotificationRuleConfig;
+import org.dependencytrack.notification.publishing.http.HttpNotificationPublisherRuleConfig;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.jspecify.annotations.Nullable;
@@ -69,10 +69,9 @@ public final class MattermostNotificationPublisherFactory implements Notificatio
 
     @Override
     public RuntimeConfigSpec ruleConfigSpec() {
-        final var defaultConfig = new HttpNotificationRuleConfig()
-                .withDestinationUrl(URI.create("https://mattermost.example.com"));
-
-        return new RuntimeConfigSpec(defaultConfig);
+        return new RuntimeConfigSpec(
+                new HttpNotificationPublisherRuleConfig()
+                        .withDestinationUrl(URI.create("https://mattermost.example.com")));
     }
 
     @Override

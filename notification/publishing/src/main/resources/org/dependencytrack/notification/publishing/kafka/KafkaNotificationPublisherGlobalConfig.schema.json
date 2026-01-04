@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "javaInterfaces": [
+    "org.dependencytrack.plugin.api.config.RuntimeConfig"
+  ],
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Enabled",
+      "description": "Whether the Kafka notification publisher should be enabled.",
+      "default": false
+    },
+    "bootstrapServers": {
+      "type": "array",
+      "title": "Kafka Bootstrap Servers",
+      "description": "Addresses of servers that may be used to establish the initial connection to the Kafka cluster.",
+      "items": {
+        "type": "string",
+        "title": "Kafka Server Address",
+        "description": "Address of a Kafka server in `host:port` format.",
+        "minLength": 1,
+        "examples": [
+          "kafka.example.com:9092"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "producerConfigs": {
+      "type": "array",
+      "title": "Producer Configs",
+      "description": "Additional [Kafka producer configs](https://kafka.apache.org/41/configuration/producer-configs/). May be used to configure mTLS and other advanced features. Must be provided in the form of `name=value`.",
+      "items": {
+        "type": "string",
+        "title": "Producer Config",
+        "pattern": ".+=.+",
+        "examples": [
+          "security.protocol=SSL"
+        ]
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "enabled"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "enabled": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "bootstrapServers": {
+            "minItems": 1
+          }
+        },
+        "required": [
+          "bootstrapServers"
+        ]
+      }
+    }
+  ]
+}

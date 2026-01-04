@@ -22,14 +22,36 @@ import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.jspecify.annotations.Nullable;
 
+import javax.net.ssl.SSLSocketFactory;
+import java.util.Collections;
+import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.notification.api.publishing.NotificationPublisherFactory.loadDefaultTemplate;
 
 /**
  * @since 5.7.0
  */
 public final class EmailNotificationPublisherFactory implements NotificationPublisherFactory {
+
+    private final Map<String, String> overrideMailProperties;
+    private final Class<? extends SSLSocketFactory> sslSocketFactoryClass;
+    private @Nullable ConfigRegistry configRegistry;
+
+    EmailNotificationPublisherFactory(
+            Map<String, String> overrideMailProperties,
+            Class<? extends SSLSocketFactory> sslSocketFactoryClass) {
+        this.overrideMailProperties = Map.copyOf(overrideMailProperties);
+        this.sslSocketFactoryClass = sslSocketFactoryClass;
+    }
+
+    public EmailNotificationPublisherFactory() {
+        this(Collections.emptyMap(), SSLSocketFactory.class);
+    }
 
     @Override
     public String extensionName() {
@@ -48,22 +70,35 @@ public final class EmailNotificationPublisherFactory implements NotificationPubl
 
     @Override
     public void init(ExtensionContext ctx) {
+        configRegistry = ctx.configRegistry();
     }
 
     @Override
     public NotificationPublisher create() {
-        return new EmailNotificationPublisher();
+        requireNonNull(configRegistry, "configRegistry must not be null");
+
+        final var globalConfig = configRegistry.getRuntimeConfig(EmailNotificationPublisherGlobalConfig.class);
+        requireNonNull(globalConfig, "globalConfig must not be null");
+
+        if (!globalConfig.getEnabled()) {
+            throw new IllegalStateException("Email notification publisher is disabled");
+        }
+
+        return new EmailNotificationPublisher(
+                overrideMailProperties,
+                sslSocketFactoryClass,
+                globalConfig);
+    }
+
+    @Override
+    public RuntimeConfigSpec runtimeConfigSpec() {
+        return new RuntimeConfigSpec(
+                new EmailNotificationPublisherGlobalConfig());
     }
 
     @Override
     public RuntimeConfigSpec ruleConfigSpec() {
-        final var defaultConfig = new EmailNotificationRuleConfig()
-                .withSmtp(new Smtp()
-                        .withHost("localhost")
-                        .withPort(25)
-                        .withSslEnabled(false)
-                        .withStartTlsEnabled(false))
-                .withSenderAddress("dependencytrack@localhost")
+        final var defaultConfig = new EmailNotificationPublisherRuleConfig()
                 .withSubjectPrefix("[Dependency-Track]");
 
         return new RuntimeConfigSpec(defaultConfig);

@@ -39,15 +39,19 @@ import java.util.Map;
  */
 final class JiraNotificationPublisher implements NotificationPublisher {
 
+    private final JiraNotificationPublisherGlobalConfig globalConfig;
     private final HttpClient httpClient;
 
-    JiraNotificationPublisher(HttpClient httpClient) {
+    JiraNotificationPublisher(
+            JiraNotificationPublisherGlobalConfig globalConfig,
+            HttpClient httpClient) {
+        this.globalConfig = globalConfig;
         this.httpClient = httpClient;
     }
 
     @Override
     public void publish(NotificationPublishContext ctx, Notification notification) throws IOException {
-        final var ruleConfig = ctx.ruleConfig(JiraNotificationRuleConfig.class);
+        final var ruleConfig = ctx.ruleConfig(JiraNotificationPublisherRuleConfig.class);
 
         final RenderedNotificationTemplate renderedTemplate = ctx.templateRenderer().render(
                 notification,
@@ -59,16 +63,16 @@ final class JiraNotificationPublisher implements NotificationPublisher {
         }
 
         final String authHeader;
-        if (ruleConfig.getUsername() != null) {
+        if (globalConfig.getUsername() != null) {
             final var credentials = Base64.getEncoder().encodeToString(
-                    "%s:%s".formatted(ruleConfig.getUsername(), ruleConfig.getPasswordOrToken()).getBytes());
+                    "%s:%s".formatted(globalConfig.getUsername(), globalConfig.getPasswordOrToken()).getBytes());
             authHeader = "Basic " + credentials;
         } else {
-            authHeader = "Bearer " + ruleConfig.getPasswordOrToken();
+            authHeader = "Bearer " + globalConfig.getPasswordOrToken();
         }
 
         final var request = HttpRequest.newBuilder()
-                .uri(URI.create("%s/rest/api/2/issue".formatted(ruleConfig.getApiUrl())))
+                .uri(URI.create("%s/rest/api/2/issue".formatted(globalConfig.getApiUrl())))
                 .header("Authorization", authHeader)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(renderedTemplate.content()))

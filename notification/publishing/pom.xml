@@ -153,42 +153,51 @@
                 <artifactId>jsonschema2pojo-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>notification-rule-config-email</id>
+                        <id>config-email</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/email/EmailNotificationRuleConfig.schema.json</sourceDirectory>
+                            <sourcePaths>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/email/EmailNotificationPublisherGlobalConfig.schema.json</sourcePath>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/email/EmailNotificationPublisherRuleConfig.schema.json</sourcePath>
+                            </sourcePaths>
                             <targetPackage>org.dependencytrack.notification.publishing.email</targetPackage>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>notification-rule-config-http</id>
+                        <id>config-http</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/http/HttpNotificationRuleConfig.schema.json</sourceDirectory>
+                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/http/HttpNotificationPublisherRuleConfig.schema.json</sourceDirectory>
                             <targetPackage>org.dependencytrack.notification.publishing.http</targetPackage>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>notification-rule-config-jira</id>
+                        <id>config-jira</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/jira/JiraNotificationRuleConfig.schema.json</sourceDirectory>
+                            <sourcePaths>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/jira/JiraNotificationPublisherGlobalConfig.schema.json</sourcePath>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/jira/JiraNotificationPublisherRuleConfig.schema.json</sourcePath>
+                            </sourcePaths>
                             <targetPackage>org.dependencytrack.notification.publishing.jira</targetPackage>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>notification-rule-config-kafka</id>
+                        <id>config-kafka</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/kafka/KafkaNotificationRuleConfig.schema.json</sourceDirectory>
+                            <sourcePaths>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/kafka/KafkaNotificationPublisherGlobalConfig.schema.json</sourcePath>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/kafka/KafkaNotificationPublisherRuleConfig.schema.json</sourcePath>
+                            </sourcePaths>
                             <targetPackage>org.dependencytrack.notification.publishing.kafka</targetPackage>
                         </configuration>
                     </execution>

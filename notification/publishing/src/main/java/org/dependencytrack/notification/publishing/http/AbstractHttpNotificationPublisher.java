@@ -53,7 +53,7 @@ public abstract class AbstractHttpNotificationPublisher implements NotificationP
 
     @Override
     public void publish(NotificationPublishContext ctx, Notification notification) throws IOException {
-        final var ruleConfig = ctx.ruleConfig(HttpNotificationRuleConfig.class);
+        final var ruleConfig = ctx.ruleConfig(HttpNotificationPublisherRuleConfig.class);
 
         final RenderedNotificationTemplate renderedTemplate = ctx.templateRenderer().render(notification);
         if (renderedTemplate == null) {

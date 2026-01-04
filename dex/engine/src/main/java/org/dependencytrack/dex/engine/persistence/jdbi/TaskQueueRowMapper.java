@@ -20,7 +20,7 @@ package org.dependencytrack.dex.engine.persistence.jdbi;
 
 import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.api.TaskQueueStatus;
-import org.dependencytrack.dex.engine.api.TaskQueueType;
+import org.dependencytrack.dex.engine.api.TaskType;
 import org.jdbi.v3.core.config.ConfigRegistry;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.mapper.ColumnMappers;
@@ -48,7 +48,7 @@ final class TaskQueueRowMapper implements RowMapper<TaskQueue> {
         requireNonNull(instantColumnMapper);
 
         return new TaskQueue(
-                TaskQueueType.valueOf(rs.getString("type")),
+                TaskType.valueOf(rs.getString("type")),
                 rs.getString("name"),
                 TaskQueueStatus.valueOf(rs.getString("status")),
                 rs.getInt("capacity"),

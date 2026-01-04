@@ -37,7 +37,7 @@ import java.util.List;
 /**
  * @since 5.7.0
  */
-public final class DefaultNotificationPublisherPlugin implements Plugin {
+public final class DefaultNotificationPublishersPlugin implements Plugin {
 
     @Override
     public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {

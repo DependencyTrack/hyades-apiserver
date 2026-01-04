@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "javaInterfaces": [
+    "org.dependencytrack.plugin.api.config.RuntimeConfig"
+  ],
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Enabled",
+      "description": "Whether the email notification publisher should be enabled.",
+      "default": false
+    },
+    "host": {
+      "type": "string",
+      "title": "SMTP Host",
+      "description": "Hostname or IP address of the SMTP server.",
+      "minLength": 1,
+      "examples": [
+        "mail.example.com"
+      ]
+    },
+    "port": {
+      "type": "integer",
+      "title": "SMTP Port",
+      "description": "Port of the SMTP server.",
+      "minimum": 1,
+      "examples": [
+        25
+      ]
+    },
+    "username": {
+      "type": "string",
+      "title": "SMTP Username",
+      "description": "Username to authenticate against the SMTP server with.",
+      "examples": [
+        "user@example.com"
+      ]
+    },
+    "password": {
+      "type": "string",
+      "title": "SMTP Password",
+      "description": "Password to authenticate against the SMTP server with.",
+      "minLength": 1,
+      "x-secret-ref": true
+    },
+    "sslEnabled": {
+      "type": "boolean",
+      "title": "SSL / TLS Enabled",
+      "description": "Whether to use SSL / TLS when connecting to the SMTP server.",
+      "default": false
+    },
+    "startTlsEnabled": {
+      "type": "boolean",
+      "title": "STARTTLS Enabled",
+      "description": "Whether to enable [`STARTTLS`](https://en.wikipedia.org/wiki/Opportunistic_TLS).",
+      "default": false
+    },
+    "senderAddress": {
+      "type": "string",
+      "format": "email",
+      "title": "Sender Address",
+      "description": "Email address that will appear as sender.",
+      "minLength": 1,
+      "examples": [
+        "from@example.com"
+      ]
+    }
+  },
+  "required": [
+    "enabled",
+    "sslEnabled",
+    "startTlsEnabled"
+  ],
+  "allOf": [
+    {
+      "$comment": "When enabled, connection details and sender address are required.",
+      "if": {
+        "properties": {
+          "enabled": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "host",
+          "port",
+          "senderAddress"
+        ]
+      }
+    },
+    {
+      "$comment": "StartTLS should not be enabled when SSL is enabled.",
+      "if": {
+        "properties": {
+          "sslEnabled": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "startTlsEnabled": {
+            "const": false
+          }
+        }
+      }
+    },
+    {
+      "$comment": "SSL should not be enabled when StartTLS is enabled.",
+      "if": {
+        "properties": {
+          "startTlsEnabled": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sslEnabled": {
+            "const": false
+          }
+        }
+      }
+    }
+  ]
+}

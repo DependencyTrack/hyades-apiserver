@@ -29,7 +29,6 @@ import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -102,11 +101,6 @@ public class KafkaEventDispatcherTest {
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> eventDispatcher.dispatchEvent(new PortfolioMetricsUpdateEvent()))
                 .withMessageStartingWith("Unable to convert event");
-    }
-
-    @Test
-    public void testDispatchAllNotificationProtosWithEmptyCollection() {
-        assertThat(eventDispatcher.dispatchAllNotificationProtos(Collections.emptyList())).isEmpty();
     }
 
 }

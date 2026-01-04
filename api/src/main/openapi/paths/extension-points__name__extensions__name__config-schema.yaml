@@ -43,6 +43,8 @@ get:
         application/json:
           schema:
             $ref: "../components/schemas/extensions/extension-config-schema.yaml"
+    "204":
+      description: Extension has no config schema
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":
