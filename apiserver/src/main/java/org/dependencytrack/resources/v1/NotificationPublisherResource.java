@@ -48,22 +48,18 @@ import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.publisher.PublisherClass;
-import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import static org.dependencytrack.model.ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED;
 import static org.dependencytrack.notification.NotificationModelConverter.convert;
 import static org.dependencytrack.notification.api.TestNotificationFactory.createTestNotification;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_WARNING;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 /**
  * JAX-RS resources for processing notification publishers.
@@ -130,6 +126,10 @@ public class NotificationPublisherResource extends AlpineResource {
                 validator.validateProperty(jsonNotificationPublisher, "template")
         );
 
+        // TODO:
+        //   * Rename publisherClass -> publisherExtensionName.
+        //   * Validate publisher extension exists.
+
         try (QueryManager qm = new QueryManager()) {
             return qm.callInTransaction(() -> {
                 NotificationPublisher existingNotificationPublisher = qm.getNotificationPublisher(jsonNotificationPublisher.getName());
@@ -184,6 +184,10 @@ public class NotificationPublisherResource extends AlpineResource {
                 validator.validateProperty(jsonNotificationPublisher, "template"),
                 validator.validateProperty(jsonNotificationPublisher, "uuid")
         );
+
+        // TODO:
+        //   * Rename publisherClass -> publisherExtensionName.
+        //   * Validate publisher extension exists.
 
         try (QueryManager qm = new QueryManager()) {
             return qm.callInTransaction(() -> {
@@ -253,30 +257,6 @@ public class NotificationPublisherResource extends AlpineResource {
                 }
             });
         }
-    }
-
-    @POST
-    @Path("/restoreDefaultTemplates")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(
-            summary = "Restore the default notification publisher templates using the ones in the solution classpath",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Default templates restored successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE})
-    public Response restoreDefaultTemplates() {
-        useJdbiTransaction(handle -> {
-            handle.attach(ConfigPropertyDao.class).setValue(
-                    NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED, "false");
-
-            DatabaseSeedingInitTask.seedDefaultNotificationPublishers(handle);
-        });
-
-        return Response.ok().build();
     }
 
     @POST

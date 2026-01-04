@@ -76,7 +76,7 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
 
     @Override
     public RuntimeConfigSpec runtimeConfigSpec() {
-        final var defaultConfig = new NVDVulnDataSourceConfig()
+        final var defaultConfig = new NvdVulnDataSourceConfig()
                 .withEnabled(true)
                 .withCveFeedsUrl(URI.create("https://nvd.nist.gov/feeds"));
 
@@ -85,12 +85,12 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
 
     @Override
     public boolean isDataSourceEnabled() {
-        return configRegistry.getRuntimeConfig(NVDVulnDataSourceConfig.class).getEnabled();
+        return configRegistry.getRuntimeConfig(NvdVulnDataSourceConfig.class).getEnabled();
     }
 
     @Override
     public VulnDataSource create() {
-        final var config = configRegistry.getRuntimeConfig(NVDVulnDataSourceConfig.class);
+        final var config = configRegistry.getRuntimeConfig(NvdVulnDataSourceConfig.class);
         if (!config.getEnabled()) {
             LOGGER.info("Disabled; Not creating an instance");
             return null;

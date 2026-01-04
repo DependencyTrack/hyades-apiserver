@@ -73,7 +73,7 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
 
     @Override
     public RuntimeConfigSpec runtimeConfigSpec() {
-        final var defaultConfig = new OSVVulnDataSourceConfig()
+        final var defaultConfig = new OsvVulnDataSourceConfig()
                 .withEnabled(false)
                 .withAliasSyncEnabled(false)
                 .withDataUrl(URI.create("https://storage.googleapis.com/osv-vulnerabilities"))
@@ -84,12 +84,12 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
 
     @Override
     public boolean isDataSourceEnabled() {
-        return configRegistry.getRuntimeConfig(OSVVulnDataSourceConfig.class).getEnabled();
+        return configRegistry.getRuntimeConfig(OsvVulnDataSourceConfig.class).getEnabled();
     }
 
     @Override
     public VulnDataSource create() {
-        final var config = configRegistry.getRuntimeConfig(OSVVulnDataSourceConfig.class);
+        final var config = configRegistry.getRuntimeConfig(OsvVulnDataSourceConfig.class);
         if (!config.getEnabled()) {
             LOGGER.info("Disabled; Not creating an instance");
             return null;

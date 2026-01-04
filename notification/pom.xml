@@ -35,6 +35,8 @@
     <modules>
         <module>proto</module>
         <module>api</module>
+        <module>publishing</module>
+        <module>templating</module>
     </modules>
 
     <properties>
