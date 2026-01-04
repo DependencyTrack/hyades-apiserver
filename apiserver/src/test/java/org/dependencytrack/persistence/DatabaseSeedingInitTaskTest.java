@@ -29,10 +29,8 @@ import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.DefaultRepository;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
-import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.Role;
-import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -126,17 +124,6 @@ public class DatabaseSeedingInitTaskTest extends PersistenceCapableTest {
             assertThat(licenseGroup.getName()).isNotBlank();
             assertThat(licenseGroup.getUuid()).isNotNull();
             assertThat(licenseGroup.getLicenses()).isNotEmpty();
-        });
-
-        final List<NotificationPublisher> notificationPublishers = qm.getAllNotificationPublishers();
-        assertThat(notificationPublishers).hasSize(DefaultNotificationPublishers.values().length);
-        assertThat(notificationPublishers).allSatisfy(notificationPublisher -> {
-            assertThat(notificationPublisher.getName()).isNotBlank();
-            assertThat(notificationPublisher.getPublisherClass()).isNotBlank();
-            assertThat(notificationPublisher.getDescription()).isNotBlank();
-            assertThat(notificationPublisher.getTemplate()).isNotBlank();
-            assertThat(notificationPublisher.getTemplateMimeType()).isNotBlank();
-            assertThat(notificationPublisher.isDefaultPublisher()).isTrue();
         });
 
         final List<Repository> repositories = qm.getRepositories().getList(Repository.class);

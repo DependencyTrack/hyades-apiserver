@@ -48,7 +48,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class KafkaNotificationPublisherTest extends AbstractNotificationPublisherTest {
 
     @Container
-    private final KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:4.1.1");
+    private final KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka:4.1.1");
 
     @Override
     protected NotificationPublisherFactory createPublisherFactory() {
@@ -75,7 +75,7 @@ class KafkaNotificationPublisherTest extends AbstractNotificationPublisherTest {
     @Override
     protected void validateBomConsumedNotificationPublish(Notification notification) throws Exception {
         final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
+        assertThat(record.key()).isEqualTo("c9c9539a-e381-4b36-ac52-6a7ab83b2c95");
         assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
         assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
     }
@@ -83,7 +83,7 @@ class KafkaNotificationPublisherTest extends AbstractNotificationPublisherTest {
     @Override
     protected void validateBomProcessingFailedNotificationPublish(Notification notification) throws Exception {
         final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
+        assertThat(record.key()).isEqualTo("c9c9539a-e381-4b36-ac52-6a7ab83b2c95");
         assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
         assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
     }
@@ -91,7 +91,7 @@ class KafkaNotificationPublisherTest extends AbstractNotificationPublisherTest {
     @Override
     protected void validateBomValidationFailedNotificationPublish(Notification notification) throws Exception {
         final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
+        assertThat(record.key()).isEqualTo("c9c9539a-e381-4b36-ac52-6a7ab83b2c95");
         assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
         assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
     }
@@ -99,7 +99,7 @@ class KafkaNotificationPublisherTest extends AbstractNotificationPublisherTest {
     @Override
     protected void validateNewVulnerabilityNotificationPublish(Notification notification) throws Exception {
         final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
+        assertThat(record.key()).isEqualTo("c9c9539a-e381-4b36-ac52-6a7ab83b2c95");
         assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
         assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
     }
@@ -107,7 +107,7 @@ class KafkaNotificationPublisherTest extends AbstractNotificationPublisherTest {
     @Override
     protected void validateNewVulnerableDependencyNotificationPublish(Notification notification) throws Exception {
         final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
+        assertThat(record.key()).isEqualTo("c9c9539a-e381-4b36-ac52-6a7ab83b2c95");
         assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
         assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
     }

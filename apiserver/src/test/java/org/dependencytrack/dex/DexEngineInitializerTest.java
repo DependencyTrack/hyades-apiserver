@@ -23,8 +23,12 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
+import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.migration.MigrationExecutor;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.secret.TestSecretManager;
+import org.dependencytrack.secret.management.SecretManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -84,10 +88,15 @@ class DexEngineInitializerTest {
 
         dataSourceRegistry = new DataSourceRegistry(config);
         final var healthCheckRegistry = new HealthCheckRegistry(Collections.emptyList());
+        final var secretManager = new TestSecretManager();
 
         final var servletContextMock = mock(ServletContext.class);
         doReturn(healthCheckRegistry)
                 .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
+        doReturn(new PluginManager(config, new ConfigTemplateRenderer(secretManager::getSecretValue), Collections.emptyList()))
+                .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
+        doReturn(secretManager)
+                .when(servletContextMock).getAttribute(eq(SecretManager.class.getName()));
 
         initializer = new DexEngineInitializer(config, dataSourceRegistry);
         initializer.contextInitialized(new ServletContextEvent(servletContextMock));

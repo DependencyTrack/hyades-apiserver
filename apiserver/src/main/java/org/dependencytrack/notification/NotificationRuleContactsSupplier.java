@@ -30,11 +30,11 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 /**
  * @since 5.7.0
  */
-final class NotificationRuleContactsSupplier implements Supplier<Set<NotificationRuleContact>> {
+public final class NotificationRuleContactsSupplier implements Supplier<Set<NotificationRuleContact>> {
 
     private final long ruleId;
 
-    NotificationRuleContactsSupplier(long ruleId) {
+    public NotificationRuleContactsSupplier(long ruleId) {
         this.ruleId = ruleId;
     }
 

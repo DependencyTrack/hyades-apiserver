@@ -18,7 +18,7 @@
           "kafka.example.com:9092"
         ]
       },
-      "minLength": 1,
+      "minItems": 1,
       "uniqueItems": true
     },
     "topicName": {
@@ -31,6 +31,20 @@
       "type": "boolean",
       "title": "Publish Protobuf",
       "description": "Whether to publish notifications in Protobuf format instead of applying a template."
+    },
+    "producerConfigs": {
+      "type": "array",
+      "title": "Producer Configs",
+      "description": "Additional [Kafka producer configs](https://kafka.apache.org/41/configuration/producer-configs/). May be used to configure mTLS and other advanced features. Must be provided in the form of `name=value`.",
+      "items": {
+        "type": "string",
+        "title": "Producer Config",
+        "pattern": ".+=.+",
+        "examples": [
+          "security.protocol=SSL"
+        ]
+      },
+      "uniqueItems": true
     }
   },
   "required": [

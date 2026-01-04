@@ -203,7 +203,7 @@ final class NotificationRouter {
                     AS t(index, scope, level, "group")
                  INNER JOIN "NOTIFICATIONRULE" AS rule
                     ON rule."SCOPE" = t.scope
-                   AND rule."NOTIFY_ON" LIKE ('%' || t."group" || '%')
+                   AND t."group" = ANY(rule."NOTIFY_ON")
                    AND rule."NOTIFICATION_LEVEL" <= t.level
                  WHERE rule."ENABLED"
                 """);

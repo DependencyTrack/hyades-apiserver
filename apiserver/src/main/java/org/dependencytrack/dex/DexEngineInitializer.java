@@ -26,9 +26,21 @@ import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
+import org.dependencytrack.config.templating.ConfigTemplateRenderer;
+import org.dependencytrack.dex.activity.DeleteFilesActivity;
+import org.dependencytrack.dex.activity.PublishNotificationActivity;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.DexEngineFactory;
+import org.dependencytrack.dex.engine.api.TaskType;
+import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
+import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
+import org.dependencytrack.dex.workflow.PublishNotificationWorkflow;
+import org.dependencytrack.dex.workflow.proto.v1.DeleteFilesArgument;
+import org.dependencytrack.dex.workflow.proto.v1.PublishNotificationArgument;
+import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.secret.management.SecretManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jspecify.annotations.Nullable;
@@ -38,10 +50,17 @@ import org.slf4j.LoggerFactory;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.ServiceLoader;
+import java.util.regex.Pattern;
+import java.util.stream.StreamSupport;
 
 import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.dex.api.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.dex.api.payload.PayloadConverters.voidConverter;
 
 /**
  * @since 5.7.0
@@ -74,14 +93,46 @@ public final class DexEngineInitializer implements ServletContextListener {
         final var healthCheckRegistry = (HealthCheckRegistry) servletContext.getAttribute(HealthCheckRegistry.class.getName());
         requireNonNull(healthCheckRegistry, "healthCheckRegistry has not been initialized");
 
+        final var pluginManager = (PluginManager) servletContext.getAttribute(PluginManager.class.getName());
+        requireNonNull(pluginManager, "pluginManager has not been initialized");
+
+        final var secretManager = (SecretManager) servletContext.getAttribute(SecretManager.class.getName());
+        requireNonNull(pluginManager, "secretManager has not been initialized");
+
         final var engineFactory = ServiceLoader.load(DexEngineFactory.class).findFirst().orElseThrow();
         engine = engineFactory.create(engineConfig);
 
-        // Register workflows and activities here.
+        engine.registerWorkflow(
+                new PublishNotificationWorkflow(),
+                protoConverter(PublishNotificationArgument.class),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerActivity(
+                new DeleteFilesActivity(pluginManager),
+                protoConverter(DeleteFilesArgument.class),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerActivity(
+                new PublishNotificationActivity(
+                        pluginManager,
+                        new ConfigTemplateRenderer(secretManager::getSecretValue),
+                        new PebbleNotificationTemplateRendererFactory(Collections.emptyMap())),
+                protoConverter(PublishNotificationArgument.class),
+                voidConverter(),
+                Duration.ofMinutes(1));
 
-        // Create task queues here.
+        ensureTaskQueues(engine, List.of(
+                new CreateTaskQueueRequest(TaskType.WORKFLOW, "default", 1000),
+                new CreateTaskQueueRequest(TaskType.ACTIVITY, "default", 1000),
+                new CreateTaskQueueRequest(TaskType.ACTIVITY, "notification", 5)));
 
-        // Register task workers here.
+        final List<String> taskWorkerNames = getTaskWorkerNames(config);
+        for (final var workerName : taskWorkerNames) {
+            LOGGER.info("Registering task worker {}", workerName);
+
+            final TaskWorkerOptions workerOptions = getTaskWorkerOptions(config, workerName);
+            engine.registerTaskWorker(workerOptions);
+        }
 
         LOGGER.info("Starting durable execution engine");
         healthCheckRegistry.addCheck(new DexEngineHealthCheck(engine));
@@ -175,6 +226,53 @@ public final class DexEngineInitializer implements ServletContextListener {
                 .ifPresent(engineConfig.maintenance()::setRunDeletionBatchSize);
 
         return engineConfig;
+    }
+
+    private void ensureTaskQueues(DexEngine engine, Collection<CreateTaskQueueRequest> requests) {
+        for (final var request : requests) {
+            final boolean created = engine.createTaskQueue(request);
+            if (created) {
+                LOGGER.info(
+                        "Created {} task queue '{}' with capacity {}",
+                        request.type().name().toLowerCase(),
+                        request.name(),
+                        request.capacity());
+            }
+        }
+    }
+
+    private static final Pattern TASK_WORKER_PROPERTY_PATTERN =
+            Pattern.compile("^dt\\.dex-engine\\.task-worker\\..+\\..+$");
+
+    private static List<String> getTaskWorkerNames(Config config) {
+        return StreamSupport.stream(config.getPropertyNames().spliterator(), false)
+                .filter(name -> TASK_WORKER_PROPERTY_PATTERN.matcher(name).matches())
+                .map(name -> name.split("\\.", 5)[3])
+                .distinct()
+                .toList();
+    }
+
+    private static TaskWorkerOptions getTaskWorkerOptions(Config config, String name) {
+        final var prefix = "dt.dex-engine.task-worker.%s.".formatted(name);
+
+        final var type = config.getValue(prefix + "type", TaskType.class);
+        final var queueName = config.getValue(prefix + "queue-name", String.class);
+        final var maxConcurrency = config.getValue(prefix + "max-concurrency", int.class);
+        final var minPollInterval = config
+                .getOptionalValue(prefix + "min-poll-interval-ms", long.class)
+                .map(Duration::ofMillis)
+                .orElse(null);
+        final IntervalFunction pollBackoffFunction = getBackoffFunction(config, prefix).orElse(null);
+
+        var options = new TaskWorkerOptions(type, name, queueName, maxConcurrency);
+        if (minPollInterval != null) {
+            options = options.withMinPollInterval(minPollInterval);
+        }
+        if (pollBackoffFunction != null) {
+            options = options.withPollBackoffFunction(pollBackoffFunction);
+        }
+
+        return options;
     }
 
     private static Optional<IntervalFunction> getBackoffFunction(Config config, String prefix) {

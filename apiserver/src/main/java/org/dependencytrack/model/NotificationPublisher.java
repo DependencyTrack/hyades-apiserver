@@ -22,6 +22,9 @@ import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.FetchGroup;
@@ -31,9 +34,6 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -48,7 +48,7 @@ import java.util.UUID;
         @FetchGroup(name = "ALL", members = {
                 @Persistent(name = "name"),
                 @Persistent(name = "description"),
-                @Persistent(name = "publisherClass"),
+                @Persistent(name = "extensionName"),
                 @Persistent(name = "template"),
                 @Persistent(name = "templateMimeType"),
                 @Persistent(name = "defaultPublisher"),
@@ -86,11 +86,11 @@ public class NotificationPublisher implements Serializable {
     private String description;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "PUBLISHER_CLASS", length = 1024, allowsNull = "false")
+    @Column(name = "EXTENSION_NAME", length = 1024, allowsNull = "false")
     @NotBlank
     @Size(min = 1, max = 1024)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
-    private String publisherClass;
+    private String extensionName;
 
     @Persistent(defaultFetchGroup = "false")
     @Column(name = "TEMPLATE", jdbcType = "CLOB")
@@ -98,8 +98,7 @@ public class NotificationPublisher implements Serializable {
     private String template;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "TEMPLATE_MIME_TYPE", allowsNull = "false")
-    @NotBlank
+    @Column(name = "TEMPLATE_MIME_TYPE")
     @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String templateMimeType;
@@ -140,12 +139,12 @@ public class NotificationPublisher implements Serializable {
     }
 
     @NotNull
-    public String getPublisherClass() {
-        return publisherClass;
+    public String getExtensionName() {
+        return extensionName;
     }
 
-    public void setPublisherClass(@NotNull String publisherClass) {
-        this.publisherClass = publisherClass;
+    public void setExtensionName(@NotNull String extensionName) {
+        this.extensionName = extensionName;
     }
 
     public String getTemplate() {

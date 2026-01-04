@@ -55,8 +55,10 @@
     },
     "recipientAddresses": {
       "type": "array",
+      "title": "Recipient Addresses",
       "items": {
         "type": "string",
+        "title": "Recipient Address",
         "format": "email",
         "minLength": 1
       },
