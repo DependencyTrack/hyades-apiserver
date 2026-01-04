@@ -104,8 +104,6 @@ public class Config {
         DATABASE_URL                           ("alpine.database.url",               "jdbc:h2:mem:alpine"),
         DATABASE_USERNAME                      ("alpine.database.username",          "sa"),
         DATABASE_PASSWORD                      ("alpine.database.password",          ""),
-        ENFORCE_AUTHENTICATION                 ("alpine.enforce.authentication",     true),
-        ENFORCE_AUTHORIZATION                  ("alpine.enforce.authorization",      true),
         BCRYPT_ROUNDS                          ("alpine.bcrypt.rounds",              14),
         LDAP_ENABLED                           ("alpine.ldap.enabled",               false),
         LDAP_SERVER_URL                        ("alpine.ldap.server.url",            null),
