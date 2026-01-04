@@ -127,7 +127,6 @@
                     <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/datasource/vuln/github</sourceDirectory>
                     <targetPackage>org.dependencytrack.datasource.vuln.github</targetPackage>
                     <generateBuilders>true</generateBuilders>
-                    <useTitleAsClassname>true</useTitleAsClassname>
                 </configuration>
             </plugin>
         </plugins>

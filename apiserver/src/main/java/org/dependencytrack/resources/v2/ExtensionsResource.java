@@ -72,7 +72,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
             Permissions.Constants.SYSTEM_CONFIGURATION_READ
     })
     public Response listExtensionPoints() {
-        final SequencedCollection<ExtensionPointSpec<?>> extensionPoints =
+        final SequencedCollection<ExtensionPointSpec> extensionPoints =
                 pluginManager.getExtensionPoints();
 
         final var response = ListExtensionPointsResponse.builder()
@@ -175,8 +175,8 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
         final ExtensionFactory extensionFactory =
                 getExtensionFactory(extensionPointClass, extensionName);
 
-        final RuntimeConfigSpec configSpec = extensionFactory.runtimeConfigSpec();
-        if (configSpec == null) {
+        final RuntimeConfigSpec runtimeConfigSpec = extensionFactory.runtimeConfigSpec();
+        if (runtimeConfigSpec == null) {
             throw new BadRequestException();
         }
 
@@ -184,7 +184,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
         // so we have to serialize it first.
         final String configJson = Json.createObjectBuilder(request.getConfig()).build().toString();
 
-        RuntimeConfigMapper.getInstance().validateJson(configJson, configSpec);
+        RuntimeConfigMapper.getInstance().validateJson(configJson, runtimeConfigSpec);
 
         final boolean updated = inJdbiTransaction(
                 getAlpineRequest(),

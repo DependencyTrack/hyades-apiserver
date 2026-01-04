@@ -18,9 +18,10 @@
  */
 package org.dependencytrack.plugin;
 
+import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionPointSpec;
 
-public class TestExtensionPointSpec implements ExtensionPointSpec<TestExtensionPoint> {
+public class TestExtensionPointSpec implements ExtensionPointSpec {
 
     @Override
     public String name() {
@@ -33,7 +34,7 @@ public class TestExtensionPointSpec implements ExtensionPointSpec<TestExtensionP
     }
 
     @Override
-    public Class<TestExtensionPoint> extensionPointClass() {
+    public Class<? extends ExtensionPoint> extensionPointClass() {
         return TestExtensionPoint.class;
     }
 
