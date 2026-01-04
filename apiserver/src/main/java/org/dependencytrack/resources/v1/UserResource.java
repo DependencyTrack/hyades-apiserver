@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
@@ -354,23 +353,19 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     public Response getSelf() {
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.ENFORCE_AUTHENTICATION)) {
-            try (QueryManager qm = new QueryManager()) {
-                if (super.isLdapUser()) {
-                    final LdapUser user = qm.getLdapUser(getPrincipal().getName());
-                    return Response.ok(user).build();
-                } else if (super.isManagedUser()) {
-                    final ManagedUser user = qm.getManagedUser(getPrincipal().getName());
-                    return Response.ok(user).build();
-                } else if (super.isOidcUser()) {
-                    final OidcUser user = qm.getOidcUser(getPrincipal().getName());
-                    return Response.ok(user).build();
-                }
-                return Response.status(401).build();
+        try (QueryManager qm = new QueryManager()) {
+            if (super.isLdapUser()) {
+                final LdapUser user = qm.getLdapUser(getPrincipal().getName());
+                return Response.ok(user).build();
+            } else if (super.isManagedUser()) {
+                final ManagedUser user = qm.getManagedUser(getPrincipal().getName());
+                return Response.ok(user).build();
+            } else if (super.isOidcUser()) {
+                final OidcUser user = qm.getOidcUser(getPrincipal().getName());
+                return Response.ok(user).build();
             }
+            return Response.status(401).build();
         }
-        // Authentication is not enabled, but we need to return a positive response without any principal data.
-        return Response.ok().build();
     }
 
     @POST
@@ -389,40 +384,36 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     public Response updateSelf(ManagedUser jsonUser) {
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.ENFORCE_AUTHENTICATION)) {
-            try (QueryManager qm = new QueryManager()) {
-                if (super.isLdapUser()) {
-                    final LdapUser user = qm.getLdapUser(getPrincipal().getName());
-                    return Response.status(Response.Status.BAD_REQUEST).entity(user).build();
-                } else if (super.isOidcUser()) {
-                    final OidcUser user = qm.getOidcUser(getPrincipal().getName());
-                    return Response.status(Response.Status.BAD_REQUEST).entity(user).build();
-                } else if (super.isManagedUser()) {
-                    final ManagedUser user = (ManagedUser) super.getPrincipal();
-                    if (StringUtils.isBlank(jsonUser.getFullname())) {
-                        return Response.status(Response.Status.BAD_REQUEST).entity("Full name is required.").build();
-                    }
-                    if (StringUtils.isBlank(jsonUser.getEmail())) {
-                        return Response.status(Response.Status.BAD_REQUEST).entity("Email address is required.").build();
-                    }
-                    user.setFullname(StringUtils.trimToNull(jsonUser.getFullname()));
-                    user.setEmail(StringUtils.trimToNull(jsonUser.getEmail()));
-                    if (StringUtils.isNotBlank(jsonUser.getNewPassword()) && StringUtils.isNotBlank(jsonUser.getConfirmPassword())) {
-                        if (jsonUser.getNewPassword().equals(jsonUser.getConfirmPassword())) {
-                            user.setPassword(String.valueOf(PasswordService.createHash(jsonUser.getNewPassword().toCharArray())));
-                        } else {
-                            return Response.status(Response.Status.BAD_REQUEST).entity("Passwords do not match.").build();
-                        }
-                    }
-                    qm.updateManagedUser(user);
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "User profile updated: " + user.getUsername());
-                    return Response.ok(user).build();
+        try (QueryManager qm = new QueryManager()) {
+            if (super.isLdapUser()) {
+                final LdapUser user = qm.getLdapUser(getPrincipal().getName());
+                return Response.status(Response.Status.BAD_REQUEST).entity(user).build();
+            } else if (super.isOidcUser()) {
+                final OidcUser user = qm.getOidcUser(getPrincipal().getName());
+                return Response.status(Response.Status.BAD_REQUEST).entity(user).build();
+            } else if (super.isManagedUser()) {
+                final ManagedUser user = (ManagedUser) super.getPrincipal();
+                if (StringUtils.isBlank(jsonUser.getFullname())) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("Full name is required.").build();
                 }
-                return Response.status(Response.Status.UNAUTHORIZED).build();
+                if (StringUtils.isBlank(jsonUser.getEmail())) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("Email address is required.").build();
+                }
+                user.setFullname(StringUtils.trimToNull(jsonUser.getFullname()));
+                user.setEmail(StringUtils.trimToNull(jsonUser.getEmail()));
+                if (StringUtils.isNotBlank(jsonUser.getNewPassword()) && StringUtils.isNotBlank(jsonUser.getConfirmPassword())) {
+                    if (jsonUser.getNewPassword().equals(jsonUser.getConfirmPassword())) {
+                        user.setPassword(String.valueOf(PasswordService.createHash(jsonUser.getNewPassword().toCharArray())));
+                    } else {
+                        return Response.status(Response.Status.BAD_REQUEST).entity("Passwords do not match.").build();
+                    }
+                }
+                qm.updateManagedUser(user);
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "User profile updated: " + user.getUsername());
+                return Response.ok(user).build();
             }
+            return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        // Authentication is not enabled, but we need to return a positive response without any principal data.
-        return Response.ok().build();
     }
 
     @PUT

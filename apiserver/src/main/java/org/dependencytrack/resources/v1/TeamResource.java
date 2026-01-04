@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.Team;
@@ -446,22 +445,18 @@ public class TeamResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "No Team for the given API key found")
     })
     public Response getSelf() {
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.ENFORCE_AUTHENTICATION)) {
-            try (var qm = new QueryManager()) {
-                if (isApiKey()) {
-                    final var apiKey = qm.getApiKeyByPublicId(((ApiKey) getPrincipal()).getPublicId());
-                    final var team = apiKey.getTeams().stream().findFirst();
-                    if (team.isPresent()) {
-                        return Response.ok(new TeamSelfResponse(team.get())).build();
-                    } else {
-                        return Response.status(Response.Status.NOT_FOUND).entity("No Team for the given API key found.").build();
-                    }
+        try (var qm = new QueryManager()) {
+            if (isApiKey()) {
+                final var apiKey = qm.getApiKeyByPublicId(((ApiKey) getPrincipal()).getPublicId());
+                final var team = apiKey.getTeams().stream().findFirst();
+                if (team.isPresent()) {
+                    return Response.ok(new TeamSelfResponse(team.get())).build();
                 } else {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("Invalid API key supplied.").build();
+                    return Response.status(Response.Status.NOT_FOUND).entity("No Team for the given API key found.").build();
                 }
+            } else {
+                return Response.status(Response.Status.BAD_REQUEST).entity("Invalid API key supplied.").build();
             }
         }
-        // Authentication is not enabled, but we need to return a positive response without any principal data.
-        return Response.ok().build();
     }
 }
