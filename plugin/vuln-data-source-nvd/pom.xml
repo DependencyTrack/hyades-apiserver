@@ -100,7 +100,7 @@
 
         <dependency>
             <groupId>io.github.nscuro</groupId>
-            <artifactId>versatile</artifactId>
+            <artifactId>versatile-core</artifactId>
         </dependency>
     </dependencies>
 

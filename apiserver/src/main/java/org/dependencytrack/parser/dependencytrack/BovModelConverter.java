@@ -25,7 +25,6 @@ import com.google.protobuf.util.Timestamps;
 import io.github.nscuro.versatile.Constraint;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
-import io.github.nscuro.versatile.version.VersioningScheme;
 import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Component;
@@ -63,6 +62,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 
+import static io.github.nscuro.versatile.version.KnownVersioningSchemes.SCHEME_GENERIC;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV2;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
@@ -480,7 +480,7 @@ public final class BovModelConverter {
                 // Fall back the invalid versioning scheme to 'generic' and reparse
                 String[] rangeParts = range.split(":", 2);
                 String[] versions = rangeParts[1].split("/", 2);
-                var genericRange = rangeParts[0] + ":" + VersioningScheme.GENERIC.name().toLowerCase() + "/" + versions[1];
+                var genericRange = rangeParts[0] + ":" + SCHEME_GENERIC + "/" + versions[1];
                 return convertRangeToVersList(genericRange);
             } else {
                 throw versException;

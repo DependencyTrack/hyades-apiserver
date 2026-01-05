@@ -21,7 +21,6 @@ package org.dependencytrack.policy.cel.compat;
 import alpine.common.logging.Logger;
 import io.github.nscuro.versatile.Comparator;
 import io.github.nscuro.versatile.Vers;
-import io.github.nscuro.versatile.version.VersioningScheme;
 import org.dependencytrack.model.PolicyCondition;
 import org.json.JSONObject;
 
@@ -29,6 +28,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static io.github.nscuro.versatile.version.KnownVersioningSchemes.SCHEME_GENERIC;
 import static org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder.escapeQuotes;
 
 public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
@@ -65,7 +65,7 @@ public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptS
         //Do an exact match if no operator found
         if (!versionOperatorMatcher.find()) {
 
-            Vers conditionVers = Vers.builder(VersioningScheme.GENERIC)
+            Vers conditionVers = Vers.builder(SCHEME_GENERIC)
                     .withConstraint(Comparator.EQUAL, conditionVersionPart)
                     .build();
             return """
@@ -88,7 +88,7 @@ public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptS
             return null;
         }
         String condition = VERSION_OPERATOR_PATTERN.split(conditionVersionPart)[1];
-        Vers conditionVers = Vers.builder(VersioningScheme.GENERIC)
+        Vers conditionVers = Vers.builder(SCHEME_GENERIC)
                 .withConstraint(versionComparator, condition)
                 .build();
 
