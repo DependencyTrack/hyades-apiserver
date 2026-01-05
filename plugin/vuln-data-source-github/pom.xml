@@ -52,6 +52,11 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>us.springett</groupId>
             <artifactId>cvss-calculator</artifactId>
         </dependency>
@@ -107,7 +112,7 @@
 
         <dependency>
             <groupId>io.github.nscuro</groupId>
-            <artifactId>versatile</artifactId>
+            <artifactId>versatile-core</artifactId>
         </dependency>
     </dependencies>
 

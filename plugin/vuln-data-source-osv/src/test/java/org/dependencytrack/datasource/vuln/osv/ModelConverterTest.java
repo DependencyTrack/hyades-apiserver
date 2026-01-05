@@ -92,7 +92,7 @@ public class ModelConverterTest {
                               "affects": [{
                                 "ref": "${json-unit.any-string}",
                                 "versions": [{
-                                  "range": "vers:maven/>=0|<2.0.17"
+                                  "range": "vers:maven/<2.0.17"
                                 }]
                               }],
                               "properties": [
@@ -169,18 +169,18 @@ public class ModelConverterTest {
                              }, {
                                "ref": "${json-unit.any-string}",
                                "versions": [
-                                    { "range": "vers:maven/>=0|<2.0.17" }
+                                    { "range": "vers:maven/<2.0.17" }
                                 ]
                              }, {
                                "ref": "${json-unit.any-string}",
                                "versions": [
-                                    { "range": "vers:maven/>=1|<2|>=3|<4"}, 
-                                    { "range":"vers:maven/>=0|<1" }
+                                    { "range": "vers:maven/>=1|<2|>=3|<4"},
+                                    { "range":"vers:maven/<1" }
                                ]
                              }, {
                                 "ref": "${json-unit.any-string}",
                                 "versions": [
-                                    {"version":"1.0.0.RELEASE"}, 
+                                    {"version":"1.0.0.RELEASE"},
                                     {"version":"2.0.9.RELEASE"}
                                 ]
                              }, {
@@ -362,7 +362,7 @@ public class ModelConverterTest {
                                   "ref": "${json-unit.any-string}",
                                   "versions": [
                                     {
-                                      "range": "vers:golang/>=0|<1.18.18"
+                                      "range": "vers:golang/<1.18.18"
                                     }
                                   ]
                                 }
@@ -411,12 +411,7 @@ public class ModelConverterTest {
                               ],
                               "affects": [
                                 {
-                                  "ref": "${json-unit.any-string}",
-                                  "versions": [
-                                    {
-                                      "range": "vers:golang/>=0"
-                                    }
-                                  ]
+                                  "ref": "${json-unit.any-string}"
                                 }
                               ],
                               "properties": [

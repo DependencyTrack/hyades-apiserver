@@ -251,7 +251,7 @@ public class BovModelConverterTest extends PersistenceCapableTest {
     public void testConvertRangeToVersList() {
         var range = "vers:earth/<=6.0.7";
         List<Vers> versConverted = BovModelConverter.convertRangeToVersList(range);
-        assertThat(versConverted.getFirst().toString()).isEqualTo("vers:generic/<=6.0.7");
+        assertThat(versConverted.getFirst().toString()).isEqualTo("vers:earth/<=6.0.7");
     }
 
 }
