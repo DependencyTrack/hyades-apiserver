@@ -19,8 +19,6 @@
 package alpine.event.framework;
 
 import alpine.common.logging.Logger;
-import alpine.model.EventServiceLog;
-import alpine.persistence.AlpineQueryManager;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
@@ -112,8 +110,7 @@ public abstract class BaseEventService implements IEventService {
             }
 
             executor.execute(() -> {
-                try (AlpineQueryManager qm = new AlpineQueryManager()) {
-                    final EventServiceLog eventServiceLog = qm.createEventServiceLog(clazz);
+                try {
                     final Subscriber subscriber = clazz.getDeclaredConstructor().newInstance();
                     final Timer.Sample timerSample = Timer.start();
                     try {
@@ -124,7 +121,6 @@ public abstract class BaseEventService implements IEventService {
                                 .tag("subscriber", clazz.getSimpleName())
                                 .register(Metrics.globalRegistry));
                     }
-                    qm.updateEventServiceLog(eventServiceLog);
                     if (event instanceof ChainableEvent) {
                         ChainableEvent chainableEvent = (ChainableEvent)event;
                         logger.debug("Calling onSuccess");
@@ -139,7 +135,7 @@ public abstract class BaseEventService implements IEventService {
                         }
                     }
                 } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException | SecurityException e) {
-                    logger.error("An error occurred while informing subscriber: " + e);
+                    logger.error("An error occurred while informing subscriber", e);
                     if (event instanceof ChainableEvent) {
                         ChainableEvent chainableEvent = (ChainableEvent)event;
                         logger.debug("Calling onFailure");
