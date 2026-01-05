@@ -604,4 +604,8 @@
                AND "PROPERTYNAME" LIKE 'extension.%';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-29" author="nscuro">
+        <dropTable tableName="EVENTSERVICELOG"/>
+    </changeSet>
 </databaseChangeLog>

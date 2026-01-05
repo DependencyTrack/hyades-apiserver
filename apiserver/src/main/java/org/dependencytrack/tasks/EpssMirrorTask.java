@@ -19,7 +19,7 @@
 package org.dependencytrack.tasks;
 
 import alpine.event.framework.Event;
-import alpine.event.framework.LoggableSubscriber;
+import alpine.event.framework.Subscriber;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -51,7 +51,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
-public class EpssMirrorTask implements LoggableSubscriber {
+public class EpssMirrorTask implements Subscriber {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EpssMirrorTask.class);
     private static final int BATCH_SIZE = 100;
