@@ -22,14 +22,12 @@ import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
 import alpine.persistence.AlpineQueryManager;
+import jakarta.ws.rs.core.HttpHeaders;
 import org.glassfish.jersey.server.ContainerRequest;
 
-import jakarta.ws.rs.core.Cookie;
-import jakarta.ws.rs.core.HttpHeaders;
 import javax.naming.AuthenticationException;
 import java.security.Principal;
 import java.util.List;
-import java.util.Map;
 
 /**
  * An AuthenticationService implementation for JWTs that authenticates users
@@ -95,22 +93,14 @@ public class JwtAuthenticationService implements AuthenticationService {
     /**
      * Returns the token (as a String), if it exists, otherwise returns null.
      *
-     * @param headers the HttpHeader to inspect to find the Authorization-Token
-     *                cookie or Authorization Bearer header
+     * @param headers the Authorization Bearer header
      * @return the token if found, otherwise null
      * @since 1.0.0
      */
     private String getAuthorizationToken(final HttpHeaders headers) {
-        if (headers.getCookies() != null) {
-            for (Map.Entry<String, Cookie> entry : headers.getCookies().entrySet()) {
-                if (AuthorizationTokenCookie.COOKIE_NAME.equals(entry.getValue().getName())) {
-                    return entry.getValue().getValue();
-                }
-            }
-        }
         final List<String> header = headers.getRequestHeader("Authorization");
-        if (header != null) {
-            final String bearer = header.get(0);
+        if (header != null && !header.isEmpty()) {
+            final String bearer = header.getFirst();
             if (bearer != null && bearer.startsWith("Bearer ")) {
                 return bearer.substring("Bearer ".length());
             }
