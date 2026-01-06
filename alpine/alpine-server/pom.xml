@@ -36,11 +36,6 @@
             <artifactId>common-datasource</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>common-health</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <dependency>
             <groupId>org.dependencytrack</groupId>

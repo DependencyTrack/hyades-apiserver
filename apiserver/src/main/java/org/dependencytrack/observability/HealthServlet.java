@@ -1,5 +1,5 @@
 /*
- * This file is part of Alpine.
+ * This file is part of Dependency-Track.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package alpine.server.servlets;
+package org.dependencytrack.observability;
 
 import alpine.common.logging.Logger;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -37,6 +37,7 @@ import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.Liveness;
 import org.eclipse.microprofile.health.Readiness;
 import org.eclipse.microprofile.health.Startup;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -51,20 +52,21 @@ import java.util.ArrayList;
  * or any combination of the same. Checks without any of those annotations will be ignored.
  *
  * @see <a href="https://download.eclipse.org/microprofile/microprofile-health-3.1/microprofile-health-spec-3.1.html">MicroProfile Health Specification</a>
- * @since 2.3.0
+ * @since 5.7.0
  */
-public class HealthServlet extends HttpServlet {
+public final class HealthServlet extends HttpServlet {
 
     private static final Logger LOGGER = Logger.getLogger(HealthServlet.class);
 
     private final HealthCheckRegistry checkRegistry;
-    private ObjectMapper objectMapper;
+    private @Nullable ObjectMapper objectMapper;
 
+    @SuppressWarnings("unused") // Used by servlet container.
     public HealthServlet() {
         this(HealthCheckRegistry.getInstance());
     }
 
-    HealthServlet(final HealthCheckRegistry checkRegistry) {
+    HealthServlet(HealthCheckRegistry checkRegistry) {
         this.checkRegistry = checkRegistry;
     }
 
@@ -74,11 +76,11 @@ public class HealthServlet extends HttpServlet {
                 // HealthCheckResponse#data is of type Optional.
                 // We need this module to correctly serialize Optional values.
                 .registerModule(new Jdk8Module())
-                .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+                .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
     }
 
     @Override
-    protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws IOException {
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         final HealthCheckType requestedCheckType = determineHealthCheckType(req);
 
         final var checkResponses = new ArrayList<HealthCheckResponse>();
@@ -121,7 +123,7 @@ public class HealthServlet extends HttpServlet {
         }
     }
 
-    private HealthCheckType determineHealthCheckType(final HttpServletRequest req) {
+    private HealthCheckType determineHealthCheckType(HttpServletRequest req) {
         final String requestPath = req.getPathInfo();
         if (requestPath == null) {
             return HealthCheckType.ALL;
@@ -135,7 +137,7 @@ public class HealthServlet extends HttpServlet {
         };
     }
 
-    private boolean matchesCheckType(final HealthCheck check, final HealthCheckType requestedType) {
+    private boolean matchesCheckType(HealthCheck check, HealthCheckType requestedType) {
         final Class<? extends HealthCheck> checkClass = check.getClass();
         if (checkClass.isAnnotationPresent(Liveness.class)
                 && (requestedType == HealthCheckType.ALL || requestedType == HealthCheckType.LIVENESS)) {

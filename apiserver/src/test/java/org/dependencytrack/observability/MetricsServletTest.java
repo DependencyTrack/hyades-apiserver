@@ -1,5 +1,5 @@
 /*
- * This file is part of Alpine.
+ * This file is part of Dependency-Track.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,15 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package alpine.server.servlets;
+package org.dependencytrack.observability;
 
-import alpine.Config;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.prometheus.client.exporter.common.TextFormat;
+import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -40,17 +40,15 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class MetricsServletTest {
+class MetricsServletTest {
 
-    private Config configMock;
     private PrometheusMeterRegistry meterRegistry;
     private HttpServletRequest requestMock;
     private HttpServletResponse responseMock;
     private ServletOutputStream responseOutputStreamMock;
 
     @BeforeEach
-    public void setUp() {
-        configMock = mock(Config.class);
+    void beforeEach() {
         meterRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         requestMock = mock(HttpServletRequest.class);
         responseMock = mock(HttpServletResponse.class);
@@ -60,12 +58,14 @@ public class MetricsServletTest {
     }
 
     @Test
-    public void shouldRespondWithMetricsWhenEnabled() throws Exception {
-        when(configMock.getPropertyAsBoolean(eq(Config.AlpineKey.METRICS_ENABLED))).thenReturn(true);
+    void shouldRespondWithMetricsWhenEnabled() throws Exception {
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValue("alpine.metrics.enabled", "true")
+                .build();
 
         when(responseMock.getOutputStream()).thenReturn(responseOutputStreamMock);
 
-        final var servlet = new MetricsServlet(configMock, meterRegistry);
+        final var servlet = new MetricsServlet(config, meterRegistry);
         servlet.init();
         servlet.doGet(requestMock, responseMock);
 
@@ -82,10 +82,10 @@ public class MetricsServletTest {
     }
 
     @Test
-    public void shouldRespondWithNotFoundWhenNotEnabled() throws Exception {
+    void shouldRespondWithNotFoundWhenNotEnabled() throws Exception {
         when(responseMock.getOutputStream()).thenReturn(responseOutputStreamMock);
 
-        final var servlet = new MetricsServlet(configMock, meterRegistry);
+        final var servlet = new MetricsServlet(new SmallRyeConfigBuilder().build(), meterRegistry);
         servlet.init();
         servlet.doGet(requestMock, responseMock);
 
@@ -94,16 +94,18 @@ public class MetricsServletTest {
     }
 
     @Test
-    public void shouldRespondWithMetricsWhenEnabledAndAuthenticated() throws Exception {
-        when(configMock.getPropertyAsBoolean(eq(Config.AlpineKey.METRICS_ENABLED))).thenReturn(true);
-        when(configMock.getProperty(eq(Config.AlpineKey.METRICS_AUTH_USERNAME))).thenReturn("metrics-user");
-        when(configMock.getProperty(eq(Config.AlpineKey.METRICS_AUTH_PASSWORD))).thenReturn("metrics-password");
+    void shouldRespondWithMetricsWhenEnabledAndAuthenticated() throws Exception {
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValue("alpine.metrics.enabled", "true")
+                .withDefaultValue("alpine.metrics.username", "metrics-user")
+                .withDefaultValue("alpine.metrics.password", "metrics-password")
+                .build();
 
         when(requestMock.getHeader(eq(HttpHeaders.AUTHORIZATION))).thenReturn("Basic bWV0cmljcy11c2VyOm1ldHJpY3MtcGFzc3dvcmQ");
 
         when(responseMock.getOutputStream()).thenReturn(responseOutputStreamMock);
 
-        final var servlet = new MetricsServlet(configMock, meterRegistry);
+        final var servlet = new MetricsServlet(config, meterRegistry);
         servlet.init();
         servlet.doGet(requestMock, responseMock);
 
@@ -120,16 +122,18 @@ public class MetricsServletTest {
     }
 
     @Test
-    public void shouldRespondWithUnauthorizedWhenEnabledAndAuthenticationFailed() throws Exception {
-        when(configMock.getPropertyAsBoolean(eq(Config.AlpineKey.METRICS_ENABLED))).thenReturn(true);
-        when(configMock.getProperty(eq(Config.AlpineKey.METRICS_AUTH_USERNAME))).thenReturn("metrics-user");
-        when(configMock.getProperty(eq(Config.AlpineKey.METRICS_AUTH_PASSWORD))).thenReturn("metrics-password");
+    void shouldRespondWithUnauthorizedWhenEnabledAndAuthenticationFailed() throws Exception {
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValue("alpine.metrics.enabled", "true")
+                .withDefaultValue("alpine.metrics.username", "metrics-user")
+                .withDefaultValue("alpine.metrics.password", "metrics-password")
+                .build();
 
         when(requestMock.getHeader(eq(HttpHeaders.AUTHORIZATION))).thenReturn("Basic Zm9vOmJhcg");
 
         when(responseMock.getOutputStream()).thenReturn(responseOutputStreamMock);
 
-        final var servlet = new MetricsServlet(configMock, meterRegistry);
+        final var servlet = new MetricsServlet(config, meterRegistry);
         servlet.init();
         servlet.doGet(requestMock, responseMock);
 

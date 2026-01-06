@@ -18,7 +18,8 @@
  */
 package alpine.event.framework;
 
-import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 
 import java.util.concurrent.ExecutorService;
@@ -47,7 +48,8 @@ public final class SingleThreadedEventService extends BaseEventService {
                 .build();
         final var executor = Executors.newFixedThreadPool(1, threadFactory);
         INSTANCE = new SingleThreadedEventService(executor);
-        Metrics.registerExecutorService(executor, EXECUTOR_NAME);
+        new ExecutorServiceMetrics(executor, EXECUTOR_NAME, null)
+                .bindTo(Metrics.globalRegistry);
     }
 
     private SingleThreadedEventService(final ExecutorService executor) {
