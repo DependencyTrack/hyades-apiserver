@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import alpine.Config;
 import alpine.resources.AlpineRequest;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -169,11 +168,8 @@ public class JdbiFactory {
                 .installPlugin(new SqlObjectPlugin())
                 .installPlugin(new PostgresPlugin())
                 .installPlugin(new Jackson2Plugin())
-                .setTemplateEngine(FreemarkerEngine.instance());
-
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            preparedJdbi.setSqlLogger(new QueryTimingSqlLogger(Metrics.globalRegistry));
-        }
+                .setTemplateEngine(FreemarkerEngine.instance())
+                .setSqlLogger(new QueryTimingSqlLogger(Metrics.globalRegistry));
 
         preparedJdbi
                 .getConfig(PaginationConfig.class)

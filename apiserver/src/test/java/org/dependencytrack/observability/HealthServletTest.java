@@ -1,4 +1,22 @@
-package alpine.server.servlets;
+/*
+ * This file is part of Dependency-Track.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
+ */
+package org.dependencytrack.observability;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,24 +46,23 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class HealthServletTest {
+class HealthServletTest {
 
     private HttpServletRequest requestMock;
     private HttpServletResponse responseMock;
     private ByteArrayOutputStream responseOutputStream;
-    private PrintWriter responseWriter;
 
     @BeforeEach
-    public void setUp() throws Exception {
+    void beforeEach() throws Exception {
         requestMock = mock(HttpServletRequest.class);
         responseMock = mock(HttpServletResponse.class);
         responseOutputStream = new ByteArrayOutputStream();
-        responseWriter = new PrintWriter(responseOutputStream);
+        final var responseWriter = new PrintWriter(responseOutputStream);
         when(responseMock.getWriter()).thenReturn(responseWriter);
     }
 
     @Test
-    public void shouldReportStatusUpWhenNoChecksAreRegistered() throws Exception {
+    void shouldReportStatusUpWhenNoChecksAreRegistered() throws Exception {
         final var servlet = new HealthServlet(new HealthCheckRegistry(Collections.emptyList()));
         servlet.init();
         servlet.doGet(requestMock, responseMock);
@@ -62,7 +79,7 @@ public class HealthServletTest {
     }
 
     @Test
-    public void shouldReportStatusUpWhenAllChecksAreUp() throws Exception {
+    void shouldReportStatusUpWhenAllChecksAreUp() throws Exception {
         final var checkRegistry = new HealthCheckRegistry(List.of(
                 new MockReadinessCheck(() -> HealthCheckResponse.up("foo")),
                 new MockReadinessCheck(() -> HealthCheckResponse.up("bar"))));
@@ -95,7 +112,7 @@ public class HealthServletTest {
     }
 
     @Test
-    public void shouldReportStatusDownWhenAtLeastOneCheckIsDown() throws Exception {
+    void shouldReportStatusDownWhenAtLeastOneCheckIsDown() throws Exception {
         final var checkRegistry = new HealthCheckRegistry(List.of(
                 new MockReadinessCheck(() -> HealthCheckResponse.up("foo")),
                 new MockReadinessCheck(() -> HealthCheckResponse.down("bar"))));
@@ -128,12 +145,7 @@ public class HealthServletTest {
     }
 
     @Test
-    public void shouldNotReportAnythingWhenCallingAtLeastOneCheckFailed() throws Exception {
-        final var checkUp = new MockReadinessCheck(() -> HealthCheckResponse.up("foo"));
-        final var checkFail = new MockReadinessCheck(() -> {
-            throw new IllegalStateException("Simulated check exception");
-        });
-
+    void shouldNotReportAnythingWhenCallingAtLeastOneCheckFailed() throws Exception {
         final var checkRegistry = new HealthCheckRegistry(List.of(
                 new MockReadinessCheck(() -> HealthCheckResponse.up("foo")),
                 new MockReadinessCheck(() -> {
@@ -151,7 +163,7 @@ public class HealthServletTest {
     }
 
     @Test
-    public void shouldIncludeLivenessCheckWhenLivenessIsRequested() throws Exception {
+    void shouldIncludeLivenessCheckWhenLivenessIsRequested() throws Exception {
         final var checkRegistry = new HealthCheckRegistry(List.of(
                 new MockLivenessCheck(() -> HealthCheckResponse.up("live")),
                 new MockReadinessCheck(() -> HealthCheckResponse.up("ready")),
@@ -188,7 +200,7 @@ public class HealthServletTest {
     }
 
     @Test
-    public void shouldIncludeReadinessCheckWhenReadinessIsRequested() throws Exception {
+    void shouldIncludeReadinessCheckWhenReadinessIsRequested() throws Exception {
         final var checkRegistry = new HealthCheckRegistry(List.of(
                 new MockLivenessCheck(() -> HealthCheckResponse.up("live")),
                 new MockReadinessCheck(() -> HealthCheckResponse.up("ready")),
@@ -225,7 +237,7 @@ public class HealthServletTest {
     }
 
     @Test
-    public void shouldIncludeStartupCheckWhenStartupIsRequested() throws Exception {
+    void shouldIncludeStartupCheckWhenStartupIsRequested() throws Exception {
         final var checkRegistry = new HealthCheckRegistry(List.of(
                 new MockLivenessCheck(() -> HealthCheckResponse.up("live")),
                 new MockReadinessCheck(() -> HealthCheckResponse.up("ready")),
@@ -262,7 +274,7 @@ public class HealthServletTest {
     }
 
     @Test
-    public void shouldIncludeAllChecksWhenAllAreRequested() throws Exception {
+    void shouldIncludeAllChecksWhenAllAreRequested() throws Exception {
         final var checkRegistry = new HealthCheckRegistry(List.of(
                 new MockLivenessCheck(() -> HealthCheckResponse.up("live")),
                 new MockReadinessCheck(() -> HealthCheckResponse.up("ready")),

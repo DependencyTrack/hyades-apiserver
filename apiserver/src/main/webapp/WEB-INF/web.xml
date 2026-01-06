@@ -27,7 +27,7 @@
         <listener-class>org.dependencytrack.dev.DevServicesInitializer</listener-class>
     </listener>
     <listener>
-        <listener-class>alpine.server.metrics.MetricsInitializer</listener-class>
+        <listener-class>org.dependencytrack.observability.MetricsInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.init.InitTaskServletContextListener</listener-class>
@@ -163,7 +163,7 @@
 
     <servlet>
         <servlet-name>Health</servlet-name>
-        <servlet-class>alpine.server.servlets.HealthServlet</servlet-class>
+        <servlet-class>org.dependencytrack.observability.HealthServlet</servlet-class>
         <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet-mapping>
@@ -173,7 +173,7 @@
 
     <servlet>
         <servlet-name>Metrics</servlet-name>
-        <servlet-class>alpine.server.servlets.MetricsServlet</servlet-class>
+        <servlet-class>org.dependencytrack.observability.MetricsServlet</servlet-class>
         <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet-mapping>

@@ -18,8 +18,9 @@
  */
 package alpine.event.framework;
 
-import alpine.common.metrics.Metrics;
 import alpine.common.util.ThreadUtil;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 
 import java.util.concurrent.ExecutorService;
@@ -59,7 +60,8 @@ public final class EventService extends BaseEventService {
                 new LinkedBlockingQueue<>(),
                 threadFactory);
         INSTANCE = new EventService(executor);
-        Metrics.registerExecutorService(executor, EXECUTOR_NAME);
+        new ExecutorServiceMetrics(executor, EXECUTOR_NAME, null)
+                .bindTo(Metrics.globalRegistry);
     }
 
     private EventService(final ExecutorService executor) {

@@ -64,21 +64,14 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
         dnProps.put(PropertyNames.PROPERTY_RETAIN_VALUES, "true");
         dnProps.put(PropertyNames.PROPERTY_METADATA_ALLOW_XML, "false");
         dnProps.put(PropertyNames.PROPERTY_METADATA_SUPPORT_ORM, "false");
-
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            dnProps.put(PropertyNames.PROPERTY_ENABLE_STATISTICS, "true");
-        }
+        dnProps.put(PropertyNames.PROPERTY_ENABLE_STATISTICS, "true");
 
         final DataSource dataSource = DataSourceRegistry.getInstance().getDefault();
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY, dataSource);
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY2, dataSource);
 
         pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
-
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            LOGGER.info("Registering DataNucleus metrics");
-            registerDataNucleusMetrics(pmf);
-        }
+        registerDataNucleusMetrics(pmf);
     }
 
     @Override
