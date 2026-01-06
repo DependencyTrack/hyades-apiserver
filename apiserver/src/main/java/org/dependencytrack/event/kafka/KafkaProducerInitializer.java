@@ -52,12 +52,8 @@ public class KafkaProducerInitializer implements ServletContextListener {
         LOGGER.info("Initializing Kafka producer");
 
         PRODUCER = createProducer();
-
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            LOGGER.info("Registering Kafka producer metrics");
-            PRODUCER_METRICS = new KafkaClientMetrics(PRODUCER);
-            PRODUCER_METRICS.bindTo(Metrics.globalRegistry);
-        }
+        PRODUCER_METRICS = new KafkaClientMetrics(PRODUCER);
+        PRODUCER_METRICS.bindTo(Metrics.globalRegistry);
     }
 
     @Override

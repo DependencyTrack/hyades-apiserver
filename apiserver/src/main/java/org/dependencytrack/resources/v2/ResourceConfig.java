@@ -26,7 +26,7 @@ import alpine.server.filters.HeaderFilter;
 import alpine.server.filters.RequestIdFilter;
 import alpine.server.filters.RequestMdcEnrichmentFilter;
 import org.dependencytrack.dex.DexEngineBinder;
-import org.dependencytrack.filters.JerseyMetricsFeature;
+import org.dependencytrack.filters.JerseyMetricsApplicationEventListener;
 import org.dependencytrack.plugin.PluginManagerBinder;
 import org.dependencytrack.secret.SecretManagerBinder;
 import org.glassfish.jersey.jackson.JacksonFeature;
@@ -55,7 +55,7 @@ public final class ResourceConfig extends org.glassfish.jersey.server.ResourceCo
         register(GZipInterceptor.class);
         register(HeaderFilter.class);
         register(JacksonFeature.withoutExceptionMappers());
-        register(JerseyMetricsFeature.class);
+        register(JerseyMetricsApplicationEventListener.class);
         register(MultiPartFeature.class);
         register(RequestIdFilter.class);
         register(RequestMdcEnrichmentFilter.class);
