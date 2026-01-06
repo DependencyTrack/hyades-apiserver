@@ -97,8 +97,8 @@ class MetricsServletTest {
     void shouldRespondWithMetricsWhenEnabledAndAuthenticated() throws Exception {
         final var config = new SmallRyeConfigBuilder()
                 .withDefaultValue("alpine.metrics.enabled", "true")
-                .withDefaultValue("alpine.metrics.username", "metrics-user")
-                .withDefaultValue("alpine.metrics.password", "metrics-password")
+                .withDefaultValue("alpine.metrics.auth.username", "metrics-user")
+                .withDefaultValue("alpine.metrics.auth.password", "metrics-password")
                 .build();
 
         when(requestMock.getHeader(eq(HttpHeaders.AUTHORIZATION))).thenReturn("Basic bWV0cmljcy11c2VyOm1ldHJpY3MtcGFzc3dvcmQ");
@@ -125,8 +125,8 @@ class MetricsServletTest {
     void shouldRespondWithUnauthorizedWhenEnabledAndAuthenticationFailed() throws Exception {
         final var config = new SmallRyeConfigBuilder()
                 .withDefaultValue("alpine.metrics.enabled", "true")
-                .withDefaultValue("alpine.metrics.username", "metrics-user")
-                .withDefaultValue("alpine.metrics.password", "metrics-password")
+                .withDefaultValue("alpine.metrics.auth.username", "metrics-user")
+                .withDefaultValue("alpine.metrics.auth.password", "metrics-password")
                 .build();
 
         when(requestMock.getHeader(eq(HttpHeaders.AUTHORIZATION))).thenReturn("Basic Zm9vOmJhcg");
