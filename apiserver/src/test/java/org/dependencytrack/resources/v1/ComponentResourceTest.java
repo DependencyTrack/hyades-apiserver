@@ -223,6 +223,7 @@ public class ComponentResourceTest extends ResourceTest {
         Assertions.assertEquals(published.toString(), Date.from(Instant.ofEpochSecond(json.getJsonObject("componentMetaInformation").getJsonNumber("lastFetched").longValue() / 1000)).toString());
     }
 
+
     @Test
     public void integrityCheckStatusPassTest() {
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);

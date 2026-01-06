@@ -196,9 +196,18 @@ public abstract class ResourceTest {
     }
 
     protected JsonObject parseJsonObject(Response response) {
-        StringReader stringReader = new StringReader(response.readEntity(String.class));
+        final String entity = response.readEntity(String.class);
+        if (entity == null || entity.trim().isEmpty()) {
+            throw new IllegalStateException("Response entity is null or empty. Status: " + response.getStatus());
+        }
+        if (entity.trim().startsWith("<")) {
+            throw new IllegalStateException("Response appears to be HTML/XML instead of JSON. Status: " + response.getStatus() + ", Content-Type: " + response.getHeaderString("Content-Type") + ", Entity: " + entity.substring(0, Math.min(200, entity.length())));
+        }
+        StringReader stringReader = new StringReader(entity);
         try (JsonReader jsonReader = Json.createReader(stringReader)) {
             return jsonReader.readObject();
+        } catch (jakarta.json.JsonException e) {
+            throw new IllegalStateException("Failed to parse JSON. Status: " + response.getStatus() + ", Content-Type: " + response.getHeaderString("Content-Type") + ", Entity: " + entity.substring(0, Math.min(200, entity.length())), e);
         }
     }
 
