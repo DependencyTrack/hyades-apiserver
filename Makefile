@@ -60,11 +60,7 @@ lint-openapi:
 .PHONY: lint-openapi
 
 lint-proto:
-	@for buf_file in $$(find . -name "buf.yaml" -type f); do \
-		proto_dir=$$(dirname $$buf_file); \
-		echo "Linting protobuf module in $$proto_dir"; \
-		buf lint $$proto_dir || exit 1; \
-	done
+	@buf lint
 .PHONY: lint-proto
 
 lint: lint-java lint-openapi lint-proto
