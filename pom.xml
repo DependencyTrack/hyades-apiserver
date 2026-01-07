@@ -110,7 +110,7 @@
         <lib.assertj.version>3.27.6</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.caffeine.version>3.2.3</lib.caffeine.version>
-        <lib.cel-java.version>0.5.3</lib.cel-java.version>
+        <lib.cel-java.version>0.6.0</lib.cel-java.version>
         <lib.commons-lang3.version>3.20.0</lib.commons-lang3.version>
         <lib.cpe-parser.version>3.0.1</lib.cpe-parser.version>
         <lib.csaf-retrieval.version>0.5.1</lib.csaf-retrieval.version>
