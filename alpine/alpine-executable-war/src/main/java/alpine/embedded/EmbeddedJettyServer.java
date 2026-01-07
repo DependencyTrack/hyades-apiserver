@@ -23,6 +23,7 @@ import org.eclipse.jetty.ee11.servlet.ServletHandler;
 import org.eclipse.jetty.ee11.webapp.WebAppContext;
 import org.eclipse.jetty.http.UriCompliance;
 import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.ForwardedRequestCustomizer;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Request;
@@ -34,8 +35,10 @@ import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.resource.URLResourceFactory;
 import org.eclipse.jetty.xml.XmlConfiguration;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.security.ProtectionDomain;
@@ -49,19 +52,26 @@ import java.util.Properties;
  */
 public final class EmbeddedJettyServer {
 
-    private static final Logger LOGGER = org.slf4j.LoggerFactory.getLogger(EmbeddedJettyServer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EmbeddedJettyServer.class);
 
-    /**
-     * Private constructor.
-     */
     private EmbeddedJettyServer() {
     }
 
-    public static void main(final String[] args) throws Exception {
-        try (final InputStream fis = Thread.currentThread().getContextClassLoader().getResourceAsStream("alpine-executable-war.version")) {
-            final Properties properties = new Properties();
+    public static void main(String[] args) {
+        final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+
+        try (final InputStream fis = contextClassLoader.getResourceAsStream("alpine-executable-war.version")) {
+            final var properties = new Properties();
             properties.load(fis);
-            LOGGER.info(properties.getProperty("name") + " v" + properties.getProperty("version") + " (" + properties.getProperty("uuid") + ") built on: " + properties.getProperty("timestamp"));
+
+            LOGGER.info(
+                    "{} v{} ({}) built on: {}",
+                    properties.getProperty("name"),
+                    properties.getProperty("version"),
+                    properties.getProperty("uuid"),
+                    properties.getProperty("timestamp"));
+        } catch (IOException e) {
+            LOGGER.warn("Failed to load version file", e);
         }
 
         final CliArgs cliArgs = new CliArgs(args);
@@ -72,9 +82,12 @@ public final class EmbeddedJettyServer {
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
 
-        final Server server = new Server();
-        final HttpConfiguration httpConfig = new HttpConfiguration();
-        httpConfig.addCustomizer(new org.eclipse.jetty.server.ForwardedRequestCustomizer()); // Add support for X-Forwarded headers
+        final var server = new Server();
+        server.setStopAtShutdown(true);
+
+        final var httpConfig = new HttpConfiguration();
+        httpConfig.addCustomizer(new ForwardedRequestCustomizer()); // Add support for X-Forwarded headers
+        httpConfig.setSendServerVersion(false);
 
         // Enable legacy (mimicking Jetty 9) URI compliance.
         // This is required to allow URL encoding in path segments, e.g. "/foo/bar%2Fbaz".
@@ -90,17 +103,17 @@ public final class EmbeddedJettyServer {
         //  here, the only viable long-term solution is to adapt REST APIs to follow Servlet API 6 spec.
         httpConfig.setUriCompliance(UriCompliance.LEGACY);
 
-        final HttpConnectionFactory connectionFactory = new HttpConnectionFactory(httpConfig);
-        final ServerConnector connector = new ServerConnector(server, connectionFactory);
+        final var connectionFactory = new HttpConnectionFactory(httpConfig);
+        final var connector = new ServerConnector(server, connectionFactory);
         connector.setHost(host);
         connector.setPort(port);
-        disableServerVersionHeader(connector);
         server.setConnectors(new Connector[]{connector});
 
-        final WebAppContext context = new WebAppContext();
+        final var context = new WebAppContext();
         context.setServer(server);
         context.setContextPath(contextPath);
         context.setErrorHandler(new ErrorHandler());
+        context.setTempDirectoryPersistent(false);
         context.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
         context.setAttribute("org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern", ".*/[^/]*taglibs.*\\.jar$");
         context.setThrowUnavailableOnStartupException(true);
@@ -119,60 +132,51 @@ public final class EmbeddedJettyServer {
         //
         // https://jetty.org/docs/jetty/12/operations-guide/xml/index.html
         // https://jetty.org/docs/jetty/12/operations-guide/annotations/index.html
-        final URL jettyContextUrl = Thread.currentThread().getContextClassLoader().getResource("WEB-INF/jetty-context.xml");
+        final URL jettyContextUrl = contextClassLoader.getResource("WEB-INF/jetty-context.xml");
         if (jettyContextUrl != null) {
             LOGGER.debug("Applying Jetty customization from {}", jettyContextUrl);
             final Resource jettyContextResource = new URLResourceFactory().newResource(jettyContextUrl);
-            final var xmlConfiguration = new XmlConfiguration(jettyContextResource);
-            xmlConfiguration.configure(context);
+            try {
+                final var xmlConfiguration = new XmlConfiguration(jettyContextResource);
+                xmlConfiguration.configure(context);
+            } catch (Exception e) {
+                LOGGER.error("Failed to apply XML context configuration", e);
+                System.exit(-1);
+            }
         }
 
         server.setHandler(context);
-        server.addBean(new ErrorHandler());
+
         try {
             server.start();
-            for (final ServletHandler handler : server.getContainedBeans(ServletHandler.class)) {
-                LOGGER.debug("Enabling decoding of ambiguous URIs for servlet handler: {}", handler.getClass().getName());
-                handler.setDecodeAmbiguousURIs(true);
-            }
-            addJettyShutdownHook(server);
-            server.join();
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Failed to start server", e);
             System.exit(-1);
         }
-    }
 
-    private static void disableServerVersionHeader(Connector connector) {
-        connector.getConnectionFactories().stream()
-                .filter(cf -> cf instanceof HttpConnectionFactory)
-                .forEach(cf -> ((HttpConnectionFactory) cf)
-                        .getHttpConfiguration().setSendServerVersion(false));
+        for (final var handler : server.getContainedBeans(ServletHandler.class)) {
+            LOGGER.debug("Enabling decoding of ambiguous URIs for servlet handler: {}", handler.getClass().getName());
+            handler.setDecodeAmbiguousURIs(true);
+        }
+
+        try {
+            server.join();
+        } catch (InterruptedException e) {
+            LOGGER.warn("Interrupted while waiting for server to stop");
+        }
     }
 
     /**
      * Dummy error handler that disables any error pages or jetty related messages and an empty page with a status code.
      */
     private static class ErrorHandler extends ErrorPageErrorHandler {
+
         @Override
-        public boolean handle(final Request request, final Response response, final Callback callback) throws Exception {
-            response.setStatus(response.getStatus());
+        public boolean handle(Request request, Response response, Callback callback) {
             callback.succeeded();
             return true;
         }
+
     }
 
-    private static void addJettyShutdownHook(final Server server) {
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                try {
-                    System.out.println("Shutting down application");
-                    server.stop();
-                } catch (Exception e) {
-                    //System.err.println("Exception occurred shutting down: " + e.getMessage());
-                }
-            }
-        });
-    }
 }
