@@ -598,17 +598,6 @@
                             <destinationFile>${project.build.directory}/${project.build.finalName}/logback.xml</destinationFile>
                         </configuration>
                     </execution>
-                    <execution>
-                        <id>copy-openapi-spec-for-tests</id>
-                        <phase>process-test-resources</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <sourceFile>${project.basedir}/../api/target/classes/org/dependencytrack/api/v2/openapi.yaml</sourceFile>
-                            <destinationFile>${project.build.directory}/test-classes/org/dependencytrack/api/v2/openapi.yaml</destinationFile>
-                        </configuration>
-                    </execution>
                 </executions>
             </plugin>
 

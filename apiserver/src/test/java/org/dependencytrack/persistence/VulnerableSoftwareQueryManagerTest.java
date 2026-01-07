@@ -122,7 +122,7 @@ public class VulnerableSoftwareQueryManagerTest extends PersistenceCapableTest {
 
         // Wait to ensure different timestamp
         try {
-            Thread.sleep(100);
+            Thread.sleep(10);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
