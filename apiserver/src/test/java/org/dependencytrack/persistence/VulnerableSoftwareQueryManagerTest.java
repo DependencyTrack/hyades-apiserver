@@ -22,8 +22,8 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -36,7 +36,7 @@ public class VulnerableSoftwareQueryManagerTest extends PersistenceCapableTest {
 
     private Vulnerability vulnerability;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         vulnerability = new Vulnerability();
         vulnerability.setVulnId("CVE-2024-0001");
