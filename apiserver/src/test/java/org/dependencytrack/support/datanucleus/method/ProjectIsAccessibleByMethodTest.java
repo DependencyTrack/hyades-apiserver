@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.persistence.datanucleus.method;
+package org.dependencytrack.support.datanucleus.method;
 
 import alpine.model.Team;
 import org.dependencytrack.PersistenceCapableTest;
@@ -33,11 +33,14 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
+// NB: The method itself is defined in the datanucleus-plugin module,
+// but due to the test requiring the full object model, it has to
+// remain in the apiserver module for the time being.
+class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldEvaluateToTrueWhenProjectIsAccessible() {
+    void shouldEvaluateToTrueWhenProjectIsAccessible() {
         final var teamA = new Team();
         teamA.setName("team-a");
         qm.persist(teamA);
@@ -61,7 +64,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldEvaluateToTrueWhenProjectParentIsAccessible() {
+    void shouldEvaluateToTrueWhenProjectParentIsAccessible() {
         final var team = new Team();
         team.setName("team");
         qm.persist(team);
@@ -86,7 +89,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldEvaluateToTrueWhenProjectGrandParentIsAccessible() {
+    void shouldEvaluateToTrueWhenProjectGrandParentIsAccessible() {
         final var team = new Team();
         team.setName("team");
         qm.persist(team);
@@ -116,7 +119,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldEvaluateToFalseWhenProjectIsNotAccessible() {
+    void shouldEvaluateToFalseWhenProjectIsNotAccessible() {
         final var teamA = new Team();
         teamA.setName("team-a");
         qm.persist(teamA);
@@ -140,7 +143,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldEvaluateToFalseWhenOnlyChildProjectIsAccessible() {
+    void shouldEvaluateToFalseWhenOnlyChildProjectIsAccessible() {
         final var team = new Team();
         team.setName("team");
         qm.persist(team);
@@ -165,7 +168,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldBeAllowedOnProjectMembersOfNonProjectObjects() {
+    void shouldBeAllowedOnProjectMembersOfNonProjectObjects() {
         final var team = new Team();
         team.setName("team");
         qm.persist(team);
@@ -190,7 +193,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldThrowWhenCalledOnNonProjectObject() {
+    void shouldThrowWhenCalledOnNonProjectObject() {
         final Query<Component> query = qm.getPersistenceManager().newQuery(Component.class);
         query.setFilter("this.isAccessibleBy(:teamIds)");
         query.setParameters(Arrays.asList(1L, 2L, 3L));
@@ -203,7 +206,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldThrowWhenNoArgs() {
+    void shouldThrowWhenNoArgs() {
         final Query<Project> query = qm.getPersistenceManager().newQuery(Project.class);
         query.setFilter("this.isAccessibleBy()");
         assertThatExceptionOfType(IllegalArgumentException.class)
@@ -213,7 +216,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldThrowWhenArgIsOfUnexpectedType() {
+    void shouldThrowWhenArgIsOfUnexpectedType() {
         final Query<Project> query = qm.getPersistenceManager().newQuery(Project.class);
         query.setFilter("this.isAccessibleBy(:teamIdsString)");
         query.setParameters("1, 2, 3");
@@ -227,7 +230,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldThrowWhenArgIsOfUnexpectedArrayType() {
+    void shouldThrowWhenArgIsOfUnexpectedArrayType() {
         final Query<Project> query = qm.getPersistenceManager().newQuery(Project.class);
         query.setFilter("this.isAccessibleBy(:teamIdStrings)");
         query.setNamedParameters(Map.of("teamIdsStrings", new String[]{"1", "2", "3"}));

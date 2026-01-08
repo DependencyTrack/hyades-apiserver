@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.persistence.datanucleus.method;
+package org.dependencytrack.support.datanucleus.method;
 
 import org.datanucleus.store.query.expression.Expression;
 import org.datanucleus.store.rdbms.mapping.java.JavaTypeMapping;
@@ -30,7 +30,6 @@ import org.datanucleus.store.rdbms.sql.expression.SQLExpression;
 import org.datanucleus.store.rdbms.sql.expression.StringExpression;
 import org.datanucleus.store.rdbms.sql.expression.StringLiteral;
 import org.datanucleus.store.rdbms.sql.method.SQLMethod;
-import org.dependencytrack.model.Project;
 
 import java.util.List;
 import java.util.StringJoiner;
@@ -39,6 +38,8 @@ import java.util.StringJoiner;
  * @since 5.6.0
  */
 public class ProjectIsAccessibleByMethod implements SQLMethod {
+
+    private static final String PROJECT_CLASS_NAME = "org.dependencytrack.model.Project";
 
     @Override
     public SQLExpression getExpression(
@@ -52,10 +53,10 @@ public class ProjectIsAccessibleByMethod implements SQLMethod {
                     ObjectExpression.class.getName(), expr.getClass().getName()));
 
         final String objectTypeName = objectExpr.getJavaTypeMapping().getType();
-        if (!Project.class.getName().equals(objectTypeName))
+        if (!PROJECT_CLASS_NAME.equals(objectTypeName))
             throw new IllegalStateException(
                     "isAccessibleBy is only allowed for objects of type %s, but was called on %s".formatted(
-                            Project.class.getName(), objectTypeName));
+                            PROJECT_CLASS_NAME, objectTypeName));
 
         if (args == null) {
             throw new IllegalArgumentException();
