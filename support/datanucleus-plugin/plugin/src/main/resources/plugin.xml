@@ -17,12 +17,25 @@
   ~ SPDX-License-Identifier: Apache-2.0
   ~ Copyright (c) OWASP Foundation. All Rights Reserved.
   -->
-<plugin id="org.dependencytrack.support.datanucleus" name="Dependency-Track DataNucleus Plugin" provider-name="nscuro">
+<plugin id="org.dependencytrack.support.datanucleus" name="Dependency-Track DataNucleus Plugin" provider-name="OWASP">
     <extension point="org.datanucleus.store.rdbms.sql_method">
-        <sql-method class="java.lang.String" method="jsonbContains" evaluator="org.dependencytrack.support.datanucleus.method.JsonbContainsMethod"/>
+        <sql-method
+                class="java.lang.String"
+                method="jsonbContains"
+                evaluator="org.dependencytrack.support.datanucleus.method.JsonbContainsMethod"/>
+    </extension>
+
+    <extension point="org.datanucleus.store.rdbms.sql_method">
+        <sql-method
+                class="java.lang.Object"
+                method="isAccessibleBy"
+                evaluator="org.dependencytrack.support.datanucleus.method.ProjectIsAccessibleByMethod"/>
     </extension>
 
     <extension point="org.datanucleus.store_valuegenerator">
-        <valuegenerator name="uuid-v7" class-name="org.dependencytrack.support.datanucleus.valuegenerator.UUIDv7Generator" datastore="rdbms"/>
+        <valuegenerator
+                name="uuid-v7"
+                class-name="org.dependencytrack.support.datanucleus.valuegenerator.UUIDv7Generator"
+                datastore="rdbms"/>
     </extension>
 </plugin>
