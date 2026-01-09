@@ -35,7 +35,6 @@ import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 
 import java.lang.reflect.Modifier;
@@ -56,6 +55,7 @@ import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
+import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION;
 import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION_NAME;
 import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION_POINT;
@@ -119,35 +119,37 @@ public class PluginManager {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends ExtensionPoint> @Nullable T getExtension(Class<T> extensionPointClass) {
+    public <T extends ExtensionPoint> T getExtension(Class<T> extensionPointClass) {
+        final ExtensionPointSpec spec = requireKnownExtensionPoint(extensionPointClass);
+
         final ExtensionFactory<?> factory = defaultFactoryByExtensionPointClass.get(extensionPointClass);
         if (factory == null) {
-            throw new NoSuchExtensionException(
-                    "No extension exists for the extension point " + extensionPointClass.getName());
+            throw new NoSuchExtensionException(spec.name());
         }
 
-        return (T) factory.create();
+        return (T) requireNonNull(factory.create(), "extension must not be null");
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends ExtensionPoint> @Nullable T getExtension(Class<T> extensionPointClass, String name) {
+    public <T extends ExtensionPoint> T getExtension(Class<T> extensionPointClass, String name) {
+        final ExtensionPointSpec spec = requireKnownExtensionPoint(extensionPointClass);
+
         final var extensionIdentity = new ExtensionIdentity(extensionPointClass, name);
         final ExtensionFactory<?> factory = factoryByExtensionIdentity.get(extensionIdentity);
         if (factory == null) {
-            throw new NoSuchExtensionException(
-                    "No extension named %s exists for the extension point %s".formatted(
-                            name, extensionPointClass.getName()));
+            throw new NoSuchExtensionException(spec.name(), name);
         }
 
-        return (T) factory.create();
+        return (T) requireNonNull(factory.create(), "extension must not be null");
     }
 
     @SuppressWarnings("unchecked")
     public <T extends ExtensionPoint, U extends ExtensionFactory<T>> U getFactory(Class<T> extensionPointClass) {
+        final ExtensionPointSpec spec = requireKnownExtensionPoint(extensionPointClass);
+
         final ExtensionFactory<?> factory = defaultFactoryByExtensionPointClass.get(extensionPointClass);
         if (factory == null) {
-            throw new NoSuchExtensionException(
-                    "No extension factory exists for the extension point " + extensionPointClass.getName());
+            throw new NoSuchExtensionException(spec.name());
         }
 
         return (U) factory;
@@ -155,12 +157,12 @@ public class PluginManager {
 
     @SuppressWarnings("unchecked")
     public <T extends ExtensionPoint, U extends ExtensionFactory<T>> U getFactory(Class<T> extensionPointClass, String name) {
+        final ExtensionPointSpec spec = requireKnownExtensionPoint(extensionPointClass);
+
         final var extensionIdentity = new ExtensionIdentity(extensionPointClass, name);
         final ExtensionFactory<?> factory = factoryByExtensionIdentity.get(extensionIdentity);
         if (factory == null) {
-            throw new NoSuchExtensionException(
-                    "No factory for extension named %s exists for the extension point %s".formatted(
-                            name, extensionPointClass.getName()));
+            throw new NoSuchExtensionException(spec.name(), name);
         }
 
         return (U) factory;
@@ -168,6 +170,8 @@ public class PluginManager {
 
     @SuppressWarnings("unchecked")
     public <T extends ExtensionPoint, U extends ExtensionFactory<T>> SequencedCollection<U> getFactories(Class<T> extensionPointClass) {
+        requireKnownExtensionPoint(extensionPointClass);
+
         final Set<String> extensionNames = extensionNamesByExtensionPointClass.get(extensionPointClass);
         if (extensionNames == null) {
             return Collections.emptyList();
@@ -188,14 +192,14 @@ public class PluginManager {
     public <T extends ExtensionPoint> ConfigRegistry getConfigRegistry(
             Class<T> extensionPointClass,
             String extensionName) {
+        final ExtensionPointSpec spec = requireKnownExtensionPoint(extensionPointClass);
+
         final var extensionIdentity = new ExtensionIdentity(extensionPointClass, extensionName);
 
         final ConfigRegistry configRegistry =
                 configRegistryByExtensionIdentity.get(extensionIdentity);
         if (configRegistry == null) {
-            throw new NoSuchExtensionException(
-                    "No extension named %s exists for the extension point %s".formatted(
-                            extensionName, extensionPointClass.getName()));
+            throw new NoSuchExtensionException(spec.name(), extensionName);
         }
 
         return configRegistry;
@@ -219,22 +223,21 @@ public class PluginManager {
      * @param extensionName       Name of the extension.
      * @param <T>                 Type of the extension point.
      * @return An {@link ExtensionKVStore} for the extension.
-     * @throws NoSuchExtensionException When the extension point or the extension do not exist.
+     * @throws NoSuchExtensionPointException When the extension point does not exist.
+     * @throws NoSuchExtensionException      When the extension do not exist.
      * @since 5.7.0
      */
     public <T extends ExtensionPoint> ExtensionKVStore getKVStore(
             Class<T> extensionPointClass,
             String extensionName) {
+        final ExtensionPointSpec spec = requireKnownExtensionPoint(extensionPointClass);
+
         final var extensionIdentity = new ExtensionIdentity(extensionPointClass, extensionName);
         if (!factoryByExtensionIdentity.containsKey(extensionIdentity)) {
-            throw new NoSuchExtensionException(
-                    "No extension named %s exists for the extension point %s".formatted(
-                            extensionName, extensionPointClass.getName()));
+            throw new NoSuchExtensionException(spec.name(), extensionName);
         }
 
-        final ExtensionPointSpec extensionPointSpec =
-                specByExtensionPointClass.get(extensionPointClass);
-        return new DatabaseExtensionKVStore(extensionPointSpec.name(), extensionName);
+        return new DatabaseExtensionKVStore(spec.name(), extensionName);
     }
 
     void loadPlugins() {
@@ -321,7 +324,7 @@ public class PluginManager {
             }
 
             final ExtensionPointSpec extensionPointSpec =
-                    requireKnownExtensionPoint(extensionFactory.extensionClass());
+                    requireImplementsExtensionPoint(extensionFactory.extensionClass());
 
             try (var ignored = new MdcScope(Map.ofEntries(
                     Map.entry(MDC_EXTENSION_POINT_NAME, extensionPointSpec.name()),
@@ -456,9 +459,7 @@ public class PluginManager {
                     extensionFactory = factories.stream()
                             .filter(factory -> factory.extensionName().equals(defaultExtensionName))
                             .findFirst()
-                            .orElseThrow(() -> new NoSuchExtensionException("""
-                                    No extension named %s exists for extension point %s (%s)"""
-                                    .formatted(defaultExtensionName, MDC.get(MDC_EXTENSION_POINT_NAME), MDC.get(MDC_EXTENSION_POINT))));
+                            .orElseThrow(() -> new NoSuchExtensionException(extensionPointSpec.name(), defaultExtensionName));
                     LOGGER.debug("Using extension %s (%s) as default".formatted(
                             extensionFactory.extensionName(), extensionFactory.extensionClass().getName()));
                 }
@@ -468,7 +469,16 @@ public class PluginManager {
         }
     }
 
-    private ExtensionPointSpec requireKnownExtensionPoint(Class<? extends ExtensionPoint> concreteExtensionClass) {
+    private ExtensionPointSpec requireKnownExtensionPoint(Class<? extends ExtensionPoint> extensionPointClass) {
+        final ExtensionPointSpec spec = specByExtensionPointClass.get(extensionPointClass);
+        if (spec == null) {
+            throw new NoSuchExtensionPointException(extensionPointClass);
+        }
+
+        return spec;
+    }
+
+    private ExtensionPointSpec requireImplementsExtensionPoint(Class<? extends ExtensionPoint> concreteExtensionClass) {
         for (final Class<? extends ExtensionPoint> extensionPointClass : specByExtensionPointClass.keySet()) {
             if (extensionPointClass.isAssignableFrom(concreteExtensionClass)) {
                 return specByExtensionPointClass.get(extensionPointClass);
@@ -533,7 +543,7 @@ public class PluginManager {
 
         // Close factories in reverse order in which they were initialized.
         for (final ExtensionFactory<?> extensionFactory : factories.reversed()) {
-            final ExtensionPointSpec extensionPointSpec = requireKnownExtensionPoint(extensionFactory.extensionClass());
+            final ExtensionPointSpec extensionPointSpec = requireImplementsExtensionPoint(extensionFactory.extensionClass());
 
             final String extensionPointClassName = extensionPointSpec.extensionPointClass().getName();
             final String extensionClassName = extensionFactory.extensionClass().getName();

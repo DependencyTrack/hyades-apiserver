@@ -28,6 +28,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull VulnDataSource, @NonNull OsvVulnDataSourceFactory> {
 
@@ -68,7 +69,9 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
         final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
 
         factory.init(new ExtensionContext(configRegistry));
-        assertThat(factory.create()).isNull();
+
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(factory::create);
     }
 
     @Test

@@ -83,8 +83,7 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
     public VulnDataSource create() {
         final var config = configRegistry.getRuntimeConfig(GitHubVulnDataSourceConfig.class);
         if (!config.getEnabled()) {
-            LOGGER.info("Disabled; Not creating an instance");
-            return null;
+            throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
 
         final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), this.kvStore);

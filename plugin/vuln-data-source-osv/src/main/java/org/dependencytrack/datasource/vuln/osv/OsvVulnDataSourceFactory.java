@@ -91,8 +91,7 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
     public VulnDataSource create() {
         final var config = configRegistry.getRuntimeConfig(OsvVulnDataSourceConfig.class);
         if (!config.getEnabled()) {
-            LOGGER.info("Disabled; Not creating an instance");
-            return null;
+            throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
 
         final var watermarkManager = WatermarkManager.create(config.getEcosystems(), kvStore);

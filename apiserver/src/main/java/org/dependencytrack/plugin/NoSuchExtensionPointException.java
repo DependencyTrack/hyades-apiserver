@@ -18,20 +18,17 @@
  */
 package org.dependencytrack.plugin;
 
+import org.dependencytrack.plugin.api.ExtensionPoint;
+
 import java.util.NoSuchElementException;
 
 /**
- * @since 5.6.0
+ * @since 5.7.0
  */
-public final class NoSuchExtensionException extends NoSuchElementException {
+public final class NoSuchExtensionPointException extends NoSuchElementException {
 
-    NoSuchExtensionException(String extensionPointName, String extensionName) {
-        super("No extension named '%s' exists for the extension point '%s'".formatted(
-                extensionName, extensionPointName));
-    }
-
-    NoSuchExtensionException(String extensionPointName) {
-        super("No extension exists for the extension point '%s'".formatted(extensionPointName));
+    NoSuchExtensionPointException(Class<? extends ExtensionPoint> clazz) {
+        super("%s is not a known extension point".formatted(clazz.getName()));
     }
 
 }

@@ -28,6 +28,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class GitHubVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull VulnDataSource, @NonNull GitHubVulnDataSourceFactory> {
 
@@ -58,14 +59,16 @@ class GitHubVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonN
     }
 
     @Test
-    void createShouldReturnNullWhenDisabled() {
+    void createShouldThrowWhenDisabled() {
         final var config = (GitHubVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
         config.setEnabled(false);
 
         final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
 
         factory.init(new ExtensionContext(configRegistry));
-        assertThat(factory.create()).isNull();
+
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(factory::create);
     }
 
     @Test
