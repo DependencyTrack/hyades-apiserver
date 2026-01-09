@@ -23,6 +23,13 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.processor.api.ProcessorManager;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.policy.cel.CelVulnerabilityPolicyEvaluator;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
+
+import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.common.ConfigKey.VULNERABILITY_POLICY_ANALYSIS_ENABLED;
 
 public class ProcessorInitializer implements ServletContextListener {
 
@@ -30,14 +37,25 @@ public class ProcessorInitializer implements ServletContextListener {
 
     static final ProcessorManager PROCESSOR_MANAGER = new ProcessorManager();
 
+    private final Config config = ConfigProvider.getConfig();
+
     @Override
-    public void contextInitialized(final ServletContextEvent event) {
+    public void contextInitialized(ServletContextEvent event) {
         LOGGER.info("Initializing processors");
+
+        final var pluginManager = (PluginManager) event.getServletContext().getAttribute(PluginManager.class.getName());
+        requireNonNull(pluginManager, "pluginManager has not been initialized");
 
         PROCESSOR_MANAGER.registerProcessor(RepositoryMetaResultProcessor.PROCESSOR_NAME,
                 KafkaTopics.REPO_META_ANALYSIS_RESULT, new RepositoryMetaResultProcessor());
-        PROCESSOR_MANAGER.registerProcessor(VulnerabilityScanResultProcessor.PROCESSOR_NAME,
-                KafkaTopics.VULN_ANALYSIS_RESULT, new VulnerabilityScanResultProcessor());
+        PROCESSOR_MANAGER.registerProcessor(
+                VulnerabilityScanResultProcessor.PROCESSOR_NAME,
+                KafkaTopics.VULN_ANALYSIS_RESULT,
+                new VulnerabilityScanResultProcessor(
+                        pluginManager,
+                        config.getOptionalValue(VULNERABILITY_POLICY_ANALYSIS_ENABLED.getPropertyName(), boolean.class).orElse(false)
+                                ? new CelVulnerabilityPolicyEvaluator()
+                                : null));
         PROCESSOR_MANAGER.registerBatchProcessor(ProcessedVulnerabilityScanResultProcessor.PROCESSOR_NAME,
                 KafkaTopics.VULN_ANALYSIS_RESULT_PROCESSED, new ProcessedVulnerabilityScanResultProcessor());
 

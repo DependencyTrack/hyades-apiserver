@@ -99,6 +99,7 @@
             <param-name>jersey.config.server.provider.classnames</param-name>
             <param-value>
                 org.dependencytrack.dex.DexEngineBinder,
+                org.dependencytrack.plugin.PluginManagerBinder,
                 org.glassfish.jersey.media.multipart.MultiPartFeature
             </param-value>
         </init-param>

@@ -24,12 +24,8 @@ import org.dependencytrack.plugin.PluginManager;
 
 public class OsvMirrorTask extends AbstractVulnDataSourceMirrorTask {
 
-    OsvMirrorTask(PluginManager pluginManager) {
+    public OsvMirrorTask(PluginManager pluginManager) {
         super(pluginManager, OsvMirrorEvent.class, "osv", Vulnerability.Source.OSV);
     }
 
-    @SuppressWarnings("unused")
-    public OsvMirrorTask() {
-        this(PluginManager.getInstance());
-    }
 }

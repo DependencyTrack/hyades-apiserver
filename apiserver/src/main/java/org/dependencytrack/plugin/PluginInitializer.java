@@ -18,29 +18,75 @@
  */
 package org.dependencytrack.plugin;
 
-import alpine.common.logging.Logger;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.notification.api.publishing.NotificationPublisherExtensionPointSpec;
+import org.dependencytrack.plugin.api.Plugin;
+import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSourceExtensionPointSpec;
+import org.dependencytrack.plugin.api.filestorage.FileStorageExtensionPointSpec;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.ServiceLoader;
 
 /**
  * @since 5.6.0
  */
 public class PluginInitializer implements ServletContextListener {
 
-    private static final Logger LOGGER = Logger.getLogger(PluginInitializer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PluginInitializer.class);
 
-    private final PluginManager pluginManager = PluginManager.getInstance();
+    private final Config config;
+    private @Nullable PluginManager pluginManager;
+
+    PluginInitializer(Config config) {
+        this.config = config;
+    }
+
+    @SuppressWarnings("unused") // Used by servlet container.
+    public PluginInitializer() {
+        this(ConfigProvider.getConfig());
+    }
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
+        LOGGER.info("Initializing plugin system");
+
+        final var extensionPointSpecs = List.of(
+                new FileStorageExtensionPointSpec(),
+                new NotificationPublisherExtensionPointSpec(),
+                new VulnDataSourceExtensionPointSpec());
+
+        pluginManager = new PluginManager(config, extensionPointSpecs);
+
+        LOGGER.info("Discovering plugins");
+        final Collection<Plugin> plugins =
+                ServiceLoader.load(Plugin.class).stream()
+                        .map(ServiceLoader.Provider::get)
+                        .toList();
+        for (final Plugin plugin : plugins) {
+            LOGGER.debug("Discovered plugin {}", plugin.getClass().getName());
+        }
+
         LOGGER.info("Loading plugins");
-        pluginManager.loadPlugins();
+        pluginManager.loadPlugins(plugins);
+
+        event.getServletContext().setAttribute(PluginManager.class.getName(), pluginManager);
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent event) {
-        LOGGER.info("Unloading plugins");
-        pluginManager.unloadPlugins();
+        if (pluginManager != null) {
+            LOGGER.info("Closing plugin manager");
+            pluginManager.close();
+        }
+
+        event.getServletContext().removeAttribute(PluginManager.class.getName());
     }
 
 }

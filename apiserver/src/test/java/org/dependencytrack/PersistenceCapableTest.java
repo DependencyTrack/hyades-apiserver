@@ -27,7 +27,6 @@ import org.apache.kafka.clients.producer.MockProducer;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.dependencytrack.support.config.source.memory.MemoryConfigSource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -82,8 +81,6 @@ public abstract class PersistenceCapableTest {
         } catch (TimeoutException e) {
             throw new IllegalStateException("Failed to drain event services", e);
         }
-
-        PluginManagerTestUtil.unloadPlugins();
 
         // PersistenceManager will refuse to close when there's an active transaction
         // that was neither committed nor rolled back. Unfortunately some areas of the

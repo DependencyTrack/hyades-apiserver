@@ -22,7 +22,6 @@ import alpine.model.IConfigProperty;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
@@ -47,26 +46,16 @@ import org.dependencytrack.model.Tools;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
-import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
-import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.api.filestorage.FileStorage;
-import org.dependencytrack.proto.filestorage.v1.FileMetadata;
-import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
-import java.io.InputStream;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,10 +63,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 @ExtendWith(SystemStubsExtension.class)
 public class CelPolicyEngineTest extends PersistenceCapableTest {
@@ -1953,46 +1940,6 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(project)).satisfiesExactly(violation ->
                 assertThat(violation.getPolicyCondition().getPolicy().getName()).isEqualTo("Policy A"));
-    }
-
-    @Test
-    @Disabled  // Un-ignore for manual profiling purposes.
-    public void testWithBloatedBom() throws Exception {
-        useJdbiTransaction(handle -> {
-            DatabaseSeedingInitTask.seedDefaultLicenses(handle);
-            DatabaseSeedingInitTask.seedDefaultLicenseGroups(handle);
-        });
-
-        final var project = new Project();
-        project.setName("acme-app");
-        project.setVersion("1.2.3");
-        qm.persist(project);
-
-        // Create a policy that will be violated by the vast majority (>8000) components.
-        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        final PolicyCondition policyConditionA = qm.createPolicyCondition(policy,
-                PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                        component.resolved_license.groups.exists(lg, lg.name == "Permissive")
-                        """);
-        policyConditionA.setViolationType(PolicyViolation.Type.OPERATIONAL);
-        qm.persist(policyConditionA);
-
-        // Import the bloated BOM.
-        new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-bloated.json")));
-
-        // Evaluate policies on the project.
-        new CelPolicyEngine().evaluateProject(project.getUuid());
-    }
-
-    private static FileMetadata storeBomFile(final String testFileName) throws Exception {
-        final Path bomFilePath = Paths.get(resourceToURL("/unit/" + testFileName).toURI());
-
-        try (final InputStream fileInputStream = Files.newInputStream(bomFilePath);
-             final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            return fileStorage.store(
-                    "test/%s-%s".formatted(CelPolicyEngineTest.class.getSimpleName(), UUID.randomUUID()),
-                    fileInputStream);
-        }
     }
 
     @Test

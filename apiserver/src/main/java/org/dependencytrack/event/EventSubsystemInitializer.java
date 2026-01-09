@@ -18,18 +18,17 @@
  */
 package org.dependencytrack.event;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.csaf.CsafDocumentImportEvent;
 import org.dependencytrack.csaf.CsafDocumentImportTask;
 import org.dependencytrack.csaf.CsafProviderDiscoveryEvent;
 import org.dependencytrack.csaf.CsafProviderDiscoveryTask;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
@@ -37,6 +36,7 @@ import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityScanMaintenanceEvent;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
+import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.CallbackTask;
 import org.dependencytrack.tasks.CloneProjectTask;
@@ -66,9 +66,13 @@ import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 import java.time.Duration;
 import java.util.concurrent.TimeoutException;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Initializes the event subsystem and configures event subscribers.
@@ -80,107 +84,124 @@ public class EventSubsystemInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(EventSubsystemInitializer.class);
 
-    // Starts the EventService
-    private static final EventService EVENT_SERVICE = EventService.getInstance();
+    private final Config config;
+    private final EventService eventService;
+    private final SingleThreadedEventService singleThreadedEventService;
 
-    // Starts the SingleThreadedEventService
-    private static final SingleThreadedEventService EVENT_SERVICE_ST = SingleThreadedEventService.getInstance();
+    EventSubsystemInitializer(
+            Config config,
+            EventService eventService,
+            SingleThreadedEventService singleThreadedEventService) {
+        this.config = config;
+        this.eventService = eventService;
+        this.singleThreadedEventService = singleThreadedEventService;
+    }
 
-    private static final Duration DRAIN_TIMEOUT_DURATION =
-            Duration.parse(Config.getInstance().getProperty(ConfigKey.ALPINE_WORKER_POOL_DRAIN_TIMEOUT_DURATION));
+    @SuppressWarnings("unused") // Used by servlet context.
+    public EventSubsystemInitializer() {
+        this(ConfigProvider.getConfig(), EventService.getInstance(), SingleThreadedEventService.getInstance());
+    }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void contextInitialized(final ServletContextEvent event) {
+    public void contextInitialized(ServletContextEvent event) {
         LOGGER.info("Initializing asynchronous event subsystem");
 
-        EVENT_SERVICE.subscribe(BomUploadEvent.class, new BomUploadProcessingTask());
-        EVENT_SERVICE.subscribe(VexUploadEvent.class, new VexUploadProcessingTask());
-        EVENT_SERVICE.subscribe(LdapSyncEvent.class, new LdapSyncTaskWrapper());
-        EVENT_SERVICE.subscribe(GitHubAdvisoryMirrorEvent.class, new GitHubAdvisoryMirrorTask());
-        EVENT_SERVICE.subscribe(OsvMirrorEvent.class, new OsvMirrorTask());
-        EVENT_SERVICE.subscribe(ProjectVulnerabilityAnalysisEvent.class, new VulnerabilityAnalysisTask());
-        EVENT_SERVICE.subscribe(PortfolioVulnerabilityAnalysisEvent.class, new VulnerabilityAnalysisTask());
-        EVENT_SERVICE.subscribe(ProjectRepositoryMetaAnalysisEvent.class, new RepositoryMetaAnalysisTask());
-        EVENT_SERVICE.subscribe(PortfolioRepositoryMetaAnalysisEvent.class, new RepositoryMetaAnalysisTask());
-        EVENT_SERVICE.subscribe(ProjectMetricsUpdateEvent.class, new ProjectMetricsUpdateTask());
-        EVENT_SERVICE.subscribe(PortfolioMetricsUpdateEvent.class, new PortfolioMetricsUpdateTask());
-        EVENT_SERVICE.subscribe(VulnerabilityMetricsUpdateEvent.class, new VulnerabilityMetricsUpdateTask());
-        EVENT_SERVICE.subscribe(CloneProjectEvent.class, new CloneProjectTask());
-        EVENT_SERVICE.subscribe(FortifySscUploadEventAbstract.class, new FortifySscUploadTask());
-        EVENT_SERVICE.subscribe(DefectDojoUploadEventAbstract.class, new DefectDojoUploadTask());
-        EVENT_SERVICE.subscribe(KennaSecurityUploadEventAbstract.class, new KennaSecurityUploadTask());
-        EVENT_SERVICE.subscribe(InternalComponentIdentificationEvent.class, new InternalComponentIdentificationTask());
-        EVENT_SERVICE.subscribe(CallbackEvent.class, new CallbackTask());
-        EVENT_SERVICE.subscribe(NistMirrorEvent.class, new NistMirrorTask());
-        EVENT_SERVICE.subscribe(VulnerabilityPolicyFetchEvent.class, new VulnerabilityPolicyFetchTask());
-        EVENT_SERVICE.subscribe(EpssMirrorEvent.class, new EpssMirrorTask());
-        EVENT_SERVICE.subscribe(ComponentPolicyEvaluationEvent.class, new PolicyEvaluationTask());
-        EVENT_SERVICE.subscribe(ProjectPolicyEvaluationEvent.class, new PolicyEvaluationTask());
-        EVENT_SERVICE.subscribe(IntegrityMetaInitializerEvent.class, new IntegrityMetaInitializerTask());
-        EVENT_SERVICE.subscribe(IntegrityAnalysisEvent.class, new IntegrityAnalysisTask());
-        EVENT_SERVICE.subscribe(CsafProviderDiscoveryEvent.class, new CsafProviderDiscoveryTask());
-        EVENT_SERVICE.subscribe(CsafDocumentImportEvent.class, new CsafDocumentImportTask());
+        final var kafkaEventDispatcher = new KafkaEventDispatcher();
+
+        final var pluginManager = (PluginManager) event.getServletContext().getAttribute(PluginManager.class.getName());
+        requireNonNull(pluginManager, "pluginManager has not been initialized");
+
+        eventService.subscribe(
+                BomUploadEvent.class,
+                new BomUploadProcessingTask(
+                        pluginManager,
+                        kafkaEventDispatcher,
+                        config.getOptionalValue("tmp.delay.bom.processed.notification", boolean.class).orElse(false)));
+        eventService.subscribe(VexUploadEvent.class, new VexUploadProcessingTask());
+        eventService.subscribe(LdapSyncEvent.class, new LdapSyncTaskWrapper());
+        eventService.subscribe(GitHubAdvisoryMirrorEvent.class, new GitHubAdvisoryMirrorTask(pluginManager));
+        eventService.subscribe(OsvMirrorEvent.class, new OsvMirrorTask(pluginManager));
+        eventService.subscribe(ProjectVulnerabilityAnalysisEvent.class, new VulnerabilityAnalysisTask());
+        eventService.subscribe(PortfolioVulnerabilityAnalysisEvent.class, new VulnerabilityAnalysisTask());
+        eventService.subscribe(ProjectRepositoryMetaAnalysisEvent.class, new RepositoryMetaAnalysisTask());
+        eventService.subscribe(PortfolioRepositoryMetaAnalysisEvent.class, new RepositoryMetaAnalysisTask());
+        eventService.subscribe(ProjectMetricsUpdateEvent.class, new ProjectMetricsUpdateTask());
+        eventService.subscribe(PortfolioMetricsUpdateEvent.class, new PortfolioMetricsUpdateTask());
+        eventService.subscribe(VulnerabilityMetricsUpdateEvent.class, new VulnerabilityMetricsUpdateTask());
+        eventService.subscribe(CloneProjectEvent.class, new CloneProjectTask());
+        eventService.subscribe(FortifySscUploadEventAbstract.class, new FortifySscUploadTask());
+        eventService.subscribe(DefectDojoUploadEventAbstract.class, new DefectDojoUploadTask());
+        eventService.subscribe(KennaSecurityUploadEventAbstract.class, new KennaSecurityUploadTask());
+        eventService.subscribe(InternalComponentIdentificationEvent.class, new InternalComponentIdentificationTask());
+        eventService.subscribe(CallbackEvent.class, new CallbackTask());
+        eventService.subscribe(NistMirrorEvent.class, new NistMirrorTask(pluginManager));
+        eventService.subscribe(VulnerabilityPolicyFetchEvent.class, new VulnerabilityPolicyFetchTask());
+        eventService.subscribe(EpssMirrorEvent.class, new EpssMirrorTask());
+        eventService.subscribe(ComponentPolicyEvaluationEvent.class, new PolicyEvaluationTask());
+        eventService.subscribe(ProjectPolicyEvaluationEvent.class, new PolicyEvaluationTask());
+        eventService.subscribe(IntegrityMetaInitializerEvent.class, new IntegrityMetaInitializerTask());
+        eventService.subscribe(IntegrityAnalysisEvent.class, new IntegrityAnalysisTask());
+        eventService.subscribe(CsafProviderDiscoveryEvent.class, new CsafProviderDiscoveryTask());
+        eventService.subscribe(CsafDocumentImportEvent.class, new CsafDocumentImportTask());
 
         // Execute maintenance tasks on the single-threaded event service.
         // This way, they are not blocked by, and don't block, actual processing tasks on the main event service.
-        EVENT_SERVICE_ST.subscribe(ComponentMetadataMaintenanceEvent.class, new ComponentMetadataMaintenanceTask());
-        EVENT_SERVICE_ST.subscribe(MetricsMaintenanceEvent.class, new MetricsMaintenanceTask());
-        EVENT_SERVICE_ST.subscribe(TagMaintenanceEvent.class, new TagMaintenanceTask());
-        EVENT_SERVICE_ST.subscribe(VulnerabilityDatabaseMaintenanceEvent.class, new VulnerabilityDatabaseMaintenanceTask());
-        EVENT_SERVICE_ST.subscribe(VulnerabilityScanMaintenanceEvent.class, new VulnerabilityScanMaintenanceTask());
-        EVENT_SERVICE_ST.subscribe(WorkflowMaintenanceEvent.class, new WorkflowMaintenanceTask());
-        EVENT_SERVICE_ST.subscribe(ProjectMaintenanceEvent.class, new ProjectMaintenanceTask());
+        singleThreadedEventService.subscribe(ComponentMetadataMaintenanceEvent.class, new ComponentMetadataMaintenanceTask());
+        singleThreadedEventService.subscribe(MetricsMaintenanceEvent.class, new MetricsMaintenanceTask());
+        singleThreadedEventService.subscribe(TagMaintenanceEvent.class, new TagMaintenanceTask());
+        singleThreadedEventService.subscribe(VulnerabilityDatabaseMaintenanceEvent.class, new VulnerabilityDatabaseMaintenanceTask());
+        singleThreadedEventService.subscribe(VulnerabilityScanMaintenanceEvent.class, new VulnerabilityScanMaintenanceTask());
+        singleThreadedEventService.subscribe(WorkflowMaintenanceEvent.class, new WorkflowMaintenanceTask());
+        singleThreadedEventService.subscribe(ProjectMaintenanceEvent.class, new ProjectMaintenanceTask());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void contextDestroyed(final ServletContextEvent event) {
+    public void contextDestroyed(ServletContextEvent event) {
         LOGGER.info("Shutting down asynchronous event subsystem");
 
-        EVENT_SERVICE.unsubscribe(BomUploadProcessingTask.class);
-        EVENT_SERVICE.unsubscribe(VexUploadProcessingTask.class);
-        EVENT_SERVICE.unsubscribe(LdapSyncTaskWrapper.class);
-        EVENT_SERVICE.unsubscribe(GitHubAdvisoryMirrorTask.class);
-        EVENT_SERVICE.unsubscribe(OsvMirrorTask.class);
-        EVENT_SERVICE.unsubscribe(VulnerabilityAnalysisTask.class);
-        EVENT_SERVICE.unsubscribe(RepositoryMetaAnalysisTask.class);
-        EVENT_SERVICE.unsubscribe(ProjectMetricsUpdateTask.class);
-        EVENT_SERVICE.unsubscribe(PortfolioMetricsUpdateTask.class);
-        EVENT_SERVICE.unsubscribe(VulnerabilityMetricsUpdateTask.class);
-        EVENT_SERVICE.unsubscribe(CloneProjectTask.class);
-        EVENT_SERVICE.unsubscribe(FortifySscUploadTask.class);
-        EVENT_SERVICE.unsubscribe(DefectDojoUploadTask.class);
-        EVENT_SERVICE.unsubscribe(KennaSecurityUploadTask.class);
-        EVENT_SERVICE.unsubscribe(InternalComponentIdentificationTask.class);
-        EVENT_SERVICE.unsubscribe(CallbackTask.class);
-        EVENT_SERVICE.unsubscribe(NistMirrorTask.class);
-        EVENT_SERVICE.unsubscribe(EpssMirrorTask.class);
-        EVENT_SERVICE.unsubscribe(PolicyEvaluationTask.class);
-        EVENT_SERVICE.unsubscribe(IntegrityMetaInitializerTask.class);
-        EVENT_SERVICE.unsubscribe(IntegrityAnalysisTask.class);
-        EVENT_SERVICE.unsubscribe(VulnerabilityPolicyFetchTask.class);
-        EVENT_SERVICE.unsubscribe(CsafProviderDiscoveryTask.class);
-        EVENT_SERVICE.unsubscribe(CsafDocumentImportTask.class);
+        final var drainTimeout = config
+                .getOptionalValue("alpine.worker.pool.drain.timeout.duration", Duration.class)
+                .orElse(Duration.ofSeconds(30));
+
+        eventService.unsubscribe(BomUploadProcessingTask.class);
+        eventService.unsubscribe(VexUploadProcessingTask.class);
+        eventService.unsubscribe(LdapSyncTaskWrapper.class);
+        eventService.unsubscribe(GitHubAdvisoryMirrorTask.class);
+        eventService.unsubscribe(OsvMirrorTask.class);
+        eventService.unsubscribe(VulnerabilityAnalysisTask.class);
+        eventService.unsubscribe(RepositoryMetaAnalysisTask.class);
+        eventService.unsubscribe(ProjectMetricsUpdateTask.class);
+        eventService.unsubscribe(PortfolioMetricsUpdateTask.class);
+        eventService.unsubscribe(VulnerabilityMetricsUpdateTask.class);
+        eventService.unsubscribe(CloneProjectTask.class);
+        eventService.unsubscribe(FortifySscUploadTask.class);
+        eventService.unsubscribe(DefectDojoUploadTask.class);
+        eventService.unsubscribe(KennaSecurityUploadTask.class);
+        eventService.unsubscribe(InternalComponentIdentificationTask.class);
+        eventService.unsubscribe(CallbackTask.class);
+        eventService.unsubscribe(NistMirrorTask.class);
+        eventService.unsubscribe(EpssMirrorTask.class);
+        eventService.unsubscribe(PolicyEvaluationTask.class);
+        eventService.unsubscribe(IntegrityMetaInitializerTask.class);
+        eventService.unsubscribe(IntegrityAnalysisTask.class);
+        eventService.unsubscribe(VulnerabilityPolicyFetchTask.class);
+        eventService.unsubscribe(CsafProviderDiscoveryTask.class);
+        eventService.unsubscribe(CsafDocumentImportTask.class);
         try {
-            EVENT_SERVICE.shutdown(DRAIN_TIMEOUT_DURATION);
+            eventService.shutdown(drainTimeout);
         } catch (TimeoutException e) {
             LOGGER.warn("Failed to shut down event service", e);
         }
 
-        EVENT_SERVICE_ST.unsubscribe(ComponentMetadataMaintenanceTask.class);
-        EVENT_SERVICE_ST.unsubscribe(MetricsMaintenanceTask.class);
-        EVENT_SERVICE_ST.unsubscribe(TagMaintenanceTask.class);
-        EVENT_SERVICE_ST.unsubscribe(VulnerabilityDatabaseMaintenanceTask.class);
-        EVENT_SERVICE_ST.unsubscribe(VulnerabilityScanMaintenanceTask.class);
-        EVENT_SERVICE_ST.unsubscribe(WorkflowMaintenanceTask.class);
-        EVENT_SERVICE_ST.unsubscribe(ProjectMaintenanceTask.class);
+        singleThreadedEventService.unsubscribe(ComponentMetadataMaintenanceTask.class);
+        singleThreadedEventService.unsubscribe(MetricsMaintenanceTask.class);
+        singleThreadedEventService.unsubscribe(TagMaintenanceTask.class);
+        singleThreadedEventService.unsubscribe(VulnerabilityDatabaseMaintenanceTask.class);
+        singleThreadedEventService.unsubscribe(VulnerabilityScanMaintenanceTask.class);
+        singleThreadedEventService.unsubscribe(WorkflowMaintenanceTask.class);
+        singleThreadedEventService.unsubscribe(ProjectMaintenanceTask.class);
         try {
-            EVENT_SERVICE_ST.shutdown(DRAIN_TIMEOUT_DURATION);
+            singleThreadedEventService.shutdown(drainTimeout);
         } catch (TimeoutException e) {
             LOGGER.warn("Failed to shut down single-threaded event service", e);
         }
