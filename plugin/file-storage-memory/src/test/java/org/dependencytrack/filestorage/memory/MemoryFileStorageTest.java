@@ -95,7 +95,7 @@ class MemoryFileStorageTest {
 
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> storage.store("foo$bar", new ByteArrayInputStream("bar".getBytes())))
-                .withMessage("fileName must match pattern: [a-zA-Z0-9_/\\-.]+");
+                .withMessage("fileName 'foo$bar' does not match pattern: [a-zA-Z0-9_/\\-.]+");
     }
 
     @Test

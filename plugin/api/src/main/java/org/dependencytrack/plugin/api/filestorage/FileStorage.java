@@ -95,7 +95,9 @@ public interface FileStorage extends ExtensionPoint {
         requireNonNull(fileName, "fileName must not be null");
 
         if (!VALID_NAME_PATTERN.matcher(fileName).matches()) {
-            throw new IllegalArgumentException("fileName must match pattern: " + VALID_NAME_PATTERN.pattern());
+            throw new IllegalArgumentException(
+                    "fileName '%s' does not match pattern: %s".formatted(
+                            fileName, VALID_NAME_PATTERN.pattern()));
         }
     }
 
