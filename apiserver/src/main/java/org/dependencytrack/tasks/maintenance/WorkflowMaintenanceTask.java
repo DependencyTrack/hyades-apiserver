@@ -24,7 +24,6 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.common.MdcScope;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
@@ -56,7 +55,6 @@ import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 public class WorkflowMaintenanceTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowMaintenanceTask.class);
-    private final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
 
     @Override
     public void inform(final Event event) {

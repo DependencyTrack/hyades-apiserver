@@ -44,11 +44,11 @@ public interface IEventService {
      * Subscribes to an event. Subscribes are automatically notified of all events for which they are
      * subscribed.
      * @param eventType The type of event to subscribe to
-     * @param subscriberType The Subscriber that gets informed when the type of event is published
+     * @param subscriber The Subscriber that gets informed when the type of event is published
      *
      * @since 1.2.0
      */
-    void subscribe(Class<? extends Event> eventType, Class<? extends Subscriber> subscriberType);
+    void subscribe(Class<? extends Event> eventType, Subscriber subscriber);
 
     /**
      * Unsubscribes a subscriber. All event types the subscriber has subscribed to will be
