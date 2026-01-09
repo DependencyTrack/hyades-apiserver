@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
@@ -31,7 +30,6 @@ import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.parsers.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.datanucleus.flush.FlushMode;
-import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
@@ -156,14 +154,15 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(BomUploadProcessingTask.class);
 
+    private final PluginManager pluginManager;
     private final KafkaEventDispatcher kafkaEventDispatcher;
     private final boolean delayBomProcessedNotification;
 
-    public BomUploadProcessingTask() {
-        this(new KafkaEventDispatcher(), Config.getInstance().getPropertyAsBoolean(ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION));
-    }
-
-    BomUploadProcessingTask(final KafkaEventDispatcher kafkaEventDispatcher, final boolean delayBomProcessedNotification) {
+    public BomUploadProcessingTask(
+            PluginManager pluginManager,
+            KafkaEventDispatcher kafkaEventDispatcher,
+            boolean delayBomProcessedNotification) {
+        this.pluginManager = pluginManager;
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.delayBomProcessedNotification = delayBomProcessedNotification;
     }
@@ -181,7 +180,7 @@ public class BomUploadProcessingTask implements Subscriber {
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
              var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString());
-             var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+             var fileStorage = pluginManager.getExtension(FileStorage.class)) {
             final byte[] cdxBomBytes;
             try (final InputStream cdxBomStream = fileStorage.get(event.getFileMetadata())) {
                 cdxBomBytes = cdxBomStream.readAllBytes();

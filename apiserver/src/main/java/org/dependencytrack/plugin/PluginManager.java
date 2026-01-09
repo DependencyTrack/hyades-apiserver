@@ -34,9 +34,9 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
 import org.eclipse.microprofile.config.Config;
-import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.MDC;
 
+import java.io.Closeable;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -49,9 +49,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.SequencedCollection;
 import java.util.SequencedMap;
-import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
@@ -67,12 +67,11 @@ import static org.dependencytrack.plugin.api.ExtensionFactory.PRIORITY_LOWEST;
 /**
  * @since 5.6.0
  */
-public class PluginManager {
+public class PluginManager implements Closeable {
 
     private static final Logger LOGGER = Logger.getLogger(PluginManager.class);
     private static final Pattern EXTENSION_POINT_NAME_PATTERN = Pattern.compile("^[a-z0-9.]+$");
     private static final Pattern EXTENSION_NAME_PATTERN = EXTENSION_POINT_NAME_PATTERN;
-    private static final PluginManager INSTANCE = new PluginManager();
 
     private final Config config;
     private final RuntimeConfigMapper runtimeConfigMapper;
@@ -86,10 +85,11 @@ public class PluginManager {
     private final Map<ExtensionIdentity, ConfigRegistry> configRegistryByExtensionIdentity;
     private final Map<Class<? extends ExtensionPoint>, ExtensionFactory<?>> defaultFactoryByExtensionPointClass;
     private final Comparator<ExtensionFactory<?>> factoryComparator;
+    private final AtomicBoolean closed = new AtomicBoolean();
     private final ReentrantLock lock;
 
-    private PluginManager() {
-        this.config = ConfigProvider.getConfig();
+    public PluginManager(Config config, Collection<ExtensionPointSpec> extensionPointSpecs) {
+        this.config = config;
         this.runtimeConfigMapper = RuntimeConfigMapper.getInstance();
         this.configTemplateRenderer = ConfigTemplateRenderer.getInstance();
         this.loadedPluginByClass = new LinkedHashMap<>();
@@ -104,10 +104,21 @@ public class PluginManager {
                 .<ExtensionFactory<?>>comparingInt(ExtensionFactory::priority)
                 .thenComparing(ExtensionFactory::extensionName);
         this.lock = new ReentrantLock();
+
+        registerExtensionPoints(extensionPointSpecs);
     }
 
-    public static PluginManager getInstance() {
-        return INSTANCE;
+    private void registerExtensionPoints(Collection<ExtensionPointSpec> extensionPointSpecs) {
+        LOGGER.debug("Registering extension points");
+        for (final ExtensionPointSpec spec : extensionPointSpecs) {
+            if (!EXTENSION_POINT_NAME_PATTERN.matcher(spec.name()).matches()) {
+                throw new IllegalStateException(
+                        "%s is not a valid extension point name".formatted(spec.name()));
+            }
+
+            LOGGER.debug("Registered extension point %s".formatted(spec.name()));
+            specByExtensionPointClass.put(spec.extensionPointClass(), spec);
+        }
     }
 
     public SequencedCollection<ExtensionPointSpec> getExtensionPoints() {
@@ -240,40 +251,24 @@ public class PluginManager {
         return new DatabaseExtensionKVStore(spec.name(), extensionName);
     }
 
-    void loadPlugins() {
+    public void loadPlugins(Collection<Plugin> plugins) {
         lock.lock();
         try {
             if (!loadedPluginByClass.isEmpty()) {
-                // NB: This is primarily to prevent erroneous redundant calls to loadPlugins.
-                // Under normal circumstances, this method will be called once on application
-                // startup, making this very unlikely to happen.
                 throw new IllegalStateException("Plugins were already loaded; Unload them first");
             }
 
-            loadPluginsLocked();
+            loadPluginsLocked(plugins);
         } finally {
             lock.unlock();
         }
     }
 
-    private void loadPluginsLocked() {
+    private void loadPluginsLocked(Collection<Plugin> plugins) {
         assert lock.isHeldByCurrentThread() : "Lock is not held by current thread";
 
-        LOGGER.debug("Discovering extension points");
-        final var extensionPointSpecLoader = ServiceLoader.load(ExtensionPointSpec.class);
-        for (final ExtensionPointSpec spec : extensionPointSpecLoader) {
-            if (!EXTENSION_POINT_NAME_PATTERN.matcher(spec.name()).matches()) {
-                throw new IllegalStateException(
-                        "%s is not a valid extension point name".formatted(spec.name()));
-            }
-
-            LOGGER.debug("Discovered extension point %s".formatted(spec.name()));
-            specByExtensionPointClass.put(spec.extensionPointClass(), spec);
-        }
-
-        LOGGER.debug("Discovering plugins");
-        final var pluginLoader = ServiceLoader.load(Plugin.class);
-        for (final Plugin plugin : pluginLoader) {
+        LOGGER.debug("Loading plugins");
+        for (final Plugin plugin : plugins) {
             try (var ignoredMdcPlugin = MDC.putCloseable(MDC_PLUGIN, plugin.getClass().getName())) {
                 LOGGER.debug("Loading plugin");
                 loadExtensionsForPlugin(plugin);
@@ -496,7 +491,9 @@ public class PluginManager {
                 continue;
             }
 
-            if (getFactory(spec.extensionPointClass()) == null) {
+            try {
+                getFactory(spec.extensionPointClass());
+            } catch (NoSuchExtensionException e) {
                 throw new IllegalStateException(
                         "Extension point %s (%s) is required, but no extension is enabled".formatted(
                                 spec.name(), spec.extensionPointClass().getName()));
@@ -504,11 +501,17 @@ public class PluginManager {
         }
     }
 
-    void unloadPlugins() {
+    @Override
+    public void close() {
+        if (!closed.compareAndSet(false, true)) {
+            return;
+        }
+
         lock.lock();
         try {
             unloadPluginsLocked();
             defaultFactoryByExtensionPointClass.clear();
+            configRegistryByExtensionIdentity.clear();
             factoryByExtensionIdentity.clear();
             extensionNamesByExtensionPointClass.clear();
             specByExtensionPointClass.clear();
@@ -518,6 +521,10 @@ public class PluginManager {
         } finally {
             lock.unlock();
         }
+    }
+
+    boolean isClosed() {
+        return closed.get();
     }
 
     private void unloadPluginsLocked() {

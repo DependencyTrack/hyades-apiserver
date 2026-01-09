@@ -27,13 +27,8 @@ import org.dependencytrack.plugin.PluginManager;
  */
 public class GitHubAdvisoryMirrorTask extends AbstractVulnDataSourceMirrorTask {
 
-    GitHubAdvisoryMirrorTask(final PluginManager pluginManager) {
+    public GitHubAdvisoryMirrorTask(PluginManager pluginManager) {
         super(pluginManager, GitHubAdvisoryMirrorEvent.class, "github", Vulnerability.Source.GITHUB);
-    }
-
-    @SuppressWarnings("unused")
-    public GitHubAdvisoryMirrorTask() {
-        this(PluginManager.getInstance());
     }
 
 }

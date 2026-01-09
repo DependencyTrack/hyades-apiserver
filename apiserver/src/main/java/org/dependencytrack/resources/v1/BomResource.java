@@ -32,6 +32,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonReader;
@@ -117,6 +118,9 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransactio
 public class BomResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(BomResource.class);
+
+    @Inject
+    private PluginManager pluginManager;
 
     @GET
     @Path("/cyclonedx/project/{uuid}")
@@ -614,7 +618,7 @@ public class BomResource extends AbstractApiResource {
         //   * application/x.vnd.cyclonedx+protobuf
         //  Consider also attaching the detected version, i.e. application/vnd.cyclonedx+xml; version=1.6
         //  See https://cyclonedx.org/specification/overview/ -> Media Types.
-        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+        try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
             return fileStorage.store(
                     "bom-upload/%s_%s".formatted(Instant.now().toEpochMilli(), project.getUuid()),
                     new ByteArrayInputStream(bomBytes));

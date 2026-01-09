@@ -27,6 +27,7 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
 import com.fasterxml.jackson.core.StreamReadConstraints;
+import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Entity;
@@ -40,6 +41,7 @@ import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -61,22 +63,23 @@ import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.proto.v1.BomValidationFailedSubject;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
-import org.dependencytrack.plugin.PluginManagerTestUtil;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.api.filestorage.FileStorageExtensionPointSpec;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
+import org.glassfish.hk2.api.Factory;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
-import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
 import java.io.File;
@@ -117,26 +120,49 @@ import static org.hamcrest.CoreMatchers.equalTo;
 @ExtendWith(SystemStubsExtension.class)
 public class BomResourceTest extends ResourceTest {
 
+    private static PluginManager pluginManager;
+
+    private static class PluginManagerFactory implements Factory<PluginManager> {
+
+        @Override
+        public PluginManager provide() {
+            if (pluginManager != null) {
+                return pluginManager;
+            }
+
+            pluginManager = new PluginManager(
+                    new SmallRyeConfigBuilder().build(),
+                    List.of(new FileStorageExtensionPointSpec()));
+            pluginManager.loadPlugins(List.of(new MemoryFileStoragePlugin()));
+            return pluginManager;
+        }
+
+        @Override
+        public void dispose(PluginManager pluginManager) {
+            // Never invoked. Instance is closed in the afterAll method.
+        }
+
+    }
+
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(BomResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
                     .register(AuthorizationFeature.class)
-                    .register(MultiPartFeature.class));
+                    .register(MultiPartFeature.class)
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bindFactory(PluginManagerFactory.class).to(PluginManager.class);
+                        }
+                    }));
 
-    @SystemStub
-    public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
-            .set("FILE_STORAGE_EXTENSION_MEMORY_ENABLED", "true")
-            .set("FILE_STORAGE_DEFAULT_EXTENSION", "memory");
-
-    @BeforeEach
-    @Override
-    public void before() throws Exception {
-        super.before();
-
-        // Required for file storage.
-        PluginManagerTestUtil.loadPlugins();
+    @AfterAll
+    static void afterAll() {
+        if (pluginManager != null) {
+            pluginManager.close();
+        }
     }
 
     @Test

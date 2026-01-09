@@ -27,13 +27,8 @@ import org.dependencytrack.plugin.PluginManager;
  */
 public class NistMirrorTask extends AbstractVulnDataSourceMirrorTask {
 
-    NistMirrorTask(PluginManager pluginManager) {
+    public NistMirrorTask(PluginManager pluginManager) {
         super(pluginManager, NistMirrorEvent.class, "nvd", Vulnerability.Source.NVD);
-    }
-
-    @SuppressWarnings("unused")
-    public NistMirrorTask() {
-        this(PluginManager.getInstance());
     }
 
 }

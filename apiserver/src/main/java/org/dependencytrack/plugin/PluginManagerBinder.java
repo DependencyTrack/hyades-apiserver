@@ -18,10 +18,13 @@
  */
 package org.dependencytrack.plugin;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
+import jakarta.servlet.ServletContext;
 import org.glassfish.hk2.api.Factory;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 
-import jakarta.inject.Singleton;
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
@@ -30,17 +33,31 @@ public final class PluginManagerBinder extends AbstractBinder {
 
     @Override
     protected void configure() {
-        bindFactory(new Factory<PluginManager>() {
-            @Override
-            public PluginManager provide() {
-                return PluginManager.getInstance();
-            }
+        bindFactory(PluginManagerFactory.class)
+                .to(PluginManager.class)
+                .in(Singleton.class);
+    }
 
-            @Override
-            public void dispose(final PluginManager instance) {
-                // Lifecycle is managed elsewhere.
-            }
-        }).to(PluginManager.class).in(Singleton.class);
+    private static final class PluginManagerFactory implements Factory<PluginManager> {
+
+        private final ServletContext servletContext;
+
+        @Inject
+        private PluginManagerFactory(ServletContext servletContext) {
+            this.servletContext = servletContext;
+        }
+
+        @Override
+        public PluginManager provide() {
+            final var instance = (PluginManager) servletContext.getAttribute(PluginManager.class.getName());
+            return requireNonNull(instance, "pluginManager is not initialized");
+        }
+
+        @Override
+        public void dispose(final PluginManager instance) {
+            // Lifecycle is managed by PluginInitializer.
+        }
+
     }
 
 }
