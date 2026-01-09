@@ -2793,7 +2793,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void cloneProjectTest() {
-        EventService.getInstance().subscribe(CloneProjectEvent.class, CloneProjectTask.class);
+        EventService.getInstance().subscribe(CloneProjectEvent.class, new CloneProjectTask());
 
         final var projectManufacturer = new OrganizationalEntity();
         projectManufacturer.setName("projectManufacturer");
@@ -3274,7 +3274,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/4413
     public void cloneProjectWithBrokenDependencyGraphTest() {
-        EventService.getInstance().subscribe(CloneProjectEvent.class, CloneProjectTask.class);
+        EventService.getInstance().subscribe(CloneProjectEvent.class, new CloneProjectTask());
 
         final var project = new Project();
         project.setName("acme-app");
@@ -3717,7 +3717,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void cloneProjectAsLatestTest() {
-        EventService.getInstance().subscribe(CloneProjectEvent.class, CloneProjectTask.class);
+        EventService.getInstance().subscribe(CloneProjectEvent.class, new CloneProjectTask());
 
         final var project = new Project();
         project.setName("acme-app-a");

@@ -96,43 +96,43 @@ public class EventSubsystemInitializer implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent event) {
         LOGGER.info("Initializing asynchronous event subsystem");
 
-        EVENT_SERVICE.subscribe(BomUploadEvent.class, BomUploadProcessingTask.class);
-        EVENT_SERVICE.subscribe(VexUploadEvent.class, VexUploadProcessingTask.class);
-        EVENT_SERVICE.subscribe(LdapSyncEvent.class, LdapSyncTaskWrapper.class);
-        EVENT_SERVICE.subscribe(GitHubAdvisoryMirrorEvent.class, GitHubAdvisoryMirrorTask.class);
-        EVENT_SERVICE.subscribe(OsvMirrorEvent.class, OsvMirrorTask.class);
-        EVENT_SERVICE.subscribe(ProjectVulnerabilityAnalysisEvent.class, VulnerabilityAnalysisTask.class);
-        EVENT_SERVICE.subscribe(PortfolioVulnerabilityAnalysisEvent.class, VulnerabilityAnalysisTask.class);
-        EVENT_SERVICE.subscribe(ProjectRepositoryMetaAnalysisEvent.class, RepositoryMetaAnalysisTask.class);
-        EVENT_SERVICE.subscribe(PortfolioRepositoryMetaAnalysisEvent.class, RepositoryMetaAnalysisTask.class);
-        EVENT_SERVICE.subscribe(ProjectMetricsUpdateEvent.class, ProjectMetricsUpdateTask.class);
-        EVENT_SERVICE.subscribe(PortfolioMetricsUpdateEvent.class, PortfolioMetricsUpdateTask.class);
-        EVENT_SERVICE.subscribe(VulnerabilityMetricsUpdateEvent.class, VulnerabilityMetricsUpdateTask.class);
-        EVENT_SERVICE.subscribe(CloneProjectEvent.class, CloneProjectTask.class);
-        EVENT_SERVICE.subscribe(FortifySscUploadEventAbstract.class, FortifySscUploadTask.class);
-        EVENT_SERVICE.subscribe(DefectDojoUploadEventAbstract.class, DefectDojoUploadTask.class);
-        EVENT_SERVICE.subscribe(KennaSecurityUploadEventAbstract.class, KennaSecurityUploadTask.class);
-        EVENT_SERVICE.subscribe(InternalComponentIdentificationEvent.class, InternalComponentIdentificationTask.class);
-        EVENT_SERVICE.subscribe(CallbackEvent.class, CallbackTask.class);
-        EVENT_SERVICE.subscribe(NistMirrorEvent.class, NistMirrorTask.class);
-        EVENT_SERVICE.subscribe(VulnerabilityPolicyFetchEvent.class, VulnerabilityPolicyFetchTask.class);
-        EVENT_SERVICE.subscribe(EpssMirrorEvent.class, EpssMirrorTask.class);
-        EVENT_SERVICE.subscribe(ComponentPolicyEvaluationEvent.class, PolicyEvaluationTask.class);
-        EVENT_SERVICE.subscribe(ProjectPolicyEvaluationEvent.class, PolicyEvaluationTask.class);
-        EVENT_SERVICE.subscribe(IntegrityMetaInitializerEvent.class, IntegrityMetaInitializerTask.class);
-        EVENT_SERVICE.subscribe(IntegrityAnalysisEvent.class, IntegrityAnalysisTask.class);
-        EVENT_SERVICE.subscribe(CsafProviderDiscoveryEvent.class, CsafProviderDiscoveryTask.class);
-        EVENT_SERVICE.subscribe(CsafDocumentImportEvent.class, CsafDocumentImportTask.class);
+        EVENT_SERVICE.subscribe(BomUploadEvent.class, new BomUploadProcessingTask());
+        EVENT_SERVICE.subscribe(VexUploadEvent.class, new VexUploadProcessingTask());
+        EVENT_SERVICE.subscribe(LdapSyncEvent.class, new LdapSyncTaskWrapper());
+        EVENT_SERVICE.subscribe(GitHubAdvisoryMirrorEvent.class, new GitHubAdvisoryMirrorTask());
+        EVENT_SERVICE.subscribe(OsvMirrorEvent.class, new OsvMirrorTask());
+        EVENT_SERVICE.subscribe(ProjectVulnerabilityAnalysisEvent.class, new VulnerabilityAnalysisTask());
+        EVENT_SERVICE.subscribe(PortfolioVulnerabilityAnalysisEvent.class, new VulnerabilityAnalysisTask());
+        EVENT_SERVICE.subscribe(ProjectRepositoryMetaAnalysisEvent.class, new RepositoryMetaAnalysisTask());
+        EVENT_SERVICE.subscribe(PortfolioRepositoryMetaAnalysisEvent.class, new RepositoryMetaAnalysisTask());
+        EVENT_SERVICE.subscribe(ProjectMetricsUpdateEvent.class, new ProjectMetricsUpdateTask());
+        EVENT_SERVICE.subscribe(PortfolioMetricsUpdateEvent.class, new PortfolioMetricsUpdateTask());
+        EVENT_SERVICE.subscribe(VulnerabilityMetricsUpdateEvent.class, new VulnerabilityMetricsUpdateTask());
+        EVENT_SERVICE.subscribe(CloneProjectEvent.class, new CloneProjectTask());
+        EVENT_SERVICE.subscribe(FortifySscUploadEventAbstract.class, new FortifySscUploadTask());
+        EVENT_SERVICE.subscribe(DefectDojoUploadEventAbstract.class, new DefectDojoUploadTask());
+        EVENT_SERVICE.subscribe(KennaSecurityUploadEventAbstract.class, new KennaSecurityUploadTask());
+        EVENT_SERVICE.subscribe(InternalComponentIdentificationEvent.class, new InternalComponentIdentificationTask());
+        EVENT_SERVICE.subscribe(CallbackEvent.class, new CallbackTask());
+        EVENT_SERVICE.subscribe(NistMirrorEvent.class, new NistMirrorTask());
+        EVENT_SERVICE.subscribe(VulnerabilityPolicyFetchEvent.class, new VulnerabilityPolicyFetchTask());
+        EVENT_SERVICE.subscribe(EpssMirrorEvent.class, new EpssMirrorTask());
+        EVENT_SERVICE.subscribe(ComponentPolicyEvaluationEvent.class, new PolicyEvaluationTask());
+        EVENT_SERVICE.subscribe(ProjectPolicyEvaluationEvent.class, new PolicyEvaluationTask());
+        EVENT_SERVICE.subscribe(IntegrityMetaInitializerEvent.class, new IntegrityMetaInitializerTask());
+        EVENT_SERVICE.subscribe(IntegrityAnalysisEvent.class, new IntegrityAnalysisTask());
+        EVENT_SERVICE.subscribe(CsafProviderDiscoveryEvent.class, new CsafProviderDiscoveryTask());
+        EVENT_SERVICE.subscribe(CsafDocumentImportEvent.class, new CsafDocumentImportTask());
 
         // Execute maintenance tasks on the single-threaded event service.
         // This way, they are not blocked by, and don't block, actual processing tasks on the main event service.
-        EVENT_SERVICE_ST.subscribe(ComponentMetadataMaintenanceEvent.class, ComponentMetadataMaintenanceTask.class);
-        EVENT_SERVICE_ST.subscribe(MetricsMaintenanceEvent.class, MetricsMaintenanceTask.class);
-        EVENT_SERVICE_ST.subscribe(TagMaintenanceEvent.class, TagMaintenanceTask.class);
-        EVENT_SERVICE_ST.subscribe(VulnerabilityDatabaseMaintenanceEvent.class, VulnerabilityDatabaseMaintenanceTask.class);
-        EVENT_SERVICE_ST.subscribe(VulnerabilityScanMaintenanceEvent.class, VulnerabilityScanMaintenanceTask.class);
-        EVENT_SERVICE_ST.subscribe(WorkflowMaintenanceEvent.class, WorkflowMaintenanceTask.class);
-        EVENT_SERVICE_ST.subscribe(ProjectMaintenanceEvent.class, ProjectMaintenanceTask.class);
+        EVENT_SERVICE_ST.subscribe(ComponentMetadataMaintenanceEvent.class, new ComponentMetadataMaintenanceTask());
+        EVENT_SERVICE_ST.subscribe(MetricsMaintenanceEvent.class, new MetricsMaintenanceTask());
+        EVENT_SERVICE_ST.subscribe(TagMaintenanceEvent.class, new TagMaintenanceTask());
+        EVENT_SERVICE_ST.subscribe(VulnerabilityDatabaseMaintenanceEvent.class, new VulnerabilityDatabaseMaintenanceTask());
+        EVENT_SERVICE_ST.subscribe(VulnerabilityScanMaintenanceEvent.class, new VulnerabilityScanMaintenanceTask());
+        EVENT_SERVICE_ST.subscribe(WorkflowMaintenanceEvent.class, new WorkflowMaintenanceTask());
+        EVENT_SERVICE_ST.subscribe(ProjectMaintenanceEvent.class, new ProjectMaintenanceTask());
     }
 
     /**

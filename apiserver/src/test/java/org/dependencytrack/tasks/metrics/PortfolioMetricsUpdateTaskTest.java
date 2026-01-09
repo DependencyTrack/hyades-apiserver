@@ -57,8 +57,8 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @BeforeAll
     public static void setUpClass1() {
-        EventService.getInstance().subscribe(ProjectMetricsUpdateEvent.class, ProjectMetricsUpdateTask.class);
-        EventService.getInstance().subscribe(CallbackEvent.class, CallbackTask.class);
+        EventService.getInstance().subscribe(ProjectMetricsUpdateEvent.class, new ProjectMetricsUpdateTask());
+        EventService.getInstance().subscribe(CallbackEvent.class, new CallbackTask());
     }
 
     @AfterAll
