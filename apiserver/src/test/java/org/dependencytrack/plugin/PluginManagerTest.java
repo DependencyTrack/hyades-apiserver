@@ -34,7 +34,7 @@ import java.util.SequencedCollection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-public class PluginManagerTest extends PersistenceCapableTest {
+class PluginManagerTest extends PersistenceCapableTest {
 
     interface UnknownExtensionPoint extends ExtensionPoint {
     }
@@ -43,15 +43,12 @@ public class PluginManagerTest extends PersistenceCapableTest {
     private static final ConfigPropertyExtension configProperties = new ConfigPropertyExtension();
 
     @BeforeEach
-    @Override
-    public void before() throws Exception {
-        super.before();
-
+    void beforeEach() {
         PluginManagerTestUtil.loadPlugins();
     }
 
     @Test
-    public void testGetLoadedPlugins() {
+    void testGetLoadedPlugins() {
         final SequencedCollection<Plugin> loadedPlugins =
                 PluginManager.getInstance().getLoadedPlugins();
         assertThat(loadedPlugins).isNotEmpty();
@@ -60,7 +57,7 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
     @Test
     @WithConfigProperty("test.extension.dummy.bar=qux")
-    public void testGetExtensionWithConfig() {
+    void testGetExtensionWithConfig() {
         final TestExtensionPoint extension =
                 PluginManager.getInstance().getExtension(TestExtensionPoint.class);
         assertThat(extension).isNotNull();
@@ -68,48 +65,42 @@ public class PluginManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testGetExtensionWithImplementationClass() {
-        assertThatExceptionOfType(NoSuchExtensionException.class)
+    void testGetExtensionWithImplementationClass() {
+        assertThatExceptionOfType(NoSuchExtensionPointException.class)
                 .isThrownBy(() -> PluginManager.getInstance().getExtension(DummyTestExtension.class))
-                .withMessage("""
-                        No extension exists for the extension point \
-                        org.dependencytrack.plugin.DummyTestExtension""");
+                .withMessage("org.dependencytrack.plugin.DummyTestExtension is not a known extension point");
     }
 
     @Test
-    public void testGetExtensionByName() {
+    void testGetExtensionByName() {
         final TestExtensionPoint extension =
                 PluginManager.getInstance().getExtension(TestExtensionPoint.class, "dummy");
         assertThat(extension).isNotNull();
     }
 
     @Test
-    public void testGetExtensionByNameWhenNoExists() {
+    void testGetExtensionByNameWhenNoExists() {
         assertThatExceptionOfType(NoSuchExtensionException.class)
                 .isThrownBy(() -> PluginManager.getInstance().getExtension(TestExtensionPoint.class, "doesNotExist"))
-                .withMessage("""
-                        No extension named doesNotExist exists for the extension point \
-                        org.dependencytrack.plugin.TestExtensionPoint""");
+                .withMessage("No extension named 'doesNotExist' exists for the extension point 'test'");
     }
 
     @Test
-    public void testGetFactory() {
+    void testGetFactory() {
         final ExtensionFactory<TestExtensionPoint> factory =
                 PluginManager.getInstance().getFactory(TestExtensionPoint.class);
         assertThat(factory).isExactlyInstanceOf(DummyTestExtensionFactory.class);
     }
 
     @Test
-    public void testGetFactoryForUnknownExtensionPoint() {
-        assertThatExceptionOfType(NoSuchExtensionException.class)
+    void testGetFactoryForUnknownExtensionPoint() {
+        assertThatExceptionOfType(NoSuchExtensionPointException.class)
                 .isThrownBy(() -> PluginManager.getInstance().getFactory(UnknownExtensionPoint.class))
-                .withMessage("""
-                        No extension factory exists for the extension point \
-                        org.dependencytrack.plugin.PluginManagerTest$UnknownExtensionPoint""");
+                .withMessage("org.dependencytrack.plugin.PluginManagerTest$UnknownExtensionPoint is not a known extension point");
     }
 
     @Test
-    public void testGetFactories() {
+    void testGetFactories() {
         final SequencedCollection<ExtensionFactory<TestExtensionPoint>> factories =
                 PluginManager.getInstance().getFactories(TestExtensionPoint.class);
         assertThat(factories).satisfiesExactly(factory ->
@@ -117,33 +108,32 @@ public class PluginManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testGetFactoriesForUnknownExtensionPoint() {
-        final SequencedCollection<ExtensionFactory<UnknownExtensionPoint>> factories =
-                PluginManager.getInstance().getFactories(UnknownExtensionPoint.class);
-        assertThat(factories).isEmpty();
+    void testGetFactoriesForUnknownExtensionPoint() {
+        assertThatExceptionOfType(NoSuchExtensionPointException.class)
+                .isThrownBy(() -> PluginManager.getInstance().getFactories(UnknownExtensionPoint.class));
     }
 
     @Test
-    public void testGetKVStore() {
+    void testGetKVStore() {
         final ExtensionKVStore kvStore =
                 PluginManager.getInstance().getKVStore(TestExtensionPoint.class, "dummy");
         assertThat(kvStore).isInstanceOf(DatabaseExtensionKVStore.class);
     }
 
     @Test
-    public void testGetKVStoreForUnknownExtensionPoint() {
-        assertThatExceptionOfType(NoSuchExtensionException.class)
+    void testGetKVStoreForUnknownExtensionPoint() {
+        assertThatExceptionOfType(NoSuchExtensionPointException.class)
                 .isThrownBy(() -> PluginManager.getInstance().getKVStore(UnknownExtensionPoint.class, "dummy"));
     }
 
     @Test
-    public void testGetKVStoreForUnknownExtension() {
+    void testGetKVStoreForUnknownExtension() {
         assertThatExceptionOfType(NoSuchExtensionException.class)
                 .isThrownBy(() -> PluginManager.getInstance().getKVStore(TestExtensionPoint.class, "doesNotExist"));
     }
 
     @Test
-    public void testLoadPluginsRepeatedly() {
+    void testLoadPluginsRepeatedly() {
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> PluginManager.getInstance().loadPlugins())
                 .withMessage("Plugins were already loaded; Unload them first");
@@ -151,7 +141,7 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
     @Test
     @WithConfigProperty("test.extension.dummy.enabled=false")
-    public void testDisabledExtension() {
+    void testDisabledExtension() {
         final PluginManager pluginManager = PluginManager.getInstance();
 
         pluginManager.unloadPlugins();
@@ -160,13 +150,11 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
         assertThatExceptionOfType(NoSuchExtensionException.class)
                 .isThrownBy(() -> PluginManager.getInstance().getExtension(TestExtensionPoint.class))
-                .withMessage("""
-                        No extension exists for the extension point \
-                        org.dependencytrack.plugin.TestExtensionPoint""");
+                .withMessage("No extension exists for the extension point 'test'");
     }
 
     @Test
-    public void testDefaultExtensionNotLoaded() {
+    void testDefaultExtensionNotLoaded() {
         final PluginManager pluginManager = PluginManager.getInstance();
 
         pluginManager.unloadPlugins();
@@ -175,9 +163,7 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
         assertThatExceptionOfType(NoSuchExtensionException.class)
                 .isThrownBy(pluginManager::loadPlugins)
-                .withMessage("""
-                        No extension named does.not.exist exists for extension point \
-                        test (org.dependencytrack.plugin.TestExtensionPoint)""");
+                .withMessage("No extension named 'does.not.exist' exists for the extension point 'test'");
     }
 
 }

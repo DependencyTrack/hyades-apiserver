@@ -59,9 +59,16 @@ public interface ExtensionFactory<T extends ExtensionPoint> extends Closeable {
     void init(ExtensionContext ctx);
 
     /**
+     * Creates a new extension instance.
+     * <p>
+     * Implementations must never return {@code null}. If an extension instance
+     * cannot be created for any reason, this method must signal the failure by
+     * throwing an unchecked exception, such as {@link IllegalStateException}.
+     *
      * @return An extension instance.
+     * @throws IllegalStateException If an extension instance cannot be created.
      */
-    @Nullable T create();
+    T create();
 
     /**
      * {@inheritDoc}
