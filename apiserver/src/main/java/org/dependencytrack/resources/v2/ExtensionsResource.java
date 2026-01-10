@@ -36,10 +36,10 @@ import org.dependencytrack.api.v2.model.ListExtensionsResponseItem;
 import org.dependencytrack.api.v2.model.UpdateExtensionConfigRequest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.persistence.jdbi.ExtensionConfigDao;
+import org.dependencytrack.plugin.ExtensionPointMetadata;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
-import org.dependencytrack.plugin.api.ExtensionPointSpec;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
 import org.dependencytrack.resources.AbstractApiResource;
@@ -72,13 +72,13 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
             Permissions.Constants.SYSTEM_CONFIGURATION_READ
     })
     public Response listExtensionPoints() {
-        final SequencedCollection<ExtensionPointSpec> extensionPoints =
+        final SequencedCollection<ExtensionPointMetadata> extensionPoints =
                 pluginManager.getExtensionPoints();
 
         final var response = ListExtensionPointsResponse.builder()
                 .extensionPoints(
                         extensionPoints.stream()
-                                .map(ExtensionPointSpec::name)
+                                .map(ExtensionPointMetadata::name)
                                 .sorted()
                                 .<ListExtensionPointsResponseItem>map(
                                         name -> ListExtensionPointsResponseItem.builder()
@@ -227,7 +227,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
     private Class<? extends ExtensionPoint> getExtensionPointClass(String extensionPointName) {
         return pluginManager.getExtensionPoints().stream()
                 .filter(spec -> spec.name().equals(extensionPointName))
-                .map(ExtensionPointSpec::extensionPointClass)
+                .map(ExtensionPointMetadata::clazz)
                 .findAny()
                 .orElseThrow(NotFoundException::new);
     }

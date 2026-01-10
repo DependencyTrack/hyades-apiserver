@@ -21,10 +21,10 @@ package org.dependencytrack.plugin;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.config.templating.ConfigTemplateRenderer;
-import org.dependencytrack.notification.api.publishing.NotificationPublisherExtensionPointSpec;
+import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.plugin.api.Plugin;
-import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSourceExtensionPointSpec;
-import org.dependencytrack.plugin.api.filestorage.FileStorageExtensionPointSpec;
+import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
+import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.secret.management.SecretManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -64,15 +64,15 @@ public class PluginInitializer implements ServletContextListener {
         final var secretManager = (SecretManager) event.getServletContext().getAttribute(SecretManager.class.getName());
         requireNonNull(secretManager, "secretManager has not been initialized");
 
-        final var extensionPointSpecs = List.of(
-                new FileStorageExtensionPointSpec(),
-                new NotificationPublisherExtensionPointSpec(),
-                new VulnDataSourceExtensionPointSpec());
+        final var extensionPoints = List.of(
+                FileStorage.class,
+                NotificationPublisher.class,
+                VulnDataSource.class);
 
         pluginManager = new PluginManager(
                 config,
                 new ConfigTemplateRenderer(secretManager::getSecretValue),
-                extensionPointSpecs);
+                extensionPoints);
 
         LOGGER.info("Discovering plugins");
         final Collection<Plugin> plugins =

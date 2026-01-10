@@ -20,6 +20,7 @@ package org.dependencytrack.plugin.api.datasource.vuln;
 
 import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.ExtensionPointSpec;
 
 import java.util.Iterator;
 
@@ -85,6 +86,7 @@ import java.util.Iterator;
  * @see <a href="https://cyclonedx.org/capabilities/bov/">CycloneDX BOV</a>
  * @since 5.7.0
  */
+@ExtensionPointSpec(name = "vuln.datasource", required = false)
 public interface VulnDataSource extends ExtensionPoint, Iterator<Bom> {
 
     /**

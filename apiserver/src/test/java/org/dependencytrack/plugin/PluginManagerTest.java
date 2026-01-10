@@ -50,7 +50,7 @@ class PluginManagerTest extends PersistenceCapableTest {
         pluginManager = new PluginManager(
                 ConfigProvider.getConfig(),
                 configTemplateRenderer,
-                List.of(new TestExtensionPointSpec()));
+                List.of(TestExtensionPoint.class));
         pluginManager.loadPlugins(List.of(new DummyPlugin()));
     }
 
@@ -76,7 +76,7 @@ class PluginManagerTest extends PersistenceCapableTest {
                 .build();
 
         try (final var pluginManager = new PluginManager(
-                config, configTemplateRenderer, List.of(new TestExtensionPointSpec()))) {
+                config, configTemplateRenderer, List.of(TestExtensionPoint.class))) {
             pluginManager.loadPlugins(List.of(new DummyPlugin()));
 
             final TestExtensionPoint extension =
@@ -168,7 +168,7 @@ class PluginManagerTest extends PersistenceCapableTest {
                 .build();
 
         try (final var pluginManager = new PluginManager(
-                config, configTemplateRenderer, List.of(new TestExtensionPointSpec()))) {
+                config, configTemplateRenderer, List.of(TestExtensionPoint.class))) {
             pluginManager.loadPlugins(List.of(new DummyPlugin()));
 
             assertThatExceptionOfType(NoSuchExtensionException.class)
@@ -184,7 +184,7 @@ class PluginManagerTest extends PersistenceCapableTest {
                 .build();
 
         try (final var pluginManager = new PluginManager(
-                config, configTemplateRenderer, List.of(new TestExtensionPointSpec()))) {
+                config, configTemplateRenderer, List.of(TestExtensionPoint.class))) {
             assertThatExceptionOfType(NoSuchExtensionException.class)
                     .isThrownBy(() -> pluginManager.loadPlugins(List.of(new DummyPlugin())))
                     .withMessage("No extension named 'does.not.exist' exists for the extension point 'test'");

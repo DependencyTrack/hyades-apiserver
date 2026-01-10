@@ -16,29 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api.datasource.vuln;
+package org.dependencytrack.plugin;
 
 import org.dependencytrack.plugin.api.ExtensionPoint;
-import org.dependencytrack.plugin.api.ExtensionPointSpec;
 
 /**
  * @since 5.7.0
  */
-public class VulnDataSourceExtensionPointSpec implements ExtensionPointSpec {
-
-    @Override
-    public String name() {
-        return "vuln.datasource";
-    }
-
-    @Override
-    public boolean required() {
-        return false;
-    }
-
-    @Override
-    public Class<? extends ExtensionPoint> extensionPointClass() {
-        return VulnDataSource.class;
-    }
-
+public record ExtensionPointMetadata(
+        String name,
+        Class<? extends ExtensionPoint> clazz,
+        boolean required) {
 }

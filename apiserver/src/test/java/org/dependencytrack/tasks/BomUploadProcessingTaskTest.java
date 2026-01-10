@@ -59,7 +59,6 @@ import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
-import org.dependencytrack.plugin.api.filestorage.FileStorageExtensionPointSpec;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -121,7 +120,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         pluginManager = new PluginManager(
                 new SmallRyeConfigBuilder().build(),
                 new ConfigTemplateRenderer(secretName -> null),
-                List.of(new FileStorageExtensionPointSpec()));
+                List.of(FileStorage.class));
         pluginManager.loadPlugins(List.of(new MemoryFileStoragePlugin()));
 
         task = new BomUploadProcessingTask(pluginManager, new KafkaEventDispatcher(), false);

@@ -18,11 +18,13 @@
  */
 package org.dependencytrack.resources.v2;
 
+import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.persistence.jdbi.ExtensionConfigDao;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.ExtensionContext;
@@ -32,27 +34,23 @@ import org.dependencytrack.plugin.api.ExtensionPointSpec;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSchemaSource;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
-import org.glassfish.hk2.utilities.binding.AbstractBinder;
+import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.jspecify.annotations.NonNull;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.util.Collections;
 import java.util.List;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
 
 public class ExtensionsResourceTest extends ResourceTest {
 
-    private static final PluginManager PLUGIN_MANAGER_MOCK = mock(PluginManager.class);
+    private static PluginManager pluginManager;
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
@@ -60,23 +58,30 @@ public class ExtensionsResourceTest extends ResourceTest {
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
-                            bind(PLUGIN_MANAGER_MOCK).to(PluginManager.class);
+                            bindFactory(() -> pluginManager).to(PluginManager.class);
                         }
                     }));
 
-    @AfterEach
-    public void after() {
-        reset(PLUGIN_MANAGER_MOCK);
-        super.after();
+    @BeforeAll
+    static void beforeAll() {
+        pluginManager = new PluginManager(
+                new SmallRyeConfigBuilder().build(),
+                new ConfigTemplateRenderer(secretName -> null),
+                List.of(DummyExtensionPoint.class));
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new DummyExtensionFactory())));
+    }
+
+    @AfterAll
+    static void afterAll() {
+        if (pluginManager != null) {
+            pluginManager.close();
+        }
     }
 
     @Test
     public void listExtensionPointsShouldListAllExtensionPoints() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
-
-        final var extensionPointSpec = new DummyExtensionPointSpec("foo");
-
-        doReturn(List.of(extensionPointSpec)).when(PLUGIN_MANAGER_MOCK).getExtensionPoints();
 
         final Response response = jersey.target("/extension-points")
                 .request()
@@ -87,7 +92,7 @@ public class ExtensionsResourceTest extends ResourceTest {
                 {
                   "extension_points": [
                     {
-                      "name": "foo"
+                      "name": "dummy"
                     }
                   ]
                 }
@@ -98,13 +103,7 @@ public class ExtensionsResourceTest extends ResourceTest {
     public void listExtensionsShouldListAllExtensions() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        final var extensionPointSpec = new DummyExtensionPointSpec("foo");
-        final var extensionFactory = new DummyExtensionFactory("bar");
-
-        doReturn(List.of(extensionPointSpec)).when(PLUGIN_MANAGER_MOCK).getExtensionPoints();
-        doReturn(List.of(extensionFactory)).when(PLUGIN_MANAGER_MOCK).getFactories(eq(DummyExtensionPoint.class));
-
-        final Response response = jersey.target("/extension-points/foo/extensions")
+        final Response response = jersey.target("/extension-points/dummy/extensions")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -113,7 +112,7 @@ public class ExtensionsResourceTest extends ResourceTest {
                 {
                   "extensions":[
                     {
-                      "name": "bar"
+                      "name": "dummy.extension"
                     }
                   ]
                 }
@@ -124,9 +123,7 @@ public class ExtensionsResourceTest extends ResourceTest {
     public void listExtensionsShouldReturnNotFoundWhenExtensionPointDoesNotExist() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        doReturn(Collections.emptyList()).when(PLUGIN_MANAGER_MOCK).getExtensionPoints();
-
-        final Response response = jersey.target("/extension-points/foo/extensions")
+        final Response response = jersey.target("/extension-points/doesNotExist/extensions")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -145,21 +142,15 @@ public class ExtensionsResourceTest extends ResourceTest {
     public void getExtensionConfigShouldReturnConfig() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        final var extensionPointSpec = new DummyExtensionPointSpec("foo");
-        final var extensionFactory = new DummyExtensionFactory("bar");
-
-        doReturn(List.of(extensionPointSpec)).when(PLUGIN_MANAGER_MOCK).getExtensionPoints();
-        doReturn(List.of(extensionFactory)).when(PLUGIN_MANAGER_MOCK).getFactories(eq(DummyExtensionPoint.class));
-
         useJdbiTransaction(
                 handle -> handle.attach(ExtensionConfigDao.class)
-                        .saveConfig("foo", "bar", /* language=JSON */ """
+                        .saveConfig("dummy", "dummy.extension", /* language=JSON */ """
                                 {
                                   "requiredString": "yay!"
                                 }
                                 """));
 
-        final Response response = jersey.target("/extension-points/foo/extensions/bar/config")
+        final Response response = jersey.target("/extension-points/dummy/extensions/dummy.extension/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -177,7 +168,7 @@ public class ExtensionsResourceTest extends ResourceTest {
     public void getExtensionConfigShouldReturnNotFoundWhenNotExists() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        final Response response = jersey.target("/extension-points/foo/extensions/bar/config")
+        final Response response = jersey.target("/extension-points/dummy/extensions/doesNotExist/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -196,13 +187,7 @@ public class ExtensionsResourceTest extends ResourceTest {
     public void updateExtensionConfigShouldReturnNoContent() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
-        final var extensionPointSpec = new DummyExtensionPointSpec("foo");
-        final var extensionFactory = new DummyExtensionFactory("bar");
-
-        doReturn(List.of(extensionPointSpec)).when(PLUGIN_MANAGER_MOCK).getExtensionPoints();
-        doReturn(List.of(extensionFactory)).when(PLUGIN_MANAGER_MOCK).getFactories(eq(DummyExtensionPoint.class));
-
-        final Response response = jersey.target("/extension-points/foo/extensions/bar/config")
+        final Response response = jersey.target("/extension-points/dummy/extensions/dummy.extension/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
@@ -217,7 +202,7 @@ public class ExtensionsResourceTest extends ResourceTest {
         assertThat(getPlainTextBody(response)).isEmpty();
 
         final String savedConfig = withJdbiHandle(
-                handle -> handle.attach(ExtensionConfigDao.class).getConfig("foo", "bar"));
+                handle -> handle.attach(ExtensionConfigDao.class).getConfig("dummy", "dummy.extension"));
         assertThatJson(savedConfig).isEqualTo(/* language=JSON */ """
                 {
                   "requiredString": "foo",
@@ -230,23 +215,17 @@ public class ExtensionsResourceTest extends ResourceTest {
     public void updateExtensionConfigShouldReturnNotModifiedWhenUnchanged() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
-        final var extensionPointSpec = new DummyExtensionPointSpec("foo");
-        final var extensionFactory = new DummyExtensionFactory("bar");
-
-        doReturn(List.of(extensionPointSpec)).when(PLUGIN_MANAGER_MOCK).getExtensionPoints();
-        doReturn(List.of(extensionFactory)).when(PLUGIN_MANAGER_MOCK).getFactories(eq(DummyExtensionPoint.class));
-
         useJdbiTransaction(
                 handle -> handle
                         .attach(ExtensionConfigDao.class)
-                        .saveConfig("foo", "bar", /* language=JSON */ """
+                        .saveConfig("dummy", "dummy.extension", /* language=JSON */ """
                                 {
                                   "requiredString": "foo",
                                   "optionalString": "bar"
                                 }
                                 """));
 
-        final Response response = jersey.target("/extension-points/foo/extensions/bar/config")
+        final Response response = jersey.target("/extension-points/dummy/extensions/dummy.extension/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
@@ -265,13 +244,7 @@ public class ExtensionsResourceTest extends ResourceTest {
     public void updateExtensionConfigShouldReturnBadRequestWhenInvalid() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
-        final var extensionPointSpec = new DummyExtensionPointSpec("foo");
-        final var extensionFactory = new DummyExtensionFactory("bar");
-
-        doReturn(List.of(extensionPointSpec)).when(PLUGIN_MANAGER_MOCK).getExtensionPoints();
-        doReturn(List.of(extensionFactory)).when(PLUGIN_MANAGER_MOCK).getFactories(eq(DummyExtensionPoint.class));
-
-        final Response response = jersey.target("/extension-points/foo/extensions/bar/config")
+        final Response response = jersey.target("/extension-points/dummy/extensions/dummy.extension/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
@@ -305,13 +278,7 @@ public class ExtensionsResourceTest extends ResourceTest {
     public void getExtensionConfigSchemaShouldReturnConfigSchema() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        final var extensionPointSpec = new DummyExtensionPointSpec("foo");
-        final var extensionFactory = new DummyExtensionFactory("bar");
-
-        doReturn(List.of(extensionPointSpec)).when(PLUGIN_MANAGER_MOCK).getExtensionPoints();
-        doReturn(List.of(extensionFactory)).when(PLUGIN_MANAGER_MOCK).getFactories(eq(DummyExtensionPoint.class));
-
-        final Response response = jersey.target("/extension-points/foo/extensions/bar/config-schema")
+        final Response response = jersey.target("/extension-points/dummy/extensions/dummy.extension/config-schema")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -338,32 +305,8 @@ public class ExtensionsResourceTest extends ResourceTest {
                 """);
     }
 
+    @ExtensionPointSpec(name = "dummy", required = false)
     private interface DummyExtensionPoint extends ExtensionPoint {
-    }
-
-    private static class DummyExtensionPointSpec implements ExtensionPointSpec {
-
-        private final String name;
-
-        private DummyExtensionPointSpec(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public @NonNull String name() {
-            return name;
-        }
-
-        @Override
-        public boolean required() {
-            return false;
-        }
-
-        @Override
-        public @NonNull Class<? extends ExtensionPoint> extensionPointClass() {
-            return DummyExtensionPoint.class;
-        }
-
     }
 
     private static class DummyExtension implements DummyExtensionPoint {
@@ -376,20 +319,14 @@ public class ExtensionsResourceTest extends ResourceTest {
 
     private static class DummyExtensionFactory implements ExtensionFactory<DummyExtensionPoint> {
 
-        private final String name;
-
-        private DummyExtensionFactory(String name) {
-            this.name = name;
-        }
-
         @Override
         public @NonNull String extensionName() {
-            return name;
+            return "dummy.extension";
         }
 
         @Override
         public @NonNull Class<? extends DummyExtensionPoint> extensionClass() {
-            return DummyExtensionPoint.class;
+            return DummyExtension.class;
         }
 
         @Override
