@@ -21,8 +21,8 @@ package org.dependencytrack.resources.v2;
 import alpine.server.auth.PermissionRequired;
 import io.csaf.retrieval.RetrievedDocument;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.AdvisoriesApi;
 import org.dependencytrack.api.v2.model.GetAdvisoryResponse;
 import org.dependencytrack.api.v2.model.ListAdvisoriesResponse;
@@ -67,7 +67,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
  * @author Christian Banse
  * @since 5.7.0
  */
-@Path("/")
+@Provider
 public class AdvisoriesResource extends AbstractApiResource implements AdvisoriesApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AdvisoriesResource.class);
