@@ -25,6 +25,7 @@ import org.dependencytrack.secret.management.SecretManagerFactory;
 import org.dependencytrack.secret.management.cache.CachingSecretManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,9 +38,8 @@ public final class SecretManagerInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SecretManagerInitializer.class);
 
-    public static SecretManager INSTANCE;
-
     private final Config config;
+    static @Nullable SecretManager secretManager;
 
     SecretManagerInitializer(final Config config) {
         this.config = config;
@@ -51,7 +51,7 @@ public final class SecretManagerInitializer implements ServletContextListener {
     }
 
     @Override
-    public void contextInitialized(final ServletContextEvent event) {
+    public void contextInitialized(ServletContextEvent event) {
         final String providerName = config.getValue("dt.secret-management.provider", String.class);
         final var secretManagerFactory = ServiceLoader.load(SecretManagerFactory.class).stream()
                 .map(ServiceLoader.Provider::get)
@@ -61,15 +61,19 @@ public final class SecretManagerInitializer implements ServletContextListener {
                         "No secret management provider found for name: " + providerName));
 
         LOGGER.info("Initializing secret management provider: {}", secretManagerFactory.name());
-        INSTANCE = CachingSecretManager.maybeWrap(secretManagerFactory.create(), config);
+        secretManager = CachingSecretManager.maybeWrap(secretManagerFactory.create(), config);
+
+        event.getServletContext().setAttribute(
+                SecretManager.class.getName(),
+                secretManager);
     }
 
     @Override
     public void contextDestroyed(final ServletContextEvent event) {
-        if (INSTANCE != null) {
+        if (secretManager != null) {
             LOGGER.info("Closing secret manager");
-            INSTANCE.close();
-            INSTANCE = null;
+            secretManager.close();
+            secretManager = null;
         }
     }
 

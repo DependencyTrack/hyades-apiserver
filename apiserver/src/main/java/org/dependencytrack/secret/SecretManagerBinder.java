@@ -18,10 +18,14 @@
  */
 package org.dependencytrack.secret;
 
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import jakarta.servlet.ServletContext;
 import org.dependencytrack.secret.management.SecretManager;
 import org.glassfish.hk2.api.Factory;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
@@ -30,17 +34,31 @@ public final class SecretManagerBinder extends AbstractBinder {
 
     @Override
     protected void configure() {
-        bindFactory(new Factory<SecretManager>() {
-            @Override
-            public SecretManager provide() {
-                return SecretManagerInitializer.INSTANCE;
-            }
+        bindFactory(SecretManagerFactory.class)
+                .to(SecretManager.class)
+                .in(Singleton.class);
+    }
 
-            @Override
-            public void dispose(final SecretManager instance) {
-                // Lifecycle is managed elsewhere.
-            }
-        }).to(SecretManager.class).in(Singleton.class);
+    private static final class SecretManagerFactory implements Factory<SecretManager> {
+
+        private final ServletContext servletContext;
+
+        @Inject
+        private SecretManagerFactory(ServletContext servletContext) {
+            this.servletContext = servletContext;
+        }
+
+        @Override
+        public SecretManager provide() {
+            final var instance = (SecretManager) servletContext.getAttribute(SecretManager.class.getName());
+            return requireNonNull(instance, "secretManager is not initialized");
+        }
+
+        @Override
+        public void dispose(SecretManager instance) {
+            // Lifecycle is managed by SecretManagerInitializer.
+        }
+
     }
 
 }

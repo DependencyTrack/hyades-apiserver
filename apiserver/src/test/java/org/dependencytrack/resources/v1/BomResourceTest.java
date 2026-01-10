@@ -41,6 +41,7 @@ import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -132,6 +133,7 @@ public class BomResourceTest extends ResourceTest {
 
             pluginManager = new PluginManager(
                     new SmallRyeConfigBuilder().build(),
+                    new ConfigTemplateRenderer(secretName -> null),
                     List.of(new FileStorageExtensionPointSpec()));
             pluginManager.loadPlugins(List.of(new MemoryFileStoragePlugin()));
             return pluginManager;

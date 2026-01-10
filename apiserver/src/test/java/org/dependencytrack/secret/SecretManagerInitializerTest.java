@@ -19,24 +19,30 @@
 package org.dependencytrack.secret;
 
 import io.smallrye.config.SmallRyeConfigBuilder;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextEvent;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.cache.CachingSecretManager;
 import org.eclipse.microprofile.config.Config;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 public class SecretManagerInitializerTest {
 
     @AfterEach
     public void afterEach() {
-        if (SecretManagerInitializer.INSTANCE != null) {
-            SecretManagerInitializer.INSTANCE.close();
-            SecretManagerInitializer.INSTANCE = null;
+        if (SecretManagerInitializer.secretManager != null) {
+            SecretManagerInitializer.secretManager.close();
+            SecretManagerInitializer.secretManager = null;
         }
     }
 
@@ -47,12 +53,21 @@ public class SecretManagerInitializerTest {
                 .withDefaultValue("dt.secret-management.cache.enabled", "false")
                 .build();
 
-        new SecretManagerInitializer(config).contextInitialized(null);
+        final var servletContextMock = mock(ServletContext.class);
 
-        assertThat(SecretManagerInitializer.INSTANCE)
+        new SecretManagerInitializer(config).contextInitialized(
+                new ServletContextEvent(servletContextMock));
+
+        final var secretManagerCaptor = ArgumentCaptor.forClass(SecretManager.class);
+        verify(servletContextMock).setAttribute(
+                eq(SecretManager.class.getName()),
+                secretManagerCaptor.capture());
+        assertThat(SecretManagerInitializer.secretManager).isEqualTo(secretManagerCaptor.getValue());
+
+        assertThat(secretManagerCaptor.getValue())
                 .isInstanceOf(TestSecretManager.class)
                 .isNotInstanceOf(CachingSecretManager.class);
-        assertThat(SecretManagerInitializer.INSTANCE.name()).isEqualTo("test");
+        assertThat(secretManagerCaptor.getValue().name()).isEqualTo("test");
     }
 
     @Test
@@ -64,11 +79,20 @@ public class SecretManagerInitializerTest {
                 .withDefaultValue("dt.secret-management.cache.max-size", "100")
                 .build();
 
-        new SecretManagerInitializer(config).contextInitialized(null);
+        final var servletContextMock = mock(ServletContext.class);
 
-        assertThat(SecretManagerInitializer.INSTANCE).isInstanceOf(CachingSecretManager.class);
+        new SecretManagerInitializer(config).contextInitialized(
+                new ServletContextEvent(servletContextMock));
 
-        final var cachingManager = (CachingSecretManager) SecretManagerInitializer.INSTANCE;
+        final var secretManagerCaptor = ArgumentCaptor.forClass(SecretManager.class);
+        verify(servletContextMock).setAttribute(
+                eq(SecretManager.class.getName()),
+                secretManagerCaptor.capture());
+
+        assertThat(secretManagerCaptor.getValue()).isInstanceOf(CachingSecretManager.class);
+        assertThat(SecretManagerInitializer.secretManager).isEqualTo(secretManagerCaptor.getValue());
+
+        final var cachingManager = (CachingSecretManager) secretManagerCaptor.getValue();
         assertThat(cachingManager.name()).isEqualTo("test");
         assertThat(cachingManager.getDelegate()).isInstanceOf(TestSecretManager.class);
     }
@@ -79,22 +103,29 @@ public class SecretManagerInitializerTest {
                 .withDefaultValue("dt.secret-management.provider", "unknown")
                 .build();
 
+        final var servletContextMock = mock(ServletContext.class);
+
         assertThatExceptionOfType(IllegalStateException.class)
-                .isThrownBy(() -> new SecretManagerInitializer(config).contextInitialized(null))
+                .isThrownBy(() -> new SecretManagerInitializer(config)
+                        .contextInitialized(new ServletContextEvent(servletContextMock)))
                 .withMessage("No secret management provider found for name: unknown");
 
-        assertThat(SecretManagerInitializer.INSTANCE).isNull();
+        verify(servletContextMock, never()).setAttribute(eq(SecretManager.class.getName()), any());
+
+        assertThat(SecretManagerInitializer.secretManager).isNull();
     }
 
     @Test
     public void shouldCloseAndNullifyInstance() {
         final var secretManagerMock = mock(SecretManager.class);
-        SecretManagerInitializer.INSTANCE = secretManagerMock;
+        SecretManagerInitializer.secretManager = secretManagerMock;
 
-        new SecretManagerInitializer(mock(Config.class)).contextDestroyed(null);
+        new SecretManagerInitializer(mock(Config.class))
+                .contextDestroyed(new ServletContextEvent(mock(ServletContext.class)));
 
         verify(secretManagerMock).close();
-        assertThat(SecretManagerInitializer.INSTANCE).isNull();
+
+        assertThat(SecretManagerInitializer.secretManager).isNull();
     }
 
 }

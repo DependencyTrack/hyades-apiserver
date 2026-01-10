@@ -25,7 +25,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
-final class TestSecretManager implements SecretManager {
+public final class TestSecretManager implements SecretManager {
 
     public static final String NAME = "test";
 

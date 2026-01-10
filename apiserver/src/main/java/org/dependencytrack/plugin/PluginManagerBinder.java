@@ -54,7 +54,7 @@ public final class PluginManagerBinder extends AbstractBinder {
         }
 
         @Override
-        public void dispose(final PluginManager instance) {
+        public void dispose(PluginManager instance) {
             // Lifecycle is managed by PluginInitializer.
         }
 
