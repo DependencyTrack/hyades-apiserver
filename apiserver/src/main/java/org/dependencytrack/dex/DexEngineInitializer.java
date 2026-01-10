@@ -20,10 +20,12 @@ package org.dependencytrack.dex;
 
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.Metrics;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.dependencytrack.common.health.HealthCheckRegistry;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.DexEngineFactory;
@@ -38,6 +40,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.ServiceLoader;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
@@ -61,13 +65,17 @@ public final class DexEngineInitializer implements ServletContextListener {
     }
 
     @Override
-    public void contextInitialized(@Nullable ServletContextEvent ignored) {
+    public void contextInitialized(ServletContextEvent event) {
         final DexEngineConfig engineConfig = createEngineConfig();
         LOGGER.debug("Effective configuration: {}", engineConfig);
 
+        final ServletContext servletContext = event.getServletContext();
+
+        final var healthCheckRegistry = (HealthCheckRegistry) servletContext.getAttribute(HealthCheckRegistry.class.getName());
+        requireNonNull(healthCheckRegistry, "healthCheckRegistry has not been initialized");
+
         final var engineFactory = ServiceLoader.load(DexEngineFactory.class).findFirst().orElseThrow();
         engine = engineFactory.create(engineConfig);
-        DexEngineHolder.set(engine);
 
         // Register workflows and activities here.
 
@@ -76,7 +84,10 @@ public final class DexEngineInitializer implements ServletContextListener {
         // Register task workers here.
 
         LOGGER.info("Starting durable execution engine");
+        healthCheckRegistry.addCheck(new DexEngineHealthCheck(engine));
         engine.start();
+
+        servletContext.setAttribute(DexEngine.class.getName(), engine);
     }
 
     @Override

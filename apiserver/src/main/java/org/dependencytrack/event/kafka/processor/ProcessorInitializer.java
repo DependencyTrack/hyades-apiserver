@@ -19,8 +19,10 @@
 package org.dependencytrack.event.kafka.processor;
 
 import alpine.common.logging.Logger;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.health.HealthCheckRegistry;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.processor.api.ProcessorManager;
 import org.dependencytrack.plugin.PluginManager;
@@ -35,20 +37,25 @@ public class ProcessorInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(ProcessorInitializer.class);
 
-    static final ProcessorManager PROCESSOR_MANAGER = new ProcessorManager();
-
     private final Config config = ConfigProvider.getConfig();
+    private ProcessorManager processorManager;
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
         LOGGER.info("Initializing processors");
 
-        final var pluginManager = (PluginManager) event.getServletContext().getAttribute(PluginManager.class.getName());
+        final ServletContext servletContext = event.getServletContext();
+
+        final var pluginManager = (PluginManager) servletContext.getAttribute(PluginManager.class.getName());
         requireNonNull(pluginManager, "pluginManager has not been initialized");
 
-        PROCESSOR_MANAGER.registerProcessor(RepositoryMetaResultProcessor.PROCESSOR_NAME,
+        final var healthCheckRegistry = (HealthCheckRegistry) servletContext.getAttribute(HealthCheckRegistry.class.getName());
+        requireNonNull(healthCheckRegistry, "healthCheckRegistry has not been initialized");
+
+        processorManager = new ProcessorManager();
+        processorManager.registerProcessor(RepositoryMetaResultProcessor.PROCESSOR_NAME,
                 KafkaTopics.REPO_META_ANALYSIS_RESULT, new RepositoryMetaResultProcessor());
-        PROCESSOR_MANAGER.registerProcessor(
+        processorManager.registerProcessor(
                 VulnerabilityScanResultProcessor.PROCESSOR_NAME,
                 KafkaTopics.VULN_ANALYSIS_RESULT,
                 new VulnerabilityScanResultProcessor(
@@ -56,16 +63,19 @@ public class ProcessorInitializer implements ServletContextListener {
                         config.getOptionalValue(VULNERABILITY_POLICY_ANALYSIS_ENABLED.getPropertyName(), boolean.class).orElse(false)
                                 ? new CelVulnerabilityPolicyEvaluator()
                                 : null));
-        PROCESSOR_MANAGER.registerBatchProcessor(ProcessedVulnerabilityScanResultProcessor.PROCESSOR_NAME,
+        processorManager.registerBatchProcessor(ProcessedVulnerabilityScanResultProcessor.PROCESSOR_NAME,
                 KafkaTopics.VULN_ANALYSIS_RESULT_PROCESSED, new ProcessedVulnerabilityScanResultProcessor());
 
-        PROCESSOR_MANAGER.startAll();
+        healthCheckRegistry.addCheck(new ProcessorsHealthCheck(processorManager));
+        processorManager.startAll();
     }
 
     @Override
-    public void contextDestroyed(final ServletContextEvent event) {
-        LOGGER.info("Stopping processors");
-        PROCESSOR_MANAGER.close();
+    public void contextDestroyed(ServletContextEvent event) {
+        if (processorManager != null) {
+            LOGGER.info("Stopping processors");
+            processorManager.close();
+        }
     }
 
 }

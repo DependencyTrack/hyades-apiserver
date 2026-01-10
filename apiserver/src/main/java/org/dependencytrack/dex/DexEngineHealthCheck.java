@@ -21,11 +21,9 @@ package org.dependencytrack.dex;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
-import org.eclipse.microprofile.health.HealthCheckResponseBuilder;
 import org.eclipse.microprofile.health.Liveness;
-import org.jspecify.annotations.Nullable;
 
-import java.util.function.Supplier;
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
@@ -33,27 +31,14 @@ import java.util.function.Supplier;
 @Liveness
 public final class DexEngineHealthCheck implements HealthCheck {
 
-    private final Supplier<@Nullable DexEngine> engineSupplier;
+    private final DexEngine engine;
 
-    DexEngineHealthCheck(final Supplier<@Nullable DexEngine> engineSupplier) {
-        this.engineSupplier = engineSupplier;
-    }
-
-    @SuppressWarnings("unused") // Used by ServiceLoader.
-    public DexEngineHealthCheck() {
-        this(DexEngineHolder::get);
+    DexEngineHealthCheck(DexEngine engine) {
+        this.engine = requireNonNull(engine, "engine must not be null");
     }
 
     @Override
     public HealthCheckResponse call() {
-        final HealthCheckResponseBuilder responseBuilder =
-                HealthCheckResponse.named("dex-engine");
-
-        final DexEngine engine = engineSupplier.get();
-        if (engine == null) {
-            return responseBuilder.down().build();
-        }
-
         return engine.probeHealth();
     }
 

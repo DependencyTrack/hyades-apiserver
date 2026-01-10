@@ -29,16 +29,6 @@ import static org.mockito.Mockito.mock;
 class DexEngineHealthCheckTest {
 
     @Test
-    void shouldReportDownWhenEngineIsNull() {
-        final var healthCheck = new DexEngineHealthCheck(() -> null);
-
-        final HealthCheckResponse response = healthCheck.call();
-        assertThat(response).isNotNull();
-        assertThat(response.getStatus()).isEqualTo(HealthCheckResponse.Status.DOWN);
-        assertThat(response.getData()).isNotPresent();
-    }
-
-    @Test
     void shouldForwardEngineResponse() {
         final var response = HealthCheckResponse
                 .named("dex-engine")
@@ -49,7 +39,7 @@ class DexEngineHealthCheckTest {
         final var engineMock = mock(DexEngine.class);
         doReturn(response).when(engineMock).probeHealth();
 
-        final var healthCheck = new DexEngineHealthCheck(() -> engineMock);
+        final var healthCheck = new DexEngineHealthCheck(engineMock);
 
         assertThat(healthCheck.call()).isEqualTo(response);
     }

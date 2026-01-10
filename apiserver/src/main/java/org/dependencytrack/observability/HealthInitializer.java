@@ -16,27 +16,25 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex;
+package org.dependencytrack.observability;
 
-import org.dependencytrack.dex.engine.api.DexEngine;
-import org.jspecify.annotations.Nullable;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.health.HealthCheckRegistry;
 
 /**
  * @since 5.7.0
  */
-public final class DexEngineHolder {
+public final class HealthInitializer implements ServletContextListener {
 
-    private static volatile @Nullable DexEngine INSTANCE;
+    @Override
+    public void contextInitialized(ServletContextEvent event) {
+        final var healthCheckRegistry = new HealthCheckRegistry();
+        healthCheckRegistry.discoverChecks();
 
-    private DexEngineHolder() {
-    }
-
-    static void set(final @Nullable DexEngine engine) {
-        INSTANCE = engine;
-    }
-
-    public static @Nullable DexEngine get() {
-        return INSTANCE;
+        event.getServletContext().setAttribute(
+                HealthCheckRegistry.class.getName(),
+                healthCheckRegistry);
     }
 
 }

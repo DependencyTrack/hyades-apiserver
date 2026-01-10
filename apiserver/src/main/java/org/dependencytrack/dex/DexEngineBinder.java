@@ -18,10 +18,14 @@
  */
 package org.dependencytrack.dex;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
+import jakarta.servlet.ServletContext;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.glassfish.hk2.api.Factory;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
-import org.jspecify.annotations.Nullable;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
@@ -30,17 +34,31 @@ public final class DexEngineBinder extends AbstractBinder {
 
     @Override
     protected void configure() {
-        bindFactory(new Factory<DexEngine>() {
-            @Override
-            public @Nullable DexEngine provide() {
-                return DexEngineHolder.get();
-            }
+        bindFactory(DexEngineFactory.class)
+                .to(DexEngine.class)
+                .in(Singleton.class);
+    }
 
-            @Override
-            public void dispose(DexEngine instance) {
-                // Engine lifecycle is managed elsewhere.
-            }
-        }).to(DexEngine.class);
+    private static final class DexEngineFactory implements Factory<DexEngine> {
+
+        private final ServletContext servletContext;
+
+        @Inject
+        private DexEngineFactory(ServletContext servletContext) {
+            this.servletContext = servletContext;
+        }
+
+        @Override
+        public DexEngine provide() {
+            final var instance = (DexEngine) servletContext.getAttribute(DexEngine.class.getName());
+            return requireNonNull(instance, "dexEngine is not initialized");
+        }
+
+        @Override
+        public void dispose(DexEngine dexEngine) {
+            // Lifecycle is managed by DexEngineInitializer.
+        }
+
     }
 
 }

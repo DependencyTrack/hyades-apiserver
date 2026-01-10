@@ -18,18 +18,23 @@
  */
 package org.dependencytrack.event.kafka.processor;
 
+import org.dependencytrack.event.kafka.processor.api.ProcessorManager;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.Liveness;
 
-import static org.dependencytrack.event.kafka.processor.ProcessorInitializer.PROCESSOR_MANAGER;
-
 @Liveness
 public class ProcessorsHealthCheck implements HealthCheck {
 
+    private final ProcessorManager processorManager;
+
+    ProcessorsHealthCheck(ProcessorManager processorManager) {
+        this.processorManager = processorManager;
+    }
+
     @Override
     public HealthCheckResponse call() {
-        return PROCESSOR_MANAGER.probeHealth();
+        return processorManager.probeHealth();
     }
 
 }

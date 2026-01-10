@@ -20,32 +20,41 @@ package org.dependencytrack.common.health;
 
 import org.eclipse.microprofile.health.HealthCheck;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
  */
 public final class HealthCheckRegistry {
 
-    private static final HealthCheckRegistry INSTANCE = new HealthCheckRegistry();
-
     private final List<HealthCheck> checks;
 
-    public HealthCheckRegistry(final List<HealthCheck> checks) {
-        this.checks = checks;
+    public HealthCheckRegistry(List<HealthCheck> checks) {
+        this.checks = new ArrayList<>(checks);
     }
 
-    private HealthCheckRegistry() {
-        this(ServiceLoader.load(HealthCheck.class).stream().map(ServiceLoader.Provider::get).toList());
-    }
-
-    public static HealthCheckRegistry getInstance() {
-        return INSTANCE;
+    public HealthCheckRegistry() {
+        this(Collections.emptyList());
     }
 
     public List<HealthCheck> getChecks() {
         return List.copyOf(checks);
+    }
+
+    public void addCheck(HealthCheck healthCheck) {
+        requireNonNull(healthCheck, "healthCheck must not be null");
+        checks.add(healthCheck);
+    }
+
+    public void discoverChecks() {
+        ServiceLoader.load(HealthCheck.class).stream()
+                .map(ServiceLoader.Provider::get)
+                .forEach(this::addCheck);
     }
 
 }

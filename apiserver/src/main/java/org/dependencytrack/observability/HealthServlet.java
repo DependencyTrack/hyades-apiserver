@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -58,20 +59,20 @@ public final class HealthServlet extends HttpServlet {
 
     private static final Logger LOGGER = Logger.getLogger(HealthServlet.class);
 
-    private final HealthCheckRegistry checkRegistry;
+    private @Nullable HealthCheckRegistry checkRegistry;
     private @Nullable ObjectMapper objectMapper;
 
-    @SuppressWarnings("unused") // Used by servlet container.
-    public HealthServlet() {
-        this(HealthCheckRegistry.getInstance());
-    }
-
-    HealthServlet(HealthCheckRegistry checkRegistry) {
-        this.checkRegistry = checkRegistry;
-    }
-
     @Override
-    public void init() throws ServletException {
+    public void init(ServletConfig servletConfig) throws ServletException {
+        if (servletConfig
+                .getServletContext()
+                .getAttribute(HealthCheckRegistry.class.getName())
+                instanceof final HealthCheckRegistry healthCheckRegistry) {
+            this.checkRegistry = healthCheckRegistry;
+        } else {
+            throw new IllegalStateException("Health check registry is not initialized");
+        }
+
         objectMapper = new ObjectMapper()
                 // HealthCheckResponse#data is of type Optional.
                 // We need this module to correctly serialize Optional values.

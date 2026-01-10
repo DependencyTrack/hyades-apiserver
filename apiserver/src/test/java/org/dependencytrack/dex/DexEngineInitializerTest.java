@@ -19,20 +19,30 @@
 package org.dependencytrack.dex;
 
 import io.smallrye.config.SmallRyeConfigBuilder;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextEvent;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.dependencytrack.common.health.HealthCheckRegistry;
+import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.migration.MigrationExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.util.Collections;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 @Testcontainers
 class DexEngineInitializerTest {
@@ -60,12 +70,10 @@ class DexEngineInitializerTest {
         if (dataSourceRegistry != null) {
             dataSourceRegistry.closeAll();
         }
-
-        DexEngineHolder.set(null);
     }
 
     @Test
-    void shouldStartEngine() {
+    void shouldStartEngine() throws Exception {
         final var config = new SmallRyeConfigBuilder()
                 .withDefaultValues(Map.ofEntries(
                         Map.entry("dt.dex-engine.datasource.name", "foo"),
@@ -75,11 +83,26 @@ class DexEngineInitializerTest {
                 .build();
 
         dataSourceRegistry = new DataSourceRegistry(config);
+        final var healthCheckRegistry = new HealthCheckRegistry(Collections.emptyList());
+
+        final var servletContextMock = mock(ServletContext.class);
+        doReturn(healthCheckRegistry)
+                .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
 
         initializer = new DexEngineInitializer(config, dataSourceRegistry);
-        initializer.contextInitialized(null);
+        initializer.contextInitialized(new ServletContextEvent(servletContextMock));
 
-        assertThat(DexEngineHolder.get()).isNotNull();
+        final var engineCaptor = ArgumentCaptor.forClass(DexEngine.class);
+        verify(servletContextMock).setAttribute(
+                eq(DexEngine.class.getName()),
+                engineCaptor.capture());
+
+        assertThat(healthCheckRegistry.getChecks())
+                .satisfiesExactly(healthCheck -> assertThat(healthCheck).isInstanceOf(DexEngineHealthCheck.class));
+
+        final DexEngine engine = engineCaptor.getValue();
+        assertThat(engine).isNotNull();
+        engine.close();
     }
 
 }

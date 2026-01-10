@@ -26,6 +26,9 @@
         <listener-class>org.dependencytrack.dev.DevServicesInitializer</listener-class>
     </listener>
     <listener>
+        <listener-class>org.dependencytrack.observability.HealthInitializer</listener-class>
+    </listener>
+    <listener>
         <listener-class>org.dependencytrack.observability.MetricsInitializer</listener-class>
     </listener>
     <listener>
