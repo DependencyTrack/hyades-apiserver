@@ -38,11 +38,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.ProtectionDomain;
+import java.util.Comparator;
 import java.util.Properties;
+import java.util.stream.Stream;
 
 /**
  * The primary class that starts an embedded Jetty server
@@ -113,10 +118,37 @@ public final class EmbeddedJettyServer {
         context.setServer(server);
         context.setContextPath(contextPath);
         context.setErrorHandler(new ErrorHandler());
-        context.setTempDirectoryPersistent(false);
         context.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
         context.setAttribute("org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern", ".*/[^/]*taglibs.*\\.jar$");
         context.setThrowUnavailableOnStartupException(true);
+
+        // Define a static temp directory to extract the WAR file into.
+        // The directory name contains the host and port to accommodate
+        // for multiple instances running at the same time.
+        //
+        // Prevents Jetty from creating new directories with random
+        // names, which could lead to disk bloat if the server is
+        // not shut down gracefully: https://github.com/DependencyTrack/dependency-track/issues/4797
+        //
+        // Note that disabling WAR extraction entirely is not possible,
+        // because Java does not support loading nested JARs,
+        // which is needed to load dependencies from WEB-INF/lib/*.
+        final File tempDirectory = new File(
+                System.getProperty("java.io.tmpdir"),
+                "dependency-track-%s-%d".formatted(
+                        host.replaceAll("[^a-zA-Z0-9\\-_]", "_"),
+                        port));
+        context.setTempDirectory(tempDirectory);
+
+        if (tempDirectory.exists()) {
+            LOGGER.warn("Deleting stale temp directory: {}", tempDirectory);
+            try {
+                deleteRecursively(tempDirectory.toPath());
+            } catch (IOException e) {
+                LOGGER.error("Failed to delete stale temp directory: {}", tempDirectory, e);
+                System.exit(-1);
+            }
+        }
 
         // Prevent loading of logging classes
         context.getProtectedClassMatcher().add("org.apache.log4j.");
@@ -177,6 +209,12 @@ public final class EmbeddedJettyServer {
             return true;
         }
 
+    }
+
+    private static void deleteRecursively(Path path) throws IOException {
+        try (final Stream<Path> paths = Files.walk(path)) {
+            paths.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
+        }
     }
 
 }
