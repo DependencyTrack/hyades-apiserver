@@ -18,18 +18,16 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.model.Team;
 import alpine.persistence.PaginatedResult;
 import alpine.persistence.ScopedCustomization;
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
-import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.proto.v1.Notification;
-import org.dependencytrack.notification.publisher.PublisherClass;
+import org.jspecify.annotations.NonNull;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -149,27 +147,6 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
     }
 
     /**
-     * Retrieves a NotificationPublisher by its class.
-     * @param clazz The Class of the NotificationPublisher
-     * @return a NotificationPublisher
-     */
-    public NotificationPublisher getDefaultNotificationPublisher(final PublisherClass clazz) {
-        return getDefaultNotificationPublisher(clazz.name());
-    }
-
-    /**
-     * Retrieves a NotificationPublisher by its class.
-     * @param clazz The Class of the NotificationPublisher
-     * @return a NotificationPublisher
-     */
-    private NotificationPublisher getDefaultNotificationPublisher(final String clazz) {
-        final Query<NotificationPublisher> query = pm.newQuery(NotificationPublisher.class, "publisherClass == :publisherClass && defaultPublisher == true");
-        query.getFetchPlan().addGroup(NotificationPublisher.FetchGroup.ALL.name());
-        query.setRange(0, 1);
-        return singleResult(query.execute(clazz));
-    }
-
-    /**
      * Retrieves a DefaultNotificationPublisher by its name.
      * @param name The name of the DefaultNotificationPublisher
      * @return a DefaultNotificationPublisher
@@ -186,14 +163,18 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
      * @param name The name of the NotificationPublisher
      * @return a NotificationPublisher
      */
-    public NotificationPublisher createNotificationPublisher(final String name, final String description,
-                                                             final String publisherClass, final String templateContent,
-                                                             final String templateMimeType, final boolean defaultPublisher) {
+    public NotificationPublisher createNotificationPublisher(
+            @NonNull String name,
+            String description,
+            @NonNull String extensionName,
+            String templateContent,
+            String templateMimeType,
+            boolean defaultPublisher) {
         return callInTransaction(() -> {
             final NotificationPublisher publisher = new NotificationPublisher();
             publisher.setName(name);
             publisher.setDescription(description);
-            publisher.setPublisherClass(publisherClass);
+            publisher.setExtensionName(extensionName);
             publisher.setTemplate(templateContent);
             publisher.setTemplateMimeType(templateMimeType);
             publisher.setDefaultPublisher(defaultPublisher);
@@ -206,61 +187,17 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
      * @return a NotificationPublisher object
      */
     public NotificationPublisher updateNotificationPublisher(NotificationPublisher transientPublisher) {
-        NotificationPublisher publisher = null;
-        if (transientPublisher.getId() > 0) {
-            publisher = getObjectById(NotificationPublisher.class, transientPublisher.getId());
-        } else if (transientPublisher.isDefaultPublisher()) {
-            publisher = getDefaultNotificationPublisher(transientPublisher.getPublisherClass());
-        }
+        final var publisher = getObjectById(NotificationPublisher.class, transientPublisher.getId());
         if (publisher != null) {
             publisher.setName(transientPublisher.getName());
             publisher.setDescription(transientPublisher.getDescription());
-            publisher.setPublisherClass(transientPublisher.getPublisherClass());
+            publisher.setExtensionName(transientPublisher.getExtensionName());
             publisher.setTemplate(transientPublisher.getTemplate());
             publisher.setTemplateMimeType(transientPublisher.getTemplateMimeType());
             publisher.setDefaultPublisher(transientPublisher.isDefaultPublisher());
             return persist(publisher);
         }
         return null;
-    }
-
-    /**
-     * Removes projects from NotificationRules
-     */
-    @SuppressWarnings("unchecked")
-    public void removeProjectFromNotificationRules(final Project project) {
-        final Query<NotificationRule> query = pm.newQuery(NotificationRule.class, "projects.contains(:project)");
-        try {
-            for (final NotificationRule rule : (List<NotificationRule>) query.execute(project)) {
-                rule.getProjects().remove(project);
-                if (!pm.currentTransaction().isActive()) {
-                    persist(rule);
-                }
-            }
-        } finally {
-            query.closeAll();
-        }
-    }
-
-    /**
-     * Removes teams from NotificationRules
-     */
-    @SuppressWarnings("unchecked")
-    public void removeTeamFromNotificationRules(final Team team) {
-        final Query<NotificationRule> query = pm.newQuery(NotificationRule.class, "teams.contains(:team)");
-        for (final NotificationRule rule: (List<NotificationRule>) query.execute(team)) {
-            rule.getTeams().remove(team);
-            persist(rule);
-        }
-    }
-
-    /**
-     * Delete a notification publisher and associated rules.
-     */
-    public void deleteNotificationPublisher(final NotificationPublisher notificationPublisher) {
-        final Query<NotificationRule> query = pm.newQuery(NotificationRule.class, "publisher.uuid == :uuid");
-        query.deletePersistentAll(notificationPublisher.getUuid());
-        delete(notificationPublisher);
     }
 
     /**

@@ -608,4 +608,77 @@
     <changeSet id="v5.7.0-29" author="nscuro">
         <dropTable tableName="EVENTSERVICELOG"/>
     </changeSet>
+
+    <changeSet id="v5.7.0-30" author="nscuro">
+        <sql splitStatements="true">
+            UPDATE "NOTIFICATIONPUBLISHER"
+               SET "PUBLISHER_CLASS" = t.extension_name
+              FROM (
+                VALUES ('ConsolePublisher', 'console')
+                     , ('CsWebexPublisher', 'webex')
+                     , ('JiraPublisher', 'jira')
+                     , ('MattermostPublisher', 'mattermost')
+                     , ('MsTeamsPublisher', 'msteams')
+                     , ('SendMailPublisher', 'email')
+                     , ('SlackPublisher', 'slack')
+                     , ('WebhookPublisher', 'webhook')
+              ) AS t(publisher_class, extension_name)
+             WHERE "PUBLISHER_CLASS" = t.publisher_class;
+
+            ALTER TABLE "NOTIFICATIONPUBLISHER" RENAME COLUMN "PUBLISHER_CLASS" TO "EXTENSION_NAME";
+
+            ALTER TABLE "NOTIFICATIONPUBLISHER" ALTER COLUMN "TEMPLATE_MIME_TYPE" DROP NOT NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-31" author="nscuro">
+        <sql splitStatements="true">
+            ALTER TABLE "NOTIFICATIONRULE" ADD COLUMN "NOTIFY_ON_ARRAY" TEXT[];
+
+            UPDATE "NOTIFICATIONRULE"
+               SET "NOTIFY_ON_ARRAY" = STRING_TO_ARRAY("NOTIFY_ON", ',')
+             WHERE "NOTIFY_ON" IS NOT NULL;
+
+            ALTER TABLE "NOTIFICATIONRULE" DROP COLUMN "NOTIFY_ON";
+            ALTER TABLE "NOTIFICATIONRULE" RENAME COLUMN "NOTIFY_ON_ARRAY" TO "NOTIFY_ON";
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-32" author="nscuro">
+        <sql>
+            ALTER TABLE "NOTIFICATIONRULE"
+            ALTER COLUMN "PUBLISHER_CONFIG"
+            TYPE JSONB USING "PUBLISHER_CONFIG"::JSONB;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-33" author="nscuro">
+        <sql splitStatements="true">
+            UPDATE "NOTIFICATIONRULE" AS r
+               SET "PUBLISHER_CONFIG" = NULL
+              FROM "NOTIFICATIONPUBLISHER" AS p
+             WHERE p."ID" = r."PUBLISHER"
+               AND p."EXTENSION_NAME" = 'console'
+               AND r."PUBLISHER_CONFIG" IS NOT NULL;
+
+            UPDATE "NOTIFICATIONRULE" AS r
+               SET "PUBLISHER_CONFIG" = JSONB_BUILD_OBJECT(
+                     'apiUrl', 'https://jira.example.com'
+                   , 'passwordOrToken', '{{ secret(''JIRA_API_TOKEN'') }}'
+                   , 'projectKey', COALESCE("PUBLISHER_CONFIG" ->> 'destination', 'EXAMPLE')
+                   , 'ticketType', COALESCE("PUBLISHER_CONFIG" ->> 'jiraTicketType', 'TASK')
+                   )
+              FROM "NOTIFICATIONPUBLISHER" AS p
+             WHERE p."ID" = r."PUBLISHER"
+               AND p."EXTENSION_NAME" = 'jira';
+
+            UPDATE "NOTIFICATIONRULE" AS r
+               SET "PUBLISHER_CONFIG" = JSONB_BUILD_OBJECT(
+                     'destinationUrl', COALESCE("PUBLISHER_CONFIG" ->> 'destination', 'https://example.com')
+                   )
+              FROM "NOTIFICATIONPUBLISHER" AS p
+             WHERE p."ID" = r."PUBLISHER"
+               AND p."EXTENSION_NAME" IN ('mattermost', 'msteams', 'slack', 'webex', 'webhook');
+        </sql>
+    </changeSet>
 </databaseChangeLog>

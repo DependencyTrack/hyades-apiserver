@@ -40,7 +40,7 @@ class NotificationRuleContactsSupplierTest extends PersistenceCapableTest {
         final NotificationPublisher publisher = qm.createNotificationPublisher(
                 "test",
                 "description",
-                "publisherClass",
+                "extensionName",
                 "templateContent",
                 "templateMimeType",
                 false);

@@ -136,9 +136,7 @@ public final class RuntimeConfigMapper {
         requireNonNull(config, "config must not be null");
 
         try {
-            return jsonMapper
-                    .writerWithDefaultPrettyPrinter()
-                    .writeValueAsString(config);
+            return jsonMapper.writeValueAsString(config);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

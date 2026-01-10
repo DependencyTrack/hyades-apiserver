@@ -29,7 +29,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import org.apache.commons.collections4.CollectionUtils;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
@@ -48,12 +47,11 @@ import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Defines a Model class for notification configurations.
@@ -133,9 +131,9 @@ public class NotificationRule implements Serializable {
     @Element(column = "TEAM_ID", foreignKey = "NOTIFICATIONRULE_TEAMS_TEAM_FK", deleteAction = ForeignKeyAction.CASCADE)
     private Set<Team> teams;
 
-    @Persistent
-    @Column(name = "NOTIFY_ON", length = 1024)
-    private String notifyOn;
+    @Persistent(defaultFetchGroup = "true")
+    @Column(name = "NOTIFY_ON", jdbcType = "ARRAY", sqlType = "TEXT ARRAY")
+    private Set<String> notifyOn = new LinkedHashSet<>();
 
     @Persistent
     @Column(name = "MESSAGE", length = 1024)
@@ -151,6 +149,10 @@ public class NotificationRule implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "PUBLISHER_CONFIG", jdbcType = "CLOB")
+    @Extensions(value = {
+            @Extension(vendorName = "datanucleus", key = "insert-function", value = "CAST(? AS JSONB)"),
+            @Extension(vendorName = "datanucleus", key = "update-function", value = "CAST(? AS JSONB)")
+    })
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String publisherConfig;
 
@@ -252,31 +254,23 @@ public class NotificationRule implements Serializable {
     }
 
     public Set<NotificationGroup> getNotifyOn() {
-        Set<NotificationGroup> result = new TreeSet<>();
-        if (notifyOn != null) {
-            String[] groups = notifyOn.split(",");
-            for (String s: groups) {
-                result.add(NotificationGroup.valueOf(s.trim()));
-            }
+        if (notifyOn == null) {
+            return null;
         }
-        return result;
+
+        return notifyOn.stream()
+                .map(NotificationGroup::valueOf)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     public void setNotifyOn(Set<NotificationGroup> groups) {
-        if (CollectionUtils.isEmpty(groups)) {
+        if (groups == null) {
             this.notifyOn = null;
-            return;
+        } else {
+            this.notifyOn = groups.stream()
+                    .map(Enum::name)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
         }
-        StringBuilder sb = new StringBuilder();
-        List<NotificationGroup> list = new ArrayList<>(groups);
-        Collections.sort(list);
-        for (int i=0; i<list.size(); i++) {
-            sb.append(list.get(i));
-            if (i+1 < list.size()) {
-                sb.append(",");
-            }
-        }
-        this.notifyOn = sb.toString();
     }
 
     public NotificationPublisher getPublisher() {

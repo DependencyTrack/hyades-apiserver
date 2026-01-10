@@ -63,7 +63,7 @@ public final class EmailNotificationPublisherFactory implements NotificationPubl
                         .withPort(25)
                         .withSslEnabled(false)
                         .withStartTlsEnabled(false))
-                .withSenderAddress("dependencytrack@localhost")
+                .withSenderAddress("dependencytrack@example.com")
                 .withSubjectPrefix("[Dependency-Track]");
 
         return new RuntimeConfigSpec(defaultConfig);

@@ -19,82 +19,89 @@
 package org.dependencytrack.notification;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import org.apache.kafka.clients.producer.MockProducer;
-import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.model.NotificationPublisher;
+import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.notification.api.TestNotificationFactory;
 import org.dependencytrack.notification.proto.v1.Notification;
+import org.dependencytrack.plugin.PluginManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.awaitility.Awaitility.await;
-import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
-import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 
-public class NotificationOutboxRelayTest extends PersistenceCapableTest {
+class NotificationOutboxRelayTest extends PersistenceCapableTest {
 
-    private MockProducer<byte[], byte[]> mockProducer;
+    private DexEngine dexEngineMock;
+    private PluginManager pluginManagerMock;
+    private NotificationRouter routerMock;
     private NotificationOutboxRelay relay;
 
     @BeforeEach
-    @Override
-    public void before() throws Exception {
-        super.before();
-
-        mockProducer = new MockProducer<>(
-                /* autoComplete */ false,
-                /* partitioner */ null,
-                new ByteArraySerializer(),
-                new ByteArraySerializer());
+    void beforeEach() {
+        dexEngineMock = mock(DexEngine.class);
+        pluginManagerMock = mock(PluginManager.class);
+        routerMock = mock(NotificationRouter.class);
         relay = new NotificationOutboxRelay(
-                new KafkaEventDispatcher(mockProducer),
+                dexEngineMock,
+                pluginManagerMock,
+                ignored -> routerMock,
                 new SimpleMeterRegistry(),
-                /* routerEnabled */ true,
                 /* pollIntervalMillis */ 10,
                 /* batchSize */ 10);
     }
 
     @AfterEach
-    @Override
-    public void after() {
+    void afterEach() {
         if (relay != null) {
             relay.close();
         }
-        if (mockProducer != null) {
-            mockProducer.close();
-        }
-
-        super.after();
     }
 
     @Test
-    public void shouldRelayNotification() {
-        final Notification notification = org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification();
+    void shouldRelayNotification() {
+        final Notification notification = TestNotificationFactory.createBomConsumedTestNotification();
+
+        createMatchingRule(notification);
 
         new JdoNotificationEmitter(qm).emit(notification);
 
+        doReturn(List.of(new NotificationPublishTask(1, "ruleName", notification)))
+                .when(routerMock).route(anyCollection());
+
         relay.start();
+
+        //noinspection unchecked
+        final ArgumentCaptor<Collection<CreateWorkflowRunRequest<?>>> createRunsCaptor =
+                ArgumentCaptor.forClass(Collection.class);
 
         await("Kafka producer send completion")
                 .atMost(1, TimeUnit.SECONDS)
-                .until(() -> mockProducer.completeNext());
+                .untilAsserted(() -> Mockito.verify(dexEngineMock).createRuns(createRunsCaptor.capture()));
 
-        assertThat(mockProducer.history()).satisfiesExactly(record -> {
-            final String key = deserializeKey(
-                    KafkaTopics.NOTIFICATION_BOM, record);
-            assertThat(key).isEqualTo("c9c9539a-e381-4b36-ac52-6a7ab83b2c95");
-
-            final Notification value = deserializeValue(
-                    KafkaTopics.NOTIFICATION_BOM, record);
-            assertThat(value).isEqualTo(notification);
+        assertThat(createRunsCaptor.getValue()).satisfiesExactly(request -> {
+            assertThat(request.workflowName()).isEqualTo("publish-notification");
+            assertThat(request.workflowVersion()).isEqualTo(1);
         });
 
         await("Outbox record removal")
@@ -103,35 +110,37 @@ public class NotificationOutboxRelayTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void shouldRetryOnFailedSend() {
+    void shouldRetryOnFailedSend() {
         final Notification notification = TestNotificationFactory.createBomConsumedTestNotification();
+
+        createMatchingRule(notification);
 
         new JdoNotificationEmitter(qm).emit(notification);
 
+        doReturn(List.of(new NotificationPublishTask(1, "ruleName", notification)))
+                .when(routerMock).route(anyCollection());
+
         relay.start();
 
-        await("Kafka producer send failure")
-                .atMost(1, TimeUnit.SECONDS)
-                .until(() -> mockProducer.errorNext(new IllegalStateException("Boom!")));
+        doThrow(new IllegalStateException("Boom!"))
+                .doReturn(List.of(UUID.fromString("2777be5d-5a95-40b3-9226-311874a21bf6")))
+                .when(dexEngineMock).createRuns(anyCollection());
 
-        assertThat(qm.getNotificationOutbox()).hasSize(1);
+        //noinspection unchecked
+        final ArgumentCaptor<Collection<CreateWorkflowRunRequest<?>>> requestsCaptor =
+                ArgumentCaptor.forClass(Collection.class);
 
         await("Kafka producer send completion")
                 .atMost(1, TimeUnit.SECONDS)
-                .until(() -> mockProducer.completeNext());
+                .untilAsserted(() -> Mockito.verify(dexEngineMock, times(2)).createRuns(requestsCaptor.capture()));
 
-        // Mock producer keeps all records in its history,
-        // even if delivery of them failed.
-        assertThat(mockProducer.history())
+        assertThat(requestsCaptor.getAllValues())
                 .hasSizeGreaterThanOrEqualTo(2)
-                .anySatisfy(record -> {
-                    final String key = deserializeKey(
-                            KafkaTopics.NOTIFICATION_BOM, record);
-                    assertThat(key).isEqualTo("c9c9539a-e381-4b36-ac52-6a7ab83b2c95");
-
-                    final Notification value = deserializeValue(
-                            KafkaTopics.NOTIFICATION_BOM, record);
-                    assertThat(value).isEqualTo(notification);
+                .allSatisfy(requests -> {
+                    assertThat(requests).satisfiesExactly(request -> {
+                        assertThat(request.workflowName()).isEqualTo("publish-notification");
+                        assertThat(request.workflowVersion()).isEqualTo(1);
+                    });
                 });
 
         await("Outbox record removal")
@@ -139,61 +148,104 @@ public class NotificationOutboxRelayTest extends PersistenceCapableTest {
                 .untilAsserted(() -> assertThat(qm.getNotificationOutbox()).isEmpty());
     }
 
-    @Test
-    @SuppressWarnings("resource")
-    public void constructorShouldThrowWhenDelegateDispatcherIsNull() {
-        assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new NotificationOutboxRelay(
-                        null,
-                        new SimpleMeterRegistry(),
-                        true,
-                        100,
-                        10));
+    @Nested
+    class ConstructorTest {
+
+        @Test
+        @SuppressWarnings("resource")
+        void shouldThrowWhenDexEngineIsNull() {
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> new NotificationOutboxRelay(
+                            null,
+                            pluginManagerMock,
+                            ignored -> routerMock,
+                            new SimpleMeterRegistry(),
+                            100,
+                            10));
+        }
+
+        @Test
+        void shouldThrowWhenPluginManagerIsNull() {
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> new NotificationOutboxRelay(
+                            dexEngineMock,
+                            null,
+                            ignored -> routerMock,
+                            new SimpleMeterRegistry(),
+                            100,
+                            10));
+        }
+
+        @Test
+        void shouldThrowWhenRouterFactoryIsNull() {
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> new NotificationOutboxRelay(
+                            dexEngineMock,
+                            pluginManagerMock,
+                            null,
+                            new SimpleMeterRegistry(),
+                            100,
+                            10));
+        }
+
+        @Test
+        void shouldThrowWhenMeterRegistryIsNull() {
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> new NotificationOutboxRelay(
+                            dexEngineMock,
+                            pluginManagerMock,
+                            ignored -> routerMock,
+                            null,
+                            100,
+                            10));
+        }
+
+        @Test
+        void shouldThrowWhenPollIntervalIsZero() {
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> new NotificationOutboxRelay(
+                            dexEngineMock,
+                            pluginManagerMock,
+                            ignored -> routerMock,
+                            new SimpleMeterRegistry(),
+                            0,
+                            10));
+        }
+
+        @Test
+        void shouldThrowWhenBatchSizeIsZero() {
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> new NotificationOutboxRelay(
+                            dexEngineMock,
+                            pluginManagerMock,
+                            ignored -> routerMock,
+                            new SimpleMeterRegistry(),
+                            100,
+                            0));
+        }
+
     }
 
     @Test
-    @SuppressWarnings("resource")
-    public void constructorShouldThrowWhenMeterRegistryIsNull() {
-        assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new NotificationOutboxRelay(
-                        new KafkaEventDispatcher(mockProducer),
-                        null,
-                        true,
-                        100,
-                        10));
-    }
-
-    @Test
-    @SuppressWarnings("resource")
-    public void constructorShouldThrowWhenPollIntervalIsZero() {
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> new NotificationOutboxRelay(
-                        new KafkaEventDispatcher(mockProducer),
-                        new SimpleMeterRegistry(),
-                        true,
-                        0,
-                        10));
-    }
-
-    @Test
-    @SuppressWarnings("resource")
-    public void constructorShouldThrowWhenBatchSizeIsZero() {
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> new NotificationOutboxRelay(
-                        new KafkaEventDispatcher(mockProducer),
-                        new SimpleMeterRegistry(),
-                        true,
-                        100,
-                        0));
-    }
-
-    @Test
-    public void startShouldThrowWhenCalledMultipleTimes() {
+    void startShouldThrowWhenCalledMultipleTimes() {
         assertThatNoException().isThrownBy(() -> relay.start());
 
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> relay.start())
                 .withMessage("Already started");
+    }
+
+    private void createMatchingRule(Notification notification) {
+        qm.runInTransaction(() -> {
+            final NotificationPublisher publisher = qm.createNotificationPublisher(
+                    "publisherName", "description", "extensionName", "templateContent", "templateMimeType", false);
+            final NotificationRule rule = qm.createNotificationRule(
+                    "ruleName",
+                    NotificationModelConverter.convert(notification.getScope()),
+                    NotificationModelConverter.convert(notification.getLevel()),
+                    publisher);
+            rule.setNotifyOn(Set.of(NotificationModelConverter.convert(notification.getGroup())));
+        });
     }
 
 }

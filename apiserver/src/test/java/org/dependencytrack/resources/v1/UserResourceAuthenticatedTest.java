@@ -37,6 +37,7 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
+import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.resources.v1.vo.ModifyUserProjectRoleRequest;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -52,12 +53,13 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.dependencytrack.notification.NotificationTestUtil.createCatchAllNotificationRule;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_USER_CREATED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_USER_DELETED;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_SYSTEM;
 
-public class UserResourceAuthenticatedTest extends ResourceTest {
+class UserResourceAuthenticatedTest extends ResourceTest {
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
@@ -69,16 +71,14 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     private String jwt;
 
     @BeforeEach
-    @Override
-    public void before() throws Exception {
-        super.before();
+    void beforeEach() {
         testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         this.jwt = new JsonWebToken().createToken(testUser);
         qm.addUserToTeam(testUser, team);
     }
 
     @Test
-    public void getManagedUsersTest() {
+    void getManagedUsersTest() {
         for (int i=0; i<1000; i++) {
             qm.createManagedUser("managed-user-" + i, TEST_USER_PASSWORD_HASH);
         }
@@ -94,7 +94,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void getLdapUsersTest() {
+    void getLdapUsersTest() {
         for (int i=0; i<1000; i++) {
             qm.createLdapUser("ldap-user-" + i);
         }
@@ -110,7 +110,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void getSelfTest() {
+    void getSelfTest() {
         Response response = jersey.target(V1_USER + "/self").request()
                 .header("Authorization", "Bearer " + jwt)
                 .get(Response.class);
@@ -122,7 +122,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void getSelfNonUserTest() {
+    void getSelfNonUserTest() {
         Response response = jersey.target(V1_USER + "/self").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -130,7 +130,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void updateSelfTest() {
+    void updateSelfTest() {
         ManagedUser user = new ManagedUser();
         user.setUsername(testUser.getUsername());
         user.setFullname("Captain BlackBeard");
@@ -147,7 +147,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void updateSelfInvalidFullnameTest() {
+    void updateSelfInvalidFullnameTest() {
         ManagedUser user = new ManagedUser();
         user.setUsername(testUser.getUsername());
         user.setFullname("");
@@ -161,7 +161,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void updateSelfInvalidEmailTest() {
+    void updateSelfInvalidEmailTest() {
         ManagedUser user = new ManagedUser();
         user.setUsername(testUser.getUsername());
         user.setFullname("Captain BlackBeard");
@@ -175,7 +175,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void updateSelfUnauthorizedTest() {
+    void updateSelfUnauthorizedTest() {
         ManagedUser user = new ManagedUser();
         user.setUsername(testUser.getUsername());
         Response response = jersey.target(V1_USER + "/self").request()
@@ -185,7 +185,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void updateSelfPasswordsTest() {
+    void updateSelfPasswordsTest() {
         ManagedUser user = new ManagedUser();
         user.setUsername(testUser.getUsername());
         user.setFullname("Captain BlackBeard");
@@ -204,7 +204,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void updateSelfPasswordMismatchTest() {
+    void updateSelfPasswordMismatchTest() {
         ManagedUser user = new ManagedUser();
         user.setUsername(testUser.getUsername());
         user.setFullname("Captain BlackBeard");
@@ -220,7 +220,9 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void createLdapUserTest() throws InterruptedException {
+    void createLdapUserTest() {
+        createCatchAllNotificationRule(qm, NotificationScope.SYSTEM);
+
         LdapUser user = new LdapUser();
         user.setUsername("blackbeard");
         Response response = jersey.target(V1_USER + "/ldap").request()
@@ -242,7 +244,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void createLdapUserInvalidUsernameTest() throws InterruptedException {
+    void createLdapUserInvalidUsernameTest() {
         LdapUser user = new LdapUser();
         user.setUsername("");
         Response response = jersey.target(V1_USER + "/ldap").request()
@@ -257,7 +259,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void createLdapUserDuplicateUsernameTest() {
+    void createLdapUserDuplicateUsernameTest() {
         qm.createLdapUser("blackbeard");
         LdapUser user = new LdapUser();
         user.setUsername("blackbeard");
@@ -270,7 +272,9 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void deleteLdapUserTest() {
+    void deleteLdapUserTest() {
+        createCatchAllNotificationRule(qm, NotificationScope.SYSTEM);
+
         qm.createLdapUser("blackbeard");
         LdapUser user = new LdapUser();
         user.setUsername("blackbeard");
@@ -291,7 +295,9 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void createManagedUserTest() throws InterruptedException {
+    void createManagedUserTest() {
+        createCatchAllNotificationRule(qm, NotificationScope.SYSTEM);
+
         ManagedUser user = new ManagedUser();
         user.setFullname("Captain BlackBeard");
         user.setEmail("blackbeard@example.com");
@@ -319,7 +325,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void createManagedUserInvalidUsernameTest() {
+    void createManagedUserInvalidUsernameTest() {
         ManagedUser user = new ManagedUser();
         user.setFullname("Captain BlackBeard");
         user.setEmail("blackbeard@example.com");
@@ -336,7 +342,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void createManagedUserInvalidFullnameTest() {
+    void createManagedUserInvalidFullnameTest() {
         ManagedUser user = new ManagedUser();
         user.setFullname("");
         user.setEmail("blackbeard@example.com");
@@ -353,7 +359,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void createManagedUserInvalidEmailTest() {
+    void createManagedUserInvalidEmailTest() {
         ManagedUser user = new ManagedUser();
         user.setFullname("Captain BlackBeard");
         user.setEmail("");
@@ -370,7 +376,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void createManagedUserInvalidPasswordTest() {
+    void createManagedUserInvalidPasswordTest() {
         ManagedUser user = new ManagedUser();
         user.setFullname("Captain BlackBeard");
         user.setEmail("blackbeard@example.com");
@@ -387,7 +393,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void createManagedUserPasswordMismatchTest() {
+    void createManagedUserPasswordMismatchTest() {
         ManagedUser user = new ManagedUser();
         user.setFullname("Captain BlackBeard");
         user.setEmail("blackbeard@example.com");
@@ -404,7 +410,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void createManagedUserDuplicateUsernameTest() {
+    void createManagedUserDuplicateUsernameTest() {
         qm.createManagedUser("blackbeard", TEST_USER_PASSWORD_HASH);
         ManagedUser user = new ManagedUser();
         user.setFullname("Captain BlackBeard");
@@ -422,7 +428,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void updateManagedUserTest() {
+    void updateManagedUserTest() {
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         ManagedUser user = new ManagedUser();
         user.setUsername("blackbeard");
@@ -446,7 +452,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void updateManagedUserInvalidFullnameTest() {
+    void updateManagedUserInvalidFullnameTest() {
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         ManagedUser user = new ManagedUser();
         user.setUsername("blackbeard");
@@ -465,7 +471,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void updateManagedUserInvalidEmailTest() {
+    void updateManagedUserInvalidEmailTest() {
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         ManagedUser user = new ManagedUser();
         user.setUsername("blackbeard");
@@ -484,7 +490,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void updateManagedUserInvalidUsernameTest() {
+    void updateManagedUserInvalidUsernameTest() {
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         ManagedUser user = new ManagedUser();
         user.setUsername("");
@@ -503,7 +509,9 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void deleteManagedUserTest() throws InterruptedException {
+    void deleteManagedUserTest() {
+        createCatchAllNotificationRule(qm, NotificationScope.SYSTEM);
+
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         ManagedUser user = new ManagedUser();
         user.setUsername("blackbeard");
@@ -524,7 +532,9 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void createOidcUserTest() throws InterruptedException {
+    void createOidcUserTest() {
+        createCatchAllNotificationRule(qm, NotificationScope.SYSTEM);
+
         final OidcUser user = new OidcUser();
         user.setUsername("blackbeard");
         Response response = jersey.target(V1_USER + "/oidc").request()
@@ -546,7 +556,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void createOidcUserDuplicateUsernameTest() {
+    void createOidcUserDuplicateUsernameTest() {
         qm.createOidcUser("blackbeard");
         final OidcUser user = new OidcUser();
         user.setUsername("blackbeard");
@@ -559,7 +569,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void deleteOidcUserTest() {
+    void deleteOidcUserTest() {
         qm.createOidcUser("blackbeard");
         OidcUser user = new OidcUser();
         user.setUsername("blackbeard");
@@ -572,7 +582,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void addTeamToUserTest() {
+    void addTeamToUserTest() {
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         Team team = qm.createTeam("Pirates");
         IdentifiableObject ido = new IdentifiableObject();
@@ -594,7 +604,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void addTeamToUserInvalidTeamTest() {
+    void addTeamToUserInvalidTeamTest() {
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         IdentifiableObject ido = new IdentifiableObject();
         ido.setUuid(UUID.randomUUID().toString());
@@ -610,7 +620,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void addTeamToUserInvalidUserTest() {
+    void addTeamToUserInvalidUserTest() {
         Team team = qm.createTeam("Pirates");
         IdentifiableObject ido = new IdentifiableObject();
         ido.setUuid(team.getUuid().toString());
@@ -626,7 +636,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void addTeamToUserDuplicateMembershipTest() {
+    void addTeamToUserDuplicateMembershipTest() {
         Team team = qm.createTeam("Pirates");
         ManagedUser user = qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         qm.addUserToTeam(user, team);
@@ -643,7 +653,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void removeTeamFromUserTest() {
+    void removeTeamFromUserTest() {
         Team team = qm.createTeam("Pirates");
         ManagedUser user = qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         qm.addUserToTeam(user, team);
@@ -658,7 +668,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void setUserTeamsTest() {
+    void setUserTeamsTest() {
         String username = qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
         TEST_USER_PASSWORD_HASH, false, false, false).getUsername();
         String endpoint = V1_USER + "/membership";
@@ -716,7 +726,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void setUserTeamsInvalidTest() {
+    void setUserTeamsInvalidTest() {
         String endpoint = V1_USER + "/membership";
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
                 TEST_USER_PASSWORD_HASH, false, false, false);
@@ -748,7 +758,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void assignProjectRoleToUserTest() {
+    void assignProjectRoleToUserTest() {
         // Arrange
         ManagedUser user = qm.createManagedUser("roleuser", TEST_USER_PASSWORD_HASH);
         Project project = qm.createProject(
@@ -777,7 +787,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void assignProjectRoleToUserAlreadyAssignedTest() {
+    void assignProjectRoleToUserAlreadyAssignedTest() {
         ManagedUser user = qm.createManagedUser("roleuser2", TEST_USER_PASSWORD_HASH);
         Project project = qm.createProject(
                 "Test Project 2","null",
@@ -800,7 +810,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void removeProjectRoleFromUserTest() {
+    void removeProjectRoleFromUserTest() {
         ManagedUser user = qm.createManagedUser("roleuser3", TEST_USER_PASSWORD_HASH);
         Project project = qm.createProject(
                 "Test Project 3","null",
@@ -824,7 +834,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void removeProjectRoleFromUserNotAssignedTest() {
+    void removeProjectRoleFromUserNotAssignedTest() {
         ManagedUser user = qm.createManagedUser("roleuser4", TEST_USER_PASSWORD_HASH);
         Project project = qm.createProject(
                 "Test Project 4","null",

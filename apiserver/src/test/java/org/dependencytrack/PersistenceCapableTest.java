@@ -115,8 +115,15 @@ public abstract class PersistenceCapableTest {
                     DO $$ DECLARE
                         r RECORD;
                     BEGIN
-                        FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = CURRENT_SCHEMA()) LOOP
-                            EXECUTE 'TRUNCATE TABLE ' || QUOTE_IDENT(r.tablename) || ' CASCADE';
+                        FOR r IN (
+                          SELECT tablename
+                            FROM pg_tables
+                           WHERE schemaname = CURRENT_SCHEMA()
+                           -- Do not truncate Liquibase / Flyway changelog tables.
+                             AND tablename != 'databasechangelog'
+                             AND tablename !~ '^.+schema_history$'
+                        ) LOOP
+                            EXECUTE FORMAT('TRUNCATE TABLE %I CASCADE', r.tablename);
                         END LOOP;
                     END $$;
                     """);
@@ -125,8 +132,8 @@ public abstract class PersistenceCapableTest {
                     DO $$
                     DECLARE
                       partition_name TEXT;
-                      today_partition_pattern TEXT := format('^(PROJECT|DEPENDENCY)METRICS_%s', TO_CHAR(CURRENT_DATE, 'YYYYMMDD'));
-                      tomorrow_partition_pattern TEXT := format('^(PROJECT|DEPENDENCY)METRICS_%s', TO_CHAR(CURRENT_DATE + 1, 'YYYYMMDD'));
+                      today_partition_pattern TEXT := FORMAT('^(PROJECT|DEPENDENCY)METRICS_%s', TO_CHAR(CURRENT_DATE, 'YYYYMMDD'));
+                      tomorrow_partition_pattern TEXT := FORMAT('^(PROJECT|DEPENDENCY)METRICS_%s', TO_CHAR(CURRENT_DATE + 1, 'YYYYMMDD'));
                     BEGIN
                       FOR partition_name IN
                         SELECT tablename
@@ -135,7 +142,7 @@ public abstract class PersistenceCapableTest {
                            AND tablename !~ today_partition_pattern
                            AND tablename !~ tomorrow_partition_pattern
                       LOOP
-                        EXECUTE format('DROP TABLE "%s"', partition_name);
+                        EXECUTE FORMAT('DROP TABLE %I', partition_name);
                       END LOOP;
                     END $$;
                     """);
