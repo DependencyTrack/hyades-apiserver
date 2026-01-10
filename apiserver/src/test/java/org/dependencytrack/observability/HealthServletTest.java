@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.observability;
 
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.javacrumbs.jsonunit.core.Option;
@@ -41,6 +43,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -48,12 +51,18 @@ import static org.mockito.Mockito.when;
 
 class HealthServletTest {
 
+    private ServletContext servletContextMock;
+    private ServletConfig servletConfigMock;
     private HttpServletRequest requestMock;
     private HttpServletResponse responseMock;
     private ByteArrayOutputStream responseOutputStream;
 
     @BeforeEach
     void beforeEach() throws Exception {
+        servletContextMock = mock(ServletContext.class);
+        servletConfigMock = mock(ServletConfig.class);
+        when(servletConfigMock.getServletContext()).thenReturn(servletContextMock);
+
         requestMock = mock(HttpServletRequest.class);
         responseMock = mock(HttpServletResponse.class);
         responseOutputStream = new ByteArrayOutputStream();
@@ -63,8 +72,11 @@ class HealthServletTest {
 
     @Test
     void shouldReportStatusUpWhenNoChecksAreRegistered() throws Exception {
-        final var servlet = new HealthServlet(new HealthCheckRegistry(Collections.emptyList()));
-        servlet.init();
+        doReturn(new HealthCheckRegistry(Collections.emptyList()))
+                .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
+
+        final var servlet = new HealthServlet();
+        servlet.init(servletConfigMock);
         servlet.doGet(requestMock, responseMock);
 
         verify(responseMock).setStatus(eq(200));
@@ -83,9 +95,11 @@ class HealthServletTest {
         final var checkRegistry = new HealthCheckRegistry(List.of(
                 new MockReadinessCheck(() -> HealthCheckResponse.up("foo")),
                 new MockReadinessCheck(() -> HealthCheckResponse.up("bar"))));
+        doReturn(checkRegistry)
+                .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
 
-        final var servlet = new HealthServlet(checkRegistry);
-        servlet.init();
+        final var servlet = new HealthServlet();
+        servlet.init(servletConfigMock);
         servlet.doGet(requestMock, responseMock);
 
         verify(responseMock).setStatus(eq(200));
@@ -116,9 +130,11 @@ class HealthServletTest {
         final var checkRegistry = new HealthCheckRegistry(List.of(
                 new MockReadinessCheck(() -> HealthCheckResponse.up("foo")),
                 new MockReadinessCheck(() -> HealthCheckResponse.down("bar"))));
+        doReturn(checkRegistry)
+                .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
 
-        final var servlet = new HealthServlet(checkRegistry);
-        servlet.init();
+        final var servlet = new HealthServlet();
+        servlet.init(servletConfigMock);
         servlet.doGet(requestMock, responseMock);
 
         verify(responseMock).setStatus(eq(503));
@@ -152,9 +168,11 @@ class HealthServletTest {
                     throw new IllegalStateException("Simulated check exception");
                 })
         ));
+        doReturn(checkRegistry)
+                .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
 
-        final var servlet = new HealthServlet(checkRegistry);
-        servlet.init();
+        final var servlet = new HealthServlet();
+        servlet.init(servletConfigMock);
         servlet.doGet(requestMock, responseMock);
 
         verify(responseMock).sendError(eq(500));
@@ -169,11 +187,13 @@ class HealthServletTest {
                 new MockReadinessCheck(() -> HealthCheckResponse.up("ready")),
                 new MockStartupCheck(() -> HealthCheckResponse.up("start")),
                 new MockAllTypesCheck(() -> HealthCheckResponse.up("all"))));
+        doReturn(checkRegistry)
+                .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
 
-        when(requestMock.getPathInfo()).thenReturn("/live");
+        doReturn("/live").when(requestMock).getPathInfo();
 
-        final var servlet = new HealthServlet(checkRegistry);
-        servlet.init();
+        final var servlet = new HealthServlet();
+        servlet.init(servletConfigMock);
         servlet.doGet(requestMock, responseMock);
 
         verify(responseMock).setStatus(eq(200));
@@ -206,11 +226,13 @@ class HealthServletTest {
                 new MockReadinessCheck(() -> HealthCheckResponse.up("ready")),
                 new MockStartupCheck(() -> HealthCheckResponse.up("start")),
                 new MockAllTypesCheck(() -> HealthCheckResponse.up("all"))));
+        doReturn(checkRegistry)
+                .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
 
-        when(requestMock.getPathInfo()).thenReturn("/ready");
+        doReturn("/ready").when(requestMock).getPathInfo();
 
-        final var servlet = new HealthServlet(checkRegistry);
-        servlet.init();
+        final var servlet = new HealthServlet();
+        servlet.init(servletConfigMock);
         servlet.doGet(requestMock, responseMock);
 
         verify(responseMock).setStatus(eq(200));
@@ -243,11 +265,13 @@ class HealthServletTest {
                 new MockReadinessCheck(() -> HealthCheckResponse.up("ready")),
                 new MockStartupCheck(() -> HealthCheckResponse.up("start")),
                 new MockAllTypesCheck(() -> HealthCheckResponse.up("all"))));
+        doReturn(checkRegistry)
+                .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
 
-        when(requestMock.getPathInfo()).thenReturn("/started");
+        doReturn("/started").when(requestMock).getPathInfo();
 
-        final var servlet = new HealthServlet(checkRegistry);
-        servlet.init();
+        final var servlet = new HealthServlet();
+        servlet.init(servletConfigMock);
         servlet.doGet(requestMock, responseMock);
 
         verify(responseMock).setStatus(eq(200));
@@ -280,11 +304,13 @@ class HealthServletTest {
                 new MockReadinessCheck(() -> HealthCheckResponse.up("ready")),
                 new MockStartupCheck(() -> HealthCheckResponse.up("start")),
                 new MockAllTypesCheck(() -> HealthCheckResponse.up("all"))));
+        doReturn(checkRegistry)
+                .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
 
-        when(requestMock.getPathInfo()).thenReturn("/");
+        doReturn("/").when(requestMock).getPathInfo();
 
-        final var servlet = new HealthServlet(checkRegistry);
-        servlet.init();
+        final var servlet = new HealthServlet();
+        servlet.init(servletConfigMock);
         servlet.doGet(requestMock, responseMock);
 
         verify(responseMock).setStatus(eq(200));
