@@ -19,6 +19,7 @@
 package org.dependencytrack.plugin.api.filestorage;
 
 import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.ExtensionPointSpec;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 
 import java.io.FileNotFoundException;
@@ -31,6 +32,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * @since 5.6.0
  */
+@ExtensionPointSpec(name = "file.storage", required = true)
 public interface FileStorage extends ExtensionPoint {
 
     Pattern VALID_NAME_PATTERN = Pattern.compile("[a-zA-Z0-9_/\\-.]+");

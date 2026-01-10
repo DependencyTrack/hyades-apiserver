@@ -28,7 +28,6 @@ import org.dependencytrack.filestorage.local.LocalFileStoragePlugin;
 import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
 import org.dependencytrack.filestorage.s3.S3FileStoragePlugin;
 import org.dependencytrack.notification.publishing.DefaultNotificationPublisherPlugin;
-import org.dependencytrack.plugin.api.ExtensionPointSpec;
 import org.dependencytrack.secret.TestSecretManager;
 import org.dependencytrack.secret.management.SecretManager;
 import org.eclipse.microprofile.config.Config;
@@ -81,7 +80,7 @@ class PluginInitializerTest extends PersistenceCapableTest {
         cleanupTasks.add(pluginManager::close);
 
         assertThat(pluginManager.getExtensionPoints())
-                .extracting(ExtensionPointSpec::name)
+                .extracting(ExtensionPointMetadata::name)
                 .containsExactlyInAnyOrder(
                         "file.storage",
                         "notification.publisher",

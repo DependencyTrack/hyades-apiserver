@@ -65,7 +65,7 @@ import org.dependencytrack.notification.proto.v1.BomValidationFailedSubject;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.api.filestorage.FileStorageExtensionPointSpec;
+import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.hk2.api.Factory;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
@@ -134,7 +134,7 @@ public class BomResourceTest extends ResourceTest {
             pluginManager = new PluginManager(
                     new SmallRyeConfigBuilder().build(),
                     new ConfigTemplateRenderer(secretName -> null),
-                    List.of(new FileStorageExtensionPointSpec()));
+                    List.of(FileStorage.class));
             pluginManager.loadPlugins(List.of(new MemoryFileStoragePlugin()));
             return pluginManager;
         }
