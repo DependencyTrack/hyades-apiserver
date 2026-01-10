@@ -20,6 +20,7 @@ package org.dependencytrack.plugin;
 
 import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.Plugin;
@@ -40,12 +41,15 @@ class PluginManagerTest extends PersistenceCapableTest {
     interface UnknownExtensionPoint extends ExtensionPoint {
     }
 
+    private ConfigTemplateRenderer configTemplateRenderer;
     private PluginManager pluginManager;
 
     @BeforeEach
     void beforeEach() {
+        configTemplateRenderer = new ConfigTemplateRenderer(secretName -> null);
         pluginManager = new PluginManager(
                 ConfigProvider.getConfig(),
+                configTemplateRenderer,
                 List.of(new TestExtensionPointSpec()));
         pluginManager.loadPlugins(List.of(new DummyPlugin()));
     }
@@ -71,7 +75,8 @@ class PluginManagerTest extends PersistenceCapableTest {
                 .withDefaultValue("test.extension.dummy.bar", "qux")
                 .build();
 
-        try (final var pluginManager = new PluginManager(config, List.of(new TestExtensionPointSpec()))) {
+        try (final var pluginManager = new PluginManager(
+                config, configTemplateRenderer, List.of(new TestExtensionPointSpec()))) {
             pluginManager.loadPlugins(List.of(new DummyPlugin()));
 
             final TestExtensionPoint extension =
@@ -162,7 +167,8 @@ class PluginManagerTest extends PersistenceCapableTest {
                 .withDefaultValue("test.extension.dummy.enabled", "false")
                 .build();
 
-        try (final var pluginManager = new PluginManager(config, List.of(new TestExtensionPointSpec()))) {
+        try (final var pluginManager = new PluginManager(
+                config, configTemplateRenderer, List.of(new TestExtensionPointSpec()))) {
             pluginManager.loadPlugins(List.of(new DummyPlugin()));
 
             assertThatExceptionOfType(NoSuchExtensionException.class)
@@ -177,7 +183,8 @@ class PluginManagerTest extends PersistenceCapableTest {
                 .withDefaultValue("test.default.extension", "does.not.exist")
                 .build();
 
-        try (final var pluginManager = new PluginManager(config, List.of(new TestExtensionPointSpec()))) {
+        try (final var pluginManager = new PluginManager(
+                config, configTemplateRenderer, List.of(new TestExtensionPointSpec()))) {
             assertThatExceptionOfType(NoSuchExtensionException.class)
                     .isThrownBy(() -> pluginManager.loadPlugins(List.of(new DummyPlugin())))
                     .withMessage("No extension named 'does.not.exist' exists for the extension point 'test'");

@@ -38,7 +38,8 @@ public final class SecretManagerAboutProvider implements AboutProvider {
 
     @SuppressWarnings("unused")
     public SecretManagerAboutProvider() {
-        this(() -> SecretManagerInitializer.INSTANCE);
+        // TODO: Find a way to get rid of this, we shouldn't rely on singletons.
+        this(() -> SecretManagerInitializer.secretManager);
     }
 
     @Override

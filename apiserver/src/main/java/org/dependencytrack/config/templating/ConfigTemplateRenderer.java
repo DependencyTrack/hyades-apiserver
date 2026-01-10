@@ -26,7 +26,6 @@ import io.pebbletemplates.pebble.PebbleEngine;
 import io.pebbletemplates.pebble.cache.template.CaffeineTemplateCache;
 import io.pebbletemplates.pebble.loader.StringLoader;
 import io.pebbletemplates.pebble.template.PebbleTemplate;
-import org.dependencytrack.secret.SecretManagerInitializer;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
@@ -59,12 +58,11 @@ import java.util.regex.Pattern;
  */
 public final class ConfigTemplateRenderer {
 
-    private static final ConfigTemplateRenderer INSTANCE = new ConfigTemplateRenderer();
     private static final Pattern TEMPLATE_PATTERN = Pattern.compile(".*\\{\\{.+}}.*");
 
     private final PebbleEngine pebbleEngine;
 
-    ConfigTemplateRenderer(Function<String, @Nullable String> secretResolver) {
+    public ConfigTemplateRenderer(Function<String, @Nullable String> secretResolver) {
         this.pebbleEngine = new PebbleEngine.Builder()
                 // Prevent loading from any external location.
                 .loader(new StringLoader())
@@ -85,16 +83,6 @@ public final class ConfigTemplateRenderer {
                 // Apply customizations to built-in extension(s).
                 .registerExtensionCustomizer(ConfigTemplatePebbleExtensionCustomizer::new)
                 .build();
-    }
-
-    public ConfigTemplateRenderer() {
-        this(secretName -> SecretManagerInitializer.INSTANCE != null
-                ? SecretManagerInitializer.INSTANCE.getSecretValue(secretName)
-                : null);
-    }
-
-    public static ConfigTemplateRenderer getInstance() {
-        return INSTANCE;
     }
 
     public @Nullable String render(@Nullable String value) {

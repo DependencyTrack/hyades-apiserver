@@ -29,6 +29,8 @@ import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
 import org.dependencytrack.filestorage.s3.S3FileStoragePlugin;
 import org.dependencytrack.notification.publishing.DefaultNotificationPublisherPlugin;
 import org.dependencytrack.plugin.api.ExtensionPointSpec;
+import org.dependencytrack.secret.TestSecretManager;
+import org.dependencytrack.secret.management.SecretManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.AfterEach;
@@ -40,6 +42,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -58,19 +61,19 @@ class PluginInitializerTest extends PersistenceCapableTest {
         final Config config = ConfigProvider.getConfig();
 
         final var servletContextMock = mock(ServletContext.class);
-        final var attributeNameCaptor = ArgumentCaptor.forClass(String.class);
-        final var attributeValueCaptor = ArgumentCaptor.forClass(Object.class);
+        doReturn(new TestSecretManager())
+                .when(servletContextMock).getAttribute(eq(SecretManager.class.getName()));
+
+        final var attributeValueCaptor = ArgumentCaptor.forClass(PluginManager.class);
 
         final var initializer = new PluginInitializer(config);
         initializer.contextInitialized(new ServletContextEvent(servletContextMock));
 
         verify(servletContextMock).setAttribute(
-                attributeNameCaptor.capture(),
+                eq(PluginManager.class.getName()),
                 attributeValueCaptor.capture());
 
-        assertThat(attributeNameCaptor.getValue()).isEqualTo(PluginManager.class.getName());
-
-        final var pluginManager = (PluginManager) attributeValueCaptor.getValue();
+        final PluginManager pluginManager = attributeValueCaptor.getValue();
         assertThat(pluginManager).isNotNull();
         assertThat(pluginManager.isClosed()).isFalse();
 

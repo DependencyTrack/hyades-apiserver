@@ -88,10 +88,13 @@ public class PluginManager implements Closeable {
     private final AtomicBoolean closed = new AtomicBoolean();
     private final ReentrantLock lock;
 
-    public PluginManager(Config config, Collection<ExtensionPointSpec> extensionPointSpecs) {
+    public PluginManager(
+            Config config,
+            ConfigTemplateRenderer configTemplateRenderer,
+            Collection<ExtensionPointSpec> extensionPointSpecs) {
         this.config = config;
         this.runtimeConfigMapper = RuntimeConfigMapper.getInstance();
-        this.configTemplateRenderer = ConfigTemplateRenderer.getInstance();
+        this.configTemplateRenderer = configTemplateRenderer;
         this.loadedPluginByClass = new LinkedHashMap<>();
         this.pluginByExtensionIdentity = new HashMap<>();
         this.factoriesByPlugin = new HashMap<>();
