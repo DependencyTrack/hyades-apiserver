@@ -23,7 +23,7 @@ import alpine.event.framework.SingleThreadedEventService;
 import alpine.event.framework.Subscriber;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
-import org.dependencytrack.config.templating.ConfigTemplateRenderer;
+import org.dependencytrack.caching.api.CacheProvider;
 import org.dependencytrack.plugin.PluginManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Duration;
-import java.util.Collections;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -49,17 +48,17 @@ class EventSubsystemInitializerTest {
 
         final var eventServiceMock = mock(EventService.class);
         final var singleThreadedEventServiceMock = mock(SingleThreadedEventService.class);
-        final var pluginManager = new PluginManager(
-                config,
-                new ConfigTemplateRenderer(secretName -> null),
-                Collections.emptyList());
+        final var pluginManagerMock = mock(PluginManager.class);
+        final var cacheProviderMock = mock(CacheProvider.class);
         final var servletContextMock = mock(ServletContext.class);
 
-        doReturn(pluginManager)
+        doReturn(cacheProviderMock)
+                .when(servletContextMock).getAttribute(eq(CacheProvider.class.getName()));
+        doReturn(pluginManagerMock)
                 .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
 
         final var initializer = new EventSubsystemInitializer(
-                ConfigProvider.getConfig(),
+                config,
                 eventServiceMock,
                 singleThreadedEventServiceMock);
         initializer.contextInitialized(new ServletContextEvent(servletContextMock));
