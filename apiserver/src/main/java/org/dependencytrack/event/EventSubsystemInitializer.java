@@ -24,6 +24,9 @@ import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.caching.CacheInvalidationEvent;
+import org.dependencytrack.caching.CacheInvalidationTask;
+import org.dependencytrack.caching.api.CacheProvider;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
@@ -104,6 +107,9 @@ public class EventSubsystemInitializer implements ServletContextListener {
 
         final var kafkaEventDispatcher = new KafkaEventDispatcher();
 
+        final var cacheProvider = (CacheProvider) event.getServletContext().getAttribute(CacheProvider.class.getName());
+        requireNonNull(cacheProvider, "cacheProvider has not been initialized");
+
         final var pluginManager = (PluginManager) event.getServletContext().getAttribute(PluginManager.class.getName());
         requireNonNull(pluginManager, "pluginManager has not been initialized");
 
@@ -147,6 +153,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         singleThreadedEventService.subscribe(VulnerabilityScanMaintenanceEvent.class, new VulnerabilityScanMaintenanceTask());
         singleThreadedEventService.subscribe(WorkflowMaintenanceEvent.class, new WorkflowMaintenanceTask());
         singleThreadedEventService.subscribe(ProjectMaintenanceEvent.class, new ProjectMaintenanceTask());
+        singleThreadedEventService.subscribe(CacheInvalidationEvent.class, new CacheInvalidationTask(cacheProvider));
     }
 
     @Override
@@ -192,6 +199,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         singleThreadedEventService.unsubscribe(VulnerabilityScanMaintenanceTask.class);
         singleThreadedEventService.unsubscribe(WorkflowMaintenanceTask.class);
         singleThreadedEventService.unsubscribe(ProjectMaintenanceTask.class);
+        singleThreadedEventService.unsubscribe(CacheInvalidationTask.class);
         try {
             singleThreadedEventService.shutdown(drainTimeout);
         } catch (TimeoutException e) {
