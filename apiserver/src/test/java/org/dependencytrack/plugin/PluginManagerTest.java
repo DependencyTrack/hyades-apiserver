@@ -20,6 +20,7 @@ package org.dependencytrack.plugin;
 
 import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.Plugin;
@@ -46,6 +47,7 @@ class PluginManagerTest extends PersistenceCapableTest {
     void beforeEach() {
         pluginManager = new PluginManager(
                 ConfigProvider.getConfig(),
+                new NoopCacheManager(),
                 secretName -> null,
                 List.of(TestExtensionPoint.class));
         pluginManager.loadPlugins(List.of(new DummyPlugin()));
@@ -73,7 +75,7 @@ class PluginManagerTest extends PersistenceCapableTest {
                 .build();
 
         try (final var pluginManager = new PluginManager(
-                config, secretName -> null, List.of(TestExtensionPoint.class))) {
+                config, new NoopCacheManager(), secretName -> null, List.of(TestExtensionPoint.class))) {
             pluginManager.loadPlugins(List.of(new DummyPlugin()));
 
             final TestExtensionPoint extension =
@@ -165,7 +167,7 @@ class PluginManagerTest extends PersistenceCapableTest {
                 .build();
 
         try (final var pluginManager = new PluginManager(
-                config, secretName -> null, List.of(TestExtensionPoint.class))) {
+                config, new NoopCacheManager(), secretName -> null, List.of(TestExtensionPoint.class))) {
             pluginManager.loadPlugins(List.of(new DummyPlugin()));
 
             assertThatExceptionOfType(NoSuchExtensionException.class)
@@ -181,7 +183,7 @@ class PluginManagerTest extends PersistenceCapableTest {
                 .build();
 
         try (final var pluginManager = new PluginManager(
-                config, secretName -> null, List.of(TestExtensionPoint.class))) {
+                config, new NoopCacheManager(), secretName -> null, List.of(TestExtensionPoint.class))) {
             assertThatExceptionOfType(NoSuchExtensionException.class)
                     .isThrownBy(() -> pluginManager.loadPlugins(List.of(new DummyPlugin())))
                     .withMessage("No extension named 'does.not.exist' exists for the extension point 'test'");

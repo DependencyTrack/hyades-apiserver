@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.plugin.api;
 
+import org.dependencytrack.cache.api.CacheManager;
+import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
@@ -33,24 +35,31 @@ import static java.util.Objects.requireNonNull;
 public final class ExtensionContext {
 
     private final ConfigRegistry configRegistry;
+    private final CacheManager cacheManager;
     private final ExtensionKVStore keyValueStore;
     private final ProxySelector proxySelector;
 
     public ExtensionContext(
             ConfigRegistry configRegistry,
+            CacheManager cacheManager,
             ExtensionKVStore kvStore,
             @Nullable ProxySelector proxySelector) {
         this.configRegistry = requireNonNull(configRegistry, "configRegistry must not be null");
+        this.cacheManager = requireNonNull(cacheManager, "cacheProvider must not be null");
         this.keyValueStore = requireNonNull(kvStore, "kvStore must not be null");
         this.proxySelector = proxySelector != null ? proxySelector : ProxySelector.getDefault();
     }
 
     public ExtensionContext(ConfigRegistry configRegistry) {
-        this(configRegistry, new InMemoryExtensionKVStore(), null);
+        this(configRegistry, new NoopCacheManager(), new InMemoryExtensionKVStore(), null);
     }
 
     public ConfigRegistry configRegistry() {
         return configRegistry;
+    }
+
+    public CacheManager cacheManager() {
+        return cacheManager;
     }
 
     public ExtensionKVStore kvStore() {

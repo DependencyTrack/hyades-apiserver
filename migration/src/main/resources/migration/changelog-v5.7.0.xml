@@ -781,4 +781,23 @@
             <column name="CVSSV4SCORE" type="numeric"/>
         </addColumn>
     </changeSet>
+
+    <changeSet id="v5.7.0-40" author="nscuro">
+        <sql splitStatements="true">
+            CREATE UNLOGGED TABLE "CACHE_ENTRY" (
+              "CACHE_NAME" TEXT
+            , "KEY" TEXT
+            , "VALUE" BYTEA
+            , "CREATED_AT" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            , "EXPIRES_AT" TIMESTAMPTZ NOT NULL
+            , CONSTRAINT "CACHE_ENTRY_PK" PRIMARY KEY ("CACHE_NAME", "KEY")
+            );
+
+            CREATE INDEX "CACHE_ENTRY_EXPIRES_AT_IDX"
+                ON "CACHE_ENTRY" ("EXPIRES_AT");
+
+            CREATE INDEX "CACHE_ENTRY_NAME_CREATED_AT_DESC_IDX"
+                ON "CACHE_ENTRY" ("CACHE_NAME", "CREATED_AT" DESC);
+        </sql>
+    </changeSet>
 </databaseChangeLog>

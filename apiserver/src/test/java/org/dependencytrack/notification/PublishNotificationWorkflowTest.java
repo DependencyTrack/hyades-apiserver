@@ -21,6 +21,7 @@ package org.dependencytrack.notification;
 import io.github.resilience4j.core.IntervalFunction;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.dex.activity.DeleteFilesActivity;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.TaskType;
@@ -73,6 +74,7 @@ class PublishNotificationWorkflowTest extends PersistenceCapableTest {
     void beforeEach() {
         pluginManager = new PluginManager(
                 new SmallRyeConfigBuilder().build(),
+                new NoopCacheManager(),
                 secretName -> null,
                 List.of(FileStorage.class, NotificationPublisher.class));
         pluginManager.loadPlugins(List.of(

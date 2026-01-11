@@ -22,6 +22,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
+import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
 import org.dependencytrack.dex.engine.api.DexEngine;
@@ -93,7 +94,7 @@ class DexEngineInitializerTest {
         final var servletContextMock = mock(ServletContext.class);
         doReturn(healthCheckRegistry)
                 .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
-        doReturn(new PluginManager(config, secretManager::getSecretValue, Collections.emptyList()))
+        doReturn(new PluginManager(config, new NoopCacheManager(), secretManager::getSecretValue, Collections.emptyList()))
                 .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
         doReturn(secretManager)
                 .when(servletContextMock).getAttribute(eq(SecretManager.class.getName()));

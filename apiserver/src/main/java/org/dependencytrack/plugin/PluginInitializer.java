@@ -20,6 +20,7 @@ package org.dependencytrack.plugin;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.plugin.api.Plugin;
@@ -60,6 +61,9 @@ public class PluginInitializer implements ServletContextListener {
     public void contextInitialized(ServletContextEvent event) {
         LOGGER.info("Initializing plugin system");
 
+        final var cacheManager = (CacheManager) event.getServletContext().getAttribute(CacheManager.class.getName());
+        requireNonNull(cacheManager, "cacheManager has not been initialized");
+
         final var secretManager = (SecretManager) event.getServletContext().getAttribute(SecretManager.class.getName());
         requireNonNull(secretManager, "secretManager has not been initialized");
 
@@ -70,6 +74,7 @@ public class PluginInitializer implements ServletContextListener {
 
         pluginManager = new PluginManager(
                 config,
+                cacheManager,
                 secretManager::getSecretValue,
                 extensionPoints);
 

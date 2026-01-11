@@ -36,6 +36,7 @@ import org.cyclonedx.proto.v1_6.OrganizationalEntity;
 import org.cyclonedx.proto.v1_6.Service;
 import org.cyclonedx.proto.v1_6.Tool;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
@@ -120,6 +121,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     void beforeEach() {
         pluginManager = new PluginManager(
                 new SmallRyeConfigBuilder().build(),
+                new NoopCacheManager(),
                 secretName -> null,
                 List.of(FileStorage.class));
         pluginManager.loadPlugins(List.of(new MemoryFileStoragePlugin()));

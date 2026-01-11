@@ -21,6 +21,7 @@ package org.dependencytrack.tasks;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
@@ -51,6 +52,7 @@ class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     void beforeEach() {
         pluginManager = new PluginManager(
                 new SmallRyeConfigBuilder().build(),
+                new NoopCacheManager(),
                 secretName -> null,
                 List.of(VulnDataSource.class));
         task = new NistMirrorTask(pluginManager);

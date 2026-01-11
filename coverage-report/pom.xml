@@ -142,6 +142,19 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>cache-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>cache-provider-database</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>file-storage-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
