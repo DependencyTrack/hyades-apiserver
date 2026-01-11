@@ -46,6 +46,7 @@
         <module>plugin/vuln-data-source-nvd</module>
         <module>plugin/vuln-data-source-osv</module>
         <module>migration</module>
+        <module>provisioning</module>
         <module>secret-management</module>
         <module>apiserver</module>
         <module>coverage-report</module>

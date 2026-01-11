@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dependencytrack.org/schemas/provisioning-config-v0.json",
+  "type": "object",
+  "title": "Provisioning Config",
+  "properties": {
+    "version": {
+      "type": "string",
+      "title": "Provisioning Config Version",
+      "pattern": "^v[0-9]+$"
+    },
+    "resources": {
+      "type": "array",
+      "title": "Provisioning Resources",
+      "items": {
+        "type": "object",
+        "title": "Provisioning Resource",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ExtensionConfig",
+              "Secret",
+              "Team",
+              "User"
+            ]
+          },
+          "spec": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/extension_config_resource"
+              },
+              {
+                "$ref": "#/$defs/secret_resource"
+              },
+              {
+                "$ref": "#/$defs/team_resource"
+              },
+              {
+                "$ref": "#/$defs/user_resource"
+              }
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "spec"
+        ]
+      }
+    }
+  },
+  "required": [
+    "version",
+    "resources"
+  ],
+  "$defs": {
+    "extension_config_resource": {
+      "type": "object",
+      "title": "Extension Config Resource",
+      "properties": {
+        "extension_point": {
+          "type": "string",
+          "title": "Extension Point Name",
+          "minLength": 1
+        },
+        "extension": {
+          "type": "string",
+          "title": "Extension Name",
+          "minLength": 1
+        },
+        "config": {
+          "type": "string",
+          "title": "Extension Config",
+          "minLength": 2
+        }
+      },
+      "required": [
+        "extension_point",
+        "extension",
+        "config"
+      ]
+    },
+    "secret_resource": {
+      "type": "object",
+      "title": "Secret Resource",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Secret Name",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "title": "Secret Description"
+        },
+        "value": {
+          "type": "string",
+          "title": "Secret Value",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ]
+    },
+    "team_resource": {
+      "type": "object",
+      "title": "Team Resource",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Team Name",
+          "minLength": 1
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "title": "Permission Name",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "user_resource": {
+      "type": "object",
+      "title": "User Resource",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Username",
+          "minLength": 1
+        },
+        "email": {
+          "type": "string",
+          "title": "User Email",
+          "format": "email"
+        },
+        "password": {
+          "type": "string",
+          "title": "User Password",
+          "minLength": 1
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "title": "Team Name",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "name",
+        "password"
+      ]
+    }
+  }
+}

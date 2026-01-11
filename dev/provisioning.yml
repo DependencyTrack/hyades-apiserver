@@ -1,0 +1,10 @@
+---
+version: v0
+resources:
+- kind: User
+  spec:
+    name: dev
+    email: dev@example.com
+    password: dev
+    teams:
+    - Administrators

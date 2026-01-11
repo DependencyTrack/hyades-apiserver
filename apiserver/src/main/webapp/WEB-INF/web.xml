@@ -44,6 +44,9 @@
         <listener-class>org.dependencytrack.plugin.PluginInitializer</listener-class>
     </listener>
     <listener>
+        <listener-class>org.dependencytrack.provisioning.ProvisioningInitializer</listener-class>
+    </listener>
+    <listener>
         <listener-class>org.dependencytrack.event.kafka.KafkaProducerInitializer</listener-class>
     </listener>
     <listener>
