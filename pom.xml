@@ -45,6 +45,7 @@
         <module>plugin/vuln-data-source-github</module>
         <module>plugin/vuln-data-source-nvd</module>
         <module>plugin/vuln-data-source-osv</module>
+        <module>caching</module>
         <module>migration</module>
         <module>secret-management</module>
         <module>apiserver</module>
