@@ -37,6 +37,7 @@ import org.dependencytrack.event.IntegrityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
+import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -57,7 +58,6 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.json.JSONArray;
 import org.slf4j.MDC;
@@ -180,7 +180,7 @@ public class BomUploadProcessingTask implements Subscriber {
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
              var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString());
-             var fileStorage = pluginManager.getExtension(FileStorage.class)) {
+             var fileStorage = pluginManager.getExtension(FileStorage.class, event.getFileMetadata().getProviderName())) {
             final byte[] cdxBomBytes;
             try (final InputStream cdxBomStream = fileStorage.get(event.getFileMetadata())) {
                 cdxBomBytes = cdxBomStream.readAllBytes();
