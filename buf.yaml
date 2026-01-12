@@ -18,6 +18,8 @@ version: v2
 modules:
 - path: dex/proto/src/main/proto
   name: github.com/DependencyTrack/dex
+- path: file-storage/proto/src/main/proto
+  name: github.com/DependencyTrack/file-storage
 - path: notification/proto/src/main/proto
   name: github.com/DependencyTrack/notification
 - path: proto/src/main/proto

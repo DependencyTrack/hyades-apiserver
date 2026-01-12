@@ -40,7 +40,9 @@ import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
+import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
@@ -58,8 +60,6 @@ import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.api.filestorage.FileStorage;
-import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

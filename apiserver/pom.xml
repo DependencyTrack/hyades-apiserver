@@ -126,6 +126,11 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>file-storage-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>file-storage-local</artifactId>
             <version>${project.version}</version>
         </dependency>
