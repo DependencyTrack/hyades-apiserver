@@ -21,7 +21,6 @@ package org.dependencytrack.plugin;
 import alpine.common.logging.Logger;
 import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.common.ProxySelector;
-import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
@@ -34,6 +33,7 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
 import org.eclipse.microprofile.config.Config;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 
 import java.io.Closeable;
@@ -53,6 +53,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import static java.util.Objects.requireNonNull;
@@ -75,7 +76,7 @@ public class PluginManager implements Closeable {
 
     private final Config config;
     private final RuntimeConfigMapper runtimeConfigMapper;
-    private final ConfigTemplateRenderer configTemplateRenderer;
+    private final Function<String, @Nullable String> secretResolver;
     private final SequencedMap<Class<? extends Plugin>, Plugin> loadedPluginByClass;
     private final Map<ExtensionIdentity, Plugin> pluginByExtensionIdentity;
     private final Map<Plugin, List<ExtensionFactory<?>>> factoriesByPlugin;
@@ -90,11 +91,11 @@ public class PluginManager implements Closeable {
 
     public PluginManager(
             Config config,
-            ConfigTemplateRenderer configTemplateRenderer,
+            Function<String, @Nullable String> secretResolver,
             Collection<Class<? extends ExtensionPoint>> extensionPointClasses) {
         this.config = config;
+        this.secretResolver = secretResolver;
         this.runtimeConfigMapper = RuntimeConfigMapper.getInstance();
-        this.configTemplateRenderer = configTemplateRenderer;
         this.loadedPluginByClass = new LinkedHashMap<>();
         this.pluginByExtensionIdentity = new HashMap<>();
         this.factoriesByPlugin = new HashMap<>();
@@ -369,7 +370,9 @@ public class PluginManager implements Closeable {
                 extensionFactory.runtimeConfigSpec() != null
                         ? runtimeConfigMapper
                         : null,
-                configTemplateRenderer);
+                extensionFactory.runtimeConfigSpec() != null
+                        ? secretResolver
+                        : null);
         configRegistryByExtensionIdentity.put(extensionIdentity, configRegistry);
 
         final boolean isEnabled = configRegistry.getDeploymentConfig()

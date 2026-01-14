@@ -71,7 +71,7 @@ public class PermissionResourceTest extends ResourceTest {
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
         Assertions.assertNotNull(json);
-        Assertions.assertEquals(44, json.size());
+        Assertions.assertEquals(43, json.size());
         Assertions.assertEquals("ACCESS_MANAGEMENT", json.getJsonObject(0).getString("name"));
         Assertions.assertEquals("Allows the management of users, teams, and API keys", json.getJsonObject(0).getString("description"));
     }

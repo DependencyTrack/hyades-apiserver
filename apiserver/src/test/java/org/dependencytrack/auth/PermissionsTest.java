@@ -43,7 +43,6 @@ import static org.dependencytrack.auth.Permissions.Constants.PROJECT_CREATION_UP
 import static org.dependencytrack.auth.Permissions.Constants.SECRET_MANAGEMENT;
 import static org.dependencytrack.auth.Permissions.Constants.SECRET_MANAGEMENT_CREATE;
 import static org.dependencytrack.auth.Permissions.Constants.SECRET_MANAGEMENT_DELETE;
-import static org.dependencytrack.auth.Permissions.Constants.SECRET_MANAGEMENT_READ;
 import static org.dependencytrack.auth.Permissions.Constants.SECRET_MANAGEMENT_UPDATE;
 import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION;
 import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_CREATE;
@@ -70,7 +69,7 @@ public class PermissionsTest {
 
     @Test
     public void testPermissionEnums() {
-        Assertions.assertEquals(44, Permissions.values().length);
+        Assertions.assertEquals(43, Permissions.values().length);
         Assertions.assertEquals("BOM_UPLOAD", Permissions.BOM_UPLOAD.name());
         Assertions.assertEquals("VIEW_PORTFOLIO", Permissions.VIEW_PORTFOLIO.name());
         Assertions.assertEquals("PORTFOLIO_ACCESS_CONTROL_BYPASS", Permissions.PORTFOLIO_ACCESS_CONTROL_BYPASS.name());
@@ -98,7 +97,6 @@ public class PermissionsTest {
         Assertions.assertEquals("ACCESS_MANAGEMENT_DELETE", Permissions.ACCESS_MANAGEMENT_DELETE.name());
         Assertions.assertEquals("SECRET_MANAGEMENT", Permissions.SECRET_MANAGEMENT.name());
         Assertions.assertEquals("SECRET_MANAGEMENT_CREATE", Permissions.SECRET_MANAGEMENT_CREATE.name());
-        Assertions.assertEquals("SECRET_MANAGEMENT_READ", Permissions.SECRET_MANAGEMENT_READ.name());
         Assertions.assertEquals("SECRET_MANAGEMENT_UPDATE", Permissions.SECRET_MANAGEMENT_UPDATE.name());
         Assertions.assertEquals("SECRET_MANAGEMENT_DELETE", Permissions.SECRET_MANAGEMENT_DELETE.name());
         Assertions.assertEquals("SYSTEM_CONFIGURATION", Permissions.SYSTEM_CONFIGURATION.name());
@@ -146,7 +144,6 @@ public class PermissionsTest {
         Assertions.assertEquals("ACCESS_MANAGEMENT_DELETE", ACCESS_MANAGEMENT_DELETE);
         Assertions.assertEquals("SECRET_MANAGEMENT", SECRET_MANAGEMENT);
         Assertions.assertEquals("SECRET_MANAGEMENT_CREATE", SECRET_MANAGEMENT_CREATE);
-        Assertions.assertEquals("SECRET_MANAGEMENT_READ", SECRET_MANAGEMENT_READ);
         Assertions.assertEquals("SECRET_MANAGEMENT_UPDATE", SECRET_MANAGEMENT_UPDATE);
         Assertions.assertEquals("SECRET_MANAGEMENT_DELETE", SECRET_MANAGEMENT_DELETE);
         Assertions.assertEquals("SYSTEM_CONFIGURATION", SYSTEM_CONFIGURATION);

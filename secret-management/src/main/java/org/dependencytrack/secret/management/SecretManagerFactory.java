@@ -18,6 +18,9 @@
  */
 package org.dependencytrack.secret.management;
 
+import org.dependencytrack.common.pagination.PageTokenEncoder;
+import org.eclipse.microprofile.config.Config;
+
 /**
  * @since 5.7.0
  */
@@ -34,6 +37,6 @@ public interface SecretManagerFactory {
      *
      * @return A secret manager instance.
      */
-    SecretManager create();
+    SecretManager create(Config config, PageTokenEncoder pageTokenEncoder);
 
 }

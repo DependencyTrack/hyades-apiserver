@@ -12,6 +12,26 @@
       "type": "string",
       "format": "email",
       "description": "A string with email format"
+    },
+    "secretString": {
+      "type": "string",
+      "x-secret-ref": true
+    },
+    "secretsArray": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "x-secret-ref": true
+      }
+    },
+    "nestedObject": {
+      "type": "object",
+      "properties": {
+        "nestedSecretString": {
+          "type": "string",
+          "x-secret-ref": true
+        }
+      }
     }
   },
   "additionalProperties": false,

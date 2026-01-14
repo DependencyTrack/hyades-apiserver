@@ -608,4 +608,10 @@
     <changeSet id="v5.7.0-29" author="nscuro">
         <dropTable tableName="EVENTSERVICELOG"/>
     </changeSet>
+
+    <changeSet id="v5.7.0-30" author="nscuro">
+        <sql>
+            DELETE FROM "PERMISSION" WHERE "NAME" = 'SECRET_MANAGEMENT_READ';
+        </sql>
+    </changeSet>
 </databaseChangeLog>

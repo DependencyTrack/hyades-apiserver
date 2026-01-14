@@ -16,28 +16,17 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.config.templating;
-
-import io.pebbletemplates.pebble.extension.AbstractExtension;
-import io.pebbletemplates.pebble.extension.Function;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Map;
+package org.dependencytrack.plugin.runtime.config;
 
 /**
+ * An exception thrown when a secret reference cannot be resolved.
+ *
  * @since 5.7.0
  */
-final class ConfigTemplatePebbleExtension extends AbstractExtension {
+public class UnresolvableSecretException extends IllegalStateException {
 
-    private final java.util.function.Function<String, String> secretResolver;
-
-    ConfigTemplatePebbleExtension(java.util.function.Function<String, @Nullable String> secretResolver) {
-        this.secretResolver = secretResolver;
-    }
-
-    @Override
-    public Map<String, Function> getFunctions() {
-        return Map.of("secret", new SecretFunction(secretResolver));
+    public UnresolvableSecretException(String secretName, String path) {
+        super("Secret '%s' referenced at path '%s' does not exist".formatted(secretName, path));
     }
 
 }

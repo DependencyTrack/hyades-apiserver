@@ -53,7 +53,6 @@ public enum Permissions {
     ACCESS_MANAGEMENT_DELETE("Allows delete permissions of users, teams, and API keys"),
     SECRET_MANAGEMENT("Grants full secret management access"),
     SECRET_MANAGEMENT_CREATE("Grants the ability to create secrets"),
-    SECRET_MANAGEMENT_READ("Grants the ability to view secret metadata"),
     SECRET_MANAGEMENT_UPDATE("Grants the ability to update secrets"),
     SECRET_MANAGEMENT_DELETE("Grants the ability to delete secrets"),
     SYSTEM_CONFIGURATION("Allows all access to configuration of the system including notifications, repositories, and email settings"),
@@ -109,7 +108,6 @@ public enum Permissions {
         public static final String ACCESS_MANAGEMENT_DELETE = "ACCESS_MANAGEMENT_DELETE";
         public static final String SECRET_MANAGEMENT = "SECRET_MANAGEMENT";
         public static final String SECRET_MANAGEMENT_CREATE = "SECRET_MANAGEMENT_CREATE";
-        public static final String SECRET_MANAGEMENT_READ = "SECRET_MANAGEMENT_READ";
         public static final String SECRET_MANAGEMENT_UPDATE = "SECRET_MANAGEMENT_UPDATE";
         public static final String SECRET_MANAGEMENT_DELETE = "SECRET_MANAGEMENT_DELETE";
         public static final String SYSTEM_CONFIGURATION = "SYSTEM_CONFIGURATION";

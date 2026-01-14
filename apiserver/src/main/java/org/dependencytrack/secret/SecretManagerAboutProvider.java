@@ -20,6 +20,7 @@ package org.dependencytrack.secret;
 
 import alpine.common.AboutProvider;
 import org.dependencytrack.secret.management.SecretManager;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.Map;
@@ -32,7 +33,7 @@ public final class SecretManagerAboutProvider implements AboutProvider {
 
     private final Supplier<SecretManager> instanceSupplier;
 
-    SecretManagerAboutProvider(final Supplier<SecretManager> instanceSupplier) {
+    SecretManagerAboutProvider(final Supplier<@Nullable SecretManager> instanceSupplier) {
         this.instanceSupplier = instanceSupplier;
     }
 
