@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.secret.management.cache;
 
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.secret.management.ListSecretsRequest;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretMetadata;
 import org.junit.jupiter.api.Test;
@@ -103,15 +105,28 @@ class CachingSecretManagerTest {
     }
 
     @Test
-    void listSecretsShouldBypassCache() {
+    void getSecretMetadataShouldBypassCache() {
+        final var secretMetadata = new SecretMetadata("foo", "description", null, null);
+
+        doReturn(secretMetadata).when(delegateMock).getSecretMetadata("foo");
+
+        assertThat(secretManager.getSecretMetadata("foo")).isEqualTo(secretMetadata);
+        assertThat(secretManager.getSecretMetadata("foo")).isEqualTo(secretMetadata);
+
+        verify(delegateMock, times(2)).getSecretMetadata("foo");
+    }
+
+    @Test
+    void listSecretMetadataShouldBypassCache() {
         final var secretMetadata = new SecretMetadata("foo", null, null, null);
+        final var request = new ListSecretsRequest(null, null, 100);
 
-        doReturn(List.of(secretMetadata)).when(delegateMock).listSecrets();
+        doReturn(new Page<>(List.of(secretMetadata))).when(delegateMock).listSecretMetadata(any());
 
-        assertThat(secretManager.listSecrets()).containsExactly(secretMetadata);
-        assertThat(secretManager.listSecrets()).containsExactly(secretMetadata);
+        assertThat(secretManager.listSecretMetadata(request).items()).containsExactly(secretMetadata);
+        assertThat(secretManager.listSecretMetadata(request).items()).containsExactly(secretMetadata);
 
-        verify(delegateMock, times(2)).listSecrets();
+        verify(delegateMock, times(2)).listSecretMetadata(any());
     }
 
     @Test

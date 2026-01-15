@@ -20,6 +20,7 @@ package org.dependencytrack.secret;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretManagerFactory;
 import org.dependencytrack.secret.management.cache.CachingSecretManager;
@@ -61,7 +62,9 @@ public final class SecretManagerInitializer implements ServletContextListener {
                         "No secret management provider found for name: " + providerName));
 
         LOGGER.info("Initializing secret management provider: {}", secretManagerFactory.name());
-        secretManager = CachingSecretManager.maybeWrap(secretManagerFactory.create(), config);
+        secretManager = CachingSecretManager.maybeWrap(
+                secretManagerFactory.create(config, new EncryptedPageTokenEncoder()),
+                config);
 
         event.getServletContext().setAttribute(
                 SecretManager.class.getName(),

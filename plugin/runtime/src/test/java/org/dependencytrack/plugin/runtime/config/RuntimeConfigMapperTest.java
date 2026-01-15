@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.plugin.runtime.config;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,8 @@ class RuntimeConfigMapperTest {
             assertThatJson(configJson).isEqualTo(/* language=JSON */ """
                     {
                       "requiredString": "foo",
-                      "emailString": "foo@example.com"
+                      "emailString": "foo@example.com",
+                      "secretsArray": []
                     }
                     """);
         }
@@ -152,6 +154,58 @@ class RuntimeConfigMapperTest {
                                     }
                                     """,
                             configSpec));
+        }
+
+    }
+
+    @Nested
+    class ResolveSecretRefsTest {
+
+        @Test
+        void shouldResolveSecretRefs() {
+            final JsonNode configNode = runtimeConfigMapper.validateJson(/* language=JSON */ """
+                            {
+                              "requiredString": "foo",
+                              "secretString": "mySecret",
+                              "secretsArray": [
+                                "mySecret"
+                              ],
+                              "nestedObject": {
+                                "nestedSecretString": "mySecret"
+                              }
+                            }
+                            """,
+                    configSpec);
+
+            runtimeConfigMapper.resolveSecretRefs(configNode, configSpec, mySecret -> "mySecretValue");
+
+            assertThatJson(configNode.toString()).isEqualTo(/* language=JSON */ """
+                    {
+                      "requiredString": "foo",
+                      "secretString": "mySecretValue",
+                      "secretsArray": [
+                        "mySecretValue"
+                      ],
+                      "nestedObject": {
+                        "nestedSecretString": "mySecretValue"
+                      }
+                    }
+                    """);
+        }
+
+        @Test
+        void shouldThrowWhenSecretCannotBeResolved() {
+            final JsonNode configNode = runtimeConfigMapper.validateJson(/* language=JSON */ """
+                            {
+                              "requiredString": "foo",
+                              "secretString": "mySecret"
+                            }
+                            """,
+                    configSpec);
+
+            assertThatExceptionOfType(UnresolvableSecretException.class)
+                    .isThrownBy(() -> runtimeConfigMapper.resolveSecretRefs(configNode, configSpec, mySecret -> null))
+                    .withMessage("Secret 'mySecret' referenced at path '/secretString' does not exist");
         }
 
     }

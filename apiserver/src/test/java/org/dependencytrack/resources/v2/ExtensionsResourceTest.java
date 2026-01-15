@@ -24,7 +24,6 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.persistence.jdbi.ExtensionConfigDao;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.ExtensionContext;
@@ -34,6 +33,8 @@ import org.dependencytrack.plugin.api.ExtensionPointSpec;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSchemaSource;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.dependencytrack.secret.TestSecretManager;
+import org.dependencytrack.secret.management.SecretManager;
 import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterAll;
@@ -51,6 +52,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 public class ExtensionsResourceTest extends ResourceTest {
 
     private static PluginManager pluginManager;
+    private static SecretManager secretManager;
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
@@ -59,14 +61,17 @@ public class ExtensionsResourceTest extends ResourceTest {
                         @Override
                         protected void configure() {
                             bindFactory(() -> pluginManager).to(PluginManager.class);
+                            bindFactory(() -> secretManager).to(SecretManager.class);
                         }
                     }));
 
     @BeforeAll
     static void beforeAll() {
+        secretManager = new TestSecretManager();
+
         pluginManager = new PluginManager(
                 new SmallRyeConfigBuilder().build(),
-                new ConfigTemplateRenderer(secretName -> null),
+                secretManager::getSecretValue,
                 List.of(DummyExtensionPoint.class));
         pluginManager.loadPlugins(List.of(
                 () -> List.of(new DummyExtensionFactory())));

@@ -25,13 +25,26 @@
     "apiToken": {
       "type": "string",
       "title": "API Token",
-      "description": "Access token to authenticate with the GitHub API.  \n**The token is only required for authentication and does not require any permissions**.  \nBoth [fine-grained](https://github.com/settings/personal-access-tokens/new) and [classic](https://github.com/settings/tokens/new) access tokens work."
+      "description": "Access token to authenticate with the GitHub API.  \n**The token is only required for authentication and does not require any permissions**.  \nBoth [fine-grained](https://github.com/settings/personal-access-tokens/new) and [classic](https://github.com/settings/tokens/new) access tokens work.",
+      "minLength": 1,
+      "x-secret-ref": true
     }
   },
   "required": [
     "enabled",
     "aliasSyncEnabled",
-    "apiUrl",
-    "apiToken"
-  ]
+    "apiUrl"
+  ],
+  "if": {
+    "properties": {
+      "enabled": {
+        "const": true
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "apiToken"
+    ]
+  }
 }

@@ -21,15 +21,18 @@ package org.dependencytrack.resources.v2;
 import alpine.server.auth.PermissionRequired;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.api.v2.SecretsApi;
 import org.dependencytrack.api.v2.model.CreateSecretRequest;
 import org.dependencytrack.api.v2.model.ListSecretsResponse;
-import org.dependencytrack.api.v2.model.ListSecretsResponseItem;
 import org.dependencytrack.api.v2.model.UpdateSecretRequest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.exception.AlreadyExistsException;
+import org.dependencytrack.resources.AbstractApiResource;
+import org.dependencytrack.secret.management.ListSecretsRequest;
 import org.dependencytrack.secret.management.SecretAlreadyExistsException;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretMetadata;
@@ -37,11 +40,8 @@ import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Path("/")
-public class SecretsResource implements SecretsApi {
+public class SecretsResource extends AbstractApiResource implements SecretsApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SecretsResource.class);
 
@@ -110,33 +110,52 @@ public class SecretsResource implements SecretsApi {
 
     @Override
     @PermissionRequired({
-            Permissions.Constants.SECRET_MANAGEMENT,
-            Permissions.Constants.SECRET_MANAGEMENT_READ
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_READ
     })
-    public Response listSecrets() {
-        final List<SecretMetadata> secrets = secretManager.listSecrets();
-
-        final var responseItems = new ArrayList<ListSecretsResponseItem>(secrets.size());
-
-        for (final SecretMetadata secret : secrets) {
-            responseItems.add(
-                    ListSecretsResponseItem.builder()
-                            .name(secret.name())
-                            .description(secret.description())
-                            .createdAt(secret.createdAt() != null
-                                    ? secret.createdAt().toEpochMilli()
-                                    : null)
-                            .updatedAt(secret.updatedAt() != null
-                                    ? secret.updatedAt().toEpochMilli()
-                                    : null)
-                            .build());
+    public Response getSecretMetadata(String name) {
+        final SecretMetadata secretMetadata = secretManager.getSecretMetadata(name);
+        if (secretMetadata == null) {
+            throw new NotFoundException();
         }
 
+        return Response.ok(convert(secretMetadata)).build();
+    }
+
+    @Override
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_READ
+    })
+    public Response listSecretMetadata(String q, String pageToken, Integer limit) {
+        final Page<SecretMetadata> secretsPage = secretManager.listSecretMetadata(
+                new ListSecretsRequest()
+                        .withSearchText(q)
+                        .withPageToken(pageToken)
+                        .withLimit(limit));
+
         final var response = ListSecretsResponse.builder()
-                .secrets(responseItems)
+                .secrets(
+                        secretsPage.items().stream()
+                                .map(this::convert)
+                                .toList())
+                .pagination(createPaginationMetadata(getUriInfo(), secretsPage))
                 .build();
 
         return Response.ok(response).build();
+    }
+
+    private org.dependencytrack.api.v2.model.SecretMetadata convert(SecretMetadata secretMetadata) {
+        return org.dependencytrack.api.v2.model.SecretMetadata.builder()
+                .name(secretMetadata.name())
+                .description(secretMetadata.description())
+                .createdAt(secretMetadata.createdAt() != null
+                        ? secretMetadata.createdAt().toEpochMilli()
+                        : null)
+                .updatedAt(secretMetadata.updatedAt() != null
+                        ? secretMetadata.updatedAt().toEpochMilli()
+                        : null)
+                .build();
     }
 
 }

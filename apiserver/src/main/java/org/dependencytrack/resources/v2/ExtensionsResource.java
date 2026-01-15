@@ -42,7 +42,9 @@ import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
+import org.dependencytrack.plugin.runtime.config.UnresolvableSecretException;
 import org.dependencytrack.resources.AbstractApiResource;
+import org.dependencytrack.secret.management.SecretManager;
 import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,8 +65,16 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ExtensionsResource.class);
 
+    private final PluginManager pluginManager;
+    private final SecretManager secretManager;
+    private final RuntimeConfigMapper configMapper;
+
     @Inject
-    private PluginManager pluginManager;
+    ExtensionsResource(PluginManager pluginManager, SecretManager secretManager) {
+        this.pluginManager = pluginManager;
+        this.secretManager = secretManager;
+        this.configMapper = RuntimeConfigMapper.getInstance();
+    }
 
     @Override
     @PermissionRequired({
@@ -184,7 +194,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
         // so we have to serialize it first.
         final String configJson = Json.createObjectBuilder(request.getConfig()).build().toString();
 
-        RuntimeConfigMapper.getInstance().validateJson(configJson, runtimeConfigSpec);
+        validateConfig(configJson, runtimeConfigSpec);
 
         final boolean updated = inJdbiTransaction(
                 getAlpineRequest(),
@@ -239,6 +249,16 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
                 .filter(factory -> factory.extensionName().equals(extensionName))
                 .findAny()
                 .orElseThrow(NotFoundException::new);
+    }
+
+    private void validateConfig(String configJson, RuntimeConfigSpec configSpec) {
+        final var configNode = configMapper.validateJson(configJson, configSpec);
+
+        try {
+            configMapper.resolveSecretRefs(configNode, configSpec, secretManager::getSecretValue);
+        } catch (UnresolvableSecretException e) {
+            throw new BadRequestException(e.getMessage());
+        }
     }
 
 }

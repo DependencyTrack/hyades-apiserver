@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.secret.management;
 
+import org.dependencytrack.common.pagination.Page;
 import org.jspecify.annotations.Nullable;
 
 import java.io.Closeable;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.regex.Pattern;
 
@@ -83,9 +83,15 @@ public interface SecretManager extends Closeable {
     @Nullable String getSecretValue(String name);
 
     /**
+     * @param name Name of the secret.
+     * @return Secret metadata.
+     */
+    @Nullable SecretMetadata getSecretMetadata(String name);
+
+    /**
      * @return A list of metadata about all secrets.
      */
-    List<SecretMetadata> listSecrets();
+    Page<SecretMetadata> listSecretMetadata(ListSecretsRequest request);
 
     @Override
     default void close() {
@@ -99,12 +105,6 @@ public interface SecretManager extends Closeable {
             throw new IllegalArgumentException(
                     "name does not match expected pattern %s: %s".formatted(
                             VALID_NAME_PATTERN.pattern(), name));
-        }
-    }
-
-    default void requireNotReadOnly() {
-        if (isReadOnly()) {
-            throw new UnsupportedOperationException("Secret manager is read-only");
         }
     }
 

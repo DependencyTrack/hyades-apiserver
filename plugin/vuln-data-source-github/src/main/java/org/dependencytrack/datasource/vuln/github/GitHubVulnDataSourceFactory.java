@@ -106,8 +106,7 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
         final var defaultConfig = new GitHubVulnDataSourceConfig()
                 .withEnabled(false)
                 .withAliasSyncEnabled(true)
-                .withApiUrl(URI.create("https://api.github.com/graphql"))
-                .withApiToken("{{ secret('GITHUB_TOKEN') }}");
+                .withApiUrl(URI.create("https://api.github.com/graphql"));
 
         return new RuntimeConfigSpec(defaultConfig);
     }

@@ -51,6 +51,7 @@ class GitHubVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonN
     void isDataSourceEnabledShouldReturnTrueWhenEnabledAndFalseOtherwise(final boolean isEnabled) {
         final var config = (GitHubVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
         config.setEnabled(isEnabled);
+        config.setApiToken("dummy");
 
         final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
 
@@ -75,6 +76,7 @@ class GitHubVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonN
     void createShouldReturnDataSource() {
         final var config = (GitHubVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
         config.setEnabled(true);
+        config.setApiToken("dummy");
 
         final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
 

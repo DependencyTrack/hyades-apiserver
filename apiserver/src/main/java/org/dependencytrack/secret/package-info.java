@@ -17,6 +17,6 @@
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 @NullMarked
-package org.dependencytrack.config.templating;
+package org.dependencytrack.secret;
 
 import org.jspecify.annotations.NullMarked;

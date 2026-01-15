@@ -41,7 +41,6 @@ import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
 import org.dependencytrack.model.AnalysisResponse;
@@ -67,21 +66,19 @@ import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
-import org.glassfish.hk2.api.Factory;
-import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
+import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -118,33 +115,9 @@ import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 import static org.hamcrest.CoreMatchers.equalTo;
 
-@ExtendWith(SystemStubsExtension.class)
 public class BomResourceTest extends ResourceTest {
 
     private static PluginManager pluginManager;
-
-    private static class PluginManagerFactory implements Factory<PluginManager> {
-
-        @Override
-        public PluginManager provide() {
-            if (pluginManager != null) {
-                return pluginManager;
-            }
-
-            pluginManager = new PluginManager(
-                    new SmallRyeConfigBuilder().build(),
-                    new ConfigTemplateRenderer(secretName -> null),
-                    List.of(FileStorage.class));
-            pluginManager.loadPlugins(List.of(new MemoryFileStoragePlugin()));
-            return pluginManager;
-        }
-
-        @Override
-        public void dispose(PluginManager pluginManager) {
-            // Never invoked. Instance is closed in the afterAll method.
-        }
-
-    }
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
@@ -156,9 +129,18 @@ public class BomResourceTest extends ResourceTest {
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
-                            bindFactory(PluginManagerFactory.class).to(PluginManager.class);
+                            bindFactory(() -> pluginManager).to(PluginManager.class);
                         }
                     }));
+
+    @BeforeAll
+    static void beforeAll() {
+        pluginManager = new PluginManager(
+                new SmallRyeConfigBuilder().build(),
+                secretName -> null,
+                List.of(FileStorage.class));
+        pluginManager.loadPlugins(List.of(new MemoryFileStoragePlugin()));
+    }
 
     @AfterAll
     static void afterAll() {

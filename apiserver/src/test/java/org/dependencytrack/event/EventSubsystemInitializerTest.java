@@ -23,7 +23,6 @@ import alpine.event.framework.SingleThreadedEventService;
 import alpine.event.framework.Subscriber;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
-import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.plugin.PluginManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -51,7 +50,7 @@ class EventSubsystemInitializerTest {
         final var singleThreadedEventServiceMock = mock(SingleThreadedEventService.class);
         final var pluginManager = new PluginManager(
                 config,
-                new ConfigTemplateRenderer(secretName -> null),
+                secretName -> null,
                 Collections.emptyList());
         final var servletContextMock = mock(ServletContext.class);
 
@@ -59,7 +58,7 @@ class EventSubsystemInitializerTest {
                 .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
 
         final var initializer = new EventSubsystemInitializer(
-                ConfigProvider.getConfig(),
+                config,
                 eventServiceMock,
                 singleThreadedEventServiceMock);
         initializer.contextInitialized(new ServletContextEvent(servletContextMock));
