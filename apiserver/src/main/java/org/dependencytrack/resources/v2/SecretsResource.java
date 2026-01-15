@@ -21,8 +21,8 @@ package org.dependencytrack.resources.v2;
 import alpine.server.auth.PermissionRequired;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.SecretsApi;
 import org.dependencytrack.api.v2.model.CreateSecretRequest;
 import org.dependencytrack.api.v2.model.ListSecretsResponse;
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-@Path("/")
+@Provider
 public class SecretsResource implements SecretsApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SecretsResource.class);

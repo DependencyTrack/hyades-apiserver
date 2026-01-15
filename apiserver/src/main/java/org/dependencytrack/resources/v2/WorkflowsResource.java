@@ -20,8 +20,8 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.WorkflowsApi;
 import org.dependencytrack.api.v2.model.ListWorkflowStatesResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowStatesResponseItem;
@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Path("/")
+@Provider
 public class WorkflowsResource implements WorkflowsApi {
 
     @Override
