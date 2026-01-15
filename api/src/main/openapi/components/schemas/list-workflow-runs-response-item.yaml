@@ -16,32 +16,43 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  step:
-    type: string
-    enum:
-      - BOM_CONSUMPTION
-      - BOM_PROCESSING
-      - VULN_ANALYSIS
-      - REPO_META_ANALYSIS
-      - POLICY_EVALUATION
-      - METRICS_UPDATE
-      - POLICY_BUNDLE_SYNC
-      - PROJECT_CLONE
-  status:
-    type: string
-    enum:
-      - PENDING
-      - TIMED_OUT
-      - COMPLETED
-      - FAILED
-      - CANCELLED
-      - NOT_APPLICABLE
-  failure_reason:
-    type: string
-  token:
+  id:
     type: string
     format: uuid
-  started_at:
+  workflow_name:
+    type: string
+  workflow_version:
+    type: integer
+    format: int32
+    minimum: 1
+    maximum: 100
+  workflow_instance_id:
+    type: string
+  status:
+    $ref: "./workflow-run-status.yaml"
+  priority:
+    type: integer
+    format: int32
+    minimum: 0
+    maximum: 100
+  concurrency_key:
+    type: string
+  labels:
+    type: object
+    additionalProperties:
+      type: string
+  created_at:
     $ref: "./timestamp.yaml"
   updated_at:
     $ref: "./timestamp.yaml"
+  started_at:
+    $ref: "./timestamp.yaml"
+  completed_at:
+    $ref: "./timestamp.yaml"
+required:
+- id
+- workflow_name
+- workflow_version
+- status
+- priority
+- created_at
