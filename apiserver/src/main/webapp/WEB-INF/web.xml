@@ -35,6 +35,9 @@
         <listener-class>org.dependencytrack.init.InitTaskServletContextListener</listener-class>
     </listener>
     <listener>
+        <listener-class>org.dependencytrack.caching.CacheProviderInitializer</listener-class>
+    </listener>
+    <listener>
         <listener-class>org.dependencytrack.secret.SecretManagerInitializer</listener-class>
     </listener>
     <listener>
@@ -101,6 +104,7 @@
         <init-param>
             <param-name>jersey.config.server.provider.classnames</param-name>
             <param-value>
+                org.dependencytrack.caching.CacheProviderBinder,
                 org.dependencytrack.dex.DexEngineBinder,
                 org.dependencytrack.plugin.PluginManagerBinder,
                 org.glassfish.jersey.media.multipart.MultiPartFeature
