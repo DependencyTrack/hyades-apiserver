@@ -81,7 +81,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.dex.api.payload.PayloadConverters.stringConverter;
 import static org.dependencytrack.dex.api.payload.PayloadConverters.voidConverter;
-import static org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELED;
+import static org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELLED;
 import static org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
 import static org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
 
@@ -296,7 +296,7 @@ class DexEngineImplTest {
 
         engine.requestRunCancellation(runId, "Stop it!");
 
-        final WorkflowRunMetadata canceledRun = awaitRunStatus(runId, WorkflowRunStatus.CANCELED);
+        final WorkflowRunMetadata canceledRun = awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
 
         assertThat(canceledRun.customStatus()).isNull();
         assertThat(canceledRun.concurrencyKey()).isNull();
@@ -317,7 +317,7 @@ class DexEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_CANCELED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED);
-                    assertThat(entry.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_CANCELED);
+                    assertThat(entry.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_CANCELLED);
                     assertThat(entry.getRunCompleted().hasResult()).isFalse();
                     assertThat(entry.getRunCompleted().getFailure().getMessage()).isEqualTo("Stop it!");
                 },
@@ -484,9 +484,9 @@ class DexEngineImplTest {
 
         engine.requestRunCancellation(parentRunId, "someReason");
 
-        awaitRunStatus(parentRunId, WorkflowRunStatus.CANCELED);
-        awaitRunStatus(childRunIdReference.get(), WorkflowRunStatus.CANCELED);
-        awaitRunStatus(grandChildRunIdReference.get(), WorkflowRunStatus.CANCELED);
+        awaitRunStatus(parentRunId, WorkflowRunStatus.CANCELLED);
+        awaitRunStatus(childRunIdReference.get(), WorkflowRunStatus.CANCELLED);
+        awaitRunStatus(grandChildRunIdReference.get(), WorkflowRunStatus.CANCELLED);
     }
 
     @Test
@@ -543,7 +543,7 @@ class DexEngineImplTest {
 
         engine.requestRunCancellation(runId, "someReason");
 
-        awaitRunStatus(runId, WorkflowRunStatus.CANCELED);
+        awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
     }
 
     @Test

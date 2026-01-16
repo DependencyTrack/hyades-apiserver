@@ -844,7 +844,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                 eventId,
                 new CompleteRunCommand(
                         eventId,
-                        WorkflowRunStatus.CANCELED,
+                        WorkflowRunStatus.CANCELLED,
                         customStatus,
                         /* result */ null,
                         FailureConverter.toFailure(new CancellationFailureException(reason))));
