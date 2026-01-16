@@ -158,7 +158,7 @@ class WorkflowsResourceTest extends ResourceTest {
         assertThat(capturedRequest.workflowName()).isEqualTo("testWorkflow");
         assertThat(capturedRequest.workflowVersion()).isEqualTo(42);
         assertThat(capturedRequest.workflowInstanceId()).isEqualTo("instance-123");
-        assertThat(capturedRequest.status()).isEqualTo(WorkflowRunStatus.CANCELED);
+        assertThat(capturedRequest.status()).isEqualTo(WorkflowRunStatus.CANCELLED);
         assertThat(capturedRequest.createdAtFrom()).isEqualTo(Instant.ofEpochMilli(1000000));
         assertThat(capturedRequest.createdAtTo()).isEqualTo(Instant.ofEpochMilli(2000000));
         assertThat(capturedRequest.completedAtFrom()).isEqualTo(Instant.ofEpochMilli(3000000));

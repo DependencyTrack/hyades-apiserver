@@ -380,7 +380,7 @@ final class WorkflowRunState {
                 }
                 childRunEventBuilder.setChildRunCompleted(
                         childRunCompletedBuilder.build());
-            } else if (command.status() == WorkflowRunStatus.CANCELED || command.status() == WorkflowRunStatus.FAILED) {
+            } else if (command.status() == WorkflowRunStatus.CANCELLED || command.status() == WorkflowRunStatus.FAILED) {
                 final var childRunFailedBuilder = ChildRunFailed.newBuilder()
                         .setChildRunCreatedEventId(parentRun.getChildRunCreatedEventId());
                 if (command.failure() != null) {

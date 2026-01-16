@@ -131,7 +131,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
 
     private static org.dependencytrack.dex.engine.api.@Nullable WorkflowRunStatus convert(@Nullable WorkflowRunStatus status) {
         return switch (status) {
-            case CANCELLED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CANCELED;
+            case CANCELLED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CANCELLED;
             case COMPLETED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.COMPLETED;
             case FAILED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.FAILED;
             case CREATED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CREATED;
@@ -143,7 +143,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
 
     private static WorkflowRunStatus convert(org.dependencytrack.dex.engine.api.WorkflowRunStatus status) {
         return switch (status) {
-            case CANCELED -> WorkflowRunStatus.CANCELLED;
+            case CANCELLED -> WorkflowRunStatus.CANCELLED;
             case COMPLETED -> WorkflowRunStatus.COMPLETED;
             case FAILED -> WorkflowRunStatus.FAILED;
             case CREATED -> WorkflowRunStatus.CREATED;
