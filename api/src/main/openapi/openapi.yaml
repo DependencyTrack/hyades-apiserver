@@ -130,6 +130,8 @@ paths:
     $ref: "./paths/extension-points__name__extensions__name__config.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/config-schema:
     $ref: "./paths/extension-points__name__extensions__name__config-schema.yaml"
+  /extension-points/{extensionPointName}/extensions/{extensionName}/test:
+    $ref: "./paths/extension-points__name__extensions__name__test.yaml"
   /metrics/portfolio/current:
     $ref: "./paths/metrics_portfolio_current.yaml"
   /metrics/vulnerabilities:

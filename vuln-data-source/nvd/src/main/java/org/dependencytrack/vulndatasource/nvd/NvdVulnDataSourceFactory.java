@@ -23,28 +23,42 @@ import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.ExtensionTestResult;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.time.Duration;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
  */
+@NullMarked
 final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NvdVulnDataSourceFactory.class);
 
-    private ConfigRegistry configRegistry;
-    private ExtensionKVStore kvStore;
-    private ObjectMapper objectMapper;
-    private HttpClient httpClient;
+    private @Nullable ConfigRegistry configRegistry;
+    private @Nullable ExtensionKVStore kvStore;
+    private @Nullable ObjectMapper objectMapper;
+    private @Nullable HttpClient httpClient;
 
     @Override
     public String extensionName() {
@@ -98,6 +112,78 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
         final var watermarkManager = WatermarkManager.create(kvStore);
 
         return new NvdVulnDataSource(watermarkManager, objectMapper, httpClient, config.getCveFeedsUrl().toString());
+    }
+
+    @Override
+    public ExtensionTestResult test(@Nullable RuntimeConfig runtimeConfig) {
+        requireNonNull(configRegistry, "configRegistry has not been initialized");
+        requireNonNull(httpClient, "httpClient has not been initialized");
+
+        if (!(runtimeConfig instanceof final NvdVulnDataSourceConfig nvdConfig)) {
+            throw new IllegalArgumentException();
+        }
+
+        final var testResult = ExtensionTestResult.ofChecks("connection", "feed_format");
+
+        if (!nvdConfig.getEnabled()) {
+            return testResult;
+        }
+
+        final URI feedsUrl = !nvdConfig.getCveFeedsUrl().getPath().endsWith("/")
+                ? URI.create(nvdConfig.getCveFeedsUrl().toString() + "/")
+                : nvdConfig.getCveFeedsUrl();
+        final URI metadataUri = feedsUrl.resolve("json/cve/2.0/nvdcve-2.0-modified.meta");
+        
+        if (!configRegistry
+                .getDeploymentConfig()
+                .getOptionalValue("allow-local-connections", boolean.class)
+                .orElse(false)) {
+            try {
+                final var hostAddress = InetAddress.getByName(feedsUrl.getHost());
+                if (hostAddress.isLoopbackAddress()
+                        || hostAddress.isLinkLocalAddress()
+                        || hostAddress.isSiteLocalAddress()
+                        || hostAddress.isAnyLocalAddress()) {
+                    return testResult.fail("connection", "Connection to local hosts is not allowed");
+                }
+            } catch (UnknownHostException e) {
+                return testResult.fail("connection", "Unknown host");
+            }
+        }
+
+        final HttpRequest request = HttpRequest.newBuilder()
+                .uri(metadataUri)
+                .timeout(Duration.ofSeconds(5))
+                .GET()
+                .build();
+
+        final HttpResponse<String> response;
+        try {
+            response = httpClient.send(request, BodyHandlers.ofString());
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            LOGGER.warn("Failed to connect to {}", metadataUri, e);
+            return testResult.fail("connection", "Connection failed, check logs for details");
+        }
+
+        if (response.statusCode() != 200) {
+            LOGGER.warn("Unexpected response code {} from {}", response.statusCode(), metadataUri);
+            return testResult.fail("connection", "Unexpected response code, check logs for details");
+        }
+
+        testResult.pass("connection");
+
+        try {
+            final var ignored = NvdDataFeedMetadata.of(response.body());
+            testResult.pass("feed_format");
+        } catch (RuntimeException e) {
+            LOGGER.warn("Failed to parse feed metadata from {}", metadataUri, e);
+            testResult.fail("feed_format", "Failed to parse feed metadata, check logs for details");
+        }
+
+        return testResult;
     }
 
     @Override
