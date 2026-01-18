@@ -33,6 +33,5 @@ module org.dependencytrack.dex.engine.api {
     requires transitive microprofile.health.api;
     requires transitive org.dependencytrack.common.pagination;
     requires transitive org.dependencytrack.dex.api;
-    requires transitive org.dependencytrack.dex.proto;
     requires transitive org.jspecify;
 }

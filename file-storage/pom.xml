@@ -33,7 +33,6 @@
     <name>File Storage :: Parent</name>
 
     <modules>
-        <module>proto</module>
         <module>api</module>
         <module>local</module>
         <module>memory</module>
