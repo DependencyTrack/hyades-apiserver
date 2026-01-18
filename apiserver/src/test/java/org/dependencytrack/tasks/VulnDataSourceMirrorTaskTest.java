@@ -24,7 +24,7 @@ import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
+import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
