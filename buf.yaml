@@ -16,11 +16,11 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 version: v2
 modules:
-- path: dex/proto/src/main/proto
+- path: dex/api/src/main/proto
   name: github.com/DependencyTrack/dex
-- path: file-storage/proto/src/main/proto
+- path: file-storage/api/src/main/proto
   name: github.com/DependencyTrack/file-storage
-- path: notification/proto/src/main/proto
+- path: notification/api/src/main/proto
   name: github.com/DependencyTrack/notification
 - path: proto/src/main/proto
   name: github.com/DependencyTrack/core
