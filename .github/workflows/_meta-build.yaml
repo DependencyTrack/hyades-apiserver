@@ -127,7 +127,7 @@ jobs:
             TAGS="${IMAGE_NAME}:${REF_NAME,,}"
           else
             TAGS="${IMAGE_NAME}:${{ inputs.app-version }}"
-            if [[ "${{ inputs.app-version }}" != "snapshot" ]]; then
+            if [[ "${{ inputs.app-version }}" != "snapshot" && "${{ inputs.app-version }}" != *-* ]]; then
               TAGS="${TAGS},${IMAGE_NAME}:latest"
             fi
           fi
