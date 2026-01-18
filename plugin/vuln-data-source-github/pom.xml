@@ -31,7 +31,7 @@
     <artifactId>vuln-data-source-github</artifactId>
     <packaging>jar</packaging>
 
-    <name>GitHub Vulnerability Data Source</name>
+    <name>Vulnerability Data Source :: GitHub</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

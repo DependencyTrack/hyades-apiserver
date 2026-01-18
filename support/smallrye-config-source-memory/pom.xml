@@ -31,6 +31,8 @@
     <artifactId>smallrye-config-source-memory</artifactId>
     <packaging>jar</packaging>
 
+    <name>Support :: SmallRye Config Source Memory</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
     </properties>

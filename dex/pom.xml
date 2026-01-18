@@ -30,7 +30,7 @@
     <artifactId>dex-parent</artifactId>
     <packaging>pom</packaging>
 
-    <name>Durable Execution Parent</name>
+    <name>Durable Execution :: Parent</name>
 
     <modules>
         <module>proto</module>

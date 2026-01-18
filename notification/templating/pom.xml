@@ -30,7 +30,7 @@
     <artifactId>notification-templating</artifactId>
     <packaging>jar</packaging>
 
-    <name>Notification Templating</name>
+    <name>Notification :: Templating</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

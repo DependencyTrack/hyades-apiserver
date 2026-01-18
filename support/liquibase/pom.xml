@@ -31,6 +31,8 @@
     <artifactId>liquibase-support</artifactId>
     <packaging>jar</packaging>
 
+    <name>Support :: Liquibase</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
     </properties>

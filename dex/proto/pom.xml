@@ -30,7 +30,7 @@
     <artifactId>dex-proto</artifactId>
     <packaging>jar</packaging>
 
-    <name>Durable Execution Protocol Buffers</name>
+    <name>Durable Execution :: Protocol Buffers</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

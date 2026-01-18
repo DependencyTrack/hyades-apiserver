@@ -12,6 +12,8 @@
     <artifactId>alpine-test</artifactId>
     <packaging>jar</packaging>
 
+    <name>Alpine :: Test Utilities</name>
+
     <dependencies>
         <dependency>
             <groupId>org.dependencytrack</groupId>

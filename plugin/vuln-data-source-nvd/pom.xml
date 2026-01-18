@@ -31,7 +31,7 @@
     <artifactId>vuln-data-source-nvd</artifactId>
     <packaging>jar</packaging>
 
-    <name>NVD Vulnerability Data Source</name>
+    <name>Vulnerability Data Source :: NVD</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

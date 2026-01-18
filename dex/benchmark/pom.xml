@@ -30,7 +30,7 @@
     <artifactId>dex-benchmark</artifactId>
     <packaging>jar</packaging>
 
-    <name>Durable Execution Benchmark</name>
+    <name>Durable Execution :: Benchmark</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

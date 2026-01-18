@@ -30,6 +30,8 @@
     <artifactId>common-pagination</artifactId>
     <packaging>jar</packaging>
 
+    <name>Common :: Pagination</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
     </properties>

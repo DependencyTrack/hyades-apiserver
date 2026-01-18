@@ -31,7 +31,7 @@
     <artifactId>plugin-testing</artifactId>
     <packaging>jar</packaging>
 
-    <name>Plugin Testing Utilities</name>
+    <name>Plugin :: Testing Utilities</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

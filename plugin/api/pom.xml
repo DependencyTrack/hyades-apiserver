@@ -31,7 +31,7 @@
     <artifactId>plugin-api</artifactId>
     <packaging>jar</packaging>
 
-    <name>Plugin API</name>
+    <name>Plugin :: API</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

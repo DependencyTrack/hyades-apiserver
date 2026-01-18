@@ -30,7 +30,7 @@
     <artifactId>dex-engine</artifactId>
     <packaging>jar</packaging>
 
-    <name>Durable Execution Engine</name>
+    <name>Durable Execution :: Engine</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

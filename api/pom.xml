@@ -30,6 +30,8 @@
     <artifactId>api</artifactId>
     <packaging>jar</packaging>
 
+    <name>API</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
         <checkstyle.skip>true</checkstyle.skip>

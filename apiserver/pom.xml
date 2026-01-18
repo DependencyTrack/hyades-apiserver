@@ -11,6 +11,8 @@
 
     <artifactId>apiserver</artifactId>
     <packaging>war</packaging>
+
+    <name>API Server</name>
     <description>The Dependency-Track API Server</description>
 
     <properties>
