@@ -90,20 +90,12 @@ public interface DexEngine extends Closeable {
             Duration lockTimeout);
 
     /**
-     * Register a worker for activity tasks.
+     * Register a task worker.
      *
      * @param options Options of the worker.
      * @throws IllegalStateException When the engine was already started.
      */
-    void registerActivityWorker(ActivityTaskWorkerOptions options);
-
-    /**
-     * Register a worker for workflow tasks.
-     *
-     * @param options Options of the worker.
-     * @throws IllegalStateException When the engine was already started.
-     */
-    void registerWorkflowWorker(WorkflowTaskWorkerOptions options);
+    void registerTaskWorker(TaskWorkerOptions options);
 
     /**
      * Add a listener for {@link DexEngineEvent}s.

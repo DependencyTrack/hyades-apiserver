@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 public record TaskQueue(
-        TaskQueueType type,
+        TaskType type,
         String name,
         TaskQueueStatus status,
         int capacity,

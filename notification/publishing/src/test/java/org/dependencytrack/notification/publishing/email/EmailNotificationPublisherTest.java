@@ -50,20 +50,34 @@ class EmailNotificationPublisherTest extends AbstractNotificationPublisherTest {
     }
 
     @Override
-    protected void customizeRuleConfig(RuntimeConfig ruleConfig) {
-        final var emailRuleConfig = (EmailNotificationRuleConfig) ruleConfig;
-
-        emailRuleConfig
-                .withSmtp(new Smtp()
-                        .withHost(GREEN_MAIL.getSmtp().getBindTo())
-                        .withPort(GREEN_MAIL.getSmtp().getPort())
-                        .withUsername("username")
-                        .withPassword("password"))
-                .withRecipientAddresses(Set.of("username@example.com"));
+    protected void customizeGlobalConfig(RuntimeConfig globalConfig) {
+        final var emailGlobalConfig = (EmailNotificationPublisherGlobalConfig) globalConfig;
+        emailGlobalConfig.setEnabled(true);
+        emailGlobalConfig.setHost(GREEN_MAIL.getSmtp().getBindTo());
+        emailGlobalConfig.setPort(GREEN_MAIL.getSmtp().getPort());
+        emailGlobalConfig.setUsername("username");
+        emailGlobalConfig.setPassword("password");
+        emailGlobalConfig.setSenderAddress("dependencytrack@example.com");
     }
 
     @Override
-    protected void validateBomConsumedNotificationPublish(Notification ignored) {
+    protected void customizeRuleConfig(RuntimeConfig ruleConfig) {
+        final var emailRuleConfig = (EmailNotificationPublisherRuleConfig) ruleConfig;
+        emailRuleConfig.setRecipientAddresses(Set.of("username@example.com"));
+    }
+
+    @Override
+    protected void validateNotificationPublish(Notification notification) {
+        switch (notification.getGroup()) {
+            case GROUP_BOM_CONSUMED -> validateBomConsumedNotificationPublish();
+            case GROUP_BOM_PROCESSING_FAILED -> validateBomProcessingFailedNotificationPublish();
+            case GROUP_BOM_VALIDATION_FAILED -> validateBomValidationFailedNotificationPublish();
+            case GROUP_NEW_VULNERABILITY -> validateNewVulnerabilityNotificationPublish();
+            case GROUP_NEW_VULNERABLE_DEPENDENCY -> validateNewVulnerableDependencyNotificationPublish();
+        }
+    }
+
+    private void validateBomConsumedNotificationPublish() {
         final ReceivedMessage message = getReceivedMessage();
         assertThat(message.subject()).isEqualTo("[Dependency-Track] Bill of Materials Consumed");
         assertThat(message.content()).isEqualToNormalizingNewlines("""
@@ -86,8 +100,7 @@ class EmailNotificationPublisherTest extends AbstractNotificationPublisherTest {
                 """);
     }
 
-    @Override
-    protected void validateBomProcessingFailedNotificationPublish(Notification ignored) {
+    private void validateBomProcessingFailedNotificationPublish() {
         final ReceivedMessage message = getReceivedMessage();
         assertThat(message.subject()).isEqualTo("[Dependency-Track] Bill of Materials Processing Failed");
         assertThat(message.content()).isEqualToNormalizingNewlines("""
@@ -115,8 +128,7 @@ class EmailNotificationPublisherTest extends AbstractNotificationPublisherTest {
                 """);
     }
 
-    @Override
-    protected void validateBomValidationFailedNotificationPublish(Notification ignored) {
+    private void validateBomValidationFailedNotificationPublish() {
         final ReceivedMessage message = getReceivedMessage();
         assertThat(message.subject()).isEqualTo("[Dependency-Track] Bill of Materials Validation Failed");
         assertThat(message.content()).isEqualToNormalizingNewlines("""
@@ -148,8 +160,7 @@ class EmailNotificationPublisherTest extends AbstractNotificationPublisherTest {
                 """);
     }
 
-    @Override
-    protected void validateNewVulnerabilityNotificationPublish(Notification ignored) {
+    private void validateNewVulnerabilityNotificationPublish() {
         final ReceivedMessage message = getReceivedMessage();
         assertThat(message.subject()).isEqualTo("[Dependency-Track] New Vulnerability Identified on Project: [projectName : projectVersion]");
         assertThat(message.content()).isEqualToNormalizingNewlines("""
@@ -181,8 +192,7 @@ class EmailNotificationPublisherTest extends AbstractNotificationPublisherTest {
                 """);
     }
 
-    @Override
-    protected void validateNewVulnerableDependencyNotificationPublish(Notification ignored) {
+    private void validateNewVulnerableDependencyNotificationPublish() {
         final ReceivedMessage message = getReceivedMessage();
         assertThat(message.subject()).isEqualTo("[Dependency-Track] Vulnerable Dependency Introduced on Project: [projectName : projectVersion]");
         assertThat(message.content()).isEqualToNormalizingNewlines("""

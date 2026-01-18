@@ -30,12 +30,11 @@ import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.prometheus.metrics.exporter.httpserver.HTTPServer;
-import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.DexEngineFactory;
-import org.dependencytrack.dex.engine.api.TaskQueueType;
-import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
+import org.dependencytrack.dex.engine.api.TaskType;
+import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.dex.engine.migration.MigrationExecutor;
@@ -86,10 +85,10 @@ public class Application {
 
         try (final DexEngine dexEngine = createDexEngine(dataSource, null)) {
             LOGGER.info("Creating task queues");
-            dexEngine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "default", 1000));
-            dexEngine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "foo", 1000));
-            dexEngine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "bar", 1000));
-            dexEngine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "baz", 1000));
+            dexEngine.createTaskQueue(new CreateTaskQueueRequest(TaskType.WORKFLOW, "default", 1000));
+            dexEngine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "foo", 1000));
+            dexEngine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "bar", 1000));
+            dexEngine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "baz", 1000));
         }
     }
 
@@ -120,10 +119,10 @@ public class Application {
 
         final DexEngine dexEngine = createDexEngine(dataSource, meterRegistry);
 
-        dexEngine.registerWorkflowWorker(new WorkflowTaskWorkerOptions("default", "default", 150));
-        dexEngine.registerActivityWorker(new ActivityTaskWorkerOptions("foo-worker", "foo", 50));
-        dexEngine.registerActivityWorker(new ActivityTaskWorkerOptions("bar-worker", "bar", 50));
-        dexEngine.registerActivityWorker(new ActivityTaskWorkerOptions("baz-worker", "baz", 50));
+        dexEngine.registerTaskWorker(new TaskWorkerOptions(TaskType.WORKFLOW, "default", "default", 150));
+        dexEngine.registerTaskWorker(new TaskWorkerOptions(TaskType.ACTIVITY, "foo-worker", "foo", 50));
+        dexEngine.registerTaskWorker(new TaskWorkerOptions(TaskType.ACTIVITY, "bar-worker", "bar", 50));
+        dexEngine.registerTaskWorker(new TaskWorkerOptions(TaskType.ACTIVITY, "baz-worker", "baz", 50));
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {

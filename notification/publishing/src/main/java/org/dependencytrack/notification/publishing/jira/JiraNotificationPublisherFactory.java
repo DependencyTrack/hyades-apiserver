@@ -22,10 +22,10 @@ import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.jspecify.annotations.Nullable;
 
-import java.net.URI;
 import java.net.http.HttpClient;
 
 import static java.util.Objects.requireNonNull;
@@ -36,6 +36,7 @@ import static org.dependencytrack.notification.api.publishing.NotificationPublis
  */
 public final class JiraNotificationPublisherFactory implements NotificationPublisherFactory {
 
+    private @Nullable ConfigRegistry configRegistry;
     private @Nullable HttpClient httpClient;
 
     @Override
@@ -55,6 +56,7 @@ public final class JiraNotificationPublisherFactory implements NotificationPubli
 
     @Override
     public void init(ExtensionContext ctx) {
+        configRegistry = ctx.configRegistry();
         httpClient = HttpClient.newBuilder()
                 .proxy(ctx.proxySelector())
                 .build();
@@ -62,15 +64,28 @@ public final class JiraNotificationPublisherFactory implements NotificationPubli
 
     @Override
     public NotificationPublisher create() {
+        requireNonNull(configRegistry, "configRegistry must not be null");
         requireNonNull(httpClient, "httpClient must not be null");
-        return new JiraNotificationPublisher(httpClient);
+
+        final var globalConfig = configRegistry.getRuntimeConfig(JiraNotificationPublisherGlobalConfig.class);
+        requireNonNull(globalConfig, "globalConfig must not be null");
+
+        if (!globalConfig.getEnabled()) {
+            throw new IllegalStateException("Jira notification publisher is disabled");
+        }
+
+        return new JiraNotificationPublisher(globalConfig, httpClient);
+    }
+
+    @Override
+    public RuntimeConfigSpec runtimeConfigSpec() {
+        return new RuntimeConfigSpec(
+                new JiraNotificationPublisherGlobalConfig());
     }
 
     @Override
     public RuntimeConfigSpec ruleConfigSpec() {
-        final var defaultConfig = new JiraNotificationRuleConfig()
-                .withApiUrl(URI.create("https://jira.example.com"))
-                .withPasswordOrToken("{{ secret('JIRA_API_TOKEN') }}")
+        final var defaultConfig = new JiraNotificationPublisherRuleConfig()
                 .withProjectKey("EXAMPLE")
                 .withTicketType("TASK");
 

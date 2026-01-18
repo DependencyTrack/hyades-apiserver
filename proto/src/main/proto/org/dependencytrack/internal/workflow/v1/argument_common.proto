@@ -16,20 +16,17 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.notification;
+syntax = "proto3";
 
-import org.dependencytrack.notification.proto.v1.Notification;
+package org.dependencytrack.internal.workflow.v1;
 
-/**
- * Unit of work for publishing a notification.
- *
- * @param ruleId       ID of the applicable notification rule.
- * @param ruleName     Name of the applicable notification rule.
- * @param notification The notification to publish.
- * @since 5.7.0
- */
-record NotificationPublishTask(
-        long ruleId,
-        String ruleName,
-        Notification notification) {
+import "org/dependencytrack/filestorage/v1/filestorage.proto";
+
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.internal.workflow.v1";
+
+// Argument of the delete-files activity.
+message DeleteFilesArgument {
+  // Metadata of files to delete.
+  repeated org.dependencytrack.filestorage.v1.FileMetadata file_metadata = 1;
 }

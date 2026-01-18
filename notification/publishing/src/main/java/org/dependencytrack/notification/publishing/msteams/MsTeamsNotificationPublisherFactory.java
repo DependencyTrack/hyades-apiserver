@@ -21,7 +21,7 @@ package org.dependencytrack.notification.publishing.msteams;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
-import org.dependencytrack.notification.publishing.http.HttpNotificationRuleConfig;
+import org.dependencytrack.notification.publishing.http.HttpNotificationPublisherRuleConfig;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.jspecify.annotations.Nullable;
@@ -69,10 +69,8 @@ public final class MsTeamsNotificationPublisherFactory implements NotificationPu
 
     @Override
     public RuntimeConfigSpec ruleConfigSpec() {
-        final var defaultConfig = new HttpNotificationRuleConfig()
-                .withDestinationUrl(URI.create("https://msteams.example.com"));
-
-        return new RuntimeConfigSpec(defaultConfig);
+        return new RuntimeConfigSpec(new HttpNotificationPublisherRuleConfig()
+                .withDestinationUrl(URI.create("https://msteams.example.com")));
     }
 
     @Override

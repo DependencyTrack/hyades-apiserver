@@ -29,7 +29,9 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
+import org.dependencytrack.notification.proto.v1.Group;
 import org.dependencytrack.notification.proto.v1.Notification;
+import org.dependencytrack.notification.proto.v1.Scope;
 import org.dependencytrack.notification.publishing.AbstractNotificationPublisherTest;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class KafkaNotificationPublisherTest extends AbstractNotificationPublisherTest {
 
     @Container
-    private final KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:4.1.1");
+    private final KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka:4.1.1");
 
     @Override
     protected NotificationPublisherFactory createPublisherFactory() {
@@ -56,9 +58,10 @@ class KafkaNotificationPublisherTest extends AbstractNotificationPublisherTest {
     }
 
     @Override
-    protected void customizeRuleConfig(RuntimeConfig ruleConfig) {
-        final var kafkaRuleConfig = (KafkaNotificationRuleConfig) ruleConfig;
-        kafkaRuleConfig.setBootstrapServers(Set.of(kafkaContainer.getBootstrapServers()));
+    protected void customizeGlobalConfig(RuntimeConfig globalConfig) {
+        final var kafkaGlobalConfig = (KafkaNotificationPublisherGlobalConfig) globalConfig;
+        kafkaGlobalConfig.setEnabled(true);
+        kafkaGlobalConfig.setBootstrapServers(Set.of(kafkaContainer.getBootstrapServers()));
     }
 
     @BeforeEach
@@ -73,41 +76,18 @@ class KafkaNotificationPublisherTest extends AbstractNotificationPublisherTest {
     }
 
     @Override
-    protected void validateBomConsumedNotificationPublish(Notification notification) throws Exception {
+    protected void validateNotificationPublish(Notification notification) throws Exception {
         final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
-        assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
-        assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
-    }
-
-    @Override
-    protected void validateBomProcessingFailedNotificationPublish(Notification notification) throws Exception {
-        final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
-        assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
-        assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
-    }
-
-    @Override
-    protected void validateBomValidationFailedNotificationPublish(Notification notification) throws Exception {
-        final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
-        assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
-        assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
-    }
-
-    @Override
-    protected void validateNewVulnerabilityNotificationPublish(Notification notification) throws Exception {
-        final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
-        assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
-        assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
-    }
-
-    @Override
-    protected void validateNewVulnerableDependencyNotificationPublish(Notification notification) throws Exception {
-        final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
+        if (notification.getScope() == Scope.SCOPE_PORTFOLIO) {
+            assertThat(record.key()).isEqualTo("c9c9539a-e381-4b36-ac52-6a7ab83b2c95");
+        } else {
+            if (notification.getGroup() == Group.GROUP_USER_CREATED
+                    || notification.getGroup() == Group.GROUP_USER_DELETED) {
+                assertThat(record.key()).isEqualTo("username");
+            } else {
+                assertThat(record.key()).isNull();
+            }
+        }
         assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
         assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
     }
