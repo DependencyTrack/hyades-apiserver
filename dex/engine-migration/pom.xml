@@ -30,7 +30,7 @@
     <artifactId>dex-engine-migration</artifactId>
     <packaging>jar</packaging>
 
-    <name>Durable Execution Engine Migrations</name>
+    <name>Durable Execution :: Engine Migrations</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

@@ -30,7 +30,7 @@
     <artifactId>notification-api</artifactId>
     <packaging>jar</packaging>
 
-    <name>Notification API</name>
+    <name>Notification :: API</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

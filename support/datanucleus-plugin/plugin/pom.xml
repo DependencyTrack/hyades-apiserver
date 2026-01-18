@@ -30,6 +30,8 @@
     <artifactId>datanucleus-plugin</artifactId>
     <packaging>jar</packaging>
 
+    <name>Support :: DataNucleus Plugin :: Plugin</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/../../..</project.parentBaseDir>
     </properties>

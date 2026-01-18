@@ -31,7 +31,7 @@
     <artifactId>vuln-data-source-osv</artifactId>
     <packaging>jar</packaging>
 
-    <name>OSV Vulnerability Data Source</name>
+    <name>Vulnerability Data Source :: OSV</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

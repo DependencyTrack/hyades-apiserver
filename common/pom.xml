@@ -30,6 +30,8 @@
     <artifactId>common-parent</artifactId>
     <packaging>pom</packaging>
 
+    <name>Common :: Parent</name>
+
     <modules>
         <module>config</module>
         <module>datasource</module>

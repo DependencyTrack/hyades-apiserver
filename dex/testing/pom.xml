@@ -30,7 +30,7 @@
     <artifactId>dex-testing</artifactId>
     <packaging>jar</packaging>
 
-    <name>Durable Execution Testing Utilities</name>
+    <name>Durable Execution :: Testing Utilities</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

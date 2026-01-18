@@ -30,7 +30,7 @@
     <artifactId>notification-proto</artifactId>
     <packaging>jar</packaging>
 
-    <name>Notification Protocol Buffers</name>
+    <name>Notification :: Protocol Buffers</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

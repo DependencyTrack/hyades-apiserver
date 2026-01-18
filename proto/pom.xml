@@ -12,6 +12,8 @@
     <artifactId>proto</artifactId>
     <packaging>jar</packaging>
 
+    <name>Protocol Buffers</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
         <checkstyle.skip>true</checkstyle.skip>

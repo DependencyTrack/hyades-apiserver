@@ -31,7 +31,7 @@
     <artifactId>plugin-runtime</artifactId>
     <packaging>jar</packaging>
 
-    <name>Plugin Runtime</name>
+    <name>Plugin :: Runtime</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

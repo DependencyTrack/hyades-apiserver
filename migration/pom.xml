@@ -12,6 +12,8 @@
     <artifactId>migration</artifactId>
     <packaging>jar</packaging>
 
+    <name>Migration</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
     </properties>

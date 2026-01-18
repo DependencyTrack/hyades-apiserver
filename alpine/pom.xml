@@ -37,7 +37,7 @@
         <module>alpine-test</module>
     </modules>
 
-    <name>alpine-parent</name>
+    <name>Alpine :: Parent</name>
     <description>
         An opinionated scaffolding library that jumpstarts Java projects with an API-first design,
         secure defaults, and minimal dependencies.
