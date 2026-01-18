@@ -149,6 +149,11 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>vuln-data-source-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>vuln-data-source-github</artifactId>
             <version>${project.version}</version>
         </dependency>

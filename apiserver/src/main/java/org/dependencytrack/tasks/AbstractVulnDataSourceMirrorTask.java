@@ -30,7 +30,7 @@ import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
+import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
