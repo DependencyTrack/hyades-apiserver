@@ -19,59 +19,41 @@ name: Release CI
 on:
   workflow_dispatch:
     inputs:
-      version-overwrite:
+      release-version:
         required: false
         default: ''
-        description: 'Use this to overwrite the version number to release, otherwise uses the current SNAPSHOT version (expected format x.y.z)'
+        description: >-
+          Release version (e.g. 5.7.0 or 5.7.0-RC1).
+          Leave empty to let Maven compute it from the current SNAPSHOT version.
         type: string
+      development-version:
+        required: false
+        default: ''
+        description: >-
+          Next development version (e.g. 5.8.0-SNAPSHOT).
+          Leave empty for automatic increment (e.g. 5.7.1-SNAPSHOT or 5.7.0-RC2-SNAPSHOT).
+        type: string
+      dry-run:
+        required: false
+        default: false
+        description: >-
+          Perform a dry run without pushing changes or creating releases.
+        type: boolean
 
 permissions: { }
 
 jobs:
-  prepare-release:
+  release:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      version: ${{ steps.variables.outputs.version }}
-      next-version: ${{ steps.variables.outputs.next-version }}
-      release-branch: ${{ steps.variables.outputs.release-branch }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # tag=v6.0.1
-
-      - name: Setup Environment
-        id: variables
-        run: |-
-          VERSION="${{ github.event.inputs.version-overwrite }}"
-          if [[ -z ${VERSION} ]]; then
-            CURRENT_SNAPSHOT=`yq -p=xml '.project.version' pom.xml`
-            VERSION=${CURRENT_SNAPSHOT%-SNAPSHOT}
-          fi
-          NEXT_VERSION="${VERSION%.*}.$((${VERSION##*.} + 1))-SNAPSHOT"
-
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "next-version=${NEXT_VERSION}" >> $GITHUB_OUTPUT
-          echo "release-branch=${VERSION%.*}.x" >> $GITHUB_OUTPUT
-
-  create-release:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     permissions:
-      # Required for pushing changes via git command (rather than via GitHub API).
-      # TODO: Use bot credentials for git, or rewrite the "Commit Version" step to use API instead.
       contents: write
-    needs:
-      - prepare-release
-
-    env:
-      VERSION: ${{ needs.prepare-release.outputs.version }}
-      BRANCH_NAME: ${{ needs.prepare-release.outputs.release-branch }}
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # tag=v6.0.1
         with:
           token: "${{ secrets.BOT_RELEASE_TOKEN }}"
+          fetch-depth: 0
 
       - name: Set up JDK
         uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # tag=v5.1.0
@@ -80,61 +62,40 @@ jobs:
           java-version: '21'
           cache: 'maven'
 
-      - name: Set Version
-        run: mvn -B --no-transfer-progress versions:set -DnewVersion=${VERSION}
-
-      - name: Commit Version
-        run: |-
+      - name: Configure Git
+        run: |
           git config user.name "dependencytrack-bot"
           git config user.email "106437498+dependencytrack-bot@users.noreply.github.com"
-          
-          git commit -am "prepare-release: set version to ${VERSION}"
 
-          if [[ -z `git ls-remote --quiet --heads origin "${BRANCH_NAME}"` ]]; then
-            git push
-          
-            git checkout -b "${BRANCH_NAME}"
-            git push origin "${BRANCH_NAME}"
-          else
-            git checkout "${BRANCH_NAME}"
-            git push
+      - name: Perform Maven Release
+        run: |-
+          MAVEN_ARGS="-B"
+          if [[ -n "${{ inputs.release-version }}" ]]; then
+            MAVEN_ARGS="${MAVEN_ARGS} -DreleaseVersion=${{ inputs.release-version }}"
           fi
+          if [[ -n "${{ inputs.development-version }}" ]]; then
+            MAVEN_ARGS="${MAVEN_ARGS} -DdevelopmentVersion=${{ inputs.development-version }}"
+          fi
+          if [[ "${{ inputs.dry-run }}" == "true" ]]; then
+            MAVEN_ARGS="${MAVEN_ARGS} -DdryRun=true"
+          fi
+          export MAVEN_ARGS
+
+          mvn release:prepare
 
       - name: Create GitHub Release
+        if: ${{ !inputs.dry-run }}
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_RELEASE_TOKEN }}
-        run: |-
-          gh release create "${{ needs.prepare-release.outputs.version }}" \
-            --target "${{ needs.prepare-release.outputs.release-branch }}" \
-            --generate-notes
+        run: |
+          RELEASE_VERSION=$(git describe --tags --abbrev=0)
+          echo "Release version: ${RELEASE_VERSION}"
 
-  post-release:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: write
-    needs:
-      - prepare-release
-      - create-release
+          PRERELEASE_FLAG=""
+          if [[ "${RELEASE_VERSION}" == *-* ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
 
-    env:
-      NEXT_VERSION: ${{ needs.prepare-release.outputs.next-version }}
-      BRANCH_NAME: ${{ needs.prepare-release.outputs.release-branch }}
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # tag=v6.0.1
-        with:
-          ref: ${{ needs.prepare-release.outputs.release-branch }}
-          token: "${{ secrets.BOT_RELEASE_TOKEN }}"
-
-      - name: Set SNAPSHOT Version after Release
-        run: mvn -B --no-transfer-progress versions:set -DnewVersion=${NEXT_VERSION}
-
-      - name: Commit SNAPSHOT Version
-        run: |-
-          git config user.name "dependencytrack-bot"
-          git config user.email "106437498+dependencytrack-bot@users.noreply.github.com"
-          
-          git commit -am "prepare-iteration: set version to ${NEXT_VERSION}"
-          git push origin "${BRANCH_NAME}"
+          gh release create "${RELEASE_VERSION}" \
+            --generate-notes \
+            ${PRERELEASE_FLAG}

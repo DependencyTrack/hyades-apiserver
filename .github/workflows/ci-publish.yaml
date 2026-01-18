@@ -20,6 +20,7 @@ on:
   release:
     types:
       - released
+      - prereleased
   workflow_dispatch:
 
 permissions: { }
