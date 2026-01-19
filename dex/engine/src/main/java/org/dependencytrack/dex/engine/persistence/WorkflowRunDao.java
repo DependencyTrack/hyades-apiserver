@@ -26,7 +26,6 @@ import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.engine.persistence.model.WorkflowRunHistoryEntry;
-import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
@@ -225,21 +224,7 @@ public final class WorkflowRunDao extends AbstractDao {
                 .define("sortBy", sortBy)
                 .define("sortDirection", sortDirection)
                 .defineNamedBindings()
-                .mapTo(WorkflowRunMetadataRow.class)
-                .map(row -> new WorkflowRunMetadata(
-                        row.id(),
-                        row.workflowName(),
-                        row.workflowVersion(),
-                        row.workflowInstanceId(),
-                        row.status(),
-                        row.customStatus(),
-                        row.priority(),
-                        row.concurrencyKey(),
-                        row.labels(),
-                        row.createdAt(),
-                        row.updatedAt(),
-                        row.startedAt(),
-                        row.completedAt()))
+                .mapTo(WorkflowRunMetadata.class)
                 .list();
 
         final List<WorkflowRunMetadata> resultItems = rows.size() > 1

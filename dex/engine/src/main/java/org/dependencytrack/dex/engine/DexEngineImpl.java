@@ -74,7 +74,6 @@ import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunComm
 import org.dependencytrack.dex.engine.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
-import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.engine.persistence.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.engine.support.Buffer;
 import org.dependencytrack.dex.proto.event.v1.ActivityTaskCompleted;
@@ -607,7 +606,7 @@ final class DexEngineImpl implements DexEngine {
 
 
     @Override
-    public @Nullable WorkflowRun getRun(UUID id) {
+    public @Nullable WorkflowRun getRunById(UUID id) {
         final List<WorkflowEvent> eventHistory = jdbi.withHandle(handle -> {
             final var dao = new WorkflowRunDao(handle);
 
@@ -643,27 +642,14 @@ final class DexEngineImpl implements DexEngine {
                 runState.eventHistory());
     }
 
-    public @Nullable WorkflowRunMetadata getRunMetadata(UUID runId) {
-        final WorkflowRunMetadataRow metadataRow = jdbi.withHandle(
-                handle -> new WorkflowDao(handle).getRunMetadataById(runId));
-        if (metadataRow == null) {
-            return null;
-        }
+    @Override
+    public @Nullable WorkflowRunMetadata getRunMetadataById(UUID runId) {
+        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunMetadataById(runId));
+    }
 
-        return new WorkflowRunMetadata(
-                metadataRow.id(),
-                metadataRow.workflowName(),
-                metadataRow.workflowVersion(),
-                metadataRow.workflowInstanceId(),
-                metadataRow.status(),
-                metadataRow.customStatus(),
-                metadataRow.priority(),
-                metadataRow.concurrencyKey(),
-                metadataRow.labels(),
-                metadataRow.createdAt(),
-                metadataRow.updatedAt(),
-                metadataRow.startedAt(),
-                metadataRow.completedAt());
+    @Override
+    public @Nullable WorkflowRunMetadata getRunMetadataByInstanceId(String instanceId) {
+        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunMetadataByInstanceId(instanceId));
     }
 
     @Override
@@ -684,7 +670,7 @@ final class DexEngineImpl implements DexEngine {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRunMetadataRow runMetadata = dao.getRunMetadataById(runId);
+            final WorkflowRunMetadata runMetadata = dao.getRunMetadataById(runId);
             if (runMetadata == null) {
                 throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
             } else if (runMetadata.status().isTerminal()) {
@@ -714,7 +700,7 @@ final class DexEngineImpl implements DexEngine {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRunMetadataRow runMetadata = dao.getRunMetadataById(runId);
+            final WorkflowRunMetadata runMetadata = dao.getRunMetadataById(runId);
             if (runMetadata == null) {
                 throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
             } else if (runMetadata.status().isTerminal()) {
@@ -746,7 +732,7 @@ final class DexEngineImpl implements DexEngine {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRunMetadataRow runMetadata = dao.getRunMetadataById(runId);
+            final WorkflowRunMetadata runMetadata = dao.getRunMetadataById(runId);
             if (runMetadata == null) {
                 throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
             } else if (runMetadata.status().isTerminal()) {
@@ -995,6 +981,7 @@ final class DexEngineImpl implements DexEngine {
                         run.workflowName(),
                         run.workflowVersion(),
                         run.workflowInstanceId(),
+                        run.taskQueueName(),
                         run.status(),
                         run.customStatus(),
                         run.priority(),

@@ -723,7 +723,7 @@ class DexEngineImplTest {
         await("Update")
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> {
-                    final WorkflowRunMetadata run = engine.getRunMetadata(runId);
+                    final WorkflowRunMetadata run = engine.getRunMetadataById(runId);
                     assertThat(run.updatedAt()).isNotNull();
                 });
 
@@ -1293,6 +1293,50 @@ class DexEngineImplTest {
     }
 
     @Nested
+    class GetRunMetadataByInstanceIdTest {
+
+        @Test
+        void shouldReturnMetadataWhenRunExistsWithNonTerminalState() {
+            registerWorkflow("foo", (ctx, arg) -> null);
+
+            final UUID runId = engine.createRun(
+                    new CreateWorkflowRunRequest<>("foo", 1)
+                            .withWorkflowInstanceId("foo-instance"));
+            assertThat(runId).isNotNull();
+
+            final WorkflowRunMetadata runMetadata =
+                    engine.getRunMetadataByInstanceId("foo-instance");
+            assertThat(runMetadata).isNotNull();
+            assertThat(runMetadata.id()).isEqualTo(runId);
+        }
+
+        @Test
+        void shouldReturnNullWhenRunDoesNotExist() {
+            final WorkflowRunMetadata runMetadata =
+                    engine.getRunMetadataByInstanceId("doesNotExist");
+            assertThat(runMetadata).isNull();
+        }
+
+        @Test
+        void shouldReturnNullWhenRunExistsWithTerminalState() {
+            registerWorkflow("foo", (ctx, arg) -> null);
+            registerWorkflowWorker("workflow-worker", 1);
+            engine.start();
+
+            final UUID runId = engine.createRun(
+                    new CreateWorkflowRunRequest<>("foo", 1)
+                            .withWorkflowInstanceId("foo-instance"));
+            assertThat(runId).isNotNull();
+            awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+            final WorkflowRunMetadata runMetadata =
+                    engine.getRunMetadataByInstanceId("foo-instance");
+            assertThat(runMetadata).isNull();
+        }
+
+    }
+
+    @Nested
     class WorkflowTaskQueueTest {
 
         @Test
@@ -1555,7 +1599,7 @@ class DexEngineImplTest {
         return await("Workflow Run Status to become " + expectedStatus)
                 .atMost(timeout)
                 .failFast(() -> {
-                    final WorkflowRunStatus currentStatus = engine.getRunMetadata(runId).status();
+                    final WorkflowRunStatus currentStatus = engine.getRunMetadataById(runId).status();
                     if (currentStatus.isTerminal() && !expectedStatus.isTerminal()) {
                         return true;
                     }
@@ -1564,7 +1608,7 @@ class DexEngineImplTest {
                             && expectedStatus.isTerminal()
                             && currentStatus != expectedStatus;
                 })
-                .until(() -> engine.getRunMetadata(runId), run -> run.status() == expectedStatus);
+                .until(() -> engine.getRunMetadataById(runId), run -> run.status() == expectedStatus);
     }
 
     private WorkflowRunMetadata awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
