@@ -44,6 +44,7 @@ import java.util.UUID;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -68,6 +69,78 @@ class WorkflowsResourceTest extends ResourceTest {
     }
 
     @Test
+    void getWorkflowInstanceShouldReturnMetadataOfWorkflowRun() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
+        final var workflowRunMetadata = new WorkflowRunMetadata(
+                UUID.fromString("724c0700-4eeb-45f0-8ff4-8bba369c0174"),
+                "workflowName",
+                66,
+                "workflowInstanceId",
+                "taskQueueName",
+                WorkflowRunStatus.RUNNING,
+                "customStatus",
+                12,
+                "concurrencyKey",
+                Map.of("foo", "bar"),
+                Instant.ofEpochMilli(666666),
+                Instant.ofEpochMilli(777777),
+                Instant.ofEpochMilli(888888),
+                null);
+
+        doReturn(workflowRunMetadata)
+                .when(DEX_ENGINE_MOCK).getRunMetadataByInstanceId(eq("foo"));
+
+        final Response response = jersey
+                .target("/workflow-instances/foo")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "id": "724c0700-4eeb-45f0-8ff4-8bba369c0174",
+                  "workflow_name": "workflowName",
+                  "workflow_version": 66,
+                  "workflow_instance_id": "workflowInstanceId",
+                  "task_queue_name": "taskQueueName",
+                  "status": "RUNNING",
+                  "created_at": 666666,
+                  "priority": 12,
+                  "concurrency_key": "concurrencyKey",
+                  "labels": {
+                    "foo": "bar"
+                  },
+                  "updated_at": 777777,
+                  "started_at": 888888
+                }
+                """);
+    }
+
+    @Test
+    void getWorkflowInstanceShouldReturnNotFoundWhenNoMatchingRunExists() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
+        doReturn(null)
+                .when(DEX_ENGINE_MOCK).getRunMetadataByInstanceId(eq("foo"));
+
+        final Response response = jersey
+                .target("/workflow-instances/foo")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type":"about:blank",
+                  "status": 404,
+                  "title": "Not Found",
+                  "detail": "The requested resource could not be found."
+                }
+                """);
+    }
+
+    @Test
     public void listWorkflowRunsShouldReturnWorkflowRunMetadata() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
@@ -76,6 +149,7 @@ class WorkflowsResourceTest extends ResourceTest {
                 "workflowName",
                 66,
                 "workflowInstanceId",
+                "taskQueueName",
                 WorkflowRunStatus.RUNNING,
                 "customStatus",
                 12,
@@ -102,6 +176,7 @@ class WorkflowsResourceTest extends ResourceTest {
                               "workflow_name": "workflowName",
                               "workflow_version": 66,
                               "workflow_instance_id": "workflowInstanceId",
+                              "task_queue_name": "taskQueueName",
                               "status": "RUNNING",
                               "created_at": 666666,
                               "priority": 12,

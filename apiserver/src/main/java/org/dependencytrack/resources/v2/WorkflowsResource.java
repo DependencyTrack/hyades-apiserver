@@ -20,11 +20,11 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.api.v2.WorkflowsApi;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponse;
-import org.dependencytrack.api.v2.model.ListWorkflowRunsResponseItem;
 import org.dependencytrack.api.v2.model.SortDirection;
 import org.dependencytrack.api.v2.model.WorkflowRunStatus;
 import org.dependencytrack.auth.Permissions;
@@ -47,6 +47,20 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
     @Inject
     WorkflowsResource(DexEngine dexEngine) {
         this.dexEngine = dexEngine;
+    }
+
+    @Override
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_READ
+    })
+    public Response getWorkflowInstance(String id) {
+        final WorkflowRunMetadata runMetadata = dexEngine.getRunMetadataByInstanceId(id);
+        if (runMetadata == null) {
+            throw new NotFoundException();
+        }
+
+        return Response.ok(convert(runMetadata)).build();
     }
 
     @Override
@@ -101,27 +115,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
 
         final var response = ListWorkflowRunsResponse.builder()
                 .workflowRuns(runsPage.items().stream()
-                        .<ListWorkflowRunsResponseItem>map(
-                                runMetadata -> ListWorkflowRunsResponseItem.builder()
-                                        .id(runMetadata.id())
-                                        .workflowName(runMetadata.workflowName())
-                                        .workflowVersion(runMetadata.workflowVersion())
-                                        .workflowInstanceId(runMetadata.workflowInstanceId())
-                                        .status(convert(runMetadata.status()))
-                                        .priority(runMetadata.priority())
-                                        .concurrencyKey(runMetadata.concurrencyKey())
-                                        .labels(runMetadata.labels())
-                                        .createdAt(runMetadata.createdAt().toEpochMilli())
-                                        .updatedAt(runMetadata.updatedAt() != null
-                                                ? runMetadata.updatedAt().toEpochMilli()
-                                                : null)
-                                        .startedAt(runMetadata.startedAt() != null
-                                                ? runMetadata.startedAt().toEpochMilli()
-                                                : null)
-                                        .completedAt(runMetadata.completedAt() != null
-                                                ? runMetadata.completedAt().toEpochMilli()
-                                                : null)
-                                        .build())
+                        .map(WorkflowsResource::convert)
                         .toList())
                 .pagination(createPaginationMetadata(getUriInfo(), runsPage))
                 .build();
@@ -150,6 +144,30 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
             case RUNNING -> WorkflowRunStatus.RUNNING;
             case SUSPENDED -> WorkflowRunStatus.SUSPENDED;
         };
+    }
+
+    private static org.dependencytrack.api.v2.model.WorkflowRunMetadata convert(WorkflowRunMetadata runMetadata) {
+        return org.dependencytrack.api.v2.model.WorkflowRunMetadata.builder()
+                .id(runMetadata.id())
+                .workflowName(runMetadata.workflowName())
+                .workflowVersion(runMetadata.workflowVersion())
+                .workflowInstanceId(runMetadata.workflowInstanceId())
+                .taskQueueName(runMetadata.taskQueueName())
+                .status(convert(runMetadata.status()))
+                .priority(runMetadata.priority())
+                .concurrencyKey(runMetadata.concurrencyKey())
+                .labels(runMetadata.labels())
+                .createdAt(runMetadata.createdAt().toEpochMilli())
+                .updatedAt(runMetadata.updatedAt() != null
+                        ? runMetadata.updatedAt().toEpochMilli()
+                        : null)
+                .startedAt(runMetadata.startedAt() != null
+                        ? runMetadata.startedAt().toEpochMilli()
+                        : null)
+                .completedAt(runMetadata.completedAt() != null
+                        ? runMetadata.completedAt().toEpochMilli()
+                        : null)
+                .build();
     }
 
 }

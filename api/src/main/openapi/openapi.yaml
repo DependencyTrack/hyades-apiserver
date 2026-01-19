@@ -152,6 +152,8 @@ paths:
     $ref: "./paths/teams__name_.yaml"
   /team-memberships:
     $ref: "./paths/team-memberships.yaml"
+  /workflow-instances/{id}:
+    $ref: "./paths/workflow-instances__id_.yaml"
   /workflow-runs:
     $ref: "./paths/workflow-runs.yaml"
 

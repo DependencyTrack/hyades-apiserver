@@ -148,22 +148,32 @@ public interface DexEngine extends Closeable {
      * Retrieve all data about a workflow run, including its full event history.
      * <p>
      * If only high-level information about the run is required, prefer to use
-     * {@link #getRunMetadata(UUID)} as it is significantly more efficient.
+     * {@link #getRunMetadataById(UUID)} as it is significantly more efficient.
      *
      * @param id ID of the workflow run.
      * @return The run data, or {@code null} if no run with the given ID exists.
      */
     @Nullable
-    WorkflowRun getRun(UUID id);
+    WorkflowRun getRunById(UUID id);
 
     /**
-     * Retrieve metadata about a workflow run.
+     * Retrieve metadata about a workflow run by ID.
      *
      * @param id ID of the workflow run.
      * @return The run metadata, or {@code null} if no run with the given ID exists.
      */
     @Nullable
-    WorkflowRunMetadata getRunMetadata(UUID id);
+    WorkflowRunMetadata getRunMetadataById(UUID id);
+
+    /**
+     * Retrieve metadata about a workflow run by workflow instance ID.
+     *
+     * @param instanceId Workflow instance ID of the workflow run.
+     * @return Metadata of the matching run, <strong>if and only if</strong>
+     * the run is in non-terminal state. Metadata of terminal runs is not returned.
+     */
+    @Nullable
+    WorkflowRunMetadata getRunMetadataByInstanceId(String instanceId);
 
     Page<WorkflowRunMetadata> listRuns(ListWorkflowRunsRequest request);
 

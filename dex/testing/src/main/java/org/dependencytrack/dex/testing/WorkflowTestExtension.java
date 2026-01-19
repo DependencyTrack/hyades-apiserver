@@ -117,7 +117,7 @@ public final class WorkflowTestExtension implements BeforeEachCallback, AfterEac
         return await("Workflow run status to become " + expectedStatus)
                 .atMost(timeout)
                 .failFast(() -> {
-                    final WorkflowRun run = getEngine().getRun(runId);
+                    final WorkflowRun run = getEngine().getRunById(runId);
                     if (run == null) {
                         return;
                     }
@@ -141,7 +141,7 @@ public final class WorkflowTestExtension implements BeforeEachCallback, AfterEac
                                 .isEqualTo(run.status());
                     }
                 })
-                .until(() -> getEngine().getRun(runId), run -> run != null && run.status() == expectedStatus);
+                .until(() -> getEngine().getRunById(runId), run -> run != null && run.status() == expectedStatus);
     }
 
     public @Nullable WorkflowRun awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {

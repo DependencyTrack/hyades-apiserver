@@ -28,6 +28,8 @@ properties:
     maximum: 100
   workflow_instance_id:
     type: string
+  task_queue_name:
+    type: string
   status:
     $ref: "./workflow-run-status.yaml"
   priority:
@@ -53,6 +55,7 @@ required:
 - id
 - workflow_name
 - workflow_version
+- task_queue_name
 - status
 - priority
 - created_at

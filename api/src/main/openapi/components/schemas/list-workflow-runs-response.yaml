@@ -21,7 +21,7 @@ properties:
   workflow_runs:
     type: array
     items:
-      $ref: "./list-workflow-runs-response-item.yaml"
+      $ref: "./workflow-run-metadata.yaml"
 required:
 - _pagination
 - workflow_runs

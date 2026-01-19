@@ -29,6 +29,7 @@ public record WorkflowRunMetadata(
         String workflowName,
         int workflowVersion,
         @Nullable String workflowInstanceId,
+        String taskQueueName,
         WorkflowRunStatus status,
         @Nullable String customStatus,
         int priority,
