@@ -35,11 +35,12 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Base persistence manager that implements AutoCloseable so that the PersistenceManager will
@@ -50,18 +51,33 @@ import java.util.concurrent.Callable;
  */
 public abstract class AbstractAlpineQueryManager implements AutoCloseable {
 
-    private static final ServiceLoader<IPersistenceManagerFactory> IpmfServiceLoader = ServiceLoader.load(IPersistenceManagerFactory.class);
+    private static final Lock IPMF_LOCK = new ReentrantLock();
+    private static IPersistenceManagerFactory IPMF;
 
     protected final Principal principal;
-    protected Pagination pagination;
+    protected final Pagination pagination;
     protected final String filter;
     protected final String orderBy;
     protected final OrderDirection orderDirection;
-
     protected final PersistenceManager pm;
 
-    public static Optional<IPersistenceManagerFactory> getPersistenceManagerFactory() {
-        return IpmfServiceLoader.findFirst();
+    public static IPersistenceManagerFactory getPersistenceManagerFactory() {
+        if (IPMF != null) {
+            return IPMF;
+        }
+
+        IPMF_LOCK.lock();
+        try {
+            if (IPMF == null) {
+                IPMF = ServiceLoader
+                        .load(IPersistenceManagerFactory.class)
+                        .findFirst()
+                        .orElseThrow();
+            }
+            return IPMF;
+        } finally {
+            IPMF_LOCK.unlock();
+        }
     }
 
     /**
@@ -82,33 +98,12 @@ public abstract class AbstractAlpineQueryManager implements AutoCloseable {
      * Default constructor
      */
     public AbstractAlpineQueryManager() {
-        final Optional<IPersistenceManagerFactory> ipmf = getPersistenceManagerFactory();
-        pm = (ipmf.isEmpty()) ? null : ipmf.get().getPersistenceManager();
+        pm = getPersistenceManagerFactory().getPersistenceManager();
         principal = null;
         pagination = new Pagination(Pagination.Strategy.NONE, 0, 0);
         filter = null;
         orderBy = null;
         orderDirection = OrderDirection.UNSPECIFIED;
-    }
-
-    /**
-     * Constructs a new QueryManager with the following:
-     * @param principal a Principal, or null
-     * @param pagination a Pagination request, or null
-     * @param filter a String filter, or null
-     * @param orderBy the field to order by
-     * @param orderDirection the sorting direction
-     * @since 1.0.0
-     */
-    public AbstractAlpineQueryManager(final Principal principal, final Pagination pagination, final String filter,
-                                      final String orderBy, final OrderDirection orderDirection) {
-        final Optional<IPersistenceManagerFactory> ipmf = getPersistenceManagerFactory();
-        pm = (ipmf.isEmpty()) ? null : ipmf.get().getPersistenceManager();
-        this.principal = principal;
-        this.pagination = pagination;
-        this.filter = filter;
-        this.orderBy = orderBy;
-        this.orderDirection = orderDirection;
     }
 
     /**
@@ -118,16 +113,13 @@ public abstract class AbstractAlpineQueryManager implements AutoCloseable {
      * @since 1.0.0
      */
     public AbstractAlpineQueryManager(final AlpineRequest request) {
-        final Optional<IPersistenceManagerFactory> ipmf = getPersistenceManagerFactory();
-        pm = (ipmf.isEmpty()) ? null : ipmf.get().getPersistenceManager();
+        pm = getPersistenceManagerFactory().getPersistenceManager();
         this.principal = request.getPrincipal();
         this.pagination = request.getPagination();
         this.filter = request.getFilter();
         this.orderBy = request.getOrderBy();
         this.orderDirection = request.getOrderDirection();
     }
-
-
 
     /**
      * Constructs a new QueryManager. Deconstructs the specified AlpineRequest
@@ -175,18 +167,6 @@ public abstract class AbstractAlpineQueryManager implements AutoCloseable {
         return new PaginatedResult()
                 .objects(executeAndCloseWithMap(query, parameters))
                 .total(count);
-    }
-
-    /**
-     * Advances the pagination based on the previous pagination settings. This is purely a
-     * convenience method as the method by itself is not aware of the query being executed,
-     * the result count, etc.
-     * @since 1.0.0
-     */
-    public void advancePagination() {
-        if (pagination.isPaginated()) {
-            pagination = new Pagination(pagination.getStrategy(), pagination.getOffset() + pagination.getLimit(), pagination.getLimit());
-        }
     }
 
     /**
