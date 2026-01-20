@@ -14,53 +14,23 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
-get:
-  operationId: getExtensionConfig
-  summary: Get extension configuration
+post:
+  operationId: testExtension
+  summary: Test extension
   description: |-
-    Returns the configuration of an extension.
+    Tests an extension.
     
-    Requires the `SYSTEM_CONFIGURATION` or `SYSTEM_CONFIGURATION_READ` permission.
-  tags:
-  - Extensions
-  parameters:
-  - name: extensionPointName
-    description: Name of the extension point
-    in: path
-    required: true
-    schema:
-      type: string
-  - name: extensionName
-    description: Name of the extension
-    in: path
-    required: true
-    schema:
-      type: string
-  responses:
-    "200":
-      description: List of extensions
-      content:
-        application/json:
-          schema:
-            $ref: "../components/schemas/extensions/get-extension-config-response.yaml"
-    "401":
-      $ref: "../components/responses/generic-unauthorized-error.yaml"
-    "403":
-      $ref: "../components/responses/generic-forbidden-error.yaml"
-    "404":
-      $ref: "../components/responses/generic-not-found-error.yaml"
-    default:
-      $ref: "../components/responses/generic-error.yaml"
-
-put:
-  operationId: updateExtensionConfig
-  summary: Update extension configuration
-  description: |-
-    Updates the configuration of an extension.
+    If the extension is configurable (i.e. `/config-schema` returns status `200`),
+    a valid configuration **must** be provided in the test request.
+    The configuration is validated against the applicable JSON schema.
     
     **Do not use clear text credentials in the supplied config**.
     Fields annotated with `x-secret-ref` in the config schema expect
     a name of a managed secret, which is resolved internally by the API.
+    
+    Test results contain one or more checks, each of which can have a status of
+    `PASSED`, `FAILED`, or `SKIPPED`. If *at least one* check is `FAILED`,
+    the entire test should be considered `FAILED`.
     
     Requires the `SYSTEM_CONFIGURATION` or `SYSTEM_CONFIGURATION_UPDATE` permission.
   tags:
@@ -83,14 +53,22 @@ put:
     content:
       application/json:
         schema:
-          $ref: "../components/schemas/extensions/update-extension-config-request.yaml"
+          $ref: "../components/schemas/extensions/test-extension-request.yaml"
   responses:
-    "204":
-      description: Configuration updated
-    "304":
-      description: Not Modified
+    "200":
+      description: Test result
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/extensions/test-extension-response.yaml"
     "400":
-      $ref: "../components/responses/json-schema-validation-error.yaml"
+      description: Bad Request
+      content:
+        application/problem+json:
+          schema:
+            anyOf:
+            - $ref: "../components/schemas/json-schema-validation-problem-details.yaml"
+            - $ref: "../components/schemas/problem-details.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":

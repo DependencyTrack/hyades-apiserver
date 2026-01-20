@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
@@ -33,13 +34,19 @@ import org.dependencytrack.api.v2.model.ListExtensionPointsResponse;
 import org.dependencytrack.api.v2.model.ListExtensionPointsResponseItem;
 import org.dependencytrack.api.v2.model.ListExtensionsResponse;
 import org.dependencytrack.api.v2.model.ListExtensionsResponseItem;
+import org.dependencytrack.api.v2.model.TestExtensionRequest;
+import org.dependencytrack.api.v2.model.TestExtensionResponse;
 import org.dependencytrack.api.v2.model.UpdateExtensionConfigRequest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.persistence.jdbi.ExtensionConfigDao;
 import org.dependencytrack.plugin.ExtensionPointMetadata;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.ExtensionTestCheck;
+import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
 import org.dependencytrack.plugin.runtime.config.UnresolvableSecretException;
@@ -54,6 +61,8 @@ import java.io.UncheckedIOException;
 import java.util.Map;
 import java.util.SequencedCollection;
 
+import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION_NAME;
+import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION_POINT_NAME;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -129,7 +138,6 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
     @PermissionRequired({
             Permissions.Constants.SYSTEM_CONFIGURATION,
             Permissions.Constants.SYSTEM_CONFIGURATION_READ
@@ -139,7 +147,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
             String extensionName) {
         final Class<? extends ExtensionPoint> extensionPointClass =
                 getExtensionPointClass(extensionPointName);
-        final ExtensionFactory extensionFactory =
+        final ExtensionFactory<?> extensionFactory =
                 getExtensionFactory(extensionPointClass, extensionName);
 
         if (extensionFactory.runtimeConfigSpec() == null) {
@@ -171,7 +179,6 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
     @PermissionRequired({
             Permissions.Constants.SYSTEM_CONFIGURATION,
             Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE
@@ -182,7 +189,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
             UpdateExtensionConfigRequest request) {
         final Class<? extends ExtensionPoint> extensionPointClass =
                 getExtensionPointClass(extensionPointName);
-        final ExtensionFactory extensionFactory =
+        final ExtensionFactory<?> extensionFactory =
                 getExtensionFactory(extensionPointClass, extensionName);
 
         final RuntimeConfigSpec runtimeConfigSpec = extensionFactory.runtimeConfigSpec();
@@ -194,7 +201,8 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
         // so we have to serialize it first.
         final String configJson = Json.createObjectBuilder(request.getConfig()).build().toString();
 
-        validateConfig(configJson, runtimeConfigSpec);
+        // Throws when config is invalid or secrets cannot be resolved.
+        validateConfigAndResolveSecrets(configJson, runtimeConfigSpec);
 
         final boolean updated = inJdbiTransaction(
                 getAlpineRequest(),
@@ -234,6 +242,57 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
         return Response.ok(runtimeConfigSpec.schema()).build();
     }
 
+    @Override
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE
+    })
+    public Response testExtension(
+            String extensionPointName,
+            String extensionName,
+            TestExtensionRequest request) {
+        final Class<? extends ExtensionPoint> extensionPointClass =
+                getExtensionPointClass(extensionPointName);
+        final ExtensionFactory<?> extensionFactory =
+                getExtensionFactory(extensionPointClass, extensionName);
+
+        try (var ignoredMdcScope = new MdcScope(Map.ofEntries(
+                Map.entry(MDC_EXTENSION_POINT_NAME, extensionPointName),
+                Map.entry(MDC_EXTENSION_NAME, extensionName)))) {
+            LOGGER.info(
+                    SecurityMarkers.SECURITY_AUDIT,
+                    "Extension test requested with configuration: {}",
+                    request.getConfig());
+        }
+
+        RuntimeConfig runtimeConfig = null;
+        final RuntimeConfigSpec runtimeConfigSpec = extensionFactory.runtimeConfigSpec();
+        if (runtimeConfigSpec == null) {
+            if (request.getConfig() != null) {
+                throw new BadRequestException("The extension does not support configuration");
+            }
+        } else {
+            final String configJson = Json.createObjectBuilder(request.getConfig()).build().toString();
+            final JsonNode configNode = validateConfigAndResolveSecrets(configJson, runtimeConfigSpec);
+            runtimeConfig = configMapper.convert(configNode, runtimeConfigSpec.configClass());
+        }
+
+        final ExtensionTestResult testResult;
+        try {
+            testResult = extensionFactory.test(runtimeConfig);
+        } catch (UnsupportedOperationException e) {
+            throw new BadRequestException("The extension does not support testing");
+        }
+
+        final var response = TestExtensionResponse.builder()
+                .checks(testResult.checks().stream()
+                        .map(ExtensionsResource::convert)
+                        .toList())
+                .build();
+
+        return Response.ok(response).build();
+    }
+
     private Class<? extends ExtensionPoint> getExtensionPointClass(String extensionPointName) {
         return pluginManager.getExtensionPoints().stream()
                 .filter(spec -> spec.name().equals(extensionPointName))
@@ -251,7 +310,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
                 .orElseThrow(NotFoundException::new);
     }
 
-    private void validateConfig(String configJson, RuntimeConfigSpec configSpec) {
+    private JsonNode validateConfigAndResolveSecrets(String configJson, RuntimeConfigSpec configSpec) {
         final var configNode = configMapper.validateJson(configJson, configSpec);
 
         try {
@@ -259,6 +318,20 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
         } catch (UnresolvableSecretException e) {
             throw new BadRequestException(e.getMessage());
         }
+
+        return configNode;
+    }
+
+    private static org.dependencytrack.api.v2.model.ExtensionTestCheck convert(ExtensionTestCheck check) {
+        return org.dependencytrack.api.v2.model.ExtensionTestCheck.builder()
+                .name(check.name())
+                .status(switch (check.status()) {
+                    case FAILED -> org.dependencytrack.api.v2.model.ExtensionTestCheckStatus.FAILED;
+                    case PASSED -> org.dependencytrack.api.v2.model.ExtensionTestCheckStatus.PASSED;
+                    case SKIPPED -> org.dependencytrack.api.v2.model.ExtensionTestCheckStatus.SKIPPED;
+                })
+                .message(check.message())
+                .build();
     }
 
 }
