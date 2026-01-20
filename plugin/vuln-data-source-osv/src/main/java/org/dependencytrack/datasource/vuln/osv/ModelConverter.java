@@ -54,6 +54,7 @@ import us.springett.cvss.Cvss;
 import us.springett.cvss.CvssV2;
 import us.springett.cvss.CvssV3;
 import us.springett.cvss.CvssV3_1;
+import us.springett.cvss.CvssV4;
 import us.springett.cvss.MalformedVectorException;
 import us.springett.cvss.Score;
 
@@ -513,6 +514,10 @@ final class ModelConverter {
             rating.setScore(Double.parseDouble(NumberFormat.getInstance(Locale.US).format(score)));
 
             switch (cvss) {
+                case CvssV4 ignored -> {
+                    rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV4);
+                    rating.setSeverity(normalizedCvssV3Score(score));
+                }
                 case CvssV3_1 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV31);
                     rating.setSeverity(normalizedCvssV3Score(score));
