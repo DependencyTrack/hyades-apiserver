@@ -67,6 +67,7 @@ import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV2;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV4;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_OWASP;
 
 public final class BovModelConverter {
@@ -152,6 +153,20 @@ public final class BovModelConverter {
                 continue;
             }
 
+            if (!appliedMethods.contains(SCORE_METHOD_CVSSV4) && (rating.getMethod().equals(SCORE_METHOD_CVSSV4))) {
+                vuln.setCvssV4Vector(trimToNull(rating.getVector()));
+                vuln.setCvssV4BaseScore(BigDecimal.valueOf(rating.getScore()));
+                if (rating.hasVector()) {
+                    final Cvss cvss = Cvss.fromVector(rating.getVector());
+                    final Score score = cvss.calculateScore();
+                    vuln.setCvssV4ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
+                    vuln.setCvssV4ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
+                    if (rating.getScore() == 0.0) {
+                        vuln.setCvssV4BaseScore(BigDecimal.valueOf(score.getBaseScore()));
+                    }
+                }
+                appliedMethods.add(SCORE_METHOD_CVSSV4);
+            }
             if (!appliedMethods.contains(SCORE_METHOD_CVSSV3)
                 && (rating.getMethod().equals(SCORE_METHOD_CVSSV3) || rating.getMethod().equals(SCORE_METHOD_CVSSV31))) {
                 vuln.setCvssV3Vector(trimToNull(rating.getVector()));
@@ -199,6 +214,7 @@ public final class BovModelConverter {
                 vuln.getSeverity(),
                 vuln.getCvssV2BaseScore(),
                 vuln.getCvssV3BaseScore(),
+                vuln.getCvssV4BaseScore(),
                 vuln.getOwaspRRLikelihoodScore(),
                 vuln.getOwaspRRTechnicalImpactScore(),
                 vuln.getOwaspRRBusinessImpactScore()
@@ -333,10 +349,11 @@ public final class BovModelConverter {
      */
     private static int scoreMethodPriority(final ScoreMethod method) {
         return switch (method) {
-            case SCORE_METHOD_CVSSV31 -> 0;
-            case SCORE_METHOD_CVSSV3 -> 1;
-            case SCORE_METHOD_CVSSV2 -> 2;
-            case SCORE_METHOD_OWASP -> 3;
+            case SCORE_METHOD_CVSSV4 -> 0;
+            case SCORE_METHOD_CVSSV31 -> 1;
+            case SCORE_METHOD_CVSSV3 -> 2;
+            case SCORE_METHOD_CVSSV2 -> 3;
+            case SCORE_METHOD_OWASP -> 4;
             default -> 999;
         };
     }
