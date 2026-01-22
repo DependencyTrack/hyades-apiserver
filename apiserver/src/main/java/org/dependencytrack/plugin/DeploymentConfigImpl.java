@@ -39,8 +39,7 @@ final class DeploymentConfigImpl implements DeploymentConfig {
             String extensionName) {
         requireNonNull(extensionPointName, "extensionPointName must not be null");
         requireNonNull(extensionName, "extensionName must not be null");
-        this.delegate = new NamespacedConfig(
-                delegate, "%s.extension.%s".formatted(extensionPointName, extensionName));
+        this.delegate = new NamespacedConfig(delegate, "dt.%s.%s".formatted(extensionPointName, extensionName));
     }
 
     @Override

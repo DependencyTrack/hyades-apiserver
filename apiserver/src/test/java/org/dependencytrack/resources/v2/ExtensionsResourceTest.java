@@ -129,7 +129,7 @@ class ExtensionsResourceTest extends ResourceTest {
                 {
                   "extensions":[
                     {
-                      "name": "dummy.extension"
+                      "name": "dummy-extension"
                     }
                   ]
                 }
@@ -165,14 +165,14 @@ class ExtensionsResourceTest extends ResourceTest {
 
         useJdbiTransaction(
                 handle -> handle.attach(ExtensionConfigDao.class)
-                        .saveConfig("dummy", "dummy.extension", /* language=JSON */ """
+                        .saveConfig("dummy", "dummy-extension", /* language=JSON */ """
                                 {
                                   "requiredString": "yay!"
                                 }
                                 """));
 
         final Response response = jersey
-                .target("/extension-points/dummy/extensions/dummy.extension/config")
+                .target("/extension-points/dummy/extensions/dummy-extension/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -214,7 +214,7 @@ class ExtensionsResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
         final Response response = jersey
-                .target("/extension-points/dummy/extensions/dummy.extension/config")
+                .target("/extension-points/dummy/extensions/dummy-extension/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
@@ -229,7 +229,7 @@ class ExtensionsResourceTest extends ResourceTest {
         assertThat(getPlainTextBody(response)).isEmpty();
 
         final String savedConfig = withJdbiHandle(
-                handle -> handle.attach(ExtensionConfigDao.class).getConfig("dummy", "dummy.extension"));
+                handle -> handle.attach(ExtensionConfigDao.class).getConfig("dummy", "dummy-extension"));
         assertThatJson(savedConfig).isEqualTo(/* language=JSON */ """
                 {
                   "requiredString": "foo",
@@ -248,7 +248,7 @@ class ExtensionsResourceTest extends ResourceTest {
         useJdbiTransaction(
                 handle -> handle
                         .attach(ExtensionConfigDao.class)
-                        .saveConfig("dummy", "dummy.extension", /* language=JSON */ """
+                        .saveConfig("dummy", "dummy-extension", /* language=JSON */ """
                                 {
                                   "requiredString": "foo",
                                   "optionalString": "bar"
@@ -256,7 +256,7 @@ class ExtensionsResourceTest extends ResourceTest {
                                 """));
 
         final Response response = jersey
-                .target("/extension-points/dummy/extensions/dummy.extension/config")
+                .target("/extension-points/dummy/extensions/dummy-extension/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
@@ -279,7 +279,7 @@ class ExtensionsResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
         final Response response = jersey
-                .target("/extension-points/dummy/extensions/dummy.extension/config")
+                .target("/extension-points/dummy/extensions/dummy-extension/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
@@ -317,7 +317,7 @@ class ExtensionsResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
         final Response response = jersey
-                .target("/extension-points/dummy/extensions/dummy.extension/config-schema")
+                .target("/extension-points/dummy/extensions/dummy-extension/config-schema")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -351,7 +351,7 @@ class ExtensionsResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
         final Response response = jersey
-                .target("/extension-points/dummy/extensions/non.configurable.extension/config-schema")
+                .target("/extension-points/dummy/extensions/non-configurable-extension/config-schema")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -367,7 +367,7 @@ class ExtensionsResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
         final Response response = jersey
-                .target("/extension-points/dummy/extensions/testable.extension/test")
+                .target("/extension-points/dummy/extensions/testable-extension/test")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(/* language=JSON */ """
@@ -398,7 +398,7 @@ class ExtensionsResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
         final Response response = jersey
-                .target("/extension-points/dummy/extensions/testable.extension/test")
+                .target("/extension-points/dummy/extensions/testable-extension/test")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(/* language=JSON */ """
@@ -430,7 +430,7 @@ class ExtensionsResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
         final Response response = jersey
-                .target("/extension-points/dummy/extensions/dummy.extension/test")
+                .target("/extension-points/dummy/extensions/dummy-extension/test")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(/* language=JSON */ """
@@ -459,7 +459,7 @@ class ExtensionsResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
         final Response response = jersey
-                .target("/extension-points/dummy/extensions/testable.extension/test")
+                .target("/extension-points/dummy/extensions/testable-extension/test")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(/* language=JSON */ """
@@ -505,7 +505,7 @@ class ExtensionsResourceTest extends ResourceTest {
 
         @Override
         public @NonNull String extensionName() {
-            return "dummy.extension";
+            return "dummy-extension";
         }
 
         @Override
@@ -559,7 +559,7 @@ class ExtensionsResourceTest extends ResourceTest {
 
         @Override
         public String extensionName() {
-            return "non.configurable.extension";
+            return "non-configurable-extension";
         }
 
         @Override
@@ -590,7 +590,7 @@ class ExtensionsResourceTest extends ResourceTest {
 
         @Override
         public @NonNull String extensionName() {
-            return "testable.extension";
+            return "testable-extension";
         }
 
         @Override

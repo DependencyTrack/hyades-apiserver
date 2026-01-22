@@ -47,7 +47,7 @@ public class DeploymentConfigImplTest {
         deploymentConfig.getValue("foo", String.class);
 
         verify(delegateConfigMock).getValue(
-                eq("extension-point-name.extension.extension-name.foo"),
+                eq("dt.extension-point-name.extension-name.foo"),
                 eq(String.class));
     }
 
@@ -56,7 +56,7 @@ public class DeploymentConfigImplTest {
         deploymentConfig.getOptionalValue("foo", String.class);
 
         verify(delegateConfigMock).getOptionalValue(
-                eq("extension-point-name.extension.extension-name.foo"),
+                eq("dt.extension-point-name.extension-name.foo"),
                 eq(String.class));
     }
 

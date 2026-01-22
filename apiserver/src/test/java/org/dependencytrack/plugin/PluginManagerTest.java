@@ -69,7 +69,7 @@ class PluginManagerTest extends PersistenceCapableTest {
     @Test
     void testGetExtensionWithConfig() {
         final var config = new SmallRyeConfigBuilder()
-                .withDefaultValue("test.extension.dummy.bar", "qux")
+                .withDefaultValue("dt.test.dummy.bar", "qux")
                 .build();
 
         try (final var pluginManager = new PluginManager(
@@ -161,7 +161,7 @@ class PluginManagerTest extends PersistenceCapableTest {
     @Test
     void testDisabledExtension() {
         final var config = new SmallRyeConfigBuilder()
-                .withDefaultValue("test.extension.dummy.enabled", "false")
+                .withDefaultValue("dt.test.dummy.enabled", "false")
                 .build();
 
         try (final var pluginManager = new PluginManager(
@@ -177,7 +177,7 @@ class PluginManagerTest extends PersistenceCapableTest {
     @Test
     void testDefaultExtensionNotLoaded() {
         final var config = new SmallRyeConfigBuilder()
-                .withDefaultValue("test.default.extension", "does.not.exist")
+                .withDefaultValue("dt.test.default-extension", "does.not.exist")
                 .build();
 
         try (final var pluginManager = new PluginManager(
