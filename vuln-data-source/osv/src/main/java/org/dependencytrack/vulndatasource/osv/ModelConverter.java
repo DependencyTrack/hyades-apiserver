@@ -54,6 +54,7 @@ import us.springett.cvss.Cvss;
 import us.springett.cvss.CvssV2;
 import us.springett.cvss.CvssV3;
 import us.springett.cvss.CvssV3_1;
+import us.springett.cvss.CvssV4;
 import us.springett.cvss.MalformedVectorException;
 import us.springett.cvss.Score;
 
@@ -318,7 +319,7 @@ final class ModelConverter {
         return affects;
     }
 
-    public static String getBomRefIfComponentExists(Bom cyclonedxBom, String purl) {
+    private static String getBomRefIfComponentExists(Bom cyclonedxBom, String purl) {
         if (purl != null) {
             Optional<Component> existingComponent = cyclonedxBom.getComponentsList().stream().filter(c ->
                     c.getPurl().equalsIgnoreCase(purl)).findFirst();
@@ -449,13 +450,30 @@ final class ModelConverter {
         return mapSeverity(severity);
     }
 
+    // https://www.first.org/cvss/v4.0/specification-document#Qualitative-Severity-Rating-Scale
+    private static Severity normalizedCvssV4Score(double score) {
+        if (score >= 9) {
+            return SEVERITY_CRITICAL;
+        } else if (score >= 7) {
+            return SEVERITY_HIGH;
+        } else if (score >= 4) {
+            return SEVERITY_MEDIUM;
+        } else if (score >= 0.1) {
+            return SEVERITY_LOW;
+        } else if (score >= 0) {
+            return SEVERITY_NONE;
+        } else {
+            return SEVERITY_UNKNOWN;
+        }
+    }
+
     /**
      * Returns the severity based on the numerical CVSS score.
      *
      * @return the severity of the vulnerability
      * @since 3.1.0
      */
-    public static Severity normalizedCvssV3Score(final double score) {
+    private static Severity normalizedCvssV3Score(final double score) {
         if (score >= 9) {
             return SEVERITY_CRITICAL;
         } else if (score >= 7) {
@@ -469,7 +487,7 @@ final class ModelConverter {
         }
     }
 
-    public static Severity normalizedCvssV2Score(final double score) {
+    private static Severity normalizedCvssV2Score(final double score) {
         if (score >= 7) {
             return SEVERITY_HIGH;
         } else if (score >= 4) {
@@ -513,6 +531,10 @@ final class ModelConverter {
             rating.setScore(Double.parseDouble(NumberFormat.getInstance(Locale.US).format(score)));
 
             switch (cvss) {
+                case CvssV4 ignored -> {
+                    rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV4);
+                    rating.setSeverity(normalizedCvssV4Score(score));
+                }
                 case CvssV3_1 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV31);
                     rating.setSeverity(normalizedCvssV3Score(score));

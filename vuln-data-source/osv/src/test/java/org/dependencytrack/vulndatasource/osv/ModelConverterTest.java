@@ -550,6 +550,12 @@ public class ModelConverterTest {
                               },
                               "ratings": [
                                 {
+                                  "method": "SCORE_METHOD_CVSSV4",
+                                  "score": 8.8,
+                                  "severity": "SEVERITY_HIGH",
+                                  "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:H/SC:N/SI:N/SA:N"
+                                },
+                                {
                                   "score": 7.2,
                                   "severity": "SEVERITY_HIGH",
                                   "method": "SCORE_METHOD_CVSSV3",
