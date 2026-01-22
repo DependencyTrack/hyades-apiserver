@@ -344,6 +344,22 @@ class ExtensionsResourceTest extends ResourceTest {
     }
 
     @Test
+    void getExtensionConfigSchemaShouldReturnNoContentWhenExtensionHasNoSchema() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new NonConfigurableExtensionFactory())));
+
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/non.configurable.extension/config-schema")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(204);
+        assertThat(getPlainTextBody(response)).isEmpty();
+    }
+
+    @Test
     void testExtensionShouldReturnTestResultWhenTestPassed() {
         pluginManager.loadPlugins(List.of(
                 () -> List.of(new TestableExtensionFactory())));
@@ -530,6 +546,34 @@ class ExtensionsResourceTest extends ResourceTest {
 
         @Override
         public void init(@NonNull ExtensionContext ctx) {
+        }
+
+        @Override
+        public DummyExtensionPoint create() {
+            return new DummyExtension();
+        }
+
+    }
+
+    private static class NonConfigurableExtensionFactory implements ExtensionFactory<DummyExtensionPoint> {
+
+        @Override
+        public String extensionName() {
+            return "non.configurable.extension";
+        }
+
+        @Override
+        public Class<? extends DummyExtensionPoint> extensionClass() {
+            return DummyExtension.class;
+        }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
+
+        @Override
+        public void init(ExtensionContext ctx) {
         }
 
         @Override

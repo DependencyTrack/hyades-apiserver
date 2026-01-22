@@ -236,7 +236,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
 
         final RuntimeConfigSpec runtimeConfigSpec = extensionFactory.runtimeConfigSpec();
         if (runtimeConfigSpec == null) {
-            throw new NotFoundException();
+            return Response.noContent().build();
         }
 
         return Response.ok(runtimeConfigSpec.schema()).build();
