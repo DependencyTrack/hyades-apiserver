@@ -18,11 +18,12 @@
  */
 package org.dependencytrack.dex.engine;
 
-import org.dependencytrack.dex.api.ActivityExecutor;
-import org.dependencytrack.dex.api.WorkflowExecutor;
-import org.dependencytrack.dex.api.annotation.Activity;
-import org.dependencytrack.dex.api.annotation.Workflow;
+import org.dependencytrack.dex.api.Activity;
+import org.dependencytrack.dex.api.ActivitySpec;
+import org.dependencytrack.dex.api.Workflow;
+import org.dependencytrack.dex.api.WorkflowSpec;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -40,59 +41,56 @@ final class MetadataRegistry {
     private static final Pattern ACTIVITY_NAME_PATTERN = WORKFLOW_NAME_PATTERN;
 
     @SuppressWarnings("rawtypes")
-    private final Map<Class<? extends WorkflowExecutor>, String> workflowNameByExecutorClass = new ConcurrentHashMap<>();
+    private final Map<Class<? extends Workflow>, String> workflowNameByExecutorClass = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
     private final Map<String, WorkflowMetadata> workflowMetadataByName = new HashMap<>();
 
     @SuppressWarnings("rawtypes")
-    private final Map<Class<? extends ActivityExecutor>, String> activityNameByExecutorClass = new ConcurrentHashMap<>();
+    private final Map<Class<? extends Activity>, String> activityNameByExecutorClass = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
     private final Map<String, ActivityMetadata> activityMetadataByName = new HashMap<>();
 
     <A, R> void registerWorkflow(
-            final WorkflowExecutor<A, R> executor,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
-            final Duration lockTimeout) {
-        requireNonNull(executor, "executor must not be null");
+            Workflow<A, R> workflow,
+            PayloadConverter<A> argumentConverter,
+            PayloadConverter<R> resultConverter,
+            Duration lockTimeout) {
+        requireNonNull(workflow, "workflow must not be null");
 
-        final Workflow workflowAnnotation = executor.getClass().getAnnotation(Workflow.class);
-        if (workflowAnnotation == null) {
-            throw new IllegalArgumentException("Executor class must be annotated with @Workflow");
-        }
+        final WorkflowSpec workflowSpec = requireWorkflowSpec(workflow.getClass());
 
         registerWorkflow(
-                workflowAnnotation.name(),
-                workflowAnnotation.version(),
+                workflowSpec.name(),
+                workflowSpec.version(),
                 argumentConverter,
                 resultConverter,
-                workflowAnnotation.defaultTaskQueue(),
+                workflowSpec.defaultTaskQueue(),
                 lockTimeout,
-                executor);
+                workflow);
     }
 
     <A, R> void registerWorkflow(
-            final String name,
-            final int version,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
-            final String defaultTaskQueueName,
-            final Duration lockTimeout,
-            final WorkflowExecutor<A, R> executor) {
+            String name,
+            int version,
+            PayloadConverter<A> argumentConverter,
+            PayloadConverter<R> resultConverter,
+            String defaultTaskQueueName,
+            Duration lockTimeout,
+            Workflow<A, R> workflow) {
         requireValidWorkflowName(name);
         requireValidWorkflowVersion(version);
         requireNonNull(argumentConverter, "argumentConverter must not be null");
         requireNonNull(resultConverter, "resultConverter must not be null");
         requireValidTaskQueueName(defaultTaskQueueName);
         requireValidLockTimeout(lockTimeout);
-        requireNonNull(executor, "executor must not be null");
+        requireNonNull(workflow, "workflow must not be null");
 
-        if (workflowNameByExecutorClass.containsKey(executor.getClass())) {
+        if (workflowNameByExecutorClass.containsKey(workflow.getClass())) {
             throw new IllegalArgumentException(
-                    "A workflow with executor %s is already registered".formatted(
-                            executor.getClass().getName()));
+                    "A workflow with workflow %s is already registered".formatted(
+                            workflow.getClass().getName()));
         }
         if (workflowMetadataByName.containsKey(name)) {
             throw new IllegalArgumentException(
@@ -102,54 +100,51 @@ final class MetadataRegistry {
         final var metadata = new WorkflowMetadata<>(
                 name,
                 version,
-                executor,
+                workflow,
                 argumentConverter,
                 resultConverter,
                 defaultTaskQueueName,
                 lockTimeout);
-        workflowNameByExecutorClass.put(executor.getClass(), name);
+        workflowNameByExecutorClass.put(workflow.getClass(), name);
         workflowMetadataByName.put(name, metadata);
     }
 
     <A, R> void registerActivity(
-            final ActivityExecutor<A, R> executor,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
-            final Duration lockTimeout) {
-        requireNonNull(executor, "executor must not be null");
+            Activity<A, R> activity,
+            PayloadConverter<A> argumentConverter,
+            PayloadConverter<R> resultConverter,
+            Duration lockTimeout) {
+        requireNonNull(activity, "activity must not be null");
 
-        final Activity activityAnnotation = executor.getClass().getAnnotation(Activity.class);
-        if (activityAnnotation == null) {
-            throw new IllegalArgumentException("Executor class must be annotated with @Activity");
-        }
+        final ActivitySpec activitySpec = requireActivitySpec(activity.getClass());
 
         registerActivity(
-                activityAnnotation.name(),
+                activitySpec.name(),
                 argumentConverter,
                 resultConverter,
-                activityAnnotation.defaultTaskQueue(),
+                activitySpec.defaultTaskQueue(),
                 lockTimeout,
-                executor);
+                activity);
     }
 
     <A, R> void registerActivity(
-            final String name,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
-            final String defaultTaskQueueName,
-            final Duration lockTimeout,
-            final ActivityExecutor<A, R> executor) {
+            String name,
+            PayloadConverter<A> argumentConverter,
+            PayloadConverter<R> resultConverter,
+            String defaultTaskQueueName,
+            Duration lockTimeout,
+            Activity<A, R> activity) {
         requireValidActivityName(name);
         requireNonNull(argumentConverter, "argumentConverter must not be null");
         requireNonNull(resultConverter, "resultConverter must not be null");
         requireValidTaskQueueName(defaultTaskQueueName);
         requireValidLockTimeout(lockTimeout);
-        requireNonNull(executor, "executor must not be null");
+        requireNonNull(activity, "activity must not be null");
 
-        if (activityNameByExecutorClass.containsKey(executor.getClass())) {
+        if (activityNameByExecutorClass.containsKey(activity.getClass())) {
             throw new IllegalArgumentException(
-                    "An activity with executor %s is already registered".formatted(
-                            executor.getClass().getName()));
+                    "An activity with activity %s is already registered".formatted(
+                            activity.getClass().getName()));
         }
         if (activityMetadataByName.containsKey(name)) {
             throw new IllegalArgumentException(
@@ -158,12 +153,12 @@ final class MetadataRegistry {
 
         final var metadata = new ActivityMetadata<>(
                 name,
-                executor,
+                activity,
                 argumentConverter,
                 resultConverter,
                 defaultTaskQueueName,
                 lockTimeout);
-        activityNameByExecutorClass.put(executor.getClass(), name);
+        activityNameByExecutorClass.put(activity.getClass(), name);
         activityMetadataByName.put(name, metadata);
     }
 
@@ -173,16 +168,16 @@ final class MetadataRegistry {
     }
 
     @SuppressWarnings("unchecked")
-    <A, R> WorkflowMetadata<A, R> getWorkflowMetadata(final Class<? extends WorkflowExecutor<A, R>> executorClass) {
-        requireNonNull(executorClass, "executorClass must not be null");
+    <A, R> WorkflowMetadata<A, R> getWorkflowMetadata(Class<? extends Workflow<A, R>> workflowClass) {
+        requireNonNull(workflowClass, "workflowClass must not be null");
 
-        final String workflowName = getWorkflowName(executorClass);
+        final String workflowName = getWorkflowName(workflowClass);
 
         return (WorkflowMetadata<A, R>) getWorkflowMetadata(workflowName);
     }
 
     @SuppressWarnings("rawtypes")
-    WorkflowMetadata getWorkflowMetadata(final String workflowName) {
+    WorkflowMetadata getWorkflowMetadata(String workflowName) {
         requireNonNull(workflowName, "workflowName must not be null");
 
         final WorkflowMetadata metadata = workflowMetadataByName.get(workflowName);
@@ -199,16 +194,16 @@ final class MetadataRegistry {
     }
 
     @SuppressWarnings("unchecked")
-    <A, R> ActivityMetadata<A, R> getActivityMetadata(final Class<? extends ActivityExecutor<A, R>> executorClass) {
-        requireNonNull(executorClass, "executorClass must not be null");
+    <A, R> ActivityMetadata<A, R> getActivityMetadata(Class<? extends Activity<A, R>> activityClass) {
+        requireNonNull(activityClass, "activityClass must not be null");
 
-        final var activityName = getActivityName(executorClass);
+        final String activityName = getActivityName(activityClass);
 
         return (ActivityMetadata<A, R>) getActivityMetadata(activityName);
     }
 
     @SuppressWarnings("rawtypes")
-    ActivityMetadata getActivityMetadata(final String activityName) {
+    ActivityMetadata getActivityMetadata(String activityName) {
         requireNonNull(activityName, "activityName must not be null");
 
         final ActivityMetadata metadata = activityMetadataByName.get(activityName);
@@ -220,54 +215,60 @@ final class MetadataRegistry {
     }
 
     @SuppressWarnings("rawtypes")
-    private String getWorkflowName(final Class<? extends WorkflowExecutor> executorClass) {
-        return workflowNameByExecutorClass.computeIfAbsent(executorClass, clazz -> {
-            final Workflow workflowAnnotation = clazz.getAnnotation(Workflow.class);
-            if (workflowAnnotation == null) {
-                throw new IllegalArgumentException("Executor class must be annotated with @Workflow");
-            }
-
-            return workflowAnnotation.name();
-        });
+    private String getWorkflowName(Class<? extends Workflow> workflowClass) {
+        return workflowNameByExecutorClass.computeIfAbsent(workflowClass, clazz -> requireWorkflowSpec(clazz).name());
     }
 
     @SuppressWarnings("rawtypes")
-    private String getActivityName(final Class<? extends ActivityExecutor> executorClass) {
-        return activityNameByExecutorClass.computeIfAbsent(executorClass, clazz -> {
-            final Activity activityAnnotation = clazz.getAnnotation(Activity.class);
-            if (activityAnnotation == null) {
-                throw new IllegalArgumentException("Executor class must be annotated with @Activity");
-            }
-
-            return activityAnnotation.name();
-        });
+    private String getActivityName(Class<? extends Activity> activityClass) {
+        return activityNameByExecutorClass.computeIfAbsent(activityClass, clazz -> requireActivitySpec(clazz).name());
     }
 
-    private static void requireValidWorkflowName(final String workflowName) {
+    @SuppressWarnings("rawtypes")
+    private static ActivitySpec requireActivitySpec(Class<? extends Activity> activityClass) {
+        final ActivitySpec spec = activityClass.getAnnotation(ActivitySpec.class);
+        if (spec == null) {
+            throw new IllegalArgumentException("Activity class must be annotated with @" + ActivitySpec.class.getSimpleName());
+        }
+
+        return spec;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static WorkflowSpec requireWorkflowSpec(Class<? extends Workflow> activityClass) {
+        final WorkflowSpec spec = activityClass.getAnnotation(WorkflowSpec.class);
+        if (spec == null) {
+            throw new IllegalArgumentException("Workflow class must be annotated with @" + WorkflowSpec.class.getSimpleName());
+        }
+
+        return spec;
+    }
+
+    private static void requireValidWorkflowName(String workflowName) {
         if (!WORKFLOW_NAME_PATTERN.matcher(workflowName).matches()) {
             throw new IllegalArgumentException("workflowName must match " + WORKFLOW_NAME_PATTERN.pattern());
         }
     }
 
-    private static void requireValidWorkflowVersion(final int workflowVersion) {
+    private static void requireValidWorkflowVersion(int workflowVersion) {
         if (workflowVersion < 1 || workflowVersion > 100) {
             throw new IllegalArgumentException("workflowVersion must be between 1 and 100, but is " + workflowVersion);
         }
     }
 
-    private static void requireValidActivityName(final String activityName) {
+    private static void requireValidActivityName(String activityName) {
         if (!ACTIVITY_NAME_PATTERN.matcher(activityName).matches()) {
             throw new IllegalArgumentException("activityName must match " + ACTIVITY_NAME_PATTERN.pattern());
         }
     }
 
-    private static void requireValidTaskQueueName(final String taskQueueName) {
+    private static void requireValidTaskQueueName(@Nullable String taskQueueName) {
         if (taskQueueName == null || taskQueueName.isBlank()) {
             throw new IllegalArgumentException("taskQueueName must not be null or blank");
         }
     }
 
-    private static void requireValidLockTimeout(final Duration lockTimeout) {
+    private static void requireValidLockTimeout(Duration lockTimeout) {
         requireNonNull(lockTimeout, "lockTimeout must not be null");
         if (!lockTimeout.isPositive()) {
             throw new IllegalArgumentException("lockTimeout must positive");

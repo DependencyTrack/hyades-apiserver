@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.api.annotation;
+package org.dependencytrack.dex.api;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -27,20 +27,15 @@ import java.lang.annotation.Target;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface Workflow {
+public @interface ActivitySpec {
 
     /**
-     * @return Name of the workflow. May contain letters, numbers, and hyphens.
+     * @return Name of the activity. May contain letters, numbers, and hyphens.
      */
     String name();
 
     /**
-     * @return Version of the workflow. Must be between 1 and 100.
-     */
-    int version() default 1;
-
-    /**
-     * @return Name of the default queue where tasks of this workflow will be scheduled.
+     * @return Name of the default queue where tasks of this activity will be scheduled.
      */
     String defaultTaskQueue() default "default";
 

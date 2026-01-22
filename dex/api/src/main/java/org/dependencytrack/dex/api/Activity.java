@@ -16,27 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.api.annotation;
+package org.dependencytrack.dex.api;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.jspecify.annotations.Nullable;
 
-@Documented
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface Activity {
+public interface Activity<A extends @Nullable Object, R extends @Nullable Object> {
 
     /**
-     * @return Name of the activity. May contain letters, numbers, and hyphens.
+     * Execute the activity.
+     * <p>
+     * <strong>This method may be called by multiple threads concurrently and must be thread-safe!</strong>
+     *
+     * @param ctx      Context of the execution.
+     * @param argument Argument of the execution.
+     * @return Result of the execution.
+     * @throws Exception When the execution failed.
      */
-    String name();
-
-    /**
-     * @return Name of the default queue where tasks of this activity will be scheduled.
-     */
-    String defaultTaskQueue() default "default";
+    @Nullable
+    R execute(ActivityContext ctx, @Nullable A argument) throws Exception;
 
 }

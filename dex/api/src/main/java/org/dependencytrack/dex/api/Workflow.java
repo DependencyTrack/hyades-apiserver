@@ -20,7 +20,7 @@ package org.dependencytrack.dex.api;
 
 import org.jspecify.annotations.Nullable;
 
-public interface WorkflowExecutor<A extends @Nullable Object, R extends @Nullable Object> {
+public interface Workflow<A extends @Nullable Object, R extends @Nullable Object> {
 
     /**
      * Execute the workflow.

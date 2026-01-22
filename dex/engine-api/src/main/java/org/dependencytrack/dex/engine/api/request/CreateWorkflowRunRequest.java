@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.dex.engine.api.request;
 
-import org.dependencytrack.dex.api.WorkflowExecutor;
-import org.dependencytrack.dex.api.annotation.Workflow;
+import org.dependencytrack.dex.api.Workflow;
+import org.dependencytrack.dex.api.WorkflowSpec;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
@@ -66,7 +66,7 @@ public record CreateWorkflowRunRequest<A>(
         this(UUID.randomUUID(), workflowName, workflowVersion, null, null, null, 0, null, null);
     }
 
-    public CreateWorkflowRunRequest(Class<? extends WorkflowExecutor<A, ?>> executorClass) {
+    public CreateWorkflowRunRequest(Class<? extends Workflow<A, ?>> executorClass) {
         this(getWorkflowName(executorClass), getWorkflowVersion(executorClass));
     }
 
@@ -148,21 +148,21 @@ public record CreateWorkflowRunRequest<A>(
                 argument);
     }
 
-    private static String getWorkflowName(Class<? extends WorkflowExecutor<?, ?>> executorClass) {
-        final Workflow annotation = executorClass.getAnnotation(Workflow.class);
+    private static String getWorkflowName(Class<? extends Workflow<?, ?>> executorClass) {
+        final WorkflowSpec annotation = executorClass.getAnnotation(WorkflowSpec.class);
         if (annotation == null) {
             throw new IllegalArgumentException("Class %s is not annotated with @%s".formatted(
-                    executorClass.getName(), Workflow.class.getName()));
+                    executorClass.getName(), WorkflowSpec.class.getName()));
         }
 
         return annotation.name();
     }
 
-    private static int getWorkflowVersion(final Class<? extends WorkflowExecutor<?, ?>> executorClass) {
-        final Workflow annotation = executorClass.getAnnotation(Workflow.class);
+    private static int getWorkflowVersion(final Class<? extends Workflow<?, ?>> executorClass) {
+        final WorkflowSpec annotation = executorClass.getAnnotation(WorkflowSpec.class);
         if (annotation == null) {
             throw new IllegalArgumentException("Class %s is not annotated with @%s".formatted(
-                    executorClass.getName(), Workflow.class.getName()));
+                    executorClass.getName(), WorkflowSpec.class.getName()));
         }
 
         return annotation.version();

@@ -18,13 +18,13 @@
  */
 package org.dependencytrack.dex.benchmark;
 
+import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityContext;
-import org.dependencytrack.dex.api.ActivityExecutor;
-import org.dependencytrack.dex.api.annotation.Activity;
+import org.dependencytrack.dex.api.ActivitySpec;
 import org.jspecify.annotations.Nullable;
 
-@Activity(name = "dummy")
-public class DummyActivity implements ActivityExecutor<Void, Void> {
+@ActivitySpec(name = "dummy")
+public class DummyActivity implements Activity<Void, Void> {
 
     @Override
     public @Nullable Void execute(ActivityContext ctx, @Nullable Void argument) {

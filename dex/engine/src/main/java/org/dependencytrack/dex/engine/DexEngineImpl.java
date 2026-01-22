@@ -29,9 +29,9 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.PageIterator;
-import org.dependencytrack.dex.api.ActivityExecutor;
+import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.RetryPolicy;
-import org.dependencytrack.dex.api.WorkflowExecutor;
+import org.dependencytrack.dex.api.Workflow;
 import org.dependencytrack.dex.api.failure.ApplicationFailureException;
 import org.dependencytrack.dex.api.failure.InternalFailureException;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
@@ -387,12 +387,12 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     public <A, R> void registerWorkflow(
-            WorkflowExecutor<A, R> workflowExecutor,
+            Workflow<A, R> workflow,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
             Duration lockTimeout) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.registerWorkflow(workflowExecutor, argumentConverter, resultConverter, lockTimeout);
+        metadataRegistry.registerWorkflow(workflow, argumentConverter, resultConverter, lockTimeout);
     }
 
     <A, R> void registerWorkflowInternal(
@@ -402,7 +402,7 @@ final class DexEngineImpl implements DexEngine {
             PayloadConverter<R> resultConverter,
             String defaultTaskQueueName,
             Duration lockTimeout,
-            WorkflowExecutor<A, R> workflowExecutor) {
+            Workflow<A, R> workflow) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         metadataRegistry.registerWorkflow(
                 workflowName,
@@ -411,17 +411,17 @@ final class DexEngineImpl implements DexEngine {
                 resultConverter,
                 defaultTaskQueueName,
                 lockTimeout,
-                workflowExecutor);
+                workflow);
     }
 
     @Override
     public <A, R> void registerActivity(
-            ActivityExecutor<A, R> activityExecutor,
+            Activity<A, R> activity,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
             Duration lockTimeout) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.registerActivity(activityExecutor, argumentConverter, resultConverter, lockTimeout);
+        metadataRegistry.registerActivity(activity, argumentConverter, resultConverter, lockTimeout);
     }
 
     <A, R> void registerActivityInternal(
@@ -430,7 +430,7 @@ final class DexEngineImpl implements DexEngine {
             PayloadConverter<R> resultConverter,
             String defaultTaskQueueName,
             Duration lockTimeout,
-            ActivityExecutor<A, R> activityExecutor) {
+            Activity<A, R> activity) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         metadataRegistry.registerActivity(
                 activityName,
@@ -438,7 +438,7 @@ final class DexEngineImpl implements DexEngine {
                 resultConverter,
                 defaultTaskQueueName,
                 lockTimeout,
-                activityExecutor);
+                activity);
     }
 
     @Override
