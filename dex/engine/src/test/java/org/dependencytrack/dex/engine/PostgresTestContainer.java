@@ -51,7 +51,7 @@ public final class PostgresTestContainer extends PostgreSQLContainer {
         // NB: Container reuse won't be active unless either:
         //  - The environment variable TESTCONTAINERS_REUSE_ENABLE=true is set
         //  - testcontainers.reuse.enable=true is set in ~/.testcontainers.properties
-        withReuse(true);
+        withReuse(System.getenv("CI") != null);
     }
 
     @Override
