@@ -22,12 +22,12 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.github.resilience4j.core.IntervalFunction;
 import org.dependencytrack.common.pagination.Page;
-import org.dependencytrack.dex.api.ActivityExecutor;
+import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.Awaitable;
 import org.dependencytrack.dex.api.ContinueAsNewOptions;
 import org.dependencytrack.dex.api.RetryPolicy;
+import org.dependencytrack.dex.api.Workflow;
 import org.dependencytrack.dex.api.WorkflowContext;
-import org.dependencytrack.dex.api.WorkflowExecutor;
 import org.dependencytrack.dex.api.failure.ActivityFailureException;
 import org.dependencytrack.dex.api.failure.ApplicationFailureException;
 import org.dependencytrack.dex.api.failure.ChildWorkflowFailureException;
@@ -1543,7 +1543,7 @@ class DexEngineImplTest {
 
     }
 
-    private interface InternalWorkflowExecutor<A, R> extends WorkflowExecutor<A, R> {
+    private interface InternalWorkflow<A, R> extends Workflow<A, R> {
 
         R execute(WorkflowContextImpl<A, R> ctx, A argument);
 
@@ -1558,11 +1558,11 @@ class DexEngineImplTest {
             final String name,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final InternalWorkflowExecutor<A, R> executor) {
+            final InternalWorkflow<A, R> executor) {
         engine.registerWorkflowInternal(name, 1, argumentConverter, resultConverter, WORKFLOW_TASK_QUEUE, Duration.ofSeconds(5), executor);
     }
 
-    private void registerWorkflow(final String name, final InternalWorkflowExecutor<Void, Void> executor) {
+    private void registerWorkflow(final String name, final InternalWorkflow<Void, Void> executor) {
         registerWorkflow(name, voidConverter(), voidConverter(), executor);
     }
 
@@ -1570,11 +1570,11 @@ class DexEngineImplTest {
             final String name,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final ActivityExecutor<A, R> executor) {
+            final Activity<A, R> executor) {
         engine.registerActivityInternal(name, argumentConverter, resultConverter, ACTIVITY_TASK_QUEUE, Duration.ofSeconds(5), executor);
     }
 
-    private void registerActivity(final String name, final ActivityExecutor<Void, Void> executor) {
+    private void registerActivity(final String name, final Activity<Void, Void> executor) {
         registerActivity(name, voidConverter(), voidConverter(), executor);
     }
 

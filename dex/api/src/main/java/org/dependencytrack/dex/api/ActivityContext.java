@@ -22,7 +22,7 @@ import java.util.UUID;
 import java.util.concurrent.CancellationException;
 
 /**
- * Context available to {@link ActivityExecutor}s.
+ * Context available to {@link Activity}s.
  */
 public interface ActivityContext {
 

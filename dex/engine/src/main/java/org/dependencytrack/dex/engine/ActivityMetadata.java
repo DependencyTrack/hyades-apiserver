@@ -18,14 +18,14 @@
  */
 package org.dependencytrack.dex.engine;
 
-import org.dependencytrack.dex.api.ActivityExecutor;
+import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
 
 import java.time.Duration;
 
 record ActivityMetadata<A, R>(
         String name,
-        ActivityExecutor<A, R> executor,
+        Activity<A, R> executor,
         PayloadConverter<A> argumentConverter,
         PayloadConverter<R> resultConverter,
         String defaultTaskQueueName,

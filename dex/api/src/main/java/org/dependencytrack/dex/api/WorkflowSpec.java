@@ -18,21 +18,30 @@
  */
 package org.dependencytrack.dex.api;
 
-import org.jspecify.annotations.Nullable;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public interface ActivityExecutor<A extends @Nullable Object, R extends @Nullable Object> {
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface WorkflowSpec {
 
     /**
-     * Execute the activity.
-     * <p>
-     * <strong>This method may be called by multiple threads concurrently and must be thread-safe!</strong>
-     *
-     * @param ctx      Context of the execution.
-     * @param argument Argument of the execution.
-     * @return Result of the execution.
-     * @throws Exception When the execution failed.
+     * @return Name of the workflow. May contain letters, numbers, and hyphens.
      */
-    @Nullable
-    R execute(ActivityContext ctx, @Nullable A argument) throws Exception;
+    String name();
+
+    /**
+     * @return Version of the workflow. Must be between 1 and 100.
+     */
+    int version() default 1;
+
+    /**
+     * @return Name of the default queue where tasks of this workflow will be scheduled.
+     */
+    String defaultTaskQueue() default "default";
 
 }

@@ -23,7 +23,6 @@ import org.jspecify.annotations.NullMarked;
 @SuppressWarnings("requires-automatic")
 module org.dependencytrack.dex.api {
     exports org.dependencytrack.dex.api;
-    exports org.dependencytrack.dex.api.annotation;
     exports org.dependencytrack.dex.api.failure;
     exports org.dependencytrack.dex.api.payload;
     exports org.dependencytrack.dex.proto.common.v1;

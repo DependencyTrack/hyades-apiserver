@@ -19,13 +19,13 @@
 package org.dependencytrack.dex.engine;
 
 import com.google.protobuf.DebugFormat;
-import org.dependencytrack.dex.api.ActivityExecutor;
+import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityHandle;
 import org.dependencytrack.dex.api.Awaitable;
 import org.dependencytrack.dex.api.ContinueAsNewOptions;
 import org.dependencytrack.dex.api.RetryPolicy;
+import org.dependencytrack.dex.api.Workflow;
 import org.dependencytrack.dex.api.WorkflowContext;
-import org.dependencytrack.dex.api.WorkflowExecutor;
 import org.dependencytrack.dex.api.WorkflowHandle;
 import org.dependencytrack.dex.api.WorkflowRunBlockedError;
 import org.dependencytrack.dex.api.WorkflowRunCanceledError;
@@ -89,7 +89,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     private final int priority;
     private final @Nullable Map<String, String> labels;
     private final MetadataRegistry metadataRegistry;
-    private final WorkflowExecutor<A, R> workflowExecutor;
+    private final Workflow<A, R> workflow;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
     private final List<WorkflowEvent> eventHistory;
@@ -118,7 +118,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             final int priority,
             final @Nullable Map<String, String> labels,
             final MetadataRegistry metadataRegistry,
-            final WorkflowExecutor<A, R> workflowExecutor,
+            final Workflow<A, R> workflow,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final List<WorkflowEvent> eventHistory,
@@ -129,7 +129,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         this.priority = priority;
         this.labels = labels;
         this.metadataRegistry = metadataRegistry;
-        this.workflowExecutor = workflowExecutor;
+        this.workflow = workflow;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
         this.eventHistory = eventHistory;
@@ -140,7 +140,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         this.pendingAwaitableByEventId = new HashMap<>();
         this.pendingAwaitablesByExternalEventId = new HashMap<>();
         this.bufferedExternalEvents = new HashMap<>();
-        this.logger = new ReplayAwareLogger(this, LoggerFactory.getLogger(workflowExecutor.getClass()));
+        this.logger = new ReplayAwareLogger(this, LoggerFactory.getLogger(workflow.getClass()));
     }
 
     @Override
@@ -183,7 +183,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     @Override
-    public <AA, AR> ActivityHandle<AA, AR> activity(final Class<? extends ActivityExecutor<AA, AR>> activityClass) {
+    public <AA, AR> ActivityHandle<AA, AR> activity(final Class<? extends Activity<AA, AR>> activityClass) {
         final ActivityMetadata<AA, AR> activityMetadata =
                 metadataRegistry.getActivityMetadata(activityClass);
         return new ActivityHandleImpl<>(
@@ -195,7 +195,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     @Override
-    public <WA, WR> WorkflowHandle<WA, WR> workflow(final Class<? extends WorkflowExecutor<WA, WR>> workflowClass) {
+    public <WA, WR> WorkflowHandle<WA, WR> workflow(final Class<? extends Workflow<WA, WR>> workflowClass) {
         final WorkflowMetadata<WA, WR> workflowMetadata =
                 metadataRegistry.getWorkflowMetadata(workflowClass);
         return new WorkflowHandleImpl<>(
@@ -477,7 +477,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final R result;
         try {
-            result = workflowExecutor.execute(this, this.argument);
+            result = workflow.execute(this, this.argument);
         } catch (Exception e) {
             if (e instanceof RuntimeException) {
                 throw (RuntimeException) e;

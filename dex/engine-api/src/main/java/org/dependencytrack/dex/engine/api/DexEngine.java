@@ -19,10 +19,10 @@
 package org.dependencytrack.dex.engine.api;
 
 import org.dependencytrack.common.pagination.Page;
-import org.dependencytrack.dex.api.ActivityExecutor;
-import org.dependencytrack.dex.api.WorkflowExecutor;
-import org.dependencytrack.dex.api.annotation.Activity;
-import org.dependencytrack.dex.api.annotation.Workflow;
+import org.dependencytrack.dex.api.Activity;
+import org.dependencytrack.dex.api.ActivitySpec;
+import org.dependencytrack.dex.api.Workflow;
+import org.dependencytrack.dex.api.WorkflowSpec;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
 import org.dependencytrack.dex.engine.api.event.DexEngineEvent;
 import org.dependencytrack.dex.engine.api.event.DexEngineEventListener;
@@ -54,9 +54,9 @@ public interface DexEngine extends Closeable {
     /**
      * Register a workflow.
      * <p>
-     * The executor's class <strong>must</strong> be annotated with {@link Workflow}.
+     * The executor's class <strong>must</strong> be annotated with {@link WorkflowSpec}.
      *
-     * @param executor          The {@link WorkflowExecutor} of the workflow.
+     * @param executor          The {@link Workflow} of the workflow.
      * @param argumentConverter The {@link PayloadConverter} to use for arguments.
      * @param resultConverter   The {@link PayloadConverter} to use for results.
      * @param lockTimeout       How long runs of this workflow shall be locked for execution.
@@ -65,7 +65,7 @@ public interface DexEngine extends Closeable {
      * @throws IllegalStateException When the engine was already started.
      */
     <A, R> void registerWorkflow(
-            WorkflowExecutor<A, R> executor,
+            Workflow<A, R> executor,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
             Duration lockTimeout);
@@ -73,9 +73,9 @@ public interface DexEngine extends Closeable {
     /**
      * Register an activity.
      * <p>
-     * The executor's class <strong>must</strong> be annotated with {@link Activity}.
+     * The executor's class <strong>must</strong> be annotated with {@link ActivitySpec}.
      *
-     * @param executor          The {@link ActivityExecutor} of the activity.
+     * @param executor          The {@link Activity} of the activity.
      * @param argumentConverter The {@link PayloadConverter} to use for arguments.
      * @param resultConverter   The {@link PayloadConverter} to use for results.
      * @param lockTimeout       How instances of this activity shall be locked for execution.
@@ -84,7 +84,7 @@ public interface DexEngine extends Closeable {
      * @throws IllegalStateException When the engine was already started.
      */
     <A, R> void registerActivity(
-            ActivityExecutor<A, R> executor,
+            Activity<A, R> executor,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
             Duration lockTimeout);
