@@ -177,10 +177,6 @@
         </dependencies>
     </dependencyManagement>
 
-    <prerequisites>
-        <maven>3.6.0</maven>
-    </prerequisites>
-
     <build>
         <plugins>
             <plugin>
