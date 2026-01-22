@@ -71,7 +71,7 @@ import static org.dependencytrack.plugin.api.ExtensionFactory.PRIORITY_LOWEST;
 public class PluginManager implements Closeable {
 
     private static final Logger LOGGER = Logger.getLogger(PluginManager.class);
-    private static final Pattern EXTENSION_POINT_NAME_PATTERN = Pattern.compile("^[a-z0-9.]+$");
+    private static final Pattern EXTENSION_POINT_NAME_PATTERN = Pattern.compile("^[a-z0-9\\-]+$");
     private static final Pattern EXTENSION_NAME_PATTERN = EXTENSION_POINT_NAME_PATTERN;
 
     private final Config config;
@@ -456,7 +456,7 @@ public class PluginManager implements Closeable {
                 }
 
                 final String defaultExtensionName = config
-                        .getOptionalValue("%s.default.extension".formatted(extensionPointMetadata.name()), String.class)
+                        .getOptionalValue("dt.%s.default-extension".formatted(extensionPointMetadata.name()), String.class)
                         .orElse(null);
 
                 final ExtensionFactory<?> extensionFactory;

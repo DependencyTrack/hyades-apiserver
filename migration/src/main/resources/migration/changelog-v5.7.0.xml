@@ -614,4 +614,12 @@
             DELETE FROM "PERMISSION" WHERE "NAME" = 'SECRET_MANAGEMENT_READ';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-31" author="nscuro">
+        <sql>
+            UPDATE "EXTENSION_RUNTIME_CONFIG"
+               SET "EXTENSION_POINT" = 'vuln-data-source'
+             WHERE "EXTENSION_POINT" = 'vuln.datasource';
+        </sql>
+    </changeSet>
 </databaseChangeLog>

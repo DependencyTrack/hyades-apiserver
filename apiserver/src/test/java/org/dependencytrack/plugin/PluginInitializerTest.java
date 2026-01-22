@@ -82,9 +82,9 @@ class PluginInitializerTest extends PersistenceCapableTest {
         assertThat(pluginManager.getExtensionPoints())
                 .extracting(ExtensionPointMetadata::name)
                 .containsExactlyInAnyOrder(
-                        "file.storage",
-                        "notification.publisher",
-                        "vuln.datasource");
+                        "file-storage",
+                        "notification-publisher",
+                        "vuln-data-source");
         assertThat(pluginManager.getLoadedPlugins()).satisfiesExactlyInAnyOrder(
                 plugin -> assertThat(plugin).isInstanceOf(DefaultNotificationPublisherPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(GitHubVulnDataSourcePlugin.class),
