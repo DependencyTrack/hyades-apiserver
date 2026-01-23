@@ -24,12 +24,11 @@ import io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityAdvisory
 import org.apache.hc.client5.http.impl.async.HttpAsyncClients;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.time.Clock;
@@ -42,8 +41,6 @@ import static io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityA
  * @since 5.7.0
  */
 final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(GitHubVulnDataSourceFactory.class);
 
     private ConfigRegistry configRegistry;
     private ExtensionKVStore kvStore;
@@ -76,13 +73,13 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
 
     @Override
     public boolean isDataSourceEnabled() {
-        return configRegistry.getRuntimeConfig(GitHubVulnDataSourceConfig.class).getEnabled();
+        return configRegistry.getRuntimeConfig(GitHubVulnDataSourceConfig.class).isEnabled();
     }
 
     @Override
     public VulnDataSource create() {
         final var config = configRegistry.getRuntimeConfig(GitHubVulnDataSourceConfig.class);
-        if (!config.getEnabled()) {
+        if (!config.isEnabled()) {
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
 
@@ -108,7 +105,17 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
                 .withAliasSyncEnabled(true)
                 .withApiUrl(URI.create("https://api.github.com/graphql"));
 
-        return new RuntimeConfigSpec(defaultConfig);
+        return RuntimeConfigSpec.of(defaultConfig, config -> {
+            if (!config.isEnabled()) {
+                return;
+            }
+            if (config.getApiUrl() == null) {
+                throw new InvalidRuntimeConfigException("No API URL provided");
+            }
+            if (config.getApiToken() == null) {
+                throw new InvalidRuntimeConfigException("No API Token provided");
+            }
+        });
     }
 
 }

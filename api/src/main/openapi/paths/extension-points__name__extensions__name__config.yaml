@@ -90,7 +90,13 @@ put:
     "304":
       description: Not Modified
     "400":
-      $ref: "../components/responses/json-schema-validation-error.yaml"
+      description: Bad Request
+      content:
+        application/problem+json:
+          schema:
+            anyOf:
+            - $ref: "../components/schemas/json-schema-validation-problem-details.yaml"
+            - $ref: "../components/schemas/problem-details.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":

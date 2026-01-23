@@ -25,6 +25,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionTestResult;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
@@ -94,18 +95,29 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
                 .withEnabled(true)
                 .withCveFeedsUrl(URI.create("https://nvd.nist.gov/feeds"));
 
-        return new RuntimeConfigSpec(defaultConfig);
+        return RuntimeConfigSpec.of(defaultConfig, config -> {
+            if (!config.isEnabled()) {
+                return;
+            }
+            if (config.getCveFeedsUrl() == null) {
+                throw new InvalidRuntimeConfigException("No CVE feeds URL provided");
+            }
+        });
     }
 
     @Override
     public boolean isDataSourceEnabled() {
-        return configRegistry.getRuntimeConfig(NvdVulnDataSourceConfig.class).getEnabled();
+        requireNonNull(configRegistry, "configRegistry must not be null");
+        return configRegistry.getRuntimeConfig(NvdVulnDataSourceConfig.class).isEnabled();
     }
 
     @Override
     public VulnDataSource create() {
+        requireNonNull(configRegistry, "configRegistry must not be null");
+        requireNonNull(kvStore, "kvStore must not be null");
+
         final var config = configRegistry.getRuntimeConfig(NvdVulnDataSourceConfig.class);
-        if (!config.getEnabled()) {
+        if (!config.isEnabled()) {
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
 
@@ -118,14 +130,13 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
     public ExtensionTestResult test(@Nullable RuntimeConfig runtimeConfig) {
         requireNonNull(configRegistry, "configRegistry has not been initialized");
         requireNonNull(httpClient, "httpClient has not been initialized");
+        requireNonNull(runtimeConfig, "runtimeConfig must not be null");
 
-        if (!(runtimeConfig instanceof final NvdVulnDataSourceConfig nvdConfig)) {
-            throw new IllegalArgumentException();
-        }
+        final var nvdConfig = (NvdVulnDataSourceConfig) runtimeConfig;
 
         final var testResult = ExtensionTestResult.ofChecks("connection", "feed_format");
 
-        if (!nvdConfig.getEnabled()) {
+        if (!nvdConfig.isEnabled()) {
             return testResult;
         }
 
@@ -133,7 +144,7 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
                 ? URI.create(nvdConfig.getCveFeedsUrl().toString() + "/")
                 : nvdConfig.getCveFeedsUrl();
         final URI metadataUri = feedsUrl.resolve("json/cve/2.0/nvdcve-2.0-modified.meta");
-        
+
         if (!configRegistry
                 .getDeploymentConfig()
                 .getOptionalValue("allow-local-connections", boolean.class)

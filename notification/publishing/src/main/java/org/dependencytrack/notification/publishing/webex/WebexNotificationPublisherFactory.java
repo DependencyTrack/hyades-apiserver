@@ -72,7 +72,7 @@ public final class WebexNotificationPublisherFactory implements NotificationPubl
         final var defaultConfig = new HttpNotificationRuleConfig()
                 .withDestinationUrl(URI.create("https://webex.example.com"));
 
-        return new RuntimeConfigSpec(defaultConfig);
+        return RuntimeConfigSpec.of(defaultConfig);
     }
 
     @Override

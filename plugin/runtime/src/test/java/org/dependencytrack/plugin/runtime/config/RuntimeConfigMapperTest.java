@@ -24,14 +24,13 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 class RuntimeConfigMapperTest {
 
     private final RuntimeConfigMapper runtimeConfigMapper = new RuntimeConfigMapper();
-    private final RuntimeConfigSpec configSpec = new RuntimeConfigSpec(new TestRuntimeConfig());
+    private final RuntimeConfigSpec configSpec = RuntimeConfigSpec.of(new TestRuntimeConfig());
 
     @Nested
     class SerializeTest {
@@ -63,38 +62,6 @@ class RuntimeConfigMapperTest {
     }
 
     @Nested
-    class DeserializeTest {
-
-        @Test
-        void shouldDeserializeFromJson() {
-            final var config = runtimeConfigMapper.deserialize(/* language=JSON */ """
-                            {
-                              "requiredString": "foo"
-                            }
-                            """,
-                    TestRuntimeConfig.class);
-
-            assertThat(config).isNotNull();
-            assertThat(config.getRequiredString()).isEqualTo("foo");
-        }
-
-        @Test
-        void shouldThrowWhenConfigSpecIsNull() {
-            assertThatExceptionOfType(NullPointerException.class)
-                    .isThrownBy(() -> runtimeConfigMapper.deserialize(null, TestRuntimeConfig.class))
-                    .withMessage("configJson must not be null");
-        }
-
-        @Test
-        void shouldThrowWhenConfigClassIsNull() {
-            assertThatExceptionOfType(NullPointerException.class)
-                    .isThrownBy(() -> runtimeConfigMapper.deserialize("", null))
-                    .withMessage("configClass must not be null");
-        }
-
-    }
-
-    @Nested
     class ValidateTest {
 
         @Test
@@ -110,7 +77,7 @@ class RuntimeConfigMapperTest {
         void shouldThrowWhenConfigIsInvalid() {
             final var config = new TestRuntimeConfig();
 
-            assertThatExceptionOfType(RuntimeConfigValidationException.class)
+            assertThatExceptionOfType(RuntimeConfigSchemaValidationException.class)
                     .isThrownBy(() -> runtimeConfigMapper.validate(config, configSpec));
         }
 
@@ -147,7 +114,7 @@ class RuntimeConfigMapperTest {
 
         @Test
         void shouldThrowWhenConfigJsonIsInvalid() {
-            assertThatExceptionOfType(RuntimeConfigValidationException.class)
+            assertThatExceptionOfType(RuntimeConfigSchemaValidationException.class)
                     .isThrownBy(() -> runtimeConfigMapper.validateJson(/* language=JSON */ """
                                     {
                                       "requiredString": null

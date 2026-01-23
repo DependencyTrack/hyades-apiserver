@@ -18,7 +18,8 @@
  */
 package org.dependencytrack.plugin.api.config;
 
-import org.jspecify.annotations.Nullable;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 /**
  * A read-only registry for accessing application configuration.
@@ -28,22 +29,49 @@ import org.jspecify.annotations.Nullable;
 public interface ConfigRegistry {
 
     /**
+     * Retrieve the deployment config.
+     *
+     * @return The deployment config.
      * @since 5.7.0
      */
     DeploymentConfig getDeploymentConfig();
 
     /**
+     * Retrieve the runtime config.
+     *
+     * @return The runtime config.
      * @since 5.7.0
      */
-    @Nullable RuntimeConfig getRuntimeConfig();
+    Optional<RuntimeConfig> getOptionalRuntimeConfig();
 
     /**
+     * Retrieve the runtime config.
+     *
+     * @param configClass Class of the runtime config.
+     * @param <T>         Type of the runtime config.
+     * @return The runtime config.
      * @throws ClassCastException When the config object can not be cast to the provided {@code configClass}.
-     * @see #getRuntimeConfig()
+     * @see #getOptionalRuntimeConfig()
      * @since 5.7.0
      */
-    default <T extends RuntimeConfig> @Nullable T getRuntimeConfig(Class<T> configClass) {
-        return configClass.cast(getRuntimeConfig());
+    default <T extends RuntimeConfig> Optional<T> getOptionalRuntimeConfig(Class<T> configClass) {
+        return getOptionalRuntimeConfig().map(configClass::cast);
+    }
+
+    /**
+     * Retrieve the runtime config, throwing if it doesn't exist.
+     *
+     * @param configClass Class of the runtime config.
+     * @param <T>         Type of the runtime config.
+     * @return The runtime config.
+     * @throws NoSuchElementException When no runtime config exists.
+     * @see #getOptionalRuntimeConfig(Class)
+     * @since 5.7.0
+     */
+    default <T extends RuntimeConfig> T getRuntimeConfig(Class<T> configClass) {
+        return getOptionalRuntimeConfig()
+                .map(configClass::cast)
+                .orElseThrow(() -> new NoSuchElementException("No runtime config found"));
     }
 
 }

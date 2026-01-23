@@ -22,7 +22,7 @@ import com.networknt.schema.ValidationMessage;
 import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.model.JsonSchemaValidationError;
 import org.dependencytrack.api.v2.model.JsonSchemaValidationProblemDetails;
-import org.dependencytrack.plugin.runtime.config.RuntimeConfigValidationException;
+import org.dependencytrack.plugin.runtime.config.RuntimeConfigSchemaValidationException;
 
 import java.util.ArrayList;
 
@@ -30,11 +30,11 @@ import java.util.ArrayList;
  * @since 5.7.0
  */
 @Provider
-public final class RuntimeConfigValidationExceptionMapper
-        extends ProblemDetailsExceptionMapper<RuntimeConfigValidationException, JsonSchemaValidationProblemDetails> {
+public final class RuntimeConfigSchemaValidationExceptionMapper
+        extends ProblemDetailsExceptionMapper<RuntimeConfigSchemaValidationException, JsonSchemaValidationProblemDetails> {
 
     @Override
-    public JsonSchemaValidationProblemDetails map(final RuntimeConfigValidationException exception) {
+    public JsonSchemaValidationProblemDetails map(final RuntimeConfigSchemaValidationException exception) {
         final var errors = new ArrayList<JsonSchemaValidationError>(exception.getValidationMessages().size());
 
         for (final ValidationMessage validationMessage : exception.getValidationMessages()) {

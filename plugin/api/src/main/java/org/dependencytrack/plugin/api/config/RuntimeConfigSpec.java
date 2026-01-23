@@ -28,23 +28,44 @@ import static java.util.Objects.requireNonNull;
 public final class RuntimeConfigSpec {
 
     private final Class<? extends RuntimeConfig> configClass;
+    @SuppressWarnings("rawtypes")
+    private final @Nullable RuntimeConfigValidator validator;
     private final RuntimeConfig defaultConfig;
     private final String schema;
 
-    public RuntimeConfigSpec(
+    @SuppressWarnings("rawtypes")
+    private RuntimeConfigSpec(
             RuntimeConfig defaultConfig,
-            @Nullable RuntimeConfigSchemaSource schemaSource) {
+            @Nullable RuntimeConfigSchemaSource schemaSource,
+            @Nullable RuntimeConfigValidator validator) {
         this.defaultConfig = requireNonNull(defaultConfig, "defaultConfig must not be null");
         this.configClass = defaultConfig.getClass();
         this.schema = loadSchema(configClass, schemaSource);
+        this.validator = validator;
     }
 
-    public RuntimeConfigSpec(RuntimeConfig defaultConfig) {
-        this(defaultConfig, null);
+    public static <T extends RuntimeConfig> RuntimeConfigSpec of(
+            T defaultConfig,
+            RuntimeConfigSchemaSource schemaSource,
+            RuntimeConfigValidator<T> validator) {
+        return new RuntimeConfigSpec(defaultConfig, schemaSource, validator);
+    }
+
+    public static <T extends RuntimeConfig> RuntimeConfigSpec of(T defaultConfig, RuntimeConfigValidator<T> validator) {
+        return new RuntimeConfigSpec(defaultConfig, null, validator);
+    }
+
+    public static <T extends RuntimeConfig> RuntimeConfigSpec of(T defaultConfig) {
+        return new RuntimeConfigSpec(defaultConfig, null, null);
     }
 
     public Class<? extends RuntimeConfig> configClass() {
         return configClass;
+    }
+
+    @SuppressWarnings("rawtypes")
+    public @Nullable RuntimeConfigValidator validator() {
+        return validator;
     }
 
     public RuntimeConfig defaultConfig() {

@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
@@ -79,18 +80,28 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
                 .withDataUrl(URI.create("https://storage.googleapis.com/osv-vulnerabilities"))
                 .withEcosystems(Set.of("Go", "Maven", "npm", "NuGet", "PyPI"));
 
-        return new RuntimeConfigSpec(defaultConfig);
+        return RuntimeConfigSpec.of(defaultConfig, config -> {
+            if (!config.isEnabled()) {
+                return;
+            }
+            if (config.getDataUrl() == null) {
+                throw new InvalidRuntimeConfigException("No data URL provided");
+            }
+            if (config.getEcosystems() == null || config.getEcosystems().isEmpty()) {
+                throw new InvalidRuntimeConfigException("At least one ecosystem must be specified");
+            }
+        });
     }
 
     @Override
     public boolean isDataSourceEnabled() {
-        return configRegistry.getRuntimeConfig(OsvVulnDataSourceConfig.class).getEnabled();
+        return configRegistry.getRuntimeConfig(OsvVulnDataSourceConfig.class).isEnabled();
     }
 
     @Override
     public VulnDataSource create() {
         final var config = configRegistry.getRuntimeConfig(OsvVulnDataSourceConfig.class);
-        if (!config.getEnabled()) {
+        if (!config.isEnabled()) {
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
 

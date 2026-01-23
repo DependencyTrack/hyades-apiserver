@@ -86,7 +86,7 @@ public final class KafkaNotificationPublisherFactory implements NotificationPubl
                 .withTopicName("dependencytrack-notifications")
                 .withPublishProtobuf(true);
 
-        return new RuntimeConfigSpec(defaultConfig);
+        return RuntimeConfigSpec.of(defaultConfig);
     }
 
     @Override

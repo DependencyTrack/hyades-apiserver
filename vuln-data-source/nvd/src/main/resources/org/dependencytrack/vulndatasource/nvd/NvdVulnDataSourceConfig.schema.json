@@ -8,7 +8,8 @@
     "enabled": {
       "type": "boolean",
       "title": "Enabled",
-      "description": "Whether the NVD data source should be enabled."
+      "description": "Whether the NVD data source should be enabled.",
+      "existingJavaType": "boolean"
     },
     "cveFeedsUrl": {
       "type": "string",
@@ -19,7 +20,6 @@
     }
   },
   "required": [
-    "enabled",
-    "cveFeedsUrl"
+    "enabled"
   ]
 }

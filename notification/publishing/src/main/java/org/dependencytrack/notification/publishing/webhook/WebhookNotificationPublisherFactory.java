@@ -72,7 +72,7 @@ public final class WebhookNotificationPublisherFactory implements NotificationPu
         final var defaultConfig = new HttpNotificationRuleConfig()
                 .withDestinationUrl(URI.create("https://example.com"));
 
-        return new RuntimeConfigSpec(defaultConfig);
+        return RuntimeConfigSpec.of(defaultConfig);
     }
 
     @Override

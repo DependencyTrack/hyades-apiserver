@@ -72,7 +72,7 @@ public final class MsTeamsNotificationPublisherFactory implements NotificationPu
         final var defaultConfig = new HttpNotificationRuleConfig()
                 .withDestinationUrl(URI.create("https://msteams.example.com"));
 
-        return new RuntimeConfigSpec(defaultConfig);
+        return RuntimeConfigSpec.of(defaultConfig);
     }
 
     @Override

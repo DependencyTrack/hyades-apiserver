@@ -74,7 +74,7 @@ public final class JiraNotificationPublisherFactory implements NotificationPubli
                 .withProjectKey("EXAMPLE")
                 .withTicketType("TASK");
 
-        return new RuntimeConfigSpec(defaultConfig);
+        return RuntimeConfigSpec.of(defaultConfig);
     }
 
     @Override
