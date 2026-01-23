@@ -8,7 +8,8 @@
     "enabled": {
       "type": "boolean",
       "title": "Enabled",
-      "description": "Whether the GitHub Advisories data source should be enabled."
+      "description": "Whether the GitHub Advisories data source should be enabled.",
+      "existingJavaType": "boolean"
     },
     "aliasSyncEnabled": {
       "type": "boolean",
@@ -31,20 +32,6 @@
     }
   },
   "required": [
-    "enabled",
-    "aliasSyncEnabled",
-    "apiUrl"
-  ],
-  "if": {
-    "properties": {
-      "enabled": {
-        "const": true
-      }
-    }
-  },
-  "then": {
-    "required": [
-      "apiToken"
-    ]
-  }
+    "enabled"
+  ]
 }

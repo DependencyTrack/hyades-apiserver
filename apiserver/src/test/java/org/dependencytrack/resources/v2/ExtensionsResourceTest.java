@@ -31,6 +31,7 @@ import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionPointSpec;
 import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSchemaSource;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
@@ -310,6 +311,35 @@ class ExtensionsResourceTest extends ResourceTest {
     }
 
     @Test
+    void updateExtensionConfigShouldReturnBadRequestWhenConfigValidationFails() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new ExtensionWithValidatorFactory())));
+
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/extension-with-validator/config")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "config": {
+                            "outcome": "PASSED"
+                          }
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 400,
+                  "type": "about:blank",
+                  "title": "Config Validation Failed",
+                  "detail": "Boom!"
+                }
+                """);
+    }
+
+    @Test
     void getExtensionConfigSchemaShouldReturnConfigSchema() {
         pluginManager.loadPlugins(List.of(
                 () -> List.of(new DummyExtensionFactory())));
@@ -452,7 +482,7 @@ class ExtensionsResourceTest extends ResourceTest {
     }
 
     @Test
-    void testExtensionShouldReturnBadRequestWhenConfigIsInvalid() {
+    void testExtensionShouldReturnBadRequestWhenConfigSchemaValidationFails() {
         pluginManager.loadPlugins(List.of(
                 () -> List.of(new TestableExtensionFactory())));
 
@@ -489,6 +519,35 @@ class ExtensionsResourceTest extends ResourceTest {
                 """);
     }
 
+    @Test
+    void testExtensionShouldReturnBadRequestWhenConfigValidationFails() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new ExtensionWithValidatorFactory())));
+
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/extension-with-validator/test")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "config": {
+                            "outcome": "PASSED"
+                          }
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 400,
+                  "type": "about:blank",
+                  "title": "Config Validation Failed",
+                  "detail": "Boom!"
+                }
+                """);
+    }
+
     @ExtensionPointSpec(name = "dummy", required = false)
     private interface DummyExtensionPoint extends ExtensionPoint {
     }
@@ -521,7 +580,7 @@ class ExtensionsResourceTest extends ResourceTest {
         @Override
         public RuntimeConfigSpec runtimeConfigSpec() {
             final var defaultConfig = new DummyRuntimeConfig("test", null);
-            return new RuntimeConfigSpec(
+            return RuntimeConfigSpec.of(
                     defaultConfig,
                     new RuntimeConfigSchemaSource.Literal(/* language=JSON */ """
                             {
@@ -541,7 +600,8 @@ class ExtensionsResourceTest extends ResourceTest {
                                 "requiredString"
                               ]
                             }
-                            """));
+                            """),
+                    null);
         }
 
         @Override
@@ -625,7 +685,7 @@ class ExtensionsResourceTest extends ResourceTest {
         @Override
         public @Nullable RuntimeConfigSpec runtimeConfigSpec() {
             final var defaultConfig = new TestableRuntimeConfig(null);
-            return new RuntimeConfigSpec(
+            return RuntimeConfigSpec.of(
                     defaultConfig,
                     new RuntimeConfigSchemaSource.Literal(/* language=JSON */ """
                             {
@@ -641,7 +701,64 @@ class ExtensionsResourceTest extends ResourceTest {
                                 }
                               }
                             }
-                            """));
+                            """),
+                    null);
+        }
+
+    }
+
+    private static class ExtensionWithValidatorFactory implements ExtensionFactory<DummyExtensionPoint> {
+
+        @Override
+        public String extensionName() {
+            return "extension-with-validator";
+        }
+
+        @Override
+        public Class<? extends DummyExtensionPoint> extensionClass() {
+            return DummyExtension.class;
+        }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
+
+        @Override
+        public void init(ExtensionContext ctx) {
+        }
+
+        @Override
+        public @Nullable RuntimeConfigSpec runtimeConfigSpec() {
+            final var defaultConfig = new TestableRuntimeConfig(null);
+            return RuntimeConfigSpec.of(
+                    defaultConfig,
+                    new RuntimeConfigSchemaSource.Literal(/* language=JSON */ """
+                            {
+                              "$schema": "https://json-schema.org/draft/2020-12/schema",
+                              "type": "object",
+                              "properties": {
+                                "outcome": {
+                                  "type": "string",
+                                  "enum": [
+                                    "PASSED",
+                                    "FAILED"
+                                  ]
+                                }
+                              }
+                            }
+                            """),
+                    config -> {
+                        final var actualConfig = (TestableRuntimeConfig) config;
+                        if (actualConfig.outcome() != null) {
+                            throw new InvalidRuntimeConfigException("Boom!");
+                        }
+                    });
+        }
+
+        @Override
+        public DummyExtensionPoint create() {
+            return new DummyExtension();
         }
 
     }

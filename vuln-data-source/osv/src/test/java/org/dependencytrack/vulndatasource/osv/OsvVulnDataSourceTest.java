@@ -43,6 +43,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -147,7 +148,7 @@ class OsvVulnDataSourceTest {
     @Test
     void testDownloadAndExtractEcosystemFiles() throws Exception {
 
-        var wireMockServer = new WireMockServer();
+        var wireMockServer = new WireMockServer(options().dynamicPort());
         wireMockServer.start();
         WireMock.configureFor("localhost", wireMockServer.port());
         final String ecosystem = "maven";

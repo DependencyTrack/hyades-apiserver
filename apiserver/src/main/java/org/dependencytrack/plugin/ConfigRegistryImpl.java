@@ -28,6 +28,7 @@ import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
 import org.eclipse.microprofile.config.Config;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Optional;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
@@ -67,9 +68,9 @@ public final class ConfigRegistryImpl implements MutableConfigRegistry {
     }
 
     @Override
-    public @Nullable RuntimeConfig getRuntimeConfig() {
+    public Optional<RuntimeConfig> getOptionalRuntimeConfig() {
         if (runtimeConfigSpec == null) {
-            return null;
+            return Optional.empty();
         }
         requireNonNull(runtimeConfigMapper, "runtimeConfigMapper is not initialized");
         requireNonNull(secretResolver, "secretResolver is not initialized");
@@ -78,14 +79,20 @@ public final class ConfigRegistryImpl implements MutableConfigRegistry {
                 handle -> handle.attach(ExtensionConfigDao.class).getConfig(
                         extensionPointName, extensionName));
         if (configJson == null) {
-            return null;
+            return Optional.empty();
         }
 
         final JsonNode configJsonNode = runtimeConfigMapper.validateJson(configJson, runtimeConfigSpec);
 
         runtimeConfigMapper.resolveSecretRefs(configJsonNode, runtimeConfigSpec, secretResolver);
 
-        return runtimeConfigMapper.convert(configJsonNode, runtimeConfigSpec.configClass());
+        final RuntimeConfig runtimeConfig = runtimeConfigMapper.convert(configJsonNode, runtimeConfigSpec.configClass());
+
+        if (runtimeConfigSpec.validator() != null) {
+            runtimeConfigSpec.validator().validate(runtimeConfig);
+        }
+
+        return Optional.of(runtimeConfig);
     }
 
     @Override

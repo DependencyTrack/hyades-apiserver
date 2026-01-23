@@ -202,7 +202,12 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
         final String configJson = Json.createObjectBuilder(request.getConfig()).build().toString();
 
         // Throws when config is invalid or secrets cannot be resolved.
-        validateConfigAndResolveSecrets(configJson, runtimeConfigSpec);
+        final JsonNode configNode = validateConfigAndResolveSecrets(configJson, runtimeConfigSpec);
+
+        final RuntimeConfig config = configMapper.convert(configNode, runtimeConfigSpec.configClass());
+        if (runtimeConfigSpec.validator() != null) {
+            runtimeConfigSpec.validator().validate(config);
+        }
 
         final boolean updated = inJdbiTransaction(
                 getAlpineRequest(),
@@ -275,6 +280,9 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
             final String configJson = Json.createObjectBuilder(request.getConfig()).build().toString();
             final JsonNode configNode = validateConfigAndResolveSecrets(configJson, runtimeConfigSpec);
             runtimeConfig = configMapper.convert(configNode, runtimeConfigSpec.configClass());
+            if (runtimeConfigSpec.validator() != null) {
+                runtimeConfigSpec.validator().validate(runtimeConfig);
+            }
         }
 
         final ExtensionTestResult testResult;

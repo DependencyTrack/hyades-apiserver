@@ -66,7 +66,7 @@ public final class EmailNotificationPublisherFactory implements NotificationPubl
                 .withSenderAddress("dependencytrack@localhost")
                 .withSubjectPrefix("[Dependency-Track]");
 
-        return new RuntimeConfigSpec(defaultConfig);
+        return RuntimeConfigSpec.of(defaultConfig);
     }
 
     @Override

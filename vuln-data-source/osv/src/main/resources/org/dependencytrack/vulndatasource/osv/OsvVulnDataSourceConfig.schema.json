@@ -8,7 +8,8 @@
     "enabled": {
       "type": "boolean",
       "title": "Enabled",
-      "description": "Whether the OSV data source should be enabled."
+      "description": "Whether the OSV data source should be enabled.",
+      "existingJavaType": "boolean"
     },
     "aliasSyncEnabled": {
       "type": "boolean",
@@ -26,7 +27,6 @@
       "type": "array",
       "title": "Ecosystems",
       "description": "The ecosystems to mirror vulnerability data for.  \nA list of available ecosystems can be found in the [OSV documentation](https://ossf.github.io/osv-schema/#defined-ecosystems).",
-      "minItems": 1,
       "uniqueItems": true,
       "items": {
         "type": "string",
@@ -36,9 +36,6 @@
     }
   },
   "required": [
-    "enabled",
-    "aliasSyncEnabled",
-    "dataUrl",
-    "ecosystems"
+    "enabled"
   ]
 }

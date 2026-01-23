@@ -403,7 +403,7 @@ public class PluginManager implements Closeable {
             }
 
             LOGGER.debug("Creating runtime extension configs with defaults if necessary");
-            if (configRegistry.getRuntimeConfig() == null) {
+            if (configRegistry.getOptionalRuntimeConfig().isEmpty()) {
                 final boolean updated = configRegistry.setRuntimeConfig(defaultRuntimeConfig);
                 if (updated) {
                     LOGGER.debug("Created default runtime config");

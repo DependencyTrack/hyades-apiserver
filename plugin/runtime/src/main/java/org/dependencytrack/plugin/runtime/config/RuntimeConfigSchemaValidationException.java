@@ -19,6 +19,7 @@
 package org.dependencytrack.plugin.runtime.config;
 
 import com.networknt.schema.ValidationMessage;
+import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 
 import java.util.Collection;
 import java.util.stream.Collectors;
@@ -26,11 +27,11 @@ import java.util.stream.Collectors;
 /**
  * @since 5.7.0
  */
-public final class RuntimeConfigValidationException extends RuntimeException {
+public final class RuntimeConfigSchemaValidationException extends InvalidRuntimeConfigException {
 
     private final Collection<ValidationMessage> validationMessages;
 
-    public RuntimeConfigValidationException(Collection<ValidationMessage> validationMessages) {
+    public RuntimeConfigSchemaValidationException(Collection<ValidationMessage> validationMessages) {
         super("Runtime config is invalid: [%s]".formatted(
                 validationMessages.stream()
                         .map(ValidationMessage::getMessage)

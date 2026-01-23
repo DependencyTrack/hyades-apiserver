@@ -29,6 +29,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -82,8 +83,8 @@ public final class MockConfigRegistry implements MutableConfigRegistry {
     }
 
     @Override
-    public @Nullable RuntimeConfig getRuntimeConfig() {
-        return runtimeConfig;
+    public Optional<@Nullable RuntimeConfig> getOptionalRuntimeConfig() {
+        return Optional.ofNullable(runtimeConfig);
     }
 
     @Override

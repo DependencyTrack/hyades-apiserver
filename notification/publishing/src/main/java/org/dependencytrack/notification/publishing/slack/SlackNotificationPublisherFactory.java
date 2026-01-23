@@ -72,7 +72,7 @@ public final class SlackNotificationPublisherFactory implements NotificationPubl
         final var defaultConfig = new HttpNotificationRuleConfig()
                 .withDestinationUrl(URI.create("https://slack.example.com"));
 
-        return new RuntimeConfigSpec(defaultConfig);
+        return RuntimeConfigSpec.of(defaultConfig);
     }
 
     @Override
