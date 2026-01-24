@@ -146,10 +146,15 @@ public final class TaskScheduler implements Closeable {
             task.future.cancel(false);
         }
 
-        final var now = Instant.now();
+        // Truncate "now" to seconds, and ensure it's at least 1s after the
+        // previous task execution finished. Otherwise, we could end up scheduling
+        // the next execution immediately. The cron library used to calculate
+        // schedules operates at second precision.
+        final var now = Instant.now().truncatedTo(ChronoUnit.SECONDS).plusSeconds(1);
+
         final var nextExecutionAt = task.schedule.next(Date.from(now)).toInstant();
         final long nextExecutionInMillis = Math.max(
-                ChronoUnit.MILLIS.between(now, nextExecutionAt), 0);
+                ChronoUnit.MILLIS.between(Instant.now(), nextExecutionAt), 0);
 
         task.future = executor.schedule(
                 () -> execute(task),
