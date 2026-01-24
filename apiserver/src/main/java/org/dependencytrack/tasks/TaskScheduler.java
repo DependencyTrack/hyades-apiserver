@@ -141,6 +141,11 @@ public final class TaskScheduler implements Closeable {
             return;
         }
 
+        if (task.future != null && !task.future.isDone()) {
+            LOGGER.debug("Cancelling pending future for task {}", task.id);
+            task.future.cancel(false);
+        }
+
         final var now = Instant.now();
         final var nextExecutionAt = task.schedule.next(Date.from(now)).toInstant();
         final long nextExecutionInMillis = Math.max(
