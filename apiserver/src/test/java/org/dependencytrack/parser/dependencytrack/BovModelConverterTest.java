@@ -26,7 +26,6 @@ import org.cyclonedx.proto.v1_6.Property;
 import org.cyclonedx.proto.v1_6.Source;
 import org.cyclonedx.proto.v1_6.VulnerabilityRating;
 import org.cyclonedx.proto.v1_6.VulnerabilityReference;
-import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Vulnerability;
 import org.junit.jupiter.api.Test;
 
@@ -39,7 +38,7 @@ import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV31;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_OWASP;
 
-public class BovModelConverterTest extends PersistenceCapableTest {
+public class BovModelConverterTest {
 
     @Test
     public void testConvertNullValue() {

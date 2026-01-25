@@ -527,11 +527,6 @@ public final class BovModelConverter {
             LOGGER.warn("Unable to assemble a version range from %s for %s".formatted(vers, vulnId));
             return Collections.emptyList();
         }
-        if ((versionStartIncluding != null || versionStartExcluding != null)
-            && (versionEndIncluding == null && versionEndExcluding == null)) {
-            LOGGER.warn("Skipping indefinite version range assembled from %s for %s".formatted(vers, vulnId));
-            return Collections.emptyList();
-        }
 
         final var vsList = new ArrayList<VulnerableSoftware>(2);
         if (affectedComponent.hasCpe()) {
