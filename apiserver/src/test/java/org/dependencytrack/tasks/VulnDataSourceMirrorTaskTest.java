@@ -18,15 +18,22 @@
  */
 package org.dependencytrack.tasks;
 
+import io.smallrye.config.SmallRyeConfigBuilder;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
+import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.util.KafkaTestUtil.generateBomFromJson;
@@ -35,25 +42,29 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
+class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
 
-    private VulnDataSource dataSourceMock;
+    private PluginManager pluginManager;
     private NistMirrorTask task;
 
     @BeforeEach
-    @Override
-    public void before() throws Exception {
-        super.before();
+    void beforeEach() {
+        pluginManager = new PluginManager(
+                new SmallRyeConfigBuilder().build(),
+                secretName -> null,
+                List.of(VulnDataSource.class));
+        task = new NistMirrorTask(pluginManager);
+    }
 
-        final var pluginManagerMock = mock(PluginManager.class);
-        dataSourceMock = mock(VulnDataSource.class);
-        doReturn(dataSourceMock).when(pluginManagerMock).getExtension(eq(VulnDataSource.class), eq("nvd"));
-
-        task = new NistMirrorTask(pluginManagerMock);
+    @AfterEach
+    void afterEach() {
+        if (pluginManager != null) {
+            pluginManager.close();
+        }
     }
 
     @Test
-    public void testProcessNvdVuln() throws Exception {
+    void testProcessNvdVuln() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -99,8 +110,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock = mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -170,7 +186,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProcessGitHubVuln() throws Exception {
+    void testProcessGitHubVuln() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -237,8 +253,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock = mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -391,7 +412,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProcessOsvVuln() throws Exception {
+    void testProcessOsvVuln() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -447,8 +468,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock =  mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -577,7 +603,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProcessVulnWithoutAffects() throws Exception {
+    void testProcessVulnWithoutAffects() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -599,8 +625,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock =  mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -641,7 +672,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProcessVulnWithUnmatchedAffectsBomRef() throws Exception {
+    void testProcessVulnWithUnmatchedAffectsBomRef() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -671,8 +702,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock = mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -713,7 +749,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProcessVulnWithVersConstraints() throws Exception {
+    void testProcessVulnWithVersConstraints() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -769,8 +805,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock =  mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -1002,7 +1043,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProcessVulnWithInvalidCpeOrPurl() throws Exception {
+    void testProcessVulnWithInvalidCpeOrPurl() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -1068,8 +1109,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock = mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -1107,6 +1153,67 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
         assertThat(vuln.getVulnerableVersions()).isNull();
         assertThat(vuln.getPatchedVersions()).isNull();
         assertThat(vuln.getVulnerableSoftware()).isEmpty();
+    }
+
+    private static class TestVulnDataSourceFactory implements VulnDataSourceFactory {
+
+        private final boolean enabled;
+        private final Supplier<VulnDataSource> dataSourceSupplier;
+
+        private TestVulnDataSourceFactory(
+                boolean enabled,
+                Supplier<VulnDataSource> dataSourceSupplier) {
+            this.enabled = enabled;
+            this.dataSourceSupplier = dataSourceSupplier;
+        }
+
+        private TestVulnDataSourceFactory(Supplier<VulnDataSource> dataSourceSupplier) {
+            this(true, dataSourceSupplier);
+        }
+
+        @Override
+        public boolean isDataSourceEnabled() {
+            return enabled;
+        }
+
+        @Override
+        public String extensionName() {
+            return "nvd";
+        }
+
+        @Override
+        public Class<? extends VulnDataSource> extensionClass() {
+            return TestVulnDataSource.class;
+        }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
+
+        @Override
+        public void init(ExtensionContext ctx) {
+        }
+
+        @Override
+        public VulnDataSource create() {
+            return dataSourceSupplier.get();
+        }
+
+    }
+
+    private static class TestVulnDataSource implements VulnDataSource {
+
+        @Override
+        public boolean hasNext() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Bom next() {
+            throw new UnsupportedOperationException();
+        }
+
     }
 
 }
