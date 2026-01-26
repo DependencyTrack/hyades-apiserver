@@ -40,7 +40,7 @@ class NvdVulnDataSourceTest {
 
     @BeforeEach
     void beforeEach() {
-        final var config = new NvdVulnDataSourceConfig();
+        final var config = new NvdVulnDataSourceConfigV1();
         config.setEnabled(true);
         config.setCveFeedsUrl(URI.create("https://nvd.nist.gov/feeds"));
 

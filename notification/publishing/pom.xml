@@ -151,42 +151,50 @@
                 <artifactId>jsonschema2pojo-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>notification-rule-config-email</id>
+                        <id>config-email</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/email/EmailNotificationRuleConfig.schema.json</sourceDirectory>
+                            <sourcePaths>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/email/email-notification-publisher-global-config-v1.schema.json</sourcePath>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/email/email-notification-publisher-rule-config-v1.schema.json</sourcePath>
+                            </sourcePaths>
                             <targetPackage>org.dependencytrack.notification.publishing.email</targetPackage>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>notification-rule-config-http</id>
+                        <id>config-http</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/http/HttpNotificationRuleConfig.schema.json</sourceDirectory>
+                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/http</sourceDirectory>
                             <targetPackage>org.dependencytrack.notification.publishing.http</targetPackage>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>notification-rule-config-jira</id>
+                        <id>config-jira</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/jira/JiraNotificationRuleConfig.schema.json</sourceDirectory>
+                            <sourcePaths>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/jira/jira-notification-publisher-global-config-v1.schema.json</sourcePath>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/jira/jira-notification-publisher-rule-config-v1.schema.json</sourcePath>
+                            </sourcePaths>
                             <targetPackage>org.dependencytrack.notification.publishing.jira</targetPackage>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>notification-rule-config-kafka</id>
+                        <id>config-kafka</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/kafka/KafkaNotificationRuleConfig.schema.json</sourceDirectory>
+                            <sourcePaths>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/kafka</sourcePath>
+                            </sourcePaths>
                             <targetPackage>org.dependencytrack.notification.publishing.kafka</targetPackage>
                         </configuration>
                     </execution>

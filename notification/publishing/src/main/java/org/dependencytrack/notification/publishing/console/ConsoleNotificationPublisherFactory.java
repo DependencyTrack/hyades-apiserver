@@ -22,6 +22,8 @@ import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.jspecify.annotations.Nullable;
 
 import java.io.OutputStream;
 
@@ -53,17 +55,17 @@ public final class ConsoleNotificationPublisherFactory implements NotificationPu
     }
 
     @Override
-    public int priority() {
-        return 0;
-    }
-
-    @Override
     public void init(ExtensionContext ctx) {
     }
 
     @Override
     public NotificationPublisher create() {
         return new ConsoleNotificationPublisher(outputStream);
+    }
+
+    @Override
+    public @Nullable RuntimeConfigSpec ruleConfigSpec() {
+        return null;
     }
 
     @Override

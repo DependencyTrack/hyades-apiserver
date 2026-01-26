@@ -65,7 +65,9 @@ public final class MockConfigRegistry implements MutableConfigRegistry {
         this(deploymentConfigs, null, null, null);
     }
 
-    public MockConfigRegistry(RuntimeConfigSpec runtimeConfigSpec, RuntimeConfig runtimeConfig) {
+    public MockConfigRegistry(
+            @Nullable RuntimeConfigSpec runtimeConfigSpec,
+            @Nullable RuntimeConfig runtimeConfig) {
         this(
                 Collections.emptyMap(),
                 runtimeConfigSpec,

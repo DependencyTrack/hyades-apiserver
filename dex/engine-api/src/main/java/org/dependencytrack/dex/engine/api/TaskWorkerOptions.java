@@ -24,14 +24,16 @@ import java.time.Duration;
 
 import static java.util.Objects.requireNonNull;
 
-public record ActivityTaskWorkerOptions(
+public record TaskWorkerOptions(
+        TaskType type,
         String name,
         String queueName,
         int maxConcurrency,
         Duration minPollInterval,
         IntervalFunction pollBackoffFunction) {
 
-    public ActivityTaskWorkerOptions {
+    public TaskWorkerOptions {
+        requireNonNull(type, "type must not be null");
         requireNonNull(name, "name must not be null");
         requireNonNull(queueName, "queueName must not be null");
         if (maxConcurrency <= 0) {
@@ -41,12 +43,13 @@ public record ActivityTaskWorkerOptions(
         requireNonNull(pollBackoffFunction, "pollBackoffFunction must not be null");
     }
 
-    public ActivityTaskWorkerOptions(String name, String queueName, int maxConcurrency) {
-        this(name, queueName, maxConcurrency, Duration.ofMillis(100), IntervalFunction.of(Duration.ofMillis(500)));
+    public TaskWorkerOptions(TaskType taskType, String name, String queueName, int maxConcurrency) {
+        this(taskType, name, queueName, maxConcurrency, Duration.ofMillis(100), IntervalFunction.of(Duration.ofMillis(500)));
     }
 
-    public ActivityTaskWorkerOptions withMinPollInterval(Duration minPollInterval) {
-        return new ActivityTaskWorkerOptions(
+    public TaskWorkerOptions withMinPollInterval(Duration minPollInterval) {
+        return new TaskWorkerOptions(
+                this.type,
                 this.name,
                 this.queueName,
                 this.maxConcurrency,
@@ -54,8 +57,9 @@ public record ActivityTaskWorkerOptions(
                 this.pollBackoffFunction);
     }
 
-    public ActivityTaskWorkerOptions withPollBackoffFunction(IntervalFunction pollBackoffFunction) {
-        return new ActivityTaskWorkerOptions(
+    public TaskWorkerOptions withPollBackoffFunction(IntervalFunction pollBackoffFunction) {
+        return new TaskWorkerOptions(
+                this.type,
                 this.name,
                 this.queueName,
                 this.maxConcurrency,

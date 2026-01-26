@@ -36,21 +36,23 @@ public interface NotificationPublisherFactory extends ExtensionFactory<Notificat
 
     /**
      * @return Specification of rule-level configuration supported by the publisher.
-     * May be {@code null} when the publisher doesn't support any configuration.
+     * May be {@code null} when the publisher doesn't support any rule-level configuration.
      */
-    default @Nullable RuntimeConfigSpec ruleConfigSpec() {
-        return null;
-    }
+    @Nullable RuntimeConfigSpec ruleConfigSpec();
 
     /**
      * @return The default template of the publisher.
      */
-    default @Nullable NotificationTemplate defaultTemplate() {
-        return null;
+    @Nullable NotificationTemplate defaultTemplate();
+
+    @Override
+    default int priority() {
+        // Priority is irrelevant for notification publishers.
+        return 0;
     }
 
     static String loadDefaultTemplate(Class<? extends NotificationPublisher> publisherClass) {
-        final InputStream inputStream = publisherClass.getResourceAsStream("DefaultTemplate.peb");
+        final InputStream inputStream = publisherClass.getResourceAsStream("default-template.peb");
         if (inputStream == null) {
             throw new NoSuchElementException("No default template found for publisher: " + publisherClass.getName());
         }

@@ -31,4 +31,12 @@ public class TerminalApplicationFailureException extends ApplicationFailureExcep
         super(message, cause, /* isTerminal */ true);
     }
 
+    public TerminalApplicationFailureException(@Nullable String message) {
+        this(message, null);
+    }
+
+    public TerminalApplicationFailureException(@Nullable Throwable cause) {
+        this(null, cause);
+    }
+
 }

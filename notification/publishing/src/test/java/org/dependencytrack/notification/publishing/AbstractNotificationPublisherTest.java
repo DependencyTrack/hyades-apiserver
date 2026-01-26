@@ -20,28 +20,33 @@ package org.dependencytrack.notification.publishing;
 
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
+import org.dependencytrack.notification.api.TestNotificationFactory;
 import org.dependencytrack.notification.api.publishing.NotificationPublishContext;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplateRenderer;
+import org.dependencytrack.notification.proto.v1.Group;
+import org.dependencytrack.notification.proto.v1.Level;
 import org.dependencytrack.notification.proto.v1.Notification;
+import org.dependencytrack.notification.proto.v1.Scope;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification;
-import static org.dependencytrack.notification.api.TestNotificationFactory.createBomProcessingFailedTestNotification;
-import static org.dependencytrack.notification.api.TestNotificationFactory.createBomValidationFailedTestNotification;
-import static org.dependencytrack.notification.api.TestNotificationFactory.createNewVulnerabilityTestNotification;
-import static org.dependencytrack.notification.api.TestNotificationFactory.createNewVulnerableDependencyTestNotification;
 
 public abstract class AbstractNotificationPublisherTest {
 
@@ -54,13 +59,36 @@ public abstract class AbstractNotificationPublisherTest {
 
     protected abstract NotificationPublisherFactory createPublisherFactory();
 
+    protected void customizeDeploymentConfig(Map<String, String> deploymentConfig) {
+    }
+
+    protected void customizeGlobalConfig(RuntimeConfig globalConfig) {
+    }
+
     protected void customizeRuleConfig(RuntimeConfig ruleConfig) {
     }
 
     @BeforeEach
     protected void beforeEach() throws Exception {
         publisherFactory = createPublisherFactory();
-        publisherFactory.init(new ExtensionContext(new MockConfigRegistry()));
+
+        final var deploymentConfig = new HashMap<String, String>();
+        customizeDeploymentConfig(deploymentConfig);
+
+        RuntimeConfig globalConfig = null;
+        final RuntimeConfigSpec globalConfigSpec = publisherFactory.runtimeConfigSpec();
+        if (globalConfigSpec != null) {
+            globalConfig = globalConfigSpec.defaultConfig();
+            customizeGlobalConfig(globalConfig);
+        }
+
+        final var configRegistry = new MockConfigRegistry(
+                deploymentConfig,
+                globalConfigSpec,
+                RuntimeConfigMapper.getInstance(),
+                globalConfig);
+
+        publisherFactory.init(new ExtensionContext(configRegistry));
         publisher = publisherFactory.create();
 
         final var templateRendererFactory =
@@ -91,84 +119,39 @@ public abstract class AbstractNotificationPublisherTest {
         }
     }
 
-    protected abstract void validateBomConsumedNotificationPublish(Notification notification) throws Exception;
-
-    @Test
-    void shouldPublishBomConsumedNotification() throws Exception {
-        final Notification notification =
-                createBomConsumedTestNotification().toBuilder()
-                        .setId(NOTIFICATION_ID)
-                        .setTimestamp(NOTIFICATION_TIMESTAMP)
-                        .build();
-
+    @ParameterizedTest
+    @MethodSource("testNotificationPublishArguments")
+    void testNotificationPublish(Notification notification) throws Exception {
         assertThatNoException()
                 .isThrownBy(() -> publisher.publish(publishContext, notification));
 
-        validateBomConsumedNotificationPublish(notification);
+        validateNotificationPublish(notification);
     }
 
-    protected abstract void validateBomProcessingFailedNotificationPublish(Notification notification) throws Exception;
+    protected abstract void validateNotificationPublish(Notification notification) throws Exception;
 
-    @Test
-    void shouldPublishBomProcessingFailedNotification() throws Exception {
-        final Notification notification =
-                createBomProcessingFailedTestNotification().toBuilder()
+    private static Stream<Arguments> testNotificationPublishArguments() {
+        final var notifications = new ArrayList<Notification>();
+
+        for (final var scope : Scope.values()) {
+            for (final var group : Group.values()) {
+                for (final var level : Level.values()) {
+                    final Notification notification =
+                            TestNotificationFactory.createTestNotification(scope, group, level);
+                    if (notification != null) {
+                        notifications.add(notification);
+                    }
+                }
+            }
+        }
+
+        return notifications.stream()
+                // Ensure notification data is deterministic.
+                .map(notification -> notification.toBuilder()
                         .setId(NOTIFICATION_ID)
                         .setTimestamp(NOTIFICATION_TIMESTAMP)
-                        .build();
-
-        assertThatNoException()
-                .isThrownBy(() -> publisher.publish(publishContext, notification));
-
-        validateBomProcessingFailedNotificationPublish(notification);
-    }
-
-    protected abstract void validateBomValidationFailedNotificationPublish(Notification notification) throws Exception;
-
-    @Test
-    void shouldPublishBomValidationFailedNotification() throws Exception {
-        final Notification notification =
-                createBomValidationFailedTestNotification().toBuilder()
-                        .setId(NOTIFICATION_ID)
-                        .setTimestamp(NOTIFICATION_TIMESTAMP)
-                        .build();
-
-        assertThatNoException()
-                .isThrownBy(() -> publisher.publish(publishContext, notification));
-
-        validateBomValidationFailedNotificationPublish(notification);
-    }
-
-    protected abstract void validateNewVulnerabilityNotificationPublish(Notification notification) throws Exception;
-
-    @Test
-    void shouldPublishNewVulnerabilityNotification() throws Exception {
-        final Notification notification =
-                createNewVulnerabilityTestNotification().toBuilder()
-                        .setId(NOTIFICATION_ID)
-                        .setTimestamp(NOTIFICATION_TIMESTAMP)
-                        .build();
-
-        assertThatNoException()
-                .isThrownBy(() -> publisher.publish(publishContext, notification));
-
-        validateNewVulnerabilityNotificationPublish(notification);
-    }
-
-    protected abstract void validateNewVulnerableDependencyNotificationPublish(Notification notification) throws Exception;
-
-    @Test
-    void shouldPublishNewVulnerableDependencyNotification() throws Exception {
-        final Notification notification =
-                createNewVulnerableDependencyTestNotification().toBuilder()
-                        .setId(NOTIFICATION_ID)
-                        .setTimestamp(NOTIFICATION_TIMESTAMP)
-                        .build();
-
-        assertThatNoException()
-                .isThrownBy(() -> publisher.publish(publishContext, notification));
-
-        validateNewVulnerableDependencyNotificationPublish(notification);
+                        .build())
+                .map(Arguments::of);
     }
 
 }

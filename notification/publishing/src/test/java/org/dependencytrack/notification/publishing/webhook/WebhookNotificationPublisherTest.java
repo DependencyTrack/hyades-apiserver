@@ -25,7 +25,7 @@ import org.dependencytrack.notification.api.publishing.NotificationPublisherFact
 import org.dependencytrack.notification.api.publishing.RetryablePublishException;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.publishing.AbstractNotificationPublisherTest;
-import org.dependencytrack.notification.publishing.http.HttpNotificationRuleConfig;
+import org.dependencytrack.notification.publishing.http.HttpNotificationPublisherRuleConfigV1;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -57,7 +57,7 @@ class WebhookNotificationPublisherTest extends AbstractNotificationPublisherTest
 
     @Override
     protected void customizeRuleConfig(RuntimeConfig ruleConfig) {
-        final var httpRuleConfig = (HttpNotificationRuleConfig) ruleConfig;
+        final var httpRuleConfig = (HttpNotificationPublisherRuleConfigV1) ruleConfig;
         httpRuleConfig.setDestinationUrl(URI.create(WIREMOCK.baseUrl()));
     }
 
@@ -72,7 +72,17 @@ class WebhookNotificationPublisherTest extends AbstractNotificationPublisherTest
     }
 
     @Override
-    protected void validateBomConsumedNotificationPublish(Notification ignored) {
+    protected void validateNotificationPublish(Notification notification) {
+        switch (notification.getGroup()) {
+            case GROUP_BOM_CONSUMED -> validateBomConsumedNotificationPublish();
+            case GROUP_BOM_PROCESSING_FAILED -> validateBomProcessingFailedNotificationPublish();
+            case GROUP_BOM_VALIDATION_FAILED -> validateBomValidationFailedNotificationPublish();
+            case GROUP_NEW_VULNERABILITY -> validateNewVulnerabilityNotificationPublish();
+            case GROUP_NEW_VULNERABLE_DEPENDENCY -> validateNewVulnerableDependencyNotificationPublish();
+        }
+    }
+
+    private void validateBomConsumedNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(anyUrl())
                 .withHeader("Content-Type", equalTo("application/json"))
                 .withRequestBody(equalToJson(/* language=JSON */ """
@@ -110,8 +120,7 @@ class WebhookNotificationPublisherTest extends AbstractNotificationPublisherTest
                         """)));
     }
 
-    @Override
-    protected void validateBomProcessingFailedNotificationPublish(Notification ignored) {
+    private void validateBomProcessingFailedNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(anyUrl())
                 .withHeader("Content-Type", equalTo("application/json"))
                 .withRequestBody(equalToJson(/* language=JSON */ """
@@ -150,8 +159,7 @@ class WebhookNotificationPublisherTest extends AbstractNotificationPublisherTest
                         """)));
     }
 
-    @Override
-    protected void validateBomValidationFailedNotificationPublish(Notification ignored) {
+    private void validateBomValidationFailedNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(anyUrl())
                 .withHeader("Content-Type", equalTo("application/json"))
                 .withRequestBody(equalToJson(/* language=JSON */ """
@@ -190,8 +198,7 @@ class WebhookNotificationPublisherTest extends AbstractNotificationPublisherTest
                         """)));
     }
 
-    @Override
-    protected void validateNewVulnerabilityNotificationPublish(Notification ignored) {
+    private void validateNewVulnerabilityNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(anyUrl())
                 .withHeader("Content-Type", equalTo("application/json"))
                 .withRequestBody(equalToJson(/* language=JSON */ """
@@ -278,8 +285,7 @@ class WebhookNotificationPublisherTest extends AbstractNotificationPublisherTest
                         """)));
     }
 
-    @Override
-    protected void validateNewVulnerableDependencyNotificationPublish(Notification ignored) {
+    private void validateNewVulnerableDependencyNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(anyUrl())
                 .withHeader("Content-Type", equalTo("application/json"))
                 .withRequestBody(equalToJson(/* language=JSON */ """

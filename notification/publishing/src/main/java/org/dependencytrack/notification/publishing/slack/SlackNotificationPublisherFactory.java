@@ -21,7 +21,7 @@ package org.dependencytrack.notification.publishing.slack;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
-import org.dependencytrack.notification.publishing.http.HttpNotificationRuleConfig;
+import org.dependencytrack.notification.publishing.http.HttpNotificationPublisherRuleConfigV1;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.jspecify.annotations.Nullable;
@@ -50,11 +50,6 @@ public final class SlackNotificationPublisherFactory implements NotificationPubl
     }
 
     @Override
-    public int priority() {
-        return 0;
-    }
-
-    @Override
     public void init(ExtensionContext ctx) {
         this.httpClient = HttpClient.newBuilder()
                 .proxy(ctx.proxySelector())
@@ -69,10 +64,9 @@ public final class SlackNotificationPublisherFactory implements NotificationPubl
 
     @Override
     public RuntimeConfigSpec ruleConfigSpec() {
-        final var defaultConfig = new HttpNotificationRuleConfig()
-                .withDestinationUrl(URI.create("https://slack.example.com"));
-
-        return RuntimeConfigSpec.of(defaultConfig);
+        return RuntimeConfigSpec.of(
+                new HttpNotificationPublisherRuleConfigV1()
+                        .withDestinationUrl(URI.create("https://slack.example.com")));
     }
 
     @Override

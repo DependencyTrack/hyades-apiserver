@@ -73,12 +73,12 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
 
     @Override
     public boolean isDataSourceEnabled() {
-        return configRegistry.getRuntimeConfig(GitHubVulnDataSourceConfig.class).isEnabled();
+        return configRegistry.getRuntimeConfig(GithubVulnDataSourceConfigV1.class).isEnabled();
     }
 
     @Override
     public VulnDataSource create() {
-        final var config = configRegistry.getRuntimeConfig(GitHubVulnDataSourceConfig.class);
+        final var config = configRegistry.getRuntimeConfig(GithubVulnDataSourceConfigV1.class);
         if (!config.isEnabled()) {
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
@@ -100,7 +100,7 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
 
     @Override
     public RuntimeConfigSpec runtimeConfigSpec() {
-        final var defaultConfig = new GitHubVulnDataSourceConfig()
+        final var defaultConfig = new GithubVulnDataSourceConfigV1()
                 .withEnabled(false)
                 .withAliasSyncEnabled(true)
                 .withApiUrl(URI.create("https://api.github.com/graphql"));

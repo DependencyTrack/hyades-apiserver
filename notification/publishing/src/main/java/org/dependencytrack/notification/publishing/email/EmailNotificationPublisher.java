@@ -18,10 +18,8 @@
  */
 package org.dependencytrack.notification.publishing.email;
 
-import jakarta.mail.Authenticator;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
-import jakarta.mail.PasswordAuthentication;
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
 import jakarta.mail.internet.InternetAddress;
@@ -31,14 +29,17 @@ import jakarta.mail.internet.MimeMultipart;
 import org.dependencytrack.notification.api.publishing.NotificationPublishContext;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationRuleContact;
+import org.dependencytrack.notification.api.publishing.RetryablePublishException;
 import org.dependencytrack.notification.api.templating.RenderedNotificationTemplate;
 import org.dependencytrack.notification.proto.v1.Notification;
+import org.eclipse.angus.mail.smtp.SMTPSendFailedException;
+import org.eclipse.angus.mail.util.MailConnectException;
 
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,11 +48,17 @@ import java.util.stream.Stream;
  */
 final class EmailNotificationPublisher implements NotificationPublisher {
 
-    private static final long TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(10);
+    private final Session session;
+    private final String senderAddress;
+
+    EmailNotificationPublisher(Session session, String senderAddress) {
+        this.session = session;
+        this.senderAddress = senderAddress;
+    }
 
     @Override
     public void publish(NotificationPublishContext ctx, Notification notification) {
-        final var ruleConfig = ctx.ruleConfig(EmailNotificationRuleConfig.class);
+        final var ruleConfig = ctx.ruleConfig(EmailNotificationPublisherRuleConfigV1.class);
 
         final RenderedNotificationTemplate renderedTemplate = ctx.templateRenderer().render(notification);
         if (renderedTemplate == null) {
@@ -76,11 +83,9 @@ final class EmailNotificationPublisher implements NotificationPublisher {
                         : "",
                 notification.getTitle()).trim();
 
-        final Session session = getSession(ruleConfig);
-
         try {
             final var message = new MimeMessage(session);
-            message.setSender(new InternetAddress(ruleConfig.getSenderAddress()));
+            message.setSender(new InternetAddress(senderAddress));
             message.setRecipients(Message.RecipientType.TO, recipients);
             message.setSubject(messageSubject);
 
@@ -89,44 +94,30 @@ final class EmailNotificationPublisher implements NotificationPublisher {
 
             final var multipart = new MimeMultipart();
             multipart.addBodyPart(bodyPart);
-            message.setContent(multipart);
+            message.setContent(multipart, renderedTemplate.mimeType());
 
             Transport.send(message);
         } catch (MessagingException e) {
-            throw new IllegalStateException(e);
+            if (isRetryable(e)) {
+                throw new RetryablePublishException("Failed to send email with retryable cause", e);
+            }
+
+            throw new IllegalStateException("Failed to send email", e);
         }
     }
 
-    private Session getSession(EmailNotificationRuleConfig ruleConfig) {
-        final boolean authenticated =
-                ruleConfig.getSmtp().getUsername() != null
-                        && ruleConfig.getSmtp().getPassword() != null;
-
-        final Properties props = new Properties();
-        props.put("mail.smtp.host", ruleConfig.getSmtp().getHost());
-        props.put("mail.smtp.port", ruleConfig.getSmtp().getPort());
-        props.put("mail.smtp.socketFactory.port", ruleConfig.getSmtp().getPort());
-        if (authenticated) {
-            props.put("mail.smtp.auth", true);
-        }
-        // props.put("mail.smtp.starttls.enable", useStartTLS);
-        props.put("mail.smtp.connectiontimeout", TIMEOUT_MILLIS);
-        props.put("mail.smtp.timeout", TIMEOUT_MILLIS);
-        props.put("mail.smtp.writetimeout", TIMEOUT_MILLIS);
-
-        Authenticator authenticator = null;
-        if (authenticated) {
-            authenticator = new Authenticator() {
-                @Override
-                protected PasswordAuthentication getPasswordAuthentication() {
-                    return new PasswordAuthentication(
-                            ruleConfig.getSmtp().getUsername(),
-                            ruleConfig.getSmtp().getPassword());
-                }
-            };
+    private boolean isRetryable(MessagingException e) {
+        if (e instanceof MailConnectException
+                || e.getCause() instanceof ConnectException
+                || e.getCause() instanceof SocketTimeoutException) {
+            return true;
         }
 
-        return Session.getInstance(props, authenticator);
+        if (e instanceof final SMTPSendFailedException ssfe) {
+            return ssfe.getReturnCode() >= 400 && ssfe.getReturnCode() < 500;
+        }
+
+        return false;
     }
 
 }

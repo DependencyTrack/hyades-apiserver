@@ -208,7 +208,7 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         qm.persist(vex);
 
         // Create a notification rule and associate projectChild with it.
-        final NotificationPublisher notificationPublisher = qm.createNotificationPublisher("name", "description", "publisherClass", "templateContent", "templateMimeType", true);
+        final NotificationPublisher notificationPublisher = qm.createNotificationPublisher("name", "description", "extensionName", "templateContent", "templateMimeType", true);
         final NotificationRule notificationRule = qm.createNotificationRule("name", NotificationScope.PORTFOLIO, NotificationLevel.WARNING, notificationPublisher);
         notificationRule.getProjects().add(projectChild);
         qm.persist(notificationRule);

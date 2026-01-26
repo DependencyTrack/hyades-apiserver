@@ -23,7 +23,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.publishing.AbstractNotificationPublisherTest;
-import org.dependencytrack.notification.publishing.http.HttpNotificationRuleConfig;
+import org.dependencytrack.notification.publishing.http.HttpNotificationPublisherRuleConfigV1;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -52,7 +52,7 @@ class MattermostNotificationPublisherTest extends AbstractNotificationPublisherT
 
     @Override
     protected void customizeRuleConfig(RuntimeConfig ruleConfig) {
-        final var httpRuleConfig = (HttpNotificationRuleConfig) ruleConfig;
+        final var httpRuleConfig = (HttpNotificationPublisherRuleConfigV1) ruleConfig;
         httpRuleConfig.setDestinationUrl(URI.create(WIREMOCK.baseUrl()));
     }
 
@@ -67,7 +67,17 @@ class MattermostNotificationPublisherTest extends AbstractNotificationPublisherT
     }
 
     @Override
-    protected void validateBomConsumedNotificationPublish(Notification ignored) {
+    protected void validateNotificationPublish(Notification notification) {
+        switch (notification.getGroup()) {
+            case GROUP_BOM_CONSUMED -> validateBomConsumedNotificationPublish();
+            case GROUP_BOM_PROCESSING_FAILED -> validateBomProcessingFailedNotificationPublish();
+            case GROUP_BOM_VALIDATION_FAILED -> validateBomValidationFailedNotificationPublish();
+            case GROUP_NEW_VULNERABILITY -> validateNewVulnerabilityNotificationPublish();
+            case GROUP_NEW_VULNERABLE_DEPENDENCY -> validateNewVulnerableDependencyNotificationPublish();
+        }
+    }
+
+    private void validateBomConsumedNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/"))
                 .withHeader("Content-Type", equalTo("application/json"))
                 .withRequestBody(equalToJson(/* language=JSON */ """
@@ -79,8 +89,7 @@ class MattermostNotificationPublisherTest extends AbstractNotificationPublisherT
                         """)));
     }
 
-    @Override
-    protected void validateBomProcessingFailedNotificationPublish(Notification ignored) {
+    private void validateBomProcessingFailedNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/"))
                 .withHeader("Content-Type", equalTo("application/json"))
                 .withRequestBody(equalToJson(/* language=JSON */ """
@@ -92,8 +101,7 @@ class MattermostNotificationPublisherTest extends AbstractNotificationPublisherT
                         """)));
     }
 
-    @Override
-    protected void validateBomValidationFailedNotificationPublish(Notification ignored) {
+    private void validateBomValidationFailedNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/"))
                 .withHeader("Content-Type", equalTo("application/json"))
                 .withRequestBody(equalToJson(/* language=JSON */ """
@@ -105,8 +113,7 @@ class MattermostNotificationPublisherTest extends AbstractNotificationPublisherT
                         """)));
     }
 
-    @Override
-    protected void validateNewVulnerabilityNotificationPublish(Notification ignored) {
+    private void validateNewVulnerabilityNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/"))
                 .withHeader("Content-Type", equalTo("application/json"))
                 .withRequestBody(equalToJson(/* language=JSON */ """
@@ -118,8 +125,7 @@ class MattermostNotificationPublisherTest extends AbstractNotificationPublisherT
                         """)));
     }
 
-    @Override
-    protected void validateNewVulnerableDependencyNotificationPublish(Notification ignored) {
+    private void validateNewVulnerableDependencyNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/"))
                 .withHeader("Content-Type", equalTo("application/json"))
                 .withRequestBody(equalToJson(/* language=JSON */ """

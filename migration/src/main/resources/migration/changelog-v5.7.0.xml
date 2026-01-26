@@ -642,4 +642,132 @@
                AND "KEY" LIKE 'watermark/%';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-33" author="nscuro">
+        <!--
+            Publisher implementations are no longer identified by their (pseudo) class name,
+            but by extension name. Further, templates are no longer mandatory, as direct
+            publishing of notification Protobuf messages is also allowed.
+        -->
+        <sql splitStatements="true">
+            UPDATE "NOTIFICATIONPUBLISHER"
+               SET "PUBLISHER_CLASS" = t.extension_name
+              FROM (
+                VALUES ('ConsolePublisher', 'console')
+                     , ('CsWebexPublisher', 'webex')
+                     , ('JiraPublisher', 'jira')
+                     , ('MattermostPublisher', 'mattermost')
+                     , ('MsTeamsPublisher', 'msteams')
+                     , ('SendMailPublisher', 'email')
+                     , ('SlackPublisher', 'slack')
+                     , ('WebhookPublisher', 'webhook')
+              ) AS t(publisher_class, extension_name)
+             WHERE "PUBLISHER_CLASS" = t.publisher_class;
+
+            ALTER TABLE "NOTIFICATIONPUBLISHER" RENAME COLUMN "PUBLISHER_CLASS" TO "EXTENSION_NAME";
+
+            ALTER TABLE "NOTIFICATIONPUBLISHER" ALTER COLUMN "TEMPLATE_MIME_TYPE" DROP NOT NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-34" author="nscuro">
+        <!--
+            Make NOTIFY_ON more reliable to query on by converting it to a proper array.
+            The previous comma-delimited format necessitated fuzzy LIKE queries.
+        -->
+        <sql splitStatements="true">
+            ALTER TABLE "NOTIFICATIONRULE" ADD COLUMN "NOTIFY_ON_ARRAY" TEXT[];
+
+            UPDATE "NOTIFICATIONRULE"
+               SET "NOTIFY_ON_ARRAY" = STRING_TO_ARRAY("NOTIFY_ON", ',')
+             WHERE "NOTIFY_ON" IS NOT NULL;
+
+            ALTER TABLE "NOTIFICATIONRULE" DROP COLUMN "NOTIFY_ON";
+            ALTER TABLE "NOTIFICATIONRULE" RENAME COLUMN "NOTIFY_ON_ARRAY" TO "NOTIFY_ON";
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-35" author="nscuro">
+        <!--
+            Make publisher configurations query- and mutable by converting it
+            from TEXT to JSONB. Also ensures we only store valid JSON.
+        -->
+        <sql>
+            ALTER TABLE "NOTIFICATIONRULE"
+            ALTER COLUMN "PUBLISHER_CONFIG"
+            TYPE JSONB USING "PUBLISHER_CONFIG"::JSONB;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-36" author="nscuro">
+        <!--
+            Attempt to migrate existing notification rules on a best-effort basis.
+            Disable all modified rules to prevent unintentional breakage.
+            The upgrade notes will state that manual review is necessary.
+        -->
+        <sql splitStatements="true">
+            UPDATE "NOTIFICATIONRULE" AS r
+               SET "PUBLISHER_CONFIG" = NULL
+                 , "ENABLED" = FALSE
+              FROM "NOTIFICATIONPUBLISHER" AS p
+             WHERE p."ID" = r."PUBLISHER"
+               AND p."EXTENSION_NAME" = 'console';
+
+            UPDATE "NOTIFICATIONRULE" AS r
+               SET "PUBLISHER_CONFIG" = JSONB_BUILD_OBJECT(
+                     'recipientAddresses',
+                     CASE
+                       WHEN NULLIF(r."PUBLISHER_CONFIG" ->> 'destination', '') IS NOT NULL
+                       THEN JSONB_BUILD_ARRAY(r."PUBLISHER_CONFIG" ->> 'destination')
+                       ELSE JSONB_BUILD_ARRAY()
+                     END
+                   )
+                 , "ENABLED" = FALSE
+              FROM "NOTIFICATIONPUBLISHER" AS p
+             WHERE p."ID" = r."PUBLISHER"
+               AND p."EXTENSION_NAME" = 'email';
+
+            UPDATE "NOTIFICATIONRULE" AS r
+               SET "PUBLISHER_CONFIG" = JSONB_BUILD_OBJECT(
+                     'projectKey', COALESCE("PUBLISHER_CONFIG" ->> 'destination', 'EXAMPLE')
+                   , 'issueType', COALESCE("PUBLISHER_CONFIG" ->> 'jiraTicketType', 'TASK')
+                   )
+                 , "ENABLED" = FALSE
+              FROM "NOTIFICATIONPUBLISHER" AS p
+             WHERE p."ID" = r."PUBLISHER"
+               AND p."EXTENSION_NAME" = 'jira';
+
+            UPDATE "NOTIFICATIONRULE" AS r
+               SET "PUBLISHER_CONFIG" = JSONB_BUILD_OBJECT(
+                     'destinationUrl', COALESCE("PUBLISHER_CONFIG" ->> 'destination', 'https://example.com')
+                   )
+                 , "ENABLED" = FALSE
+              FROM "NOTIFICATIONPUBLISHER" AS p
+             WHERE p."ID" = r."PUBLISHER"
+               AND p."EXTENSION_NAME" IN ('mattermost', 'msteams', 'slack', 'webex', 'webhook');
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-37" author="nscuro">
+        <createIndex tableName="NOTIFICATIONRULE" indexName="NOTIFICATIONRULE_NAME_IDX" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.7.0-38" author="nscuro">
+        <!--
+            Remove global configuration options for email and Jira,
+            as they're managed in publisher configs going forward.
+        -->
+        <sql splitStatements="true">
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = 'email';
+
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = 'integrations'
+               AND "PROPERTYNAME" LIKE 'jira.%';
+        </sql>
+    </changeSet>
 </databaseChangeLog>

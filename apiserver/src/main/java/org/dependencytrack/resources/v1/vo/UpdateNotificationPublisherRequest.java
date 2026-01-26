@@ -16,12 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.api;
+package org.dependencytrack.resources.v1.vo;
 
-public enum TaskQueueType {
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
-    ACTIVITY,
+import java.util.UUID;
 
-    WORKFLOW
-
+/**
+ * @since 5.7.0
+ */
+@JsonIgnoreProperties(ignoreUnknown = true)
+public record UpdateNotificationPublisherRequest(
+        @NotBlank String name,
+        @NotBlank String extensionName,
+        String description,
+        String template,
+        String templateMimeType,
+        @NotNull UUID uuid) {
 }

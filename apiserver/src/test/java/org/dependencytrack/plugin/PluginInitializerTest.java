@@ -24,7 +24,7 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.filestorage.local.LocalFileStoragePlugin;
 import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
 import org.dependencytrack.filestorage.s3.S3FileStoragePlugin;
-import org.dependencytrack.notification.publishing.DefaultNotificationPublisherPlugin;
+import org.dependencytrack.notification.publishing.DefaultNotificationPublishersPlugin;
 import org.dependencytrack.secret.TestSecretManager;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.vulndatasource.github.GitHubVulnDataSourcePlugin;
@@ -86,7 +86,7 @@ class PluginInitializerTest extends PersistenceCapableTest {
                         "notification-publisher",
                         "vuln-data-source");
         assertThat(pluginManager.getLoadedPlugins()).satisfiesExactlyInAnyOrder(
-                plugin -> assertThat(plugin).isInstanceOf(DefaultNotificationPublisherPlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(DefaultNotificationPublishersPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(GitHubVulnDataSourcePlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(LocalFileStoragePlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(MemoryFileStoragePlugin.class),

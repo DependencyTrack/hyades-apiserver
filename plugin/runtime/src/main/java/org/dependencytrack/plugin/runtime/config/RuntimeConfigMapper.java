@@ -66,8 +66,12 @@ import static java.util.Objects.requireNonNull;
  */
 public final class RuntimeConfigMapper {
 
+    private static class CustomAnnotations {
+        private static final String SECRET_REF = "x-secret-ref";
+        private static final String UI_HINT = "x-ui-hint";
+    }
+
     private static final RuntimeConfigMapper INSTANCE = new RuntimeConfigMapper();
-    private static final String SECRET_REF_ANNOTATION = "x-secret-ref";
 
     private final ObjectMapper jsonMapper;
     private final JsonSchemaFactory schemaFactory;
@@ -90,7 +94,9 @@ public final class RuntimeConfigMapper {
                         new NonValidationKeyword("javaName"),
                         new NonValidationKeyword("javaType")))
                 // Don't emit warning when encountering custom annotations.
-                .keyword(new NonValidationKeyword(SECRET_REF_ANNOTATION))
+                .keywords(List.of(
+                        new NonValidationKeyword(CustomAnnotations.SECRET_REF),
+                        new NonValidationKeyword(CustomAnnotations.UI_HINT)))
                 .build();
         this.schemaFactory = JsonSchemaFactory
                 .builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012))
@@ -127,9 +133,7 @@ public final class RuntimeConfigMapper {
         requireNonNull(config, "config must not be null");
 
         try {
-            return jsonMapper
-                    .writerWithDefaultPrettyPrinter()
-                    .writeValueAsString(config);
+            return jsonMapper.writeValueAsString(config);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -231,6 +235,10 @@ public final class RuntimeConfigMapper {
                     }
 
                     final JsonSchema jsonSchema = schemaFactory.getSchema(schemaNode);
+                    if (jsonSchema.getId() == null || jsonSchema.getId().isBlank()) {
+                        throw new IllegalStateException("Schema does not define an ID");
+                    }
+
                     final Set<String> secretRefPaths = getSecretRefPaths(schemaNode, null);
 
                     return new RuntimeConfigSchema(jsonSchema, secretRefPaths);
@@ -274,15 +282,15 @@ public final class RuntimeConfigMapper {
     }
 
     private boolean hasSecretRef(JsonNode propertyNode, String path) {
-        if (!propertyNode.has(SECRET_REF_ANNOTATION)) {
+        if (!propertyNode.has(CustomAnnotations.SECRET_REF)) {
             return false;
         }
 
-        final JsonNode secretRefNode = propertyNode.get(SECRET_REF_ANNOTATION);
+        final JsonNode secretRefNode = propertyNode.get(CustomAnnotations.SECRET_REF);
         if (!secretRefNode.isBoolean()) {
             throw new IllegalStateException(
                     "Invalid %s node type at %s: Expected %s but was %s".formatted(
-                            SECRET_REF_ANNOTATION, path, JsonNodeType.BOOLEAN, secretRefNode.getNodeType()));
+                            CustomAnnotations.SECRET_REF, path, JsonNodeType.BOOLEAN, secretRefNode.getNodeType()));
         }
 
         return secretRefNode.asBoolean();

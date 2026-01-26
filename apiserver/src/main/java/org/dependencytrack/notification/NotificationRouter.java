@@ -48,12 +48,17 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.common.MdcKeys.MDC_NOTIFICATION_GROUP;
+import static org.dependencytrack.common.MdcKeys.MDC_NOTIFICATION_ID;
+import static org.dependencytrack.common.MdcKeys.MDC_NOTIFICATION_LEVEL;
+import static org.dependencytrack.common.MdcKeys.MDC_NOTIFICATION_SCOPE;
 import static org.dependencytrack.notification.NotificationModelConverter.convert;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 
@@ -61,6 +66,9 @@ import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
  * @since 5.7.0
  */
 final class NotificationRouter {
+
+    record Result(Notification notification, Set<String> ruleNames) {
+    }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationRouter.class.getName());
 
@@ -88,7 +96,7 @@ final class NotificationRouter {
                 .withRegistry(meterRegistry);
     }
 
-    List<NotificationPublishTask> route(Collection<Notification> notifications) {
+    List<Result> route(Collection<Notification> notifications) {
         requireNonNull(notifications, "notifications must not be null");
         if (notifications.isEmpty()) {
             return Collections.emptyList();
@@ -107,17 +115,17 @@ final class NotificationRouter {
             return Collections.emptyList();
         }
 
-        final var publishTasks = new ArrayList<NotificationPublishTask>(rulesByNotification.size());
+        final var results = new ArrayList<Result>(rulesByNotification.size());
 
         for (final Map.Entry<Notification, List<RuleQueryResult>> entry : rulesByNotification.entrySet()) {
             final Notification notification = entry.getKey();
             final List<RuleQueryResult> rules = entry.getValue();
 
             try (var ignoredMdcScope = new MdcScope(Map.ofEntries(
-                    Map.entry("notificationId", notification.getId()),
-                    Map.entry("notificationScope", convert(notification.getScope()).name()),
-                    Map.entry("notificationGroup", convert(notification.getGroup()).name()),
-                    Map.entry("notificationLevel", convert(notification.getLevel()).name())))) {
+                    Map.entry(MDC_NOTIFICATION_ID, notification.getId()),
+                    Map.entry(MDC_NOTIFICATION_SCOPE, convert(notification.getScope()).name()),
+                    Map.entry(MDC_NOTIFICATION_GROUP, convert(notification.getGroup()).name()),
+                    Map.entry(MDC_NOTIFICATION_LEVEL, convert(notification.getLevel()).name())))) {
                 final Timer.Sample ruleFilterLatencySample = Timer.start();
                 final List<RuleQueryResult> applicableRules;
                 try {
@@ -126,15 +134,19 @@ final class NotificationRouter {
                     ruleFilterLatencySample.stop(ruleFilterLatency);
                 }
 
+                final var applicableRuleNames = new HashSet<String>(applicableRules.size());
                 for (final RuleQueryResult rule : applicableRules) {
-                    LOGGER.debug("Adding publish task for rule {}", rule.name());
                     rulesMatchedCounter.withTag("ruleName", rule.name()).increment();
-                    publishTasks.add(new NotificationPublishTask(rule.id(), rule.name(), notification));
+                    applicableRuleNames.add(rule.name());
+                }
+
+                if (!applicableRuleNames.isEmpty()) {
+                    results.add(new Result(notification, applicableRuleNames));
                 }
             }
         }
 
-        return publishTasks;
+        return results;
     }
 
     public record RuleQueryResult(
@@ -203,7 +215,7 @@ final class NotificationRouter {
                     AS t(index, scope, level, "group")
                  INNER JOIN "NOTIFICATIONRULE" AS rule
                     ON rule."SCOPE" = t.scope
-                   AND rule."NOTIFY_ON" LIKE ('%' || t."group" || '%')
+                   AND t."group" = ANY(rule."NOTIFY_ON")
                    AND rule."NOTIFICATION_LEVEL" <= t.level
                  WHERE rule."ENABLED"
                 """);

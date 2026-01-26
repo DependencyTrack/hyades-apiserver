@@ -19,13 +19,13 @@
 package org.dependencytrack.dex.engine.api.request;
 
 import org.dependencytrack.dex.engine.api.TaskQueueStatus;
-import org.dependencytrack.dex.engine.api.TaskQueueType;
+import org.dependencytrack.dex.engine.api.TaskType;
 import org.jspecify.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
 public record UpdateTaskQueueRequest(
-        TaskQueueType type,
+        TaskType type,
         String name,
         @Nullable TaskQueueStatus status,
         @Nullable Integer capacity) {

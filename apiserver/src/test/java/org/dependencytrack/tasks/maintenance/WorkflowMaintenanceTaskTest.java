@@ -26,6 +26,7 @@ import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -41,19 +42,20 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_RETENTION_HOURS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES;
+import static org.dependencytrack.notification.NotificationTestUtil.createCatchAllNotificationRule;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_PROCESSING_FAILED;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 
-public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
+class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
 
     @RegisterExtension
-    private static final ConfigPropertyExtension configProperties =
+    static ConfigPropertyExtension configProperties =
             new ConfigPropertyExtension()
                     .withProperty("tmp.delay.bom.processed.notification", "true");
 
     @Test
-    public void testWithTransitionToTimedOut() {
+    void testWithTransitionToTimedOut() {
         qm.createConfigProperty(
                 MAINTENANCE_WORKFLOW_RETENTION_HOURS.getGroupName(),
                 MAINTENANCE_WORKFLOW_RETENTION_HOURS.getPropertyName(),
@@ -100,7 +102,7 @@ public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testWithTransitionTimedOutToFailed() {
+    void testWithTransitionTimedOutToFailed() {
         qm.createConfigProperty(
                 MAINTENANCE_WORKFLOW_RETENTION_HOURS.getGroupName(),
                 MAINTENANCE_WORKFLOW_RETENTION_HOURS.getPropertyName(),
@@ -166,7 +168,9 @@ public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testWithTransitionTimedOutToFailedForVulnAnalysis() {
+    void testWithTransitionTimedOutToFailedForVulnAnalysis() {
+        createCatchAllNotificationRule(qm, NotificationScope.PORTFOLIO);
+
         qm.createConfigProperty(
                 MAINTENANCE_WORKFLOW_RETENTION_HOURS.getGroupName(),
                 MAINTENANCE_WORKFLOW_RETENTION_HOURS.getPropertyName(),
@@ -231,7 +235,7 @@ public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testWithDeleteExpired() {
+    void testWithDeleteExpired() {
         qm.createConfigProperty(
                 MAINTENANCE_WORKFLOW_RETENTION_HOURS.getGroupName(),
                 MAINTENANCE_WORKFLOW_RETENTION_HOURS.getPropertyName(),
