@@ -843,7 +843,7 @@
                         </executions>
                         <configuration>
                             <systemProperties>
-                                <alpine.config.profile>dev</alpine.config.profile>
+                                <smallrye.config.profile>dev</smallrye.config.profile>
                                 <dev.services.enabled>true</dev.services.enabled>
                             </systemProperties>
                             <webApp>

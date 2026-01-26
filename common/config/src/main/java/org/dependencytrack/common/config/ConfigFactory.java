@@ -18,14 +18,10 @@
  */
 package org.dependencytrack.common.config;
 
-import io.smallrye.config.ExpressionConfigSourceInterceptor;
-import io.smallrye.config.ProfileConfigSourceInterceptor;
 import io.smallrye.config.SmallRyeConfig;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import io.smallrye.config.SmallRyeConfigFactory;
 import io.smallrye.config.SmallRyeConfigProviderResolver;
-
-import java.util.List;
 
 /**
  * @since 5.7.0
@@ -53,12 +49,12 @@ public final class ConfigFactory extends SmallRyeConfigFactory {
                 .addDefaultSources()
                 // Enable sources discovered via SPI.
                 .addDiscoveredSources()
-                // Support expressions.
-                // https://smallrye.io/smallrye-config/Main/config/expressions/
-                .withInterceptors(new ExpressionConfigSourceInterceptor())
-                // Support profiles.
-                // https://smallrye.io/smallrye-config/Main/config/profiles/
-                .withInterceptors(new ProfileConfigSourceInterceptor(List.of("prod", "dev", "test")))
+                // Enable default interceptors for:
+                //   * Profile support: https://smallrye.io/smallrye-config/Main/config/profiles/
+                //   * Expression support: https://smallrye.io/smallrye-config/Main/config/expressions/
+                //   * Secrets support: https://smallrye.io/smallrye-config/Main/config/secret-keys/
+                //   * Logging support: https://smallrye.io/smallrye-config/Main/extensions/logging/
+                .addDefaultInterceptors()
                 // Allow applications to customize the Config via SPI.
                 // https://smallrye.io/smallrye-config/Main/config/customizer/
                 .addDiscoveredCustomizers()
