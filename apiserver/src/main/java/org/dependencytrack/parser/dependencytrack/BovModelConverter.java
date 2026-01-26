@@ -159,8 +159,6 @@ public final class BovModelConverter {
                 if (rating.hasVector()) {
                     final Cvss cvss = Cvss.fromVector(rating.getVector());
                     final Score score = cvss.calculateScore();
-                    vuln.setCvssV4ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
-                    vuln.setCvssV4ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
                     if (rating.getScore() == 0.0) {
                         vuln.setCvssV4BaseScore(BigDecimal.valueOf(score.getBaseScore()));
                     }
