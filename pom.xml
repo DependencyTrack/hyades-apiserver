@@ -121,7 +121,7 @@
         <lib.httpclient5.version>5.6</lib.httpclient5.version>
         <lib.jakarta-ee.version>11.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.2.0</lib.java-uuid-generator.version>
-        <lib.jackson.version>2.20.1</lib.jackson.version>
+        <lib.jackson.version>2.21.0</lib.jackson.version>
         <lib.jdbi.version>3.51.0</lib.jdbi.version>
         <lib.jersey.version>4.0.0</lib.jersey.version>
         <lib.jetty.version>12.1.5</lib.jetty.version>
