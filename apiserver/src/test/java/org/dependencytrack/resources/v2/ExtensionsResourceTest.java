@@ -24,20 +24,25 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.persistence.jdbi.ExtensionConfigDao;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionPointSpec;
+import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSchemaSource;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.dependencytrack.secret.TestSecretManager;
+import org.dependencytrack.secret.management.SecretManager;
 import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.jspecify.annotations.NonNull;
-import org.junit.jupiter.api.AfterAll;
+import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -48,9 +53,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
-public class ExtensionsResourceTest extends ResourceTest {
+class ExtensionsResourceTest extends ResourceTest {
 
     private static PluginManager pluginManager;
+    private static SecretManager secretManager;
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
@@ -59,31 +65,39 @@ public class ExtensionsResourceTest extends ResourceTest {
                         @Override
                         protected void configure() {
                             bindFactory(() -> pluginManager).to(PluginManager.class);
+                            bindFactory(() -> secretManager).to(SecretManager.class);
                         }
                     }));
 
     @BeforeAll
     static void beforeAll() {
-        pluginManager = new PluginManager(
-                new SmallRyeConfigBuilder().build(),
-                new ConfigTemplateRenderer(secretName -> null),
-                List.of(DummyExtensionPoint.class));
-        pluginManager.loadPlugins(List.of(
-                () -> List.of(new DummyExtensionFactory())));
+        secretManager = new TestSecretManager();
     }
 
-    @AfterAll
-    static void afterAll() {
+    @BeforeEach
+    void beforeEach() {
+        pluginManager = new PluginManager(
+                new SmallRyeConfigBuilder().build(),
+                secretManager::getSecretValue,
+                List.of(DummyExtensionPoint.class));
+    }
+
+    @AfterEach
+    void afterEach() {
         if (pluginManager != null) {
             pluginManager.close();
         }
     }
 
     @Test
-    public void listExtensionPointsShouldListAllExtensionPoints() {
+    void listExtensionPointsShouldListAllExtensionPoints() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new DummyExtensionFactory())));
+
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        final Response response = jersey.target("/extension-points")
+        final Response response = jersey
+                .target("/extension-points")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -100,10 +114,14 @@ public class ExtensionsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listExtensionsShouldListAllExtensions() {
+    void listExtensionsShouldListAllExtensions() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new DummyExtensionFactory())));
+
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        final Response response = jersey.target("/extension-points/dummy/extensions")
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -112,7 +130,7 @@ public class ExtensionsResourceTest extends ResourceTest {
                 {
                   "extensions":[
                     {
-                      "name": "dummy.extension"
+                      "name": "dummy-extension"
                     }
                   ]
                 }
@@ -120,10 +138,11 @@ public class ExtensionsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listExtensionsShouldReturnNotFoundWhenExtensionPointDoesNotExist() {
+    void listExtensionsShouldReturnNotFoundWhenExtensionPointDoesNotExist() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        final Response response = jersey.target("/extension-points/doesNotExist/extensions")
+        final Response response = jersey
+                .target("/extension-points/doesNotExist/extensions")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -139,18 +158,22 @@ public class ExtensionsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getExtensionConfigShouldReturnConfig() {
+    void getExtensionConfigShouldReturnConfig() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new DummyExtensionFactory())));
+
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
         useJdbiTransaction(
                 handle -> handle.attach(ExtensionConfigDao.class)
-                        .saveConfig("dummy", "dummy.extension", /* language=JSON */ """
+                        .saveConfig("dummy", "dummy-extension", /* language=JSON */ """
                                 {
                                   "requiredString": "yay!"
                                 }
                                 """));
 
-        final Response response = jersey.target("/extension-points/dummy/extensions/dummy.extension/config")
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/dummy-extension/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -165,10 +188,11 @@ public class ExtensionsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getExtensionConfigShouldReturnNotFoundWhenNotExists() {
+    void getExtensionConfigShouldReturnNotFoundWhenNotExists() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        final Response response = jersey.target("/extension-points/dummy/extensions/doesNotExist/config")
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/doesNotExist/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -184,10 +208,14 @@ public class ExtensionsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateExtensionConfigShouldReturnNoContent() {
+    void updateExtensionConfigShouldReturnNoContent() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new DummyExtensionFactory())));
+
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
-        final Response response = jersey.target("/extension-points/dummy/extensions/dummy.extension/config")
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/dummy-extension/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
@@ -202,7 +230,7 @@ public class ExtensionsResourceTest extends ResourceTest {
         assertThat(getPlainTextBody(response)).isEmpty();
 
         final String savedConfig = withJdbiHandle(
-                handle -> handle.attach(ExtensionConfigDao.class).getConfig("dummy", "dummy.extension"));
+                handle -> handle.attach(ExtensionConfigDao.class).getConfig("dummy", "dummy-extension"));
         assertThatJson(savedConfig).isEqualTo(/* language=JSON */ """
                 {
                   "requiredString": "foo",
@@ -212,20 +240,24 @@ public class ExtensionsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateExtensionConfigShouldReturnNotModifiedWhenUnchanged() {
+    void updateExtensionConfigShouldReturnNotModifiedWhenUnchanged() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new DummyExtensionFactory())));
+
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
         useJdbiTransaction(
                 handle -> handle
                         .attach(ExtensionConfigDao.class)
-                        .saveConfig("dummy", "dummy.extension", /* language=JSON */ """
+                        .saveConfig("dummy", "dummy-extension", /* language=JSON */ """
                                 {
                                   "requiredString": "foo",
                                   "optionalString": "bar"
                                 }
                                 """));
 
-        final Response response = jersey.target("/extension-points/dummy/extensions/dummy.extension/config")
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/dummy-extension/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
@@ -241,10 +273,14 @@ public class ExtensionsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateExtensionConfigShouldReturnBadRequestWhenInvalid() {
+    void updateExtensionConfigShouldReturnBadRequestWhenInvalid() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new DummyExtensionFactory())));
+
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
-        final Response response = jersey.target("/extension-points/dummy/extensions/dummy.extension/config")
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/dummy-extension/config")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
@@ -275,10 +311,43 @@ public class ExtensionsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getExtensionConfigSchemaShouldReturnConfigSchema() {
+    void updateExtensionConfigShouldReturnBadRequestWhenConfigValidationFails() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new ExtensionWithValidatorFactory())));
+
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/extension-with-validator/config")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "config": {
+                            "outcome": "PASSED"
+                          }
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 400,
+                  "type": "about:blank",
+                  "title": "Config Validation Failed",
+                  "detail": "Boom!"
+                }
+                """);
+    }
+
+    @Test
+    void getExtensionConfigSchemaShouldReturnConfigSchema() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new DummyExtensionFactory())));
+
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        final Response response = jersey.target("/extension-points/dummy/extensions/dummy.extension/config-schema")
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/dummy-extension/config-schema")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -297,10 +366,184 @@ public class ExtensionsResourceTest extends ResourceTest {
                       "description": "An optional string"
                     }
                   },
-                  "additionalProperties": false,
                   "required": [
                     "requiredString"
                   ]
+                }
+                """);
+    }
+
+    @Test
+    void getExtensionConfigSchemaShouldReturnNoContentWhenExtensionHasNoSchema() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new NonConfigurableExtensionFactory())));
+
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/non-configurable-extension/config-schema")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(204);
+        assertThat(getPlainTextBody(response)).isEmpty();
+    }
+
+    @Test
+    void testExtensionShouldReturnTestResultWhenTestPassed() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestableExtensionFactory())));
+
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/testable-extension/test")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "config": {
+                            "outcome": "PASSED"
+                          }
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "checks": [
+                    {
+                      "name": "name",
+                      "status": "PASSED"
+                    }
+                  ]
+                }
+                """);
+    }
+
+    @Test
+    void testExtensionShouldReturnTestResultWhenTestFailed() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestableExtensionFactory())));
+
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/testable-extension/test")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "config": {
+                            "outcome": "FAILED"
+                          }
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "checks": [
+                    {
+                      "name": "name",
+                      "status": "FAILED",
+                      "message": "message"
+                    }
+                  ]
+                }
+                """);
+    }
+
+    @Test
+    void testExtensionShouldReturnBadRequestWhenExtensionDoesNotSupportTesting() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new DummyExtensionFactory())));
+
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/dummy-extension/test")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "config": {
+                            "requiredString": "foo"
+                          }
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 400,
+                  "type": "about:blank",
+                  "title": "Bad Request",
+                  "detail": "The extension does not support testing"
+                }
+                """);
+    }
+
+    @Test
+    void testExtensionShouldReturnBadRequestWhenConfigSchemaValidationFails() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestableExtensionFactory())));
+
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/testable-extension/test")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "config": {
+                            "outcome": "invalid"
+                          }
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 400,
+                  "type": "about:blank",
+                  "title":"JSON Schema Validation Failed",
+                  "detail": "The provided configuration failed JSON schema validation.",
+                  "errors": [
+                    {
+                      "evaluation_path": "$.properties.outcome.enum",
+                      "instance_location": "$.outcome",
+                      "keyword": "enum",
+                      "message": "$.outcome: does not have a value in the enumeration [\\"PASSED\\", \\"FAILED\\"]",
+                      "schema_location": "#/properties/outcome/enum"
+                    }
+                  ]
+                }
+                """);
+    }
+
+    @Test
+    void testExtensionShouldReturnBadRequestWhenConfigValidationFails() {
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new ExtensionWithValidatorFactory())));
+
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
+        final Response response = jersey
+                .target("/extension-points/dummy/extensions/extension-with-validator/test")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "config": {
+                            "outcome": "PASSED"
+                          }
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 400,
+                  "type": "about:blank",
+                  "title": "Config Validation Failed",
+                  "detail": "Boom!"
                 }
                 """);
     }
@@ -321,7 +564,7 @@ public class ExtensionsResourceTest extends ResourceTest {
 
         @Override
         public @NonNull String extensionName() {
-            return "dummy.extension";
+            return "dummy-extension";
         }
 
         @Override
@@ -337,7 +580,7 @@ public class ExtensionsResourceTest extends ResourceTest {
         @Override
         public RuntimeConfigSpec runtimeConfigSpec() {
             final var defaultConfig = new DummyRuntimeConfig("test", null);
-            return new RuntimeConfigSpec(
+            return RuntimeConfigSpec.of(
                     defaultConfig,
                     new RuntimeConfigSchemaSource.Literal(/* language=JSON */ """
                             {
@@ -353,16 +596,164 @@ public class ExtensionsResourceTest extends ResourceTest {
                                   "description": "An optional string"
                                 }
                               },
-                              "additionalProperties": false,
                               "required": [
                                 "requiredString"
                               ]
                             }
-                            """));
+                            """),
+                    null);
         }
 
         @Override
         public void init(@NonNull ExtensionContext ctx) {
+        }
+
+        @Override
+        public DummyExtensionPoint create() {
+            return new DummyExtension();
+        }
+
+    }
+
+    private static class NonConfigurableExtensionFactory implements ExtensionFactory<DummyExtensionPoint> {
+
+        @Override
+        public String extensionName() {
+            return "non-configurable-extension";
+        }
+
+        @Override
+        public Class<? extends DummyExtensionPoint> extensionClass() {
+            return DummyExtension.class;
+        }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
+
+        @Override
+        public void init(ExtensionContext ctx) {
+        }
+
+        @Override
+        public DummyExtensionPoint create() {
+            return new DummyExtension();
+        }
+
+    }
+
+    private record TestableRuntimeConfig(String outcome) implements RuntimeConfig {
+    }
+
+    private static class TestableExtensionFactory implements ExtensionFactory<DummyExtensionPoint> {
+
+        @Override
+        public @NonNull String extensionName() {
+            return "testable-extension";
+        }
+
+        @Override
+        public Class<? extends DummyExtensionPoint> extensionClass() {
+            return DummyExtension.class;
+        }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
+
+        @Override
+        public void init(ExtensionContext ctx) {
+        }
+
+        @Override
+        public DummyExtensionPoint create() {
+            return new DummyExtension();
+        }
+
+        @Override
+        public ExtensionTestResult test(@Nullable RuntimeConfig runtimeConfig) {
+            final var testConfig = (TestableRuntimeConfig) runtimeConfig;
+            if ("PASSED".equals(testConfig.outcome())) {
+                return ExtensionTestResult.ofChecks("name").pass("name");
+            } else {
+                return ExtensionTestResult.ofChecks("name").fail("name", "message");
+            }
+        }
+
+        @Override
+        public @Nullable RuntimeConfigSpec runtimeConfigSpec() {
+            final var defaultConfig = new TestableRuntimeConfig(null);
+            return RuntimeConfigSpec.of(
+                    defaultConfig,
+                    new RuntimeConfigSchemaSource.Literal(/* language=JSON */ """
+                            {
+                              "$schema": "https://json-schema.org/draft/2020-12/schema",
+                              "type": "object",
+                              "properties": {
+                                "outcome": {
+                                  "type": "string",
+                                  "enum": [
+                                    "PASSED",
+                                    "FAILED"
+                                  ]
+                                }
+                              }
+                            }
+                            """),
+                    null);
+        }
+
+    }
+
+    private static class ExtensionWithValidatorFactory implements ExtensionFactory<DummyExtensionPoint> {
+
+        @Override
+        public String extensionName() {
+            return "extension-with-validator";
+        }
+
+        @Override
+        public Class<? extends DummyExtensionPoint> extensionClass() {
+            return DummyExtension.class;
+        }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
+
+        @Override
+        public void init(ExtensionContext ctx) {
+        }
+
+        @Override
+        public @Nullable RuntimeConfigSpec runtimeConfigSpec() {
+            final var defaultConfig = new TestableRuntimeConfig(null);
+            return RuntimeConfigSpec.of(
+                    defaultConfig,
+                    new RuntimeConfigSchemaSource.Literal(/* language=JSON */ """
+                            {
+                              "$schema": "https://json-schema.org/draft/2020-12/schema",
+                              "type": "object",
+                              "properties": {
+                                "outcome": {
+                                  "type": "string",
+                                  "enum": [
+                                    "PASSED",
+                                    "FAILED"
+                                  ]
+                                }
+                              }
+                            }
+                            """),
+                    config -> {
+                        final var actualConfig = (TestableRuntimeConfig) config;
+                        if (actualConfig.outcome() != null) {
+                            throw new InvalidRuntimeConfigException("Boom!");
+                        }
+                    });
         }
 
         @Override

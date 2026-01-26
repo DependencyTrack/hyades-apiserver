@@ -26,6 +26,9 @@
     </parent>
 
     <artifactId>alpine-infra</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Alpine :: Infra</name>
 
     <dependencies>
         <dependency>

@@ -23,6 +23,7 @@ import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.dex.engine.WorkflowMessage;
 import org.dependencytrack.dex.engine.WorkflowTask;
 import org.dependencytrack.dex.engine.api.TaskQueue;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.ListTaskQueuesRequest;
@@ -35,7 +36,6 @@ import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunComm
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
-import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.engine.persistence.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.jdbi.v3.core.Handle;
@@ -385,7 +385,7 @@ public final class WorkflowDao extends AbstractDao {
                 .list();
     }
 
-    public @Nullable WorkflowRunMetadataRow getRunMetadataById(UUID id) {
+    public @Nullable WorkflowRunMetadata getRunMetadataById(UUID id) {
         final Query query = jdbiHandle.createQuery("""
                 select *
                   from dex_workflow_run
@@ -394,7 +394,22 @@ public final class WorkflowDao extends AbstractDao {
 
         return query
                 .bind("id", id)
-                .mapTo(WorkflowRunMetadataRow.class)
+                .mapTo(WorkflowRunMetadata.class)
+                .findOne()
+                .orElse(null);
+    }
+
+    public @Nullable WorkflowRunMetadata getRunMetadataByInstanceId(String instanceId) {
+        final Query query = jdbiHandle.createQuery("""
+                select *
+                  from dex_workflow_run
+                 where workflow_instance_id = :instanceId
+                   and status in ('CREATED', 'RUNNING', 'SUSPENDED')
+                """);
+
+        return query
+                .bind("instanceId", instanceId)
+                .mapTo(WorkflowRunMetadata.class)
                 .findOne()
                 .orElse(null);
     }

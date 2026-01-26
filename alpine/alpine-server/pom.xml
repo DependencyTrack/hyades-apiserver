@@ -28,7 +28,7 @@
     <artifactId>alpine-server</artifactId>
     <packaging>jar</packaging>
 
-    <name>alpine-server</name>
+    <name>Alpine :: Server</name>
 
     <dependencies>
         <dependency>

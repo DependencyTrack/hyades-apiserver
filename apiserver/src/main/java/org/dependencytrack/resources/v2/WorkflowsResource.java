@@ -19,52 +19,155 @@
 package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.api.v2.WorkflowsApi;
-import org.dependencytrack.api.v2.model.ListWorkflowStatesResponse;
-import org.dependencytrack.api.v2.model.ListWorkflowStatesResponseItem;
+import org.dependencytrack.api.v2.model.ListWorkflowRunsResponse;
+import org.dependencytrack.api.v2.model.SortDirection;
+import org.dependencytrack.api.v2.model.WorkflowRunStatus;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.resources.AbstractApiResource;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import java.time.Instant;
 
 @Path("/")
-public class WorkflowsResource implements WorkflowsApi {
+@NullMarked
+public class WorkflowsResource extends AbstractApiResource implements WorkflowsApi {
+
+    private final DexEngine dexEngine;
+
+    @Inject
+    WorkflowsResource(DexEngine dexEngine) {
+        this.dexEngine = dexEngine;
+    }
 
     @Override
-    @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
-    public Response getWorkflowStates(final UUID token) {
-        List<WorkflowState> workflowStates;
-        try (final var qm = new QueryManager()) {
-            workflowStates = qm.getAllWorkflowStatesForAToken(token);
-            if (workflowStates.isEmpty()) {
-                throw new NotFoundException();
-            }
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_READ
+    })
+    public Response getWorkflowInstance(String id) {
+        final WorkflowRunMetadata runMetadata = dexEngine.getRunMetadataByInstanceId(id);
+        if (runMetadata == null) {
+            throw new NotFoundException();
         }
-        List<ListWorkflowStatesResponseItem> states = workflowStates.stream()
-                .map(this::mapWorkflowStateResponse)
-                .collect(Collectors.toList());
-        return Response.ok(ListWorkflowStatesResponse.builder().states(states).build()).build();
+
+        return Response.ok(convert(runMetadata)).build();
     }
 
-    private ListWorkflowStatesResponseItem mapWorkflowStateResponse(WorkflowState workflowState) {
-        var mappedState = ListWorkflowStatesResponseItem.builder()
-                .token(workflowState.getToken())
-                .status(ListWorkflowStatesResponseItem.StatusEnum.fromString(workflowState.getStatus().name()))
-                .step(ListWorkflowStatesResponseItem.StepEnum.fromString(workflowState.getStep().name()))
-                .failureReason(workflowState.getFailureReason())
+    @Override
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_READ
+    })
+    public Response listWorkflowRuns(
+            @Nullable String workflowName,
+            @Nullable Integer workflowVersion,
+            @Nullable String workflowInstanceId,
+            @Nullable WorkflowRunStatus status,
+            @Nullable Long createdAtFrom,
+            @Nullable Long createdAtTo,
+            @Nullable Long completedAtFrom,
+            @Nullable Long completedAtTo,
+            Integer limit,
+            @Nullable String pageToken,
+            @Nullable SortDirection sortDirection,
+            @Nullable String sortBy) {
+        final Page<WorkflowRunMetadata> runsPage = dexEngine.listRuns(
+                new ListWorkflowRunsRequest()
+                        .withWorkflowName(workflowName)
+                        .withWorkflowVersion(workflowVersion)
+                        .withWorkflowInstanceId(workflowInstanceId)
+                        .withStatus(convert(status))
+                        .withCreatedAtFrom(createdAtFrom != null
+                                ? Instant.ofEpochMilli(createdAtFrom)
+                                : null)
+                        .withCreatedAtTo(createdAtTo != null
+                                ? Instant.ofEpochMilli(createdAtTo)
+                                : null)
+                        .withCompletedAtFrom(completedAtFrom != null
+                                ? Instant.ofEpochMilli(completedAtFrom)
+                                : null)
+                        .withCompletedAtTo(completedAtTo != null
+                                ? Instant.ofEpochMilli(completedAtTo)
+                                : null)
+                        .withSortBy(switch (sortBy) {
+                            case "id" -> ListWorkflowRunsRequest.SortBy.ID;
+                            case "created_at" -> ListWorkflowRunsRequest.SortBy.CREATED_AT;
+                            case "completed_at" -> ListWorkflowRunsRequest.SortBy.COMPLETED_AT;
+                            case null, default -> null;
+                        })
+                        .withSortDirection(switch (sortDirection) {
+                            case ASC -> org.dependencytrack.common.pagination.SortDirection.ASC;
+                            case DESC -> org.dependencytrack.common.pagination.SortDirection.DESC;
+                            case null -> null;
+                        })
+                        .withPageToken(pageToken)
+                        .withLimit(limit));
+
+        final var response = ListWorkflowRunsResponse.builder()
+                .workflowRuns(runsPage.items().stream()
+                        .map(WorkflowsResource::convert)
+                        .toList())
+                .pagination(createPaginationMetadata(getUriInfo(), runsPage))
                 .build();
-        if (workflowState.getStartedAt() != null) {
-            mappedState.setStartedAt(workflowState.getStartedAt().getTime());
-        }
-        if (workflowState.getUpdatedAt() != null) {
-            mappedState.setUpdatedAt(workflowState.getUpdatedAt().getTime());
-        }
-        return mappedState;
+
+        return Response.ok(response).build();
     }
+
+    private static org.dependencytrack.dex.engine.api.@Nullable WorkflowRunStatus convert(@Nullable WorkflowRunStatus status) {
+        return switch (status) {
+            case CANCELLED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CANCELLED;
+            case COMPLETED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.COMPLETED;
+            case FAILED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.FAILED;
+            case CREATED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.CREATED;
+            case RUNNING -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.RUNNING;
+            case SUSPENDED -> org.dependencytrack.dex.engine.api.WorkflowRunStatus.SUSPENDED;
+            case null -> null;
+        };
+    }
+
+    private static WorkflowRunStatus convert(org.dependencytrack.dex.engine.api.WorkflowRunStatus status) {
+        return switch (status) {
+            case CANCELLED -> WorkflowRunStatus.CANCELLED;
+            case COMPLETED -> WorkflowRunStatus.COMPLETED;
+            case FAILED -> WorkflowRunStatus.FAILED;
+            case CREATED -> WorkflowRunStatus.CREATED;
+            case RUNNING -> WorkflowRunStatus.RUNNING;
+            case SUSPENDED -> WorkflowRunStatus.SUSPENDED;
+        };
+    }
+
+    private static org.dependencytrack.api.v2.model.WorkflowRunMetadata convert(WorkflowRunMetadata runMetadata) {
+        return org.dependencytrack.api.v2.model.WorkflowRunMetadata.builder()
+                .id(runMetadata.id())
+                .workflowName(runMetadata.workflowName())
+                .workflowVersion(runMetadata.workflowVersion())
+                .workflowInstanceId(runMetadata.workflowInstanceId())
+                .taskQueueName(runMetadata.taskQueueName())
+                .status(convert(runMetadata.status()))
+                .priority(runMetadata.priority())
+                .concurrencyKey(runMetadata.concurrencyKey())
+                .labels(runMetadata.labels())
+                .createdAt(runMetadata.createdAt().toEpochMilli())
+                .updatedAt(runMetadata.updatedAt() != null
+                        ? runMetadata.updatedAt().toEpochMilli()
+                        : null)
+                .startedAt(runMetadata.startedAt() != null
+                        ? runMetadata.startedAt().toEpochMilli()
+                        : null)
+                .completedAt(runMetadata.completedAt() != null
+                        ? runMetadata.completedAt().toEpochMilli()
+                        : null)
+                .build();
+    }
+
 }

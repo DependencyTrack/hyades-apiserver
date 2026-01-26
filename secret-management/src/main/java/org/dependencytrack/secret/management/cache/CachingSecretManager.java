@@ -20,12 +20,13 @@ package org.dependencytrack.secret.management.cache;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.secret.management.ListSecretsRequest;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretMetadata;
 import org.eclipse.microprofile.config.Config;
 import org.jspecify.annotations.Nullable;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -40,9 +41,9 @@ public final class CachingSecretManager implements SecretManager {
     private final Cache<String, Optional<String>> cache;
 
     CachingSecretManager(
-            final SecretManager delegate,
-            final long expireAfterWriteMillis,
-            final int maxSize) {
+            SecretManager delegate,
+            long expireAfterWriteMillis,
+            int maxSize) {
         this.delegate = requireNonNull(delegate, "delegate must not be null");
         this.cache = Caffeine.newBuilder()
                 .expireAfterWrite(expireAfterWriteMillis, TimeUnit.MILLISECONDS)
@@ -51,8 +52,8 @@ public final class CachingSecretManager implements SecretManager {
     }
 
     public static SecretManager maybeWrap(
-            final SecretManager delegate,
-            final Config config) {
+            SecretManager delegate,
+            Config config) {
         final var cacheConfig = new CachingSecretManagerConfig(config);
         if (!cacheConfig.isEnabled()) {
             return delegate;
@@ -80,18 +81,18 @@ public final class CachingSecretManager implements SecretManager {
 
     @Override
     public void createSecret(
-            final String name,
-            final @Nullable String description,
-            final String value) {
+            String name,
+            @Nullable String description,
+            String value) {
         delegate.createSecret(name, description, value);
         cache.invalidate(name);
     }
 
     @Override
     public boolean updateSecret(
-            final String name,
-            final @Nullable String description,
-            final @Nullable String value) {
+            String name,
+            @Nullable String description,
+            @Nullable String value) {
         final boolean updated = delegate.updateSecret(name, description, value);
         if (updated) {
             cache.invalidate(name);
@@ -100,19 +101,24 @@ public final class CachingSecretManager implements SecretManager {
     }
 
     @Override
-    public void deleteSecret(final String name) {
+    public void deleteSecret(String name) {
         delegate.deleteSecret(name);
         cache.invalidate(name);
     }
 
     @Override
-    public @Nullable String getSecretValue(final String name) {
+    public @Nullable SecretMetadata getSecretMetadata(String name) {
+        return delegate.getSecretMetadata(name);
+    }
+
+    @Override
+    public @Nullable String getSecretValue(String name) {
         return cache.get(name, secretName -> Optional.ofNullable(delegate.getSecretValue(secretName))).orElse(null);
     }
 
     @Override
-    public List<SecretMetadata> listSecrets() {
-        return delegate.listSecrets();
+    public Page<SecretMetadata> listSecretMetadata(ListSecretsRequest request) {
+        return delegate.listSecretMetadata(request);
     }
 
     @Override

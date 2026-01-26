@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
@@ -33,16 +34,24 @@ import org.dependencytrack.api.v2.model.ListExtensionPointsResponse;
 import org.dependencytrack.api.v2.model.ListExtensionPointsResponseItem;
 import org.dependencytrack.api.v2.model.ListExtensionsResponse;
 import org.dependencytrack.api.v2.model.ListExtensionsResponseItem;
+import org.dependencytrack.api.v2.model.TestExtensionRequest;
+import org.dependencytrack.api.v2.model.TestExtensionResponse;
 import org.dependencytrack.api.v2.model.UpdateExtensionConfigRequest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.persistence.jdbi.ExtensionConfigDao;
 import org.dependencytrack.plugin.ExtensionPointMetadata;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.ExtensionTestCheck;
+import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
+import org.dependencytrack.plugin.runtime.config.UnresolvableSecretException;
 import org.dependencytrack.resources.AbstractApiResource;
+import org.dependencytrack.secret.management.SecretManager;
 import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +61,8 @@ import java.io.UncheckedIOException;
 import java.util.Map;
 import java.util.SequencedCollection;
 
+import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION_NAME;
+import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION_POINT_NAME;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -63,8 +74,16 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ExtensionsResource.class);
 
+    private final PluginManager pluginManager;
+    private final SecretManager secretManager;
+    private final RuntimeConfigMapper configMapper;
+
     @Inject
-    private PluginManager pluginManager;
+    ExtensionsResource(PluginManager pluginManager, SecretManager secretManager) {
+        this.pluginManager = pluginManager;
+        this.secretManager = secretManager;
+        this.configMapper = RuntimeConfigMapper.getInstance();
+    }
 
     @Override
     @PermissionRequired({
@@ -119,7 +138,6 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
     @PermissionRequired({
             Permissions.Constants.SYSTEM_CONFIGURATION,
             Permissions.Constants.SYSTEM_CONFIGURATION_READ
@@ -129,7 +147,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
             String extensionName) {
         final Class<? extends ExtensionPoint> extensionPointClass =
                 getExtensionPointClass(extensionPointName);
-        final ExtensionFactory extensionFactory =
+        final ExtensionFactory<?> extensionFactory =
                 getExtensionFactory(extensionPointClass, extensionName);
 
         if (extensionFactory.runtimeConfigSpec() == null) {
@@ -161,7 +179,6 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
     @PermissionRequired({
             Permissions.Constants.SYSTEM_CONFIGURATION,
             Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE
@@ -172,7 +189,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
             UpdateExtensionConfigRequest request) {
         final Class<? extends ExtensionPoint> extensionPointClass =
                 getExtensionPointClass(extensionPointName);
-        final ExtensionFactory extensionFactory =
+        final ExtensionFactory<?> extensionFactory =
                 getExtensionFactory(extensionPointClass, extensionName);
 
         final RuntimeConfigSpec runtimeConfigSpec = extensionFactory.runtimeConfigSpec();
@@ -184,7 +201,13 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
         // so we have to serialize it first.
         final String configJson = Json.createObjectBuilder(request.getConfig()).build().toString();
 
-        RuntimeConfigMapper.getInstance().validateJson(configJson, runtimeConfigSpec);
+        // Throws when config is invalid or secrets cannot be resolved.
+        final JsonNode configNode = validateConfigAndResolveSecrets(configJson, runtimeConfigSpec);
+
+        final RuntimeConfig config = configMapper.convert(configNode, runtimeConfigSpec.configClass());
+        if (runtimeConfigSpec.validator() != null) {
+            runtimeConfigSpec.validator().validate(config);
+        }
 
         final boolean updated = inJdbiTransaction(
                 getAlpineRequest(),
@@ -218,10 +241,64 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
 
         final RuntimeConfigSpec runtimeConfigSpec = extensionFactory.runtimeConfigSpec();
         if (runtimeConfigSpec == null) {
-            throw new NotFoundException();
+            return Response.noContent().build();
         }
 
         return Response.ok(runtimeConfigSpec.schema()).build();
+    }
+
+    @Override
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE
+    })
+    public Response testExtension(
+            String extensionPointName,
+            String extensionName,
+            TestExtensionRequest request) {
+        final Class<? extends ExtensionPoint> extensionPointClass =
+                getExtensionPointClass(extensionPointName);
+        final ExtensionFactory<?> extensionFactory =
+                getExtensionFactory(extensionPointClass, extensionName);
+
+        try (var ignoredMdcScope = new MdcScope(Map.ofEntries(
+                Map.entry(MDC_EXTENSION_POINT_NAME, extensionPointName),
+                Map.entry(MDC_EXTENSION_NAME, extensionName)))) {
+            LOGGER.info(
+                    SecurityMarkers.SECURITY_AUDIT,
+                    "Extension test requested with configuration: {}",
+                    request.getConfig());
+        }
+
+        RuntimeConfig runtimeConfig = null;
+        final RuntimeConfigSpec runtimeConfigSpec = extensionFactory.runtimeConfigSpec();
+        if (runtimeConfigSpec == null) {
+            if (request.getConfig() != null) {
+                throw new BadRequestException("The extension does not support configuration");
+            }
+        } else {
+            final String configJson = Json.createObjectBuilder(request.getConfig()).build().toString();
+            final JsonNode configNode = validateConfigAndResolveSecrets(configJson, runtimeConfigSpec);
+            runtimeConfig = configMapper.convert(configNode, runtimeConfigSpec.configClass());
+            if (runtimeConfigSpec.validator() != null) {
+                runtimeConfigSpec.validator().validate(runtimeConfig);
+            }
+        }
+
+        final ExtensionTestResult testResult;
+        try {
+            testResult = extensionFactory.test(runtimeConfig);
+        } catch (UnsupportedOperationException e) {
+            throw new BadRequestException("The extension does not support testing");
+        }
+
+        final var response = TestExtensionResponse.builder()
+                .checks(testResult.checks().stream()
+                        .map(ExtensionsResource::convert)
+                        .toList())
+                .build();
+
+        return Response.ok(response).build();
     }
 
     private Class<? extends ExtensionPoint> getExtensionPointClass(String extensionPointName) {
@@ -239,6 +316,30 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
                 .filter(factory -> factory.extensionName().equals(extensionName))
                 .findAny()
                 .orElseThrow(NotFoundException::new);
+    }
+
+    private JsonNode validateConfigAndResolveSecrets(String configJson, RuntimeConfigSpec configSpec) {
+        final var configNode = configMapper.validateJson(configJson, configSpec);
+
+        try {
+            configMapper.resolveSecretRefs(configNode, configSpec, secretManager::getSecretValue);
+        } catch (UnresolvableSecretException e) {
+            throw new BadRequestException(e.getMessage());
+        }
+
+        return configNode;
+    }
+
+    private static org.dependencytrack.api.v2.model.ExtensionTestCheck convert(ExtensionTestCheck check) {
+        return org.dependencytrack.api.v2.model.ExtensionTestCheck.builder()
+                .name(check.name())
+                .status(switch (check.status()) {
+                    case FAILED -> org.dependencytrack.api.v2.model.ExtensionTestCheckStatus.FAILED;
+                    case PASSED -> org.dependencytrack.api.v2.model.ExtensionTestCheckStatus.PASSED;
+                    case SKIPPED -> org.dependencytrack.api.v2.model.ExtensionTestCheckStatus.SKIPPED;
+                })
+                .message(check.message())
+                .build();
     }
 
 }

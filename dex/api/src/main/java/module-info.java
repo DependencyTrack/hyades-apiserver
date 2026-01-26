@@ -23,13 +23,15 @@ import org.jspecify.annotations.NullMarked;
 @SuppressWarnings("requires-automatic")
 module org.dependencytrack.dex.api {
     exports org.dependencytrack.dex.api;
-    exports org.dependencytrack.dex.api.annotation;
     exports org.dependencytrack.dex.api.failure;
     exports org.dependencytrack.dex.api.payload;
+    exports org.dependencytrack.dex.proto.common.v1;
+    exports org.dependencytrack.dex.proto.event.v1;
+    exports org.dependencytrack.dex.proto.failure.v1;
+    exports org.dependencytrack.dex.proto.payload.v1;
 
     requires com.google.protobuf.util;
-    requires com.google.protobuf;
-    requires transitive org.dependencytrack.dex.proto;
+    requires transitive com.google.protobuf;
     requires transitive org.jspecify;
     requires transitive org.slf4j;
 }

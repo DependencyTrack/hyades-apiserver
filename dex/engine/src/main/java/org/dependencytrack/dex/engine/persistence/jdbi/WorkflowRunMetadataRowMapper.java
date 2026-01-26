@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.dex.engine.persistence.jdbi;
 
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
-import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.jdbi.v3.core.config.ConfigRegistry;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.mapper.ColumnMappers;
@@ -39,7 +39,7 @@ import java.util.UUID;
 import static java.util.Objects.requireNonNull;
 import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
 
-final class WorkflowRunMetadataRowMapper implements RowMapper<WorkflowRunMetadataRow> {
+final class WorkflowRunMetadataRowMapper implements RowMapper<WorkflowRunMetadata> {
 
     private static final Type LABELS_TYPE = parameterizeClass(Map.class, String.class, String.class);
 
@@ -53,10 +53,10 @@ final class WorkflowRunMetadataRowMapper implements RowMapper<WorkflowRunMetadat
     }
 
     @Override
-    public WorkflowRunMetadataRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+    public WorkflowRunMetadata map(final ResultSet rs, final StatementContext ctx) throws SQLException {
         requireNonNull(instantColumnMapper);
 
-        return new WorkflowRunMetadataRow(
+        return new WorkflowRunMetadata(
                 rs.getObject("id", UUID.class),
                 rs.getString("workflow_name"),
                 rs.getInt("workflow_version"),
@@ -64,8 +64,8 @@ final class WorkflowRunMetadataRowMapper implements RowMapper<WorkflowRunMetadat
                 rs.getString("task_queue_name"),
                 WorkflowRunStatus.valueOf(rs.getString("status")),
                 rs.getString("custom_status"),
-                rs.getString("concurrency_key"),
                 rs.getInt("priority"),
+                rs.getString("concurrency_key"),
                 getLabels(rs, ctx),
                 instantColumnMapper.map(rs, "created_at", ctx),
                 instantColumnMapper.map(rs, "updated_at", ctx),

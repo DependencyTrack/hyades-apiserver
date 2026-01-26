@@ -26,6 +26,9 @@
     </parent>
 
     <artifactId>alpine-model</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Alpine :: Model</name>
 
     <dependencies>
         <dependency>

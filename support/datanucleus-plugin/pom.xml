@@ -31,6 +31,8 @@
     <artifactId>datanucleus-plugin-parent</artifactId>
     <packaging>pom</packaging>
 
+    <name>Support :: DataNucleus Plugin :: Parent</name>
+
     <modules>
         <module>plugin</module>
         <module>test</module>

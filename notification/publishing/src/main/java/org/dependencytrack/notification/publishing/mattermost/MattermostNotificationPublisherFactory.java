@@ -72,7 +72,7 @@ public final class MattermostNotificationPublisherFactory implements Notificatio
         final var defaultConfig = new HttpNotificationRuleConfig()
                 .withDestinationUrl(URI.create("https://mattermost.example.com"));
 
-        return new RuntimeConfigSpec(defaultConfig);
+        return RuntimeConfigSpec.of(defaultConfig);
     }
 
     @Override

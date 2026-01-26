@@ -18,8 +18,10 @@
  */
 package org.dependencytrack.secret.management.env;
 
+import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretManagerFactory;
+import org.eclipse.microprofile.config.Config;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
@@ -47,7 +49,7 @@ public final class EnvSecretManagerFactory implements SecretManagerFactory {
     }
 
     @Override
-    public SecretManager create() {
+    public SecretManager create(Config config, PageTokenEncoder pageTokenEncoder) {
         final var logger = LoggerFactory.getLogger(EnvSecretManager.class);
         final var secretValueByName = new HashMap<String, String>();
 
@@ -79,7 +81,7 @@ public final class EnvSecretManagerFactory implements SecretManagerFactory {
             }
         }
 
-        return new EnvSecretManager(secretValueByName);
+        return new EnvSecretManager(secretValueByName, pageTokenEncoder);
     }
 
 }

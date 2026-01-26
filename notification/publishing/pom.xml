@@ -30,7 +30,7 @@
     <artifactId>notification-publishing</artifactId>
     <packaging>jar</packaging>
 
-    <name>Notification Publishing</name>
+    <name>Notification :: Publishing</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

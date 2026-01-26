@@ -31,6 +31,8 @@
     <artifactId>secret-management</artifactId>
     <packaging>jar</packaging>
 
+    <name>Secret Management</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
     </properties>
@@ -39,6 +41,11 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>common-datasource</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>common-pagination</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -63,6 +70,12 @@
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <dependency>

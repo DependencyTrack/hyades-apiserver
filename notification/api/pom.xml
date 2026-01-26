@@ -30,18 +30,13 @@
     <artifactId>notification-api</artifactId>
     <packaging>jar</packaging>
 
-    <name>Notification API</name>
+    <name>Notification :: API</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>notification-proto</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>plugin-api</artifactId>
@@ -73,8 +68,21 @@
 
         <dependency>
             <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java-util</artifactId>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.github.ascopes</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

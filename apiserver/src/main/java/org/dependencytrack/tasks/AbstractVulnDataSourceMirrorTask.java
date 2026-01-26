@@ -30,7 +30,8 @@ import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
+import org.dependencytrack.vulndatasource.api.VulnDataSource;
+import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,11 +92,13 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
     private void informLocked() {
         lockAcquiredAt = Instant.now();
 
-        try (final var dataSource = pluginManager.getExtension(VulnDataSource.class, vulnDataSourceExtensionName)) {
-            if (dataSource == null) {
-                return; // Likely disabled.
-            }
+        final VulnDataSourceFactory dataSourceFactory =
+                pluginManager.getFactory(VulnDataSource.class, vulnDataSourceExtensionName);
+        if (!dataSourceFactory.isDataSourceEnabled()) {
+            return;
+        }
 
+        try (final VulnDataSource dataSource = dataSourceFactory.create()) {
             final var bovBatch = new ArrayList<Bom>(25);
             while (dataSource.hasNext()) {
                 if (Thread.currentThread().isInterrupted()) {

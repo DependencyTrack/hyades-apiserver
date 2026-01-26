@@ -20,12 +20,11 @@ package org.dependencytrack.plugin;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.plugin.api.Plugin;
-import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
 import org.dependencytrack.secret.management.SecretManager;
+import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jspecify.annotations.Nullable;
@@ -71,7 +70,7 @@ public class PluginInitializer implements ServletContextListener {
 
         pluginManager = new PluginManager(
                 config,
-                new ConfigTemplateRenderer(secretManager::getSecretValue),
+                secretManager::getSecretValue,
                 extensionPoints);
 
         LOGGER.info("Discovering plugins");

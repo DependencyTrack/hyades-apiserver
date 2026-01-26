@@ -12,6 +12,8 @@
     <artifactId>coverage-report</artifactId>
     <packaging>pom</packaging>
 
+    <name>Coverage Report</name>
+
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
         <checkstyle.skip>true</checkstyle.skip>

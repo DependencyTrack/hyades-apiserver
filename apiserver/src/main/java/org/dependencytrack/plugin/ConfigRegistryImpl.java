@@ -19,7 +19,6 @@
 package org.dependencytrack.plugin;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.persistence.jdbi.ExtensionConfigDao;
 import org.dependencytrack.plugin.api.config.DeploymentConfig;
 import org.dependencytrack.plugin.api.config.MutableConfigRegistry;
@@ -28,6 +27,9 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
 import org.eclipse.microprofile.config.Config;
 import org.jspecify.annotations.Nullable;
+
+import java.util.Optional;
+import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
@@ -43,7 +45,7 @@ public final class ConfigRegistryImpl implements MutableConfigRegistry {
     private final DeploymentConfig deploymentConfig;
     private final @Nullable RuntimeConfigSpec runtimeConfigSpec;
     private final @Nullable RuntimeConfigMapper runtimeConfigMapper;
-    private final @Nullable ConfigTemplateRenderer configTemplateRenderer;
+    private final @Nullable Function<String, @Nullable String> secretResolver;
 
     ConfigRegistryImpl(
             Config config,
@@ -51,13 +53,13 @@ public final class ConfigRegistryImpl implements MutableConfigRegistry {
             String extensionName,
             @Nullable RuntimeConfigSpec runtimeConfigSpec,
             @Nullable RuntimeConfigMapper runtimeConfigMapper,
-            @Nullable ConfigTemplateRenderer configTemplateRenderer) {
+            @Nullable Function<String, @Nullable String> secretResolver) {
         this.extensionPointName = requireNonNull(extensionPointName, "extensionPointName must not be null");
         this.extensionName = requireNonNull(extensionName, "extensionName must not be null");
         this.deploymentConfig = new DeploymentConfigImpl(config, extensionPointName, extensionName);
         this.runtimeConfigSpec = runtimeConfigSpec;
         this.runtimeConfigMapper = runtimeConfigMapper;
-        this.configTemplateRenderer = configTemplateRenderer;
+        this.secretResolver = secretResolver;
     }
 
     @Override
@@ -66,25 +68,31 @@ public final class ConfigRegistryImpl implements MutableConfigRegistry {
     }
 
     @Override
-    public @Nullable RuntimeConfig getRuntimeConfig() {
+    public Optional<RuntimeConfig> getOptionalRuntimeConfig() {
         if (runtimeConfigSpec == null) {
-            return null;
+            return Optional.empty();
         }
         requireNonNull(runtimeConfigMapper, "runtimeConfigMapper is not initialized");
-        requireNonNull(configTemplateRenderer, "configTemplateRenderer is not initialized");
+        requireNonNull(secretResolver, "secretResolver is not initialized");
 
         final String configJson = withJdbiHandle(
                 handle -> handle.attach(ExtensionConfigDao.class).getConfig(
                         extensionPointName, extensionName));
         if (configJson == null) {
-            return null;
+            return Optional.empty();
         }
 
         final JsonNode configJsonNode = runtimeConfigMapper.validateJson(configJson, runtimeConfigSpec);
 
-        configTemplateRenderer.renderJson(configJsonNode);
+        runtimeConfigMapper.resolveSecretRefs(configJsonNode, runtimeConfigSpec, secretResolver);
 
-        return runtimeConfigMapper.convert(configJsonNode, runtimeConfigSpec.configClass());
+        final RuntimeConfig runtimeConfig = runtimeConfigMapper.convert(configJsonNode, runtimeConfigSpec.configClass());
+
+        if (runtimeConfigSpec.validator() != null) {
+            runtimeConfigSpec.validator().validate(runtimeConfig);
+        }
+
+        return Optional.of(runtimeConfig);
     }
 
     @Override

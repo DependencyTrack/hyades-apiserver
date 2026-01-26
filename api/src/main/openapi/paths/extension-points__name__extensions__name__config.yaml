@@ -58,7 +58,11 @@ put:
   description: |-
     Updates the configuration of an extension.
     
-    Requires the `SYSTEM_CONFIGURATION` or `SYSTEM_CONFIGURATION_READ` permission.
+    **Do not use clear text credentials in the supplied config**.
+    Fields annotated with `x-secret-ref` in the config schema expect
+    a name of a managed secret, which is resolved internally by the API.
+    
+    Requires the `SYSTEM_CONFIGURATION` or `SYSTEM_CONFIGURATION_UPDATE` permission.
   tags:
   - Extensions
   parameters:
@@ -86,7 +90,13 @@ put:
     "304":
       description: Not Modified
     "400":
-      $ref: "../components/responses/json-schema-validation-error.yaml"
+      description: Bad Request
+      content:
+        application/problem+json:
+          schema:
+            anyOf:
+            - $ref: "../components/schemas/json-schema-validation-problem-details.yaml"
+            - $ref: "../components/schemas/problem-details.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":

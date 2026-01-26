@@ -18,19 +18,20 @@
  */
 package org.dependencytrack.secret;
 
+import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretManagerFactory;
-import org.jspecify.annotations.NonNull;
+import org.eclipse.microprofile.config.Config;
 
 public final class TestSecretManagerFactory implements SecretManagerFactory {
 
     @Override
-    public @NonNull String name() {
+    public String name() {
         return TestSecretManager.NAME;
     }
 
     @Override
-    public @NonNull SecretManager create() {
+    public SecretManager create(Config config, PageTokenEncoder pageTokenEncoder) {
         return new TestSecretManager();
     }
 

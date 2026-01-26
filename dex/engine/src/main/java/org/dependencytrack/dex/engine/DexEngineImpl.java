@@ -29,9 +29,9 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.PageIterator;
-import org.dependencytrack.dex.api.ActivityExecutor;
+import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.RetryPolicy;
-import org.dependencytrack.dex.api.WorkflowExecutor;
+import org.dependencytrack.dex.api.Workflow;
 import org.dependencytrack.dex.api.failure.ApplicationFailureException;
 import org.dependencytrack.dex.api.failure.InternalFailureException;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
@@ -74,7 +74,6 @@ import org.dependencytrack.dex.engine.persistence.command.UpdateAndUnlockRunComm
 import org.dependencytrack.dex.engine.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.dex.engine.persistence.model.PolledWorkflowTask;
-import org.dependencytrack.dex.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.dex.engine.persistence.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.engine.support.Buffer;
 import org.dependencytrack.dex.proto.event.v1.ActivityTaskCompleted;
@@ -388,12 +387,12 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     public <A, R> void registerWorkflow(
-            WorkflowExecutor<A, R> workflowExecutor,
+            Workflow<A, R> workflow,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
             Duration lockTimeout) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.registerWorkflow(workflowExecutor, argumentConverter, resultConverter, lockTimeout);
+        metadataRegistry.registerWorkflow(workflow, argumentConverter, resultConverter, lockTimeout);
     }
 
     <A, R> void registerWorkflowInternal(
@@ -403,7 +402,7 @@ final class DexEngineImpl implements DexEngine {
             PayloadConverter<R> resultConverter,
             String defaultTaskQueueName,
             Duration lockTimeout,
-            WorkflowExecutor<A, R> workflowExecutor) {
+            Workflow<A, R> workflow) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         metadataRegistry.registerWorkflow(
                 workflowName,
@@ -412,17 +411,17 @@ final class DexEngineImpl implements DexEngine {
                 resultConverter,
                 defaultTaskQueueName,
                 lockTimeout,
-                workflowExecutor);
+                workflow);
     }
 
     @Override
     public <A, R> void registerActivity(
-            ActivityExecutor<A, R> activityExecutor,
+            Activity<A, R> activity,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
             Duration lockTimeout) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.registerActivity(activityExecutor, argumentConverter, resultConverter, lockTimeout);
+        metadataRegistry.registerActivity(activity, argumentConverter, resultConverter, lockTimeout);
     }
 
     <A, R> void registerActivityInternal(
@@ -431,7 +430,7 @@ final class DexEngineImpl implements DexEngine {
             PayloadConverter<R> resultConverter,
             String defaultTaskQueueName,
             Duration lockTimeout,
-            ActivityExecutor<A, R> activityExecutor) {
+            Activity<A, R> activity) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         metadataRegistry.registerActivity(
                 activityName,
@@ -439,7 +438,7 @@ final class DexEngineImpl implements DexEngine {
                 resultConverter,
                 defaultTaskQueueName,
                 lockTimeout,
-                activityExecutor);
+                activity);
     }
 
     @Override
@@ -607,7 +606,7 @@ final class DexEngineImpl implements DexEngine {
 
 
     @Override
-    public @Nullable WorkflowRun getRun(UUID id) {
+    public @Nullable WorkflowRun getRunById(UUID id) {
         final List<WorkflowEvent> eventHistory = jdbi.withHandle(handle -> {
             final var dao = new WorkflowRunDao(handle);
 
@@ -643,27 +642,14 @@ final class DexEngineImpl implements DexEngine {
                 runState.eventHistory());
     }
 
-    public @Nullable WorkflowRunMetadata getRunMetadata(UUID runId) {
-        final WorkflowRunMetadataRow metadataRow = jdbi.withHandle(
-                handle -> new WorkflowDao(handle).getRunMetadataById(runId));
-        if (metadataRow == null) {
-            return null;
-        }
+    @Override
+    public @Nullable WorkflowRunMetadata getRunMetadataById(UUID runId) {
+        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunMetadataById(runId));
+    }
 
-        return new WorkflowRunMetadata(
-                metadataRow.id(),
-                metadataRow.workflowName(),
-                metadataRow.workflowVersion(),
-                metadataRow.workflowInstanceId(),
-                metadataRow.status(),
-                metadataRow.customStatus(),
-                metadataRow.priority(),
-                metadataRow.concurrencyKey(),
-                metadataRow.labels(),
-                metadataRow.createdAt(),
-                metadataRow.updatedAt(),
-                metadataRow.startedAt(),
-                metadataRow.completedAt());
+    @Override
+    public @Nullable WorkflowRunMetadata getRunMetadataByInstanceId(String instanceId) {
+        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunMetadataByInstanceId(instanceId));
     }
 
     @Override
@@ -684,7 +670,7 @@ final class DexEngineImpl implements DexEngine {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRunMetadataRow runMetadata = dao.getRunMetadataById(runId);
+            final WorkflowRunMetadata runMetadata = dao.getRunMetadataById(runId);
             if (runMetadata == null) {
                 throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
             } else if (runMetadata.status().isTerminal()) {
@@ -714,7 +700,7 @@ final class DexEngineImpl implements DexEngine {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRunMetadataRow runMetadata = dao.getRunMetadataById(runId);
+            final WorkflowRunMetadata runMetadata = dao.getRunMetadataById(runId);
             if (runMetadata == null) {
                 throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
             } else if (runMetadata.status().isTerminal()) {
@@ -746,7 +732,7 @@ final class DexEngineImpl implements DexEngine {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRunMetadataRow runMetadata = dao.getRunMetadataById(runId);
+            final WorkflowRunMetadata runMetadata = dao.getRunMetadataById(runId);
             if (runMetadata == null) {
                 throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
             } else if (runMetadata.status().isTerminal()) {
@@ -995,6 +981,7 @@ final class DexEngineImpl implements DexEngine {
                         run.workflowName(),
                         run.workflowVersion(),
                         run.workflowInstanceId(),
+                        run.taskQueueName(),
                         run.status(),
                         run.customStatus(),
                         run.priority(),

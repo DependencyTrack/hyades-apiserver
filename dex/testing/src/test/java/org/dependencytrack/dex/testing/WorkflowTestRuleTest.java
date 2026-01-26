@@ -19,12 +19,12 @@
 package org.dependencytrack.dex.testing;
 
 import io.github.resilience4j.core.IntervalFunction;
+import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityContext;
-import org.dependencytrack.dex.api.ActivityExecutor;
+import org.dependencytrack.dex.api.ActivitySpec;
+import org.dependencytrack.dex.api.Workflow;
 import org.dependencytrack.dex.api.WorkflowContext;
-import org.dependencytrack.dex.api.WorkflowExecutor;
-import org.dependencytrack.dex.api.annotation.Activity;
-import org.dependencytrack.dex.api.annotation.Workflow;
+import org.dependencytrack.dex.api.WorkflowSpec;
 import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.TaskQueueType;
@@ -139,8 +139,8 @@ public class WorkflowTestRuleTest {
         assertThat(stringConverter().convertFromPayload(run.result())).isEqualTo("foo-mocked");
     }
 
-    @Workflow(name = "test")
-    public static class TestWorkflow implements WorkflowExecutor<Void, String> {
+    @WorkflowSpec(name = "test")
+    public static class TestWorkflow implements Workflow<Void, String> {
 
         @Override
         public String execute(final WorkflowContext<Void> ctx, final @Nullable Void argument) {
@@ -150,8 +150,8 @@ public class WorkflowTestRuleTest {
 
     }
 
-    @Activity(name = "test")
-    public static class TestActivity implements ActivityExecutor<Void, String> {
+    @ActivitySpec(name = "test")
+    public static class TestActivity implements Activity<Void, String> {
 
         @Override
         public String execute(final ActivityContext ctx, final @Nullable Void argument) {

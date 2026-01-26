@@ -20,13 +20,13 @@ package org.dependencytrack.dex.benchmark;
 
 import org.dependencytrack.dex.api.ActivityCallOptions;
 import org.dependencytrack.dex.api.ActivityHandle;
+import org.dependencytrack.dex.api.Workflow;
 import org.dependencytrack.dex.api.WorkflowContext;
-import org.dependencytrack.dex.api.WorkflowExecutor;
-import org.dependencytrack.dex.api.annotation.Workflow;
+import org.dependencytrack.dex.api.WorkflowSpec;
 import org.jspecify.annotations.Nullable;
 
-@Workflow(name = "dummy")
-public class DummyWorkflow implements WorkflowExecutor<Void, Void> {
+@WorkflowSpec(name = "dummy")
+public class DummyWorkflow implements Workflow<Void, Void> {
 
     @Override
     public @Nullable Void execute(

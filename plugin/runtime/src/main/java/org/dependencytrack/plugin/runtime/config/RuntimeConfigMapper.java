@@ -21,6 +21,10 @@ package org.dependencytrack.plugin.runtime.config;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.networknt.schema.JsonMetaSchema;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
@@ -30,13 +34,18 @@ import com.networknt.schema.ValidationMessage;
 import com.networknt.schema.serialization.DefaultJsonNodeReader;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
@@ -58,10 +67,11 @@ import static java.util.Objects.requireNonNull;
 public final class RuntimeConfigMapper {
 
     private static final RuntimeConfigMapper INSTANCE = new RuntimeConfigMapper();
+    private static final String SECRET_REF_ANNOTATION = "x-secret-ref";
 
     private final ObjectMapper jsonMapper;
     private final JsonSchemaFactory schemaFactory;
-    private final Map<RuntimeConfigSpec, JsonSchema> schemaCache;
+    private final Map<RuntimeConfigSpec, RuntimeConfigSchema> schemaCache;
 
     RuntimeConfigMapper() {
         this.jsonMapper = new ObjectMapper()
@@ -79,6 +89,8 @@ public final class RuntimeConfigMapper {
                         new NonValidationKeyword("javaJsonView"),
                         new NonValidationKeyword("javaName"),
                         new NonValidationKeyword("javaType")))
+                // Don't emit warning when encountering custom annotations.
+                .keyword(new NonValidationKeyword(SECRET_REF_ANNOTATION))
                 .build();
         this.schemaFactory = JsonSchemaFactory
                 .builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012))
@@ -94,27 +106,6 @@ public final class RuntimeConfigMapper {
 
     public static RuntimeConfigMapper getInstance() {
         return INSTANCE;
-    }
-
-    /**
-     * Deserialize a given config in JSON format.
-     *
-     * @param configJson  The config in JSON format.
-     * @param configClass Class to deserialize the config into.
-     * @param <T>         Type of the config.
-     * @return The deserialized {@link RuntimeConfig}.
-     * @throws NullPointerException When either {@code configJson} or {@code configClass} are {@code null}.
-     * @throws UncheckedIOException When deserialization failed.
-     */
-    public <T extends RuntimeConfig> T deserialize(String configJson, Class<T> configClass) {
-        requireNonNull(configJson, "configJson must not be null");
-        requireNonNull(configClass, "configClass must not be null");
-
-        try {
-            return jsonMapper.readValue(configJson, configClass);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 
     public <T extends RuntimeConfig> T convert(JsonNode configJsonNode, Class<T> configClass) {
@@ -151,18 +142,22 @@ public final class RuntimeConfigMapper {
      * @param runtimeConfigSpec The applicable config spec.
      * @throws NullPointerException             When either {@code config} or {@code configSchemaJson} are {@code null}.
      * @throws UncheckedIOException             When parsing the config JSON failed.
-     * @throws RuntimeConfigValidationException When the config failed validation.
+     * @throws RuntimeConfigSchemaValidationException When the config failed validation.
      */
     public <T extends RuntimeConfig> JsonNode validate(T config, RuntimeConfigSpec runtimeConfigSpec) {
         requireNonNull(config, "config must not be null");
         requireNonNull(runtimeConfigSpec, "configSpec must not be null");
 
-        final JsonSchema schema = getSchema(runtimeConfigSpec);
+        final RuntimeConfigSchema schema = getSchema(runtimeConfigSpec);
         final JsonNode configNode = jsonMapper.convertValue(config, JsonNode.class);
 
-        final Set<ValidationMessage> validationMessages = schema.validate(configNode);
+        final Set<ValidationMessage> validationMessages = schema.jsonSchema().validate(configNode);
         if (!validationMessages.isEmpty()) {
-            throw new RuntimeConfigValidationException(validationMessages);
+            throw new RuntimeConfigSchemaValidationException(validationMessages);
+        }
+
+        if (runtimeConfigSpec.validator() != null) {
+            runtimeConfigSpec.validator().validate(config);
         }
 
         return configNode;
@@ -175,13 +170,13 @@ public final class RuntimeConfigMapper {
      * @param runtimeConfigSpec The applicable config spec.
      * @throws NullPointerException             When either {@code configJson} or {@code configSchemaJson} are {@code null}.
      * @throws UncheckedIOException             When parsing the config JSON failed.
-     * @throws RuntimeConfigValidationException When the config failed validation.
+     * @throws RuntimeConfigSchemaValidationException When the config failed validation.
      */
     public JsonNode validateJson(String configJson, RuntimeConfigSpec runtimeConfigSpec) {
         requireNonNull(configJson, "configJson must not be null");
         requireNonNull(runtimeConfigSpec, "configSpec must not be null");
 
-        final JsonSchema schema = getSchema(runtimeConfigSpec);
+        final RuntimeConfigSchema schema = getSchema(runtimeConfigSpec);
 
         final JsonNode configNode;
         try {
@@ -190,19 +185,41 @@ public final class RuntimeConfigMapper {
             throw new UncheckedIOException(e);
         }
 
-        final Set<ValidationMessage> validationMessages = schema.validate(configNode);
+        final Set<ValidationMessage> validationMessages = schema.jsonSchema().validate(configNode);
         if (!validationMessages.isEmpty()) {
-            throw new RuntimeConfigValidationException(validationMessages);
+            throw new RuntimeConfigSchemaValidationException(validationMessages);
         }
 
         return configNode;
+    }
+
+    /**
+     * Resolve secret references in {@code configNode} to their corresponding secret values.
+     *
+     * @param configNode        The config JSON node to resolve secrets in.
+     * @param runtimeConfigSpec The applicable config spec.
+     * @param secretResolver    The secret resolver.
+     * @throws UnresolvableSecretException When a secret could not be resolved.
+     */
+    public void resolveSecretRefs(
+            JsonNode configNode,
+            RuntimeConfigSpec runtimeConfigSpec,
+            Function<String, @Nullable String> secretResolver) {
+        final RuntimeConfigSchema schema = getSchema(runtimeConfigSpec);
+        if (schema.secretRefPaths().isEmpty()) {
+            return;
+        }
+
+        for (final String secretRefPath : schema.secretRefPaths()) {
+            resolveSecretRefs(configNode, secretRefPath, secretResolver);
+        }
     }
 
     public ObjectMapper getJsonMapper() {
         return jsonMapper;
     }
 
-    private JsonSchema getSchema(RuntimeConfigSpec runtimeConfigSpec) {
+    private RuntimeConfigSchema getSchema(RuntimeConfigSpec runtimeConfigSpec) {
         return schemaCache.computeIfAbsent(
                 runtimeConfigSpec,
                 clazz -> {
@@ -213,8 +230,146 @@ public final class RuntimeConfigMapper {
                         throw new UncheckedIOException(e);
                     }
 
-                    return schemaFactory.getSchema(schemaNode);
+                    final JsonSchema jsonSchema = schemaFactory.getSchema(schemaNode);
+                    final Set<String> secretRefPaths = getSecretRefPaths(schemaNode, null);
+
+                    return new RuntimeConfigSchema(jsonSchema, secretRefPaths);
                 });
+    }
+
+    private Set<String> getSecretRefPaths(JsonNode schemaNode, @Nullable String currentPath) {
+        if (!schemaNode.has("properties")) {
+            return Collections.emptySet();
+        }
+
+        final JsonNode propertiesNode = schemaNode.get("properties");
+        final Iterator<String> fieldNamesIterator = propertiesNode.fieldNames();
+
+        final var paths = new HashSet<String>();
+
+        while (fieldNamesIterator.hasNext()) {
+            final String fieldName = fieldNamesIterator.next();
+            final JsonNode propertySchemaNode = propertiesNode.get(fieldName);
+
+            final String fieldPath = currentPath != null
+                    ? currentPath + "/" + fieldName
+                    : "/" + fieldName;
+
+            if (hasSecretRef(propertySchemaNode, fieldPath)) {
+                paths.add(fieldPath);
+            }
+
+            paths.addAll(getSecretRefPaths(propertySchemaNode, fieldPath));
+
+            if (propertySchemaNode.has("items")) {
+                final JsonNode itemsSchemaNode = propertySchemaNode.get("items");
+                if (hasSecretRef(itemsSchemaNode, fieldPath)) {
+                    paths.add(fieldPath + "[*]");
+                }
+                paths.addAll(getSecretRefPaths(itemsSchemaNode, fieldPath + "[*]"));
+            }
+        }
+
+        return paths;
+    }
+
+    private boolean hasSecretRef(JsonNode propertyNode, String path) {
+        if (!propertyNode.has(SECRET_REF_ANNOTATION)) {
+            return false;
+        }
+
+        final JsonNode secretRefNode = propertyNode.get(SECRET_REF_ANNOTATION);
+        if (!secretRefNode.isBoolean()) {
+            throw new IllegalStateException(
+                    "Invalid %s node type at %s: Expected %s but was %s".formatted(
+                            SECRET_REF_ANNOTATION, path, JsonNodeType.BOOLEAN, secretRefNode.getNodeType()));
+        }
+
+        return secretRefNode.asBoolean();
+    }
+
+    private void resolveSecretRefs(
+            JsonNode configNode,
+            String path,
+            Function<String, @Nullable String> secretResolver) {
+        // Handle array paths such as /foo[*]/bar manually because
+        // JSON pointers don't support wildcards in array indexes.
+        //
+        // In the future we could possibly use a fully-fledged JSON path
+        // implementation here, but for now this does the job.
+        if (path.contains("[*]")) {
+            // Deconstruct path: "/foo[*]/bar" -> "/foo", "/bar".
+            final int arrayWildcardIndex = path.indexOf("[*]");
+            final String pathBeforeWildcard = path.substring(0, arrayWildcardIndex);
+            final String pathAfterWildcard = arrayWildcardIndex + 3 < path.length()
+                    ? path.substring(arrayWildcardIndex + 3)
+                    : null;
+
+            if (!(configNode.at(pathBeforeWildcard) instanceof ArrayNode arrayNode)) {
+                return;
+            }
+
+            for (int i = 0; i < arrayNode.size(); i++) {
+                final JsonNode arrayItemNode = arrayNode.get(i);
+                if (pathAfterWildcard != null) {
+                    // Path refers to a nested node after the array, so recurse into that.
+                    resolveSecretRefs(arrayItemNode, pathAfterWildcard, secretResolver);
+                } else if (arrayItemNode.isTextual()) {
+                    final String secretName = arrayItemNode.asText().trim();
+                    if (!secretName.isEmpty()) {
+                        final String secretValue = secretResolver.apply(secretName);
+                        if (secretValue == null) {
+                            throw new UnresolvableSecretException(secretName, pathBeforeWildcard + "[" + i + "]");
+                        }
+                        arrayNode.set(i, TextNode.valueOf(secretValue));
+                    }
+                }
+            }
+        } else {
+            // Directly navigate to the secret ref node using JSON pointer.
+            final JsonNode propertyNode = configNode.at(path);
+            if (!propertyNode.isTextual()) {
+                return;
+            }
+
+            final String secretName = propertyNode.asText().trim();
+            if (secretName.isEmpty()) {
+                return;
+            }
+
+            final String secretValue = secretResolver.apply(secretName);
+            if (secretValue == null) {
+                throw new UnresolvableSecretException(secretName, path);
+            }
+
+            // JSON values are immutable. To replace the secret ref
+            // with the resolved secret, we need to replace the whole
+            // node in its parent.
+            final int lastSlash = path.lastIndexOf('/');
+            if (lastSlash == 0) {
+                // Path is at the root level (e.g. "/secretString").
+                final String fieldName = path.substring(1);
+                if (configNode instanceof final ObjectNode objectNode) {
+                    objectNode.set(fieldName, TextNode.valueOf(secretValue));
+                }
+            } else {
+                // Path is nested (e.g. "/nested/secretString").
+                // Deconstruct: "/nested/secretString" -> "/nested", "secretString".
+                final String parentPath = path.substring(0, lastSlash);
+                final String fieldName = path.substring(lastSlash + 1);
+
+                // Directly navigate to the parent node via JSON pointer.
+                final JsonNode parentNode = configNode.at(parentPath);
+
+                if (parentNode instanceof final ObjectNode objectNode) {
+                    objectNode.set(fieldName, TextNode.valueOf(secretValue));
+                } else {
+                    throw new IllegalStateException(
+                            "Unexpected node type at %s: Expected %s but was %s".formatted(
+                                    path, JsonNodeType.OBJECT, parentNode.getNodeType()));
+                }
+            }
+        }
     }
 
 }

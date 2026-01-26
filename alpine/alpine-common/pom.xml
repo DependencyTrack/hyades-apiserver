@@ -26,6 +26,9 @@
     </parent>
 
     <artifactId>alpine-common</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Alpine :: Common</name>
 
     <dependencies>
         <dependency>

@@ -19,10 +19,10 @@
 package org.dependencytrack.secret.management.database;
 
 import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretManagerFactory;
 import org.eclipse.microprofile.config.Config;
-import org.eclipse.microprofile.config.ConfigProvider;
 
 import javax.sql.DataSource;
 
@@ -31,19 +31,15 @@ import javax.sql.DataSource;
  */
 public final class DatabaseSecretManagerFactory implements SecretManagerFactory {
 
-    private final DatabaseSecretManagerConfig config;
     private final DataSourceRegistry dataSourceRegistry;
 
-    DatabaseSecretManagerFactory(
-            final Config config,
-            final DataSourceRegistry dataSourceRegistry) {
-        this.config = new DatabaseSecretManagerConfig(config);
+    DatabaseSecretManagerFactory(DataSourceRegistry dataSourceRegistry) {
         this.dataSourceRegistry = dataSourceRegistry;
     }
 
     @SuppressWarnings("unused")
     public DatabaseSecretManagerFactory() {
-        this(ConfigProvider.getConfig(), DataSourceRegistry.getInstance());
+        this(DataSourceRegistry.getInstance());
     }
 
     @Override
@@ -52,9 +48,15 @@ public final class DatabaseSecretManagerFactory implements SecretManagerFactory 
     }
 
     @Override
-    public SecretManager create() {
-        final DataSource dataSource = dataSourceRegistry.get(config.getDataSourceName());
-        return new DatabaseSecretManager(dataSource, new Crypto(dataSource, config));
+    public SecretManager create(Config config, PageTokenEncoder pageTokenEncoder) {
+        final var secretManagerConfig = new DatabaseSecretManagerConfig(config);
+
+        final DataSource dataSource = dataSourceRegistry.get(secretManagerConfig.getDataSourceName());
+
+        return new DatabaseSecretManager(
+                dataSource,
+                new Crypto(dataSource, secretManagerConfig),
+                pageTokenEncoder);
     }
 
 }

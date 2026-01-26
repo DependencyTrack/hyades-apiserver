@@ -18,19 +18,18 @@
  */
 package org.dependencytrack.secret;
 
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.secret.management.ListSecretsRequest;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretMetadata;
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-
-import java.util.List;
 
 public final class TestSecretManager implements SecretManager {
 
     public static final String NAME = "test";
 
     @Override
-    public @NonNull String name() {
+    public String name() {
         return NAME;
     }
 
@@ -41,32 +40,37 @@ public final class TestSecretManager implements SecretManager {
 
     @Override
     public void createSecret(
-            final @NonNull String name,
-            final String description,
-            final @NonNull String value) {
+            String name,
+            @Nullable String description,
+            String value) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean updateSecret(
-            final @NonNull String name,
-            final String description,
-            final String value) {
+            String name,
+            @Nullable String description,
+            String value) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void deleteSecret(final @NonNull String name) {
+    public void deleteSecret(String name) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public @Nullable String getSecretValue(final @NonNull String name) {
+    public @Nullable String getSecretValue(String name) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public @NonNull List<SecretMetadata> listSecrets() {
+    public @Nullable SecretMetadata getSecretMetadata(String name) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Page<SecretMetadata> listSecretMetadata(ListSecretsRequest request) {
         throw new UnsupportedOperationException();
     }
 

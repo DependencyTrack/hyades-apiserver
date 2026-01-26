@@ -609,7 +609,21 @@
         <dropTable tableName="EVENTSERVICELOG"/>
     </changeSet>
 
-    <changeSet id="v5.7.0-30" author="sahibamittal">
+    <changeSet id="v5.7.0-30" author="nscuro">
+        <sql>
+            DELETE FROM "PERMISSION" WHERE "NAME" = 'SECRET_MANAGEMENT_READ';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-31" author="nscuro">
+        <sql>
+            UPDATE "EXTENSION_RUNTIME_CONFIG"
+               SET "EXTENSION_POINT" = 'vuln-data-source'
+             WHERE "EXTENSION_POINT" = 'vuln.datasource';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-32" author="sahibamittal">
         <addColumn tableName="VULNERABILITY">
             <column name="CVSSV4BASESCORE" type="numeric"/>
             <column name="CVSSV4VECTOR" type="VARCHAR(255)"/>

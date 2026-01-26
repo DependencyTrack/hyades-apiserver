@@ -18,12 +18,17 @@
  */
 package org.dependencytrack.secret.management.env;
 
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.common.pagination.PageToken;
+import org.dependencytrack.common.pagination.PageTokenEncoder;
+import org.dependencytrack.secret.management.ListSecretsRequest;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretMetadata;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 /**
  * @since 5.7.0
@@ -31,9 +36,13 @@ import java.util.Map;
 final class EnvSecretManager implements SecretManager {
 
     private final Map<String, String> secretValueByName;
+    private final PageTokenEncoder pageTokenEncoder;
 
-    EnvSecretManager(Map<String, String> secretValueByName) {
+    EnvSecretManager(
+            Map<String, String> secretValueByName,
+            PageTokenEncoder pageTokenEncoder) {
         this.secretValueByName = secretValueByName;
+        this.pageTokenEncoder = pageTokenEncoder;
     }
 
     @Override
@@ -62,20 +71,55 @@ final class EnvSecretManager implements SecretManager {
     }
 
     @Override
+    public @Nullable SecretMetadata getSecretMetadata(String name) {
+        return secretValueByName.keySet().stream()
+                .filter(name::equals)
+                .map(secretName -> new SecretMetadata(secretName, null, null, null))
+                .findAny()
+                .orElse(null);
+    }
+
+    @Override
     public @Nullable String getSecretValue(String name) {
         return secretValueByName.get(name);
     }
 
+    record ListSecretsPageToken(String lastName) implements PageToken {
+    }
+
     @Override
-    public List<SecretMetadata> listSecrets() {
-        return secretValueByName.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(entry -> new SecretMetadata(
-                        entry.getKey(),
-                        null,
-                        null,
-                        null))
+    public Page<SecretMetadata> listSecretMetadata(ListSecretsRequest request) {
+        final var pageTokenValue = pageTokenEncoder.decode(request.pageToken(), ListSecretsPageToken.class);
+
+        final String searchText = request.searchText() != null
+                ? request.searchText().toLowerCase()
+                : null;
+
+        final Predicate<String> filterPredicate =
+                secretName -> searchText == null || secretName.toLowerCase().startsWith(searchText);
+
+        final long totalCount = secretValueByName.keySet().stream()
+                .filter(filterPredicate)
+                .count();
+
+        final List<SecretMetadata> allMatching = secretValueByName.keySet().stream()
+                .sorted()
+                .filter(name -> pageTokenValue == null || name.compareTo(pageTokenValue.lastName()) > 0)
+                .filter(filterPredicate)
+                .limit(request.limit() + 1)
+                .map(name -> new SecretMetadata(name, null, null, null))
                 .toList();
+
+        final List<SecretMetadata> resultItems = allMatching.size() > request.limit()
+                ? allMatching.subList(0, request.limit())
+                : allMatching;
+
+        final String nextPageToken = allMatching.size() > request.limit()
+                ? pageTokenEncoder.encode(new ListSecretsPageToken(resultItems.getLast().name()))
+                : null;
+
+        return new Page<>(resultItems, nextPageToken)
+                .withTotalCount(totalCount, Page.TotalCount.Type.EXACT);
     }
 
 }

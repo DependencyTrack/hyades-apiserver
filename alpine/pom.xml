@@ -37,7 +37,7 @@
         <module>alpine-test</module>
     </modules>
 
-    <name>alpine-parent</name>
+    <name>Alpine :: Parent</name>
     <description>
         An opinionated scaffolding library that jumpstarts Java projects with an API-first design,
         secure defaults, and minimal dependencies.
@@ -80,9 +80,9 @@
         <lib.commons.io.version>2.21.0</lib.commons.io.version>
         <lib.h2.version>2.4.240</lib.h2.version>
         <lib.jsonwebtoken.version>0.13.0</lib.jsonwebtoken.version>
-        <lib.logback.version>1.5.23</lib.logback.version>
+        <lib.logback.version>1.5.24</lib.logback.version>
         <lib.logstash-logback-encoder.version>8.1</lib.logstash-logback-encoder.version>
-        <lib.nimbus-oauth2-oidc-sdk.version>11.31</lib.nimbus-oauth2-oidc-sdk.version>
+        <lib.nimbus-oauth2-oidc-sdk.version>11.31.1</lib.nimbus-oauth2-oidc-sdk.version>
         <lib.owasp.security-logging.version>1.1.7</lib.owasp.security-logging.version>
         <lib.parsson.version>1.1.7</lib.parsson.version>
         <!-- Unit test libraries -->
@@ -176,10 +176,6 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
-    <prerequisites>
-        <maven>3.6.0</maven>
-    </prerequisites>
 
     <build>
         <plugins>

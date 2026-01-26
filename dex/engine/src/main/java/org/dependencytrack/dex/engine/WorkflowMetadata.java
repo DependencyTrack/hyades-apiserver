@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.dex.engine;
 
-import org.dependencytrack.dex.api.WorkflowExecutor;
+import org.dependencytrack.dex.api.Workflow;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
 
 import java.time.Duration;
@@ -26,7 +26,7 @@ import java.time.Duration;
 record WorkflowMetadata<A, R>(
         String name,
         int version,
-        WorkflowExecutor<A, R> executor,
+        Workflow<A, R> executor,
         PayloadConverter<A> argumentConverter,
         PayloadConverter<R> resultConverter,
         String defaultTaskQueueName,

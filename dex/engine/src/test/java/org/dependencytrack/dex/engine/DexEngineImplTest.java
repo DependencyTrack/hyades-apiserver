@@ -22,12 +22,12 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.github.resilience4j.core.IntervalFunction;
 import org.dependencytrack.common.pagination.Page;
-import org.dependencytrack.dex.api.ActivityExecutor;
+import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.Awaitable;
 import org.dependencytrack.dex.api.ContinueAsNewOptions;
 import org.dependencytrack.dex.api.RetryPolicy;
+import org.dependencytrack.dex.api.Workflow;
 import org.dependencytrack.dex.api.WorkflowContext;
-import org.dependencytrack.dex.api.WorkflowExecutor;
 import org.dependencytrack.dex.api.failure.ActivityFailureException;
 import org.dependencytrack.dex.api.failure.ApplicationFailureException;
 import org.dependencytrack.dex.api.failure.ChildWorkflowFailureException;
@@ -81,7 +81,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.dex.api.payload.PayloadConverters.stringConverter;
 import static org.dependencytrack.dex.api.payload.PayloadConverters.voidConverter;
-import static org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELED;
+import static org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELLED;
 import static org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
 import static org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
 
@@ -296,7 +296,7 @@ class DexEngineImplTest {
 
         engine.requestRunCancellation(runId, "Stop it!");
 
-        final WorkflowRunMetadata canceledRun = awaitRunStatus(runId, WorkflowRunStatus.CANCELED);
+        final WorkflowRunMetadata canceledRun = awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
 
         assertThat(canceledRun.customStatus()).isNull();
         assertThat(canceledRun.concurrencyKey()).isNull();
@@ -317,7 +317,7 @@ class DexEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_CANCELED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED);
-                    assertThat(entry.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_CANCELED);
+                    assertThat(entry.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_CANCELLED);
                     assertThat(entry.getRunCompleted().hasResult()).isFalse();
                     assertThat(entry.getRunCompleted().getFailure().getMessage()).isEqualTo("Stop it!");
                 },
@@ -484,9 +484,9 @@ class DexEngineImplTest {
 
         engine.requestRunCancellation(parentRunId, "someReason");
 
-        awaitRunStatus(parentRunId, WorkflowRunStatus.CANCELED);
-        awaitRunStatus(childRunIdReference.get(), WorkflowRunStatus.CANCELED);
-        awaitRunStatus(grandChildRunIdReference.get(), WorkflowRunStatus.CANCELED);
+        awaitRunStatus(parentRunId, WorkflowRunStatus.CANCELLED);
+        awaitRunStatus(childRunIdReference.get(), WorkflowRunStatus.CANCELLED);
+        awaitRunStatus(grandChildRunIdReference.get(), WorkflowRunStatus.CANCELLED);
     }
 
     @Test
@@ -543,7 +543,7 @@ class DexEngineImplTest {
 
         engine.requestRunCancellation(runId, "someReason");
 
-        awaitRunStatus(runId, WorkflowRunStatus.CANCELED);
+        awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
     }
 
     @Test
@@ -723,7 +723,7 @@ class DexEngineImplTest {
         await("Update")
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> {
-                    final WorkflowRunMetadata run = engine.getRunMetadata(runId);
+                    final WorkflowRunMetadata run = engine.getRunMetadataById(runId);
                     assertThat(run.updatedAt()).isNotNull();
                 });
 
@@ -1293,6 +1293,50 @@ class DexEngineImplTest {
     }
 
     @Nested
+    class GetRunMetadataByInstanceIdTest {
+
+        @Test
+        void shouldReturnMetadataWhenRunExistsWithNonTerminalState() {
+            registerWorkflow("foo", (ctx, arg) -> null);
+
+            final UUID runId = engine.createRun(
+                    new CreateWorkflowRunRequest<>("foo", 1)
+                            .withWorkflowInstanceId("foo-instance"));
+            assertThat(runId).isNotNull();
+
+            final WorkflowRunMetadata runMetadata =
+                    engine.getRunMetadataByInstanceId("foo-instance");
+            assertThat(runMetadata).isNotNull();
+            assertThat(runMetadata.id()).isEqualTo(runId);
+        }
+
+        @Test
+        void shouldReturnNullWhenRunDoesNotExist() {
+            final WorkflowRunMetadata runMetadata =
+                    engine.getRunMetadataByInstanceId("doesNotExist");
+            assertThat(runMetadata).isNull();
+        }
+
+        @Test
+        void shouldReturnNullWhenRunExistsWithTerminalState() {
+            registerWorkflow("foo", (ctx, arg) -> null);
+            registerWorkflowWorker("workflow-worker", 1);
+            engine.start();
+
+            final UUID runId = engine.createRun(
+                    new CreateWorkflowRunRequest<>("foo", 1)
+                            .withWorkflowInstanceId("foo-instance"));
+            assertThat(runId).isNotNull();
+            awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+            final WorkflowRunMetadata runMetadata =
+                    engine.getRunMetadataByInstanceId("foo-instance");
+            assertThat(runMetadata).isNull();
+        }
+
+    }
+
+    @Nested
     class WorkflowTaskQueueTest {
 
         @Test
@@ -1499,7 +1543,7 @@ class DexEngineImplTest {
 
     }
 
-    private interface InternalWorkflowExecutor<A, R> extends WorkflowExecutor<A, R> {
+    private interface InternalWorkflow<A, R> extends Workflow<A, R> {
 
         R execute(WorkflowContextImpl<A, R> ctx, A argument);
 
@@ -1514,11 +1558,11 @@ class DexEngineImplTest {
             final String name,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final InternalWorkflowExecutor<A, R> executor) {
+            final InternalWorkflow<A, R> executor) {
         engine.registerWorkflowInternal(name, 1, argumentConverter, resultConverter, WORKFLOW_TASK_QUEUE, Duration.ofSeconds(5), executor);
     }
 
-    private void registerWorkflow(final String name, final InternalWorkflowExecutor<Void, Void> executor) {
+    private void registerWorkflow(final String name, final InternalWorkflow<Void, Void> executor) {
         registerWorkflow(name, voidConverter(), voidConverter(), executor);
     }
 
@@ -1526,11 +1570,11 @@ class DexEngineImplTest {
             final String name,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final ActivityExecutor<A, R> executor) {
+            final Activity<A, R> executor) {
         engine.registerActivityInternal(name, argumentConverter, resultConverter, ACTIVITY_TASK_QUEUE, Duration.ofSeconds(5), executor);
     }
 
-    private void registerActivity(final String name, final ActivityExecutor<Void, Void> executor) {
+    private void registerActivity(final String name, final Activity<Void, Void> executor) {
         registerActivity(name, voidConverter(), voidConverter(), executor);
     }
 
@@ -1555,7 +1599,7 @@ class DexEngineImplTest {
         return await("Workflow Run Status to become " + expectedStatus)
                 .atMost(timeout)
                 .failFast(() -> {
-                    final WorkflowRunStatus currentStatus = engine.getRunMetadata(runId).status();
+                    final WorkflowRunStatus currentStatus = engine.getRunMetadataById(runId).status();
                     if (currentStatus.isTerminal() && !expectedStatus.isTerminal()) {
                         return true;
                     }
@@ -1564,7 +1608,7 @@ class DexEngineImplTest {
                             && expectedStatus.isTerminal()
                             && currentStatus != expectedStatus;
                 })
-                .until(() -> engine.getRunMetadata(runId), run -> run.status() == expectedStatus);
+                .until(() -> engine.getRunMetadataById(runId), run -> run.status() == expectedStatus);
     }
 
     private WorkflowRunMetadata awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {

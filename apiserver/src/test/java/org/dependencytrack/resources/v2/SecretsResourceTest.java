@@ -24,6 +24,8 @@ import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.secret.management.ListSecretsRequest;
 import org.dependencytrack.secret.management.SecretAlreadyExistsException;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretMetadata;
@@ -34,7 +36,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -49,7 +50,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-public class SecretsResourceTest extends ResourceTest {
+class SecretsResourceTest extends ResourceTest {
 
     private static final SecretManager SECRET_MANAGER_MOCK = mock(SecretManager.class);
 
@@ -64,14 +65,12 @@ public class SecretsResourceTest extends ResourceTest {
                     }));
 
     @AfterEach
-    @Override
-    public void after() {
+    void afterEach() {
         Mockito.reset(SECRET_MANAGER_MOCK);
-        super.after();
     }
 
     @Test
-    public void createSecretShouldCreateSecretAndReturnNoContent() {
+    void createSecretShouldCreateSecretAndReturnNoContent() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_CREATE);
 
         final Response response = jersey
@@ -92,7 +91,7 @@ public class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createSecretShouldReturnBadRequestWhenSecretManagerIsReadOnly() {
+    void createSecretShouldReturnBadRequestWhenSecretManagerIsReadOnly() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_CREATE);
 
         doThrow(new UnsupportedOperationException("Not supported"))
@@ -121,7 +120,7 @@ public class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createSecretShouldReturnConflictWhenAlreadyExists() {
+    void createSecretShouldReturnConflictWhenAlreadyExists() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_CREATE);
 
         doThrow(new SecretAlreadyExistsException("foo"))
@@ -150,7 +149,7 @@ public class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateSecretShouldUpdateDescriptionAndReturnNoContent() {
+    void updateSecretShouldUpdateDescriptionAndReturnNoContent() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_UPDATE);
 
         doReturn(true).when(SECRET_MANAGER_MOCK).updateSecret(eq("foo"), any(), any());
@@ -171,7 +170,7 @@ public class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateSecretShouldUpdateValueAndReturnNoContent() {
+    void updateSecretShouldUpdateValueAndReturnNoContent() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_UPDATE);
 
         doReturn(true).when(SECRET_MANAGER_MOCK).updateSecret(eq("foo"), any(), any());
@@ -192,7 +191,7 @@ public class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateSecretShouldReturnNotModifiedWhenUnchanged() {
+    void updateSecretShouldReturnNotModifiedWhenUnchanged() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_UPDATE);
 
         doReturn(false).when(SECRET_MANAGER_MOCK).updateSecret(eq("foo"), any(), any());
@@ -211,7 +210,7 @@ public class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateSecretShouldReturnBadRequestWhenSecretManagerIsReadOnly() {
+    void updateSecretShouldReturnBadRequestWhenSecretManagerIsReadOnly() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_UPDATE);
 
         doThrow(new UnsupportedOperationException("Not supported"))
@@ -238,7 +237,7 @@ public class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateSecretShouldReturnNotFoundWhenSecretDoesNotExist() {
+    void updateSecretShouldReturnNotFoundWhenSecretDoesNotExist() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_UPDATE);
 
         doThrow(new NoSuchElementException("No secret with name foo found"))
@@ -265,7 +264,7 @@ public class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void deleteSecretShouldDeleteSecretAndReturnNoContent() {
+    void deleteSecretShouldDeleteSecretAndReturnNoContent() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_DELETE);
 
         final Response response = jersey
@@ -280,7 +279,7 @@ public class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void deleteSecretShouldReturnBadRequestWhenSecretManagerIsReadOnly() {
+    void deleteSecretShouldReturnBadRequestWhenSecretManagerIsReadOnly() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_DELETE);
 
         doThrow(new UnsupportedOperationException("Not supported"))
@@ -303,7 +302,7 @@ public class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void deleteSecretShouldReturnNotFoundWhenSecretDoesNotExist() {
+    void deleteSecretShouldReturnNotFoundWhenSecretDoesNotExist() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_DELETE);
 
         doThrow(new NoSuchElementException("No secret with name foo found"))
@@ -326,10 +325,77 @@ public class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listSecretsShouldReturnEmptyArrayWhenNoSecretsExist() {
-        initializeWithPermissions(Permissions.SECRET_MANAGEMENT_READ);
+    void getSecretMetadataShouldReturnSecretMetadata() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        doReturn(Collections.emptyList()).when(SECRET_MANAGER_MOCK).listSecrets();
+        doReturn(new SecretMetadata("foo", "foo-description", Instant.now(), null))
+                .when(SECRET_MANAGER_MOCK).getSecretMetadata(eq("foo"));
+
+        final Response response = jersey
+                .target("/secrets/foo")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "name": "foo",
+                  "description": "foo-description",
+                  "created_at": "${json-unit.any-number}"
+                }
+                """);
+    }
+
+    @Test
+    void getSecretMetadataShouldReturnSecretMetadataWithUpdatedAt() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
+        doReturn(new SecretMetadata("foo", "foo-description", Instant.now(), Instant.now()))
+                .when(SECRET_MANAGER_MOCK).getSecretMetadata(eq("foo"));
+
+        final Response response = jersey
+                .target("/secrets/foo")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "name": "foo",
+                  "description": "foo-description",
+                  "created_at": "${json-unit.any-number}",
+                  "updated_at": "${json-unit.any-number}"
+                }
+                """);
+    }
+
+    @Test
+    void getSecretMetadataShouldReturnNotFoundWhenSecretDoesNotExist() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
+        doReturn(null).when(SECRET_MANAGER_MOCK).getSecretMetadata(eq("doesNotExist"));
+
+        final Response response = jersey
+                .target("/secrets/doesNotExist")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type": "about:blank",
+                  "status": 404,
+                  "title": "Not Found",
+                  "detail": "The requested resource could not be found."
+                }
+                """);
+    }
+
+    @Test
+    void listSecretMetadataShouldReturnEmptyArrayWhenNoSecretMetadataExist() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
+        doReturn(Page.empty()).when(SECRET_MANAGER_MOCK).listSecretMetadata(any(ListSecretsRequest.class));
 
         final Response response = jersey
                 .target("/secrets")
@@ -339,20 +405,30 @@ public class SecretsResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "secrets": []
+                  "secrets": [],
+                  "_pagination": {
+                    "links": {
+                      "self": "${json-unit.any-string}"
+                    },
+                    "total": {
+                      "count": 0,
+                      "type": "EXACT"
+                    }
+                  }
                 }
                 """);
     }
 
     @Test
-    public void listSecretsShouldReturnSecrets() {
-        initializeWithPermissions(Permissions.SECRET_MANAGEMENT_READ);
+    void listSecretMetadataShouldReturnSecretMetadata() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        doReturn(List.of(
+        doReturn(new Page<>(List.of(
                 new SecretMetadata("foo", "foo-description", Instant.now(), null),
                 new SecretMetadata("bar", "bar-description", Instant.now(), Instant.now()),
                 new SecretMetadata("baz", "baz-description", Instant.now(), null)))
-                .when(SECRET_MANAGER_MOCK).listSecrets();
+                .withTotalCount(3, Page.TotalCount.Type.EXACT))
+                .when(SECRET_MANAGER_MOCK).listSecretMetadata(any());
 
         final Response response = jersey
                 .target("/secrets")
@@ -381,7 +457,16 @@ public class SecretsResourceTest extends ResourceTest {
                               "description": "foo-description",
                               "created_at": "${json-unit.any-number}"
                             }
-                          ]
+                          ],
+                          "_pagination": {
+                            "links": {
+                              "self": "${json-unit.any-string}"
+                            },
+                            "total": {
+                              "count": 3,
+                              "type": "EXACT"
+                            }
+                          }
                         }
                         """);
     }

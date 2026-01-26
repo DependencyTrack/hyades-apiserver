@@ -34,7 +34,7 @@ import java.util.function.Supplier;
 import static org.dependencytrack.dex.api.payload.PayloadConverters.voidConverter;
 
 /**
- * Context available to {@link WorkflowExecutor}s.
+ * Context available to {@link Workflow}s.
  *
  * @param <A> Type of the workflow's argument.
  */
@@ -75,7 +75,7 @@ public interface WorkflowContext<A extends @Nullable Object> {
      * @return An {@link ActivityHandle}.
      * @throws java.util.NoSuchElementException When the activity is not known to the engine.
      */
-    <AA, AR> ActivityHandle<AA, AR> activity(Class<? extends ActivityExecutor<AA, AR>> activityClass);
+    <AA, AR> ActivityHandle<AA, AR> activity(Class<? extends Activity<AA, AR>> activityClass);
 
     /**
      * Get a handle on a workflow that can be used for invocations.
@@ -85,7 +85,7 @@ public interface WorkflowContext<A extends @Nullable Object> {
      * @param <WR>          Type of the workflow's result.
      * @return A {@link WorkflowHandle}.
      */
-    <WA, WR> WorkflowHandle<WA, WR> workflow(Class<? extends WorkflowExecutor<WA, WR>> workflowClass);
+    <WA, WR> WorkflowHandle<WA, WR> workflow(Class<? extends Workflow<WA, WR>> workflowClass);
 
     /**
      * Create a durable timer.

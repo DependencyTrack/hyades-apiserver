@@ -25,6 +25,9 @@ import com.google.crypto.tink.TinkJsonProtoKeysetFormat;
 import com.google.crypto.tink.aead.AeadKeyTemplates;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
+import org.dependencytrack.secret.management.ListSecretsRequest;
 import org.dependencytrack.secret.management.SecretAlreadyExistsException;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.support.liquibase.MigrationExecutor;
@@ -94,7 +97,8 @@ class DatabaseSecretManagerTest {
 
         dataSourceRegistry = new DataSourceRegistry(config);
 
-        secretManager = new DatabaseSecretManagerFactory(config, dataSourceRegistry).create();
+        secretManager = new DatabaseSecretManagerFactory(dataSourceRegistry)
+                .create(config, new SimplePageTokenEncoder());
     }
 
     @AfterEach
@@ -258,6 +262,41 @@ class DatabaseSecretManagerTest {
     }
 
     @Nested
+    class GetSecretMetadataTest {
+
+        @Test
+        void shouldReturnMetadataIfExists() {
+            secretManager.createSecret("name", "description", "secret");
+
+            final var metadata = secretManager.getSecretMetadata("name");
+            assertThat(metadata).isNotNull();
+            assertThat(metadata.name()).isEqualTo("name");
+            assertThat(metadata.description()).isEqualTo("description");
+            assertThat(metadata.createdAt()).isNotNull();
+            assertThat(metadata.updatedAt()).isNull();
+        }
+
+        @Test
+        void shouldReturnMetadataWithUpdatedAtIfSecretWasUpdated() {
+            secretManager.createSecret("name", "description", "secret");
+            secretManager.updateSecret("name", "newDescription", null);
+
+            final var metadata = secretManager.getSecretMetadata("name");
+            assertThat(metadata).isNotNull();
+            assertThat(metadata.name()).isEqualTo("name");
+            assertThat(metadata.description()).isEqualTo("newDescription");
+            assertThat(metadata.createdAt()).isNotNull();
+            assertThat(metadata.updatedAt()).isNotNull();
+        }
+
+        @Test
+        void shouldReturnNullIfNotExists() {
+            assertThat(secretManager.getSecretMetadata("doesNotExist")).isNull();
+        }
+
+    }
+
+    @Nested
     class ListSecretsTest {
 
         @Test
@@ -265,24 +304,92 @@ class DatabaseSecretManagerTest {
             secretManager.createSecret("foo", "description", "secret");
             secretManager.createSecret("bar", null, "secret");
 
-            assertThat(secretManager.listSecrets()).satisfiesExactlyInAnyOrder(
-                    record -> {
-                        assertThat(record.name()).isEqualTo("foo");
-                        assertThat(record.description()).isEqualTo("description");
-                        assertThat(record.createdAt()).isNotNull();
-                        assertThat(record.updatedAt()).isNull();
-                    },
-                    record -> {
-                        assertThat(record.name()).isEqualTo("bar");
-                        assertThat(record.description()).isNull();
-                        assertThat(record.createdAt()).isNotNull();
-                        assertThat(record.updatedAt()).isNull();
-                    });
+            final var page = secretManager.listSecretMetadata(new ListSecretsRequest(null, null, 100));
+            assertThat(page.totalCount()).isNotNull();
+            assertThat(page.totalCount().value()).isEqualTo(2);
+            assertThat(page.totalCount().type()).isEqualTo(Page.TotalCount.Type.EXACT);
+            assertThat(page.items())
+                    .satisfiesExactlyInAnyOrder(
+                            record -> {
+                                assertThat(record.name()).isEqualTo("foo");
+                                assertThat(record.description()).isEqualTo("description");
+                                assertThat(record.createdAt()).isNotNull();
+                                assertThat(record.updatedAt()).isNull();
+                            },
+                            record -> {
+                                assertThat(record.name()).isEqualTo("bar");
+                                assertThat(record.description()).isNull();
+                                assertThat(record.createdAt()).isNotNull();
+                                assertThat(record.updatedAt()).isNull();
+                            });
         }
 
         @Test
         void shouldReturnEmptyListIfNoSecretsExists() {
-            assertThat(secretManager.listSecrets()).isEmpty();
+            final var page = secretManager.listSecretMetadata(new ListSecretsRequest(null, null, 100));
+            assertThat(page.items()).isEmpty();
+            assertThat(page.totalCount().value()).isEqualTo(0);
+        }
+
+        @Test
+        void shouldSupportPagination() {
+            secretManager.createSecret("alpha", null, "secret");
+            secretManager.createSecret("beta", null, "secret");
+            secretManager.createSecret("gamma", null, "secret");
+
+            final var firstPage = secretManager.listSecretMetadata(
+                    new ListSecretsRequest()
+                            .withLimit(2));
+            assertThat(firstPage.items()).extracting("name").containsExactly("alpha", "beta");
+            assertThat(firstPage.nextPageToken()).isNotNull();
+            assertThat(firstPage.totalCount().value()).isEqualTo(3);
+
+            final var secondPage = secretManager.listSecretMetadata(
+                    new ListSecretsRequest()
+                            .withPageToken(firstPage.nextPageToken())
+                            .withLimit(2));
+            assertThat(secondPage.items()).extracting("name").containsExactly("gamma");
+            assertThat(secondPage.nextPageToken()).isNull();
+            assertThat(secondPage.totalCount().value()).isEqualTo(3);
+        }
+
+        @Test
+        void shouldSupportSearchText() {
+            secretManager.createSecret("alpha", null, "secret");
+            secretManager.createSecret("beta", null, "secret");
+            secretManager.createSecret("ALPHABET", null, "secret");
+
+            final var page = secretManager.listSecretMetadata(
+                    new ListSecretsRequest()
+                            .withSearchText("alph"));
+            assertThat(page.items()).extracting("name").containsExactly("ALPHABET", "alpha");
+            assertThat(page.nextPageToken()).isNull();
+            assertThat(page.totalCount().value()).isEqualTo(2);
+        }
+
+        @Test
+        void shouldSupportSearchTextWithPagination() {
+            secretManager.createSecret("foo1", null, "secret");
+            secretManager.createSecret("foo2", null, "secret");
+            secretManager.createSecret("foo3", null, "secret");
+            secretManager.createSecret("bar1", null, "secret");
+
+            final var firstPage = secretManager.listSecretMetadata(
+                    new ListSecretsRequest()
+                            .withSearchText("foo")
+                            .withLimit(2));
+            assertThat(firstPage.items()).extracting("name").containsExactly("foo1", "foo2");
+            assertThat(firstPage.nextPageToken()).isNotNull();
+            assertThat(firstPage.totalCount().value()).isEqualTo(3);
+
+            final var secondPage = secretManager.listSecretMetadata(
+                    new ListSecretsRequest()
+                            .withSearchText("foo")
+                            .withPageToken(firstPage.nextPageToken())
+                            .withLimit(2));
+            assertThat(secondPage.items()).extracting("name").containsExactly("foo3");
+            assertThat(secondPage.nextPageToken()).isNull();
+            assertThat(secondPage.totalCount().value()).isEqualTo(3);
         }
 
     }
@@ -322,9 +429,9 @@ class DatabaseSecretManagerTest {
                             Map.entry("dt.secret-management.database.kek-keyset.path", newKekKeysetFilePath.toString()),
                             Map.entry("dt.secret-management.database.kek-keyset.create-if-missing", "false")))
                     .build();
-            final var newSecretManagerFactory = new DatabaseSecretManagerFactory(config, dataSourceRegistry);
+            final var newSecretManagerFactory = new DatabaseSecretManagerFactory(dataSourceRegistry);
 
-            try (final var newSecretManager = newSecretManagerFactory.create()) {
+            try (final var newSecretManager = newSecretManagerFactory.create(config, new SimplePageTokenEncoder())) {
                 // Verify that the existing secret can still be decrypted.
                 assertThat(newSecretManager.getSecretValue("name")).isEqualTo("secret");
 

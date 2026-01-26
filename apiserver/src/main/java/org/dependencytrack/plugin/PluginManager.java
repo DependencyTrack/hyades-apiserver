@@ -21,7 +21,6 @@ package org.dependencytrack.plugin;
 import alpine.common.logging.Logger;
 import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.common.ProxySelector;
-import org.dependencytrack.config.templating.ConfigTemplateRenderer;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
@@ -34,6 +33,7 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
 import org.eclipse.microprofile.config.Config;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 
 import java.io.Closeable;
@@ -53,6 +53,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import static java.util.Objects.requireNonNull;
@@ -70,12 +71,12 @@ import static org.dependencytrack.plugin.api.ExtensionFactory.PRIORITY_LOWEST;
 public class PluginManager implements Closeable {
 
     private static final Logger LOGGER = Logger.getLogger(PluginManager.class);
-    private static final Pattern EXTENSION_POINT_NAME_PATTERN = Pattern.compile("^[a-z0-9.]+$");
+    private static final Pattern EXTENSION_POINT_NAME_PATTERN = Pattern.compile("^[a-z0-9\\-]+$");
     private static final Pattern EXTENSION_NAME_PATTERN = EXTENSION_POINT_NAME_PATTERN;
 
     private final Config config;
     private final RuntimeConfigMapper runtimeConfigMapper;
-    private final ConfigTemplateRenderer configTemplateRenderer;
+    private final Function<String, @Nullable String> secretResolver;
     private final SequencedMap<Class<? extends Plugin>, Plugin> loadedPluginByClass;
     private final Map<ExtensionIdentity, Plugin> pluginByExtensionIdentity;
     private final Map<Plugin, List<ExtensionFactory<?>>> factoriesByPlugin;
@@ -90,11 +91,11 @@ public class PluginManager implements Closeable {
 
     public PluginManager(
             Config config,
-            ConfigTemplateRenderer configTemplateRenderer,
+            Function<String, @Nullable String> secretResolver,
             Collection<Class<? extends ExtensionPoint>> extensionPointClasses) {
         this.config = config;
+        this.secretResolver = secretResolver;
         this.runtimeConfigMapper = RuntimeConfigMapper.getInstance();
-        this.configTemplateRenderer = configTemplateRenderer;
         this.loadedPluginByClass = new LinkedHashMap<>();
         this.pluginByExtensionIdentity = new HashMap<>();
         this.factoriesByPlugin = new HashMap<>();
@@ -369,7 +370,9 @@ public class PluginManager implements Closeable {
                 extensionFactory.runtimeConfigSpec() != null
                         ? runtimeConfigMapper
                         : null,
-                configTemplateRenderer);
+                extensionFactory.runtimeConfigSpec() != null
+                        ? secretResolver
+                        : null);
         configRegistryByExtensionIdentity.put(extensionIdentity, configRegistry);
 
         final boolean isEnabled = configRegistry.getDeploymentConfig()
@@ -400,7 +403,7 @@ public class PluginManager implements Closeable {
             }
 
             LOGGER.debug("Creating runtime extension configs with defaults if necessary");
-            if (configRegistry.getRuntimeConfig() == null) {
+            if (configRegistry.getOptionalRuntimeConfig().isEmpty()) {
                 final boolean updated = configRegistry.setRuntimeConfig(defaultRuntimeConfig);
                 if (updated) {
                     LOGGER.debug("Created default runtime config");
@@ -453,7 +456,7 @@ public class PluginManager implements Closeable {
                 }
 
                 final String defaultExtensionName = config
-                        .getOptionalValue("%s.default.extension".formatted(extensionPointMetadata.name()), String.class)
+                        .getOptionalValue("dt.%s.default-extension".formatted(extensionPointMetadata.name()), String.class)
                         .orElse(null);
 
                 final ExtensionFactory<?> extensionFactory;

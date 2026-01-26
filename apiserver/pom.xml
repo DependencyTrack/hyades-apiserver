@@ -11,6 +11,8 @@
 
     <artifactId>apiserver</artifactId>
     <packaging>war</packaging>
+
+    <name>API Server</name>
     <description>The Dependency-Track API Server</description>
 
     <properties>
@@ -21,7 +23,7 @@
         <lib.cloud-sql-postgres-socket-factory.version>1.27.1</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.28.0</lib.commons-compress.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
-        <lib.cyclonedx-java.version>11.0.1</lib.cyclonedx-java.version>
+        <lib.cyclonedx-java.version>12.0.1</lib.cyclonedx-java.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
         <lib.swagger-parser.version>2.1.37</lib.swagger-parser.version>
@@ -145,6 +147,11 @@
             <version>${project.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>vuln-data-source-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>vuln-data-source-github</artifactId>

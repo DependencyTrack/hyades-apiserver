@@ -28,23 +28,20 @@
 
     <modules>
         <module>common</module>
+        <module>support/cyclonedx-proto</module>
         <module>support/datanucleus-plugin</module>
         <module>support/liquibase</module>
         <module>support/smallrye-config-source-memory</module>
         <module>api</module>
         <module>alpine</module>
         <module>dex</module>
+        <module>plugin</module>
         <module>proto</module>
         <module>notification</module>
-        <module>plugin/api</module>
-        <module>plugin/runtime</module>
-        <module>plugin/testing</module>
-        <module>plugin/vuln-data-source-github</module>
-        <module>plugin/vuln-data-source-nvd</module>
-        <module>plugin/vuln-data-source-osv</module>
         <module>file-storage</module>
         <module>migration</module>
         <module>secret-management</module>
+        <module>vuln-data-source</module>
         <module>apiserver</module>
         <module>coverage-report</module>
     </modules>
@@ -117,7 +114,7 @@
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
-        <lib.flyway.version>11.20.0</lib.flyway.version>
+        <lib.flyway.version>11.20.1</lib.flyway.version>
         <lib.eclipse-angus.version>2.0.5</lib.eclipse-angus.version>
         <lib.greenmail.version>2.1.8</lib.greenmail.version>
         <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
@@ -131,7 +128,7 @@
         <lib.json-schema-validator.version>1.5.9</lib.json-schema-validator.version>
         <lib.json-unit.version>5.1.0</lib.json-unit.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
-        <lib.junit-jupiter.version>6.0.1</lib.junit-jupiter.version>
+        <lib.junit-jupiter.version>6.0.2</lib.junit-jupiter.version>
         <lib.kafka-clients.version>4.1.1</lib.kafka-clients.version>
         <lib.kotlin.version>2.3.0</lib.kotlin.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
@@ -145,11 +142,11 @@
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.pebble.version>4.1.0</lib.pebble.version>
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
-        <lib.protobuf-java.version>4.33.2</lib.protobuf-java.version>
+        <lib.protobuf-java.version>4.33.4</lib.protobuf-java.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
         <lib.smallrye-config.version>3.15.0</lib.smallrye-config.version>
-        <lib.swagger.version>2.2.41</lib.swagger.version>
+        <lib.swagger.version>2.2.42</lib.swagger.version>
         <lib.system-stubs.version>2.1.8</lib.system-stubs.version>
         <lib.testcontainers.version>2.0.3</lib.testcontainers.version>
         <lib.tink.version>1.20.0</lib.tink.version>
@@ -608,6 +605,22 @@
                 </plugin>
 
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <version>3.3.1</version>
+                    <configuration>
+                        <tagNameFormat>@{project.version}</tagNameFormat>
+                        <autoVersionSubmodules>true</autoVersionSubmodules>
+                        <pushChanges>true</pushChanges>
+                        <localCheckout>true</localCheckout>
+                        <releaseProfiles>quick</releaseProfiles>
+                        <preparationGoals>clean verify -Pquick</preparationGoals>
+                        <completionGoals>clean</completionGoals>
+                        <signTag>false</signTag>
+                    </configuration>
+                </plugin>
+
+                <plugin>
                     <groupId>io.github.ascopes</groupId>
                     <artifactId>protobuf-maven-plugin</artifactId>
                     <version>4.1.2</version>
@@ -655,7 +668,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>12.3.0</version>
+                        <version>13.0.0</version>
                     </dependency>
                 </dependencies>
             </plugin>

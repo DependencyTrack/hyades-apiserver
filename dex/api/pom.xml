@@ -30,19 +30,13 @@
     <artifactId>dex-api</artifactId>
     <packaging>jar</packaging>
 
-    <name>Durable Execution API</name>
+    <name>Durable Execution :: API</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>dex-proto</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
@@ -74,5 +68,14 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.github.ascopes</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

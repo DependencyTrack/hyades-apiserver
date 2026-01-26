@@ -45,6 +45,5 @@ module org.dependencytrack.dex.engine {
     requires transitive org.dependencytrack.dex.api;
     requires transitive org.dependencytrack.dex.engine.api;
     requires transitive org.dependencytrack.dex.engine.migration;
-    requires transitive org.dependencytrack.dex.proto;
     requires transitive org.jspecify;
 }
