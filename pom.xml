@@ -363,6 +363,17 @@
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-clients</artifactId>
                 <version>${lib.kafka-clients.version}</version>
+                <exclusions>
+                    <!--
+                        The lz4-java project is archived and has vulnerabilities.
+                        Kafka needs to move to https://github.com/yawkat/lz4-java to resolve them.
+                        Since we don't use lz4, we can safely exclude it until then.
+                    -->
+                    <exclusion>
+                        <groupId>org.lz4</groupId>
+                        <artifactId>lz4-java</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>
