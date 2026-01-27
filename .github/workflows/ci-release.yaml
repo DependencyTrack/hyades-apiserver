@@ -23,7 +23,7 @@ on:
         required: false
         default: ''
         description: >-
-          Release version (e.g. 5.7.0 or 5.7.0-RC1).
+          Release version (e.g. 5.7.0 or 5.7.0-rc.1).
           Leave empty to let Maven compute it from the current SNAPSHOT version.
         type: string
       development-version:
@@ -31,7 +31,7 @@ on:
         default: ''
         description: >-
           Next development version (e.g. 5.8.0-SNAPSHOT).
-          Leave empty for automatic increment (e.g. 5.7.1-SNAPSHOT or 5.7.0-RC2-SNAPSHOT).
+          Leave empty for automatic increment (e.g. 5.7.1-SNAPSHOT or 5.7.0-rc.2-SNAPSHOT).
         type: string
       dry-run:
         required: false

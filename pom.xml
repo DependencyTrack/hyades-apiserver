@@ -78,9 +78,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git@github.com:DependencyTrack/hyades-apiserver.git</connection>
-        <url>https://github.com/DependencyTrack/hyades-apiserver.git</url>
-        <developerConnection>scm:git:git@github.com:DependencyTrack/hyades-apiserver.git</developerConnection>
+        <connection>${scm.connection}</connection>
+        <developerConnection>${scm.developer.connection}</developerConnection>
+        <url>${scm.url}</url>
         <tag>HEAD</tag>
     </scm>
 
@@ -158,6 +158,11 @@
 
         <!-- Log level to use for unit tests -->
         <unitTestLogLevel>WARN</unitTestLogLevel>
+
+        <!-- Default SCM Properties -->
+        <scm.connection>scm:git:git@github.com:DependencyTrack/hyades-apiserver.git</scm.connection>
+        <scm.developer.connection>scm:git:git@github.com:DependencyTrack/hyades-apiserver.git</scm.developer.connection>
+        <scm.url>https://github.com/DependencyTrack/hyades-apiserver.git</scm.url>
     </properties>
 
     <dependencyManagement>
@@ -712,6 +717,9 @@
             </activation>
             <properties>
                 <unitTestLogLevel>OFF</unitTestLogLevel>
+                <scm.connection>scm:git:https://github.com/${env.GITHUB_REPOSITORY}.git</scm.connection>
+                <scm.developer.connection>scm:git:https://github.com/${env.GITHUB_REPOSITORY}.git</scm.developer.connection>
+                <scm.url>https://github.com/${env.GITHUB_REPOSITORY}.git</scm.url>
             </properties>
         </profile>
     </profiles>

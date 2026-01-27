@@ -18,13 +18,13 @@ To release a new stable version such as `5.7.0` or `5.7.1`:
 
 ### Release Candidate
 
-To release a prerelease such as `5.7.0-RC1`:
+To release a prerelease such as `5.7.0-rc.1`:
 
 1. Ensure the current state in the target branch is ready to be released.
 2. Navigate to the [Release CI] workflow.
 3. Run the workflow with the following parameters:
    * **Branch**: Select the branch (usually `main`).
-   * **Release version**: Enter the prerelease version (e.g. `5.7.0-RC1`).
-   * **Development version**: Leave empty (in which case it will be bumped to `5.7.0-RC2-SNAPSHOT`), or explicitly set to `5.7.0-SNAPSHOT`.
+   * **Release version**: Enter the prerelease version (e.g. `5.7.0-rc.1`).
+   * **Development version**: Leave empty (in which case it will be bumped to `5.7.0-rc.2-SNAPSHOT`), or explicitly set to `5.7.0-SNAPSHOT`.
 
 [Release CI]: https://github.com/DependencyTrack/hyades-apiserver/actions/workflows/ci-release.yaml
