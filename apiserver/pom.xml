@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>dependency-track-parent</artifactId>
-        <version>5.7.0-SNAPSHOT</version>
+        <version>5.7.0-alpha.0</version>
     </parent>
 
     <artifactId>apiserver</artifactId>
@@ -703,8 +701,7 @@
                         <phase>prepare-package</phase>
                         <configuration>
                             <target>
-                                <copy file="${project.build.directory}/bom.json"
-                                      tofile="${project.build.directory}/${project.build.finalName}/.well-known/sbom"/>
+                                <copy file="${project.build.directory}/bom.json" tofile="${project.build.directory}/${project.build.finalName}/.well-known/sbom" />
                             </target>
                             <skip>${cyclonedx.skip}</skip>
                         </configuration>
@@ -718,8 +715,7 @@
                         <phase>package</phase>
                         <configuration>
                             <target>
-                                <copy file="${project.build.directory}/${project.build.finalName}.war"
-                                      tofile="${project.build.directory}/${project.build.finalName}.jar" />
+                                <copy file="${project.build.directory}/${project.build.finalName}.war" tofile="${project.build.directory}/${project.build.finalName}.jar" />
                             </target>
                             <skip>${maven.war.skip}</skip>
                         </configuration>
