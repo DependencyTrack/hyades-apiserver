@@ -276,6 +276,7 @@ public class CelPolicyEngine {
      */
     private List<Pair<PolicyCondition, CelPolicyScript>> getApplicableConditionScriptPairs(final CelPolicyQueryManager celQm, final Project project) {
         final List<Policy> policies = celQm.getApplicablePolicies(project);
+        // Add GEM policies to the list here?
         if (policies.isEmpty()) {
             return emptyList();
         }
@@ -505,6 +506,7 @@ public class CelPolicyEngine {
         final Severity severity = VulnerabilityUtil.getSeverity(projection.severity,
                 projection.cvssV2BaseScore,
                 projection.cvssV3BaseScore,
+                projection.cvssV4BaseScore,
                 projection.owaspRrLikelihoodScore,
                 projection.owaspRrTechnicalImpactScore,
                 projection.owaspRrBusinessImpactScore);

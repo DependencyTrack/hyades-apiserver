@@ -133,6 +133,16 @@ public class Analysis implements Serializable {
     private BigDecimal cvssV3Score;
 
     @Persistent
+    @Column(name = "CVSSV4VECTOR")
+    @JsonProperty(value = "cvssV4Vector")
+    private String cvssV4Vector;
+
+    @Persistent
+    @Column(name = "CVSSV4SCORE")
+    @JsonProperty(value = "cvssV4Score")
+    private BigDecimal cvssV4Score;
+
+    @Persistent
     @Column(name = "OWASPVECTOR")
     @JsonProperty(value = "owaspVector")
     private String owaspVector;
@@ -262,6 +272,22 @@ public class Analysis implements Serializable {
 
     public void setCvssV3Score(BigDecimal cvssV3Score) {
         this.cvssV3Score = cvssV3Score;
+    }
+
+    public String getCvssV4Vector() {
+        return cvssV4Vector;
+    }
+
+    public void setCvssV4Vector(String cvssV4Vector) {
+        this.cvssV4Vector = cvssV4Vector;
+    }
+
+    public BigDecimal getCvssV4Score() {
+        return cvssV4Score;
+    }
+
+    public void setCvssV4Score(BigDecimal cvssV4Score) {
+        this.cvssV4Score = cvssV4Score;
     }
 
     public String getOwaspVector() {

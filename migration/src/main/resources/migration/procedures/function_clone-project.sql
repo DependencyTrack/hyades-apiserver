@@ -372,6 +372,8 @@ BEGIN
           , "OWASPVECTOR"
           , "CVSSV3VECTOR"
           , "SEVERITY"
+          , "CVSSV4SCORE"
+          , "CVSSV4VECTOR"
           )
           SELECT tmp_component_mapping.target_id
                , target_project.id
@@ -389,6 +391,8 @@ BEGIN
                , "OWASPVECTOR"
                , "CVSSV3VECTOR"
                , "SEVERITY"
+               , "CVSSV4SCORE"
+               , "CVSSV4VECTOR"
             FROM source_analysis
            INNER JOIN tmp_component_mapping
               ON tmp_component_mapping.source_id = "COMPONENT_ID"
