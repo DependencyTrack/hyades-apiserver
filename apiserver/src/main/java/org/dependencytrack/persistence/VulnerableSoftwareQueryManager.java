@@ -65,9 +65,13 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
      * @return a VulnerableSoftware object, or null if not found
      */
     @Override
-    public VulnerableSoftware getVulnerableSoftwareByCpe23(String cpe23,
-                                                           String versionEndExcluding, String versionEndIncluding,
-                                                           String versionStartExcluding, String versionStartIncluding) {
+    public VulnerableSoftware getVulnerableSoftwareByCpe23(
+            String cpe23,
+            String version,
+            String versionEndExcluding,
+            String versionEndIncluding,
+            String versionStartExcluding,
+            String versionStartIncluding) {
         final Query<VulnerableSoftware> query = pm.newQuery(VulnerableSoftware.class);
         var filter = "cpe23 == :cpe23";
         final var parameters = new HashMap<String, Object>();
@@ -77,6 +81,12 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
         // cache. This method is called very frequently during NVD mirroring,
         // we should avoid the overhead of repeated re-compilation if possible.
         // See also: https://github.com/DependencyTrack/dependency-track/issues/2540
+        if (version != null) {
+            filter += " && version == :version";
+            parameters.put("version", version);
+        } else {
+            filter += " && version == null";
+        }
         if (versionEndExcluding != null) {
             filter += " && versionEndExcluding == :vee";
             parameters.put("vee", versionEndExcluding);
@@ -288,6 +298,7 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
                 if (vs.getCpe23() != null) {
                     existingVs = getVulnerableSoftwareByCpe23(
                             vs.getCpe23(),
+                            vs.getVersion(),
                             vs.getVersionEndExcluding(),
                             vs.getVersionEndIncluding(),
                             vs.getVersionStartExcluding(),

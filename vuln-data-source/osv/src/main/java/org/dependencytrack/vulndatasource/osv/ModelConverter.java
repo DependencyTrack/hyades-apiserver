@@ -87,7 +87,7 @@ import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_UNKNOWN;
 final class ModelConverter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ModelConverter.class);
-    private static final Pattern WILDCARD_VERS_PATTERN = Pattern.compile("^vers:\\w+/\\*$");
+    private static final Pattern WILDCARD_VERS_PATTERN = Pattern.compile("^vers:\\w+/(\\*|>=0(\\.0)*)$");
     private static final String TITLE_PROPERTY_NAME = "dependency-track:vuln:title";
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
