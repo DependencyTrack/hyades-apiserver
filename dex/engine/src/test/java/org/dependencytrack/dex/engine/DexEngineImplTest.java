@@ -34,15 +34,14 @@ import org.dependencytrack.dex.api.failure.ChildWorkflowFailureException;
 import org.dependencytrack.dex.api.failure.FailureException;
 import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.dex.api.payload.PayloadConverter;
-import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.ExternalEvent;
 import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.api.TaskQueueStatus;
-import org.dependencytrack.dex.engine.api.TaskQueueType;
+import org.dependencytrack.dex.engine.api.TaskType;
+import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
-import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEventListener;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
@@ -117,8 +116,8 @@ class DexEngineImplTest {
         config.taskEventBuffer().setFlushInterval(Duration.ofMillis(10));
 
         engine = new DexEngineImpl(config);
-        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, WORKFLOW_TASK_QUEUE, 10));
-        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, ACTIVITY_TASK_QUEUE, 10));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.WORKFLOW, WORKFLOW_TASK_QUEUE, 10));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, ACTIVITY_TASK_QUEUE, 10));
     }
 
     @AfterEach
@@ -255,7 +254,7 @@ class DexEngineImplTest {
         registerActivity("abc", (ctx, arg) -> null);
         registerActivity("def", (ctx, arg) -> null);
         registerWorkflowWorker("workflow-worker", 1);
-        registerActivityWorker("activity-worker", 1);
+        registerTaskWorker("activity-worker", 1);
 
         engine.start();
 
@@ -848,7 +847,7 @@ class DexEngineImplTest {
         });
         registerActivity("abc", voidConverter(), stringConverter(), (ctx, arg) -> "123");
         registerWorkflowWorker("workflow-worker", 1);
-        registerActivityWorker("activity-worker", 1);
+        registerTaskWorker("activity-worker", 1);
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -880,7 +879,7 @@ class DexEngineImplTest {
         });
         registerActivity("abc", stringConverter(), stringConverter(), (ctx, arg) -> arg);
         registerWorkflowWorker("workflow-worker", 1);
-        registerActivityWorker("activity-worker", 2);
+        registerTaskWorker("activity-worker", 2);
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -915,7 +914,7 @@ class DexEngineImplTest {
             throw new IllegalStateException();
         });
         registerWorkflowWorker("workflow-worker", 1);
-        registerActivityWorker("activity-worker", 1);
+        registerTaskWorker("activity-worker", 1);
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -947,7 +946,7 @@ class DexEngineImplTest {
             throw new TerminalApplicationFailureException("Ouch!", null);
         });
         registerWorkflowWorker("workflow-worker", 1);
-        registerActivityWorker("activity-worker", 1);
+        registerTaskWorker("activity-worker", 1);
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -987,7 +986,7 @@ class DexEngineImplTest {
             return null;
         });
         registerWorkflowWorker("workflow-worker", 1);
-        registerActivityWorker("activity-worker", 1);
+        registerTaskWorker("activity-worker", 1);
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -1018,7 +1017,7 @@ class DexEngineImplTest {
             }
         });
         registerWorkflowWorker("workflow-worker", 1);
-        registerActivityWorker("activity-worker", 1);
+        registerTaskWorker("activity-worker", 1);
         engine.start();
 
         engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -1058,7 +1057,7 @@ class DexEngineImplTest {
             throw new TerminalApplicationFailureException("Ouch!", null);
         });
         registerWorkflowWorker("workflow-worker", 3);
-        registerActivityWorker("activity-worker", 1);
+        registerTaskWorker("activity-worker", 1);
         engine.start();
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1)
@@ -1342,29 +1341,29 @@ class DexEngineImplTest {
         @Test
         void createShouldReturnTrueWhenCreatedAndFalseWhenNot() {
             boolean created = engine.createTaskQueue(
-                    new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "foo", 1));
+                    new CreateTaskQueueRequest(TaskType.WORKFLOW, "foo", 1));
             assertThat(created).isTrue();
 
             created = engine.createTaskQueue(
-                    new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "foo", 2));
+                    new CreateTaskQueueRequest(TaskType.WORKFLOW, "foo", 2));
             assertThat(created).isFalse();
         }
 
         @Test
         void updateShouldReturnTrueWhenUpdated() {
-            engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "foo", 1));
+            engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.WORKFLOW, "foo", 1));
 
             final boolean updated = engine.updateTaskQueue(
-                    new UpdateTaskQueueRequest(TaskQueueType.WORKFLOW, "foo", TaskQueueStatus.PAUSED, null));
+                    new UpdateTaskQueueRequest(TaskType.WORKFLOW, "foo", TaskQueueStatus.PAUSED, null));
             assertThat(updated).isTrue();
         }
 
         @Test
         void updateShouldReturnFalseWhenUnchanged() {
-            engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "foo", 1));
+            engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.WORKFLOW, "foo", 1));
 
             final boolean updated = engine.updateTaskQueue(
-                    new UpdateTaskQueueRequest(TaskQueueType.WORKFLOW, "foo", null, null));
+                    new UpdateTaskQueueRequest(TaskType.WORKFLOW, "foo", null, null));
             assertThat(updated).isFalse();
         }
 
@@ -1372,16 +1371,16 @@ class DexEngineImplTest {
         void updateShouldThrowWhenQueueDoesNotExist() {
             assertThatExceptionOfType(NoSuchElementException.class)
                     .isThrownBy(() -> engine.updateTaskQueue(
-                            new UpdateTaskQueueRequest(TaskQueueType.WORKFLOW, "does-not-exist", null, null)));
+                            new UpdateTaskQueueRequest(TaskType.WORKFLOW, "does-not-exist", null, null)));
         }
 
         @Test
         void listShouldSupportPagination() {
-            engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "foo-1", 1));
-            engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "foo-2", 2));
+            engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.WORKFLOW, "foo-1", 1));
+            engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.WORKFLOW, "foo-2", 2));
 
             Page<@NonNull TaskQueue> queuesPage = engine.listTaskQueues(
-                    new ListTaskQueuesRequest(TaskQueueType.WORKFLOW).withLimit(2));
+                    new ListTaskQueuesRequest(TaskType.WORKFLOW).withLimit(2));
             assertThat(queuesPage.items()).satisfiesExactly(
                     queue -> {
                         assertThat(queue.name()).isEqualTo("default");
@@ -1402,7 +1401,7 @@ class DexEngineImplTest {
             assertThat(queuesPage.nextPageToken()).isNotNull();
 
             queuesPage = engine.listTaskQueues(
-                    new ListTaskQueuesRequest(TaskQueueType.WORKFLOW).withPageToken(queuesPage.nextPageToken()));
+                    new ListTaskQueuesRequest(TaskType.WORKFLOW).withPageToken(queuesPage.nextPageToken()));
             assertThat(queuesPage.items()).satisfiesExactly(queue -> {
                 assertThat(queue.name()).isEqualTo("foo-2");
                 assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
@@ -1422,29 +1421,29 @@ class DexEngineImplTest {
         @Test
         void createShouldReturnTrueWhenCreatedAndFalseWhenNot() {
             boolean created = engine.createTaskQueue(
-                    new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "foo", 1));
+                    new CreateTaskQueueRequest(TaskType.ACTIVITY, "foo", 1));
             assertThat(created).isTrue();
 
             created = engine.createTaskQueue(
-                    new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "foo", 2));
+                    new CreateTaskQueueRequest(TaskType.ACTIVITY, "foo", 2));
             assertThat(created).isFalse();
         }
 
         @Test
         void updateShouldReturnTrueWhenUpdated() {
-            engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "foo", 1));
+            engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "foo", 1));
 
             final boolean updated = engine.updateTaskQueue(
-                    new UpdateTaskQueueRequest(TaskQueueType.ACTIVITY, "foo", TaskQueueStatus.PAUSED, null));
+                    new UpdateTaskQueueRequest(TaskType.ACTIVITY, "foo", TaskQueueStatus.PAUSED, null));
             assertThat(updated).isTrue();
         }
 
         @Test
         void updateShouldReturnFalseWhenUnchanged() {
-            engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "foo", 1));
+            engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "foo", 1));
 
             final boolean updated = engine.updateTaskQueue(
-                    new UpdateTaskQueueRequest(TaskQueueType.ACTIVITY, "foo", null, null));
+                    new UpdateTaskQueueRequest(TaskType.ACTIVITY, "foo", null, null));
             assertThat(updated).isFalse();
         }
 
@@ -1452,16 +1451,16 @@ class DexEngineImplTest {
         void updateShouldThrowWhenQueueDoesNotExist() {
             assertThatExceptionOfType(NoSuchElementException.class)
                     .isThrownBy(() -> engine.updateTaskQueue(
-                            new UpdateTaskQueueRequest(TaskQueueType.ACTIVITY, "does-not-exist", null, null)));
+                            new UpdateTaskQueueRequest(TaskType.ACTIVITY, "does-not-exist", null, null)));
         }
 
         @Test
         void listShouldSupportPagination() {
-            engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "foo-1", 1));
-            engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "foo-2", 2));
+            engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "foo-1", 1));
+            engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "foo-2", 2));
 
             Page<@NonNull TaskQueue> queuesPage = engine.listTaskQueues(
-                    new ListTaskQueuesRequest(TaskQueueType.ACTIVITY).withLimit(2));
+                    new ListTaskQueuesRequest(TaskType.ACTIVITY).withLimit(2));
             assertThat(queuesPage.items()).satisfiesExactly(
                     queue -> {
                         assertThat(queue.name()).isEqualTo("default");
@@ -1482,7 +1481,7 @@ class DexEngineImplTest {
             assertThat(queuesPage.nextPageToken()).isNotNull();
 
             queuesPage = engine.listTaskQueues(
-                    new ListTaskQueuesRequest(TaskQueueType.ACTIVITY).withPageToken(queuesPage.nextPageToken()));
+                    new ListTaskQueuesRequest(TaskType.ACTIVITY).withPageToken(queuesPage.nextPageToken()));
             assertThat(queuesPage.items()).satisfiesExactly(queue -> {
                 assertThat(queue.name()).isEqualTo("foo-2");
                 assertThat(queue.status()).isEqualTo(TaskQueueStatus.ACTIVE);
@@ -1579,15 +1578,15 @@ class DexEngineImplTest {
     }
 
     private void registerWorkflowWorker(final String name, final int maxConcurrency) {
-        engine.registerWorkflowWorker(
-                new WorkflowTaskWorkerOptions(name, WORKFLOW_TASK_QUEUE, maxConcurrency)
+        engine.registerTaskWorker(
+                new TaskWorkerOptions(TaskType.WORKFLOW, name, WORKFLOW_TASK_QUEUE, maxConcurrency)
                         .withMinPollInterval(Duration.ofMillis(10))
                         .withPollBackoffFunction(IntervalFunction.of(10)));
     }
 
-    private void registerActivityWorker(final String name, final int maxConcurrency) {
-        engine.registerActivityWorker(
-                new ActivityTaskWorkerOptions(name, ACTIVITY_TASK_QUEUE, maxConcurrency)
+    private void registerTaskWorker(final String name, final int maxConcurrency) {
+        engine.registerTaskWorker(
+                new TaskWorkerOptions(TaskType.ACTIVITY, name, ACTIVITY_TASK_QUEUE, maxConcurrency)
                         .withMinPollInterval(Duration.ofMillis(10))
                         .withPollBackoffFunction(IntervalFunction.of(10)));
     }

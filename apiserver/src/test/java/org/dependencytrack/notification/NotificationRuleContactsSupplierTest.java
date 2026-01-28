@@ -40,7 +40,7 @@ class NotificationRuleContactsSupplierTest extends PersistenceCapableTest {
         final NotificationPublisher publisher = qm.createNotificationPublisher(
                 "test",
                 "description",
-                "publisherClass",
+                "extensionName",
                 "templateContent",
                 "templateMimeType",
                 false);
@@ -54,7 +54,7 @@ class NotificationRuleContactsSupplierTest extends PersistenceCapableTest {
 
     @Test
     void shouldReturnEmptySetWhenRuleHasNoTeams() {
-        final var supplier = new NotificationRuleContactsSupplier(rule.getId());
+        final var supplier = new NotificationRuleContactsSupplier(rule.getName());
 
         assertThat(supplier.get()).isEmpty();
     }
@@ -67,7 +67,7 @@ class NotificationRuleContactsSupplierTest extends PersistenceCapableTest {
 
         rule.setTeams(Set.of(team));
 
-        final var supplier = new NotificationRuleContactsSupplier(rule.getId());
+        final var supplier = new NotificationRuleContactsSupplier(rule.getName());
 
         assertThat(supplier.get()).isEmpty();
     }
@@ -86,7 +86,7 @@ class NotificationRuleContactsSupplierTest extends PersistenceCapableTest {
 
         rule.setTeams(Set.of(team));
 
-        final var supplier = new NotificationRuleContactsSupplier(rule.getId());
+        final var supplier = new NotificationRuleContactsSupplier(rule.getName());
 
         assertThat(supplier.get()).satisfiesExactly(contact -> {
             assertThat(contact.username()).isEqualTo("test");

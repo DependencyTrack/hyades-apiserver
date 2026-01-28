@@ -33,6 +33,7 @@ import org.dependencytrack.notification.proto.v1.Scope;
 import org.jdbi.v3.core.Handle;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -47,316 +48,308 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.dependencytrack.notification.NotificationModelConverter.convert;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
-public class NotificationRouterTest extends PersistenceCapableTest {
+class NotificationRouterTest extends PersistenceCapableTest {
 
     private Handle jdbiHandle;
     private NotificationRouter router;
 
     @BeforeEach
-    @Override
-    public void before() throws Exception {
-        super.before();
-
+    void beforeEach() {
         jdbiHandle = openJdbiHandle();
         router = new NotificationRouter(jdbiHandle, new SimpleMeterRegistry());
     }
 
     @AfterEach
-    @Override
-    public void after() {
+    void afterEach() {
         if (jdbiHandle != null) {
             jdbiHandle.close();
         }
-
-        super.after();
     }
 
-    @Test
-    public void constructorShouldThrowWhenJdbiHandleIsNull() {
-        assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new NotificationRouter(null, new SimpleMeterRegistry()))
-                .withMessage("jdbiHandle must not be null");
+    @Nested
+    class ConstructorTest {
+
+        @Test
+        void constructorShouldThrowWhenJdbiHandleIsNull() {
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> new NotificationRouter(null, new SimpleMeterRegistry()))
+                    .withMessage("jdbiHandle must not be null");
+        }
+
+        @Test
+        void constructorShouldThrowWhenMeterRegistryIsNull() {
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> new NotificationRouter(jdbiHandle, null))
+                    .withMessage("meterRegistry must not be null");
+        }
+
     }
 
-    @Test
-    public void constructorShouldThrowWhenMeterRegistryIsNull() {
-        assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new NotificationRouter(jdbiHandle, null))
-                .withMessage("meterRegistry must not be null");
-    }
+    @Nested
+    class RouteTest {
 
-    @Test
-    public void routeShouldThrowWhenNotificationsIsNull() {
-        assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> router.route(null))
-                .withMessage("notifications must not be null");
-    }
+        @Test
+        void routeShouldThrowWhenNotificationsIsNull() {
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> router.route(null))
+                    .withMessage("notifications must not be null");
+        }
 
-    @Test
-    public void routeShouldReturnEmptyListWhenNotificationsIsEmpty() {
-        assertThat(router.route(Collections.emptyList())).isEmpty();
-    }
+        @Test
+        void routeShouldReturnEmptyListWhenNotificationsIsEmpty() {
+            assertThat(router.route(Collections.emptyList())).isEmpty();
+        }
 
-    @Test
-    public void routeShouldMatchEnabledRules() {
-        // Create a rule that is enabled.
-        final var enabledRule = new NotificationRule();
-        enabledRule.setName("A");
-        enabledRule.setScope(NotificationScope.PORTFOLIO);
-        enabledRule.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
-        enabledRule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
-        enabledRule.setEnabled(true);
-        qm.persist(enabledRule);
+        @Test
+        void routeShouldMatchEnabledRules() {
+            // Create a rule that is enabled.
+            final var enabledRule = new NotificationRule();
+            enabledRule.setName("A");
+            enabledRule.setScope(NotificationScope.PORTFOLIO);
+            enabledRule.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            enabledRule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            enabledRule.setEnabled(true);
+            qm.persist(enabledRule);
 
-        // Create a rule that disabled.
-        final var disabledRule = new NotificationRule();
-        disabledRule.setName("B");
-        disabledRule.setScope(NotificationScope.PORTFOLIO);
-        disabledRule.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
-        disabledRule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
-        disabledRule.setEnabled(false);
-        qm.persist(disabledRule);
+            // Create a rule that disabled.
+            final var disabledRule = new NotificationRule();
+            disabledRule.setName("B");
+            disabledRule.setScope(NotificationScope.PORTFOLIO);
+            disabledRule.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            disabledRule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            disabledRule.setEnabled(false);
+            qm.persist(disabledRule);
 
-        final Notification notification = org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification();
+            final Notification notification = TestNotificationFactory.createBomConsumedTestNotification();
 
-        // Only the enabled rule should have matched.
-        assertThat(router.route(List.of(notification))).satisfiesExactly(task -> {
-            assertThat(task.ruleId()).isEqualTo(enabledRule.getId());
-            assertThat(task.ruleName()).isEqualTo(enabledRule.getName());
-            assertThat(task.notification()).isEqualTo(notification);
-        });
-    }
+            // Only the enabled rule should have matched.
+            assertThat(router.route(List.of(notification))).satisfiesExactly(result -> {
+                assertThat(result.ruleNames()).containsOnly(enabledRule.getName());
+                assertThat(result.notification()).isEqualTo(notification);
+            });
+        }
 
-    @Test
-    public void routeShouldMatchRulesWithMatchingProject() throws Exception {
-        final var projectA = new Project();
-        projectA.setName("acme-app-a");
-        qm.persist(projectA);
+        @Test
+        void routeShouldMatchRulesWithMatchingProject() throws Exception {
+            final var projectA = new Project();
+            projectA.setName("acme-app-a");
+            qm.persist(projectA);
 
-        final var projectB = new Project();
-        projectB.setName("acme-app-b");
-        qm.persist(projectB);
+            final var projectB = new Project();
+            projectB.setName("acme-app-b");
+            qm.persist(projectB);
 
-        // Create a rule that is limited to project A.
-        final var ruleProjectA = new NotificationRule();
-        ruleProjectA.setName("A");
-        ruleProjectA.setScope(NotificationScope.PORTFOLIO);
-        ruleProjectA.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
-        ruleProjectA.setNotificationLevel(NotificationLevel.INFORMATIONAL);
-        ruleProjectA.setEnabled(true);
-        ruleProjectA.setProjects(List.of(projectA));
-        qm.persist(ruleProjectA);
+            // Create a rule that is limited to project A.
+            final var ruleProjectA = new NotificationRule();
+            ruleProjectA.setName("A");
+            ruleProjectA.setScope(NotificationScope.PORTFOLIO);
+            ruleProjectA.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            ruleProjectA.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            ruleProjectA.setEnabled(true);
+            ruleProjectA.setProjects(List.of(projectA));
+            qm.persist(ruleProjectA);
 
-        // Create a rule that is limited to project B.
-        final var ruleProjectB = new NotificationRule();
-        ruleProjectB.setName("B");
-        ruleProjectB.setScope(NotificationScope.PORTFOLIO);
-        ruleProjectB.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
-        ruleProjectB.setNotificationLevel(NotificationLevel.INFORMATIONAL);
-        ruleProjectB.setEnabled(true);
-        ruleProjectB.setProjects(List.of(projectB));
-        qm.persist(ruleProjectB);
+            // Create a rule that is limited to project B.
+            final var ruleProjectB = new NotificationRule();
+            ruleProjectB.setName("B");
+            ruleProjectB.setScope(NotificationScope.PORTFOLIO);
+            ruleProjectB.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            ruleProjectB.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            ruleProjectB.setEnabled(true);
+            ruleProjectB.setProjects(List.of(projectB));
+            qm.persist(ruleProjectB);
 
-        // Create a notification for project A.
-        final Notification.Builder notificationBuilder =
-                org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
-        final BomConsumedOrProcessedSubject.Builder subjectBuilder =
-                notificationBuilder.getSubject().unpack(BomConsumedOrProcessedSubject.class).toBuilder();
-        subjectBuilder.setProject(
-                org.dependencytrack.notification.proto.v1.Project.newBuilder()
-                        .setUuid(projectA.getUuid().toString())
-                        .setName(projectA.getName())
-                        .build());
-        final Notification notification = notificationBuilder
-                .setSubject(Any.pack(subjectBuilder.build()))
-                .build();
+            // Create a notification for project A.
+            final Notification.Builder notificationBuilder =
+                    TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
+            final BomConsumedOrProcessedSubject.Builder subjectBuilder =
+                    notificationBuilder.getSubject().unpack(BomConsumedOrProcessedSubject.class).toBuilder();
+            subjectBuilder.setProject(
+                    org.dependencytrack.notification.proto.v1.Project.newBuilder()
+                            .setUuid(projectA.getUuid().toString())
+                            .setName(projectA.getName())
+                            .build());
+            final Notification notification = notificationBuilder
+                    .setSubject(Any.pack(subjectBuilder.build()))
+                    .build();
 
-        // Only the rule limited to project A must have matched.
-        assertThat(router.route(List.of(notification))).satisfiesExactly(task -> {
-            assertThat(task.ruleId()).isEqualTo(ruleProjectA.getId());
-            assertThat(task.ruleName()).isEqualTo(ruleProjectA.getName());
-            assertThat(task.notification()).isEqualTo(notification);
-        });
-    }
+            // Only the rule limited to project A must have matched.
+            assertThat(router.route(List.of(notification))).satisfiesExactly(result -> {
+                assertThat(result.ruleNames()).containsOnly(ruleProjectA.getName());
+                assertThat(result.notification()).isEqualTo(notification);
+            });
+        }
 
-    @Test
-    public void routeShouldMatchRulesWithMatchingParentProject() throws Exception {
-        final var parentProject = new Project();
-        parentProject.setName("acme-app-parent");
-        qm.persist(parentProject);
+        @Test
+        void routeShouldMatchRulesWithMatchingParentProject() throws Exception {
+            final var parentProject = new Project();
+            parentProject.setName("acme-app-parent");
+            qm.persist(parentProject);
 
-        final var childProject = new Project();
-        childProject.setParent(parentProject);
-        childProject.setName("acme-app-child");
-        qm.persist(childProject);
+            final var childProject = new Project();
+            childProject.setParent(parentProject);
+            childProject.setName("acme-app-child");
+            qm.persist(childProject);
 
-        // Create a rule that is limited to the parent project,
-        // but has the "notify children" feature ENABLED.
-        final var ruleNotifyChildren = new NotificationRule();
-        ruleNotifyChildren.setName("A");
-        ruleNotifyChildren.setScope(NotificationScope.PORTFOLIO);
-        ruleNotifyChildren.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
-        ruleNotifyChildren.setNotificationLevel(NotificationLevel.INFORMATIONAL);
-        ruleNotifyChildren.setEnabled(true);
-        ruleNotifyChildren.setProjects(List.of(parentProject));
-        ruleNotifyChildren.setNotifyChildren(true);
-        qm.persist(ruleNotifyChildren);
+            // Create a rule that is limited to the parent project,
+            // but has the "notify children" feature ENABLED.
+            final var ruleNotifyChildren = new NotificationRule();
+            ruleNotifyChildren.setName("A");
+            ruleNotifyChildren.setScope(NotificationScope.PORTFOLIO);
+            ruleNotifyChildren.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            ruleNotifyChildren.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            ruleNotifyChildren.setEnabled(true);
+            ruleNotifyChildren.setProjects(List.of(parentProject));
+            ruleNotifyChildren.setNotifyChildren(true);
+            qm.persist(ruleNotifyChildren);
 
-        // Create a rule that is limited to the parent project,
-        // but has the "notify children" feature DISABLED.
-        final var ruleDoNotNotifyChildren = new NotificationRule();
-        ruleDoNotNotifyChildren.setName("B");
-        ruleDoNotNotifyChildren.setScope(NotificationScope.PORTFOLIO);
-        ruleDoNotNotifyChildren.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
-        ruleDoNotNotifyChildren.setNotificationLevel(NotificationLevel.INFORMATIONAL);
-        ruleDoNotNotifyChildren.setEnabled(true);
-        ruleDoNotNotifyChildren.setProjects(List.of(parentProject));
-        ruleDoNotNotifyChildren.setNotifyChildren(false);
-        qm.persist(ruleDoNotNotifyChildren);
+            // Create a rule that is limited to the parent project,
+            // but has the "notify children" feature DISABLED.
+            final var ruleDoNotNotifyChildren = new NotificationRule();
+            ruleDoNotNotifyChildren.setName("B");
+            ruleDoNotNotifyChildren.setScope(NotificationScope.PORTFOLIO);
+            ruleDoNotNotifyChildren.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            ruleDoNotNotifyChildren.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            ruleDoNotNotifyChildren.setEnabled(true);
+            ruleDoNotNotifyChildren.setProjects(List.of(parentProject));
+            ruleDoNotNotifyChildren.setNotifyChildren(false);
+            qm.persist(ruleDoNotNotifyChildren);
 
-        // Create a notification for the child project.
-        final Notification.Builder notificationBuilder =
-                org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
-        final BomConsumedOrProcessedSubject.Builder subjectBuilder =
-                notificationBuilder.getSubject().unpack(BomConsumedOrProcessedSubject.class).toBuilder();
-        subjectBuilder.setProject(
-                org.dependencytrack.notification.proto.v1.Project.newBuilder()
-                        .setUuid(childProject.getUuid().toString())
-                        .setName(childProject.getName())
-                        .build());
-        final Notification notification = notificationBuilder
-                .setSubject(Any.pack(subjectBuilder.build()))
-                .build();
+            // Create a notification for the child project.
+            final Notification.Builder notificationBuilder =
+                    TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
+            final BomConsumedOrProcessedSubject.Builder subjectBuilder =
+                    notificationBuilder.getSubject().unpack(BomConsumedOrProcessedSubject.class).toBuilder();
+            subjectBuilder.setProject(
+                    org.dependencytrack.notification.proto.v1.Project.newBuilder()
+                            .setUuid(childProject.getUuid().toString())
+                            .setName(childProject.getName())
+                            .build());
+            final Notification notification = notificationBuilder
+                    .setSubject(Any.pack(subjectBuilder.build()))
+                    .build();
 
-        // Only the rule with "notify children" ENABLED should have matched.
-        assertThat(router.route(List.of(notification))).satisfiesExactly(task -> {
-            assertThat(task.ruleId()).isEqualTo(ruleNotifyChildren.getId());
-            assertThat(task.ruleName()).isEqualTo(ruleNotifyChildren.getName());
-            assertThat(task.notification()).isEqualTo(notification);
-        });
-    }
+            // Only the rule with "notify children" ENABLED should have matched.
+            assertThat(router.route(List.of(notification))).satisfiesExactly(result -> {
+                assertThat(result.ruleNames()).containsOnly(ruleNotifyChildren.getName());
+                assertThat(result.notification()).isEqualTo(notification);
+            });
+        }
 
-    @Test
-    public void routeShouldMatchRulesWithMatchingProjectTags() throws Exception {
-        final var tagA = qm.persist(new Tag("a"));
-        final var tagB = qm.persist(new Tag("b"));
+        @Test
+        void routeShouldMatchRulesWithMatchingProjectTags() throws Exception {
+            final var tagA = qm.persist(new Tag("a"));
+            final var tagB = qm.persist(new Tag("b"));
 
-        // Create a project tagged with tag A.
-        final var project = new Project();
-        project.setName("acme-app");
-        project.setTags(Set.of(tagA));
-        qm.persist(project);
+            // Create a project tagged with tag A.
+            final var project = new Project();
+            project.setName("acme-app");
+            project.setTags(Set.of(tagA));
+            qm.persist(project);
 
-        // Create a rule limited to tag A.
-        final var ruleTagA = new NotificationRule();
-        ruleTagA.setName("A");
-        ruleTagA.setScope(NotificationScope.PORTFOLIO);
-        ruleTagA.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
-        ruleTagA.setNotificationLevel(NotificationLevel.INFORMATIONAL);
-        ruleTagA.setEnabled(true);
-        ruleTagA.setTags(Set.of(tagA));
-        qm.persist(ruleTagA);
+            // Create a rule limited to tag A.
+            final var ruleTagA = new NotificationRule();
+            ruleTagA.setName("A");
+            ruleTagA.setScope(NotificationScope.PORTFOLIO);
+            ruleTagA.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            ruleTagA.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            ruleTagA.setEnabled(true);
+            ruleTagA.setTags(Set.of(tagA));
+            qm.persist(ruleTagA);
 
-        // Create a rule limited to tag B.
-        final var ruleTagB = new NotificationRule();
-        ruleTagB.setName("B");
-        ruleTagB.setScope(NotificationScope.PORTFOLIO);
-        ruleTagB.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
-        ruleTagB.setNotificationLevel(NotificationLevel.INFORMATIONAL);
-        ruleTagB.setEnabled(true);
-        ruleTagB.setTags(Set.of(tagB));
-        qm.persist(ruleTagB);
+            // Create a rule limited to tag B.
+            final var ruleTagB = new NotificationRule();
+            ruleTagB.setName("B");
+            ruleTagB.setScope(NotificationScope.PORTFOLIO);
+            ruleTagB.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            ruleTagB.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            ruleTagB.setEnabled(true);
+            ruleTagB.setTags(Set.of(tagB));
+            qm.persist(ruleTagB);
 
-        // Create a notification for the project tagged with tag A.
-        final Notification.Builder notificationBuilder =
-                org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
-        final BomConsumedOrProcessedSubject.Builder subjectBuilder =
-                notificationBuilder.getSubject().unpack(BomConsumedOrProcessedSubject.class).toBuilder();
-        subjectBuilder.setProject(
-                org.dependencytrack.notification.proto.v1.Project.newBuilder()
-                        .setUuid(project.getUuid().toString())
-                        .setName(project.getName())
-                        .addTags(tagA.getName())
-                        .build());
-        final Notification notification = notificationBuilder
-                .setSubject(Any.pack(subjectBuilder.build()))
-                .build();
+            // Create a notification for the project tagged with tag A.
+            final Notification.Builder notificationBuilder =
+                    TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
+            final BomConsumedOrProcessedSubject.Builder subjectBuilder =
+                    notificationBuilder.getSubject().unpack(BomConsumedOrProcessedSubject.class).toBuilder();
+            subjectBuilder.setProject(
+                    org.dependencytrack.notification.proto.v1.Project.newBuilder()
+                            .setUuid(project.getUuid().toString())
+                            .setName(project.getName())
+                            .addTags(tagA.getName())
+                            .build());
+            final Notification notification = notificationBuilder
+                    .setSubject(Any.pack(subjectBuilder.build()))
+                    .build();
 
-        // Only the rule limited to tag A must have matched.
-        assertThat(router.route(List.of(notification))).satisfiesExactly(task -> {
-            assertThat(task.ruleId()).isEqualTo(ruleTagA.getId());
-            assertThat(task.ruleName()).isEqualTo(ruleTagA.getName());
-            assertThat(task.notification()).isEqualTo(notification);
-        });
-    }
+            // Only the rule limited to tag A must have matched.
+            assertThat(router.route(List.of(notification))).satisfiesExactly(result -> {
+                assertThat(result.ruleNames()).containsOnly(ruleTagA.getName());
+                assertThat(result.notification()).isEqualTo(notification);
+            });
+        }
 
-    @Test
-    public void routeShouldMatchMultipleRules() {
-        final var ruleA = new NotificationRule();
-        ruleA.setName("A");
-        ruleA.setScope(NotificationScope.PORTFOLIO);
-        ruleA.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
-        ruleA.setNotificationLevel(NotificationLevel.INFORMATIONAL);
-        ruleA.setEnabled(true);
-        qm.persist(ruleA);
+        @Test
+        void routeShouldMatchMultipleRules() {
+            final var ruleA = new NotificationRule();
+            ruleA.setName("A");
+            ruleA.setScope(NotificationScope.PORTFOLIO);
+            ruleA.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            ruleA.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            ruleA.setEnabled(true);
+            qm.persist(ruleA);
 
-        final var ruleB = new NotificationRule();
-        ruleB.setName("B");
-        ruleB.setScope(NotificationScope.PORTFOLIO);
-        ruleB.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
-        ruleB.setNotificationLevel(NotificationLevel.INFORMATIONAL);
-        ruleB.setEnabled(true);
-        qm.persist(ruleB);
+            final var ruleB = new NotificationRule();
+            ruleB.setName("B");
+            ruleB.setScope(NotificationScope.PORTFOLIO);
+            ruleB.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            ruleB.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            ruleB.setEnabled(true);
+            qm.persist(ruleB);
 
-        final Notification notification = org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification();
+            final Notification notification = TestNotificationFactory.createBomConsumedTestNotification();
 
-        assertThat(router.route(List.of(notification))).satisfiesExactlyInAnyOrder(
-                task -> {
-                    assertThat(task.ruleId()).isEqualTo(ruleA.getId());
-                    assertThat(task.ruleName()).isEqualTo(ruleA.getName());
-                    assertThat(task.notification()).isEqualTo(notification);
-                },
-                task -> {
-                    assertThat(task.ruleId()).isEqualTo(ruleB.getId());
-                    assertThat(task.ruleName()).isEqualTo(ruleB.getName());
-                    assertThat(task.notification()).isEqualTo(notification);
-                });
-    }
+            assertThat(router.route(List.of(notification))).satisfiesExactlyInAnyOrder(result -> {
+                assertThat(result.ruleNames()).containsOnly(ruleA.getName(), ruleB.getName());
+                assertThat(result.notification()).isEqualTo(notification);
+            });
+        }
 
-    @SuppressWarnings("unused")
-    private static List<Notification> routeShouldHandleAllNotificationTypesParams() {
-        final var notifications = new ArrayList<Notification>();
+        @SuppressWarnings("unused")
+        private static List<Notification> routeShouldHandleAllNotificationTypesParams() {
+            final var notifications = new ArrayList<Notification>();
 
-        for (final var scope : Scope.values()) {
-            for (final var group : Group.values()) {
-                for (final var level : Level.values()) {
-                    final Notification notification = TestNotificationFactory.createTestNotification(scope, group, level);
-                    if (notification != null) {
-                        notifications.add(notification);
+            for (final var scope : Scope.values()) {
+                for (final var group : Group.values()) {
+                    for (final var level : Level.values()) {
+                        final Notification notification = TestNotificationFactory.createTestNotification(scope, group, level);
+                        if (notification != null) {
+                            notifications.add(notification);
+                        }
                     }
                 }
             }
+
+            return notifications;
         }
 
-        return notifications;
-    }
+        @ParameterizedTest
+        @MethodSource("routeShouldHandleAllNotificationTypesParams")
+        void routeShouldHandleAllNotificationTypes(final Notification notification) {
+            final var rule = new NotificationRule();
+            rule.setName("foo");
+            rule.setScope(convert(notification.getScope()));
+            rule.setNotifyOn(Set.of(convert(notification.getGroup())));
+            rule.setNotificationLevel(convert(notification.getLevel()));
+            rule.setEnabled(true);
+            qm.persist(rule);
 
-    @ParameterizedTest
-    @MethodSource("routeShouldHandleAllNotificationTypesParams")
-    public void routeShouldHandleAllNotificationTypes(final Notification notification) {
-        final var rule = new NotificationRule();
-        rule.setName("foo");
-        rule.setScope(convert(notification.getScope()));
-        rule.setNotifyOn(Set.of(convert(notification.getGroup())));
-        rule.setNotificationLevel(convert(notification.getLevel()));
-        rule.setEnabled(true);
-        qm.persist(rule);
+            assertThat(router.route(List.of(notification))).satisfiesExactly(result -> {
+                assertThat(result.ruleNames()).containsOnly(rule.getName());
+                assertThat(result.notification()).isEqualTo(notification);
+            });
+        }
 
-        assertThat(router.route(List.of(notification))).satisfiesExactly(task -> {
-            assertThat(task.ruleId()).isEqualTo(rule.getId());
-            assertThat(task.ruleName()).isEqualTo(rule.getName());
-            assertThat(task.notification()).isEqualTo(notification);
-        });
     }
 
 }

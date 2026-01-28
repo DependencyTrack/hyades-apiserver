@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dependencytrack.org/schemas/http-notification-publisher-rule-config-v1.schema.json",
   "type": "object",
   "javaInterfaces": [
     "org.dependencytrack.plugin.api.config.RuntimeConfig"
@@ -7,7 +8,8 @@
   "properties": {
     "destinationUrl": {
       "type": "string",
-      "description": "Destination URL",
+      "title": "Destination URL",
+      "description": "The URL to send the notification to.",
       "format": "uri",
       "minLength": 1
     }

@@ -83,8 +83,12 @@ public final class RuntimeConfigSpec {
         if (schemaSource != null) {
             schema = schemaSource.getSchema(configClass);
         } else {
-            final String schemaResourcePath = "%s.schema.json".formatted(
-                    configClass.getName().replaceAll("\\.", "/"));
+            final String configClassNameKebab = configClass.getSimpleName()
+                    .replaceAll("([a-z])([A-Z])", "$1-$2")
+                    .toLowerCase();
+
+            final String schemaResourcePath = "%s/%s.schema.json".formatted(
+                    configClass.getPackageName().replaceAll("\\.", "/"), configClassNameKebab);
             schema = new RuntimeConfigSchemaSource.Resource(schemaResourcePath).getSchema(configClass);
         }
 

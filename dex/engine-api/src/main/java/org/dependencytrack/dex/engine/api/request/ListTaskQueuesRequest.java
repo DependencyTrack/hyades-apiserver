@@ -18,12 +18,12 @@
  */
 package org.dependencytrack.dex.engine.api.request;
 
-import org.dependencytrack.dex.engine.api.TaskQueueType;
+import org.dependencytrack.dex.engine.api.TaskType;
 import org.jspecify.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
-public record ListTaskQueuesRequest(TaskQueueType type, @Nullable String pageToken, int limit) {
+public record ListTaskQueuesRequest(TaskType type, @Nullable String pageToken, int limit) {
 
     public ListTaskQueuesRequest {
         requireNonNull(type, "type must not be null");
@@ -32,7 +32,7 @@ public record ListTaskQueuesRequest(TaskQueueType type, @Nullable String pageTok
         }
     }
 
-    public ListTaskQueuesRequest(final TaskQueueType type) {
+    public ListTaskQueuesRequest(final TaskType type) {
         this(type, null, 10);
     }
 

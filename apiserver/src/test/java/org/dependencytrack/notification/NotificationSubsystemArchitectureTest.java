@@ -38,10 +38,10 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
                 DoNotIncludeJars.class,
                 DoNotIncludeTests.class,
         })
-public class NotificationSubsystemArchitectureTest {
+class NotificationSubsystemArchitectureTest {
 
     @ArchTest
-    public static final ArchRule mustOnlyBeCreatedThroughNotificationFactory =
+    static final ArchRule mustOnlyBeCreatedThroughNotificationFactory =
             noClasses()
                     .that().resideOutsideOfPackages(
                             "org.dependencytrack.notification..",
@@ -52,7 +52,7 @@ public class NotificationSubsystemArchitectureTest {
                             This ensures that critical fields such as ID and timestamp are always set.""");
 
     @ArchTest
-    public static final ArchRule mustNotModifyCoreNotificationFieldsOutsideOfNotificationFactory =
+    static final ArchRule mustNotModifyCoreNotificationFieldsOutsideOfNotificationFactory =
             noClasses()
                     .that().areNotAssignableTo(org.dependencytrack.notification.api.NotificationFactory.class)
                     .and().areNotAssignableTo(org.dependencytrack.notification.api.TestNotificationFactory.class)
@@ -65,7 +65,7 @@ public class NotificationSubsystemArchitectureTest {
                             only be set by NotificationFactory. This ensures consistency.""");
 
     @ArchTest
-    public static final ArchRule mustNotUseJdoApi =
+    static final ArchRule mustNotUseJdoApi =
             noClasses()
                     .that().resideInAPackage("org.dependencytrack.notification..")
                     .and().areNotAssignableTo(JdoNotificationEmitter.class)

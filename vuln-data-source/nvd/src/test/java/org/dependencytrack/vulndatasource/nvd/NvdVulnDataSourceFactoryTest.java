@@ -67,7 +67,7 @@ class NvdVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
                             new MockConfigRegistry(
                                     Map.of("allow-local-connections", "true"))));
 
-            final var runtimeConfig = new NvdVulnDataSourceConfig()
+            final var runtimeConfig = new NvdVulnDataSourceConfigV1()
                     .withEnabled(true)
                     .withCveFeedsUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()));
 
@@ -98,7 +98,7 @@ class NvdVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
                             new MockConfigRegistry(
                                     Map.of("allow-local-connections", "true"))));
 
-            final var runtimeConfig = new NvdVulnDataSourceConfig()
+            final var runtimeConfig = new NvdVulnDataSourceConfigV1()
                     .withEnabled(true)
                     .withCveFeedsUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()));
 
@@ -125,7 +125,7 @@ class NvdVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
                             new MockConfigRegistry(
                                     Map.of("allow-local-connections", "false"))));
 
-            final var runtimeConfig = new NvdVulnDataSourceConfig()
+            final var runtimeConfig = new NvdVulnDataSourceConfigV1()
                     .withEnabled(true)
                     .withCveFeedsUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()));
 
@@ -156,7 +156,7 @@ class NvdVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
                             new MockConfigRegistry(
                                     Map.of("allow-local-connections", "true"))));
 
-            final var runtimeConfig = new NvdVulnDataSourceConfig()
+            final var runtimeConfig = new NvdVulnDataSourceConfigV1()
                     .withEnabled(true)
                     .withCveFeedsUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()));
 
@@ -183,7 +183,7 @@ class NvdVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
                             new MockConfigRegistry(
                                     Map.of("allow-local-connections", "true"))));
 
-            final var runtimeConfig = new NvdVulnDataSourceConfig()
+            final var runtimeConfig = new NvdVulnDataSourceConfigV1()
                     .withEnabled(false)
                     .withCveFeedsUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()));
 

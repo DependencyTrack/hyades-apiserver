@@ -32,7 +32,6 @@ import org.dependencytrack.init.InitTaskContext;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.DefaultRepository;
 import org.dependencytrack.model.License;
-import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
@@ -44,7 +43,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -144,7 +142,6 @@ public final class DatabaseSeedingInitTask implements InitTask {
             seedDefaultConfigProperties(handle);
             seedDefaultPermissions(handle);
             seedDefaultLicenses(handle);
-            seedDefaultNotificationPublishers(handle);
             seedDefaultRepositories(handle);
 
             final boolean isFirstExecution = defaultObjectsVersion == null;
@@ -409,54 +406,6 @@ public final class DatabaseSeedingInitTask implements InitTask {
                 .bindArray("groupRiskWeights", Integer.class, groupRiskWeights)
                 .bindArray("licenseIds", String.class, licenseIds)
                 .execute();
-    }
-
-    // TODO:
-    //   * Move to a separate init task or ServletContextListener.
-    //   * Replace DefaultNotificationPublishers enum with dynamic
-    //     discovery of NotificationPublisher extensions.
-    public static void seedDefaultNotificationPublishers(final Handle jdbiHandle) {
-        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
-                INSERT INTO "NOTIFICATIONPUBLISHER" (
-                  "NAME", "PUBLISHER_CLASS", "DEFAULT_PUBLISHER", "DESCRIPTION"
-                , "TEMPLATE", "TEMPLATE_MIME_TYPE", "UUID")
-                VALUES (
-                  :publisherName, :publisherClass, TRUE, :publisherDescription
-                , :templateContent, :templateMimeType, GEN_RANDOM_UUID())
-                ON CONFLICT ("NAME") DO UPDATE
-                SET "PUBLISHER_CLASS" = EXCLUDED."PUBLISHER_CLASS"
-                  , "DESCRIPTION" = EXCLUDED."DESCRIPTION"
-                  , "TEMPLATE" = EXCLUDED."TEMPLATE"
-                  , "TEMPLATE_MIME_TYPE" =  EXCLUDED."TEMPLATE_MIME_TYPE"
-                -- Only update when at least one relevant field has changed.
-                WHERE "NOTIFICATIONPUBLISHER"."PUBLISHER_CLASS" IS DISTINCT FROM EXCLUDED."PUBLISHER_CLASS"
-                   OR "NOTIFICATIONPUBLISHER"."DESCRIPTION" IS DISTINCT FROM EXCLUDED."DESCRIPTION"
-                   OR "NOTIFICATIONPUBLISHER"."TEMPLATE" IS DISTINCT FROM EXCLUDED."TEMPLATE"
-                   OR "NOTIFICATIONPUBLISHER"."TEMPLATE_MIME_TYPE" IS DISTINCT FROM EXCLUDED."TEMPLATE_MIME_TYPE"
-                """);
-
-        for (final DefaultNotificationPublishers publisher : DefaultNotificationPublishers.values()) {
-            final String templateContent;
-            try (final InputStream inputStream =
-                         DatabaseSeedingInitTask.class
-                                 .getResourceAsStream(
-                                         publisher.getPublisherTemplateFile())) {
-                if (inputStream == null) {
-                    throw new IllegalStateException(
-                            "Template file could not be found: " + publisher.getPublisherTemplateFile());
-                }
-                templateContent = new String(inputStream.readAllBytes());
-            } catch (IOException e) {
-                throw new UncheckedIOException("Failed to read template file", e);
-            }
-
-            preparedBatch.bindBean(publisher);
-            preparedBatch.bind("templateContent", templateContent);
-            preparedBatch.add();
-        }
-
-        final int publishersCreatedOrUpdated = Arrays.stream(preparedBatch.execute()).sum();
-        LOGGER.debug("Created or updated {} publishers", publishersCreatedOrUpdated);
     }
 
     public static void seedDefaultRepositories(final Handle jdbiHandle) {

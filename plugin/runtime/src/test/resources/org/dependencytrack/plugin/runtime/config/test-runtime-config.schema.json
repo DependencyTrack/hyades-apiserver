@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schema/test",
   "type": "object",
   "title": "Test Runtime Config",
   "javaInterfaces" : ["org.dependencytrack.plugin.api.config.RuntimeConfig"],

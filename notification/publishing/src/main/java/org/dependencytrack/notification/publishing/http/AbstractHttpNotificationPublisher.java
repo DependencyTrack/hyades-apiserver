@@ -29,7 +29,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.Set;
@@ -53,7 +55,7 @@ public abstract class AbstractHttpNotificationPublisher implements NotificationP
 
     @Override
     public void publish(NotificationPublishContext ctx, Notification notification) throws IOException {
-        final var ruleConfig = ctx.ruleConfig(HttpNotificationRuleConfig.class);
+        final var ruleConfig = ctx.ruleConfig(HttpNotificationPublisherRuleConfigV1.class);
 
         final RenderedNotificationTemplate renderedTemplate = ctx.templateRenderer().render(notification);
         if (renderedTemplate == null) {
@@ -63,13 +65,14 @@ public abstract class AbstractHttpNotificationPublisher implements NotificationP
         final var request = HttpRequest
                 .newBuilder(ruleConfig.getDestinationUrl())
                 .header("Content-Type", renderedTemplate.mimeType())
-                .POST(HttpRequest.BodyPublishers.ofString(renderedTemplate.content()))
+                .header("User-Agent", "Dependency-Track")
+                .POST(BodyPublishers.ofString(renderedTemplate.content()))
                 .timeout(Duration.ofSeconds(10))
                 .build();
 
         final HttpResponse<?> response;
         try {
-            response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
+            response = httpClient.send(request, BodyHandlers.discarding());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RetryablePublishException("Interrupted while sending request", e);

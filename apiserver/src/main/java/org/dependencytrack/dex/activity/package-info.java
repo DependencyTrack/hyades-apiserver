@@ -16,22 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.notification.publisher;
+@NullMarked
+package org.dependencytrack.dex.activity;
 
-import org.dependencytrack.notification.api.publishing.NotificationPublisher;
-
-/**
- * @deprecated To be removed in favour of dynamically discovered {@link NotificationPublisher}s.
- */
-@Deprecated(forRemoval = true, since = "5.7.0")
-public enum PublisherClass {
-
-    SlackPublisher,
-    MsTeamsPublisher,
-    MattermostPublisher,
-    SendMailPublisher,
-    ConsolePublisher,
-    WebhookPublisher,
-    CsWebexPublisher,
-    JiraPublisher;
-}
+import org.jspecify.annotations.NullMarked;

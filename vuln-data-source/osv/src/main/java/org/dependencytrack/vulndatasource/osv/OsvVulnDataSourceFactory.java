@@ -27,8 +27,6 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -38,8 +36,6 @@ import java.util.Set;
  * @since 5.7.0
  */
 final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(OsvVulnDataSourceFactory.class);
 
     private ConfigRegistry configRegistry;
     private ExtensionKVStore kvStore;
@@ -74,7 +70,7 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
 
     @Override
     public RuntimeConfigSpec runtimeConfigSpec() {
-        final var defaultConfig = new OsvVulnDataSourceConfig()
+        final var defaultConfig = new OsvVulnDataSourceConfigV1()
                 .withEnabled(false)
                 .withAliasSyncEnabled(false)
                 .withDataUrl(URI.create("https://storage.googleapis.com/osv-vulnerabilities"))
@@ -95,12 +91,12 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
 
     @Override
     public boolean isDataSourceEnabled() {
-        return configRegistry.getRuntimeConfig(OsvVulnDataSourceConfig.class).isEnabled();
+        return configRegistry.getRuntimeConfig(OsvVulnDataSourceConfigV1.class).isEnabled();
     }
 
     @Override
     public VulnDataSource create() {
-        final var config = configRegistry.getRuntimeConfig(OsvVulnDataSourceConfig.class);
+        final var config = configRegistry.getRuntimeConfig(OsvVulnDataSourceConfigV1.class);
         if (!config.isEnabled()) {
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }

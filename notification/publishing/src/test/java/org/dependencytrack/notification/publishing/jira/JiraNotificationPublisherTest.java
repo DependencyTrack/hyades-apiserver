@@ -51,13 +51,19 @@ class JiraNotificationPublisherTest extends AbstractNotificationPublisherTest {
     }
 
     @Override
-    protected void customizeRuleConfig(RuntimeConfig ruleConfig) {
-        final var jiraRuleConfig = (JiraNotificationRuleConfig) ruleConfig;
+    protected void customizeGlobalConfig(RuntimeConfig globalConfig) {
+        final var jiraGlobalConfig = (JiraNotificationPublisherGlobalConfigV1) globalConfig;
+        jiraGlobalConfig.setEnabled(true);
+        jiraGlobalConfig.setApiUrl(URI.create(WIREMOCK.baseUrl()));
+        jiraGlobalConfig.setUsername("username");
+        jiraGlobalConfig.setPasswordOrToken("password");
+    }
 
-        jiraRuleConfig
-                .withApiUrl(URI.create(WIREMOCK.baseUrl()))
-                .withUsername("username")
-                .withPasswordOrToken("password");
+    @Override
+    protected void customizeRuleConfig(RuntimeConfig ruleConfig) {
+        final var jiraRuleConfig = (JiraNotificationPublisherRuleConfigV1) ruleConfig;
+        jiraRuleConfig.setProjectKey("EXAMPLE");
+        jiraRuleConfig.setIssueType("TASK");
     }
 
     @BeforeEach
@@ -71,7 +77,17 @@ class JiraNotificationPublisherTest extends AbstractNotificationPublisherTest {
     }
 
     @Override
-    protected void validateBomConsumedNotificationPublish(Notification ignored) {
+    protected void validateNotificationPublish(Notification notification) {
+        switch (notification.getGroup()) {
+            case GROUP_BOM_CONSUMED -> validateBomConsumedNotificationPublish();
+            case GROUP_BOM_PROCESSING_FAILED -> validateBomProcessingFailedNotificationPublish();
+            case GROUP_BOM_VALIDATION_FAILED -> validateBomValidationFailedNotificationPublish();
+            case GROUP_NEW_VULNERABILITY -> validateNewVulnerabilityNotificationPublish();
+            case GROUP_NEW_VULNERABLE_DEPENDENCY -> validateNewVulnerableDependencyNotificationPublish();
+        }
+    }
+
+    private void validateBomConsumedNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/rest/api/2/issue"))
                 .withBasicAuth(new BasicCredentials("username", "password"))
                 .withHeader("Content-Type", equalTo("application/json"))
@@ -91,8 +107,7 @@ class JiraNotificationPublisherTest extends AbstractNotificationPublisherTest {
                         """)));
     }
 
-    @Override
-    protected void validateBomProcessingFailedNotificationPublish(Notification ignored) {
+    private void validateBomProcessingFailedNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/rest/api/2/issue"))
                 .withBasicAuth(new BasicCredentials("username", "password"))
                 .withHeader("Content-Type", equalTo("application/json"))
@@ -112,8 +127,7 @@ class JiraNotificationPublisherTest extends AbstractNotificationPublisherTest {
                         """)));
     }
 
-    @Override
-    protected void validateBomValidationFailedNotificationPublish(Notification ignored) {
+    private void validateBomValidationFailedNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/rest/api/2/issue"))
                 .withBasicAuth(new BasicCredentials("username", "password"))
                 .withHeader("Content-Type", equalTo("application/json"))
@@ -133,8 +147,7 @@ class JiraNotificationPublisherTest extends AbstractNotificationPublisherTest {
                         """)));
     }
 
-    @Override
-    protected void validateNewVulnerabilityNotificationPublish(Notification ignored) {
+    private void validateNewVulnerabilityNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/rest/api/2/issue"))
                 .withBasicAuth(new BasicCredentials("username", "password"))
                 .withHeader("Content-Type", equalTo("application/json"))
@@ -154,8 +167,7 @@ class JiraNotificationPublisherTest extends AbstractNotificationPublisherTest {
                         """)));
     }
 
-    @Override
-    protected void validateNewVulnerableDependencyNotificationPublish(Notification ignored) {
+    private void validateNewVulnerableDependencyNotificationPublish() {
         WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/rest/api/2/issue"))
                 .withBasicAuth(new BasicCredentials("username", "password"))
                 .withHeader("Content-Type", equalTo("application/json"))

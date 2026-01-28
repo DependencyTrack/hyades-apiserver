@@ -44,14 +44,7 @@ public class NotificationPublisherTest {
         NotificationPublisher publisher = new NotificationPublisher();
         publisher.setDescription("My description");
         Assertions.assertEquals("My description", publisher.getDescription());
-    } 
-
-    @Test
-    public void testPublisherClass() {
-        NotificationPublisher publisher = new NotificationPublisher();
-        publisher.setPublisherClass("org.acme.publisher");
-        Assertions.assertEquals("org.acme.publisher", publisher.getPublisherClass());
-    } 
+    }
 
     @Test
     public void testTemplate() {

@@ -28,7 +28,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.Base64;
@@ -39,46 +41,50 @@ import java.util.Map;
  */
 final class JiraNotificationPublisher implements NotificationPublisher {
 
+    private final JiraNotificationPublisherGlobalConfigV1 globalConfig;
     private final HttpClient httpClient;
 
-    JiraNotificationPublisher(HttpClient httpClient) {
+    JiraNotificationPublisher(
+            JiraNotificationPublisherGlobalConfigV1 globalConfig,
+            HttpClient httpClient) {
+        this.globalConfig = globalConfig;
         this.httpClient = httpClient;
     }
 
     @Override
     public void publish(NotificationPublishContext ctx, Notification notification) throws IOException {
-        final var ruleConfig = ctx.ruleConfig(JiraNotificationRuleConfig.class);
+        final var ruleConfig = ctx.ruleConfig(JiraNotificationPublisherRuleConfigV1.class);
 
         final RenderedNotificationTemplate renderedTemplate = ctx.templateRenderer().render(
                 notification,
                 Map.ofEntries(
                         Map.entry("jiraProjectKey", ruleConfig.getProjectKey()),
-                        Map.entry("jiraTicketType", ruleConfig.getTicketType())));
+                        Map.entry("jiraTicketType", ruleConfig.getIssueType())));
         if (renderedTemplate == null) {
             throw new IllegalStateException("No template configured");
         }
 
         final String authHeader;
-        if (ruleConfig.getUsername() != null) {
+        if (globalConfig.getUsername() != null) {
             final var credentials = Base64.getEncoder().encodeToString(
-                    "%s:%s".formatted(ruleConfig.getUsername(), ruleConfig.getPasswordOrToken()).getBytes());
+                    "%s:%s".formatted(globalConfig.getUsername(), globalConfig.getPasswordOrToken()).getBytes());
             authHeader = "Basic " + credentials;
         } else {
-            authHeader = "Bearer " + ruleConfig.getPasswordOrToken();
+            authHeader = "Bearer " + globalConfig.getPasswordOrToken();
         }
 
         final var request = HttpRequest.newBuilder()
-                .uri(URI.create("%s/rest/api/2/issue".formatted(ruleConfig.getApiUrl())))
+                .uri(URI.create("%s/rest/api/2/issue".formatted(globalConfig.getApiUrl())))
                 .header("Authorization", authHeader)
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(renderedTemplate.content()))
+                .header("User-Agent", "Dependency-Track")
+                .POST(BodyPublishers.ofString(renderedTemplate.content()))
                 .timeout(Duration.ofSeconds(10))
                 .build();
 
         final HttpResponse<?> response;
         try {
-            response = httpClient.send(
-                    request, HttpResponse.BodyHandlers.discarding());
+            response = httpClient.send(request, BodyHandlers.discarding());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RetryablePublishException("Interrupted while sending request", e);

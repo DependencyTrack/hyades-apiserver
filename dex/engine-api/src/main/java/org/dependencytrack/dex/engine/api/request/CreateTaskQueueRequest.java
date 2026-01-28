@@ -18,11 +18,11 @@
  */
 package org.dependencytrack.dex.engine.api.request;
 
-import org.dependencytrack.dex.engine.api.TaskQueueType;
+import org.dependencytrack.dex.engine.api.TaskType;
 
 import static java.util.Objects.requireNonNull;
 
-public record CreateTaskQueueRequest(TaskQueueType type, String name, int capacity) {
+public record CreateTaskQueueRequest(TaskType type, String name, int capacity) {
 
     public CreateTaskQueueRequest {
         requireNonNull(type, "type must not be null");
