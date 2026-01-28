@@ -622,4 +622,24 @@
              WHERE "EXTENSION_POINT" = 'vuln.datasource';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-32" author="nscuro">
+        <!--
+            Remove watermarks of vuln data sources to force
+            a complete re-ingestion after fixing version range logic.
+        -->
+        <sql>
+            DELETE
+              FROM "EXTENSION_KV_STORE"
+             WHERE "EXTENSION_POINT" = 'vuln-data-source'
+               AND "EXTENSION" IN ('nvd', 'github')
+               AND "KEY" = 'watermark';
+
+            DELETE
+              FROM "EXTENSION_KV_STORE"
+             WHERE "EXTENSION_POINT" = 'vuln-data-source'
+               AND "EXTENSION" = 'osv'
+               AND "KEY" LIKE 'watermark/%';
+        </sql>
+    </changeSet>
 </databaseChangeLog>

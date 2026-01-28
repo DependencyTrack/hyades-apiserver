@@ -238,6 +238,7 @@ public class VulnerableSoftwareQueryManagerTest extends PersistenceCapableTest {
 
         final VulnerableSoftware found = qm.getVulnerableSoftwareByCpe23(
                 "cpe:2.3:a:acme:product:1.0.0:*:*:*:*:*:*:*",
+                null,
                 "1.1.0",
                 null,
                 null,
@@ -257,6 +258,7 @@ public class VulnerableSoftwareQueryManagerTest extends PersistenceCapableTest {
 
         final VulnerableSoftware found = qm.getVulnerableSoftwareByCpe23(
                 "cpe:2.3:a:acme:product:1.0.0:*:*:*:*:*:*:*",
+                null,
                 null,
                 null,
                 null,

@@ -25,6 +25,7 @@ import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.cyclonedx.proto.v1_6.Bom;
+import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.parser.dependencytrack.BovModelConverter;
@@ -41,8 +42,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.datanucleus.PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT;
+import static org.dependencytrack.common.MdcKeys.MDC_VULN_ID;
+import static org.dependencytrack.common.MdcKeys.MDC_VULN_SOURCE;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.LockProvider.isTaskLockToBeExtended;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
@@ -151,8 +155,14 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
                 continue;
             }
 
-            final Vulnerability vuln = BovModelConverter.convert(bov, bov.getVulnerabilities(0), true);
-            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+            final Vulnerability vuln;
+            final List<VulnerableSoftware> vsList;
+            try (var ignored = new MdcScope(Map.ofEntries(
+                    Map.entry(MDC_VULN_ID, bov.getVulnerabilities(0).getId()),
+                    Map.entry(MDC_VULN_SOURCE, bov.getVulnerabilities(0).getSource().getName())))) {
+                vuln = BovModelConverter.convert(bov, bov.getVulnerabilities(0), true);
+                vsList = BovModelConverter.extractVulnerableSoftware(bov);
+            }
 
             vulns.add(vuln);
             vsListByVulnId.put(vuln.getVulnId(), vsList);
