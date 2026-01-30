@@ -1,1 +1,1 @@
-org.dependencytrack.notification.publishing.DefaultNotificationPublisherPlugin
+org.dependencytrack.notification.publishing.DefaultNotificationPublishersPlugin

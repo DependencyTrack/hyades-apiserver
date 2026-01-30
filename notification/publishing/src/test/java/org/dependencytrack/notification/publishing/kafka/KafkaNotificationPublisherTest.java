@@ -18,10 +18,8 @@
  */
 package org.dependencytrack.notification.publishing.kafka;
 
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -29,9 +27,12 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
+import org.dependencytrack.notification.proto.v1.Group;
 import org.dependencytrack.notification.proto.v1.Notification;
+import org.dependencytrack.notification.proto.v1.Scope;
 import org.dependencytrack.notification.publishing.AbstractNotificationPublisherTest;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -41,14 +42,20 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
+import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
 class KafkaNotificationPublisherTest extends AbstractNotificationPublisherTest {
 
     @Container
-    private final KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:4.1.1");
+    private static final KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka:4.1.1");
 
     @Override
     protected NotificationPublisherFactory createPublisherFactory() {
@@ -56,69 +63,62 @@ class KafkaNotificationPublisherTest extends AbstractNotificationPublisherTest {
     }
 
     @Override
-    protected void customizeRuleConfig(RuntimeConfig ruleConfig) {
-        final var kafkaRuleConfig = (KafkaNotificationRuleConfig) ruleConfig;
-        kafkaRuleConfig.setBootstrapServers(Set.of(kafkaContainer.getBootstrapServers()));
+    protected void customizeDeploymentConfig(Map<String, String> deploymentConfig) {
+        deploymentConfig.put("allow-local-connections", "true");
+    }
+
+    @Override
+    protected void customizeGlobalConfig(RuntimeConfig globalConfig) {
+        final var kafkaGlobalConfig = (KafkaNotificationPublisherGlobalConfigV1) globalConfig;
+        kafkaGlobalConfig.setEnabled(true);
+        kafkaGlobalConfig.setBootstrapServers(Set.of(kafkaContainer.getBootstrapServers()));
     }
 
     @BeforeEach
     @Override
     protected void beforeEach() throws Exception {
         try (final var adminClient = AdminClient.create(Map.of(
-                CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers()))) {
+                BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers()))) {
             adminClient.createTopics(List.of(new NewTopic("dependencytrack-notifications", 1, (short) 1))).all().get();
         }
 
         super.beforeEach();
     }
 
-    @Override
-    protected void validateBomConsumedNotificationPublish(Notification notification) throws Exception {
-        final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
-        assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
-        assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
+    @AfterEach
+    protected void afterEach() {
+        try (final var adminClient = AdminClient.create(Map.of(
+                BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers()))) {
+            adminClient.deleteTopics(List.of("dependencytrack-notifications"));
+        }
+
+        super.afterEach();
     }
 
     @Override
-    protected void validateBomProcessingFailedNotificationPublish(Notification notification) throws Exception {
+    protected void validateNotificationPublish(Notification notification) throws Exception {
         final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
-        assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
-        assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
-    }
-
-    @Override
-    protected void validateBomValidationFailedNotificationPublish(Notification notification) throws Exception {
-        final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
-        assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
-        assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
-    }
-
-    @Override
-    protected void validateNewVulnerabilityNotificationPublish(Notification notification) throws Exception {
-        final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
-        assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
-        assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
-    }
-
-    @Override
-    protected void validateNewVulnerableDependencyNotificationPublish(Notification notification) throws Exception {
-        final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        assertThat(record.key()).isEqualTo("TODO");
+        if (notification.getScope() == Scope.SCOPE_PORTFOLIO) {
+            assertThat(record.key()).isEqualTo("c9c9539a-e381-4b36-ac52-6a7ab83b2c95");
+        } else {
+            if (notification.getGroup() == Group.GROUP_USER_CREATED
+                    || notification.getGroup() == Group.GROUP_USER_DELETED) {
+                assertThat(record.key()).isEqualTo("username");
+            } else {
+                assertThat(record.key()).isNull();
+            }
+        }
         assertThat(record.headers()).containsExactly(new RecordHeader("content-type", "application/protobuf".getBytes()));
         assertThat(Notification.parseFrom(record.value())).isEqualTo(notification);
     }
 
     private ConsumerRecord<String, byte[]> pollNotificationRecord() {
         try (final var consumer = new KafkaConsumer<String, byte[]>(Map.ofEntries(
-                Map.entry(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers()),
-                Map.entry(ConsumerConfig.GROUP_ID_CONFIG, "test-group"),
-                Map.entry(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"),
-                Map.entry(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()),
-                Map.entry(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName())))) {
+                Map.entry(BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers()),
+                Map.entry(GROUP_ID_CONFIG, UUID.randomUUID().toString()),
+                Map.entry(AUTO_OFFSET_RESET_CONFIG, "earliest"),
+                Map.entry(KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()),
+                Map.entry(VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName())))) {
             consumer.subscribe(List.of("dependencytrack-notifications"));
 
             final ConsumerRecords<String, byte[]> records = consumer.poll(Duration.ofSeconds(1));

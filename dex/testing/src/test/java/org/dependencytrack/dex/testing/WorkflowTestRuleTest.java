@@ -25,12 +25,11 @@ import org.dependencytrack.dex.api.ActivitySpec;
 import org.dependencytrack.dex.api.Workflow;
 import org.dependencytrack.dex.api.WorkflowContext;
 import org.dependencytrack.dex.api.WorkflowSpec;
-import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngine;
-import org.dependencytrack.dex.engine.api.TaskQueueType;
+import org.dependencytrack.dex.engine.api.TaskType;
+import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.WorkflowRun;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
-import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.jspecify.annotations.Nullable;
@@ -77,15 +76,15 @@ public class WorkflowTestRuleTest {
                 stringConverter(),
                 Duration.ofSeconds(3));
 
-        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "default", 10));
-        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "default", 10));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.WORKFLOW, "default", 10));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "default", 10));
 
-        engine.registerWorkflowWorker(
-                new WorkflowTaskWorkerOptions("workflow-worker", "default", 1)
+        engine.registerTaskWorker(
+                new TaskWorkerOptions(TaskType.WORKFLOW, "workflow-worker", "default", 1)
                         .withMinPollInterval(Duration.ofMillis(25))
                         .withPollBackoffFunction(IntervalFunction.of(25)));
-        engine.registerActivityWorker(
-                new ActivityTaskWorkerOptions("activity-worker", "default", 1)
+        engine.registerTaskWorker(
+                new TaskWorkerOptions(TaskType.ACTIVITY, "activity-worker", "default", 1)
                         .withMinPollInterval(Duration.ofMillis(25))
                         .withPollBackoffFunction(IntervalFunction.of(25)));
 
@@ -117,15 +116,15 @@ public class WorkflowTestRuleTest {
                 stringConverter(),
                 Duration.ofSeconds(3));
 
-        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.WORKFLOW, "default", 10));
-        engine.createTaskQueue(new CreateTaskQueueRequest(TaskQueueType.ACTIVITY, "default", 10));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.WORKFLOW, "default", 10));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "default", 10));
 
-        engine.registerWorkflowWorker(
-                new WorkflowTaskWorkerOptions("workflow-worker", "default", 1)
+        engine.registerTaskWorker(
+                new TaskWorkerOptions(TaskType.WORKFLOW, "workflow-worker", "default", 1)
                         .withMinPollInterval(Duration.ofMillis(25))
                         .withPollBackoffFunction(IntervalFunction.of(25)));
-        engine.registerActivityWorker(
-                new ActivityTaskWorkerOptions("activity-worker", "default", 1)
+        engine.registerTaskWorker(
+                new TaskWorkerOptions(TaskType.ACTIVITY, "activity-worker", "default", 1)
                         .withMinPollInterval(Duration.ofMillis(25))
                         .withPollBackoffFunction(IntervalFunction.of(25)));
 

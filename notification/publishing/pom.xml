@@ -17,14 +17,12 @@
   ~ SPDX-License-Identifier: Apache-2.0
   ~ Copyright (c) OWASP Foundation. All Rights Reserved.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>notification-parent</artifactId>
-        <version>5.7.0-SNAPSHOT</version>
+        <version>5.7.0-alpha.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>notification-publishing</artifactId>
@@ -153,42 +151,50 @@
                 <artifactId>jsonschema2pojo-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>notification-rule-config-email</id>
+                        <id>config-email</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/email/EmailNotificationRuleConfig.schema.json</sourceDirectory>
+                            <sourcePaths>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/email/email-notification-publisher-global-config-v1.schema.json</sourcePath>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/email/email-notification-publisher-rule-config-v1.schema.json</sourcePath>
+                            </sourcePaths>
                             <targetPackage>org.dependencytrack.notification.publishing.email</targetPackage>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>notification-rule-config-http</id>
+                        <id>config-http</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/http/HttpNotificationRuleConfig.schema.json</sourceDirectory>
+                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/http</sourceDirectory>
                             <targetPackage>org.dependencytrack.notification.publishing.http</targetPackage>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>notification-rule-config-jira</id>
+                        <id>config-jira</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/jira/JiraNotificationRuleConfig.schema.json</sourceDirectory>
+                            <sourcePaths>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/jira/jira-notification-publisher-global-config-v1.schema.json</sourcePath>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/jira/jira-notification-publisher-rule-config-v1.schema.json</sourcePath>
+                            </sourcePaths>
                             <targetPackage>org.dependencytrack.notification.publishing.jira</targetPackage>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>notification-rule-config-kafka</id>
+                        <id>config-kafka</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/kafka/KafkaNotificationRuleConfig.schema.json</sourceDirectory>
+                            <sourcePaths>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/kafka</sourcePath>
+                            </sourcePaths>
                             <targetPackage>org.dependencytrack.notification.publishing.kafka</targetPackage>
                         </configuration>
                     </execution>

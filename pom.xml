@@ -17,14 +17,12 @@
   ~ SPDX-License-Identifier: Apache-2.0
   ~ Copyright (c) OWASP Foundation. All Rights Reserved.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.dependencytrack</groupId>
     <artifactId>dependency-track-parent</artifactId>
     <packaging>pom</packaging>
-    <version>5.7.0-SNAPSHOT</version>
+    <version>5.7.0-alpha.1-SNAPSHOT</version>
 
     <modules>
         <module>common</module>
@@ -78,9 +76,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git@github.com:DependencyTrack/hyades-apiserver.git</connection>
-        <url>https://github.com/DependencyTrack/hyades-apiserver.git</url>
-        <developerConnection>scm:git:git@github.com:DependencyTrack/hyades-apiserver.git</developerConnection>
+        <connection>${scm.connection}</connection>
+        <developerConnection>${scm.developer.connection}</developerConnection>
+        <url>${scm.url}</url>
         <tag>HEAD</tag>
     </scm>
 
@@ -121,7 +119,7 @@
         <lib.httpclient5.version>5.6</lib.httpclient5.version>
         <lib.jakarta-ee.version>11.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.2.0</lib.java-uuid-generator.version>
-        <lib.jackson.version>2.20.1</lib.jackson.version>
+        <lib.jackson.version>2.21.0</lib.jackson.version>
         <lib.jdbi.version>3.51.0</lib.jdbi.version>
         <lib.jersey.version>4.0.0</lib.jersey.version>
         <lib.jetty.version>12.1.5</lib.jetty.version>
@@ -132,25 +130,26 @@
         <lib.kafka-clients.version>4.1.1</lib.kafka-clients.version>
         <lib.kotlin.version>2.3.0</lib.kotlin.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
+        <lib.logback.version>1.5.26</lib.logback.version>
         <lib.micrometer.version>1.16.2</lib.micrometer.version>
         <lib.microprofile-config.version>3.1</lib.microprofile-config.version>
         <lib.microprofile-health.version>4.0.1</lib.microprofile-health.version>
         <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.21.0</lib.mockito.version>
         <lib.okhttp.version>5.3.2</lib.okhttp.version>
-        <lib.open-vulnerability-clients.version>9.0.2</lib.open-vulnerability-clients.version>
+        <lib.open-vulnerability-clients.version>9.0.3</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.pebble.version>4.1.0</lib.pebble.version>
-        <lib.postgresql.version>42.7.8</lib.postgresql.version>
+        <lib.postgresql.version>42.7.9</lib.postgresql.version>
         <lib.protobuf-java.version>4.33.4</lib.protobuf-java.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
-        <lib.smallrye-config.version>3.15.0</lib.smallrye-config.version>
+        <lib.smallrye-config.version>3.15.1</lib.smallrye-config.version>
         <lib.swagger.version>2.2.42</lib.swagger.version>
         <lib.system-stubs.version>2.1.8</lib.system-stubs.version>
         <lib.testcontainers.version>2.0.3</lib.testcontainers.version>
         <lib.tink.version>1.20.0</lib.tink.version>
-        <lib.versatile.version>0.15.0</lib.versatile.version>
+        <lib.versatile.version>0.16.1</lib.versatile.version>
         <lib.wiremock.version>3.13.2</lib.wiremock.version>
         <lib.zstd-jni.version>1.5.7-6</lib.zstd-jni.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
@@ -158,6 +157,11 @@
 
         <!-- Log level to use for unit tests -->
         <unitTestLogLevel>WARN</unitTestLogLevel>
+
+        <!-- Default SCM Properties -->
+        <scm.connection>scm:git:git@github.com:DependencyTrack/hyades-apiserver.git</scm.connection>
+        <scm.developer.connection>scm:git:git@github.com:DependencyTrack/hyades-apiserver.git</scm.developer.connection>
+        <scm.url>https://github.com/DependencyTrack/hyades-apiserver.git</scm.url>
     </properties>
 
     <dependencyManagement>
@@ -360,6 +364,17 @@
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-clients</artifactId>
                 <version>${lib.kafka-clients.version}</version>
+                <exclusions>
+                    <!--
+                        The lz4-java project is archived and has vulnerabilities.
+                        Kafka needs to move to https://github.com/yawkat/lz4-java to resolve them.
+                        Since we don't use lz4, we can safely exclude it until then.
+                    -->
+                    <exclusion>
+                        <groupId>org.lz4</groupId>
+                        <artifactId>lz4-java</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>
@@ -374,6 +389,17 @@
                 <groupId>org.liquibase</groupId>
                 <artifactId>liquibase-core</artifactId>
                 <version>${lib.liquibase.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${lib.logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-core</artifactId>
+                <version>${lib.logback.version}</version>
             </dependency>
 
             <dependency>
@@ -712,6 +738,9 @@
             </activation>
             <properties>
                 <unitTestLogLevel>OFF</unitTestLogLevel>
+                <scm.connection>scm:git:https://github.com/${env.GITHUB_REPOSITORY}.git</scm.connection>
+                <scm.developer.connection>scm:git:https://github.com/${env.GITHUB_REPOSITORY}.git</scm.developer.connection>
+                <scm.url>https://github.com/${env.GITHUB_REPOSITORY}.git</scm.url>
             </properties>
         </profile>
     </profiles>

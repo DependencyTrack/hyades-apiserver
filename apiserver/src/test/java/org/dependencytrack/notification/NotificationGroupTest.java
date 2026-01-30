@@ -21,10 +21,10 @@ package org.dependencytrack.notification;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class NotificationGroupTest {
+class NotificationGroupTest {
 
     @Test
-    public void testEnums() {
+    void testEnums() {
         // System Groups
         Assertions.assertEquals("CONFIGURATION", NotificationGroup.CONFIGURATION.name());
         Assertions.assertEquals("DATASOURCE_MIRRORING", NotificationGroup.DATASOURCE_MIRRORING.name());

@@ -22,10 +22,11 @@ import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.jspecify.annotations.Nullable;
 
-import java.net.URI;
 import java.net.http.HttpClient;
 
 import static java.util.Objects.requireNonNull;
@@ -36,6 +37,7 @@ import static org.dependencytrack.notification.api.publishing.NotificationPublis
  */
 public final class JiraNotificationPublisherFactory implements NotificationPublisherFactory {
 
+    private @Nullable ConfigRegistry configRegistry;
     private @Nullable HttpClient httpClient;
 
     @Override
@@ -49,12 +51,8 @@ public final class JiraNotificationPublisherFactory implements NotificationPubli
     }
 
     @Override
-    public int priority() {
-        return 0;
-    }
-
-    @Override
     public void init(ExtensionContext ctx) {
+        configRegistry = ctx.configRegistry();
         httpClient = HttpClient.newBuilder()
                 .proxy(ctx.proxySelector())
                 .build();
@@ -62,19 +60,49 @@ public final class JiraNotificationPublisherFactory implements NotificationPubli
 
     @Override
     public NotificationPublisher create() {
+        requireNonNull(configRegistry, "configRegistry must not be null");
         requireNonNull(httpClient, "httpClient must not be null");
-        return new JiraNotificationPublisher(httpClient);
+
+        final var globalConfig = configRegistry.getRuntimeConfig(JiraNotificationPublisherGlobalConfigV1.class);
+
+        if (!globalConfig.isEnabled()) {
+            throw new IllegalStateException("Publisher is disabled");
+        }
+
+        return new JiraNotificationPublisher(globalConfig, httpClient);
+    }
+
+    @Override
+    public RuntimeConfigSpec runtimeConfigSpec() {
+        return RuntimeConfigSpec.of(
+                new JiraNotificationPublisherGlobalConfigV1(),
+                config -> {
+                    if (!config.isEnabled()) {
+                        return;
+                    }
+                    if (config.getApiUrl() == null) {
+                        throw new InvalidRuntimeConfigException("No API URL provided");
+                    }
+                    if (config.getPasswordOrToken() == null) {
+                        throw new InvalidRuntimeConfigException("No password or token provided");
+                    }
+                });
     }
 
     @Override
     public RuntimeConfigSpec ruleConfigSpec() {
-        final var defaultConfig = new JiraNotificationRuleConfig()
-                .withApiUrl(URI.create("https://jira.example.com"))
-                .withPasswordOrToken("{{ secret('JIRA_API_TOKEN') }}")
-                .withProjectKey("EXAMPLE")
-                .withTicketType("TASK");
-
-        return RuntimeConfigSpec.of(defaultConfig);
+        return RuntimeConfigSpec.of(
+                new JiraNotificationPublisherRuleConfigV1()
+                        .withProjectKey("EXAMPLE")
+                        .withIssueType("Bug"),
+                config -> {
+                    if (config.getProjectKey() == null) {
+                        throw new InvalidRuntimeConfigException("No project key provided");
+                    }
+                    if (config.getIssueType() == null) {
+                        throw new InvalidRuntimeConfigException("No issue type provided");
+                    }
+                });
     }
 
     @Override

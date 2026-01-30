@@ -29,7 +29,6 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import net.jcip.annotations.NotThreadSafe;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
@@ -42,6 +41,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
@@ -58,14 +58,14 @@ import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.notification.NotificationTestUtil.createCatchAllNotificationRule;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
-@NotThreadSafe
-public class AnalysisResourceTest extends ResourceTest {
+class AnalysisResourceTest extends ResourceTest {
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
@@ -75,7 +75,7 @@ public class AnalysisResourceTest extends ResourceTest {
                     .register(AuthorizationFeature.class));
 
     @Test
-    public void retrieveAnalysisTest() {
+    void retrieveAnalysisTest() {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -130,7 +130,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void retrieveAnalysisWithoutExistingAnalysisTest() {
+    void retrieveAnalysisWithoutExistingAnalysisTest() {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -161,7 +161,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void noAnalysisExists() {
+    void noAnalysisExists() {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -189,7 +189,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void retrieveAnalysisWithProjectNotFoundTest() {
+    void retrieveAnalysisWithProjectNotFoundTest() {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -220,7 +220,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void retrieveAnalysisWithComponentNotFoundTest() {
+    void retrieveAnalysisWithComponentNotFoundTest() {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -251,7 +251,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void retrieveAnalysisWithVulnerabilityNotFoundTest() {
+    void retrieveAnalysisWithVulnerabilityNotFoundTest() {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -282,7 +282,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void retrieveAnalysisUnauthorizedTest() {
+    void retrieveAnalysisUnauthorizedTest() {
         final Response response = jersey.target(V1_ANALYSIS)
                 .queryParam("project", UUID.randomUUID())
                 .queryParam("component", UUID.randomUUID())
@@ -295,7 +295,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void retrieveAnalysisWithAclTest() {
+    void retrieveAnalysisWithAclTest() {
         enablePortfolioAccessControl();
 
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
@@ -349,7 +349,9 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisCreateNewTest() throws Exception {
+    void updateAnalysisCreateNewTest() {
+        createCatchAllNotificationRule(qm, NotificationScope.PORTFOLIO);
+
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -415,7 +417,9 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisCreateNewWithUserTest() {
+    void updateAnalysisCreateNewWithUserTest() {
+        createCatchAllNotificationRule(qm, NotificationScope.PORTFOLIO);
+
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
         ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
@@ -485,7 +489,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisCreateNewWithEmptyRequestTest() {
+    void updateAnalysisCreateNewWithEmptyRequestTest() {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -526,7 +530,9 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisUpdateExistingTest() throws Exception {
+    void updateAnalysisUpdateExistingTest() {
+        createCatchAllNotificationRule(qm, NotificationScope.PORTFOLIO);
+
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -610,7 +616,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisWithNoChangesTest() {
+    void updateAnalysisWithNoChangesTest() {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -669,7 +675,9 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisUpdateExistingWithEmptyRequestTest() throws Exception {
+    void updateAnalysisUpdateExistingWithEmptyRequestTest() {
+        createCatchAllNotificationRule(qm, NotificationScope.PORTFOLIO);
+
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -742,7 +750,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisWithComponentNotFoundTest() {
+    void updateAnalysisWithComponentNotFoundTest() {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -774,7 +782,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisWithVulnerabilityNotFoundTest() {
+    void updateAnalysisWithVulnerabilityNotFoundTest() {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -810,7 +818,9 @@ public class AnalysisResourceTest extends ResourceTest {
     // Performing an analysis with those request fields set in >= 4.4.0 then resulted in NPEs,
     // see https://github.com/DependencyTrack/dependency-track/issues/1409
     @Test
-    public void updateAnalysisIssue1409Test() throws InterruptedException {
+    void updateAnalysisIssue1409Test() {
+        createCatchAllNotificationRule(qm, NotificationScope.PORTFOLIO);
+
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -882,7 +892,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisUnauthorizedTest() {
+    void updateAnalysisUnauthorizedTest() {
         final var analysisRequest = new AnalysisRequest(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
                 UUID.randomUUID().toString(), AnalysisState.NOT_AFFECTED, AnalysisJustification.PROTECTED_BY_MITIGATING_CONTROL,
                 AnalysisResponse.UPDATE, "Analysis details here", "Analysis comment here", false);
@@ -896,7 +906,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisWithAclTest() {
+    void updateAnalysisWithAclTest() {
         enablePortfolioAccessControl();
 
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
@@ -947,7 +957,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisWithAssociatedVulnerabilityPolicyTest() {
+    void updateAnalysisWithAssociatedVulnerabilityPolicyTest() {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
         final var project = new Project();

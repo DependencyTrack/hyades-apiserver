@@ -532,7 +532,7 @@ class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getTargetSw()).isNull();
                     assertThat(vs.getTargetHw()).isNull();
                     assertThat(vs.getOther()).isNull();
-                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartIncluding()).isEqualTo("0");
                     assertThat(vs.getVersionStartExcluding()).isNull();
                     assertThat(vs.getVersionEndIncluding()).isNull();
                     assertThat(vs.getVersionEndExcluding()).isEqualTo("1.9.0");
@@ -849,7 +849,8 @@ class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
         assertThat(vuln.getVulnerableVersions()).isNull();
         assertThat(vuln.getPatchedVersions()).isNull();
 
-        assertThat(vuln.getVulnerableSoftware()).satisfiesExactly(
+        assertThat(vuln.getVulnerableSoftware()).satisfiesExactlyInAnyOrder(
+                // vers:foobar/<1
                 vs -> {
                     assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
                     assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
@@ -877,6 +878,7 @@ class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getPurlSubpath()).isNull();
                     assertThat(vs.getPurl()).isNull();
                 },
+                // vers:generic/*
                 vs -> {
                     assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
                     assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
@@ -884,6 +886,62 @@ class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getVendor()).isEqualTo("thinkcmf");
                     assertThat(vs.getProduct()).isEqualTo("thinkcmf");
                     assertThat(vs.getVersion()).isEqualTo("*");
+                    assertThat(vs.getUpdate()).isEqualTo("*");
+                    assertThat(vs.getEdition()).isEqualTo("*");
+                    assertThat(vs.getLanguage()).isEqualTo("*");
+                    assertThat(vs.getSwEdition()).isEqualTo("*");
+                    assertThat(vs.getTargetSw()).isEqualTo("*");
+                    assertThat(vs.getTargetHw()).isEqualTo("*");
+                    assertThat(vs.getOther()).isEqualTo("*");
+                    assertThat(vs.getVersionStartIncluding()).isEqualTo("0");
+                    assertThat(vs.getVersionStartExcluding()).isNull();
+                    assertThat(vs.getVersionEndIncluding()).isNull();
+                    assertThat(vs.getVersionEndExcluding()).isNull();
+                    assertThat(vs.isVulnerable()).isTrue();
+                    assertThat(vs.getPurlType()).isNull();
+                    assertThat(vs.getPurlNamespace()).isNull();
+                    assertThat(vs.getPurlName()).isNull();
+                    assertThat(vs.getPurlVersion()).isNull();
+                    assertThat(vs.getPurlQualifiers()).isNull();
+                    assertThat(vs.getPurlSubpath()).isNull();
+                    assertThat(vs.getPurl()).isNull();
+                },
+                // vers:generic/>0
+                vs -> {
+                    assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
+                    assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
+                    assertThat(vs.getPart()).isEqualTo("a");
+                    assertThat(vs.getVendor()).isEqualTo("thinkcmf");
+                    assertThat(vs.getProduct()).isEqualTo("thinkcmf");
+                    assertThat(vs.getVersion()).isEqualTo("*");
+                    assertThat(vs.getUpdate()).isEqualTo("*");
+                    assertThat(vs.getEdition()).isEqualTo("*");
+                    assertThat(vs.getLanguage()).isEqualTo("*");
+                    assertThat(vs.getSwEdition()).isEqualTo("*");
+                    assertThat(vs.getTargetSw()).isEqualTo("*");
+                    assertThat(vs.getTargetHw()).isEqualTo("*");
+                    assertThat(vs.getOther()).isEqualTo("*");
+                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartExcluding()).isEqualTo("0");
+                    assertThat(vs.getVersionEndIncluding()).isNull();
+                    assertThat(vs.getVersionEndExcluding()).isNull();
+                    assertThat(vs.isVulnerable()).isTrue();
+                    assertThat(vs.getPurlType()).isNull();
+                    assertThat(vs.getPurlNamespace()).isNull();
+                    assertThat(vs.getPurlName()).isNull();
+                    assertThat(vs.getPurlVersion()).isNull();
+                    assertThat(vs.getPurlQualifiers()).isNull();
+                    assertThat(vs.getPurlSubpath()).isNull();
+                    assertThat(vs.getPurl()).isNull();
+                },
+                // vers:generic/0
+                vs -> {
+                    assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
+                    assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
+                    assertThat(vs.getPart()).isEqualTo("a");
+                    assertThat(vs.getVendor()).isEqualTo("thinkcmf");
+                    assertThat(vs.getProduct()).isEqualTo("thinkcmf");
+                    assertThat(vs.getVersion()).isEqualTo("0");
                     assertThat(vs.getUpdate()).isEqualTo("*");
                     assertThat(vs.getEdition()).isEqualTo("*");
                     assertThat(vs.getLanguage()).isEqualTo("*");
@@ -904,6 +962,63 @@ class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getPurlSubpath()).isNull();
                     assertThat(vs.getPurl()).isNull();
                 },
+                // vers:generic/1
+                vs -> {
+                    assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
+                    assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
+                    assertThat(vs.getPart()).isEqualTo("a");
+                    assertThat(vs.getVendor()).isEqualTo("thinkcmf");
+                    assertThat(vs.getProduct()).isEqualTo("thinkcmf");
+                    assertThat(vs.getVersion()).isEqualTo("1");
+                    assertThat(vs.getUpdate()).isEqualTo("*");
+                    assertThat(vs.getEdition()).isEqualTo("*");
+                    assertThat(vs.getLanguage()).isEqualTo("*");
+                    assertThat(vs.getSwEdition()).isEqualTo("*");
+                    assertThat(vs.getTargetSw()).isEqualTo("*");
+                    assertThat(vs.getTargetHw()).isEqualTo("*");
+                    assertThat(vs.getOther()).isEqualTo("*");
+                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartExcluding()).isNull();
+                    assertThat(vs.getVersionEndIncluding()).isNull();
+                    assertThat(vs.getVersionEndExcluding()).isNull();
+                    assertThat(vs.isVulnerable()).isTrue();
+                    assertThat(vs.getPurlType()).isNull();
+                    assertThat(vs.getPurlNamespace()).isNull();
+                    assertThat(vs.getPurlName()).isNull();
+                    assertThat(vs.getPurlVersion()).isNull();
+                    assertThat(vs.getPurlQualifiers()).isNull();
+                    assertThat(vs.getPurlSubpath()).isNull();
+                    assertThat(vs.getPurl()).isNull();
+                },
+                // vers:generic/>2
+                vs -> {
+                    assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
+                    assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
+                    assertThat(vs.getPart()).isEqualTo("a");
+                    assertThat(vs.getVendor()).isEqualTo("thinkcmf");
+                    assertThat(vs.getProduct()).isEqualTo("thinkcmf");
+                    assertThat(vs.getVersion()).isEqualTo("*");
+                    assertThat(vs.getUpdate()).isEqualTo("*");
+                    assertThat(vs.getEdition()).isEqualTo("*");
+                    assertThat(vs.getLanguage()).isEqualTo("*");
+                    assertThat(vs.getSwEdition()).isEqualTo("*");
+                    assertThat(vs.getTargetSw()).isEqualTo("*");
+                    assertThat(vs.getTargetHw()).isEqualTo("*");
+                    assertThat(vs.getOther()).isEqualTo("*");
+                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartExcluding()).isEqualTo("2");
+                    assertThat(vs.getVersionEndIncluding()).isNull();
+                    assertThat(vs.getVersionEndExcluding()).isNull();
+                    assertThat(vs.isVulnerable()).isTrue();
+                    assertThat(vs.getPurlType()).isNull();
+                    assertThat(vs.getPurlNamespace()).isNull();
+                    assertThat(vs.getPurlName()).isNull();
+                    assertThat(vs.getPurlVersion()).isNull();
+                    assertThat(vs.getPurlQualifiers()).isNull();
+                    assertThat(vs.getPurlSubpath()).isNull();
+                    assertThat(vs.getPurl()).isNull();
+                },
+                // vers:generic/>3|<4
                 vs -> {
                     assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
                     assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
@@ -931,6 +1046,7 @@ class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getPurlSubpath()).isNull();
                     assertThat(vs.getPurl()).isNull();
                 },
+                // vers:generic/>5|<6|6.0.1 - range part.
                 vs -> {
                     assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
                     assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
@@ -958,6 +1074,35 @@ class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getPurlSubpath()).isNull();
                     assertThat(vs.getPurl()).isNull();
                 },
+                // vers:generic/>5|<6|6.0.1 - exact version part.
+                vs -> {
+                    assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
+                    assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
+                    assertThat(vs.getPart()).isEqualTo("a");
+                    assertThat(vs.getVendor()).isEqualTo("thinkcmf");
+                    assertThat(vs.getProduct()).isEqualTo("thinkcmf");
+                    assertThat(vs.getVersion()).isEqualTo("6.0.1");
+                    assertThat(vs.getUpdate()).isEqualTo("*");
+                    assertThat(vs.getEdition()).isEqualTo("*");
+                    assertThat(vs.getLanguage()).isEqualTo("*");
+                    assertThat(vs.getSwEdition()).isEqualTo("*");
+                    assertThat(vs.getTargetSw()).isEqualTo("*");
+                    assertThat(vs.getTargetHw()).isEqualTo("*");
+                    assertThat(vs.getOther()).isEqualTo("*");
+                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartExcluding()).isNull();
+                    assertThat(vs.getVersionEndIncluding()).isNull();
+                    assertThat(vs.getVersionEndExcluding()).isNull();
+                    assertThat(vs.isVulnerable()).isTrue();
+                    assertThat(vs.getPurlType()).isNull();
+                    assertThat(vs.getPurlNamespace()).isNull();
+                    assertThat(vs.getPurlName()).isNull();
+                    assertThat(vs.getPurlVersion()).isNull();
+                    assertThat(vs.getPurlQualifiers()).isNull();
+                    assertThat(vs.getPurlSubpath()).isNull();
+                    assertThat(vs.getPurl()).isNull();
+                },
+                // vers:generic/>*|<7
                 vs -> {
                     assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
                     assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
@@ -973,7 +1118,7 @@ class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getTargetHw()).isEqualTo("*");
                     assertThat(vs.getOther()).isEqualTo("*");
                     assertThat(vs.getVersionStartIncluding()).isNull();
-                    assertThat(vs.getVersionStartExcluding()).isNull();
+                    assertThat(vs.getVersionStartExcluding()).isEqualTo("*");
                     assertThat(vs.getVersionEndIncluding()).isNull();
                     assertThat(vs.getVersionEndExcluding()).isEqualTo("7");
                     assertThat(vs.isVulnerable()).isTrue();
@@ -985,6 +1130,35 @@ class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getPurlSubpath()).isNull();
                     assertThat(vs.getPurl()).isNull();
                 },
+                // vers:generic/>8
+                vs -> {
+                    assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
+                    assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
+                    assertThat(vs.getPart()).isEqualTo("a");
+                    assertThat(vs.getVendor()).isEqualTo("thinkcmf");
+                    assertThat(vs.getProduct()).isEqualTo("thinkcmf");
+                    assertThat(vs.getVersion()).isEqualTo("*");
+                    assertThat(vs.getUpdate()).isEqualTo("*");
+                    assertThat(vs.getEdition()).isEqualTo("*");
+                    assertThat(vs.getLanguage()).isEqualTo("*");
+                    assertThat(vs.getSwEdition()).isEqualTo("*");
+                    assertThat(vs.getTargetSw()).isEqualTo("*");
+                    assertThat(vs.getTargetHw()).isEqualTo("*");
+                    assertThat(vs.getOther()).isEqualTo("*");
+                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartExcluding()).isEqualTo("8");
+                    assertThat(vs.getVersionEndIncluding()).isNull();
+                    assertThat(vs.getVersionEndExcluding()).isNull();
+                    assertThat(vs.isVulnerable()).isTrue();
+                    assertThat(vs.getPurlType()).isNull();
+                    assertThat(vs.getPurlNamespace()).isNull();
+                    assertThat(vs.getPurlName()).isNull();
+                    assertThat(vs.getPurlVersion()).isNull();
+                    assertThat(vs.getPurlQualifiers()).isNull();
+                    assertThat(vs.getPurlSubpath()).isNull();
+                    assertThat(vs.getPurl()).isNull();
+                },
+                // vers:generic/<13
                 vs -> {
                     assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
                     assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
@@ -1012,13 +1186,14 @@ class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getPurlSubpath()).isNull();
                     assertThat(vs.getPurl()).isNull();
                 },
+                // purl with vers:generic/*
                 vs -> {
                     assertThat(vs.getCpe22()).isNull();
                     assertThat(vs.getCpe23()).isNull();
                     assertThat(vs.getPart()).isNull();
                     assertThat(vs.getVendor()).isNull();
                     assertThat(vs.getProduct()).isNull();
-                    assertThat(vs.getVersion()).isEqualTo("*");
+                    assertThat(vs.getVersion()).isNull();
                     assertThat(vs.getUpdate()).isNull();
                     assertThat(vs.getEdition()).isNull();
                     assertThat(vs.getLanguage()).isNull();
@@ -1026,7 +1201,7 @@ class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getTargetSw()).isNull();
                     assertThat(vs.getTargetHw()).isNull();
                     assertThat(vs.getOther()).isNull();
-                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartIncluding()).isEqualTo("0");
                     assertThat(vs.getVersionStartExcluding()).isNull();
                     assertThat(vs.getVersionEndIncluding()).isNull();
                     assertThat(vs.getVersionEndExcluding()).isNull();

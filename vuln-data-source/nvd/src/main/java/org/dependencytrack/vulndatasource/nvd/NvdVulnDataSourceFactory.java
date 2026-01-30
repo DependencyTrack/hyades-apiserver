@@ -91,7 +91,7 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
 
     @Override
     public RuntimeConfigSpec runtimeConfigSpec() {
-        final var defaultConfig = new NvdVulnDataSourceConfig()
+        final var defaultConfig = new NvdVulnDataSourceConfigV1()
                 .withEnabled(true)
                 .withCveFeedsUrl(URI.create("https://nvd.nist.gov/feeds"));
 
@@ -108,7 +108,7 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
     @Override
     public boolean isDataSourceEnabled() {
         requireNonNull(configRegistry, "configRegistry must not be null");
-        return configRegistry.getRuntimeConfig(NvdVulnDataSourceConfig.class).isEnabled();
+        return configRegistry.getRuntimeConfig(NvdVulnDataSourceConfigV1.class).isEnabled();
     }
 
     @Override
@@ -116,7 +116,7 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
         requireNonNull(configRegistry, "configRegistry must not be null");
         requireNonNull(kvStore, "kvStore must not be null");
 
-        final var config = configRegistry.getRuntimeConfig(NvdVulnDataSourceConfig.class);
+        final var config = configRegistry.getRuntimeConfig(NvdVulnDataSourceConfigV1.class);
         if (!config.isEnabled()) {
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
@@ -132,7 +132,7 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
         requireNonNull(httpClient, "httpClient has not been initialized");
         requireNonNull(runtimeConfig, "runtimeConfig must not be null");
 
-        final var nvdConfig = (NvdVulnDataSourceConfig) runtimeConfig;
+        final var nvdConfig = (NvdVulnDataSourceConfigV1) runtimeConfig;
 
         final var testResult = ExtensionTestResult.ofChecks("connection", "feed_format");
 

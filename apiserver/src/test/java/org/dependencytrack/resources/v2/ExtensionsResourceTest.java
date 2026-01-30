@@ -300,7 +300,7 @@ class ExtensionsResourceTest extends ResourceTest {
                   "errors": [
                     {
                       "evaluation_path": "$.properties.requiredString.type",
-                      "schema_location": "#/properties/requiredString/type",
+                      "schema_location": "https://example.com/schema/test#/properties/requiredString/type",
                       "instance_location": "$.requiredString",
                       "keyword": "type",
                       "message": "$.requiredString: null found, string expected"
@@ -355,6 +355,7 @@ class ExtensionsResourceTest extends ResourceTest {
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://example.com/schema/test",
                   "type": "object",
                   "properties": {
                     "requiredString": {
@@ -512,7 +513,7 @@ class ExtensionsResourceTest extends ResourceTest {
                       "instance_location": "$.outcome",
                       "keyword": "enum",
                       "message": "$.outcome: does not have a value in the enumeration [\\"PASSED\\", \\"FAILED\\"]",
-                      "schema_location": "#/properties/outcome/enum"
+                      "schema_location": "https://example.com/schema/test#/properties/outcome/enum"
                     }
                   ]
                 }
@@ -585,6 +586,7 @@ class ExtensionsResourceTest extends ResourceTest {
                     new RuntimeConfigSchemaSource.Literal(/* language=JSON */ """
                             {
                               "$schema": "https://json-schema.org/draft/2020-12/schema",
+                              "$id": "https://example.com/schema/test",
                               "type": "object",
                               "properties": {
                                 "requiredString": {
@@ -690,6 +692,7 @@ class ExtensionsResourceTest extends ResourceTest {
                     new RuntimeConfigSchemaSource.Literal(/* language=JSON */ """
                             {
                               "$schema": "https://json-schema.org/draft/2020-12/schema",
+                              "$id": "https://example.com/schema/test",
                               "type": "object",
                               "properties": {
                                 "outcome": {
@@ -736,6 +739,7 @@ class ExtensionsResourceTest extends ResourceTest {
                     new RuntimeConfigSchemaSource.Literal(/* language=JSON */ """
                             {
                               "$schema": "https://json-schema.org/draft/2020-12/schema",
+                              "$id": "https://example.com/schema/test",
                               "type": "object",
                               "properties": {
                                 "outcome": {

@@ -36,7 +36,17 @@ class ConsoleNotificationPublisherTest extends AbstractNotificationPublisherTest
     }
 
     @Override
-    protected void validateBomConsumedNotificationPublish(Notification ignored) {
+    protected void validateNotificationPublish(Notification notification) {
+        switch (notification.getGroup()) {
+            case GROUP_BOM_CONSUMED -> validateBomConsumedNotificationPublish();
+            case GROUP_BOM_PROCESSING_FAILED -> validateBomProcessingFailedNotificationPublish();
+            case GROUP_BOM_VALIDATION_FAILED -> validateBomValidationFailedNotificationPublish();
+            case GROUP_NEW_VULNERABILITY -> validateNewVulnerabilityNotificationPublish();
+            case GROUP_NEW_VULNERABLE_DEPENDENCY -> validateNewVulnerableDependencyNotificationPublish();
+        }
+    }
+
+    private void validateBomConsumedNotificationPublish() {
         assertThat(outputStream).asString().isEqualTo("""
                 --------------------------------------------------------------------------------
                 Notification
@@ -49,8 +59,7 @@ class ConsoleNotificationPublisherTest extends AbstractNotificationPublisherTest
                 """);
     }
 
-    @Override
-    protected void validateBomProcessingFailedNotificationPublish(Notification ignored) {
+    private void validateBomProcessingFailedNotificationPublish() {
         assertThat(outputStream).asString().isEqualTo("""
                 --------------------------------------------------------------------------------
                 Notification
@@ -63,8 +72,7 @@ class ConsoleNotificationPublisherTest extends AbstractNotificationPublisherTest
                 """);
     }
 
-    @Override
-    protected void validateBomValidationFailedNotificationPublish(Notification ignored) {
+    private void validateBomValidationFailedNotificationPublish() {
         assertThat(outputStream).asString().isEqualTo("""
                 --------------------------------------------------------------------------------
                 Notification
@@ -77,8 +85,7 @@ class ConsoleNotificationPublisherTest extends AbstractNotificationPublisherTest
                 """);
     }
 
-    @Override
-    protected void validateNewVulnerabilityNotificationPublish(Notification ignored) {
+    private void validateNewVulnerabilityNotificationPublish() {
         assertThat(outputStream).asString().isEqualTo("""
                 --------------------------------------------------------------------------------
                 Notification
@@ -91,8 +98,7 @@ class ConsoleNotificationPublisherTest extends AbstractNotificationPublisherTest
                 """);
     }
 
-    @Override
-    protected void validateNewVulnerableDependencyNotificationPublish(Notification ignored) {
+    private void validateNewVulnerableDependencyNotificationPublish() {
         assertThat(outputStream).asString().isEqualTo("""
                 --------------------------------------------------------------------------------
                 Notification

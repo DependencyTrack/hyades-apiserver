@@ -44,19 +44,22 @@
         <listener-class>org.dependencytrack.plugin.PluginInitializer</listener-class>
     </listener>
     <listener>
+        <listener-class>org.dependencytrack.notification.DefaultNotificationPublisherInitializer</listener-class>
+    </listener>
+    <listener>
         <listener-class>org.dependencytrack.event.kafka.KafkaProducerInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.event.EventSubsystemInitializer</listener-class>
     </listener>
     <listener>
+        <listener-class>org.dependencytrack.dex.DexEngineInitializer</listener-class>
+    </listener>
+    <listener>
         <listener-class>org.dependencytrack.tasks.TaskSchedulerInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.notification.NotificationSubsystemInitializer</listener-class>
-    </listener>
-    <listener>
-        <listener-class>org.dependencytrack.dex.DexEngineInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.event.kafka.processor.ProcessorInitializer</listener-class>

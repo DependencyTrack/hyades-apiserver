@@ -40,15 +40,15 @@ import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskCompletedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskFailedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.WorkflowTaskAbandonedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.WorkflowTaskCompletedEvent;
-import org.dependencytrack.dex.engine.api.ActivityTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
 import org.dependencytrack.dex.engine.api.ExternalEvent;
 import org.dependencytrack.dex.engine.api.TaskQueue;
+import org.dependencytrack.dex.engine.api.TaskType;
+import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.WorkflowRun;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
-import org.dependencytrack.dex.engine.api.WorkflowTaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.event.DexEngineEvent;
 import org.dependencytrack.dex.engine.api.event.DexEngineEventListener;
 import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEvent;
@@ -442,9 +442,19 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public void registerActivityWorker(ActivityTaskWorkerOptions options) {
+    public void registerTaskWorker(TaskWorkerOptions options) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
 
+        if (options.type() == TaskType.ACTIVITY) {
+            registerActivityTaskWorker(options);
+        } else if (options.type() == TaskType.WORKFLOW) {
+            registerWorkflowTaskWorker(options);
+        } else {
+            throw new IllegalArgumentException("Unknown task type: " + options.type());
+        }
+    }
+
+    private void registerActivityTaskWorker(TaskWorkerOptions options) {
         final boolean queueExists = jdbi.withHandle(
                 handle -> new ActivityDao(handle).doesActivityTaskQueueExists(options.queueName()));
         if (!queueExists) {
@@ -463,14 +473,11 @@ final class DexEngineImpl implements DexEngine {
 
         if (taskWorkerByName.putIfAbsent("activity/" + options.name(), worker) != null) {
             throw new IllegalStateException(
-                    "An activity task worker with name %s was already registered".formatted(options.name()));
+                    "An task worker with name %s was already registered".formatted(options.name()));
         }
     }
 
-    @Override
-    public void registerWorkflowWorker(WorkflowTaskWorkerOptions options) {
-        requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-
+    private void registerWorkflowTaskWorker(TaskWorkerOptions options) {
         final boolean queueExists = jdbi.withHandle(
                 handle -> new WorkflowDao(handle).doesWorkflowTaskQueueExists(options.queueName()));
         if (!queueExists) {
@@ -489,7 +496,7 @@ final class DexEngineImpl implements DexEngine {
 
         if (taskWorkerByName.putIfAbsent("workflow/" + options.name(), worker) != null) {
             throw new IllegalStateException(
-                    "A workflow task worker with name %s was already registered".formatted(options.name()));
+                    "A task worker with name %s was already registered".formatted(options.name()));
         }
     }
 
@@ -504,7 +511,7 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<CreateWorkflowRunResponse> createRuns(Collection<CreateWorkflowRunRequest<?>> requests) {
+    public List<CreateWorkflowRunResponse> createRuns(Collection<? extends CreateWorkflowRunRequest<?>> requests) {
         final var now = Timestamps.now();
         final var nowInstant = toInstant(now);
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>(requests.size());

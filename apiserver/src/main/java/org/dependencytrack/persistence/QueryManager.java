@@ -85,13 +85,13 @@ import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.proto.v1.Notification;
-import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.EffectivePermissionDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
+import org.jspecify.annotations.NonNull;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
@@ -831,10 +831,15 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerabilityQueryManager().contains(vulnerability, component);
     }
 
-    public VulnerableSoftware getVulnerableSoftwareByCpe23(String cpe23,
-                                                           String versionEndExcluding, String versionEndIncluding,
-                                                           String versionStartExcluding, String versionStartIncluding) {
-        return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByCpe23(cpe23, versionEndExcluding, versionEndIncluding, versionStartExcluding, versionStartIncluding);
+    public VulnerableSoftware getVulnerableSoftwareByCpe23(
+            String cpe23,
+            String version,
+            String versionEndExcluding,
+            String versionEndIncluding,
+            String versionStartExcluding,
+            String versionStartIncluding) {
+        return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByCpe23(
+                cpe23, version, versionEndExcluding, versionEndIncluding, versionStartExcluding, versionStartIncluding);
     }
 
     public VulnerableSoftware getVulnerableSoftwareByPurl(
@@ -1037,34 +1042,23 @@ public class QueryManager extends AlpineQueryManager {
         return getNotificationQueryManager().getNotificationPublisher(name);
     }
 
-    public NotificationPublisher getDefaultNotificationPublisher(final PublisherClass clazz) {
-        return getNotificationQueryManager().getDefaultNotificationPublisher(clazz);
-    }
-
     public NotificationPublisher getDefaultNotificationPublisherByName(String publisherName) {
         return getNotificationQueryManager().getDefaultNotificationPublisherByName(publisherName);
     }
 
-    public NotificationPublisher createNotificationPublisher(final String name, final String description,
-                                                             final String publisherClass, final String templateContent,
-                                                             final String templateMimeType, final boolean defaultPublisher) {
-        return getNotificationQueryManager().createNotificationPublisher(name, description, publisherClass, templateContent, templateMimeType, defaultPublisher);
+    public NotificationPublisher createNotificationPublisher(
+            @NonNull String name,
+            String description,
+            @NonNull String extensionName,
+            String templateContent,
+            String templateMimeType,
+            boolean defaultPublisher) {
+        return getNotificationQueryManager().createNotificationPublisher(
+                name, description, extensionName, templateContent, templateMimeType, defaultPublisher);
     }
 
     public NotificationPublisher updateNotificationPublisher(NotificationPublisher transientPublisher) {
         return getNotificationQueryManager().updateNotificationPublisher(transientPublisher);
-    }
-
-    public void deleteNotificationPublisher(NotificationPublisher notificationPublisher) {
-        getNotificationQueryManager().deleteNotificationPublisher(notificationPublisher);
-    }
-
-    public void removeProjectFromNotificationRules(final Project project) {
-        getNotificationQueryManager().removeProjectFromNotificationRules(project);
-    }
-
-    public void removeTeamFromNotificationRules(final Team team) {
-        getNotificationQueryManager().removeTeamFromNotificationRules(team);
     }
 
     /**

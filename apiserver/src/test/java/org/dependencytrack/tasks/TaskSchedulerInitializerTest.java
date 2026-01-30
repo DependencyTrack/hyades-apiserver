@@ -18,18 +18,32 @@
  */
 package org.dependencytrack.tasks;
 
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextEvent;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 public class TaskSchedulerInitializerTest {
 
     @Test
     public void shouldScheduleTasks() {
+        final Config config = ConfigProvider.getConfig();
         final var scheduler = new TaskScheduler();
+        final var dexEngineMock = mock(DexEngine.class);
 
-        final var initializer = new TaskSchedulerInitializer(scheduler);
-        initializer.contextInitialized(null);
+        final var servletContextMock = mock(ServletContext.class);
+        doReturn(dexEngineMock)
+                .when(servletContextMock).getAttribute(eq(DexEngine.class.getName()));
+
+        final var initializer = new TaskSchedulerInitializer(config, scheduler);
+        initializer.contextInitialized(new ServletContextEvent(servletContextMock));
 
         assertThat(scheduler.scheduledTaskIds()).containsExactlyInAnyOrder(
                 "CSAF Document Import",
