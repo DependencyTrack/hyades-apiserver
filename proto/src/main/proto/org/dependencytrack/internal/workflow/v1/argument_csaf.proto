@@ -16,20 +16,21 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.csaf;
+syntax = "proto3";
 
-import alpine.event.framework.SingletonCapableEvent;
+package org.dependencytrack.internal.workflow.v1;
 
-import java.util.UUID;
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.internal.workflow.v1";
 
-/**
- * @since 5.7.0
- */
-public class CsafDocumentImportEvent extends SingletonCapableEvent {
+// Argument of the discover-csaf-providers workflow and activity.
+message DiscoverCsafProvidersArg {
+  // ID of the aggregator to discover providers from.
+  string aggregator_id = 1;
+}
 
-    public CsafDocumentImportEvent() {
-        setChainIdentifier(UUID.fromString("31979220-ad64-41b0-b447-0f738682e205"));
-        setSingleton(true);
-    }
-
+// Argument of the import-csaf-documents workflow and activity.
+message ImportCsafDocumentsArg {
+  // ID of the provider to import documents from.
+  string provider_id = 1;
 }

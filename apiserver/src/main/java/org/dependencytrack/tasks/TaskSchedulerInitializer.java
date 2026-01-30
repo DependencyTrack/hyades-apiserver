@@ -23,8 +23,12 @@ import alpine.event.framework.Event;
 import alpine.server.tasks.LdapSyncTask;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import org.dependencytrack.csaf.CsafDocumentImportEvent;
-import org.dependencytrack.csaf.CsafDocumentImportTask;
+import org.dependencytrack.common.pagination.PageIterator;
+import org.dependencytrack.csaf.CsafProviderDao;
+import org.dependencytrack.csaf.ImportCsafDocumentsWorkflow;
+import org.dependencytrack.csaf.ListCsafProvidersQuery;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.event.DefectDojoUploadEventAbstract;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
@@ -46,6 +50,7 @@ import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEve
 import org.dependencytrack.event.maintenance.VulnerabilityScanMaintenanceEvent;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.tasks.maintenance.ComponentMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
@@ -56,13 +61,20 @@ import org.dependencytrack.tasks.maintenance.WorkflowMaintenanceTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
+import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_ENABLED;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.TaskUtil.getCronScheduleForTask;
+import static org.dependencytrack.util.TaskUtil.getCronScheduleFromConfig;
 
 /**
  * @since 5.7.0
@@ -71,21 +83,26 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskSchedulerInitializer.class);
 
+    private final Config config;
     private final TaskScheduler scheduler;
 
-    TaskSchedulerInitializer(TaskScheduler scheduler) {
+    TaskSchedulerInitializer(Config config, TaskScheduler scheduler) {
+        this.config = config;
         this.scheduler = scheduler;
     }
 
     @SuppressWarnings("unused")
     public TaskSchedulerInitializer() {
-        this(new TaskScheduler());
+        this(ConfigProvider.getConfig(), new TaskScheduler());
     }
 
     @Override
-    public void contextInitialized(ServletContextEvent sce) {
+    public void contextInitialized(ServletContextEvent event) {
         LOGGER.info("Starting task scheduler");
         scheduler.start();
+
+        final var dexEngine = (DexEngine) event.getServletContext().getAttribute(DexEngine.class.getName());
+        requireNonNull(dexEngine, "dexEngine has not been initialized");
 
         scheduler
                 .schedule(
@@ -94,8 +111,22 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         () -> Event.dispatch(new ComponentMetadataMaintenanceEvent()))
                 .schedule(
                         "CSAF Document Import",
-                        getCronScheduleForTask(CsafDocumentImportTask.class),
-                        () -> Event.dispatch(new CsafDocumentImportEvent()))
+                        getCronScheduleFromConfig(config, "task.csaf.document.import.cron"),
+                        () -> {
+                            final List<? extends CreateWorkflowRunRequest<?>> requests =
+                                    withJdbiHandle(handle -> PageIterator.stream(
+                                                    pageToken -> handle.attach(CsafProviderDao.class).list(
+                                                            new ListCsafProvidersQuery()
+                                                                    .withEnabled(true)
+                                                                    .withPageToken(pageToken)))
+                                            .map(provider -> new CreateWorkflowRunRequest<>(ImportCsafDocumentsWorkflow.class)
+                                                    .withWorkflowInstanceId("import-csaf-documents:" + provider.getId())
+                                                    .withArgument(ImportCsafDocumentsArg.newBuilder()
+                                                            .setProviderId(provider.getId().toString())
+                                                            .build()))
+                                            .toList());
+                            dexEngine.createRuns(requests);
+                        })
                 .schedule(
                         "Defect Dojo Upload",
                         getCronScheduleForTask(DefectDojoUploadTask.class),
@@ -201,5 +232,5 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
         LOGGER.info("Stopping task scheduler");
         scheduler.close();
     }
-    
+
 }

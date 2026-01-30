@@ -42,5 +42,7 @@ post:
       $ref: "../../components/responses/generic-forbidden-error.yaml"
     "404":
       $ref: "../../components/responses/generic-not-found-error.yaml"
+    "409":
+      $ref: "../../components/responses/generic-conflict-error.yaml"
     default:
       $ref: "../../components/responses/generic-error.yaml"

@@ -511,7 +511,7 @@ final class DexEngineImpl implements DexEngine {
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<CreateWorkflowRunResponse> createRuns(Collection<CreateWorkflowRunRequest<?>> requests) {
+    public List<CreateWorkflowRunResponse> createRuns(Collection<? extends CreateWorkflowRunRequest<?>> requests) {
         final var now = Timestamps.now();
         final var nowInstant = toInstant(now);
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>(requests.size());

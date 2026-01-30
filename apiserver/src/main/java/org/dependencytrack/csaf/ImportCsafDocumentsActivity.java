@@ -18,14 +18,17 @@
  */
 package org.dependencytrack.csaf;
 
-import alpine.event.framework.Event;
-import alpine.event.framework.Subscriber;
 import io.csaf.retrieval.RetrievedDocument;
-import org.dependencytrack.common.pagination.PageIterator;
+import org.dependencytrack.dex.api.Activity;
+import org.dependencytrack.dex.api.ActivityContext;
+import org.dependencytrack.dex.api.ActivitySpec;
+import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.model.Advisory;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.jdbi.v3.core.Handle;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -35,6 +38,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 
@@ -43,68 +47,53 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
- * TODO: Refactor to dex workflow + activity once dex engine is integrated.
- *   * Use workflow instance ID to ensure only one workflow run per provider can exist.
- *   * Use same concurrency key across all providers to serialize their execution.
- *   * Create an "uber-workflow" that that triggers import for all providers.
- *   * Schedule the uber-workflow to run at least once daily.
- *
  * @since 5.7.0
  */
-public class CsafDocumentImportTask implements Subscriber {
+@ActivitySpec(name = "import-csaf-documents")
+public final class ImportCsafDocumentsActivity implements Activity<ImportCsafDocumentsArg, Void> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CsafDocumentImportTask.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportCsafDocumentsActivity.class);
 
     private final CsafClient csafClient;
 
-    CsafDocumentImportTask(CsafClient csafClient) {
+    ImportCsafDocumentsActivity(CsafClient csafClient) {
         this.csafClient = csafClient;
     }
 
-    @SuppressWarnings("unused")
-    public CsafDocumentImportTask() {
+    public ImportCsafDocumentsActivity() {
         this(new CsafClient());
     }
 
     @Override
-    public void inform(Event e) {
-        if (!(e instanceof CsafDocumentImportEvent)) {
-            return;
+    public @Nullable Void execute(
+            ActivityContext ctx,
+            @Nullable ImportCsafDocumentsArg arg) throws Exception {
+        if (arg == null) {
+            throw new TerminalApplicationFailureException("No argument provided");
         }
 
-        final List<CsafProvider> providers = getEnabledProviders();
-        if (providers.isEmpty()) {
-            LOGGER.info("No providers available to import documents from");
-            return;
+        final CsafProvider provider = withJdbiHandle(
+                handle -> handle.attach(CsafProviderDao.class).getById(UUID.fromString(arg.getProviderId())));
+        if (provider == null) {
+            throw new TerminalApplicationFailureException(
+                    "Provider with ID %s does not exist".formatted(arg.getProviderId()));
         }
 
-        for (final CsafProvider provider : providers) {
-            try (var ignored = MDC.putCloseable("csafProvider", provider.getName())) {
-                importDocuments(provider);
-            } catch (ExecutionException | RuntimeException ex) {
-                LOGGER.error("Failed to import CSAF documents", ex);
-            } catch (InterruptedException ex) {
-                LOGGER.warn("Interrupted while importing CSAF documents");
-                Thread.currentThread().interrupt();
-                break;
+        try (var ignored = MDC.putCloseable("csafProvider", provider.getName())) {
+            if (!provider.isEnabled()) {
+                LOGGER.info("Provider is disabled");
+                return null;
             }
+
+            importDocuments(ctx, provider);
         }
+
+        return null;
     }
 
-    private List<CsafProvider> getEnabledProviders() {
-        return withJdbiHandle(handle -> {
-            final var dao = handle.attach(CsafProviderDao.class);
-
-            return PageIterator.stream(
-                            pageToken -> dao.list(
-                                    new ListCsafProvidersQuery()
-                                            .withEnabled(true)
-                                            .withPageToken(pageToken)))
-                    .toList();
-        });
-    }
-
-    private void importDocuments(CsafProvider provider) throws ExecutionException, InterruptedException {
+    private void importDocuments(
+            ActivityContext ctx,
+            CsafProvider provider) throws ExecutionException, InterruptedException {
         Instant latestDocumentReleaseDate = provider.getLatestDocumentReleaseDate();
         if (latestDocumentReleaseDate != null) {
             LOGGER.info("Importing CSAF documents modified since {}", latestDocumentReleaseDate);
@@ -119,6 +108,7 @@ public class CsafDocumentImportTask implements Subscriber {
             final var documentBatch = new ArrayList<RetrievedDocument>(25);
             while (documentIterator.hasNext()) {
                 final RetrievedDocument doc = documentIterator.next();
+                ctx.maybeHeartbeat();
 
                 final Instant docReleaseDate = doc.getJson().getDocument().getTracking().getCurrent_release_date().getValue$kotlinx_datetime();
                 if (latestDocumentReleaseDate == null || latestDocumentReleaseDate.isBefore(docReleaseDate)) {
@@ -133,6 +123,7 @@ public class CsafDocumentImportTask implements Subscriber {
             }
 
             if (!documentBatch.isEmpty()) {
+                ctx.maybeHeartbeat();
                 processDocuments(documentBatch);
                 documentBatch.clear();
             }

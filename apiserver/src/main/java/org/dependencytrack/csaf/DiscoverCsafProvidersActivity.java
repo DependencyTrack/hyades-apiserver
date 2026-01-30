@@ -18,73 +18,72 @@
  */
 package org.dependencytrack.csaf;
 
-import alpine.event.framework.Event;
-import alpine.event.framework.Subscriber;
+import org.dependencytrack.dex.api.Activity;
+import org.dependencytrack.dex.api.ActivityContext;
+import org.dependencytrack.dex.api.ActivitySpec;
+import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
+import org.dependencytrack.proto.internal.workflow.v1.DiscoverCsafProvidersArg;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
- * TODO: Refactor to dex workflow + activity once dex engine is integrated.
- *   * Use workflow instance ID to ensure only one workflow run per aggregator can exist.
- *   * Use same concurrency key across all aggregators to serialize their execution.
- *
  * @since 5.7.0
  */
-public class CsafProviderDiscoveryTask implements Subscriber {
+@ActivitySpec(name = "discover-csaf-providers")
+public final class DiscoverCsafProvidersActivity implements Activity<DiscoverCsafProvidersArg, Void> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CsafProviderDiscoveryTask.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DiscoverCsafProvidersActivity.class);
 
     private final CsafClient csafClient;
 
-    CsafProviderDiscoveryTask(CsafClient csafClient) {
+    DiscoverCsafProvidersActivity(CsafClient csafClient) {
         this.csafClient = csafClient;
     }
 
-    @SuppressWarnings("unused") // Used by event system.
-    public CsafProviderDiscoveryTask() {
+    public DiscoverCsafProvidersActivity() {
         this(new CsafClient());
     }
 
     @Override
-    public void inform(Event e) {
-        if (!(e instanceof final CsafProviderDiscoveryEvent event)) {
-            return;
+    public @Nullable Void execute(
+            ActivityContext ctx,
+            @Nullable DiscoverCsafProvidersArg arg) throws Exception {
+        if (arg == null) {
+            throw new TerminalApplicationFailureException("No argument provided");
         }
 
-        final CsafAggregator aggregator = event.getAggregator();
+        final CsafAggregator aggregator = withJdbiHandle(
+                handle -> handle.attach(CsafAggregatorDao.class).getById(UUID.fromString(arg.getAggregatorId())));
+        if (aggregator == null) {
+            throw new TerminalApplicationFailureException(
+                    "Aggregator with ID %s does not exist".formatted(arg.getAggregatorId()));
+        }
 
         try (var ignored = MDC.putCloseable("csafAggregator", aggregator.getNamespace().toString())) {
             LOGGER.info("Discovering providers");
 
-            final List<CsafProvider> discoveredProviders;
-            try {
-                discoveredProviders =
-                        csafClient.discoverProviders(aggregator)
-                                .peek(provider -> {
-                                    provider.setEnabled(false);
-                                    provider.setDiscoveredFrom(aggregator.getId());
-                                    provider.setDiscoveredAt(Instant.now());
-                                })
-                                .toList();
-            } catch (ExecutionException | RuntimeException ex) {
-                throw new IllegalStateException("Failed to discover providers", ex);
-            } catch (InterruptedException ex) {
-                LOGGER.warn("Interrupted while discovering providers", ex);
-                Thread.currentThread().interrupt();
-                return;
-            }
+            final List<CsafProvider> discoveredProviders =
+                    csafClient.discoverProviders(aggregator)
+                            .peek(provider -> {
+                                provider.setEnabled(false);
+                                provider.setDiscoveredFrom(aggregator.getId());
+                                provider.setDiscoveredAt(Instant.now());
+                            })
+                            .toList();
 
             if (discoveredProviders.isEmpty()) {
                 LOGGER.info("No providers discovered");
-                return;
+                return null;
             }
 
             LOGGER.info("Discovered {} providers", discoveredProviders.size());
@@ -98,6 +97,8 @@ public class CsafProviderDiscoveryTask implements Subscriber {
             useJdbiTransaction(handle -> handle.attach(CsafAggregatorDao.class)
                     .updateLastDiscoveryAtById(aggregator.getId(), Instant.now()));
         }
+
+        return null;
     }
 
 }
