@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.resources.v2;
 
-import alpine.event.framework.Event;
 import alpine.server.auth.PermissionRequired;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
@@ -37,10 +37,13 @@ import org.dependencytrack.csaf.CsafAggregator;
 import org.dependencytrack.csaf.CsafAggregatorDao;
 import org.dependencytrack.csaf.CsafProvider;
 import org.dependencytrack.csaf.CsafProviderDao;
-import org.dependencytrack.csaf.CsafProviderDiscoveryEvent;
+import org.dependencytrack.csaf.DiscoverCsafProvidersWorkflow;
 import org.dependencytrack.csaf.ListCsafAggregatorsQuery;
 import org.dependencytrack.csaf.ListCsafProvidersQuery;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.exception.AlreadyExistsException;
+import org.dependencytrack.proto.internal.workflow.v1.DiscoverCsafProvidersArg;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
@@ -60,6 +63,13 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 public class CsafResource extends AbstractApiResource implements CsafApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CsafResource.class);
+
+    private final DexEngine dexEngine;
+
+    @Inject
+    CsafResource(DexEngine dexEngine) {
+        this.dexEngine = dexEngine;
+    }
 
     @Override
     @PermissionRequired({
@@ -209,7 +219,15 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
             throw new BadRequestException();
         }
 
-        Event.dispatch(new CsafProviderDiscoveryEvent(aggregator));
+        final UUID runId = dexEngine.createRun(
+                new CreateWorkflowRunRequest<>(DiscoverCsafProvidersWorkflow.class)
+                        .withWorkflowInstanceId("discover-csaf-providers:" + aggregator.getId())
+                        .withArgument(DiscoverCsafProvidersArg.newBuilder()
+                                .setAggregatorId(aggregator.getId().toString())
+                                .build()));
+        if (runId == null) {
+            throw new AlreadyExistsException("Discovery is already in progress");
+        }
 
         LOGGER.info(
                 SecurityMarkers.SECURITY_AUDIT,

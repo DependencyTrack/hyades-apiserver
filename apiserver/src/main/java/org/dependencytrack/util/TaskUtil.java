@@ -78,6 +78,16 @@ public final class TaskUtil {
         }
     }
 
+    public static Schedule getCronScheduleFromConfig(
+            org.eclipse.microprofile.config.Config config,
+            String configName) {
+        try {
+            return Schedule.create(config.getValue(configName, String.class));
+        } catch (InvalidExpressionException e) {
+            throw new IllegalStateException("Cron expression of config '%s' is invalid".formatted(configName), e);
+        }
+    }
+
     private static String getTaskConfigName(final Class<? extends Subscriber> taskClass) {
         requireNonNull(taskClass);
 

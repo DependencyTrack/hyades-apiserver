@@ -28,14 +28,21 @@ import org.dependencytrack.csaf.CsafAggregator;
 import org.dependencytrack.csaf.CsafAggregatorDao;
 import org.dependencytrack.csaf.CsafProvider;
 import org.dependencytrack.csaf.CsafProviderDao;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.proto.internal.workflow.v1.DiscoverCsafProvidersArg;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.jdbi.v3.core.Handle;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.net.URI;
 import java.time.Instant;
+import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,38 +51,46 @@ import static org.dependencytrack.auth.Permissions.SYSTEM_CONFIGURATION_DELETE;
 import static org.dependencytrack.auth.Permissions.SYSTEM_CONFIGURATION_READ;
 import static org.dependencytrack.auth.Permissions.SYSTEM_CONFIGURATION_UPDATE;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
-public class CsafResourceTest extends ResourceTest {
+class CsafResourceTest extends ResourceTest {
+
+    private static final DexEngine DEX_ENGINE_MOCK = mock(DexEngine.class);
 
     @RegisterExtension
-    static JerseyTestExtension jersey = new JerseyTestExtension(new ResourceConfig());
+    static JerseyTestExtension jersey = new JerseyTestExtension(
+            new ResourceConfig()
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bind(DEX_ENGINE_MOCK).to(DexEngine.class);
+                        }
+                    }));
 
     private Handle jdbiHandle;
     private CsafAggregatorDao aggregatorDao;
     private CsafProviderDao providerDao;
 
     @BeforeEach
-    @Override
-    public void before() throws Exception {
-        super.before();
-
+    void beforeEach() {
         jdbiHandle = openJdbiHandle();
         aggregatorDao = jdbiHandle.attach(CsafAggregatorDao.class);
         providerDao = jdbiHandle.attach(CsafProviderDao.class);
     }
 
     @AfterEach
-    @Override
-    public void after() {
+    void afterEach() {
         if (jdbiHandle != null) {
             jdbiHandle.close();
         }
 
-        super.after();
+        Mockito.reset(DEX_ENGINE_MOCK);
     }
 
     @Test
-    public void createAggregatorShouldReturnCreatedAggregator() {
+    void createAggregatorShouldReturnCreatedAggregator() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_CREATE);
 
         Response response = jersey.target("/csaf-aggregators")
@@ -104,7 +119,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createAggregatorShouldReturnConflictWhenUrlAlreadyExists() {
+    void createAggregatorShouldReturnConflictWhenUrlAlreadyExists() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_CREATE);
 
         aggregatorDao.create(new CsafAggregator(
@@ -135,7 +150,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getAggregatorShouldReturnAggregator() {
+    void getAggregatorShouldReturnAggregator() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_READ);
 
         var aggregator = new CsafAggregator(
@@ -162,7 +177,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getAggregatorShouldReturnNotFoundWhenDoesNotExist() {
+    void getAggregatorShouldReturnNotFoundWhenDoesNotExist() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_READ);
 
         final Response response = jersey.target("/csaf-aggregators/ca9569dd-3e81-41b2-b9dc-6bc536ad1cc7")
@@ -181,7 +196,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listAggregatorsShouldSupportPagination() {
+    void listAggregatorsShouldSupportPagination() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_READ);
 
         for (int i = 0; i < 2; i++) {
@@ -262,7 +277,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listAggregatorsShouldSupportFilteringBySearchText() {
+    void listAggregatorsShouldSupportFilteringBySearchText() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_READ);
 
         aggregatorDao.create(
@@ -327,7 +342,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAggregatorShouldReturnUpdatedAggregator() {
+    void updateAggregatorShouldReturnUpdatedAggregator() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_UPDATE);
 
         final var aggregator = new CsafAggregator(
@@ -360,7 +375,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void deleteAggregatorShouldReturnNoContent() {
+    void deleteAggregatorShouldReturnNoContent() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_DELETE);
 
         final var aggregator = new CsafAggregator(
@@ -381,15 +396,22 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void triggerCsafProviderDiscoveryShouldReturnAccepted() {
+    void triggerCsafProviderDiscoveryShouldReturnAccepted() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_UPDATE);
 
-        final var aggregator = new CsafAggregator(
+        var aggregator = new CsafAggregator(
                 URI.create("example.com"),
                 URI.create("https://example.com"),
                 "test");
         aggregator.setEnabled(true);
-        aggregatorDao.create(aggregator);
+        aggregator = aggregatorDao.create(aggregator);
+
+        //noinspection unchecked
+        final ArgumentCaptor<CreateWorkflowRunRequest<?>> createRunCaptor =
+                ArgumentCaptor.forClass(CreateWorkflowRunRequest.class);
+
+        doReturn(UUID.randomUUID())
+                .when(DEX_ENGINE_MOCK).createRun(createRunCaptor.capture());
 
         final Response response = jersey.target(
                         "/csaf-aggregators/%s/provider-discovery".formatted(
@@ -399,10 +421,19 @@ public class CsafResourceTest extends ResourceTest {
                 .post(null);
         assertThat(response.getStatus()).isEqualTo(202);
         assertThat(getPlainTextBody(response)).isEmpty();
+
+        final CreateWorkflowRunRequest<?> createRunRequest = createRunCaptor.getValue();
+        assertThat(createRunRequest.workflowName()).isEqualTo("discover-csaf-providers");
+        assertThat(createRunRequest.workflowVersion()).isEqualTo(1);
+        assertThat(createRunRequest.workflowInstanceId()).isEqualTo("discover-csaf-providers:" + aggregator.getId());
+        assertThat(createRunRequest.argument()).isInstanceOf(DiscoverCsafProvidersArg.class);
+
+        final var createRunArg = (DiscoverCsafProvidersArg) createRunRequest.argument();
+        assertThat(createRunArg.getAggregatorId()).isEqualTo(aggregator.getId().toString());
     }
 
     @Test
-    public void triggerCsafProviderDiscoveryShouldReturnNotFoundWhenAggregatorDoesNotExist() {
+    void triggerCsafProviderDiscoveryShouldReturnNotFoundWhenAggregatorDoesNotExist() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_UPDATE);
 
         final Response response = jersey.target("/csaf-aggregators/e15127ce-d2a4-44f8-a037-3b19ca77c174/provider-discovery")
@@ -421,7 +452,38 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createProviderShouldReturnCreatedProvider() {
+    void triggerCsafProviderDiscoveryShouldReturnConflictWhenAlreadyInProgress() {
+        initializeWithPermissions(SYSTEM_CONFIGURATION_UPDATE);
+
+        final var aggregator = new CsafAggregator(
+                URI.create("example.com"),
+                URI.create("https://example.com"),
+                "test");
+        aggregator.setEnabled(true);
+        aggregatorDao.create(aggregator);
+
+        doReturn(null)
+                .when(DEX_ENGINE_MOCK).createRun(any(CreateWorkflowRunRequest.class));
+
+        final Response response = jersey.target(
+                        "/csaf-aggregators/%s/provider-discovery".formatted(
+                                aggregator.getId()))
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(null);
+        assertThat(response.getStatus()).isEqualTo(409);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type": "about:blank",
+                  "status": 409,
+                  "title": "Resource already exists",
+                  "detail": "Discovery is already in progress"
+                }
+                """);
+    }
+
+    @Test
+    void createProviderShouldReturnCreatedProvider() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_CREATE);
 
         Response response = jersey.target("/csaf-providers")
@@ -450,7 +512,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createProviderShouldReturnConflictWhenUrlAlreadyExists() {
+    void createProviderShouldReturnConflictWhenUrlAlreadyExists() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_CREATE);
 
         providerDao.create(new CsafProvider(
@@ -481,7 +543,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getProviderShouldReturnProvider() {
+    void getProviderShouldReturnProvider() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_READ);
 
         var provider = new CsafProvider(
@@ -508,7 +570,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getProviderShouldReturnNotFoundWhenDoesNotExist() {
+    void getProviderShouldReturnNotFoundWhenDoesNotExist() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_READ);
 
         final Response response = jersey.target("/csaf-providers/ca9569dd-3e81-41b2-b9dc-6bc536ad1cc7")
@@ -527,7 +589,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listProvidersShouldSupportPagination() {
+    void listProvidersShouldSupportPagination() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_READ);
 
         for (int i = 0; i < 2; i++) {
@@ -608,7 +670,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listProvidersShouldSupportFilteringBySearchText() {
+    void listProvidersShouldSupportFilteringBySearchText() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_READ);
 
         providerDao.create(
@@ -673,7 +735,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listProvidersShouldSupportFilteringByDiscovered() {
+    void listProvidersShouldSupportFilteringByDiscovered() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_READ);
 
         var aggregator = new CsafAggregator(
@@ -744,7 +806,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateProviderShouldReturnUpdatedProvider() {
+    void updateProviderShouldReturnUpdatedProvider() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_UPDATE);
 
         final var provider = new CsafProvider(
@@ -777,7 +839,7 @@ public class CsafResourceTest extends ResourceTest {
     }
 
     @Test
-    public void deleteProviderShouldReturnNoContent() {
+    void deleteProviderShouldReturnNoContent() {
         initializeWithPermissions(SYSTEM_CONFIGURATION_DELETE);
 
         final var provider = new CsafProvider(

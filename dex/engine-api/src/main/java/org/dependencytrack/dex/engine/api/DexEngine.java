@@ -115,7 +115,7 @@ public interface DexEngine extends Closeable {
      * @return IDs of the created runs.
      * @throws NoSuchElementException When a workflow is not known to the engine.
      */
-    List<CreateWorkflowRunResponse> createRuns(Collection<CreateWorkflowRunRequest<?>> requests);
+    List<CreateWorkflowRunResponse> createRuns(Collection<? extends CreateWorkflowRunRequest<?>> requests);
 
     /**
      * Creates a single workflow run.

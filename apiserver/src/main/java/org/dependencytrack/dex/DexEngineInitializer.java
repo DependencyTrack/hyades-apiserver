@@ -26,6 +26,10 @@ import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
+import org.dependencytrack.csaf.DiscoverCsafProvidersActivity;
+import org.dependencytrack.csaf.DiscoverCsafProvidersWorkflow;
+import org.dependencytrack.csaf.ImportCsafDocumentsActivity;
+import org.dependencytrack.csaf.ImportCsafDocumentsWorkflow;
 import org.dependencytrack.dex.activity.DeleteFilesActivity;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
@@ -39,6 +43,8 @@ import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemp
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
+import org.dependencytrack.proto.internal.workflow.v1.DiscoverCsafProvidersArg;
+import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationActivityArg;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
 import org.dependencytrack.secret.management.SecretManager;
@@ -113,15 +119,36 @@ public final class DexEngineInitializer implements ServletContextListener {
         engine = engineFactory.create(engineConfig);
 
         engine.registerWorkflow(
+                new DiscoverCsafProvidersWorkflow(),
+                protoConverter(DiscoverCsafProvidersArg.class),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerWorkflow(
+                new ImportCsafDocumentsWorkflow(),
+                protoConverter(ImportCsafDocumentsArg.class),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerWorkflow(
                 new PublishNotificationWorkflow(),
                 protoConverter(PublishNotificationWorkflowArg.class),
                 voidConverter(),
                 Duration.ofMinutes(1));
+
         engine.registerActivity(
                 new DeleteFilesActivity(pluginManager),
                 protoConverter(DeleteFilesArgument.class),
                 voidConverter(),
                 Duration.ofMinutes(1));
+        engine.registerActivity(
+                new DiscoverCsafProvidersActivity(),
+                protoConverter(DiscoverCsafProvidersArg.class),
+                voidConverter(),
+                Duration.ofMinutes(5));
+        engine.registerActivity(
+                new ImportCsafDocumentsActivity(),
+                protoConverter(ImportCsafDocumentsArg.class),
+                voidConverter(),
+                Duration.ofMinutes(5));
         engine.registerActivity(
                 new PublishNotificationActivity(
                         pluginManager,

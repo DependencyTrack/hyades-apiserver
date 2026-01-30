@@ -24,10 +24,6 @@ import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import org.dependencytrack.csaf.CsafDocumentImportEvent;
-import org.dependencytrack.csaf.CsafDocumentImportTask;
-import org.dependencytrack.csaf.CsafProviderDiscoveryEvent;
-import org.dependencytrack.csaf.CsafProviderDiscoveryTask;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
@@ -141,8 +137,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.subscribe(ProjectPolicyEvaluationEvent.class, new PolicyEvaluationTask());
         eventService.subscribe(IntegrityMetaInitializerEvent.class, new IntegrityMetaInitializerTask());
         eventService.subscribe(IntegrityAnalysisEvent.class, new IntegrityAnalysisTask());
-        eventService.subscribe(CsafProviderDiscoveryEvent.class, new CsafProviderDiscoveryTask());
-        eventService.subscribe(CsafDocumentImportEvent.class, new CsafDocumentImportTask());
 
         // Execute maintenance tasks on the single-threaded event service.
         // This way, they are not blocked by, and don't block, actual processing tasks on the main event service.
@@ -185,8 +179,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.unsubscribe(IntegrityMetaInitializerTask.class);
         eventService.unsubscribe(IntegrityAnalysisTask.class);
         eventService.unsubscribe(VulnerabilityPolicyFetchTask.class);
-        eventService.unsubscribe(CsafProviderDiscoveryTask.class);
-        eventService.unsubscribe(CsafDocumentImportTask.class);
         try {
             eventService.shutdown(drainTimeout);
         } catch (TimeoutException e) {
