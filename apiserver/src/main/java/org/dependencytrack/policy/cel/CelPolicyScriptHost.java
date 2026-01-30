@@ -155,13 +155,14 @@ public class CelPolicyScriptHost {
         final MultiValuedMap<Type, String> requirements = visitor.getAccessedFieldsByType();
 
         // Special case for vulnerability severity: The "true" severity may or may not be persisted
-        // in the SEVERITY database column. To compute the actual severity, CVSSv2, CVSSv3, and OWASP RR
+        // in the SEVERITY database column. To compute the actual severity, CVSSv2, CVSSv3, CVSSv4, and OWASP RR
         // scores may be required. See https://github.com/DependencyTrack/dependency-track/issues/2474
         if (requirements.containsKey(TYPE_VULNERABILITY)
             && requirements.get(TYPE_VULNERABILITY).contains("severity")) {
             requirements.putAll(TYPE_VULNERABILITY, List.of(
                     "cvssv2_base_score",
                     "cvssv3_base_score",
+                    "cvssv4_base_score",
                     "owasp_rr_likelihood_score",
                     "owasp_rr_technical_impact_score",
                     "owasp_rr_business_impact_score"

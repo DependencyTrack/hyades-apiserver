@@ -42,7 +42,7 @@ BEGIN
     RAISE EXCEPTION 'Component with UUID % does not exist', "component_uuid";
   END IF;
 
-  FOR "v_vulnerability" IN SELECT "VULNID", "SOURCE", "V"."SEVERITY", "A"."SEVERITY" AS "SEVERITY_OVERRIDE", "CVSSV2BASESCORE", "CVSSV3BASESCORE"
+  FOR "v_vulnerability" IN SELECT "VULNID", "SOURCE", "V"."SEVERITY", "A"."SEVERITY" AS "SEVERITY_OVERRIDE", "CVSSV2BASESCORE", "CVSSV3BASESCORE", "CVSSV4BASESCORE"
                            FROM "VULNERABILITY" AS "V"
                                   INNER JOIN "COMPONENTS_VULNERABILITIES" AS "CV"
                                              ON "CV"."COMPONENT_ID" = "v_component"."ID"

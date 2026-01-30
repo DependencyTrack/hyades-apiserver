@@ -59,6 +59,8 @@ public class AnalysisRowMapper implements RowMapper<Analysis> {
         maybeSet(rs, "CVSSV2SCORE", ResultSet::getBigDecimal, analysis::setCvssV2Score);
         maybeSet(rs, "CVSSV3VECTOR", ResultSet::getString, analysis::setCvssV3Vector);
         maybeSet(rs, "CVSSV3SCORE", ResultSet::getBigDecimal, analysis::setCvssV3Score);
+        maybeSet(rs, "CVSSV4VECTOR", ResultSet::getString, analysis::setCvssV4Vector);
+        maybeSet(rs, "CVSSV4SCORE", ResultSet::getBigDecimal, analysis::setCvssV4Score);
         maybeSet(rs, "OWASPVECTOR", ResultSet::getString, analysis::setOwaspVector);
         maybeSet(rs, "OWASPSCORE", ResultSet::getBigDecimal, analysis::setOwaspScore);
         return analysis;
