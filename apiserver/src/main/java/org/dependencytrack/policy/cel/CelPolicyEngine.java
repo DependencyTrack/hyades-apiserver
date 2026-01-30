@@ -481,6 +481,7 @@ public class CelPolicyEngine {
                         .setSource(trimToEmpty(projection.source))
                         .setCvssv2Vector(trimToEmpty(projection.cvssV2Vector))
                         .setCvssv3Vector(trimToEmpty(projection.cvssV3Vector))
+                        .setCvssv4Vector(trimToEmpty(projection.cvssV4Vector))
                         .setOwaspRrVector(trimToEmpty(projection.owaspRrVector));
         Optional.ofNullable(projection.cvssV2BaseScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv2BaseScore);
         Optional.ofNullable(projection.cvssV2ImpactSubScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv2ImpactSubscore);
@@ -488,6 +489,7 @@ public class CelPolicyEngine {
         Optional.ofNullable(projection.cvssV3BaseScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv3BaseScore);
         Optional.ofNullable(projection.cvssV3ImpactSubScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv3ImpactSubscore);
         Optional.ofNullable(projection.cvssV3ExploitabilitySubScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv3ExploitabilitySubscore);
+        Optional.ofNullable(projection.cvssV4BaseScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv4BaseScore);
         Optional.ofNullable(projection.owaspRrLikelihoodScore).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrLikelihoodScore);
         Optional.ofNullable(projection.owaspRrTechnicalImpactScore).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrTechnicalImpactScore);
         Optional.ofNullable(projection.owaspRrBusinessImpactScore).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrBusinessImpactScore);

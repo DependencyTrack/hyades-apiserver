@@ -273,11 +273,17 @@ public final class NotificationModelConverter {
         if (vuln.getCvssV3BaseScore() != null) {
             builder.setCvssV3(vuln.getCvssV3BaseScore().doubleValue());
         }
+        if (vuln.getCvssV4BaseScore() != null) {
+            builder.setCvssV4(vuln.getCvssV4BaseScore().doubleValue());
+        }
         if (vuln.getCvssV2Vector() != null) {
             builder.setCvssV2Vector(vuln.getCvssV2Vector());
         }
         if (vuln.getCvssV3Vector() != null) {
             builder.setCvssV3Vector(vuln.getCvssV3Vector());
+        }
+        if (vuln.getCvssV4Vector() != null) {
+            builder.setCvssV4Vector(vuln.getCvssV4Vector());
         }
         if (vuln.getOwaspRRLikelihoodScore() != null) {
             builder.setOwaspRrLikelihood(vuln.getOwaspRRLikelihoodScore().doubleValue());

@@ -39,6 +39,8 @@ public final class AnalysisCommentFormatter {
         CVSSV2_SCORE("CVSSv2 Score", "(None)"),
         CVSSV3_VECTOR("CVSSv3 Vector", "(None)"),
         CVSSV3_SCORE("CVSSv3 Score", "(None)"),
+        CVSSV4_VECTOR("CVSSv4 Vector", "(None)"),
+        CVSSV4_SCORE("CVSSv4 Score", "(None)"),
         OWASP_VECTOR("OWASP Vector", "(None)"),
         OWASP_SCORE("OWASP Score", "(None)");
 
