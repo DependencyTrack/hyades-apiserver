@@ -21,8 +21,8 @@ package org.dependencytrack.event;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.IntegrityMetaComponent;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.sql.Date;
 import java.time.Instant;
@@ -36,7 +36,7 @@ public class PurlMigratorTest extends PersistenceCapableTest {
 
     final Component componentPersisted = new Component();
 
-    @Before
+    @BeforeEach
     public void persistComponentData() {
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         componentPersisted.setProject(projectA);

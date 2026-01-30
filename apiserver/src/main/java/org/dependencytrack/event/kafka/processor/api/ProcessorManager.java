@@ -20,12 +20,12 @@ package org.dependencytrack.event.kafka.processor.api;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
 import io.confluent.parallelconsumer.ParallelConsumerOptions;
 import io.confluent.parallelconsumer.ParallelConsumerOptions.ProcessingOrder;
 import io.confluent.parallelconsumer.ParallelEoSStreamProcessor;
 import io.confluent.parallelconsumer.ParallelStreamProcessor;
 import io.github.resilience4j.core.IntervalFunction;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.DescribeTopicsOptions;
@@ -292,13 +292,10 @@ public class ProcessorManager implements AutoCloseable {
         final long shutdownTimeoutMs = Optional.ofNullable(properties.get(PROPERTY_SHUTDOWN_TIMEOUT_MS))
                 .map(Long::parseLong)
                 .orElse(PROPERTY_SHUTDOWN_TIMEOUT_MS_DEFAULT);
-        optionsBuilder.shutdownTimeout(Duration.ofMillis(shutdownTimeoutMs));
-
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            optionsBuilder
-                    .meterRegistry(Metrics.getRegistry())
-                    .pcInstanceTag(processorName);
-        }
+        optionsBuilder
+                .shutdownTimeout(Duration.ofMillis(shutdownTimeoutMs))
+                .meterRegistry(Metrics.globalRegistry)
+                .pcInstanceTag(processorName);
 
         final ParallelConsumerOptions<byte[], byte[]> options = optionsBuilder.build();
         LOGGER.debug("Creating parallel consumer for processor %s with options %s".formatted(processorName, options));
@@ -332,10 +329,7 @@ public class ProcessorManager implements AutoCloseable {
 
         LOGGER.debug("Creating consumer for processor %s with options %s".formatted(processorName, consumerConfig));
         final var consumer = new KafkaConsumer<byte[], byte[]>(consumerConfig);
-
-        if (config.getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            new KafkaClientMetrics(consumer).bindTo(Metrics.getRegistry());
-        }
+        new KafkaClientMetrics(consumer).bindTo(Metrics.globalRegistry);
 
         return consumer;
     }

@@ -18,183 +18,174 @@
  */
 package org.dependencytrack.plugin;
 
-import alpine.model.IConfigProperty;
-import alpine.test.config.ConfigPropertyRule;
-import alpine.test.config.WithConfigProperty;
+import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.Plugin;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.eclipse.microprofile.config.ConfigProvider;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.SequencedCollection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-public class PluginManagerTest extends PersistenceCapableTest {
+class PluginManagerTest extends PersistenceCapableTest {
 
     interface UnknownExtensionPoint extends ExtensionPoint {
     }
 
-    @Rule
-    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
+    private PluginManager pluginManager;
 
-    @Before
-    @Override
-    public void before() throws Exception {
-        super.before();
+    @BeforeEach
+    void beforeEach() {
+        pluginManager = new PluginManager(
+                ConfigProvider.getConfig(),
+                secretName -> null,
+                List.of(TestExtensionPoint.class));
+        pluginManager.loadPlugins(List.of(new DummyPlugin()));
+    }
 
-        PluginManagerTestUtil.loadPlugins();
+    @AfterEach
+    void afterEach() {
+        if (pluginManager != null) {
+            pluginManager.close();
+        }
     }
 
     @Test
-    public void testGetLoadedPlugins() {
+    void testGetLoadedPlugins() {
         final SequencedCollection<Plugin> loadedPlugins =
-                PluginManager.getInstance().getLoadedPlugins();
+                pluginManager.getLoadedPlugins();
         assertThat(loadedPlugins).isNotEmpty();
         assertThat(loadedPlugins).isUnmodifiable();
     }
 
     @Test
-    public void testGetExtension() {
-        final TestExtensionPoint extension =
-                PluginManager.getInstance().getExtension(TestExtensionPoint.class);
-        assertThat(extension).isNotNull();
-        assertThat(extension.test()).isEqualTo("null-null");
+    void testGetExtensionWithConfig() {
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValue("dt.test.dummy.bar", "qux")
+                .build();
+
+        try (final var pluginManager = new PluginManager(
+                config, secretName -> null, List.of(TestExtensionPoint.class))) {
+            pluginManager.loadPlugins(List.of(new DummyPlugin()));
+
+            final TestExtensionPoint extension =
+                    pluginManager.getExtension(TestExtensionPoint.class);
+            assertThat(extension).isNotNull();
+            assertThat(extension.test()).isEqualTo("qux");
+        }
     }
 
     @Test
-    @WithConfigProperty("test.extension.dummy.bar=qux")
-    public void testGetExtensionWithConfig() {
-        qm.createConfigProperty(
-                /* groupName */ "test",
-                /* propertyName */ "extension.dummy.foo",
-                /* propertyValue */ "baz",
-                IConfigProperty.PropertyType.STRING,
-                /* description */ null
-        );
-
-        final TestExtensionPoint extension =
-                PluginManager.getInstance().getExtension(TestExtensionPoint.class);
-        assertThat(extension).isNotNull();
-        assertThat(extension.test()).isEqualTo("baz-qux");
+    void testGetExtensionWithImplementationClass() {
+        assertThatExceptionOfType(NoSuchExtensionPointException.class)
+                .isThrownBy(() -> pluginManager.getExtension(DummyTestExtension.class))
+                .withMessage("org.dependencytrack.plugin.DummyTestExtension is not a known extension point");
     }
 
     @Test
-    public void testGetExtensionWithImplementationClass() {
+    void testGetExtensionByName() {
+        final TestExtensionPoint extension =
+                pluginManager.getExtension(TestExtensionPoint.class, "dummy");
+        assertThat(extension).isNotNull();
+    }
+
+    @Test
+    void testGetExtensionByNameWhenNoExists() {
         assertThatExceptionOfType(NoSuchExtensionException.class)
-                .isThrownBy(() -> PluginManager.getInstance().getExtension(DummyTestExtension.class))
-                .withMessage("""
-                        No extension exists for the extension point \
-                        org.dependencytrack.plugin.DummyTestExtension""");
+                .isThrownBy(() -> pluginManager.getExtension(TestExtensionPoint.class, "doesNotExist"))
+                .withMessage("No extension named 'doesNotExist' exists for the extension point 'test'");
     }
 
     @Test
-    public void testGetExtensionByName() {
-        final TestExtensionPoint extension =
-                PluginManager.getInstance().getExtension(TestExtensionPoint.class, "dummy");
-        assertThat(extension).isNotNull();
-    }
-
-    @Test
-    public void testGetExtensionByNameWhenNoExists() {
-        assertThatExceptionOfType(NoSuchExtensionException.class)
-                .isThrownBy(() -> PluginManager.getInstance().getExtension(TestExtensionPoint.class, "doesNotExist"))
-                .withMessage("""
-                        No extension named doesNotExist exists for the extension point \
-                        org.dependencytrack.plugin.TestExtensionPoint""");
-    }
-
-    @Test
-    public void testGetFactory() {
+    void testGetFactory() {
         final ExtensionFactory<TestExtensionPoint> factory =
-                PluginManager.getInstance().getFactory(TestExtensionPoint.class);
+                pluginManager.getFactory(TestExtensionPoint.class);
         assertThat(factory).isExactlyInstanceOf(DummyTestExtensionFactory.class);
     }
 
     @Test
-    public void testGetFactoryForUnknownExtensionPoint() {
-        assertThatExceptionOfType(NoSuchExtensionException.class)
-                .isThrownBy(() -> PluginManager.getInstance().getFactory(UnknownExtensionPoint.class))
-                .withMessage("""
-                        No extension factory exists for the extension point \
-                        org.dependencytrack.plugin.PluginManagerTest$UnknownExtensionPoint""");
+    void testGetFactoryForUnknownExtensionPoint() {
+        assertThatExceptionOfType(NoSuchExtensionPointException.class)
+                .isThrownBy(() -> pluginManager.getFactory(UnknownExtensionPoint.class))
+                .withMessage("org.dependencytrack.plugin.PluginManagerTest$UnknownExtensionPoint is not a known extension point");
     }
 
     @Test
-    public void testGetFactories() {
+    void testGetFactories() {
         final SequencedCollection<ExtensionFactory<TestExtensionPoint>> factories =
-                PluginManager.getInstance().getFactories(TestExtensionPoint.class);
+                pluginManager.getFactories(TestExtensionPoint.class);
         assertThat(factories).satisfiesExactly(factory ->
                 assertThat(factory).isExactlyInstanceOf(DummyTestExtensionFactory.class));
     }
 
     @Test
-    public void testGetFactoriesForUnknownExtensionPoint() {
-        final SequencedCollection<ExtensionFactory<UnknownExtensionPoint>> factories =
-                PluginManager.getInstance().getFactories(UnknownExtensionPoint.class);
-        assertThat(factories).isEmpty();
+    void testGetFactoriesForUnknownExtensionPoint() {
+        assertThatExceptionOfType(NoSuchExtensionPointException.class)
+                .isThrownBy(() -> pluginManager.getFactories(UnknownExtensionPoint.class));
     }
 
     @Test
-    public void testGetKVStore() {
+    void testGetKVStore() {
         final ExtensionKVStore kvStore =
-                PluginManager.getInstance().getKVStore(TestExtensionPoint.class, "dummy");
+                pluginManager.getKVStore(TestExtensionPoint.class, "dummy");
         assertThat(kvStore).isInstanceOf(DatabaseExtensionKVStore.class);
     }
 
     @Test
-    public void testGetKVStoreForUnknownExtensionPoint() {
-        assertThatExceptionOfType(NoSuchExtensionException.class)
-                .isThrownBy(() -> PluginManager.getInstance().getKVStore(UnknownExtensionPoint.class, "dummy"));
+    void testGetKVStoreForUnknownExtensionPoint() {
+        assertThatExceptionOfType(NoSuchExtensionPointException.class)
+                .isThrownBy(() -> pluginManager.getKVStore(UnknownExtensionPoint.class, "dummy"));
     }
 
     @Test
-    public void testGetKVStoreForUnknownExtension() {
+    void testGetKVStoreForUnknownExtension() {
         assertThatExceptionOfType(NoSuchExtensionException.class)
-                .isThrownBy(() -> PluginManager.getInstance().getKVStore(TestExtensionPoint.class, "doesNotExist"));
+                .isThrownBy(() -> pluginManager.getKVStore(TestExtensionPoint.class, "doesNotExist"));
     }
 
     @Test
-    public void testLoadPluginsRepeatedly() {
+    void testLoadPluginsRepeatedly() {
         assertThatExceptionOfType(IllegalStateException.class)
-                .isThrownBy(() -> PluginManager.getInstance().loadPlugins())
+                .isThrownBy(() -> pluginManager.loadPlugins(List.of(new DummyPlugin())))
                 .withMessage("Plugins were already loaded; Unload them first");
     }
 
     @Test
-    @WithConfigProperty("test.extension.dummy.enabled=false")
-    public void testDisabledExtension() {
-        final PluginManager pluginManager = PluginManager.getInstance();
+    void testDisabledExtension() {
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValue("dt.test.dummy.enabled", "false")
+                .build();
 
-        pluginManager.unloadPlugins();
+        try (final var pluginManager = new PluginManager(
+                config, secretName -> null, List.of(TestExtensionPoint.class))) {
+            pluginManager.loadPlugins(List.of(new DummyPlugin()));
 
-        pluginManager.loadPlugins();
-
-        assertThatExceptionOfType(NoSuchExtensionException.class)
-                .isThrownBy(() -> PluginManager.getInstance().getExtension(TestExtensionPoint.class))
-                .withMessage("""
-                        No extension exists for the extension point \
-                        org.dependencytrack.plugin.TestExtensionPoint""");
+            assertThatExceptionOfType(NoSuchExtensionException.class)
+                    .isThrownBy(() -> pluginManager.getExtension(TestExtensionPoint.class))
+                    .withMessage("No extension exists for the extension point 'test'");
+        }
     }
 
     @Test
-    public void testDefaultExtensionNotLoaded() {
-        final PluginManager pluginManager = PluginManager.getInstance();
+    void testDefaultExtensionNotLoaded() {
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValue("dt.test.default-extension", "does.not.exist")
+                .build();
 
-        pluginManager.unloadPlugins();
-
-        configPropertyRule.setProperty("test.default.extension", "does.not.exist");
-
-        assertThatExceptionOfType(NoSuchExtensionException.class)
-                .isThrownBy(pluginManager::loadPlugins)
-                .withMessage("""
-                        No extension named does.not.exist exists for extension point \
-                        test (org.dependencytrack.plugin.TestExtensionPoint)""");
+        try (final var pluginManager = new PluginManager(
+                config, secretName -> null, List.of(TestExtensionPoint.class))) {
+            assertThatExceptionOfType(NoSuchExtensionException.class)
+                    .isThrownBy(() -> pluginManager.loadPlugins(List.of(new DummyPlugin())))
+                    .withMessage("No extension named 'does.not.exist' exists for the extension point 'test'");
+        }
     }
 
 }

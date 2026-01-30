@@ -32,7 +32,8 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisComment;
 import org.dependencytrack.model.ViolationAnalysisState;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdoNotificationEmitter;
+import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.util.DateUtil;
 
@@ -49,7 +50,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.dependencytrack.notification.NotificationFactory.createPolicyViolationAnalysisDecisionChangeNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createPolicyViolationAnalysisDecisionChangeNotification;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistentAll;
 
@@ -370,9 +371,14 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
 
             if (!command.options().contains(MakeViolationAnalysisCommand.Option.OMIT_NOTIFICATION)
                     && (stateChanged || suppressionChanged)) {
-                NotificationEmitter.using(this).emit(
+                new JdoNotificationEmitter(this).emit(
                         createPolicyViolationAnalysisDecisionChangeNotification(
-                                analysis, stateChanged, suppressionChanged));
+                                NotificationModelConverter.convert(analysis.getProject()),
+                                NotificationModelConverter.convert(analysis.getComponent()),
+                                NotificationModelConverter.convert(analysis.getPolicyViolation()),
+                                NotificationModelConverter.convert(analysis),
+                                stateChanged,
+                                suppressionChanged));
             }
 
             return analysis.getId();

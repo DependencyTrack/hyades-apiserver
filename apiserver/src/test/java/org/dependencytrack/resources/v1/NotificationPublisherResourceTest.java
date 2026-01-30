@@ -18,174 +18,242 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.util.UuidUtil;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
-import jakarta.json.JsonArray;
+import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.JerseyTestRule;
+import net.javacrumbs.jsonunit.core.Option;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.notification.DefaultNotificationPublisherInitializer;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
-import org.dependencytrack.persistence.DatabaseSeedingInitTask;
+import org.dependencytrack.notification.publishing.DefaultNotificationPublishersPlugin;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.resources.v1.vo.UpdateNotificationPublisherRequest;
+import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.notification.publisher.PublisherClass.SendMailPublisher;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
-public class NotificationPublisherResourceTest extends ResourceTest {
+class NotificationPublisherResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    private static PluginManager pluginManager;
+
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(NotificationPublisherResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bindFactory(() -> pluginManager).to(PluginManager.class);
+                        }
+                    }));
 
-    @Before
-    public void before() throws Exception {
-        super.before();
+    @BeforeAll
+    static void beforeAll() {
+        pluginManager = new PluginManager(
+                new SmallRyeConfigBuilder().build(),
+                secretName -> null,
+                List.of(org.dependencytrack.notification.api.publishing.NotificationPublisher.class));
+        pluginManager.loadPlugins(List.of(new DefaultNotificationPublishersPlugin()));
+    }
 
-        useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultNotificationPublishers);
+    @AfterAll
+    static void afterAll() {
+        if (pluginManager != null) {
+            pluginManager.close();
+        }
     }
 
     @Test
-    public void getAllNotificationPublishersTest() {
-        Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
+    void getAllNotificationPublishersTest() {
+        new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
+
+        final Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
                 .header(X_API_KEY, apiKey)
-                .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(8, json.size());
-        Assert.assertEquals("Console", json.getJsonObject(1).getString("name"));
-        Assert.assertEquals("Displays notifications on the system console", json.getJsonObject(1).getString("description"));
-        Assert.assertEquals("text/plain", json.getJsonObject(1).getString("templateMimeType"));
-        Assert.assertNotNull("template");
-        Assert.assertTrue(json.getJsonObject(1).getBoolean("defaultPublisher"));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getJsonObject(1).getString("uuid")));
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
+                .isEqualTo(/* language=JSON */ """
+                        [
+                          {
+                            "name": "Console",
+                            "description": "Default Console publisher",
+                            "extensionName": "console",
+                            "template": "${json-unit.any-string}",
+                            "templateMimeType": "${json-unit.any-string}",
+                            "defaultPublisher": true,
+                            "uuid": "${json-unit.any-string}"
+                          },
+                          {
+                            "name": "Email",
+                            "description": "Default Email publisher",
+                            "extensionName": "email",
+                            "template": "${json-unit.any-string}",
+                            "templateMimeType": "${json-unit.any-string}",
+                            "defaultPublisher": true,
+                            "uuid": "${json-unit.any-string}"
+                          },
+                          {
+                            "name": "Jira",
+                            "description": "Default Jira publisher",
+                            "extensionName": "jira",
+                            "template": "${json-unit.any-string}",
+                            "templateMimeType": "${json-unit.any-string}",
+                            "defaultPublisher": true,
+                            "uuid": "${json-unit.any-string}"
+                          },
+                          {
+                            "name": "Kafka",
+                            "description": "Default Kafka publisher",
+                            "extensionName": "kafka",
+                            "defaultPublisher": true,
+                            "uuid": "${json-unit.any-string}"
+                          },
+                          {
+                            "name": "Mattermost",
+                            "description": "Default Mattermost publisher",
+                            "extensionName": "mattermost",
+                            "template": "${json-unit.any-string}",
+                            "templateMimeType": "${json-unit.any-string}",
+                            "defaultPublisher": true,
+                            "uuid": "${json-unit.any-string}"
+                          },
+                          {
+                            "name": "Msteams",
+                            "description": "Default Msteams publisher",
+                            "extensionName": "msteams",
+                            "template": "${json-unit.any-string}",
+                            "templateMimeType": "${json-unit.any-string}",
+                            "defaultPublisher": true,
+                            "uuid": "${json-unit.any-string}"
+                          },
+                          {
+                            "name": "Slack",
+                            "description": "Default Slack publisher",
+                            "extensionName": "slack",
+                            "template": "${json-unit.any-string}",
+                            "templateMimeType": "${json-unit.any-string}",
+                            "defaultPublisher": true,
+                            "uuid": "${json-unit.any-string}"
+                          },
+                          {
+                            "name": "Webex",
+                            "description": "Default Webex publisher",
+                            "extensionName": "webex",
+                            "template": "${json-unit.any-string}",
+                            "templateMimeType": "${json-unit.any-string}",
+                            "defaultPublisher": true,
+                            "uuid": "${json-unit.any-string}"
+                          },
+                          {
+                            "name": "Webhook",
+                            "description": "Default Webhook publisher",
+                            "extensionName": "webhook",
+                            "template": "${json-unit.any-string}",
+                            "templateMimeType": "${json-unit.any-string}",
+                            "defaultPublisher": true,
+                            "uuid": "${json-unit.any-string}"
+                          }
+                        ]
+                        """);
     }
 
     @Test
-    public void createNotificationPublisherTest() {
-        NotificationPublisher publisher = new NotificationPublisher();
-        publisher.setName("Example Publisher");
-        publisher.setDescription("Publisher description");
-        publisher.setTemplate("template");
-        publisher.setTemplateMimeType("application/json");
-        publisher.setPublisherClass(SendMailPublisher.name());
-        publisher.setDefaultPublisher(false);
-        Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
+    void createNotificationPublisherTest() {
+        final Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.entity(publisher, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
-        JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Example Publisher", json.getString("name"));
-        Assert.assertFalse(json.getBoolean("defaultPublisher"));
-        Assert.assertEquals("Publisher description", json.getString("description"));
-        Assert.assertEquals("template", json.getString("template"));
-        Assert.assertEquals("application/json", json.getString("templateMimeType"));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
-        Assert.assertEquals(SendMailPublisher.name(), json.getString("publisherClass"));
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "Example Publisher",
+                          "description": "Publisher description",
+                          "extensionName": "slack",
+                          "template": "template",
+                          "templateMimeType": "application/json"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "name": "Example Publisher",
+                  "description": "Publisher description",
+                  "extensionName": "slack",
+                  "template": "template",
+                  "templateMimeType": "application/json",
+                  "defaultPublisher": false,
+                  "uuid": "${json-unit.any-string}"
+                }
+                """);
     }
 
     @Test
-    public void createNotificationPublisherWithDefaultFlagTest() {
-        NotificationPublisher publisher = new NotificationPublisher();
-        publisher.setName("Example Publisher");
-        publisher.setDescription("Publisher description");
-        publisher.setTemplate("template");
-        publisher.setTemplateMimeType("application/json");
-        publisher.setPublisherClass(SendMailPublisher.name());
-        publisher.setDefaultPublisher(true);
-        Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
+    void createNotificationPublisherWithExistingNameTest() {
+        new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
+
+        final Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.entity(publisher, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        String body = getPlainTextBody(response);
-        Assert.assertEquals("The creation of a new default publisher is forbidden", body);
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "Slack",
+                          "extensionName": "slack",
+                          "template": "template",
+                          "templateMimeType": "application/json"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(409);
+        assertThat(getPlainTextBody(response)).isEqualTo(
+                "The notification with the name Slack already exist");
     }
 
     @Test
-    public void createNotificationPublisherWithExistingNameTest() {
-        NotificationPublisher publisher = new NotificationPublisher();
-        publisher.setName(DefaultNotificationPublishers.SLACK.getPublisherName());
-        publisher.setDescription("Publisher description");
-        publisher.setTemplate("template");
-        publisher.setTemplateMimeType("application/json");
-        publisher.setPublisherClass(SendMailPublisher.name());
-        publisher.setDefaultPublisher(true);
-        Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
-                .header(X_API_KEY, apiKey)
-                .put(Entity.entity(publisher, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(409, response.getStatus(), 0);
-        String body = getPlainTextBody(response);
-        Assert.assertEquals("The notification with the name "+DefaultNotificationPublishers.SLACK.getPublisherName()+" already exist", body);
-    }
-
-    @Test
-    public void createNotificationPublisherWithClassNotImplementingPublisherInterfaceTest() {
-        NotificationPublisher publisher = new NotificationPublisher();
-        publisher.setName("Example Publisher");
-        publisher.setDescription("Publisher description");
-        publisher.setTemplate("template");
-        publisher.setTemplateMimeType("application/json");
-        publisher.setPublisherClass(NotificationPublisherResource.class.getName());
-        publisher.setDefaultPublisher(false);
-        Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
-                .header(X_API_KEY, apiKey)
-                .put(Entity.entity(publisher, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        String body = getPlainTextBody(response);
-        Assert.assertEquals("The publisher class "+NotificationPublisherResource.class.getName()+" is not valid.", body);
-    }
-
-    @Test
-    public void updateNotificationPublisherTest() {
+    void updateNotificationPublisherTest() {
         NotificationPublisher notificationPublisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
-                SendMailPublisher.name(), "template", "text/html",
+                "slack", "template", "text/html",
                 false
         );
         notificationPublisher.setName("Updated Publisher name");
         Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(notificationPublisher, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Updated Publisher name", json.getString("name"));
-        Assert.assertFalse(json.getBoolean("defaultPublisher"));
-        Assert.assertEquals("Publisher description", json.getString("description"));
-        Assert.assertEquals("template", json.getString("template"));
-        Assert.assertEquals("text/html", json.getString("templateMimeType"));
-        Assert.assertEquals(notificationPublisher.getUuid().toString(), json.getString("uuid"));
-        Assert.assertEquals(SendMailPublisher.name(), json.getString("publisherClass"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Updated Publisher name", json.getString("name"));
+        Assertions.assertFalse(json.getBoolean("defaultPublisher"));
+        Assertions.assertEquals("Publisher description", json.getString("description"));
+        Assertions.assertEquals("template", json.getString("template"));
+        Assertions.assertEquals("text/html", json.getString("templateMimeType"));
+        Assertions.assertEquals(notificationPublisher.getUuid().toString(), json.getString("uuid"));
+        Assertions.assertEquals("slack", json.getString("extensionName"));
     }
 
     @Test
-    public void updateUnknownNotificationPublisherTest() {
+    void updateUnknownNotificationPublisherTest() {
         NotificationPublisher notificationPublisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
-                SendMailPublisher.name(), "template", "text/html",
+                "slack", "template", "text/html",
                 false
         );
         notificationPublisher = qm.detach(NotificationPublisher.class, notificationPublisher.getId());
@@ -193,79 +261,107 @@ public class NotificationPublisherResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(notificationPublisher, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The UUID of the notification publisher could not be found.", body);
+        Assertions.assertEquals("The UUID of the notification publisher could not be found.", body);
     }
 
     @Test
-    public void updateExistingDefaultNotificationPublisherTest() {
-        NotificationPublisher notificationPublisher = qm.getDefaultNotificationPublisherByName(DefaultNotificationPublishers.MS_TEAMS.getPublisherName());
-        notificationPublisher.setName(notificationPublisher.getName() + " Updated");
+    void updateExistingDefaultNotificationPublisherTest() {
+        new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
+
+        final NotificationPublisher slackPublisher = qm.getDefaultNotificationPublisherByName("Slack");
+        assertThat(slackPublisher).isNotNull();
+
+        final var updateRequest = new UpdateNotificationPublisherRequest(
+                "foo",
+                slackPublisher.getExtensionName(),
+                slackPublisher.getDescription(),
+                slackPublisher.getTemplate(),
+                slackPublisher.getTemplateMimeType(),
+                slackPublisher.getUuid());
+
         Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.entity(notificationPublisher, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        String body = getPlainTextBody(response);
-        Assert.assertEquals("The modification of a default publisher is forbidden", body);
+                .post(Entity.json(updateRequest));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo(
+                "The modification of a default publisher is forbidden");
     }
 
     @Test
-    public void updateNotificationPublisherWithNameOfAnotherNotificationPublisherTest() {
-        NotificationPublisher notificationPublisher = qm.createNotificationPublisher(
-                "Example Publisher", "Publisher description",
-                SendMailPublisher.name(), "template", "text/html",
-                false
-        );
-        notificationPublisher = qm.detach(NotificationPublisher.class, notificationPublisher.getId());
-        notificationPublisher.setName(DefaultNotificationPublishers.MS_TEAMS.getPublisherName());
+    void updateNotificationPublisherWithNameOfAnotherNotificationPublisherTest() {
+        new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
+
+        final NotificationPublisher publisher = qm.createNotificationPublisher(
+                "Example Publisher",
+                "description",
+                "slack",
+                "template",
+                "text/html",
+                false);
+
         Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.entity(notificationPublisher, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(409, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        String body = getPlainTextBody(response);
-        Assert.assertEquals("An existing publisher with the name '"+DefaultNotificationPublishers.MS_TEAMS.getPublisherName()+"' already exist", body);
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "Slack",
+                          "description": "description",
+                          "extensionName": "slack",
+                          "template": "template",
+                          "templateMimeType": "templateMimeType",
+                          "uuid": "%s"
+                        }
+                        """.formatted(publisher.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(409);
+        assertThat(getPlainTextBody(response)).isEqualTo(
+                "An existing publisher with the name 'Slack' already exist");
     }
 
     @Test
-    public void updateNotificationPublisherWithInvalidClassTest() {
-        NotificationPublisher notificationPublisher = qm.createNotificationPublisher(
-                "Example Publisher", "Publisher description",
-                SendMailPublisher.name(), "template", "text/html",
-                false
-        );
-        notificationPublisher.setPublisherClass("unknownClass");
-        Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
+    void updateNotificationPublisherWithInvalidExtensionNameTest() {
+        new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
+
+        final NotificationPublisher slackPublisher = qm.getNotificationPublisher("Slack");
+        assertThat(slackPublisher).isNotNull();
+
+        final var updateRequest = new UpdateNotificationPublisherRequest(
+                slackPublisher.getName(),
+                "unknown",
+                slackPublisher.getDescription(),
+                slackPublisher.getTemplate(),
+                slackPublisher.getTemplateMimeType(),
+                slackPublisher.getUuid());
+
+        final Response response = jersey.target(V1_NOTIFICATION_PUBLISHER)
+                .request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.entity(notificationPublisher, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        String body = getPlainTextBody(response);
-        Assert.assertEquals("The publisher class unknownClass is not valid.", body);
+                .post(Entity.json(updateRequest));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo(
+                "No extension with name 'unknown' exists");
     }
 
     @Test
-    public void deleteNotificationPublisherWithNoRulesTest() {
+    void deleteNotificationPublisherWithNoRulesTest() {
         NotificationPublisher publisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
-                SendMailPublisher.name(), "template", "text/html",
+                "slack", "template", "text/html",
                 false
         );
         Response response = jersey.target(V1_NOTIFICATION_PUBLISHER + "/" + publisher.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(204, response.getStatus(), 0);
-        Assert.assertNull(qm.getObjectByUuid(NotificationPublisher.class, publisher.getUuid()));
+        Assertions.assertEquals(204, response.getStatus(), 0);
+        Assertions.assertNull(qm.getObjectByUuid(NotificationPublisher.class, publisher.getUuid()));
     }
 
     @Test
-    public void deleteNotificationPublisherWithLinkedNotificationRulesTest() {
+    void deleteNotificationPublisherWithLinkedNotificationRulesTest() {
         NotificationPublisher publisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
-                SendMailPublisher.name(), "template", "text/html",
+                "slack", "template", "text/html",
                 false
         );
         NotificationRule firstRule = qm.createNotificationRule("Example Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -273,59 +369,62 @@ public class NotificationPublisherResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_PUBLISHER + "/" + publisher.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(204, response.getStatus(), 0);
-        Assert.assertNull(qm.getObjectByUuid(NotificationPublisher.class, publisher.getUuid()));
-        Assert.assertNull(qm.getObjectByUuid(NotificationRule.class, firstRule.getUuid()));
-        Assert.assertNull(qm.getObjectByUuid(NotificationRule.class, secondRule.getUuid()));
+        Assertions.assertEquals(204, response.getStatus(), 0);
+        Assertions.assertNull(qm.getObjectByUuid(NotificationPublisher.class, publisher.getUuid()));
+        Assertions.assertNull(qm.getObjectByUuid(NotificationRule.class, firstRule.getUuid()));
+        Assertions.assertNull(qm.getObjectByUuid(NotificationRule.class, secondRule.getUuid()));
     }
 
     @Test
-    public void deleteUnknownNotificationPublisherTest() {
+    void deleteUnknownNotificationPublisherTest() {
         Response response = jersey.target(V1_NOTIFICATION_PUBLISHER + "/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
-    public void deleteDefaultNotificationPublisherTest() {
-        NotificationPublisher notificationPublisher = qm.getDefaultNotificationPublisherByName(DefaultNotificationPublishers.MS_TEAMS.getPublisherName());;
-        Response response = jersey.target(V1_NOTIFICATION_PUBLISHER + "/" + notificationPublisher.getUuid()).request()
+    void deleteDefaultNotificationPublisherTest() {
+        new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
+
+        final NotificationPublisher slackPublisher = qm.getNotificationPublisher("Slack");
+        assertThat(slackPublisher).isNotNull();
+
+        final Response response = jersey.target(V1_NOTIFICATION_PUBLISHER + "/" + slackPublisher.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(400, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        String body = getPlainTextBody(response);
-        Assert.assertEquals("Deleting a default notification publisher is forbidden.", body);
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo(
+                "Deleting a default notification publisher is forbidden.");
     }
 
     @Test
-    public void restoreDefaultTemplatesTest() {
-        NotificationPublisher slackPublisher = qm.getDefaultNotificationPublisherByName(DefaultNotificationPublishers.SLACK.getPublisherName());
-        slackPublisher.setName(slackPublisher.getName()+" Updated");
-        qm.persist(slackPublisher);
-        qm.detach(NotificationPublisher.class, slackPublisher.getId());
-        qm.createConfigProperty(
-                ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getGroupName(),
-                ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getDescription()
-        );
-        Response response = jersey.target(V1_NOTIFICATION_PUBLISHER + "/restoreDefaultTemplates").request()
+    void getNotificationPublisherConfigShouldReturnJsonSchema() {
+        new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
+
+        final NotificationPublisher slackPublisher = qm.getDefaultNotificationPublisherByName("Slack");
+
+        final Response response = jersey.target(
+                        "%s/%s/configSchema".formatted(V1_NOTIFICATION_PUBLISHER, slackPublisher.getUuid()))
+                .request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.json(""));
-        qm.getPersistenceManager().refreshAll();
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertFalse(qm.isEnabled(ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED));
-        slackPublisher = qm.getDefaultNotificationPublisherByName(DefaultNotificationPublishers.SLACK.getPublisherName());
-        Assert.assertEquals(DefaultNotificationPublishers.SLACK.getPublisherName(), slackPublisher.getName());
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .withOptions(Option.IGNORING_EXTRA_FIELDS)
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "$schema": "https://json-schema.org/draft/2020-12/schema"
+                        }
+                        """);
     }
 
     @Test
-    public void testNotificationRuleTest() {
-        NotificationPublisher slackPublisher = qm.getDefaultNotificationPublisherByName(DefaultNotificationPublishers.SLACK.getPublisherName());
-        slackPublisher.setName(slackPublisher.getName()+" Test Rule");
+    void testNotificationRuleTest() {
+        new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
+
+        NotificationPublisher slackPublisher = qm.getDefaultNotificationPublisherByName("Slack");
+        slackPublisher.setName(slackPublisher.getName() + " Test Rule");
         qm.persist(slackPublisher);
         qm.detach(NotificationPublisher.class, slackPublisher.getId());
 
@@ -342,12 +441,12 @@ public class NotificationPublisherResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity("", MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 
-        Assert.assertEquals(200, response.getStatus());
+        Assertions.assertEquals(200, response.getStatus());
         assertThat(qm.getNotificationOutbox()).hasSize(11);
     }
 
     @Test
-    public void testNotificationRuleNotFoundTest() {
+    void testNotificationRuleNotFoundTest() {
         final Response response = jersey.target(V1_NOTIFICATION_PUBLISHER + "/test/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .post(null);

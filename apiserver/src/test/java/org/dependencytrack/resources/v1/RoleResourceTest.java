@@ -23,23 +23,23 @@ import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
-import org.dependencytrack.JerseyTestRule;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,13 +49,13 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransactio
 
 public class RoleResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(RoleResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class));
 
-    @Before
+    @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();
@@ -71,13 +71,13 @@ public class RoleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_ROLE).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(4, json.size());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(4, json.size());
         for (int i = 0; i < json.size(); i++) {
-            Assert.assertNotNull(json.getJsonObject(i).getString("name"));
-            Assert.assertNotNull(json.getJsonObject(i).getString("uuid"));
+            Assertions.assertNotNull(json.getJsonObject(i).getString("name"));
+            Assertions.assertNotNull(json.getJsonObject(i).getString("uuid"));
         }
     }
 
@@ -88,20 +88,20 @@ public class RoleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_ROLE + "/" + role.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getString("name"));
     }
 
     @Test
     public void getRoleByInvalidUuidTest() {
         Response response = jersey.target(V1_ROLE + "/" + UUID.randomUUID())
                 .request().header(X_API_KEY, apiKey).get(Response.class);
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The role could not be found.", body);
+        Assertions.assertEquals("The role could not be found.", body);
     }
 
     @Test
@@ -116,11 +116,11 @@ public class RoleResourceTest extends ResourceTest {
                           "permissions": []
                         }
                         """));
-        Assert.assertEquals(201, response.getStatus());
+        Assertions.assertEquals(201, response.getStatus());
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("ABC", json.getString("name"));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("ABC", json.getString("name"));
+        Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
     }
 
     @Test
@@ -135,7 +135,7 @@ public class RoleResourceTest extends ResourceTest {
                           "permissions": []
                         }
                         """));
-        Assert.assertEquals(201, response.getStatus());
+        Assertions.assertEquals(201, response.getStatus());
 
         Response secondResponse = jersey.target(V1_ROLE).request()
         .header(X_API_KEY, apiKey)
@@ -145,7 +145,7 @@ public class RoleResourceTest extends ResourceTest {
                   "permissions": []
                 }
                 """));
-        Assert.assertEquals(409, secondResponse.getStatus());
+        Assertions.assertEquals(409, secondResponse.getStatus());
     }
 
     @Test
@@ -155,10 +155,10 @@ public class RoleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_ROLE).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(role, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("My New Role Name", json.getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("My New Role Name", json.getString("name"));
     }
 
     @Test
@@ -168,7 +168,7 @@ public class RoleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_ROLE).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(role, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -178,7 +178,7 @@ public class RoleResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .method("DELETE");
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
-        Assert.assertEquals(204, response.getStatus(), 0);
+        Assertions.assertEquals(204, response.getStatus(), 0);
     }
 
     @Test
@@ -188,7 +188,7 @@ public class RoleResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .method("DELETE");
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
-        Assert.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
@@ -205,12 +205,12 @@ public class RoleResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
 
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
 
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(1, json.size());
-        Assert.assertEquals("maintainer", json.getJsonObject(0).getJsonObject("role").getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(1, json.size());
+        Assertions.assertEquals("maintainer", json.getJsonObject(0).getJsonObject("role").getString("name"));
     }
 
     @Test
@@ -221,11 +221,11 @@ public class RoleResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
 
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
 
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(0, json.size());
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(0, json.size());
     }
 
 }

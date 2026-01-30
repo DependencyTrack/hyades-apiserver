@@ -91,7 +91,7 @@ public @interface DefineApiProjectAclCondition {
         private final String attributeName;
         private final String projectIdColumn;
 
-        StatementCustomizer(final String attributeName, final String projectIdColumn) {
+        public StatementCustomizer(final String attributeName, final String projectIdColumn) {
             this.attributeName = attributeName;
             this.projectIdColumn = projectIdColumn;
         }

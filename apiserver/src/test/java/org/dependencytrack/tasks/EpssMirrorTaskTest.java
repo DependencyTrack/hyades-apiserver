@@ -18,12 +18,12 @@
  */
 package org.dependencytrack.tasks;
 
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.model.Epss;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
@@ -32,7 +32,6 @@ import java.util.zip.GZIPOutputStream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,8 +40,11 @@ import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SO
 
 public class EpssMirrorTaskTest extends PersistenceCapableTest {
 
-    @Rule
-    public final WireMockRule wireMockRule = new WireMockRule(options().dynamicPort());
+    @RegisterExtension
+    private static final WireMockExtension wireMock =
+            WireMockExtension.newInstance()
+                    .options(options().dynamicPort())
+                    .build();
 
     @Test
     public void shouldMirrorEpssRecords() throws Exception {
@@ -55,7 +57,7 @@ public class EpssMirrorTaskTest extends PersistenceCapableTest {
         qm.createConfigProperty(
                 VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getGroupName(),
                 VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getPropertyName(),
-                wireMockRule.baseUrl(),
+                wireMock.baseUrl(),
                 VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getPropertyType(),
                 VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getDescription());
 
@@ -70,7 +72,7 @@ public class EpssMirrorTaskTest extends PersistenceCapableTest {
                     """.getBytes());
         }
 
-        stubFor(get(urlPathEqualTo("/epss_scores-current.csv.gz"))
+        wireMock.stubFor(get(urlPathEqualTo("/epss_scores-current.csv.gz"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withBody(compressedFeedOutputStream.toByteArray())));
@@ -113,7 +115,7 @@ public class EpssMirrorTaskTest extends PersistenceCapableTest {
         qm.createConfigProperty(
                 VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getGroupName(),
                 VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getPropertyName(),
-                wireMockRule.baseUrl(),
+                wireMock.baseUrl(),
                 VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getPropertyType(),
                 VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getDescription());
 
@@ -126,7 +128,7 @@ public class EpssMirrorTaskTest extends PersistenceCapableTest {
                     """.getBytes());
         }
 
-        stubFor(get(urlPathEqualTo("/epss_scores-current.csv.gz"))
+        wireMock.stubFor(get(urlPathEqualTo("/epss_scores-current.csv.gz"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withBody(compressedFeedOutputStream.toByteArray())));

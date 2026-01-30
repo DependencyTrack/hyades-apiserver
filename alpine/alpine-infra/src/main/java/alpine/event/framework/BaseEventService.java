@@ -19,10 +19,8 @@
 package alpine.event.framework;
 
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
-import alpine.model.EventServiceLog;
-import alpine.persistence.AlpineQueryManager;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 
 import java.lang.reflect.InvocationTargetException;
@@ -46,7 +44,7 @@ import static alpine.common.util.ExecutorUtil.getExecutorStats;
 /**
  * A publish/subscribe (pub/sub) event service that provides the ability to publish events and
  * asynchronously inform all subscribers to subscribed events.
- *
+ * <p>
  * Defaults to a single thread event system when extending this class. This can be changed by
  * specifying an alternative executor service.
  *
@@ -74,7 +72,7 @@ public abstract class BaseEventService implements IEventService {
 
     }
 
-    private final Map<Class<? extends Event>, ArrayList<Class<? extends Subscriber>>> subscriptionMap = new ConcurrentHashMap<>();
+    private final Map<Class<? extends Event>, ArrayList<Subscriber>> subscriptionMap = new ConcurrentHashMap<>();
     private final Map<UUID, ArrayList<UUID>> chainTracker = new ConcurrentHashMap<>();
     private final ExecutorService executor;
     private final Logger logger = Logger.getLogger(getClass());
@@ -87,8 +85,10 @@ public abstract class BaseEventService implements IEventService {
 
     /**
      * {@inheritDoc}
+     *
      * @since 1.0.0
      */
+    @Override
     public void publish(Event event) {
         final Status currentStatus = status;
         if (currentStatus != Status.RUNNING) {
@@ -97,38 +97,34 @@ public abstract class BaseEventService implements IEventService {
         }
 
         logger.debug("Dispatching event: " + event.getClass());
-        final ArrayList<Class<? extends Subscriber>> subscriberClasses = subscriptionMap.get(event.getClass());
-        if (subscriberClasses == null) {
+        final ArrayList<Subscriber> subscribers = subscriptionMap.get(event.getClass());
+        if (subscribers == null) {
             logger.debug("No subscribers to inform from event: " + event.getClass().getName());
             return;
         }
-        for (Class<? extends Subscriber> clazz: subscriberClasses) {
-            logger.debug("Alerting subscriber " + clazz.getName());
+        for (final Subscriber subscriber : subscribers) {
+            logger.debug("Alerting subscriber " + subscriber.getClass().getName());
 
             if (event instanceof ChainableEvent) {
-                if (! addTrackedEvent((ChainableEvent)event)) {
+                if (!addTrackedEvent((ChainableEvent) event)) {
                     return;
                 }
             }
 
             executor.execute(() -> {
-                try (AlpineQueryManager qm = new AlpineQueryManager()) {
-                    final EventServiceLog eventServiceLog = qm.createEventServiceLog(clazz);
-                    final Subscriber subscriber = clazz.getDeclaredConstructor().newInstance();
+                try {
                     final Timer.Sample timerSample = Timer.start();
                     try {
                         subscriber.inform(event);
                     } finally {
                         timerSample.stop(Timer.builder("alpine_event_processing")
                                 .tag("event", event.getClass().getSimpleName())
-                                .tag("subscriber", clazz.getSimpleName())
-                                .register(Metrics.getRegistry()));
+                                .tag("subscriber", subscriber.getClass().getSimpleName())
+                                .register(Metrics.globalRegistry));
                     }
-                    qm.updateEventServiceLog(eventServiceLog);
-                    if (event instanceof ChainableEvent) {
-                        ChainableEvent chainableEvent = (ChainableEvent)event;
+                    if (event instanceof final ChainableEvent chainableEvent) {
                         logger.debug("Calling onSuccess");
-                        for (ChainLink chainLink: chainableEvent.onSuccess()) {
+                        for (ChainLink chainLink : chainableEvent.onSuccess()) {
                             if (chainLink.getSuccessEventService() != null) {
                                 Method method = chainLink.getSuccessEventService().getMethod("getInstance");
                                 IEventService es = (IEventService) method.invoke(chainLink.getSuccessEventService(), new Object[0]);
@@ -138,18 +134,19 @@ public abstract class BaseEventService implements IEventService {
                             }
                         }
                     }
-                } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException | SecurityException e) {
-                    logger.error("An error occurred while informing subscriber: " + e);
-                    if (event instanceof ChainableEvent) {
-                        ChainableEvent chainableEvent = (ChainableEvent)event;
+                } catch (NoSuchMethodException | InvocationTargetException |
+                         IllegalAccessException | SecurityException e) {
+                    logger.error("An error occurred while informing subscriber", e);
+                    if (event instanceof final ChainableEvent chainableEvent) {
                         logger.debug("Calling onFailure");
-                        for (ChainLink chainLink: chainableEvent.onFailure()) {
+                        for (ChainLink chainLink : chainableEvent.onFailure()) {
                             if (chainLink.getFailureEventService() != null) {
                                 try {
                                     Method method = chainLink.getFailureEventService().getMethod("getInstance");
                                     IEventService es = (IEventService) method.invoke(chainLink.getFailureEventService(), new Object[0]);
                                     es.publish(chainLink.getFailureEvent());
-                                } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException ex) {
+                                } catch (NoSuchMethodException | InvocationTargetException |
+                                         IllegalAccessException ex) {
                                     logger.error("Exception while calling onFailure callback", ex);
                                 }
                             } else {
@@ -159,7 +156,7 @@ public abstract class BaseEventService implements IEventService {
                     }
                 } finally {
                     if (event instanceof ChainableEvent) {
-                        removeTrackedEvent((ChainableEvent)event);
+                        removeTrackedEvent((ChainableEvent) event);
                     }
                 }
             });
@@ -169,40 +166,43 @@ public abstract class BaseEventService implements IEventService {
 
     /**
      * {@inheritDoc}
+     *
      * @since 1.4.0
      */
+    @Override
     public synchronized boolean isEventBeingProcessed(ChainableEvent event) {
         return isEventBeingProcessed(event.getChainIdentifier());
     }
 
     /**
      * {@inheritDoc}
+     *
      * @since 1.4.0
      */
+    @Override
     public synchronized boolean isEventBeingProcessed(UUID chainIdentifier) {
         ArrayList<UUID> eventIdentifiers = chainTracker.get(chainIdentifier);
-        return eventIdentifiers != null && eventIdentifiers.size() != 0;
+        return eventIdentifiers != null && !eventIdentifiers.isEmpty();
     }
 
     private synchronized boolean addTrackedEvent(ChainableEvent event) {
-            ArrayList<UUID> eventIdentifiers = chainTracker.get(event.getChainIdentifier());
-            if (eventIdentifiers == null) {
-                eventIdentifiers = new ArrayList<>();
-            }
-            if (event instanceof SingletonCapableEvent) {
-                final SingletonCapableEvent sEvent = (SingletonCapableEvent)event;
-                // Check is this is a singleton event where only a
-                // single occurrence should be running at a given time
-                if (sEvent.isSingleton()) {
-                    if (! eventIdentifiers.isEmpty()) {
-                        logger.info("An singleton event (" + sEvent.getClass().getSimpleName() + ") was received but another singleton event of the same type is already in progress. Skipping.");
-                        return false;
-                    }
+        ArrayList<UUID> eventIdentifiers = chainTracker.get(event.getChainIdentifier());
+        if (eventIdentifiers == null) {
+            eventIdentifiers = new ArrayList<>();
+        }
+        if (event instanceof final SingletonCapableEvent singletonEvent) {
+            // Check is this is a singleton event where only a
+            // single occurrence should be running at a given time
+            if (singletonEvent.isSingleton()) {
+                if (!eventIdentifiers.isEmpty()) {
+                    logger.info("An singleton event (" + singletonEvent.getClass().getSimpleName() + ") was received but another singleton event of the same type is already in progress. Skipping.");
+                    return false;
                 }
             }
-            eventIdentifiers.add(event.getEventIdentifier());
-            chainTracker.put(event.getChainIdentifier(), eventIdentifiers);
-            return true;
+        }
+        eventIdentifiers.add(event.getEventIdentifier());
+        chainTracker.put(event.getChainIdentifier(), eventIdentifiers);
+        return true;
     }
 
     private synchronized void removeTrackedEvent(ChainableEvent event) {
@@ -220,41 +220,47 @@ public abstract class BaseEventService implements IEventService {
         Counter.builder("alpine_events_published_total")
                 .description("Total number of published events")
                 .tags("event", event.getClass().getName(), "publisher", this.getClass().getName())
-                .register(Metrics.getRegistry())
+                .register(Metrics.globalRegistry)
                 .increment();
     }
 
     /**
      * {@inheritDoc}
+     *
      * @since 1.0.0
      */
-    public void subscribe(Class<? extends Event> eventType, Class<? extends Subscriber> subscriberType) {
+    @Override
+    public void subscribe(Class<? extends Event> eventType, Subscriber subscriber) {
         if (!subscriptionMap.containsKey(eventType)) {
             subscriptionMap.put(eventType, new ArrayList<>());
         }
-        final ArrayList<Class<? extends Subscriber>> subscribers = subscriptionMap.get(eventType);
-        if (!subscribers.contains(subscriberType)) {
-            subscribers.add(subscriberType);
+        final ArrayList<Subscriber> subscribers = subscriptionMap.get(eventType);
+        if (subscribers.stream().map(Object::getClass).noneMatch(clazz -> clazz.equals(subscriber.getClass()))) {
+            subscribers.add(subscriber);
         }
     }
 
     /**
      * {@inheritDoc}
+     *
      * @since 1.0.0
      */
+    @Override
     public void unsubscribe(Class<? extends Subscriber> subscriberType) {
-        for (ArrayList<Class<? extends Subscriber>> list : subscriptionMap.values()) {
-            list.remove(subscriberType);
+        for (ArrayList<Subscriber> list : subscriptionMap.values()) {
+            list.removeIf(subscriber -> subscriberType.equals(subscriber.getClass()));
         }
     }
 
     /**
      * {@inheritDoc}
+     *
      * @since 1.2.0
      */
+    @Override
     public boolean hasSubscriptions(Event event) {
-        final ArrayList<Class<? extends Subscriber>> subscriberClasses = subscriptionMap.get(event.getClass());
-        return subscriberClasses != null;
+        final ArrayList<Subscriber> subscribers = subscriptionMap.get(event.getClass());
+        return subscribers != null && !subscribers.isEmpty();
     }
 
     public Status getStatus() {

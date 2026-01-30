@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>dependency-track-parent</artifactId>
-        <version>5.7.0-SNAPSHOT</version>
+        <version>5.7.0-alpha.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>apiserver</artifactId>
     <packaging>war</packaging>
+
+    <name>API Server</name>
     <description>The Dependency-Track API Server</description>
 
     <properties>
@@ -18,23 +18,17 @@
         <maven.install.skip>true</maven.install.skip>
 
         <!-- Dependency Versions -->
-        <lib.cloud-sql-postgres-socket-factory.version>1.27.0</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.28.0</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.28.0</lib.commons-compress.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
-        <lib.cyclonedx-java.version>11.0.0</lib.cyclonedx-java.version>
-        <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <lib.kafka.version>3.9.1</lib.kafka.version>
+        <lib.cyclonedx-java.version>12.0.1</lib.cyclonedx-java.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
-        <lib.kotlin-stdlib.version>2.2.21</lib.kotlin-stdlib.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
-        <lib.pebble.version>3.2.4</lib.pebble.version>
-        <lib.swagger.version>2.2.40</lib.swagger.version>
-        <lib.swagger-parser.version>2.1.35</lib.swagger-parser.version>
+        <lib.swagger-parser.version>2.1.37</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.woodstox.version>7.1.1</lib.woodstox.version>
-        <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>6.10.0</lib.net.javacrumbs.shedlock.version>
+        <lib.net.javacrumbs.shedlock.version>7.6.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
 
         <!-- CycloneDX CLI -->
@@ -53,13 +47,6 @@
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
-
-            <!-- Managed dependencies to exclude/override vulnerable version of kotlin-stdlib-jdk8 -->
-            <dependency>
-                <groupId>org.jetbrains.kotlin</groupId>
-                <artifactId>kotlin-stdlib-jdk8</artifactId>
-                <version>${lib.kotlin-stdlib.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -67,6 +54,11 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>common-pagination</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -81,7 +73,22 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>persistence-migration</artifactId>
+            <artifactId>migration</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>notification-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>notification-publishing</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>notification-templating</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -91,10 +98,37 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>plugin-runtime</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>proto</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>secret-management</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>dex-engine</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>dex-testing</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>file-storage-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>file-storage-local</artifactId>
@@ -111,6 +145,11 @@
             <version>${project.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>vuln-data-source-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>vuln-data-source-github</artifactId>
@@ -225,6 +264,11 @@
         </dependency>
 
         <dependency>
+            <groupId>io.csaf</groupId>
+            <artifactId>csaf-retrieval-jvm</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>jakarta.activation</groupId>
             <artifactId>jakarta.activation-api</artifactId>
         </dependency>
@@ -240,17 +284,15 @@
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20250517</version>
+            <version>20251224</version>
         </dependency>
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-jaxrs2-jakarta</artifactId>
-            <version>${lib.swagger.version}</version>
         </dependency>
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-annotations-jakarta</artifactId>
-            <version>${lib.swagger.version}</version>
         </dependency>
         <dependency>
             <groupId>io.swagger.parser.v3</groupId>
@@ -283,7 +325,6 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
-            <version>${lib.kafka.version}</version>
         </dependency>
 
         <!-- shedlock dependencies -->
@@ -304,6 +345,14 @@
         </dependency>
         <!-- Micrometer Metrics -->
         <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus-simpleclient</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.github.mweirauch</groupId>
             <artifactId>micrometer-jvm-extras</artifactId>
             <version>${lib.micrometer-jvm-extras.version}</version>
@@ -318,7 +367,6 @@
         <dependency>
             <groupId>io.pebbletemplates</groupId>
             <artifactId>pebble</artifactId>
-            <version>${lib.pebble.version}</version>
         </dependency>
         <!-- Protobuf -->
         <dependency>
@@ -344,12 +392,12 @@
         </dependency>
         <dependency>
             <groupId>io.github.nscuro</groupId>
-            <artifactId>versatile</artifactId>
+            <artifactId>versatile-core</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-artifact</artifactId>
-            <version>3.9.11</version>
+            <version>3.9.12</version>
         </dependency>
 
         <dependency>
@@ -375,6 +423,7 @@
             <artifactId>commons-compress</artifactId>
             <version>${lib.commons-compress.version}</version>
         </dependency>
+
         <!-- Resilience4J -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>
@@ -403,27 +452,9 @@
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp-jvm</artifactId>
         </dependency>
-
-        <!-- Test Dependencies -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>pl.pragmatists</groupId>
-            <artifactId>JUnitParams</artifactId>
-            <version>${lib.junit-params.version}</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.glassfish.jersey.test-framework.providers</groupId>
             <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish.jersey.connectors</groupId>
-            <artifactId>jersey-grizzly-connector</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -432,14 +463,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.stefanbirkner</groupId>
-            <artifactId>system-rules</artifactId>
-            <version>${lib.system-rules.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>com.tngtech.archunit</groupId>
-            <artifactId>archunit-junit4</artifactId>
+            <artifactId>archunit-junit5</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -453,18 +478,28 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>kafka</artifactId>
+            <groupId>uk.org.webcompere</groupId>
+            <artifactId>system-stubs-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>minio</artifactId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
+            <artifactId>testcontainers-kafka</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-minio</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -547,11 +582,15 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <!-- Do not fail the build if -Dtest specifies tests that don't match any classes -->
+                    <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
                     <argLine>
                         @{argLine}
                         -Xmx512m
-                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.net=ALL-UNNAMED
                         --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.util.concurrent=ALL-UNNAMED
                         -javaagent:${settings.localRepository}/org/mockito/mockito-core/${lib.mockito.version}/mockito-core-${lib.mockito.version}.jar
                         -Xshare:off
                     </argLine>
@@ -560,13 +599,6 @@
                         <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
                     </systemPropertyVariables>
                 </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.apache.maven.surefire</groupId>
-                        <artifactId>surefire-junit4</artifactId>
-                        <version>3.5.4</version>
-                    </dependency>
-                </dependencies>
             </plugin>
 
             <plugin>
@@ -637,7 +669,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.6.2</version>
+                <version>3.6.3</version>
                 <executions>
                     <execution>
                         <id>merge-services-bom</id>
@@ -670,8 +702,7 @@
                         <phase>prepare-package</phase>
                         <configuration>
                             <target>
-                                <copy file="${project.build.directory}/bom.json"
-                                      tofile="${project.build.directory}/${project.build.finalName}/.well-known/sbom"/>
+                                <copy file="${project.build.directory}/bom.json" tofile="${project.build.directory}/${project.build.finalName}/.well-known/sbom" />
                             </target>
                             <skip>${cyclonedx.skip}</skip>
                         </configuration>
@@ -685,8 +716,7 @@
                         <phase>package</phase>
                         <configuration>
                             <target>
-                                <copy file="${project.build.directory}/${project.build.finalName}.war"
-                                      tofile="${project.build.directory}/${project.build.finalName}.jar" />
+                                <copy file="${project.build.directory}/${project.build.finalName}.war" tofile="${project.build.directory}/${project.build.finalName}.jar" />
                             </target>
                             <skip>${maven.war.skip}</skip>
                         </configuration>
@@ -700,7 +730,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.5.1</version>
                 <configuration>
                     <warName>dependency-track-apiserver</warName>
                     <archive>
@@ -752,8 +782,8 @@
             </plugin>
 
             <plugin>
-                <groupId>org.eclipse.jetty.ee10</groupId>
-                <artifactId>jetty-ee10-maven-plugin</artifactId>
+                <groupId>org.eclipse.jetty.ee11</groupId>
+                <artifactId>jetty-ee11-maven-plugin</artifactId>
                 <version>${lib.jetty.version}</version>
                 <configuration>
                     <webApp>
@@ -784,32 +814,22 @@
                 </dependency>
                 <dependency>
                     <groupId>org.testcontainers</groupId>
-                    <artifactId>postgresql</artifactId>
+                    <artifactId>testcontainers-postgresql</artifactId>
                     <version>${lib.testcontainers.version}</version>
                     <scope>compile</scope>
                 </dependency>
                 <dependency>
                     <groupId>org.testcontainers</groupId>
-                    <artifactId>kafka</artifactId>
+                    <artifactId>testcontainers-kafka</artifactId>
                     <version>${lib.testcontainers.version}</version>
-                    <scope>compile</scope>
-                </dependency>
-                <dependency>
-                    <!--
-                        Unfortunately required by testcontainers:
-                        https://github.com/testcontainers/testcontainers-java/issues/970
-                    -->
-                    <groupId>junit</groupId>
-                    <artifactId>junit</artifactId>
-                    <version>${lib.junit4.version}</version>
                     <scope>compile</scope>
                 </dependency>
             </dependencies>
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.eclipse.jetty.ee10</groupId>
-                        <artifactId>jetty-ee10-maven-plugin</artifactId>
+                        <groupId>org.eclipse.jetty.ee11</groupId>
+                        <artifactId>jetty-ee11-maven-plugin</artifactId>
                         <executions>
                             <execution>
                                 <phase>verify</phase>
@@ -820,7 +840,7 @@
                         </executions>
                         <configuration>
                             <systemProperties>
-                                <alpine.config.profile>dev</alpine.config.profile>
+                                <smallrye.config.profile>dev</smallrye.config.profile>
                                 <dev.services.enabled>true</dev.services.enabled>
                             </systemProperties>
                             <webApp>

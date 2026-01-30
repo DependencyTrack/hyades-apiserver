@@ -20,14 +20,13 @@ package org.dependencytrack.parser.cyclonedx;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import jakarta.ws.rs.core.MediaType;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Source;
 import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
@@ -47,13 +46,12 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
-@RunWith(JUnitParamsRunner.class)
 public class CycloneDxValidatorTest {
 
     private CycloneDxValidator validator;
     private final MediaType mediaTypeProtobuf = new MediaType("application", "x.vnd.cyclonedx+protobuf");
 
-    @Before
+    @BeforeEach
     public void setUp() {
         validator = new CycloneDxValidator();
     }
@@ -202,7 +200,7 @@ public class CycloneDxValidatorTest {
     }
 
     @SuppressWarnings("unused")
-    private Object[] testValidateWithValidBomParameters() throws Exception {
+    private static Object[] testValidateWithValidBomParameters() throws Exception {
         final PathMatcher pathMatcherJson = FileSystems.getDefault().getPathMatcher("glob:**/valid-bom-*.json");
         final PathMatcher pathMatcherXml = FileSystems.getDefault().getPathMatcher("glob:**/valid-bom-*.xml");
         final var bomFilePaths = new ArrayList<Path>();
@@ -221,8 +219,8 @@ public class CycloneDxValidatorTest {
         return bomFilePaths.stream().sorted().toArray();
     }
 
-    @Test
-    @Parameters(method = "testValidateWithValidBomParameters")
+    @ParameterizedTest
+    @MethodSource("testValidateWithValidBomParameters")
     public void testValidateWithValidBom(final Path bomFilePath) throws Exception {
         final byte[] bomBytes = Files.readAllBytes(bomFilePath);
 

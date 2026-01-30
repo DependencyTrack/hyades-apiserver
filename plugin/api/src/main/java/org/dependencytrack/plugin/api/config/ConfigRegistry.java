@@ -18,61 +18,60 @@
  */
 package org.dependencytrack.plugin.api.config;
 
-import org.dependencytrack.plugin.api.ExtensionPoint;
-
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
 /**
  * A read-only registry for accessing application configuration.
- * <p>
- * The registry enforces namespacing of property names,
- * to prevent {@link ExtensionPoint}s from accessing values
- * belonging to the core application, or other extension points.
- * <p>
- * Namespacing is based on the extension point's, and the extension's name.
- * Extension {@code bar} of extension point {@code foo} can access:
- * <ul>
- *     <li>Runtime properties with {@code groupName} of {@code foo} and {@code propertyName} prefixed with {@code extension.bar}</li>
- *     <li>Deployment properties prefixed with {@code foo.extension.bar}</li>
- * </ul>
- * <p>
- * Runtime properties are sourced from the database.
- * Deployment properties are sourced from environment variables, and the {@code application.properties} file.
  *
  * @since 5.6.0
  */
 public interface ConfigRegistry {
 
     /**
-     * Retrieve the value of a configuration.
+     * Retrieve the deployment config.
      *
-     * @param config Definition of the config to retrieve.
-     * @return The config's value, if any.
+     * @return The deployment config.
+     * @since 5.7.0
      */
-    <T> Optional<T> getOptionalValue(final ConfigDefinition<T> config);
+    DeploymentConfig getDeploymentConfig();
 
     /**
-     * Retrieve the value of a configuration, throwing if there is none.
+     * Retrieve the runtime config.
      *
-     * @param config Definition of the config to retrieve.
-     * @return The config's value.
-     * @throws NoSuchElementException When the config does not exist or is {@code null}.
+     * @return The runtime config.
+     * @since 5.7.0
      */
-    default <T> T getValue(final ConfigDefinition<T> config) {
-        return getOptionalValue(config).orElseThrow(NoSuchElementException::new);
+    Optional<RuntimeConfig> getOptionalRuntimeConfig();
+
+    /**
+     * Retrieve the runtime config.
+     *
+     * @param configClass Class of the runtime config.
+     * @param <T>         Type of the runtime config.
+     * @return The runtime config.
+     * @throws ClassCastException When the config object can not be cast to the provided {@code configClass}.
+     * @see #getOptionalRuntimeConfig()
+     * @since 5.7.0
+     */
+    default <T extends RuntimeConfig> Optional<T> getOptionalRuntimeConfig(Class<T> configClass) {
+        return getOptionalRuntimeConfig().map(configClass::cast);
     }
 
     /**
-     * Set the value of a given runtime configuration.
+     * Retrieve the runtime config, throwing if it doesn't exist.
      *
-     * @param config The definition of the config to set.
-     * @param value  The value to set.
-     * @throws IllegalArgumentException When {@link RuntimeConfigDefinition#isRequired()} is {@code true} but
-     *                                  {@code value} is null, or {@link RuntimeConfigDefinition#isSecret()} is
-     *                                  {@code true} but encryption failed.
+     * @param configClass Class of the runtime config.
+     * @param <T>         Type of the runtime config.
+     * @return The runtime config.
+     * @throws NoSuchElementException When no runtime config exists.
+     * @see #getOptionalRuntimeConfig(Class)
      * @since 5.7.0
      */
-    <T> void setValue(RuntimeConfigDefinition<T> config, T value);
+    default <T extends RuntimeConfig> T getRuntimeConfig(Class<T> configClass) {
+        return getOptionalRuntimeConfig()
+                .map(configClass::cast)
+                .orElseThrow(() -> new NoSuchElementException("No runtime config found"));
+    }
 
 }

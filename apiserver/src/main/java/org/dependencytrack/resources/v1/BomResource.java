@@ -32,6 +32,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonReader;
@@ -57,19 +58,21 @@ import org.cyclonedx.CycloneDxMediaType;
 import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdbiNotificationEmitter;
+import org.dependencytrack.notification.JdoNotificationEmitter;
+import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.api.filestorage.FileStorage;
-import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
@@ -96,8 +99,8 @@ import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
-import static org.dependencytrack.notification.NotificationFactory.createBomValidationFailedNotification;
-import static org.dependencytrack.notification.NotificationFactory.createProjectCreatedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createBomValidationFailedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createProjectCreatedNotification;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 /**
@@ -115,6 +118,9 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransactio
 public class BomResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(BomResource.class);
+
+    @Inject
+    private PluginManager pluginManager;
 
     @GET
     @Path("/cyclonedx/project/{uuid}")
@@ -378,8 +384,9 @@ public class BomResource extends AbstractApiResource {
                                     null, null, request.isLatestProjectVersion(), true);
                             Principal principal = getPrincipal();
                             qm.updateNewProjectACL(project, principal);
-                            NotificationEmitter.using(qm).emit(
-                                    createProjectCreatedNotification(project));
+                            new JdoNotificationEmitter(qm).emit(
+                                    createProjectCreatedNotification(
+                                            NotificationModelConverter.convert(project)));
                         } else {
                             final var response = Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                             return new ProcessingResult(response, null);
@@ -500,8 +507,9 @@ public class BomResource extends AbstractApiResource {
                             project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, tags, parent, null, null, isLatest, true);
                             Principal principal = getPrincipal();
                             qm.updateNewProjectACL(project, principal);
-                            NotificationEmitter.using(qm).emit(
-                                    createProjectCreatedNotification(project));
+                            new JdoNotificationEmitter(qm).emit(
+                                    createProjectCreatedNotification(
+                                            NotificationModelConverter.convert(project)));
                         } else {
                             final var response = Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                             return new ProcessingResult(response, null);
@@ -610,7 +618,7 @@ public class BomResource extends AbstractApiResource {
         //   * application/x.vnd.cyclonedx+protobuf
         //  Consider also attaching the detected version, i.e. application/vnd.cyclonedx+xml; version=1.6
         //  See https://cyclonedx.org/specification/overview/ -> Media Types.
-        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+        try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
             return fileStorage.store(
                     "bom-upload/%s_%s".formatted(Instant.now().toEpochMilli(), project.getUuid()),
                     new ByteArrayInputStream(bomBytes));
@@ -645,8 +653,10 @@ public class BomResource extends AbstractApiResource {
             // NB: Usage of a separate DB connection is intended here,
             // as the active transaction will be rolled back when the
             // below exception is thrown.
-            useJdbiTransaction(handle -> NotificationEmitter.using(handle).emit(
-                    createBomValidationFailedNotification(project, e.getValidationErrors())));
+            useJdbiTransaction(handle -> new JdbiNotificationEmitter(handle).emit(
+                    createBomValidationFailedNotification(
+                            NotificationModelConverter.convert(project),
+                            e.getValidationErrors())));
 
             throw new WebApplicationException(problemDetails.toResponse());
         } catch (RuntimeException e) {
@@ -708,7 +718,7 @@ public class BomResource extends AbstractApiResource {
                     .map(org.dependencytrack.model.Tag::getName)
                     .anyMatch(validationModeTags::contains);
             return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
-                   || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
+                    || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
         }
     }
 }

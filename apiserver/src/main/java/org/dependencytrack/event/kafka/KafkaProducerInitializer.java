@@ -20,8 +20,10 @@ package org.dependencytrack.event.kafka;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.MockProducer;
@@ -32,8 +34,6 @@ import org.apache.kafka.common.record.CompressionType;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.dependencytrack.common.ConfigKey;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Properties;
@@ -52,12 +52,8 @@ public class KafkaProducerInitializer implements ServletContextListener {
         LOGGER.info("Initializing Kafka producer");
 
         PRODUCER = createProducer();
-
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            LOGGER.info("Registering Kafka producer metrics");
-            PRODUCER_METRICS = new KafkaClientMetrics(PRODUCER);
-            PRODUCER_METRICS.bindTo(Metrics.getRegistry());
-        }
+        PRODUCER_METRICS = new KafkaClientMetrics(PRODUCER);
+        PRODUCER_METRICS.bindTo(Metrics.globalRegistry);
     }
 
     @Override
@@ -80,7 +76,7 @@ public class KafkaProducerInitializer implements ServletContextListener {
             // Workaround for tests, as we can't use dependency injection in JerseyTest.
             // Analog to how it's done for instantiation of PersistenceManagerFactory:
             // https://github.com/stevespringett/Alpine/blob/alpine-parent-2.2.0/alpine-server/src/main/java/alpine/server/persistence/PersistenceManagerFactory.java#L127-L135
-            PRODUCER = new MockProducer<>(true, new ByteArraySerializer(), new ByteArraySerializer());
+            PRODUCER = new MockProducer<>(true, null, new ByteArraySerializer(), new ByteArraySerializer());
         }
 
         return PRODUCER;

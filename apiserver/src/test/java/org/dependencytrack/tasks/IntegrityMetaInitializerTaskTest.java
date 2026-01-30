@@ -18,15 +18,15 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.ConfigPropertyExtension;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.IntegrityMetaInitializerEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.IntegrityMetaComponent;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.sql.Date;
 import java.time.Instant;
@@ -38,13 +38,14 @@ import static org.dependencytrack.model.FetchStatus.IN_PROGRESS;
 
 public class IntegrityMetaInitializerTaskTest extends PersistenceCapableTest {
 
-    @Rule
-    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule()
-            .withProperty("integrity.initializer.enabled", "true");
+    @RegisterExtension
+    private static final ConfigPropertyExtension configProperties =
+            new ConfigPropertyExtension()
+                    .withProperty("integrity.initializer.enabled", "true");
 
     final Component componentPersisted = new Component();
 
-    @Before
+    @BeforeEach
     public void persistComponentData() {
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         componentPersisted.setProject(projectA);

@@ -26,9 +26,10 @@ import org.cyclonedx.proto.v1_6.Property;
 import org.cyclonedx.proto.v1_6.Source;
 import org.cyclonedx.proto.v1_6.VulnerabilityRating;
 import org.cyclonedx.proto.v1_6.VulnerabilityReference;
-import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Vulnerability;
-import org.junit.Test;
+import org.dependencytrack.model.VulnerableSoftware;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -39,15 +40,15 @@ import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV31;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_OWASP;
 
-public class BovModelConverterTest extends PersistenceCapableTest {
+class BovModelConverterTest {
 
     @Test
-    public void testConvertNullValue() {
+    void testConvertNullValue() {
         assertThat(BovModelConverter.convert(Bom.newBuilder().build(), null, false)).isNull();
     }
 
     @Test
-    public void testConvert() {
+    void testConvert() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
                 org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
                         .setId("CVE-2021-44228")
@@ -114,7 +115,7 @@ public class BovModelConverterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testConvertWithRatingFromSnykAsAuthoritativeSource() {
+    void testConvertWithRatingFromSnykAsAuthoritativeSource() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
                 org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
                         .setId("SNYK-PYTHON-DJANGO-2968205")
@@ -150,7 +151,7 @@ public class BovModelConverterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testConvertWithRatingsWithoutVector() {
+    void testConvertWithRatingsWithoutVector() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
                 org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
                         .setId("SNYK-PYTHON-DJANGO-2968205")
@@ -180,7 +181,7 @@ public class BovModelConverterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testConvertWithNoRatings() {
+    void testConvertWithNoRatings() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
                 org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
                         .setId("Foo")
@@ -203,7 +204,7 @@ public class BovModelConverterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testConvertWithOnlyThirdPartyRatings() {
+    void testConvertWithOnlyThirdPartyRatings() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
                 org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
                         .setId("SONATYPE-001")
@@ -234,7 +235,7 @@ public class BovModelConverterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testConvertWithRatingWithoutMethod() {
+    void testConvertWithRatingWithoutMethod() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
                 org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
                         .setId("SONATYPE-001")
@@ -248,10 +249,320 @@ public class BovModelConverterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testConvertRangeToVersList() {
+    void testConvertRangeToVersList() {
         var range = "vers:earth/<=6.0.7";
         List<Vers> versConverted = BovModelConverter.convertRangeToVersList(range);
-        assertThat(versConverted.getFirst().toString()).isEqualTo("vers:generic/<=6.0.7");
+        assertThat(versConverted.getFirst().toString()).isEqualTo("vers:earth/<=6.0.7");
+    }
+
+    @Nested
+    class ExtractVulnerableSoftwareTest {
+
+        @Test
+        void shouldConvertWildcardToStartIncludingZero() {
+            final Bom bov = createBovWithVersionRange("vers:npm/*");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactly(vs -> {
+                assertThat(vs.getVersion()).isNull();
+                assertThat(vs.getVersionStartIncluding()).isEqualTo("0");
+                assertThat(vs.getVersionStartExcluding()).isNull();
+                assertThat(vs.getVersionEndIncluding()).isNull();
+                assertThat(vs.getVersionEndExcluding()).isNull();
+            });
+        }
+
+        @Test
+        void shouldConvertSingleEqualsConstraintToExactVersion() {
+            final Bom bov = createBovWithVersionRange("vers:npm/1.0.0");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactly(vs -> {
+                assertThat(vs.getVersion()).isEqualTo("1.0.0");
+                assertThat(vs.getVersionStartIncluding()).isNull();
+                assertThat(vs.getVersionStartExcluding()).isNull();
+                assertThat(vs.getVersionEndIncluding()).isNull();
+                assertThat(vs.getVersionEndExcluding()).isNull();
+            });
+        }
+
+        @Test
+        void shouldConvertGreaterThanOrEqualZeroToStartIncludingZero() {
+            final Bom bov = createBovWithVersionRange("vers:npm/>=0");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactly(vs -> {
+                assertThat(vs.getVersion()).isNull();
+                assertThat(vs.getVersionStartIncluding()).isEqualTo("0");
+                assertThat(vs.getVersionStartExcluding()).isNull();
+                assertThat(vs.getVersionEndIncluding()).isNull();
+                assertThat(vs.getVersionEndExcluding()).isNull();
+            });
+        }
+
+        @Test
+        void shouldConvertGreaterThanZeroToStartExcludingZero() {
+            final Bom bov = createBovWithVersionRange("vers:npm/>0");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactly(vs -> {
+                assertThat(vs.getVersion()).isNull();
+                assertThat(vs.getVersionStartIncluding()).isNull();
+                assertThat(vs.getVersionStartExcluding()).isEqualTo("0");
+                assertThat(vs.getVersionEndIncluding()).isNull();
+                assertThat(vs.getVersionEndExcluding()).isNull();
+            });
+        }
+
+        @Test
+        void shouldHandleOpenEndedStartRange() {
+            final Bom bov = createBovWithVersionRange("vers:npm/>=1.0.0");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactly(vs -> {
+                assertThat(vs.getVersion()).isNull();
+                assertThat(vs.getVersionStartIncluding()).isEqualTo("1.0.0");
+                assertThat(vs.getVersionStartExcluding()).isNull();
+                assertThat(vs.getVersionEndIncluding()).isNull();
+                assertThat(vs.getVersionEndExcluding()).isNull();
+            });
+        }
+
+        @Test
+        void shouldHandleOpenEndedEndRange() {
+            final Bom bov = createBovWithVersionRange("vers:npm/<2.0.0");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactly(vs -> {
+                assertThat(vs.getVersion()).isNull();
+                assertThat(vs.getVersionStartIncluding()).isNull();
+                assertThat(vs.getVersionStartExcluding()).isNull();
+                assertThat(vs.getVersionEndIncluding()).isNull();
+                assertThat(vs.getVersionEndExcluding()).isEqualTo("2.0.0");
+            });
+        }
+
+        @Test
+        void shouldHandleRangeStartingFromZero() {
+            final Bom bov = createBovWithVersionRange("vers:npm/>=0|<2.0.0");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactly(vs -> {
+                assertThat(vs.getVersion()).isNull();
+                assertThat(vs.getVersionStartIncluding()).isEqualTo("0");
+                assertThat(vs.getVersionStartExcluding()).isNull();
+                assertThat(vs.getVersionEndIncluding()).isNull();
+                assertThat(vs.getVersionEndExcluding()).isEqualTo("2.0.0");
+            });
+        }
+
+        @Test
+        void shouldHandleRangeExcludingZero() {
+            final Bom bov = createBovWithVersionRange("vers:npm/>0|<2.0.0");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactly(vs -> {
+                assertThat(vs.getVersion()).isNull();
+                assertThat(vs.getVersionStartIncluding()).isNull();
+                assertThat(vs.getVersionStartExcluding()).isEqualTo("0");
+                assertThat(vs.getVersionEndIncluding()).isNull();
+                assertThat(vs.getVersionEndExcluding()).isEqualTo("2.0.0");
+            });
+        }
+
+        @Test
+        void shouldHandleBoundedRange() {
+            final Bom bov = createBovWithVersionRange("vers:npm/>=1.0.0|<2.0.0");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactly(vs -> {
+                assertThat(vs.getVersion()).isNull();
+                assertThat(vs.getVersionStartIncluding()).isEqualTo("1.0.0");
+                assertThat(vs.getVersionStartExcluding()).isNull();
+                assertThat(vs.getVersionEndIncluding()).isNull();
+                assertThat(vs.getVersionEndExcluding()).isEqualTo("2.0.0");
+            });
+        }
+
+        @Test
+        void shouldNormalizeZeroZeroZeroToZero() {
+            final Bom bov = createBovWithVersionRange("vers:npm/>=0.0.0");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactly(vs -> {
+                assertThat(vs.getVersion()).isNull();
+                assertThat(vs.getVersionStartIncluding()).isEqualTo("0");
+                assertThat(vs.getVersionStartExcluding()).isNull();
+                assertThat(vs.getVersionEndIncluding()).isNull();
+                assertThat(vs.getVersionEndExcluding()).isNull();
+            });
+        }
+
+        @Test
+        void shouldFallBackToGenericSchemeForInvalidVersion() {
+            // "2015.8.0rrc1" is not a valid PEP 440 version, so the pypi scheme will fail.
+            // The converter should fall back to the generic scheme.
+            final Bom bov = createBovWithVersionRange("vers:pypi/>=2015.8.0rrc1|<2015.8.4");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactly(vs -> {
+                assertThat(vs.getVersion()).isNull();
+                assertThat(vs.getVersionStartIncluding()).isEqualTo("2015.8.0rrc1");
+                assertThat(vs.getVersionStartExcluding()).isNull();
+                assertThat(vs.getVersionEndIncluding()).isNull();
+                assertThat(vs.getVersionEndExcluding()).isEqualTo("2015.8.4");
+            });
+        }
+
+        @Test
+        void shouldProduceTwoEntriesForRangeWithExactVersion() {
+            final Bom bov = createBovWithCpeAndVersionRange(
+                    "cpe:2.3:a:vendor:product:*:*:*:*:*:*:*:*",
+                    "vers:generic/>5|<6|6.0.1");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactlyInAnyOrder(
+                    vs -> {
+                        assertThat(vs.getVersion()).isEqualTo("*");
+                        assertThat(vs.getVersionStartIncluding()).isNull();
+                        assertThat(vs.getVersionStartExcluding()).isEqualTo("5");
+                        assertThat(vs.getVersionEndIncluding()).isNull();
+                        assertThat(vs.getVersionEndExcluding()).isEqualTo("6");
+                    },
+                    vs -> {
+                        assertThat(vs.getVersion()).isEqualTo("6.0.1");
+                        assertThat(vs.getVersionStartIncluding()).isNull();
+                        assertThat(vs.getVersionStartExcluding()).isNull();
+                        assertThat(vs.getVersionEndIncluding()).isNull();
+                        assertThat(vs.getVersionEndExcluding()).isNull();
+                    });
+        }
+
+        @Test
+        void shouldHandleCpeWithVersionRange() {
+            final Bom bov = createBovWithCpeAndVersionRange(
+                    "cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*",
+                    "vers:generic/>=2.0.0|<2.17.0");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactly(vs -> {
+                assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*");
+                assertThat(vs.getPart()).isEqualTo("a");
+                assertThat(vs.getVendor()).isEqualTo("apache");
+                assertThat(vs.getProduct()).isEqualTo("log4j");
+                assertThat(vs.getVersion()).isEqualTo("*");
+                assertThat(vs.getVersionStartIncluding()).isEqualTo("2.0.0");
+                assertThat(vs.getVersionStartExcluding()).isNull();
+                assertThat(vs.getVersionEndIncluding()).isNull();
+                assertThat(vs.getVersionEndExcluding()).isEqualTo("2.17.0");
+                assertThat(vs.isVulnerable()).isTrue();
+            });
+        }
+
+        @Test
+        void shouldHandleBothCpeAndPurl() {
+            final Bom bov = createBovWithCpePurlAndVersionRange(
+                    "cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*",
+                    "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.0",
+                    "vers:maven/>=2.0.0|<2.17.0");
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            assertThat(vsList).satisfiesExactlyInAnyOrder(
+                    vs -> {
+                        assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*");
+                        assertThat(vs.getVendor()).isEqualTo("apache");
+                        assertThat(vs.getProduct()).isEqualTo("log4j");
+                        assertThat(vs.getVersion()).isEqualTo("*");
+                        assertThat(vs.getVersionStartIncluding()).isEqualTo("2.0.0");
+                        assertThat(vs.getVersionEndExcluding()).isEqualTo("2.17.0");
+                    },
+                    vs -> {
+                        assertThat(vs.getPurl()).isEqualTo("pkg:maven/org.apache.logging.log4j/log4j-core@2.14.0");
+                        assertThat(vs.getPurlType()).isEqualTo("maven");
+                        assertThat(vs.getPurlNamespace()).isEqualTo("org.apache.logging.log4j");
+                        assertThat(vs.getPurlName()).isEqualTo("log4j-core");
+                        assertThat(vs.getPurlVersion()).isEqualTo("2.14.0");
+                        assertThat(vs.getVersionStartIncluding()).isEqualTo("2.0.0");
+                        assertThat(vs.getVersionEndExcluding()).isEqualTo("2.17.0");
+                    });
+        }
+
+        private static Bom createBovWithVersionRange(String versionRange) {
+            final var component = org.cyclonedx.proto.v1_6.Component.newBuilder()
+                    .setBomRef("test-component")
+                    .setPurl("pkg:npm/test-package@1.0.0")
+                    .build();
+
+            final var vulnAffects = org.cyclonedx.proto.v1_6.VulnerabilityAffects.newBuilder()
+                    .setRef("test-component")
+                    .addVersions(org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions.newBuilder()
+                            .setRange(versionRange)
+                            .build())
+                    .build();
+
+            final var vuln = org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                    .setId("CVE-2024-0001")
+                    .setSource(Source.newBuilder().setName("NVD").build())
+                    .addAffects(vulnAffects)
+                    .build();
+
+            return Bom.newBuilder()
+                    .addComponents(component)
+                    .addVulnerabilities(vuln)
+                    .build();
+        }
+
+        private static Bom createBovWithCpeAndVersionRange(String cpe, String versionRange) {
+            final var component = org.cyclonedx.proto.v1_6.Component.newBuilder()
+                    .setBomRef("test-component")
+                    .setCpe(cpe)
+                    .build();
+
+            final var vulnAffects = org.cyclonedx.proto.v1_6.VulnerabilityAffects.newBuilder()
+                    .setRef("test-component")
+                    .addVersions(org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions.newBuilder()
+                            .setRange(versionRange)
+                            .build())
+                    .build();
+
+            final var vuln = org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                    .setId("CVE-2024-0001")
+                    .setSource(Source.newBuilder().setName("NVD").build())
+                    .addAffects(vulnAffects)
+                    .build();
+
+            return Bom.newBuilder()
+                    .addComponents(component)
+                    .addVulnerabilities(vuln)
+                    .build();
+        }
+
+        private static Bom createBovWithCpePurlAndVersionRange(String cpe, String purl, String versionRange) {
+            final var component = org.cyclonedx.proto.v1_6.Component.newBuilder()
+                    .setBomRef("test-component")
+                    .setCpe(cpe)
+                    .setPurl(purl)
+                    .build();
+
+            final var vulnAffects = org.cyclonedx.proto.v1_6.VulnerabilityAffects.newBuilder()
+                    .setRef("test-component")
+                    .addVersions(org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions.newBuilder()
+                            .setRange(versionRange)
+                            .build())
+                    .build();
+
+            final var vuln = org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                    .setId("CVE-2024-0001")
+                    .setSource(Source.newBuilder().setName("NVD").build())
+                    .addAffects(vulnAffects)
+                    .build();
+
+            return Bom.newBuilder()
+                    .addComponents(component)
+                    .addVulnerabilities(vuln)
+                    .build();
+        }
+
     }
 
 }

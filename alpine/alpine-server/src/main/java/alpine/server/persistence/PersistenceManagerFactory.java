@@ -20,19 +20,17 @@ package alpine.server.persistence;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
 import alpine.persistence.IPersistenceManagerFactory;
 import alpine.persistence.JdoProperties;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory;
 import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.Gauge;
-import org.datanucleus.PropertyNames;
-import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
-
+import io.micrometer.core.instrument.Metrics;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.datanucleus.PropertyNames;
+import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
+
 import javax.jdo.JDOHelper;
 import javax.jdo.PersistenceManager;
 import javax.sql.DataSource;
@@ -66,44 +64,14 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
         dnProps.put(PropertyNames.PROPERTY_RETAIN_VALUES, "true");
         dnProps.put(PropertyNames.PROPERTY_METADATA_ALLOW_XML, "false");
         dnProps.put(PropertyNames.PROPERTY_METADATA_SUPPORT_ORM, "false");
+        dnProps.put(PropertyNames.PROPERTY_ENABLE_STATISTICS, "true");
 
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            dnProps.put(PropertyNames.PROPERTY_ENABLE_STATISTICS, "true");
-        }
-
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.DATABASE_POOL_ENABLED)) {
-            // DataNucleus per default creates two connection factories.
-            //  - Primary: Used for operations in transactional context
-            //  - Secondary: Used for operations in non-transactional context, schema generation and value generation
-            //
-            // When using pooling, DN will thus create two connection pools of equal size.
-            //
-            // See also:
-            //  - https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#datastore_connection
-            //  - https://datanucleus.groups.io/g/main/topic/95191894#490
-            //
-            // We don't need this separation, and have observed the non-transactional pool
-            // to remain mostly idle. Thus, we explicitly only create one pool.
-            // https://groups.io/g/datanucleus/topic/side_effects_of_setting/108286305
-
-            LOGGER.info("Creating connection pool");
-            final DataSource pooledDataSource = createPooledDataSource();
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY, pooledDataSource);
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY2, pooledDataSource);
-        } else {
-            // No connection pooling; Let DataNucleus handle the datasource setup
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_URL, Config.getInstance().getProperty(Config.AlpineKey.DATABASE_URL));
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_DRIVER_NAME, Config.getInstance().getProperty(Config.AlpineKey.DATABASE_DRIVER));
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_USER_NAME, Config.getInstance().getProperty(Config.AlpineKey.DATABASE_USERNAME));
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_PASSWORD, Config.getInstance().getPropertyOrFile(Config.AlpineKey.DATABASE_PASSWORD));
-        }
+        final DataSource dataSource = DataSourceRegistry.getInstance().getDefault();
+        dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY, dataSource);
+        dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY2, dataSource);
 
         pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
-
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            LOGGER.info("Registering DataNucleus metrics");
-            registerDataNucleusMetrics(pmf);
-        }
+        registerDataNucleusMetrics(pmf);
     }
 
     @Override
@@ -170,77 +138,77 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "datastore_reads_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getNumberOfDatastoreReads())
                 .description("Total number of read operations from the datastore")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "datastore_writes_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getNumberOfDatastoreWrites())
                 .description("Total number of write operations to the datastore")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "object_fetches_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getNumberOfObjectFetches())
                 .description("Total number of objects fetched from the datastore")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "object_inserts_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getNumberOfObjectInserts())
                 .description("Total number of objects inserted into the datastore")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "object_updates_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getNumberOfObjectUpdates())
                 .description("Total number of objects updated in the datastore")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "object_deletes_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getNumberOfObjectDeletes())
                 .description("Total number of objects deleted from the datastore")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "query_execution_time_ms_avg", pmf,
                         p -> p.getNucleusContext().getStatistics().getQueryExecutionTimeAverage())
                 .description("Average query execution time in milliseconds")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "queries_active", pmf,
                         p -> p.getNucleusContext().getStatistics().getQueryActiveTotalCount())
                 .description("Number of currently active queries")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "queries_executed_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getQueryExecutionTotalCount())
                 .description("Total number of executed queries")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "queries_failed_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getQueryErrorTotalCount())
                 .description("Total number of queries that completed with an error")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "transaction_execution_time_ms_avg", pmf,
                         p -> p.getNucleusContext().getStatistics().getTransactionExecutionTimeAverage())
                 .description("Average transaction execution time in milliseconds")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "transactions_active", pmf,
                         p -> p.getNucleusContext().getStatistics().getTransactionActiveTotalCount())
                 .description("Number of currently active transactions")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "transactions_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getTransactionTotalCount())
                 .description("Total number of transactions")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "transactions_committed_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getTransactionCommittedTotalCount())
                 .description("Total number of committed transactions")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         FunctionCounter.builder(DATANUCLEUS_METRICS_PREFIX + "transactions_rolledback_total", pmf,
                         p -> p.getNucleusContext().getStatistics().getTransactionRolledBackTotalCount())
                 .description("Total number of rolled-back transactions")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         // This number does not necessarily equate the number of physical connections.
         // It resembles the number of active connections MANAGED BY DATANUCLEUS.
@@ -248,48 +216,28 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "connections_active", pmf,
                         p -> p.getNucleusContext().getStatistics().getConnectionActiveCurrent())
                 .description("Number of currently active managed datastore connections")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "cache_second_level_entries", pmf,
                         p -> p.getNucleusContext().getLevel2Cache().getSize())
                 .description("Number of entries in the second level cache")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "cache_query_generic_compilation_entries", pmf,
                         p -> p.getQueryGenericCompilationCache().size())
                 .description("Number of entries in the generic query compilation cache")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "cache_query_datastore_compilation_entries", pmf,
                         p -> p.getQueryDatastoreCompilationCache().size())
                 .description("Number of entries in the datastore query compilation cache")
-                .register(Metrics.getRegistry());
+                .register(Metrics.globalRegistry);
 
         // Note: The query results cache is disabled per default.
         Gauge.builder(DATANUCLEUS_METRICS_PREFIX + "cache_query_result_entries", pmf,
                         p -> p.getQueryCache().getQueryCache().size())
                 .description("Number of entries in the query result cache")
-                .register(Metrics.getRegistry());
-    }
-
-    private DataSource createPooledDataSource() {
-        final var hikariConfig = new HikariConfig();
-        hikariConfig.setPoolName("Alpine");
-        hikariConfig.setJdbcUrl(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_URL));
-        hikariConfig.setDriverClassName(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_DRIVER));
-        hikariConfig.setUsername(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_USERNAME));
-        hikariConfig.setPassword(Config.getInstance().getPropertyOrFile(Config.AlpineKey.DATABASE_PASSWORD));
-
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            hikariConfig.setMetricsTrackerFactory(new MicrometerMetricsTrackerFactory(Metrics.getRegistry()));
-        }
-
-        hikariConfig.setMaximumPoolSize(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_MAX_SIZE));
-        hikariConfig.setMinimumIdle(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_MIN_IDLE));
-        hikariConfig.setMaxLifetime(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_MAX_LIFETIME));
-        hikariConfig.setIdleTimeout(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_IDLE_TIMEOUT));
-        hikariConfig.setKeepaliveTime(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_KEEPALIVE_INTERVAL));
-        return new HikariDataSource(hikariConfig);
+                .register(Metrics.globalRegistry);
     }
 
 }

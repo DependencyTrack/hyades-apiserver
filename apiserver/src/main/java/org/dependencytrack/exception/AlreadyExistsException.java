@@ -23,8 +23,12 @@ package org.dependencytrack.exception;
  */
 public final class AlreadyExistsException extends RuntimeException {
 
-    public AlreadyExistsException(final String message, final Throwable cause) {
+    public AlreadyExistsException(String message, Throwable cause) {
         super(message, cause);
+    }
+
+    public AlreadyExistsException(String message) {
+        super(message);
     }
 
 }

@@ -36,35 +36,23 @@ public enum ConfigKey implements Config.Key {
     KAFKA_TRUST_STORE_PASSWORD("kafka.truststore.password", ""),
     KAFKA_TRUST_STORE_PATH("kafka.truststore.path", ""),
 
-    TASK_SCHEDULER_INITIAL_DELAY("task.scheduler.initial.delay", "180000"),
-    TASK_SCHEDULER_POLLING_INTERVAL("task.scheduler.polling.interval", "60000"),
     TMP_DELAY_BOM_PROCESSED_NOTIFICATION("tmp.delay.bom.processed.notification", "false"),
     INTEGRITY_INITIALIZER_ENABLED("integrity.initializer.enabled", "false"),
     INTEGRITY_CHECK_ENABLED("integrity.check.enabled", "false"),
     VULNERABILITY_POLICY_ANALYSIS_ENABLED("vulnerability.policy.analysis.enabled", false),
     VULNERABILITY_POLICY_BUNDLE_URL("vulnerability.policy.bundle.url", null),
     VULNERABILITY_POLICY_BUNDLE_SOURCE_TYPE("vulnerability.policy.bundle.source.type", "NGINX"),
-    VULNERABILITY_POLICY_BUNDLE_AUTH_USERNAME( "vulnerability.policy.bundle.auth.username", null),
-    VULNERABILITY_POLICY_BUNDLE_AUTH_BEARER_TOKEN("vulnerability.policy.bundle.auth.bearer.token", null),
-    VULNERABILITY_POLICY_BUNDLE_AUTH_PASSWORD( "vulnerability.policy.bundle.auth.password", null),
     VULNERABILITY_POLICY_S3_ACCESS_KEY("vulnerability.policy.s3.access.key", null),
     VULNERABILITY_POLICY_S3_SECRET_KEY("vulnerability.policy.s3.secret.key", null),
     VULNERABILITY_POLICY_S3_BUCKET_NAME("vulnerability.policy.s3.bucket.name", null),
     VULNERABILITY_POLICY_S3_BUNDLE_NAME("vulnerability.policy.s3.bundle.name", null),
     VULNERABILITY_POLICY_S3_REGION("vulnerability.policy.s3.region", null),
-    INIT_TASKS_ENABLED("init.tasks.enabled", true),
-    INIT_TASKS_DATABASE_URL("init.tasks.database.url", null),
-    INIT_TASKS_DATABASE_USERNAME("init.tasks.database.username", null),
-    INIT_TASKS_DATABASE_PASSWORD("init.tasks.database.password", null),
-    INIT_AND_EXIT("init.and.exit", false),
 
-    DEV_SERVICES_ENABLED("dev.services.enabled", false),
     DEV_SERVICES_IMAGE_FRONTEND("dev.services.image.frontend", "ghcr.io/dependencytrack/hyades-frontend:snapshot"),
     DEV_SERVICES_IMAGE_KAFKA("dev.services.image.kafka", "apache/kafka-native:3.9.1"),
-    DEV_SERVICES_IMAGE_POSTGRES("dev.services.image.postgres", "postgres:13-alpine"),
+    DEV_SERVICES_IMAGE_POSTGRES("dev.services.image.postgres", "postgres:14-alpine"),
     DEV_SERVICES_PORT_FRONTEND("dev.services.port.frontend", 8081),
-    DEV_SERVICES_PORT_KAFKA("dev.services.port.kafka", 9092),
-    DEV_SERVICES_PORT_POSTGRES("dev.services.port.postgres", 5432);
+    DEV_SERVICES_PORT_KAFKA("dev.services.port.kafka", 9092);
 
     private final String propertyName;
     private final Object defaultValue;

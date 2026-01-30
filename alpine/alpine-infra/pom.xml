@@ -22,10 +22,13 @@
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>alpine-parent</artifactId>
-        <version>5.7.0-SNAPSHOT</version>
+        <version>5.7.0-alpha.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>alpine-infra</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Alpine :: Infra</name>
 
     <dependencies>
         <dependency>
@@ -41,6 +44,10 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-collections4</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
         </dependency>
         <!-- Persistence -->
         <dependency>
@@ -62,10 +69,6 @@
         <dependency>
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.javassist</groupId>
-            <artifactId>javassist</artifactId>
         </dependency>
         <!-- Authentication and Authorization -->
         <dependency>

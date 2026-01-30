@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.event.kafka.processor.api;
 
-import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.ConfigPropertyExtension;
 import alpine.test.config.WithConfigProperty;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -29,11 +29,12 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
 import org.eclipse.microprofile.health.HealthCheckResponse;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
 
 import java.time.Duration;
@@ -54,20 +55,20 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+@Testcontainers
 public class ProcessorManagerTest {
 
+    @Container
     private final KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:3.9.1");
 
-    private final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule()
-                    .withProperty("kafka.bootstrap.servers", kafkaContainer::getBootstrapServers);
-
-    @Rule
-    public final RuleChain ruleChain = RuleChain.outerRule(kafkaContainer).around(configPropertyRule);
+    @RegisterExtension
+    private final ConfigPropertyExtension configProperties = new ConfigPropertyExtension()
+            .withProperty("kafka.bootstrap.servers", kafkaContainer::getBootstrapServers);
 
     private AdminClient adminClient;
     private Producer<String, String> producer;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         adminClient = AdminClient.create(Map.of(BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers()));
         producer = new KafkaProducer<>(Map.ofEntries(
@@ -77,7 +78,7 @@ public class ProcessorManagerTest {
         ));
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         if (adminClient != null) {
             adminClient.close();
@@ -201,9 +202,8 @@ public class ProcessorManagerTest {
         adminClient.createTopics(List.of(new NewTopic(inputTopic.name(), 12, (short) 1))).all().get();
 
         final var threadNames = new ArrayBlockingQueue<String>(100);
-        final Processor<String, String> processor = record -> {
-            threadNames.add(Thread.currentThread().getName());
-        };
+        final Processor<String, String> processor = record ->
+                threadNames.add(Thread.currentThread().getName());
 
         try (final var processorManager = new ProcessorManager()) {
             processorManager.registerProcessor("foo", inputTopic, processor);

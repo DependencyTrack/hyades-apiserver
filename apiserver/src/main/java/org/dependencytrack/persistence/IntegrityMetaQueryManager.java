@@ -20,12 +20,12 @@ package org.dependencytrack.persistence;
 
 import alpine.common.logging.Logger;
 import alpine.resources.AlpineRequest;
-import alpine.server.util.DbUtil;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import javax.jdo.datastore.JDOConnection;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Timestamp;
@@ -101,21 +101,18 @@ public class IntegrityMetaQueryManager extends QueryManager implements IQueryMan
                     VALUES (?, ?, ?) 
                     ON CONFLICT DO NOTHING
                 """;
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        try {
-            connection = (Connection) pm.getDataStoreConnection();
-            preparedStatement = connection.prepareStatement(createQuery);
-            preparedStatement.setString(1, integrityMetaComponent.getPurl().toString());
-            preparedStatement.setString(2, integrityMetaComponent.getStatus().toString());
-            preparedStatement.setTimestamp(3, new java.sql.Timestamp(integrityMetaComponent.getLastFetch().getTime()));
-            preparedStatement.execute();
+        final JDOConnection jdoConnection = pm.getDataStoreConnection();
+        final var nativeConnection = (Connection) jdoConnection.getNativeConnection();
+        try (final PreparedStatement ps = nativeConnection.prepareStatement(createQuery)) {
+            ps.setString(1, integrityMetaComponent.getPurl().toString());
+            ps.setString(2, integrityMetaComponent.getStatus().toString());
+            ps.setTimestamp(3, new java.sql.Timestamp(integrityMetaComponent.getLastFetch().getTime()));
+            ps.execute();
         } catch (Exception ex) {
             LOGGER.error("Error in creating integrity meta component", ex);
             throw new RuntimeException(ex);
         } finally {
-            DbUtil.close(preparedStatement);
-            DbUtil.close(connection);
+            jdoConnection.close();
         }
     }
 
@@ -130,19 +127,16 @@ public class IntegrityMetaQueryManager extends QueryManager implements IQueryMan
                     WHERE "PURL" IS NOT NULL
                     ON CONFLICT DO NOTHING
                 """;
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        try {
-            connection = (Connection) pm.getDataStoreConnection();
-            preparedStatement = connection.prepareStatement(purlSyncQuery);
-            var purlCount = preparedStatement.executeUpdate();
+        final JDOConnection jdoConnection = pm.getDataStoreConnection();
+        final var nativeConnection = (Connection) jdoConnection.getNativeConnection();
+        try (final PreparedStatement ps = nativeConnection.prepareStatement(purlSyncQuery)) {
+            var purlCount = ps.executeUpdate();
             LOGGER.info("Number of component purls synchronized for integrity check : " + purlCount);
         } catch (Exception ex) {
             LOGGER.error("Error in synchronizing component purls for integrity meta.", ex);
             throw new RuntimeException(ex);
         } finally {
-            DbUtil.close(preparedStatement);
-            DbUtil.close(connection);
+            jdoConnection.close();
         }
     }
 
@@ -188,24 +182,21 @@ public class IntegrityMetaQueryManager extends QueryManager implements IQueryMan
                 SET "LAST_FETCH" = ?, "STATUS" = ?
                 WHERE "ID" = ? AND ("STATUS" IS NULL OR "STATUS" = 'IN_PROGRESS')
                 """;
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        try {
-            connection = (Connection) pm.getDataStoreConnection();
-            preparedStatement = connection.prepareStatement(updateQuery);
+        final JDOConnection jdoConnection = pm.getDataStoreConnection();
+        final var nativeConnection = (Connection) jdoConnection.getNativeConnection();
+        try (final PreparedStatement ps = nativeConnection.prepareStatement(updateQuery)) {
             for (var purlRecord : purls) {
-                preparedStatement.setTimestamp(1, new Timestamp(Date.from(Instant.now()).getTime()));
-                preparedStatement.setString(2, FetchStatus.IN_PROGRESS.toString());
-                preparedStatement.setLong(3, purlRecord.getId());
-                preparedStatement.addBatch();
+                ps.setTimestamp(1, new Timestamp(Date.from(Instant.now()).getTime()));
+                ps.setString(2, FetchStatus.IN_PROGRESS.toString());
+                ps.setLong(3, purlRecord.getId());
+                ps.addBatch();
             }
-            preparedStatement.executeBatch();
+            ps.executeBatch();
         } catch (Exception ex) {
             LOGGER.error("Error in batch updating integrity meta.", ex);
             throw new RuntimeException(ex);
         } finally {
-            DbUtil.close(preparedStatement);
-            DbUtil.close(connection);
+            jdoConnection.close();
         }
     }
 }

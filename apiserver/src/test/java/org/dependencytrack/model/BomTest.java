@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.model;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Date;
 import java.util.UUID;
@@ -30,7 +30,7 @@ public class BomTest {
     public void testId() {
         Bom bom = new Bom();
         bom.setId(111L);
-        Assert.assertEquals(111L, bom.getId());
+        Assertions.assertEquals(111L, bom.getId());
     }
 
     @Test
@@ -38,7 +38,7 @@ public class BomTest {
         Date date = new Date();
         Bom bom = new Bom();
         bom.setImported(date);
-        Assert.assertEquals(date, bom.getImported());
+        Assertions.assertEquals(date, bom.getImported());
     }
 
     @Test
@@ -46,7 +46,7 @@ public class BomTest {
         Project project = new Project();
         Bom bom = new Bom();
         bom.setProject(project);
-        Assert.assertEquals(project, bom.getProject());
+        Assertions.assertEquals(project, bom.getProject());
     }
 
     @Test
@@ -54,20 +54,20 @@ public class BomTest {
         UUID uuid = UUID.randomUUID();
         Bom bom = new Bom();
         bom.setUuid(uuid);
-        Assert.assertEquals(uuid.toString(), bom.getUuid().toString());
+        Assertions.assertEquals(uuid.toString(), bom.getUuid().toString());
     }
 
     @Test
     public void testBomFormat() {
         Bom bom = new Bom();
         bom.setBomFormat(Bom.Format.CYCLONEDX);
-        Assert.assertEquals(Bom.Format.CYCLONEDX.getFormatShortName(), bom.getBomFormat());
+        Assertions.assertEquals(Bom.Format.CYCLONEDX.getFormatShortName(), bom.getBomFormat());
     }
 
     @Test
     public void testBomSpecVersion() {
         Bom bom = new Bom();
         bom.setSpecVersion("1.1");
-        Assert.assertEquals("1.1", bom.getSpecVersion());
+        Assertions.assertEquals("1.1", bom.getSpecVersion());
     }
 }

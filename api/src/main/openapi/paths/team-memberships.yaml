@@ -17,9 +17,13 @@
 get:
   operationId: listTeamMemberships
   summary: List all team memberships
-  description: >-
+  description: |-
     Returns a paginated list of team memberships,
-    sorted by team name and username in ascending order
+    sorted by team name and username in ascending order.
+    
+    Reports `EXACT` total counts for up to 500 items, and `AT_LEAST` past that.
+
+    Requires permission `ACCESS_MANAGEMENT`.
   tags:
   - Teams
   parameters:
@@ -56,7 +60,10 @@ get:
 post:
   operationId: createTeamMembership
   summary: Create team membership
-  description: Create a team membership
+  description: |-
+    Creates a team membership.
+    
+    Requires permission `ACCESS_MANAGEMENT`.
   tags:
   - Teams
   requestBody:
@@ -73,7 +80,7 @@ post:
       content:
         application/problem+json:
           schema:
-            oneOf:
+            anyOf:
             - $ref: "../components/schemas/invalid-request-problem-details.yaml"
             - $ref: "../components/schemas/problem-details.yaml"
     "401":
@@ -90,7 +97,10 @@ post:
 delete:
   operationId: deleteTeamMembership
   summary: Delete team membership
-  description: Delete a team membership
+  description: |-
+    Deletes a team membership.
+    
+    Requires permission `ACCESS_MANAGEMENT`.
   tags:
   - Teams
   parameters:

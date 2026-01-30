@@ -20,28 +20,20 @@ package org.dependencytrack.plugin;
 
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionFactory;
-import org.dependencytrack.plugin.api.config.ConfigDefinition;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
-import org.dependencytrack.plugin.api.config.ConfigTypes;
-import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
-import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
+import org.jspecify.annotations.NonNull;
 
-public class DummyTestExtensionFactory implements ExtensionFactory<TestExtensionPoint> {
-
-    private static final ConfigDefinition<String> CONFIG_FOO =
-            new RuntimeConfigDefinition<>("foo", "description", ConfigTypes.STRING, null, false, false);
-    private static final ConfigDefinition<String> CONFIG_BAR =
-            new DeploymentConfigDefinition<>("bar", ConfigTypes.STRING, false);
+public class DummyTestExtensionFactory implements ExtensionFactory<@NonNull TestExtensionPoint> {
 
     private ConfigRegistry configRegistry;
 
     @Override
-    public String extensionName() {
+    public @NonNull String extensionName() {
         return DummyTestExtension.NAME;
     }
 
     @Override
-    public Class<? extends TestExtensionPoint> extensionClass() {
+    public @NonNull Class<? extends TestExtensionPoint> extensionClass() {
         return DummyTestExtension.class;
     }
 
@@ -51,16 +43,13 @@ public class DummyTestExtensionFactory implements ExtensionFactory<TestExtension
     }
 
     @Override
-    public void init(final ExtensionContext ctx) {
+    public void init(final @NonNull ExtensionContext ctx) {
         this.configRegistry = ctx.configRegistry();
     }
 
     @Override
     public DummyTestExtension create() {
-        return new DummyTestExtension(
-                configRegistry.getOptionalValue(CONFIG_FOO).orElse(null),
-                configRegistry.getOptionalValue(CONFIG_BAR).orElse(null)
-        );
+        return new DummyTestExtension(configRegistry.getDeploymentConfig().getOptionalValue("bar", String.class).orElse(null));
     }
 
 }

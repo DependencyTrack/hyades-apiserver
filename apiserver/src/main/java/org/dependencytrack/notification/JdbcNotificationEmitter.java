@@ -25,26 +25,30 @@ import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
-import org.dependencytrack.proto.notification.v1.Group;
-import org.dependencytrack.proto.notification.v1.Level;
-import org.dependencytrack.proto.notification.v1.Notification;
-import org.dependencytrack.proto.notification.v1.Scope;
+import org.dependencytrack.notification.api.emission.NotificationEmitter;
+import org.dependencytrack.notification.proto.v1.Group;
+import org.dependencytrack.notification.proto.v1.Level;
+import org.dependencytrack.notification.proto.v1.Notification;
+import org.dependencytrack.notification.proto.v1.Scope;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.notification.ModelConverter.convert;
-import static org.dependencytrack.proto.notification.v1.Group.GROUP_UNSPECIFIED;
-import static org.dependencytrack.proto.notification.v1.Level.LEVEL_UNSPECIFIED;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_UNSPECIFIED;
+import static org.dependencytrack.notification.NotificationModelConverter.convert;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_UNSPECIFIED;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_UNSPECIFIED;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_UNSPECIFIED;
 
 /**
  * A {@link NotificationEmitter} that uses the JDBC API for database interactions.
@@ -55,30 +59,31 @@ class JdbcNotificationEmitter implements NotificationEmitter {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private final Connection connection;
+    private final @Nullable Connection connection;
     private final Timer emitLatencyTimer;
     private final MeterProvider<DistributionSummary> emittedDistribution;
 
     JdbcNotificationEmitter(
-            final Connection connection,
-            final MeterRegistry meterRegistry) {
+            @Nullable Connection connection,
+            MeterRegistry meterRegistry) {
         this.connection = connection;
         requireNonNull(meterRegistry, "meterRegistry must not be null");
         this.emitLatencyTimer = Timer
-                .builder("dtrack.notifications.emit.latency")
+                .builder("dt.notifications.emit.latency")
                 .register(meterRegistry);
         this.emittedDistribution = DistributionSummary
-                .builder("dtrack.notifications.emitted")
+                .builder("dt.notifications.emitted")
                 .withRegistry(meterRegistry);
-
     }
 
     @Override
-    public void emitAll(final Collection<Notification> notifications) {
+    public void emitAll(Collection<Notification> notifications) {
+        requireNonNull(connection, "connection must not be null");
+
         emitAll(connection, notifications);
     }
 
-    void emitAll(final Connection connection, final Collection<Notification> notifications) {
+    void emitAll(Connection connection, Collection<Notification> notifications) {
         requireNonNull(connection, "connection must not be null");
         requireNonNull(notifications, "notifications must not be null");
 
@@ -115,39 +120,30 @@ class JdbcNotificationEmitter implements NotificationEmitter {
             index++;
         }
 
-        // TODO: Modify the query such that emission is skipped if
-        //  no applicable rule exists. This should be added once the
-        //  NotificationOutboxRelay also performs rule evaluation and routing.
-        //  Always inserting all notifications is a temporary solution that
-        //  replicates the behavior we previously had with emitting directly to Kafka.
-
-        // INSERT INTO "NOTIFICATION_OUTBOX" ("ID", "TIMESTAMP", "SCOPE", "GROUP", "LEVEL", "PAYLOAD")
-        // SELECT id
-        //      , timestamp
-        //      , scope
-        //      , "group"
-        //      , level
-        //      , payload
-        //   FROM UNNEST(?, ?, ?, ?, ?, ?)
-        //     AS t(id, timestamp, scope, "group", level, payload)
-        // -- Preliminary check if there even is a rule that could match
-        // -- the notification. Note that more extensive matching is performed
-        // -- during relay. This is just to avoid unnecessary inserts.
-        //  WHERE EXISTS(
-        //          SELECT 1
-        //            FROM "NOTIFICATIONRULE"
-        //           WHERE "ENABLED"
-        //             AND "SCOPE" = t.scope
-        //             AND "NOTIFICATION_LEVEL" <= t.level
-        //             AND "NOTIFY_ON" LIKE ('%' || t."group" || '%')
-        //        )
-
-        int emittedCount;
+        final var emittedIds = new HashSet<String>();
         try (final PreparedStatement ps = connection.prepareStatement("""
                 INSERT INTO "NOTIFICATION_OUTBOX" ("ID", "TIMESTAMP", "SCOPE", "GROUP", "LEVEL", "PAYLOAD")
-                SELECT *
+                SELECT id
+                     , timestamp
+                     , scope
+                     , "group"
+                     , level
+                     , payload
                   FROM UNNEST(?, ?, ?, ?, ?, ?)
-                """)) {
+                    AS t(id, timestamp, scope, "group", level, payload)
+                -- Preliminary check if there even is a rule that could match
+                -- the notification. Note that more extensive matching is performed
+                -- during relay. This is just to avoid unnecessary inserts.
+                 WHERE EXISTS(
+                   SELECT 1
+                     FROM "NOTIFICATIONRULE"
+                    WHERE "ENABLED"
+                      AND "SCOPE" = t.scope
+                      AND "NOTIFICATION_LEVEL" <= t.level
+                      AND t."group" = ANY("NOTIFY_ON")
+                 )
+                RETURNING "ID"
+                """, PreparedStatement.RETURN_GENERATED_KEYS)) {
 
             // timestamp, scope, group, and level are only added for debugging and monitoring purposes.
             // The same information is included in payload, but that of course is not viewable
@@ -157,33 +153,37 @@ class JdbcNotificationEmitter implements NotificationEmitter {
             ps.setArray(2, connection.createArrayOf("TIMESTAMPTZ", timestamps));
             ps.setArray(3, connection.createArrayOf("TEXT", scopes));
             ps.setArray(4, connection.createArrayOf("TEXT", groups));
-            ps.setArray(5, connection.createArrayOf("TEXT", levels));
+            ps.setArray(5, connection.createArrayOf("NOTIFICATION_LEVEL", levels));
             ps.setArray(6, connection.createArrayOf("BYTEA", payloads));
+            ps.executeUpdate();
 
-            emittedCount = ps.executeUpdate();
+            final ResultSet rs = ps.getGeneratedKeys();
+            while (rs.next()) {
+                emittedIds.add(rs.getString(1));
+            }
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to insert notification records", e);
         }
 
-        // TODO: Once emission is filtered based on whether matching rules exist,
-        //  this must be modified to only consider actually emitted notifications.
         for (final Notification notification : notifications) {
-            emittedDistribution
-                    .withTags(List.of(
-                            Tag.of("level", convert(notification.getLevel()).name()),
-                            Tag.of("scope", convert(notification.getScope()).name()),
-                            Tag.of("group", convert(notification.getGroup()).name())))
-                    .record(1);
+            if (emittedIds.contains(notification.getId())) {
+                emittedDistribution
+                        .withTags(List.of(
+                                Tag.of("level", convert(notification.getLevel()).name()),
+                                Tag.of("scope", convert(notification.getScope()).name()),
+                                Tag.of("group", convert(notification.getGroup()).name())))
+                        .record(1);
+            }
         }
 
         final long emitLatencyNanos = emitLatencySample.stop(emitLatencyTimer);
         logger.debug(
                 "Emitted {} notifications in {}ms",
-                emittedCount,
+                emittedIds.size(),
                 TimeUnit.NANOSECONDS.toMillis(emitLatencyNanos));
     }
 
-    private static void validateRequiredFields(final Notification notification) {
+    private static void validateRequiredFields(Notification notification) {
         if (notification.getId().isEmpty()) {
             throw new IllegalArgumentException("Missing ID");
         }

@@ -62,15 +62,6 @@ public class KafkaEventDispatcher {
         return dispatchAll(List.of(kafkaEvent)).getFirst();
     }
 
-    /**
-     * @deprecated Use {@link org.dependencytrack.notification.NotificationEmitter} instead.
-     */
-    @Deprecated(since = "5.7.0", forRemoval = true)
-    public List<CompletableFuture<RecordMetadata>> dispatchAllNotificationProtos(final Collection<org.dependencytrack.proto.notification.v1.Notification> notifications) {
-        final List<KafkaEvent<?, ?>> kafkaEvents = KafkaEventConverter.convertAllNotificationProtos(notifications);
-        return dispatchAll(kafkaEvents);
-    }
-
     public List<CompletableFuture<RecordMetadata>> dispatchAll(final Collection<KafkaEvent<?, ?>> events) {
         if (events == null || events.isEmpty()) {
             return Collections.emptyList();

@@ -18,17 +18,17 @@
  */
 package org.dependencytrack.event.kafka;
 
-import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.ConfigPropertyExtension;
 import alpine.test.config.WithConfigProperty;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class KafkaTopicsTest {
 
-    @Rule
-    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
+    @RegisterExtension
+    private static final ConfigPropertyExtension configProperties = new ConfigPropertyExtension();
 
     @Test
     @WithConfigProperty("dt.kafka.topic.prefix=foo-bar.baz.")

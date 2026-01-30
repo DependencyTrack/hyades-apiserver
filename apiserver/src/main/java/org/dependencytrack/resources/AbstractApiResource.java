@@ -20,7 +20,13 @@ package org.dependencytrack.resources;
 
 import alpine.common.logging.Logger;
 import alpine.server.resources.AlpineResource;
+import jakarta.ws.rs.core.UriInfo;
+import org.dependencytrack.api.v2.model.PaginationLinks;
+import org.dependencytrack.api.v2.model.PaginationMetadata;
+import org.dependencytrack.api.v2.model.TotalCount;
+import org.dependencytrack.api.v2.model.TotalCountType;
 import org.dependencytrack.common.MdcScope;
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.exception.ProjectAccessDeniedException;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
@@ -108,7 +114,7 @@ public abstract class AbstractApiResource extends AlpineResource {
     /**
      * Asserts that the authenticated {@link java.security.Principal} has access to the project with a given {@link UUID}.
      *
-     * @param jdbiHandle    The {@link Handle} to use.
+     * @param jdbiHandle  The {@link Handle} to use.
      * @param projectUuid {@link UUID} of the project to verify access permission for.
      * @throws NoSuchElementException       When no project with the given {@link UUID} exists.
      * @throws ProjectAccessDeniedException When the authenticated {@link java.security.Principal}
@@ -126,4 +132,38 @@ public abstract class AbstractApiResource extends AlpineResource {
             throw new ProjectAccessDeniedException("Access to the requested project is forbidden");
         }
     }
+
+    protected PaginationMetadata createPaginationMetadata(
+            final UriInfo uriInfo, final Page<?> page) {
+        final var linksBuilder = PaginationLinks.builder()
+                .self(uriInfo.getRequestUri());
+        if (page.nextPageToken() != null) {
+            linksBuilder.next(
+                    uriInfo.getRequestUriBuilder()
+                            .replaceQueryParam("page_token", page.nextPageToken())
+                            // Clear sorting parameters, they're included in the
+                            // page token for subsequent requests.
+                            .replaceQueryParam("sort_by")
+                            .replaceQueryParam("sort_direction")
+                            .build());
+        }
+
+        TotalCount totalCount = null;
+        if (page.totalCount() != null) {
+            totalCount = TotalCount.builder()
+                    .count(page.totalCount().value())
+                    .type(switch (page.totalCount().type()) {
+                        case AT_LEAST -> TotalCountType.AT_LEAST;
+                        case ESTIMATE -> TotalCountType.ESTIMATE;
+                        case EXACT -> TotalCountType.EXACT;
+                    })
+                    .build();
+        }
+
+        return PaginationMetadata.builder()
+                .links(linksBuilder.build())
+                .total(totalCount)
+                .build();
+    }
+
 }

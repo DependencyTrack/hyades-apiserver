@@ -18,14 +18,19 @@
  */
 package org.dependencytrack.notification;
 
-import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.Metrics;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.plugin.PluginManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
@@ -35,27 +40,37 @@ public final class NotificationSubsystemInitializer implements ServletContextLis
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationSubsystemInitializer.class);
 
     private final Config config = ConfigProvider.getConfig();
-    private NotificationOutboxRelay relay;
+    private @Nullable NotificationOutboxRelay relay;
 
     @Override
-    public void contextInitialized(final ServletContextEvent event) {
+    public void contextInitialized(ServletContextEvent event) {
         if (!config.getValue("notification.outbox-relay.enabled", boolean.class)) {
             LOGGER.info("Not starting outbox relay because it is disabled");
             return;
         }
 
+        final ServletContext servletContext = event.getServletContext();
+
+        final var pluginManager = (PluginManager) servletContext.getAttribute(PluginManager.class.getName());
+        requireNonNull(pluginManager, "pluginManager has not been initialized");
+
+        final var dexEngine = (DexEngine) servletContext.getAttribute(DexEngine.class.getName());
+        requireNonNull(pluginManager, "dexEngine has not been initialized");
+
         LOGGER.info("Starting outbox relay");
         relay = new NotificationOutboxRelay(
-                new KafkaEventDispatcher(),
-                Metrics.getRegistry(),
-                config.getValue("notification.router.enabled", boolean.class),
+                dexEngine,
+                pluginManager,
+                handle -> new NotificationRouter(handle, Metrics.globalRegistry),
+                Metrics.globalRegistry,
                 config.getValue("notification.outbox-relay.poll-interval-ms", long.class),
-                config.getValue("notification.outbox-relay.batch-size", int.class));
+                config.getValue("notification.outbox-relay.batch-size", int.class),
+                config.getValue("notification.outbox-relay.large-notification-threshold-bytes", int.class));
         relay.start();
     }
 
     @Override
-    public void contextDestroyed(final ServletContextEvent event) {
+    public void contextDestroyed(ServletContextEvent event) {
         if (relay != null) {
             LOGGER.info("Stopping outbox relay");
             relay.close();

@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
@@ -31,7 +30,6 @@ import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.parsers.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.datanucleus.flush.FlushMode;
-import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
@@ -39,6 +37,7 @@ import org.dependencytrack.event.IntegrityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
+import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -53,12 +52,12 @@ import org.dependencytrack.model.VulnerabilityScan.TargetType;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdoNotificationEmitter;
+import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.json.JSONArray;
 import org.slf4j.MDC;
@@ -103,9 +102,9 @@ import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TIME_SPAN;
-import static org.dependencytrack.notification.NotificationFactory.createBomConsumedNotification;
-import static org.dependencytrack.notification.NotificationFactory.createBomProcessedNotification;
-import static org.dependencytrack.notification.NotificationFactory.createBomProcessingFailedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createBomConsumedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createBomProcessedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createBomProcessingFailedNotification;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertComponents;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertDependencyGraph;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertServices;
@@ -155,14 +154,15 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(BomUploadProcessingTask.class);
 
+    private final PluginManager pluginManager;
     private final KafkaEventDispatcher kafkaEventDispatcher;
     private final boolean delayBomProcessedNotification;
 
-    public BomUploadProcessingTask() {
-        this(new KafkaEventDispatcher(), Config.getInstance().getPropertyAsBoolean(ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION));
-    }
-
-    BomUploadProcessingTask(final KafkaEventDispatcher kafkaEventDispatcher, final boolean delayBomProcessedNotification) {
+    public BomUploadProcessingTask(
+            PluginManager pluginManager,
+            KafkaEventDispatcher kafkaEventDispatcher,
+            boolean delayBomProcessedNotification) {
+        this.pluginManager = pluginManager;
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.delayBomProcessedNotification = delayBomProcessedNotification;
     }
@@ -180,7 +180,7 @@ public class BomUploadProcessingTask implements Subscriber {
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
              var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString());
-             var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+             var fileStorage = pluginManager.getExtension(FileStorage.class, event.getFileMetadata().getProviderName())) {
             final byte[] cdxBomBytes;
             try (final InputStream cdxBomStream = fileStorage.get(event.getFileMetadata())) {
                 cdxBomBytes = cdxBomStream.readAllBytes();
@@ -1105,25 +1105,35 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private void dispatchBomConsumedNotification(final Context ctx) {
         try (final var qm = new QueryManager()) {
-            NotificationEmitter.using(qm).emit(
+            new JdoNotificationEmitter(qm).emit(
                     createBomConsumedNotification(
-                            ctx.project, ctx.bomFormat, ctx.bomSpecVersion, ctx.token));
+                            NotificationModelConverter.convert(ctx.project),
+                            ctx.bomFormat.getFormatShortName(),
+                            ctx.bomSpecVersion,
+                            ctx.token.toString()));
         }
     }
 
     private void dispatchBomProcessedNotification(final Context ctx) {
         try (final var qm = new QueryManager()) {
-            NotificationEmitter.using(qm).emit(
+            new JdoNotificationEmitter(qm).emit(
                     createBomProcessedNotification(
-                            ctx.project, ctx.bomFormat, ctx.bomSpecVersion, ctx.token));
+                            NotificationModelConverter.convert(ctx.project),
+                            ctx.bomFormat.getFormatShortName(),
+                            ctx.bomSpecVersion,
+                            ctx.token.toString()));
         }
     }
 
     private void dispatchBomProcessingFailedNotification(
             final QueryManager qm, final Context ctx, final Throwable throwable) {
-        NotificationEmitter.using(qm).emit(
+        new JdoNotificationEmitter(qm).emit(
                 createBomProcessingFailedNotification(
-                        ctx.project, ctx.bomFormat, ctx.bomSpecVersion, throwable, ctx.token));
+                        NotificationModelConverter.convert(ctx.project),
+                        ctx.bomFormat.getFormatShortName(),
+                        ctx.bomSpecVersion,
+                        ctx.token.toString(),
+                        throwable.getMessage()));
     }
 
     private static List<ComponentVulnerabilityAnalysisEvent> createVulnAnalysisEvents(

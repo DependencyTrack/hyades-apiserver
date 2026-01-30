@@ -17,7 +17,6 @@
   ~ SPDX-License-Identifier: Apache-2.0
   ~ Copyright (c) OWASP Foundation. All Rights Reserved.
   -->
-
 <web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
@@ -27,10 +26,16 @@
         <listener-class>org.dependencytrack.dev.DevServicesInitializer</listener-class>
     </listener>
     <listener>
-        <listener-class>alpine.server.metrics.MetricsInitializer</listener-class>
+        <listener-class>org.dependencytrack.observability.HealthInitializer</listener-class>
+    </listener>
+    <listener>
+        <listener-class>org.dependencytrack.observability.MetricsInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.init.InitTaskServletContextListener</listener-class>
+    </listener>
+    <listener>
+        <listener-class>org.dependencytrack.secret.SecretManagerInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>alpine.server.persistence.PersistenceManagerFactory</listener-class>
@@ -39,13 +44,19 @@
         <listener-class>org.dependencytrack.plugin.PluginInitializer</listener-class>
     </listener>
     <listener>
-        <listener-class>org.dependencytrack.health.HealthCheckInitializer</listener-class>
+        <listener-class>org.dependencytrack.notification.DefaultNotificationPublisherInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.event.kafka.KafkaProducerInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.event.EventSubsystemInitializer</listener-class>
+    </listener>
+    <listener>
+        <listener-class>org.dependencytrack.tasks.TaskSchedulerInitializer</listener-class>
+    </listener>
+    <listener>
+        <listener-class>org.dependencytrack.dex.DexEngineInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.notification.NotificationSubsystemInitializer</listener-class>
@@ -62,7 +73,7 @@
         <filter-class>alpine.server.filters.WhitelistUrlFilter</filter-class>
         <init-param>
             <param-name>allowUrls</param-name>
-            <param-value>/index.html,/css,/fonts,/img,/js,/static,/favicon.ico,/api,/health,/metrics,/mirror,/.well-known</param-value>
+            <param-value>/index.html,/api,/health,/metrics,/.well-known</param-value>
         </init-param>
         <init-param>
             <param-name>forwardTo</param-name>
@@ -70,41 +81,11 @@
         </init-param>
         <init-param>
             <param-name>forwardExcludes</param-name>
-            <param-value>/api,/health,/metrics,/mirror</param-value>
+            <param-value>/api,/health,/metrics</param-value>
         </init-param>
     </filter>
     <filter-mapping>
         <filter-name>WhitelistUrlFilter</filter-name>
-        <url-pattern>/*</url-pattern>
-    </filter-mapping>
-
-    <filter>
-        <filter-name>ClickjackingFilter</filter-name>
-        <filter-class>alpine.server.filters.ClickjackingFilter</filter-class>
-        <init-param>
-            <param-name>mode</param-name>
-            <param-value>DENY</param-value>
-        </init-param>
-    </filter>
-    <filter-mapping>
-        <filter-name>ClickjackingFilter</filter-name>
-        <url-pattern>/*</url-pattern>
-    </filter-mapping>
-
-    <filter>
-        <filter-name>CspFilter</filter-name>
-        <filter-class>alpine.server.filters.ContentSecurityPolicyFilter</filter-class>
-        <init-param>
-            <param-name>script-src</param-name>
-            <param-value>'self' 'unsafe-inline'</param-value>
-        </init-param>
-        <init-param>
-            <param-name>style-src</param-name>
-            <param-value>'self' 'unsafe-inline'</param-value>
-        </init-param>
-    </filter>
-    <filter-mapping>
-        <filter-name>CspFilter</filter-name>
         <url-pattern>/*</url-pattern>
     </filter-mapping>
 
@@ -122,10 +103,18 @@
         </init-param>
         <init-param>
             <param-name>jersey.config.server.provider.classnames</param-name>
-            <param-value>org.glassfish.jersey.media.multipart.MultiPartFeature</param-value>
+            <param-value>
+                org.dependencytrack.dex.DexEngineBinder,
+                org.dependencytrack.plugin.PluginManagerBinder,
+                org.glassfish.jersey.media.multipart.MultiPartFeature
+            </param-value>
         </init-param>
         <init-param>
             <param-name>jersey.config.beanValidation.enableOutputValidationErrorEntity.server</param-name>
+            <param-value>true</param-value>
+        </init-param>
+        <init-param>
+            <param-name>jersey.config.server.wadl.disableWadl</param-name>
             <param-value>true</param-value>
         </init-param>
         <load-on-startup>1</load-on-startup>
@@ -150,7 +139,7 @@
 
     <servlet>
         <servlet-name>Health</servlet-name>
-        <servlet-class>alpine.server.servlets.HealthServlet</servlet-class>
+        <servlet-class>org.dependencytrack.observability.HealthServlet</servlet-class>
         <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet-mapping>
@@ -160,28 +149,12 @@
 
     <servlet>
         <servlet-name>Metrics</servlet-name>
-        <servlet-class>alpine.server.servlets.MetricsServlet</servlet-class>
+        <servlet-class>org.dependencytrack.observability.MetricsServlet</servlet-class>
         <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet-mapping>
         <servlet-name>Metrics</servlet-name>
         <url-pattern>/metrics</url-pattern>
     </servlet-mapping>
-
-    <error-page>
-        <exception-type>java.lang.Exception</exception-type>
-        <location>/WEB-INF/fragments/error.jsp</location>
-    </error-page>
-
-    <session-config>
-        <session-timeout>1</session-timeout>
-        <cookie-config>
-            <name>DEPENDENCY-TRACK_JSESSIONID</name>
-            <http-only>true</http-only>
-            <!-- <secure>true</secure> -->
-            <max-age>0</max-age>
-        </cookie-config>
-        <tracking-mode>COOKIE</tracking-mode>
-    </session-config>
 
 </web-app>

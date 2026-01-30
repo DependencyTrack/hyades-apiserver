@@ -38,11 +38,18 @@ public final class MdcKeys {
     public static final String MDC_KAFKA_RECORD_PARTITION = "kafkaRecordPartition";
     public static final String MDC_KAFKA_RECORD_OFFSET = "kafkaRecordOffset";
     public static final String MDC_KAFKA_RECORD_KEY = "kafkaRecordKey";
+    public static final String MDC_NOTIFICATION_GROUP = "notificationGroup";
+    public static final String MDC_NOTIFICATION_ID = "notificationId";
+    public static final String MDC_NOTIFICATION_LEVEL = "notificationLevel";
+    public static final String MDC_NOTIFICATION_RULE_NAME = "notificationRuleName";
+    public static final String MDC_NOTIFICATION_SCOPE = "notificationScope";
     public static final String MDC_PLUGIN = "plugin";
     public static final String MDC_PROJECT_NAME = "projectName";
     public static final String MDC_PROJECT_UUID = "projectUuid";
     public static final String MDC_PROJECT_VERSION = "projectVersion";
     public static final String MDC_SCAN_TOKEN = "scanToken";
+    public static final String MDC_VULN_ID = "vulnId";
+    public static final String MDC_VULN_SOURCE = "vulnSource";
     public static final String MDC_WORKFLOW_TOKEN = "workflowToken";
 
     private MdcKeys() {

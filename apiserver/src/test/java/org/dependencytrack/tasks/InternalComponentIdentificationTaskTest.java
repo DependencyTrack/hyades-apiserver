@@ -24,8 +24,8 @@ import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.jdo.Query;
 import javax.jdo.Transaction;
@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class InternalComponentIdentificationTaskTest extends PersistenceCapableTest {
 
-    @Before
+    @BeforeEach
     public void before() throws Exception {
         super.before();
 

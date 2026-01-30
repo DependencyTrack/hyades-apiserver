@@ -21,8 +21,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -P -- "$(dirname "$0")" && pwd -P)"
 ROOT_DIR="$(cd -P -- "${SCRIPT_DIR}/../../" && pwd -P)"
-MIGRATION_DIR="$(cd -P -- "${ROOT_DIR}/persistence-migration" && pwd -P)"
-CONTAINER_ID="$(docker run -d --rm -e 'POSTGRES_DB=dtrack' -e 'POSTGRES_USER=dtrack' -e 'POSTGRES_PASSWORD=dtrack' -p '5432' postgres:13-alpine)"
+MIGRATION_DIR="$(cd -P -- "${ROOT_DIR}/migration" && pwd -P)"
+CONTAINER_ID="$(docker run -d --rm -e 'POSTGRES_DB=dtrack' -e 'POSTGRES_USER=dtrack' -e 'POSTGRES_PASSWORD=dtrack' -p '5432' postgres:14-alpine)"
 CONTAINER_PORT="$(docker port "${CONTAINER_ID}" "5432/tcp" | cut -d ':' -f 2)"
 TMP_LIQUIBASE_CONFIG_FILE="$(mktemp -p "${MIGRATION_DIR}")"
 
@@ -35,7 +35,7 @@ username=dtrack
 password=dtrack
 EOF
 
-mvn -pl persistence-migration liquibase:update \
+mvn -pl migration liquibase:update \
   -Dliquibase.analytics.enabled=false \
   -Dliquibase.propertyFile="$(basename "${TMP_LIQUIBASE_CONFIG_FILE}")"; \
   docker exec "${CONTAINER_ID}" pg_dump -Udtrack --schema-only --no-owner --no-privileges dtrack | sed -e '/^--/d' | cat -s > "${ROOT_DIR}/schema.sql"; \

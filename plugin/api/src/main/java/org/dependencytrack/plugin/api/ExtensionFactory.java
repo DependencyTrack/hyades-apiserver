@@ -18,11 +18,11 @@
  */
 package org.dependencytrack.plugin.api;
 
-import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
+import org.dependencytrack.plugin.api.config.RuntimeConfig;
+import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.jspecify.annotations.Nullable;
 
 import java.io.Closeable;
-import java.util.Collections;
-import java.util.SequencedCollection;
 
 /**
  * @since 5.6.0
@@ -49,11 +49,11 @@ public interface ExtensionFactory<T extends ExtensionPoint> extends Closeable {
     int priority();
 
     /**
-     * @return The supported runtime configuration definitions.
-     * @since 5.7.0
+     * @return A runtime config specification, or {@code null} when runtime configuration
+     * is not supported.
      */
-    default SequencedCollection<RuntimeConfigDefinition<?>> runtimeConfigs() {
-        return Collections.emptyList();
+    default @Nullable RuntimeConfigSpec runtimeConfigSpec() {
+        return null;
     }
 
     /**
@@ -64,9 +64,29 @@ public interface ExtensionFactory<T extends ExtensionPoint> extends Closeable {
     void init(ExtensionContext ctx);
 
     /**
+     * Creates a new extension instance.
+     * <p>
+     * Implementations must never return {@code null}. If an extension instance
+     * cannot be created for any reason, this method must signal the failure by
+     * throwing an unchecked exception, such as {@link IllegalStateException}.
+     *
      * @return An extension instance.
+     * @throws IllegalStateException If an extension instance cannot be created.
      */
     T create();
+
+    /**
+     * Performs a test whether the extension is operational with the provided runtime config.
+     *
+     * @param runtimeConfig The runtime config to test with. {@code null} when the extension
+     *                      does not support runtime configuration (i.e. {@link #runtimeConfigSpec()}
+     *                      also returns {@code null}).
+     * @return The test result.
+     * @throws UnsupportedOperationException When the extension does not support testing.
+     */
+    default ExtensionTestResult test(@Nullable RuntimeConfig runtimeConfig) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * {@inheritDoc}

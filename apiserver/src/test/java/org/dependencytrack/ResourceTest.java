@@ -25,29 +25,29 @@ import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.auth.PasswordService;
 import alpine.server.persistence.PersistenceManagerFactory;
-import org.apache.kafka.clients.producer.MockProducer;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaProducerInitializer;
-import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.plugin.PluginManagerTestUtil;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
 import jakarta.ws.rs.core.Response;
+import org.apache.kafka.clients.producer.MockProducer;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.dependencytrack.event.kafka.KafkaProducerInitializer;
+import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.support.config.source.memory.MemoryConfigSource;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+
 import java.io.StringReader;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import static org.dependencytrack.PersistenceCapableTest.configurePmf;
 import static org.dependencytrack.PersistenceCapableTest.truncateTables;
 
 public abstract class ResourceTest {
@@ -110,17 +110,21 @@ public abstract class ResourceTest {
     protected Team team;
     protected String apiKey;
 
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         Config.enableUnitTests();
 
         postgresContainer = new PostgresTestContainer();
         postgresContainer.start();
 
-        configurePmf(postgresContainer);
+        MemoryConfigSource.setProperty("dt.datasource.url", postgresContainer.getJdbcUrl());
+        MemoryConfigSource.setProperty("dt.datasource.username", postgresContainer.getUsername());
+        MemoryConfigSource.setProperty("dt.datasource.password", postgresContainer.getPassword());
+
+        new PersistenceManagerFactory().contextInitialized(null);
     }
 
-    @Before
+    @BeforeEach
     public void before() throws Exception {
         truncateTables(postgresContainer);
 
@@ -131,7 +135,7 @@ public abstract class ResourceTest {
         this.apiKey = qm.createApiKey(team).getKey();
     }
 
-    @After
+    @AfterEach
     public void after() {
         // Ensure that any events dispatched during the test are drained
         // to prevent them from impacting other tests.
@@ -141,8 +145,6 @@ public abstract class ResourceTest {
         } catch (TimeoutException e) {
             throw new IllegalStateException("Failed to drain event services", e);
         }
-
-        PluginManagerTestUtil.unloadPlugins();
 
         // PersistenceManager will refuse to close when there's an active transaction
         // that was neither committed nor rolled back. Unfortunately some areas of the
@@ -157,9 +159,10 @@ public abstract class ResourceTest {
         KafkaProducerInitializer.tearDown();
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() {
         PersistenceManagerFactory.tearDown();
+        DataSourceRegistry.getInstance().closeAll();
 
         if (postgresContainer != null) {
             postgresContainer.stopWhenNotReusing();

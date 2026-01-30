@@ -28,30 +28,39 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
-import org.apache.kafka.clients.producer.RecordMetadata;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.filestorage.proto.v1.FileMetadata;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.persistence.jdbi.NotificationOutboxDao;
-import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
 import org.jdbi.v3.core.Handle;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 
 import static io.github.resilience4j.core.IntervalFunction.ofExponentialRandomBackoff;
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.notification.ModelConverter.convert;
+import static org.dependencytrack.common.MdcKeys.MDC_NOTIFICATION_ID;
+import static org.dependencytrack.notification.NotificationModelConverter.convert;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 
 /**
@@ -67,27 +76,33 @@ final class NotificationOutboxRelay implements Closeable {
     private static final List<Tag> COMMON_METER_TAGS = List.of(Tag.of("outboxName", "notifications"));
     private static final String OUTCOME_METER_TAG_NAME = "outcome";
 
-    private final KafkaEventDispatcher delegateDispatcher;
+    private final DexEngine dexEngine;
+    private final PluginManager pluginManager;
+    private final Function<Handle, NotificationRouter> routerFactory;
     private final MeterRegistry meterRegistry;
-    private final boolean routerEnabled;
     private final long pollIntervalMillis;
     private final int batchSize;
+    private final int largeNotificationThresholdBytes;
     private final BlockingQueue<Notification> currentBatch;
     private final IntervalFunction backoffIntervalFunction;
-    private ScheduledExecutorService executorService;
-    private MeterProvider<Timer> cycleLatencyTimer;
-    private MeterProvider<Counter> cycleCounter;
-    private Timer pollLatencyTimer;
-    private Timer sendLatencyTimer;
-    private MeterProvider<DistributionSummary> sentDistribution;
+    private @Nullable ScheduledExecutorService executorService;
+    private @Nullable MeterProvider<Timer> cycleLatencyTimer;
+    private @Nullable MeterProvider<Counter> cycleCounter;
+    private @Nullable Timer pollLatencyTimer;
+    private @Nullable Timer sendLatencyTimer;
+    private @Nullable MeterProvider<DistributionSummary> sentDistribution;
 
     public NotificationOutboxRelay(
-            final KafkaEventDispatcher delegateDispatcher,
-            final MeterRegistry meterRegistry,
-            final boolean routerEnabled,
-            final long pollIntervalMillis,
-            final int batchSize) {
-        this.delegateDispatcher = requireNonNull(delegateDispatcher, "delegate dispatcher must not be null");
+            DexEngine dexEngine,
+            PluginManager pluginManager,
+            Function<Handle, NotificationRouter> routerFactory,
+            MeterRegistry meterRegistry,
+            long pollIntervalMillis,
+            int batchSize,
+            int largeNotificationThresholdBytes) {
+        this.dexEngine = requireNonNull(dexEngine, "dexEngine must not be null");
+        this.pluginManager = requireNonNull(pluginManager, "pluginManager must not be null");
+        this.routerFactory = requireNonNull(routerFactory, "routerFactory must not be null");
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry must not be null");
         if (pollIntervalMillis <= 0) {
             throw new IllegalArgumentException("pollIntervalMillis must be greater than 0");
@@ -95,9 +110,12 @@ final class NotificationOutboxRelay implements Closeable {
         if (batchSize <= 0) {
             throw new IllegalArgumentException("batchSize must be greater than 0");
         }
-        this.routerEnabled = routerEnabled;
+        if (largeNotificationThresholdBytes <= 0) {
+            throw new IllegalArgumentException("largeNotificationThresholdBytes must be greater than 0");
+        }
         this.pollIntervalMillis = pollIntervalMillis;
         this.batchSize = batchSize;
+        this.largeNotificationThresholdBytes = largeNotificationThresholdBytes;
         this.currentBatch = new ArrayBlockingQueue<>(batchSize);
         this.backoffIntervalFunction = ofExponentialRandomBackoff(
                 /* initialDelay */ pollIntervalMillis,
@@ -121,31 +139,31 @@ final class NotificationOutboxRelay implements Closeable {
                 .bindTo(meterRegistry);
 
         cycleLatencyTimer = Timer
-                .builder("dtrack.outbox.relay.cycle.latency")
+                .builder("dt.outbox.relay.cycle.latency")
                 .tags(COMMON_METER_TAGS)
                 .description("Latency of a relay cycle")
                 .withRegistry(meterRegistry);
 
         cycleCounter = Counter
-                .builder("dtrack.outbox.relay.cycles")
+                .builder("dt.outbox.relay.cycles")
                 .tags(COMMON_METER_TAGS)
                 .description("Number of relay cycles")
                 .withRegistry(meterRegistry);
 
         pollLatencyTimer = Timer
-                .builder("dtrack.outbox.relay.poll.latency")
+                .builder("dt.outbox.relay.poll.latency")
                 .tags(COMMON_METER_TAGS)
                 .description("Latency of polls from the outbox table")
                 .register(meterRegistry);
 
         sendLatencyTimer = Timer
-                .builder("dtrack.outbox.relay.send.latency")
+                .builder("dt.outbox.relay.send.latency")
                 .tags(COMMON_METER_TAGS)
                 .description("Latency of messages being sent")
                 .register(meterRegistry);
 
         sentDistribution = DistributionSummary
-                .builder("dtrack.outbox.relay.messages.sent")
+                .builder("dt.outbox.relay.messages.sent")
                 .tags(COMMON_METER_TAGS)
                 .description("Number of messages sent")
                 .withRegistry(meterRegistry);
@@ -164,7 +182,7 @@ final class NotificationOutboxRelay implements Closeable {
         }
     }
 
-    private void run(final int failureBackoffCount) {
+    private void run(int failureBackoffCount) {
         final Timer.Sample cycleLatencySample = Timer.start();
         try {
             final RelayCycleOutcome cycleOutcome = executeRelayCycle();
@@ -225,21 +243,16 @@ final class NotificationOutboxRelay implements Closeable {
                 return RelayCycleOutcome.COMPLETED;
             }
 
-            if (routerEnabled) {
-                try {
-                    final List<NotificationPublishTask> publishTasks =
-                            new NotificationRouter(handle, meterRegistry).route(currentBatch);
-                    LOGGER.debug("Router generated {} publish tasks", publishTasks.size());
-                } catch (RuntimeException e) {
-                    LOGGER.warn("""
-                            Router failed, but since routing results are not currently used,
-                            the failure is ignored. If it continues to fail, consider disabling the router.""", e);
-                }
+            final NotificationRouter router = routerFactory.apply(handle);
+            final List<NotificationRouter.Result> routerResults = router.route(currentBatch);
+            LOGGER.debug("Router generated {} results", routerResults.size());
+            if (routerResults.isEmpty()) {
+                return RelayCycleOutcome.COMPLETED;
             }
 
             final Timer.Sample sendLatencySample = Timer.start();
             try {
-                sendAll(currentBatch);
+                sendAll(routerResults);
             } finally {
                 sendLatencySample.stop(sendLatencyTimer);
             }
@@ -257,7 +270,7 @@ final class NotificationOutboxRelay implements Closeable {
         });
     }
 
-    private boolean tryAcquireAdvisoryLock(final Handle handle) {
+    private boolean tryAcquireAdvisoryLock(Handle handle) {
         return handle.createQuery("""
                         SELECT pg_try_advisory_xact_lock(:lockId)
                         """)
@@ -266,27 +279,53 @@ final class NotificationOutboxRelay implements Closeable {
                 .one();
     }
 
-    private void sendAll(final Collection<Notification> notifications) {
-        @SuppressWarnings("removal") final List<CompletableFuture<RecordMetadata>> futures =
-                delegateDispatcher.dispatchAllNotificationProtos(notifications);
+    private void sendAll(Collection<NotificationRouter.Result> routerResults) {
+        final var createRunRequests = new ArrayList<CreateWorkflowRunRequest<?>>(routerResults.size());
 
-        final CompletableFuture<?> combinedFuture =
-                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        for (final var routerResult : routerResults) {
+            final Notification notification = routerResult.notification();
 
-        try {
-            // Since we're in a database transaction, ensure we're not blocking it
-            // for prolonged time. 5 seconds should be plenty for every Kafka cluster.
-            combinedFuture.get(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(
-                    "Interrupted while waiting for messages to be acknowledged", e);
-        } catch (TimeoutException e) {
-            throw new IllegalStateException(
-                    "Timed out while waiting for messages to be acknowledged", e);
-        } catch (ExecutionException e) {
-            throw new IllegalStateException("Failed to send messages", e.getCause());
+            try (var ignored = MDC.putCloseable(MDC_NOTIFICATION_ID, notification.getId())) {
+                final var workflowArgBuilder =
+                        PublishNotificationWorkflowArg.newBuilder()
+                                .setNotificationId(notification.getId())
+                                .addAllNotificationRuleNames(routerResult.ruleNames());
+
+                // Large payloads have the potential to slow down the dex engine,
+                // as they're stored in the workflow history. Some notifications
+                // can be large, e.g. BOM_CONSUMED or PROJECT_VULN_ANALYSIS_COMPLETED.
+                //
+                // If a notification exceeds the configured size threshold,
+                // offload it to file storage and send the file's metadata
+                // as workflow argument instead. It is the workflow's responsibility
+                // to ensure that the file is deleted.
+                if (notification.getSerializedSize() > largeNotificationThresholdBytes) {
+                    LOGGER.warn(
+                            "Notification size {}b exceeds large threshold of {}b; Will offload to file storage",
+                            notification.getSerializedSize(),
+                            largeNotificationThresholdBytes);
+
+                    try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
+                        final FileMetadata fileMetadata = fileStorage.store(
+                                "notifications/%s.proto".formatted(notification.getId()),
+                                "application/protobuf",
+                                new ByteArrayInputStream(notification.toByteArray()));
+                        workflowArgBuilder.setNotificationFileMetadata(fileMetadata);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException("Failed to store notification file", e);
+                    }
+                } else {
+                    workflowArgBuilder.setNotification(notification);
+                }
+
+                createRunRequests.add(
+                        new CreateWorkflowRunRequest<>(PublishNotificationWorkflow.class)
+                                .withWorkflowInstanceId("publish-notification:" + notification.getId())
+                                .withArgument(workflowArgBuilder.build()));
+            }
         }
+
+        dexEngine.createRuns(createRunRequests);
     }
 
 }

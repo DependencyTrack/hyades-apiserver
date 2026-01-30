@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.event.kafka.processor;
 
-import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.ConfigPropertyExtension;
 import com.google.protobuf.Timestamp;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.FetchStatus;
@@ -29,8 +29,8 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.proto.repometaanalysis.v1.AnalysisResult;
 import org.dependencytrack.proto.repometaanalysis.v1.IntegrityMeta;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.jdo.Query;
 import java.time.Duration;
@@ -43,9 +43,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class RepositoryMetaResultProcessorTest extends AbstractProcessorTest {
 
-    @Rule
-    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule()
-            .withProperty("integrity.check.enabled", "true");
+    @RegisterExtension
+    private static final ConfigPropertyExtension configProperties =
+            new ConfigPropertyExtension()
+                    .withProperty("integrity.check.enabled", "true");
 
     @Test
     public void processNewMetaModelTest() throws Exception {

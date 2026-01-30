@@ -18,23 +18,23 @@
  */
 package org.dependencytrack.filters;
 
-import alpine.Config;
-import alpine.common.metrics.Metrics;
+import io.micrometer.core.instrument.Metrics;
+import jakarta.ws.rs.ext.Provider;
 import org.glassfish.jersey.micrometer.server.DefaultJerseyTagsProvider;
 import org.glassfish.jersey.micrometer.server.MetricsApplicationEventListener;
 
 /**
  * @since 5.5.0
  */
+@Provider
 public class JerseyMetricsApplicationEventListener extends MetricsApplicationEventListener {
 
     public JerseyMetricsApplicationEventListener() {
         super(
-                Metrics.getRegistry(),
+                Metrics.globalRegistry,
                 new DefaultJerseyTagsProvider(),
                 /* metricName */ "http.server.requests",
-                /* autoTimeRequests */ Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)
-        );
+                /* autoTimeRequests */ true);
     }
 
 }

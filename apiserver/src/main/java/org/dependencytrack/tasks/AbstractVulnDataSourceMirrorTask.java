@@ -25,12 +25,14 @@ import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.cyclonedx.proto.v1_6.Bom;
+import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
+import org.dependencytrack.vulndatasource.api.VulnDataSource;
+import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,8 +42,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.datanucleus.PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT;
+import static org.dependencytrack.common.MdcKeys.MDC_VULN_ID;
+import static org.dependencytrack.common.MdcKeys.MDC_VULN_SOURCE;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.LockProvider.isTaskLockToBeExtended;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
@@ -54,8 +59,8 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
     private final PluginManager pluginManager;
     private final Class<? extends Event> eventClass;
     private final String vulnDataSourceExtensionName;
-    private final Vulnerability.Source source;
-    private final Logger logger;
+    protected final Vulnerability.Source source;
+    protected final Logger logger;
     private LockConfiguration lockConfig;
     private Instant lockAcquiredAt;
 
@@ -91,11 +96,13 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
     private void informLocked() {
         lockAcquiredAt = Instant.now();
 
-        try (final var dataSource = pluginManager.getExtension(VulnDataSource.class, vulnDataSourceExtensionName)) {
-            if (dataSource == null) {
-                return; // Likely disabled.
-            }
+        final VulnDataSourceFactory dataSourceFactory =
+                pluginManager.getFactory(VulnDataSource.class, vulnDataSourceExtensionName);
+        if (!dataSourceFactory.isDataSourceEnabled()) {
+            return;
+        }
 
+        try (final VulnDataSource dataSource = dataSourceFactory.create()) {
             final var bovBatch = new ArrayList<Bom>(25);
             while (dataSource.hasNext()) {
                 if (Thread.currentThread().isInterrupted()) {
@@ -131,7 +138,7 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
         }
     }
 
-    private void processBatch(final VulnDataSource dataSource, final Collection<Bom> bovs) {
+    protected void processBatch(final VulnDataSource dataSource, final Collection<Bom> bovs) {
         logger.debug("Processing batch of {} BOVs", bovs.size());
 
         final var vulns = new ArrayList<Vulnerability>(bovs.size());
@@ -148,8 +155,14 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
                 continue;
             }
 
-            final Vulnerability vuln = BovModelConverter.convert(bov, bov.getVulnerabilities(0), true);
-            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+            final Vulnerability vuln;
+            final List<VulnerableSoftware> vsList;
+            try (var ignored = new MdcScope(Map.ofEntries(
+                    Map.entry(MDC_VULN_ID, bov.getVulnerabilities(0).getId()),
+                    Map.entry(MDC_VULN_SOURCE, bov.getVulnerabilities(0).getSource().getName())))) {
+                vuln = BovModelConverter.convert(bov, bov.getVulnerabilities(0), true);
+                vsList = BovModelConverter.extractVulnerableSoftware(bov);
+            }
 
             vulns.add(vuln);
             vsListByVulnId.put(vuln.getVulnId(), vsList);

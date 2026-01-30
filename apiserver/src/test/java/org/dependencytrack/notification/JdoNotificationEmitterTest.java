@@ -20,30 +20,31 @@ package org.dependencytrack.notification;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.proto.notification.v1.Notification;
-import org.junit.Before;
-import org.junit.Test;
+import org.dependencytrack.notification.api.emission.NotificationEmitter;
+import org.dependencytrack.notification.proto.v1.Notification;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.notification.TestNotificationFactory.createBomConsumedTestNotification;
+import static org.dependencytrack.notification.NotificationTestUtil.createCatchAllNotificationRule;
+import static org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification;
 
-public class JdoNotificationEmitterTest extends PersistenceCapableTest {
+class JdoNotificationEmitterTest extends PersistenceCapableTest {
 
     private NotificationEmitter emitter;
 
-    @Before
-    @Override
-    public void before() throws Exception {
-        super.before();
-
+    @BeforeEach
+    void beforeEach() {
         emitter = new JdoNotificationEmitter(qm, new SimpleMeterRegistry());
     }
 
     @Test
-    public void emitShouldEmitNotification() {
+    void emitShouldEmitNotification() {
+        createCatchAllNotificationRule(qm, NotificationScope.PORTFOLIO);
+
         final Notification notification = createBomConsumedTestNotification();
 
         emitter.emit(notification);
@@ -52,7 +53,9 @@ public class JdoNotificationEmitterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void emitAllShouldEmitNotifications() {
+    void emitAllShouldEmitNotifications() {
+        createCatchAllNotificationRule(qm, NotificationScope.PORTFOLIO);
+
         final var notifications = new ArrayList<Notification>(5);
 
         for (int i = 0; i < 5; i++) {
@@ -65,19 +68,19 @@ public class JdoNotificationEmitterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void emitShouldThrowWhenNotificationIsNull() {
+    void emitShouldThrowWhenNotificationIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
                 .isThrownBy(() -> emitter.emit(null));
     }
 
     @Test
-    public void emitAllShouldThrowWhenNotificationsIsNull() {
+    void emitAllShouldThrowWhenNotificationsIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
                 .isThrownBy(() -> emitter.emitAll(null));
     }
 
     @Test
-    public void emitShouldThrowWhenNotificationIdIsMissing() {
+    void emitShouldThrowWhenNotificationIdIsMissing() {
         final Notification notification =
                 createBomConsumedTestNotification().toBuilder()
                         .clearId()
@@ -88,7 +91,7 @@ public class JdoNotificationEmitterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void emitShouldThrowWhenNotificationScopeIsMissing() {
+    void emitShouldThrowWhenNotificationScopeIsMissing() {
         final Notification notification =
                 createBomConsumedTestNotification().toBuilder()
                         .clearScope()
@@ -99,7 +102,7 @@ public class JdoNotificationEmitterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void emitShouldThrowWhenNotificationGroupIsMissing() {
+    void emitShouldThrowWhenNotificationGroupIsMissing() {
         final Notification notification =
                 createBomConsumedTestNotification().toBuilder()
                         .clearGroup()
@@ -110,7 +113,7 @@ public class JdoNotificationEmitterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void emitShouldThrowWhenNotificationLevelIsMissing() {
+    void emitShouldThrowWhenNotificationLevelIsMissing() {
         final Notification notification =
                 createBomConsumedTestNotification().toBuilder()
                         .clearLevel()
@@ -121,7 +124,7 @@ public class JdoNotificationEmitterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void emitShouldThrowWhenNotificationTimestampIsMissing() {
+    void emitShouldThrowWhenNotificationTimestampIsMissing() {
         final Notification notification =
                 createBomConsumedTestNotification().toBuilder()
                         .clearTimestamp()
@@ -132,7 +135,7 @@ public class JdoNotificationEmitterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void emitShouldThrowWhenNotificationTitleIsMissing() {
+    void emitShouldThrowWhenNotificationTitleIsMissing() {
         final Notification notification =
                 createBomConsumedTestNotification().toBuilder()
                         .clearTitle()
@@ -143,7 +146,7 @@ public class JdoNotificationEmitterTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void emitShouldThrowWhenNotificationContentIsMissing() {
+    void emitShouldThrowWhenNotificationContentIsMissing() {
         final Notification notification =
                 createBomConsumedTestNotification().toBuilder()
                         .clearContent()

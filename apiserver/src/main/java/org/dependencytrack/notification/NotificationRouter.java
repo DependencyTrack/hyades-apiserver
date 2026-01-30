@@ -23,21 +23,22 @@ import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.dependencytrack.common.MdcScope;
-import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
-import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
-import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
-import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
-import org.dependencytrack.proto.notification.v1.NewVulnerableDependencySubject;
-import org.dependencytrack.proto.notification.v1.Notification;
-import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysisDecisionChangeSubject;
-import org.dependencytrack.proto.notification.v1.PolicyViolationSubject;
-import org.dependencytrack.proto.notification.v1.Project;
-import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
-import org.dependencytrack.proto.notification.v1.VexConsumedOrProcessedSubject;
-import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubject;
+import org.dependencytrack.notification.proto.v1.BomConsumedOrProcessedSubject;
+import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
+import org.dependencytrack.notification.proto.v1.BomValidationFailedSubject;
+import org.dependencytrack.notification.proto.v1.NewVulnerabilitySubject;
+import org.dependencytrack.notification.proto.v1.NewVulnerableDependencySubject;
+import org.dependencytrack.notification.proto.v1.Notification;
+import org.dependencytrack.notification.proto.v1.PolicyViolationAnalysisDecisionChangeSubject;
+import org.dependencytrack.notification.proto.v1.PolicyViolationSubject;
+import org.dependencytrack.notification.proto.v1.Project;
+import org.dependencytrack.notification.proto.v1.ProjectVulnAnalysisCompleteSubject;
+import org.dependencytrack.notification.proto.v1.VexConsumedOrProcessedSubject;
+import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -47,19 +48,27 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.notification.ModelConverter.convert;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
+import static org.dependencytrack.common.MdcKeys.MDC_NOTIFICATION_GROUP;
+import static org.dependencytrack.common.MdcKeys.MDC_NOTIFICATION_ID;
+import static org.dependencytrack.common.MdcKeys.MDC_NOTIFICATION_LEVEL;
+import static org.dependencytrack.common.MdcKeys.MDC_NOTIFICATION_SCOPE;
+import static org.dependencytrack.notification.NotificationModelConverter.convert;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 
 /**
  * @since 5.7.0
  */
 final class NotificationRouter {
+
+    record Result(Notification notification, Set<String> ruleNames) {
+    }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationRouter.class.getName());
 
@@ -69,25 +78,25 @@ final class NotificationRouter {
     private final MeterProvider<Counter> rulesMatchedCounter;
 
     NotificationRouter(
-            final Handle jdbiHandle,
-            final MeterRegistry meterRegistry) {
+            Handle jdbiHandle,
+            MeterRegistry meterRegistry) {
         this.jdbiHandle = requireNonNull(jdbiHandle, "jdbiHandle must not be null");
         requireNonNull(meterRegistry, "meterRegistry must not be null");
         this.ruleQueryLatency = Timer
-                .builder("dtrack.notification.router.rule.query.latency")
+                .builder("dt.notification.router.rule.query.latency")
                 .description("Latency of applicable notification rule queries")
                 .register(meterRegistry);
         this.ruleFilterLatency = Timer
-                .builder("dtrack.notification.router.rule.filter.latency")
+                .builder("dt.notification.router.rule.filter.latency")
                 .description("Latency of applicable notification rule filtering")
                 .register(meterRegistry);
         this.rulesMatchedCounter = Counter
-                .builder("dtrack.notification.router.rules.matched")
+                .builder("dt.notification.router.rules.matched")
                 .description("Number of matched notification rules")
                 .withRegistry(meterRegistry);
     }
 
-    List<NotificationPublishTask> route(final Collection<Notification> notifications) {
+    List<Result> route(Collection<Notification> notifications) {
         requireNonNull(notifications, "notifications must not be null");
         if (notifications.isEmpty()) {
             return Collections.emptyList();
@@ -106,17 +115,17 @@ final class NotificationRouter {
             return Collections.emptyList();
         }
 
-        final var publishTasks = new ArrayList<NotificationPublishTask>(rulesByNotification.size());
+        final var results = new ArrayList<Result>(rulesByNotification.size());
 
         for (final Map.Entry<Notification, List<RuleQueryResult>> entry : rulesByNotification.entrySet()) {
             final Notification notification = entry.getKey();
             final List<RuleQueryResult> rules = entry.getValue();
 
             try (var ignoredMdcScope = new MdcScope(Map.ofEntries(
-                    Map.entry("notificationId", notification.getId()),
-                    Map.entry("notificationScope", convert(notification.getScope()).name()),
-                    Map.entry("notificationGroup", convert(notification.getGroup()).name()),
-                    Map.entry("notificationLevel", convert(notification.getLevel()).name())))) {
+                    Map.entry(MDC_NOTIFICATION_ID, notification.getId()),
+                    Map.entry(MDC_NOTIFICATION_SCOPE, convert(notification.getScope()).name()),
+                    Map.entry(MDC_NOTIFICATION_GROUP, convert(notification.getGroup()).name()),
+                    Map.entry(MDC_NOTIFICATION_LEVEL, convert(notification.getLevel()).name())))) {
                 final Timer.Sample ruleFilterLatencySample = Timer.start();
                 final List<RuleQueryResult> applicableRules;
                 try {
@@ -125,15 +134,19 @@ final class NotificationRouter {
                     ruleFilterLatencySample.stop(ruleFilterLatency);
                 }
 
+                final var applicableRuleNames = new HashSet<String>(applicableRules.size());
                 for (final RuleQueryResult rule : applicableRules) {
-                    LOGGER.debug("Adding publish task for rule {}", rule.name());
                     rulesMatchedCounter.withTag("ruleName", rule.name()).increment();
-                    publishTasks.add(new NotificationPublishTask(rule.id(), rule.name(), notification));
+                    applicableRuleNames.add(rule.name());
+                }
+
+                if (!applicableRuleNames.isEmpty()) {
+                    results.add(new Result(notification, applicableRuleNames));
                 }
             }
         }
 
-        return publishTasks;
+        return results;
     }
 
     public record RuleQueryResult(
@@ -141,8 +154,8 @@ final class NotificationRouter {
             long id,
             String name,
             boolean isNotifyChildProjects,
-            Set<String> limitToProjectUuids,
-            Set<String> limitToTagNames) {
+            @Nullable Set<String> limitToProjectUuids,
+            @Nullable Set<String> limitToTagNames) {
 
         private boolean isLimitedToProjects() {
             return limitToProjectUuids != null && !limitToProjectUuids.isEmpty();
@@ -154,8 +167,7 @@ final class NotificationRouter {
 
     }
 
-    private Map<Notification, List<RuleQueryResult>> queryRules(
-            final Collection<Notification> notifications) {
+    private Map<Notification, List<RuleQueryResult>> queryRules(Collection<Notification> notifications) {
         // Copy notifications into a list so they're accessible by index.
         final var notificationsList = List.copyOf(notifications);
 
@@ -203,7 +215,7 @@ final class NotificationRouter {
                     AS t(index, scope, level, "group")
                  INNER JOIN "NOTIFICATIONRULE" AS rule
                     ON rule."SCOPE" = t.scope
-                   AND rule."NOTIFY_ON" LIKE ('%' || t."group" || '%')
+                   AND t."group" = ANY(rule."NOTIFY_ON")
                    AND rule."NOTIFICATION_LEVEL" <= t.level
                  WHERE rule."ENABLED"
                 """);
@@ -224,8 +236,8 @@ final class NotificationRouter {
     }
 
     private List<RuleQueryResult> maybeFilterRules(
-            final Notification notification,
-            final List<RuleQueryResult> ruleCandidates) {
+            Notification notification,
+            List<RuleQueryResult> ruleCandidates) {
         final Project projectSubject = getProjectSubject(notification);
         if (projectSubject == null) {
             LOGGER.debug("Notification can't be filtered; All rules are applicable");
@@ -247,7 +259,7 @@ final class NotificationRouter {
         return applicableRules;
     }
 
-    private boolean isApplicable(final RuleQueryResult rule, final Project project) {
+    private boolean isApplicable(RuleQueryResult rule, Project project) {
         // TODO: It should be possible to allow for custom filtering using CEL.
         //  This would address feature requests such as https://github.com/DependencyTrack/dependency-track/issues/3767.
         //  Since notifications are already well-defined Protobuf messages,
@@ -299,7 +311,7 @@ final class NotificationRouter {
         return false;
     }
 
-    private Project getProjectSubject(final Notification notification) {
+    private @Nullable Project getProjectSubject(Notification notification) {
         if (notification.getScope() != SCOPE_PORTFOLIO
                 || !notification.hasSubject()) {
             return null;
@@ -344,7 +356,7 @@ final class NotificationRouter {
         }
     }
 
-    private boolean isChildOfAnyActiveParent(final Collection<String> parentUuids, final String childUuid) {
+    private boolean isChildOfAnyActiveParent(Collection<String> parentUuids, String childUuid) {
         final Query query = jdbiHandle.createQuery("""
                 SELECT EXISTS(
                   SELECT 1

@@ -18,12 +18,21 @@
  */
 package org.dependencytrack.plugin.api;
 
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 /**
  * Specification of an {@link ExtensionPoint}.
  *
  * @since 5.6.0
  */
-public interface ExtensionPointSpec<T extends ExtensionPoint> {
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface ExtensionPointSpec {
 
     /**
      * @return The name of the extension point.
@@ -36,10 +45,5 @@ public interface ExtensionPointSpec<T extends ExtensionPoint> {
      * Required extension points must have at least one active extension.
      */
     boolean required();
-
-    /**
-     * @return The {@link Class} of the {@link ExtensionPoint}.
-     */
-    Class<T> extensionPointClass();
 
 }

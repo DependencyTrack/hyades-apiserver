@@ -22,17 +22,15 @@ public class DummyTestExtension implements TestExtensionPoint {
 
     static final String NAME = "dummy";
 
-    private final String runtimeConfigValue;
     private final String deploymentConfigValue;
 
-    DummyTestExtension(final String runtimeConfigValue, final String deploymentConfigValue) {
-        this.runtimeConfigValue = runtimeConfigValue;
+    DummyTestExtension(final String deploymentConfigValue) {
         this.deploymentConfigValue = deploymentConfigValue;
     }
 
     @Override
     public String test() {
-        return "%s-%s".formatted(runtimeConfigValue, deploymentConfigValue);
+        return deploymentConfigValue;
     }
 
 }

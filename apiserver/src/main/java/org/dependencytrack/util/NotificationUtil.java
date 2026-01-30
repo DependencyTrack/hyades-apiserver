@@ -26,7 +26,7 @@ import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.ViolationAnalysisState;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.persistence.QueryManager;
 
 import javax.jdo.Query;
@@ -37,8 +37,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.dependencytrack.notification.ModelConverter.convert;
-import static org.dependencytrack.notification.NotificationFactory.createPolicyViolationNotification;
+import static org.dependencytrack.notification.NotificationModelConverter.convert;
+import static org.dependencytrack.notification.api.NotificationFactory.createPolicyViolationNotification;
 
 public final class NotificationUtil {
 
@@ -164,7 +164,7 @@ public final class NotificationUtil {
         violation.setType(PolicyViolation.Type.valueOf(projection.violationType));
         violation.setTimestamp(projection.violationTimestamp);
 
-        NotificationEmitter.using(qm).emit(
+        new JdoNotificationEmitter(qm).emit(
                 createPolicyViolationNotification(
                         convert(project),
                         convert(component),

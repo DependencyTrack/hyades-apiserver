@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
@@ -63,7 +62,8 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdoNotificationEmitter;
+import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
@@ -81,8 +81,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.dependencytrack.notification.NotificationFactory.createUserCreatedNotification;
-import static org.dependencytrack.notification.NotificationFactory.createUserDeletedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createUserCreatedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createUserDeletedNotification;
 
 /**
  * JAX-RS resources for processing users.
@@ -212,7 +212,7 @@ public class UserResource extends AlpineResource {
     })
     @AuthenticationNotRequired
     public Response forceChangePassword(@FormParam("username") String username, @FormParam("password") String password,
-            @FormParam("newPassword") String newPassword, @FormParam("confirmPassword") String confirmPassword) {
+                                        @FormParam("newPassword") String newPassword, @FormParam("confirmPassword") String confirmPassword) {
         final Authenticator auth = new Authenticator(username, password);
         AtomicReference<Principal> principal = new AtomicReference<>();
         try (QueryManager qm = new QueryManager()) {
@@ -353,23 +353,19 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     public Response getSelf() {
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.ENFORCE_AUTHENTICATION)) {
-            try (QueryManager qm = new QueryManager()) {
-                if (super.isLdapUser()) {
-                    final LdapUser user = qm.getLdapUser(getPrincipal().getName());
-                    return Response.ok(user).build();
-                } else if (super.isManagedUser()) {
-                    final ManagedUser user = qm.getManagedUser(getPrincipal().getName());
-                    return Response.ok(user).build();
-                } else if (super.isOidcUser()) {
-                    final OidcUser user = qm.getOidcUser(getPrincipal().getName());
-                    return Response.ok(user).build();
-                }
-                return Response.status(401).build();
+        try (QueryManager qm = new QueryManager()) {
+            if (super.isLdapUser()) {
+                final LdapUser user = qm.getLdapUser(getPrincipal().getName());
+                return Response.ok(user).build();
+            } else if (super.isManagedUser()) {
+                final ManagedUser user = qm.getManagedUser(getPrincipal().getName());
+                return Response.ok(user).build();
+            } else if (super.isOidcUser()) {
+                final OidcUser user = qm.getOidcUser(getPrincipal().getName());
+                return Response.ok(user).build();
             }
+            return Response.status(401).build();
         }
-        // Authentication is not enabled, but we need to return a positive response without any principal data.
-        return Response.ok().build();
     }
 
     @POST
@@ -388,40 +384,36 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     public Response updateSelf(ManagedUser jsonUser) {
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.ENFORCE_AUTHENTICATION)) {
-            try (QueryManager qm = new QueryManager()) {
-                if (super.isLdapUser()) {
-                    final LdapUser user = qm.getLdapUser(getPrincipal().getName());
-                    return Response.status(Response.Status.BAD_REQUEST).entity(user).build();
-                } else if (super.isOidcUser()) {
-                    final OidcUser user = qm.getOidcUser(getPrincipal().getName());
-                    return Response.status(Response.Status.BAD_REQUEST).entity(user).build();
-                } else if (super.isManagedUser()) {
-                    final ManagedUser user = (ManagedUser) super.getPrincipal();
-                    if (StringUtils.isBlank(jsonUser.getFullname())) {
-                        return Response.status(Response.Status.BAD_REQUEST).entity("Full name is required.").build();
-                    }
-                    if (StringUtils.isBlank(jsonUser.getEmail())) {
-                        return Response.status(Response.Status.BAD_REQUEST).entity("Email address is required.").build();
-                    }
-                    user.setFullname(StringUtils.trimToNull(jsonUser.getFullname()));
-                    user.setEmail(StringUtils.trimToNull(jsonUser.getEmail()));
-                    if (StringUtils.isNotBlank(jsonUser.getNewPassword()) && StringUtils.isNotBlank(jsonUser.getConfirmPassword())) {
-                        if (jsonUser.getNewPassword().equals(jsonUser.getConfirmPassword())) {
-                            user.setPassword(String.valueOf(PasswordService.createHash(jsonUser.getNewPassword().toCharArray())));
-                        } else {
-                            return Response.status(Response.Status.BAD_REQUEST).entity("Passwords do not match.").build();
-                        }
-                    }
-                    qm.updateManagedUser(user);
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "User profile updated: " + user.getUsername());
-                    return Response.ok(user).build();
+        try (QueryManager qm = new QueryManager()) {
+            if (super.isLdapUser()) {
+                final LdapUser user = qm.getLdapUser(getPrincipal().getName());
+                return Response.status(Response.Status.BAD_REQUEST).entity(user).build();
+            } else if (super.isOidcUser()) {
+                final OidcUser user = qm.getOidcUser(getPrincipal().getName());
+                return Response.status(Response.Status.BAD_REQUEST).entity(user).build();
+            } else if (super.isManagedUser()) {
+                final ManagedUser user = (ManagedUser) super.getPrincipal();
+                if (StringUtils.isBlank(jsonUser.getFullname())) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("Full name is required.").build();
                 }
-                return Response.status(Response.Status.UNAUTHORIZED).build();
+                if (StringUtils.isBlank(jsonUser.getEmail())) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("Email address is required.").build();
+                }
+                user.setFullname(StringUtils.trimToNull(jsonUser.getFullname()));
+                user.setEmail(StringUtils.trimToNull(jsonUser.getEmail()));
+                if (StringUtils.isNotBlank(jsonUser.getNewPassword()) && StringUtils.isNotBlank(jsonUser.getConfirmPassword())) {
+                    if (jsonUser.getNewPassword().equals(jsonUser.getConfirmPassword())) {
+                        user.setPassword(String.valueOf(PasswordService.createHash(jsonUser.getNewPassword().toCharArray())));
+                    } else {
+                        return Response.status(Response.Status.BAD_REQUEST).entity("Passwords do not match.").build();
+                    }
+                }
+                qm.updateManagedUser(user);
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "User profile updated: " + user.getUsername());
+                return Response.ok(user).build();
             }
+            return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        // Authentication is not enabled, but we need to return a positive response without any principal data.
-        return Response.ok().build();
     }
 
     @PUT
@@ -453,7 +445,9 @@ public class UserResource extends AlpineResource {
                 if (user == null) {
                     user = qm.createLdapUser(jsonUser.getUsername());
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user created: " + jsonUser.getUsername());
-                    NotificationEmitter.using(qm).emit(createUserCreatedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserCreatedNotification(
+                                    NotificationModelConverter.convert(user)));
                     return Response.status(Response.Status.CREATED).entity(user).build();
                 } else {
                     return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
@@ -481,7 +475,9 @@ public class UserResource extends AlpineResource {
             return qm.callInTransaction(() -> {
                 final LdapUser user = qm.getLdapUser(jsonUser.getUsername());
                 if (user != null) {
-                    NotificationEmitter.using(qm).emit(createUserDeletedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserDeletedNotification(
+                                    NotificationModelConverter.convert(user)));
                     qm.delete(user);
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user deleted: " + jsonUser.getUsername());
                     return Response.status(Response.Status.NO_CONTENT).build();
@@ -536,7 +532,9 @@ public class UserResource extends AlpineResource {
                             String.valueOf(PasswordService.createHash(jsonUser.getNewPassword().toCharArray())),
                             jsonUser.isForcePasswordChange(), jsonUser.isNonExpiryPassword(), jsonUser.isSuspended());
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user created: " + jsonUser.getUsername());
-                    NotificationEmitter.using(qm).emit(createUserCreatedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserCreatedNotification(
+                                    NotificationModelConverter.convert(user)));
                     return Response.status(Response.Status.CREATED).entity(user).build();
                 } else {
                     return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
@@ -613,7 +611,9 @@ public class UserResource extends AlpineResource {
             return qm.callInTransaction(() -> {
                 final ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
                 if (user != null) {
-                    NotificationEmitter.using(qm).emit(createUserDeletedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserDeletedNotification(
+                                    NotificationModelConverter.convert(user)));
                     qm.delete(user);
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user deleted: " + jsonUser.getUsername());
                     return Response.status(Response.Status.NO_CONTENT).build();
@@ -653,7 +653,9 @@ public class UserResource extends AlpineResource {
                 if (user == null) {
                     user = qm.createOidcUser(jsonUser.getUsername());
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user created: " + jsonUser.getUsername());
-                    NotificationEmitter.using(qm).emit(createUserCreatedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserCreatedNotification(
+                                    NotificationModelConverter.convert(user)));
                     return Response.status(Response.Status.CREATED).entity(user).build();
                 } else {
                     return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
@@ -681,7 +683,9 @@ public class UserResource extends AlpineResource {
             return qm.callInTransaction(() -> {
                 final OidcUser user = qm.getOidcUser(jsonUser.getUsername());
                 if (user != null) {
-                    NotificationEmitter.using(qm).emit(createUserDeletedNotification(user));
+                    new JdoNotificationEmitter(qm).emit(
+                            createUserDeletedNotification(
+                                    NotificationModelConverter.convert(user)));
                     qm.delete(user);
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user deleted: " + jsonUser.getUsername());
                     return Response.status(Response.Status.NO_CONTENT).build();
@@ -799,7 +803,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user or team(s) could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
     public Response setUserTeams(
             @Parameter(description = "Username and list of UUIDs to assign to user", required = true) @Valid TeamsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
@@ -863,7 +867,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user, role, or project could not be found", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class)))
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
     public Response assignProjectRoleToUser(
             @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {
@@ -909,9 +913,9 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "204", description = "The specified role was successfully removed from the user"),
             @ApiResponse(responseCode = "304", description = "The user is not a member of the specified role for the project"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404",description = "The user, role, or project could not be found",content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class)))
+            @ApiResponse(responseCode = "404", description = "The user, role, or project could not be found", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class)))
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
     public Response removeProjectRoleFromUser(
             @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {

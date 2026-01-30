@@ -102,18 +102,8 @@ public class Config {
         DATA_DIRECTORY                         ("alpine.data.directory",             "~/.alpine"),
         SECRET_KEY_PATH                        ("alpine.secret.key.path",            null),
         DATABASE_URL                           ("alpine.database.url",               "jdbc:h2:mem:alpine"),
-        DATABASE_DRIVER                        ("alpine.database.driver",            "org.h2.Driver"),
         DATABASE_USERNAME                      ("alpine.database.username",          "sa"),
         DATABASE_PASSWORD                      ("alpine.database.password",          ""),
-        DATABASE_PASSWORD_FILE                 ("alpine.database.password.file",     null),
-        DATABASE_POOL_ENABLED                  ("alpine.database.pool.enabled",      true),
-        DATABASE_POOL_MAX_SIZE                 ("alpine.database.pool.max.size",     20),
-        DATABASE_POOL_IDLE_TIMEOUT             ("alpine.database.pool.idle.timeout", 300000),
-        DATABASE_POOL_MIN_IDLE                 ("alpine.database.pool.min.idle",     10),
-        DATABASE_POOL_MAX_LIFETIME             ("alpine.database.pool.max.lifetime", 600000),
-        DATABASE_POOL_KEEPALIVE_INTERVAL       ("alpine.database.pool.keepalive.interval", 0),
-        ENFORCE_AUTHENTICATION                 ("alpine.enforce.authentication",     true),
-        ENFORCE_AUTHORIZATION                  ("alpine.enforce.authorization",      true),
         BCRYPT_ROUNDS                          ("alpine.bcrypt.rounds",              14),
         LDAP_ENABLED                           ("alpine.ldap.enabled",               false),
         LDAP_SERVER_URL                        ("alpine.ldap.server.url",            null),
@@ -131,9 +121,6 @@ public class Config {
         LDAP_USERS_SEARCH_FILTER               ("alpine.ldap.users.search.filter",   null),
         LDAP_USER_PROVISIONING                 ("alpine.ldap.user.provisioning",     false),
         LDAP_TEAM_SYNCHRONIZATION              ("alpine.ldap.team.synchronization",  false),
-        METRICS_ENABLED                        ("alpine.metrics.enabled",            false),
-        METRICS_AUTH_USERNAME                  ("alpine.metrics.auth.username",      null),
-        METRICS_AUTH_PASSWORD                  ("alpine.metrics.auth.password",      null),
         OIDC_ENABLED                           ("alpine.oidc.enabled",               false),
         OIDC_ISSUER                            ("alpine.oidc.issuer",                null),
         OIDC_CLIENT_ID                         ("alpine.oidc.client.id",             null),
@@ -154,9 +141,9 @@ public class Config {
         HTTP_TIMEOUT_SOCKET                    ("alpine.http.timeout.socket",        30),
         CORS_ENABLED                           ("alpine.cors.enabled",               true),
         CORS_ALLOW_ORIGIN                      ("alpine.cors.allow.origin",          "*"),
-        CORS_ALLOW_METHODS                     ("alpine.cors.allow.methods",         "GET, POST, PUT, DELETE, OPTIONS"),
-        CORS_ALLOW_HEADERS                     ("alpine.cors.allow.headers",         "Origin, Content-Type, Authorization, X-Requested-With, Content-Length, Accept, Origin, X-Api-Key, X-Total-Count, *"),
-        CORS_EXPOSE_HEADERS                    ("alpine.cors.expose.headers",        "Origin, Content-Type, Authorization, X-Requested-With, Content-Length, Accept, Origin, X-Api-Key, X-Total-Count"),
+        CORS_ALLOW_METHODS                     ("alpine.cors.allow.methods",         "GET,POST,PUT,PATCH,DELETE,OPTIONS"),
+        CORS_ALLOW_HEADERS                     ("alpine.cors.allow.headers",         "Origin,Content-Type,Authorization,X-Requested-With,Content-Length,Accept,Origin,X-Api-Key,X-Total-Count,*"),
+        CORS_EXPOSE_HEADERS                    ("alpine.cors.expose.headers",        "Origin,Content-Type,Authorization,X-Requested-With,Content-Length,Accept,Origin,X-Api-Key,X-Total-Count"),
         CORS_ALLOW_CREDENTIALS                 ("alpine.cors.allow.credentials",     true),
         CORS_MAX_AGE                           ("alpine.cors.max.age",               3600),
         API_KEY_PREFIX                         ("alpine.api.key.prefix",             "alpine_"),
@@ -198,7 +185,7 @@ public class Config {
         // Force initialization of MicroProfile config.
         org.eclipse.microprofile.config.Config ignored = ConfigProvider.getConfig();
 
-        final File dataDirectory = getDataDirectorty();
+        final File dataDirectory = getDataDirectory();
         if (!dataDirectory.exists()) {
             if (!dataDirectory.mkdirs()) {
                 LOGGER.warn("""
@@ -241,7 +228,7 @@ public class Config {
      * @since 1.8.0
      */
     private File getSystemIdFilePath() {
-        return new File(Config.getInstance().getDataDirectorty() + File.separator + "id.system");
+        return new File(Config.getInstance().getDataDirectory() + File.separator + "id.system");
     }
 
     /**
@@ -333,7 +320,7 @@ public class Config {
      * @return a File object of the data directory
      * @since 1.0.0
      */
-    public File getDataDirectorty() {
+    public File getDataDirectory() {
         final String prop = PathUtil.resolve(getProperty(AlpineKey.DATA_DIRECTORY));
         return new File(prop).getAbsoluteFile();
     }

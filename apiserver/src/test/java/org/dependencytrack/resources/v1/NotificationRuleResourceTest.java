@@ -22,13 +22,16 @@ import alpine.common.util.UuidUtil;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import io.smallrye.config.SmallRyeConfigBuilder;
+import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
@@ -36,17 +39,19 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
-import org.dependencytrack.persistence.DatabaseSeedingInitTask;
+import org.dependencytrack.notification.publishing.DefaultNotificationPublishersPlugin;
+import org.dependencytrack.plugin.PluginManager;
 import org.glassfish.jersey.client.ClientProperties;
+import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -55,134 +60,203 @@ import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.dependencytrack.notification.publisher.PublisherClass.SendMailPublisher;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.hamcrest.Matchers.equalTo;
 
-public class NotificationRuleResourceTest extends ResourceTest {
+class NotificationRuleResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    private static PluginManager pluginManager;
+
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(NotificationRuleResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bindFactory(() -> pluginManager).to(PluginManager.class);
+                        }
+                    }));
 
-    @Before
-    public void before() throws Exception {
-        super.before();
+    private NotificationPublisher publisher;
 
-        useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultNotificationPublishers);
+    @BeforeAll
+    static void beforeAll() {
+        pluginManager = new PluginManager(
+                new SmallRyeConfigBuilder().build(),
+                secretName -> null,
+                List.of(org.dependencytrack.notification.api.publishing.NotificationPublisher.class));
+        pluginManager.loadPlugins(List.of(new DefaultNotificationPublishersPlugin()));
+    }
+
+    @BeforeEach
+    void beforeEach() {
+        publisher = qm.createNotificationPublisher(
+                "Slack",
+                "description",
+                "slack",
+                "templateContent",
+                "templateMimeType",
+                true);
+    }
+
+    @AfterAll
+    static void afterAll() {
+        if (pluginManager != null) {
+            pluginManager.close();
+        }
     }
 
     @Test
-    public void getAllNotificationRulesTest() {
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
+    void getAllNotificationRulesTest() {
         qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         qm.createNotificationRule("Rule 2", NotificationScope.PORTFOLIO, NotificationLevel.WARNING, publisher);
         qm.createNotificationRule("Rule 3", NotificationScope.SYSTEM, NotificationLevel.ERROR, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertEquals(String.valueOf(3), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(String.valueOf(3), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals(3, json.size());
-        Assert.assertEquals("Rule 1", json.getJsonObject(0).getString("name"));
-        Assert.assertTrue(json.getJsonObject(0).getBoolean("enabled"));
-        Assert.assertEquals("PORTFOLIO", json.getJsonObject(0).getString("scope"));
-        Assert.assertEquals("INFORMATIONAL", json.getJsonObject(0).getString("notificationLevel"));
-        Assert.assertEquals(0, json.getJsonObject(0).getJsonArray("notifyOn").size());
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getJsonObject(0).getString("uuid")));
-        Assert.assertEquals("Slack", json.getJsonObject(0).getJsonObject("publisher").getString("name"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(3, json.size());
+        Assertions.assertEquals("Rule 1", json.getJsonObject(0).getString("name"));
+        Assertions.assertTrue(json.getJsonObject(0).getBoolean("enabled"));
+        Assertions.assertEquals("PORTFOLIO", json.getJsonObject(0).getString("scope"));
+        Assertions.assertEquals("INFORMATIONAL", json.getJsonObject(0).getString("notificationLevel"));
+        Assertions.assertEquals(0, json.getJsonObject(0).getJsonArray("notifyOn").size());
+        Assertions.assertTrue(UuidUtil.isValidUUID(json.getJsonObject(0).getString("uuid")));
+        Assertions.assertEquals("Slack", json.getJsonObject(0).getJsonObject("publisher").getString("name"));
     }
 
     @Test
-    public void createNotificationRuleTest() {
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
-        NotificationRule rule = new NotificationRule();
-        rule.setName("Example Rule");
-        rule.setEnabled(true);
-        rule.setPublisherConfig("{ \"foo\": \"bar\" }");
-        rule.setMessage("A message");
-        rule.setNotificationLevel(NotificationLevel.WARNING);
-        rule.setScope(NotificationScope.SYSTEM);
-        rule.setPublisher(publisher);
+    void createNotificationRuleTest() {
+        final Response response = jersey.target(V1_NOTIFICATION_RULE).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "Example Rule",
+                          "notificationLevel": "WARNING",
+                          "scope": "SYSTEM",
+                          "publisher": {
+                            "uuid": "%s"
+                          }
+                        }
+                        """.formatted(publisher.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "name": "Example Rule",
+                  "enabled": true,
+                  "notifyChildren": true,
+                  "logSuccessfulPublish": false,
+                  "scope": "SYSTEM",
+                  "notificationLevel": "WARNING",
+                  "projects": [],
+                  "tags": [],
+                  "teams": [],
+                  "notifyOn": [],
+                  "publisher": {
+                    "name": "Slack",
+                    "description": "description",
+                    "extensionName": "slack",
+                    "templateMimeType": "templateMimeType",
+                    "defaultPublisher": true,
+                    "uuid": "${json-unit.any-string}"
+                  },
+                  "publisherConfig": "{\\"destinationUrl\\":\\"https://slack.example.com\\"}",
+                  "uuid": "${json-unit.any-string}"
+                }
+                """);
+    }
+
+    @Test
+    void createNotificationRuleInvalidPublisherTest() {
+        final Response response = jersey.target(V1_NOTIFICATION_RULE).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "Example Rule",
+                          "notificationLevel": "WARNING",
+                          "scope": "SYSTEM",
+                          "publisher": {
+                            "uuid": "da3222e6-6041-4423-9452-141fc9c2ea77"
+                          }
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThat(getPlainTextBody(response)).isEqualTo(
+                "The UUID of the notification publisher could not be found.");
+    }
+
+    @Test
+    void updateNotificationRuleTest() {
         Response response = jersey.target(V1_NOTIFICATION_RULE).request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.entity(rule, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(201, response.getStatus(), 0);
-        JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Example Rule", json.getString("name"));
-        Assert.assertTrue(json.getBoolean("enabled"));
-        Assert.assertEquals("SYSTEM", json.getString("scope"));
-        Assert.assertEquals("WARNING", json.getString("notificationLevel"));
-        Assert.assertEquals(0, json.getJsonArray("notifyOn").size());
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
-        Assert.assertEquals("Slack", json.getJsonObject("publisher").getString("name"));
-    }
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "Rule 1",
+                          "notificationLevel": "INFORMATIONAL",
+                          "scope": "PORTFOLIO",
+                          "publisher": {
+                            "uuid": "%s"
+                          }
+                        }
+                        """.formatted(publisher.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(201);
 
-    @Test
-    public void createNotificationRuleInvalidPublisherTest() {
-        NotificationPublisher publisher = new NotificationPublisher();
-        publisher.setUuid(UUID.randomUUID());
-        NotificationRule rule = new NotificationRule();
-        rule.setName("Example Rule");
-        rule.setEnabled(true);
-        rule.setPublisherConfig("{ \"foo\": \"bar\" }");
-        rule.setMessage("A message");
-        rule.setNotificationLevel(NotificationLevel.WARNING);
-        rule.setScope(NotificationScope.SYSTEM);
-        rule.setPublisher(publisher);
-        Response response = jersey.target(V1_NOTIFICATION_RULE).request()
+        final JsonObjectBuilder ruleJson = Json.createObjectBuilder(parseJsonObject(response));
+        ruleJson.add("name", "Example Rule");
+        ruleJson.add("notifyOn", Json.createArrayBuilder().add(NotificationGroup.NEW_VULNERABILITY.name()));
+
+        response = jersey.target(V1_NOTIFICATION_RULE).request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.entity(rule, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        String body = getPlainTextBody(response);
-        Assert.assertEquals("The UUID of the notification publisher could not be found.", body);
+                .post(Entity.json(ruleJson.build().toString()));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "name": "Example Rule",
+                  "enabled": true,
+                  "notifyChildren": true,
+                  "logSuccessfulPublish": false,
+                  "scope": "PORTFOLIO",
+                  "notificationLevel": "INFORMATIONAL",
+                  "projects": [],
+                  "tags": [],
+                  "teams": [],
+                  "notifyOn": [
+                    "NEW_VULNERABILITY"
+                  ],
+                  "publisher": {
+                    "name": "Slack",
+                    "description": "description",
+                    "extensionName": "slack",
+                    "templateMimeType": "templateMimeType",
+                    "defaultPublisher": true,
+                    "uuid": "${json-unit.any-string}"
+                  },
+                  "publisherConfig": "{\\"destinationUrl\\":\\"https://slack.example.com\\"}",
+                  "uuid": "${json-unit.any-string}"
+                }
+                """);
     }
 
     @Test
-    public void updateNotificationRuleTest() {
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
-        NotificationRule rule = qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-        rule.setName("Example Rule");
-        rule.setNotifyOn(Collections.singleton(NotificationGroup.NEW_VULNERABILITY));
-        Response response = jersey.target(V1_NOTIFICATION_RULE).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity(rule, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(200, response.getStatus(), 0);
-        JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Example Rule", json.getString("name"));
-        Assert.assertTrue(json.getBoolean("enabled"));
-        Assert.assertEquals("PORTFOLIO", json.getString("scope"));
-        Assert.assertEquals("INFORMATIONAL", json.getString("notificationLevel"));
-        Assert.assertEquals("NEW_VULNERABILITY", json.getJsonArray("notifyOn").getString(0));
-        Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
-        Assert.assertEquals("Slack", json.getJsonObject("publisher").getString("name"));
-    }
-
-    @Test
-    public void updateNotificationRuleInvalidTest() {
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
+    void updateNotificationRuleInvalidTest() {
         NotificationRule rule = qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         rule = qm.detach(NotificationRule.class, rule.getId());
         rule.setUuid(UUID.randomUUID());
         Response response = jersey.target(V1_NOTIFICATION_RULE).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.entity(rule, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The UUID of the notification rule could not be found.", body);
+        Assertions.assertEquals("The UUID of the notification rule could not be found.", body);
     }
 
     @Test
-    public void deleteNotificationRuleTest() {
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
+    void deleteNotificationRuleTest() {
         NotificationRule rule = qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         rule.setName("Example Rule");
         Response response = jersey.target(V1_NOTIFICATION_RULE).request()
@@ -190,97 +264,90 @@ public class NotificationRuleResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true) // HACK
                 .method("DELETE", Entity.entity(rule, MediaType.APPLICATION_JSON)); // HACK
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
-        Assert.assertEquals(204, response.getStatus(), 0);
+        Assertions.assertEquals(204, response.getStatus(), 0);
     }
 
     @Test
-    public void addProjectToRuleTest() {
+    void addProjectToRuleTest() {
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Example Rule", json.getString("name"));
-        Assert.assertEquals(1, json.getJsonArray("projects").size());
-        Assert.assertEquals("Acme Example", json.getJsonArray("projects").getJsonObject(0).getString("name"));
-        Assert.assertEquals(project.getUuid().toString(), json.getJsonArray("projects").getJsonObject(0).getString("uuid"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Example Rule", json.getString("name"));
+        Assertions.assertEquals(1, json.getJsonArray("projects").size());
+        Assertions.assertEquals("Acme Example", json.getJsonArray("projects").getJsonObject(0).getString("name"));
+        Assertions.assertEquals(project.getUuid().toString(), json.getJsonArray("projects").getJsonObject(0).getString("uuid"));
     }
 
     @Test
-    public void addProjectToRuleInvalidRuleTest() {
+    void addProjectToRuleInvalidRuleTest() {
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/project/" + project.getUuid().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID() + "/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The notification rule could not be found.", body);
+        Assertions.assertEquals("The notification rule could not be found.", body);
     }
 
     @Test
-    public void addProjectToRuleInvalidScopeTest() {
+    void addProjectToRuleInvalidScopeTest() {
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.SYSTEM, NotificationLevel.INFORMATIONAL, publisher);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(406, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(406, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("Project limitations are only possible on notification rules with PORTFOLIO scope.", body);
+        Assertions.assertEquals("Project limitations are only possible on notification rules with PORTFOLIO scope.", body);
     }
 
     @Test
-    public void addProjectToRuleInvalidProjectTest() {
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
+    void addProjectToRuleInvalidProjectTest() {
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + UUID.randomUUID().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/project/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The project could not be found.", body);
+        Assertions.assertEquals("The project could not be found.", body);
     }
 
     @Test
-    public void addProjectToRuleDuplicateProjectTest() {
+    void addProjectToRuleDuplicateProjectTest() {
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         List<Project> projects = new ArrayList<>();
         projects.add(project);
         rule.setProjects(projects);
         qm.persist(rule);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
-    public void addProjectToRuleAclTest() {
+    void addProjectToRuleAclTest() {
         enablePortfolioAccessControl();
 
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
 
-        final NotificationPublisher publisher = qm.getNotificationPublisher(
-                DefaultNotificationPublishers.SLACK.getPublisherName());
         final NotificationRule rule = qm.createNotificationRule(
                 "rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
 
         final Supplier<Response> responseSupplier = () -> jersey
-                .target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
+                .target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
 
@@ -301,89 +368,82 @@ public class NotificationRuleResourceTest extends ResourceTest {
     }
 
     @Test
-    public void removeProjectFromRuleTest() {
+    void removeProjectFromRuleTest() {
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         List<Project> projects = new ArrayList<>();
         projects.add(project);
         rule.setProjects(projects);
         qm.persist(rule);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
-    public void removeProjectFromRuleInvalidRuleTest() {
+    void removeProjectFromRuleInvalidRuleTest() {
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
-        qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/project/" + project.getUuid().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID() + "/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The notification rule could not be found.", body);
+        Assertions.assertEquals("The notification rule could not be found.", body);
     }
 
     @Test
-    public void removeProjectFromRuleInvalidScopeTest() {
+    void removeProjectFromRuleInvalidScopeTest() {
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.SYSTEM, NotificationLevel.INFORMATIONAL, publisher);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(406, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(406, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("Project limitations are only possible on notification rules with PORTFOLIO scope.", body);
+        Assertions.assertEquals("Project limitations are only possible on notification rules with PORTFOLIO scope.", body);
     }
 
     @Test
-    public void removeProjectFromRuleInvalidProjectTest() {
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
+    void removeProjectFromRuleInvalidProjectTest() {
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + UUID.randomUUID().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/project/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The project could not be found.", body);
+        Assertions.assertEquals("The project could not be found.", body);
     }
 
     @Test
-    public void removeProjectFromRuleDuplicateProjectTest() {
+    void removeProjectFromRuleDuplicateProjectTest() {
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
-    public void removeProjectFromRuleAclTest() {
+    void removeProjectFromRuleAclTest() {
         enablePortfolioAccessControl();
 
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
 
-        final NotificationPublisher publisher = qm.getNotificationPublisher(
-                DefaultNotificationPublishers.SLACK.getPublisherName());
         final NotificationRule rule = qm.createNotificationRule(
                 "rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         rule.setProjects(List.of(project));
 
         final Supplier<Response> responseSupplier = () -> jersey
-                .target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
+                .target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
 
@@ -404,83 +464,63 @@ public class NotificationRuleResourceTest extends ResourceTest {
     }
 
     @Test
-    public void addTeamToRuleTest(){
+    void addTeamToRuleTest() {
         Team team = qm.createTeam("Team Example");
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/team/" + team.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
-        Assert.assertEquals("Example Rule", json.getString("name"));
-        Assert.assertEquals(1, json.getJsonArray("teams").size());
-        Assert.assertEquals("Team Example", json.getJsonArray("teams").getJsonObject(0).getString("name"));
-        Assert.assertEquals(team.getUuid().toString(), json.getJsonArray("teams").getJsonObject(0).getString("uuid"));
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals("Example Rule", json.getString("name"));
+        Assertions.assertEquals(1, json.getJsonArray("teams").size());
+        Assertions.assertEquals("Team Example", json.getJsonArray("teams").getJsonObject(0).getString("name"));
+        Assertions.assertEquals(team.getUuid().toString(), json.getJsonArray("teams").getJsonObject(0).getString("uuid"));
     }
 
     @Test
-    public void addTeamToRuleInvalidRuleTest(){
+    void addTeamToRuleInvalidRuleTest() {
         Team team = qm.createTeam("Team Example");
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/team/" + team.getUuid().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID() + "/team/" + team.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The notification rule could not be found.", body);
+        Assertions.assertEquals("The notification rule could not be found.", body);
     }
 
     @Test
-    public void addTeamToRuleInvalidTeamTest() {
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
+    void addTeamToRuleInvalidTeamTest() {
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + UUID.randomUUID().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/team/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The team could not be found.", body);
+        Assertions.assertEquals("The team could not be found.", body);
     }
 
-
     @Test
-    public void addTeamToRuleDuplicateTeamTest() {
+    void addTeamToRuleDuplicateTeamTest() {
         Team team = qm.createTeam("Team Example");
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Set<Team> teams = new HashSet<>();
         teams.add(team);
         rule.setTeams(teams);
         qm.persist(rule);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
+        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/team/" + team.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(""));
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
-    public void addTeamToRuleInvalidPublisherTest(){
-        Team team = qm.createTeam("Team Example");
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
-        NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.json(""));
-        Assert.assertEquals(406, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        String body = getPlainTextBody(response);
-        Assert.assertEquals("Team subscriptions are only possible on notification rules with EMAIL publisher.", body);
-    }
-
-    @Test
-    public void addTeamToRuleWithCustomEmailPublisherTest() {
+    void addTeamToRuleWithCustomEmailPublisherTest() {
         final Team team = qm.createTeam("Team Example");
-        final NotificationPublisher publisher = qm.createNotificationPublisher("foo", "description", SendMailPublisher.name(), "template", "templateMimeType", false);
         final NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         final Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/team/" + team.getUuid()).request()
                 .header(X_API_KEY, apiKey)
@@ -509,11 +549,11 @@ public class NotificationRuleResourceTest extends ResourceTest {
                           ],
                           "notifyOn": [],
                           "publisher": {
-                            "name": "foo",
+                            "name": "Slack",
                             "description": "description",
-                            "publisherClass": "SendMailPublisher",
+                            "extensionName": "slack",
                             "templateMimeType": "templateMimeType",
-                            "defaultPublisher": false,
+                            "defaultPublisher": true,
                             "uuid": "${json-unit.matches:publisherUuid}"
                           },
                           "uuid": "${json-unit.matches:ruleUuid}"
@@ -522,9 +562,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
     }
 
     @Test
-    public void removeTeamFromRuleTest() {
+    void removeTeamFromRuleTest() {
         Team team = qm.createTeam("Team Example");
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Set<Team> teams = new HashSet<>();
         teams.add(team);
@@ -533,95 +572,79 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(200, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
-    public void removeTeamFromRuleInvalidRuleTest() {
+    void removeTeamFromRuleInvalidRuleTest() {
         Team team = qm.createTeam("Team Example");
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The notification rule could not be found.", body);
+        Assertions.assertEquals("The notification rule could not be found.", body);
     }
 
     @Test
-    public void removeTeamFromRuleInvalidTeamTest() {
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
+    void removeTeamFromRuleInvalidTeamTest() {
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + UUID.randomUUID().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(404, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(404, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The team could not be found.", body);
+        Assertions.assertEquals("The team could not be found.", body);
     }
 
     @Test
-    public void removeTeamFromRuleDuplicateTeamTest() {
+    void removeTeamFromRuleDuplicateTeamTest() {
         Team team = qm.createTeam("Team Example");
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        Assert.assertEquals(304, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(304, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test
-    public void removeTeamToRuleInvalidPublisherTest(){
-        Team team = qm.createTeam("Team Example");
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
-        NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-        Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
-                .header(X_API_KEY, apiKey)
-                .delete();
-        Assert.assertEquals(406, response.getStatus(), 0);
-        Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        String body = getPlainTextBody(response);
-        Assert.assertEquals("Team subscriptions are only possible on notification rules with EMAIL publisher.", body);
-    }
-
-    @Test
-    public void updateNotificationRuleWithTagsTest() {
-        final NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
-        final NotificationRule rule = qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-
-        // Tag the rule with "foo" and "bar".
+    void updateNotificationRuleWithTagsTest() {
         Response response = jersey.target(V1_NOTIFICATION_RULE).request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.entity(/* language=JSON */ """
+                .put(Entity.json(/* language=JSON */ """
                         {
-                          "uuid": "%s",
                           "name": "Rule 1",
-                          "scope": "PORTFOLIO",
                           "notificationLevel": "INFORMATIONAL",
-                          "tags": [
-                            {
-                              "name": "foo"
-                            },
-                            {
-                              "name": "bar"
-                            }
-                          ]
+                          "scope": "PORTFOLIO",
+                          "publisher": {
+                            "uuid": "%s"
+                          }
                         }
-                        """.formatted(rule.getUuid()), MediaType.APPLICATION_JSON));
+                        """.formatted(publisher.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(201);
+
+        // Tag the rule with "foo" and "bar".
+        JsonObjectBuilder ruleJson = Json.createObjectBuilder(parseJsonObject(response));
+        ruleJson.add("tags", Json.createArrayBuilder()
+                .add(Json.createObjectBuilder().add("name", "foo"))
+                .add(Json.createObjectBuilder().add("name", "bar")));
+
+        response = jersey.target(V1_NOTIFICATION_RULE).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(ruleJson.build().toString()));
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThatJson(getPlainTextBody(response))
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString())
                 .withOptions(Option.IGNORING_ARRAY_ORDER)
-                .withMatcher("ruleUuid", equalTo(rule.getUuid().toString()))
                 .isEqualTo(/* language=JSON */ """
                         {
                           "name": "Rule 1",
-                          "enabled": false,
-                          "notifyChildren": false,
+                          "enabled": true,
+                          "notifyChildren": true,
                           "logSuccessfulPublish": false,
                           "scope": "PORTFOLIO",
                           "notificationLevel": "INFORMATIONAL",
@@ -639,60 +662,52 @@ public class NotificationRuleResourceTest extends ResourceTest {
                           "publisher": {
                             "name": "${json-unit.any-string}",
                             "description": "${json-unit.any-string}",
-                            "publisherClass": "${json-unit.any-string}",
+                            "extensionName": "${json-unit.any-string}",
                             "templateMimeType": "${json-unit.any-string}",
                             "defaultPublisher": true,
                             "uuid": "${json-unit.any-string}"
                           },
-                          "uuid": "${json-unit.matches:ruleUuid}"
+                          "publisherConfig": "${json-unit.any-string}",
+                          "uuid": "${json-unit.any-string}"
                         }
                         """);
 
         // Replace the previous tags with only "baz".
+        ruleJson = Json.createObjectBuilder(responseJson);
+        ruleJson.add("tags", Json.createArrayBuilder()
+                .add(Json.createObjectBuilder().add("name", "baz")));
+
         response = jersey.target(V1_NOTIFICATION_RULE).request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.entity(/* language=JSON */ """
-                        {
-                          "uuid": "%s",
-                          "name": "Rule 1",
-                          "scope": "PORTFOLIO",
-                          "notificationLevel": "INFORMATIONAL",
-                          "tags": [
-                            {
-                              "name": "baz"
-                            }
-                          ]
-                        }
-                        """.formatted(rule.getUuid()), MediaType.APPLICATION_JSON));
+                .post(Entity.json(ruleJson.build().toString()));
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThatJson(getPlainTextBody(response))
-                .withMatcher("ruleUuid", equalTo(rule.getUuid().toString()))
-                .isEqualTo(/* language=JSON */ """
-                        {
-                          "name": "Rule 1",
-                          "enabled": false,
-                          "notifyChildren": false,
-                          "logSuccessfulPublish": false,
-                          "scope": "PORTFOLIO",
-                          "notificationLevel": "INFORMATIONAL",
-                          "projects": [],
-                          "tags": [
-                            {
-                              "name": "baz"
-                            }
-                          ],
-                          "teams": [],
-                          "notifyOn": [],
-                          "publisher": {
-                            "name": "${json-unit.any-string}",
-                            "description": "${json-unit.any-string}",
-                            "publisherClass": "${json-unit.any-string}",
-                            "templateMimeType": "${json-unit.any-string}",
-                            "defaultPublisher": true,
-                            "uuid": "${json-unit.any-string}"
-                          },
-                          "uuid": "${json-unit.matches:ruleUuid}"
-                        }
-                        """);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "name": "Rule 1",
+                  "enabled": true,
+                  "notifyChildren": true,
+                  "logSuccessfulPublish": false,
+                  "scope": "PORTFOLIO",
+                  "notificationLevel": "INFORMATIONAL",
+                  "projects": [],
+                  "tags": [
+                    {
+                      "name": "baz"
+                    }
+                  ],
+                  "teams": [],
+                  "notifyOn": [],
+                  "publisher": {
+                    "name": "${json-unit.any-string}",
+                    "description": "${json-unit.any-string}",
+                    "extensionName": "${json-unit.any-string}",
+                    "templateMimeType": "${json-unit.any-string}",
+                    "defaultPublisher": true,
+                    "uuid": "${json-unit.any-string}"
+                  },
+                  "publisherConfig": "${json-unit.any-string}",
+                  "uuid": "${json-unit.any-string}"
+                }
+                """);
     }
 }

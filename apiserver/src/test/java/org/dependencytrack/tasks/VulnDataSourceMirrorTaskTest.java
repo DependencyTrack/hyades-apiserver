@@ -18,15 +18,22 @@
  */
 package org.dependencytrack.tasks;
 
+import io.smallrye.config.SmallRyeConfigBuilder;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
-import org.junit.Before;
-import org.junit.Test;
+import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.vulndatasource.api.VulnDataSource;
+import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.util.KafkaTestUtil.generateBomFromJson;
@@ -35,25 +42,29 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
+class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
 
-    private VulnDataSource dataSourceMock;
+    private PluginManager pluginManager;
     private NistMirrorTask task;
 
-    @Before
-    @Override
-    public void before() throws Exception {
-        super.before();
+    @BeforeEach
+    void beforeEach() {
+        pluginManager = new PluginManager(
+                new SmallRyeConfigBuilder().build(),
+                secretName -> null,
+                List.of(VulnDataSource.class));
+        task = new NistMirrorTask(pluginManager);
+    }
 
-        final var pluginManagerMock = mock(PluginManager.class);
-        dataSourceMock = mock(VulnDataSource.class);
-        doReturn(dataSourceMock).when(pluginManagerMock).getExtension(eq(VulnDataSource.class), eq("nvd"));
-
-        task = new NistMirrorTask(pluginManagerMock);
+    @AfterEach
+    void afterEach() {
+        if (pluginManager != null) {
+            pluginManager.close();
+        }
     }
 
     @Test
-    public void testProcessNvdVuln() throws Exception {
+    void testProcessNvdVuln() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -99,8 +110,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock = mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -170,7 +186,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProcessGitHubVuln() throws Exception {
+    void testProcessGitHubVuln() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -237,8 +253,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock = mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -391,7 +412,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProcessOsvVuln() throws Exception {
+    void testProcessOsvVuln() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -447,8 +468,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock =  mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -506,7 +532,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getTargetSw()).isNull();
                     assertThat(vs.getTargetHw()).isNull();
                     assertThat(vs.getOther()).isNull();
-                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartIncluding()).isEqualTo("0");
                     assertThat(vs.getVersionStartExcluding()).isNull();
                     assertThat(vs.getVersionEndIncluding()).isNull();
                     assertThat(vs.getVersionEndExcluding()).isEqualTo("1.9.0");
@@ -577,7 +603,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProcessVulnWithoutAffects() throws Exception {
+    void testProcessVulnWithoutAffects() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -599,8 +625,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock =  mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -641,7 +672,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProcessVulnWithUnmatchedAffectsBomRef() throws Exception {
+    void testProcessVulnWithUnmatchedAffectsBomRef() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -671,8 +702,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock = mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -713,7 +749,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProcessVulnWithVersConstraints() throws Exception {
+    void testProcessVulnWithVersConstraints() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -769,8 +805,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock =  mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -808,7 +849,8 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
         assertThat(vuln.getVulnerableVersions()).isNull();
         assertThat(vuln.getPatchedVersions()).isNull();
 
-        assertThat(vuln.getVulnerableSoftware()).satisfiesExactly(
+        assertThat(vuln.getVulnerableSoftware()).satisfiesExactlyInAnyOrder(
+                // vers:foobar/<1
                 vs -> {
                     assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
                     assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
@@ -836,6 +878,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getPurlSubpath()).isNull();
                     assertThat(vs.getPurl()).isNull();
                 },
+                // vers:generic/*
                 vs -> {
                     assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
                     assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
@@ -843,6 +886,62 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getVendor()).isEqualTo("thinkcmf");
                     assertThat(vs.getProduct()).isEqualTo("thinkcmf");
                     assertThat(vs.getVersion()).isEqualTo("*");
+                    assertThat(vs.getUpdate()).isEqualTo("*");
+                    assertThat(vs.getEdition()).isEqualTo("*");
+                    assertThat(vs.getLanguage()).isEqualTo("*");
+                    assertThat(vs.getSwEdition()).isEqualTo("*");
+                    assertThat(vs.getTargetSw()).isEqualTo("*");
+                    assertThat(vs.getTargetHw()).isEqualTo("*");
+                    assertThat(vs.getOther()).isEqualTo("*");
+                    assertThat(vs.getVersionStartIncluding()).isEqualTo("0");
+                    assertThat(vs.getVersionStartExcluding()).isNull();
+                    assertThat(vs.getVersionEndIncluding()).isNull();
+                    assertThat(vs.getVersionEndExcluding()).isNull();
+                    assertThat(vs.isVulnerable()).isTrue();
+                    assertThat(vs.getPurlType()).isNull();
+                    assertThat(vs.getPurlNamespace()).isNull();
+                    assertThat(vs.getPurlName()).isNull();
+                    assertThat(vs.getPurlVersion()).isNull();
+                    assertThat(vs.getPurlQualifiers()).isNull();
+                    assertThat(vs.getPurlSubpath()).isNull();
+                    assertThat(vs.getPurl()).isNull();
+                },
+                // vers:generic/>0
+                vs -> {
+                    assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
+                    assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
+                    assertThat(vs.getPart()).isEqualTo("a");
+                    assertThat(vs.getVendor()).isEqualTo("thinkcmf");
+                    assertThat(vs.getProduct()).isEqualTo("thinkcmf");
+                    assertThat(vs.getVersion()).isEqualTo("*");
+                    assertThat(vs.getUpdate()).isEqualTo("*");
+                    assertThat(vs.getEdition()).isEqualTo("*");
+                    assertThat(vs.getLanguage()).isEqualTo("*");
+                    assertThat(vs.getSwEdition()).isEqualTo("*");
+                    assertThat(vs.getTargetSw()).isEqualTo("*");
+                    assertThat(vs.getTargetHw()).isEqualTo("*");
+                    assertThat(vs.getOther()).isEqualTo("*");
+                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartExcluding()).isEqualTo("0");
+                    assertThat(vs.getVersionEndIncluding()).isNull();
+                    assertThat(vs.getVersionEndExcluding()).isNull();
+                    assertThat(vs.isVulnerable()).isTrue();
+                    assertThat(vs.getPurlType()).isNull();
+                    assertThat(vs.getPurlNamespace()).isNull();
+                    assertThat(vs.getPurlName()).isNull();
+                    assertThat(vs.getPurlVersion()).isNull();
+                    assertThat(vs.getPurlQualifiers()).isNull();
+                    assertThat(vs.getPurlSubpath()).isNull();
+                    assertThat(vs.getPurl()).isNull();
+                },
+                // vers:generic/0
+                vs -> {
+                    assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
+                    assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
+                    assertThat(vs.getPart()).isEqualTo("a");
+                    assertThat(vs.getVendor()).isEqualTo("thinkcmf");
+                    assertThat(vs.getProduct()).isEqualTo("thinkcmf");
+                    assertThat(vs.getVersion()).isEqualTo("0");
                     assertThat(vs.getUpdate()).isEqualTo("*");
                     assertThat(vs.getEdition()).isEqualTo("*");
                     assertThat(vs.getLanguage()).isEqualTo("*");
@@ -863,6 +962,63 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getPurlSubpath()).isNull();
                     assertThat(vs.getPurl()).isNull();
                 },
+                // vers:generic/1
+                vs -> {
+                    assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
+                    assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
+                    assertThat(vs.getPart()).isEqualTo("a");
+                    assertThat(vs.getVendor()).isEqualTo("thinkcmf");
+                    assertThat(vs.getProduct()).isEqualTo("thinkcmf");
+                    assertThat(vs.getVersion()).isEqualTo("1");
+                    assertThat(vs.getUpdate()).isEqualTo("*");
+                    assertThat(vs.getEdition()).isEqualTo("*");
+                    assertThat(vs.getLanguage()).isEqualTo("*");
+                    assertThat(vs.getSwEdition()).isEqualTo("*");
+                    assertThat(vs.getTargetSw()).isEqualTo("*");
+                    assertThat(vs.getTargetHw()).isEqualTo("*");
+                    assertThat(vs.getOther()).isEqualTo("*");
+                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartExcluding()).isNull();
+                    assertThat(vs.getVersionEndIncluding()).isNull();
+                    assertThat(vs.getVersionEndExcluding()).isNull();
+                    assertThat(vs.isVulnerable()).isTrue();
+                    assertThat(vs.getPurlType()).isNull();
+                    assertThat(vs.getPurlNamespace()).isNull();
+                    assertThat(vs.getPurlName()).isNull();
+                    assertThat(vs.getPurlVersion()).isNull();
+                    assertThat(vs.getPurlQualifiers()).isNull();
+                    assertThat(vs.getPurlSubpath()).isNull();
+                    assertThat(vs.getPurl()).isNull();
+                },
+                // vers:generic/>2
+                vs -> {
+                    assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
+                    assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
+                    assertThat(vs.getPart()).isEqualTo("a");
+                    assertThat(vs.getVendor()).isEqualTo("thinkcmf");
+                    assertThat(vs.getProduct()).isEqualTo("thinkcmf");
+                    assertThat(vs.getVersion()).isEqualTo("*");
+                    assertThat(vs.getUpdate()).isEqualTo("*");
+                    assertThat(vs.getEdition()).isEqualTo("*");
+                    assertThat(vs.getLanguage()).isEqualTo("*");
+                    assertThat(vs.getSwEdition()).isEqualTo("*");
+                    assertThat(vs.getTargetSw()).isEqualTo("*");
+                    assertThat(vs.getTargetHw()).isEqualTo("*");
+                    assertThat(vs.getOther()).isEqualTo("*");
+                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartExcluding()).isEqualTo("2");
+                    assertThat(vs.getVersionEndIncluding()).isNull();
+                    assertThat(vs.getVersionEndExcluding()).isNull();
+                    assertThat(vs.isVulnerable()).isTrue();
+                    assertThat(vs.getPurlType()).isNull();
+                    assertThat(vs.getPurlNamespace()).isNull();
+                    assertThat(vs.getPurlName()).isNull();
+                    assertThat(vs.getPurlVersion()).isNull();
+                    assertThat(vs.getPurlQualifiers()).isNull();
+                    assertThat(vs.getPurlSubpath()).isNull();
+                    assertThat(vs.getPurl()).isNull();
+                },
+                // vers:generic/>3|<4
                 vs -> {
                     assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
                     assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
@@ -890,6 +1046,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getPurlSubpath()).isNull();
                     assertThat(vs.getPurl()).isNull();
                 },
+                // vers:generic/>5|<6|6.0.1 - range part.
                 vs -> {
                     assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
                     assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
@@ -917,6 +1074,35 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getPurlSubpath()).isNull();
                     assertThat(vs.getPurl()).isNull();
                 },
+                // vers:generic/>5|<6|6.0.1 - exact version part.
+                vs -> {
+                    assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
+                    assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
+                    assertThat(vs.getPart()).isEqualTo("a");
+                    assertThat(vs.getVendor()).isEqualTo("thinkcmf");
+                    assertThat(vs.getProduct()).isEqualTo("thinkcmf");
+                    assertThat(vs.getVersion()).isEqualTo("6.0.1");
+                    assertThat(vs.getUpdate()).isEqualTo("*");
+                    assertThat(vs.getEdition()).isEqualTo("*");
+                    assertThat(vs.getLanguage()).isEqualTo("*");
+                    assertThat(vs.getSwEdition()).isEqualTo("*");
+                    assertThat(vs.getTargetSw()).isEqualTo("*");
+                    assertThat(vs.getTargetHw()).isEqualTo("*");
+                    assertThat(vs.getOther()).isEqualTo("*");
+                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartExcluding()).isNull();
+                    assertThat(vs.getVersionEndIncluding()).isNull();
+                    assertThat(vs.getVersionEndExcluding()).isNull();
+                    assertThat(vs.isVulnerable()).isTrue();
+                    assertThat(vs.getPurlType()).isNull();
+                    assertThat(vs.getPurlNamespace()).isNull();
+                    assertThat(vs.getPurlName()).isNull();
+                    assertThat(vs.getPurlVersion()).isNull();
+                    assertThat(vs.getPurlQualifiers()).isNull();
+                    assertThat(vs.getPurlSubpath()).isNull();
+                    assertThat(vs.getPurl()).isNull();
+                },
+                // vers:generic/>*|<7
                 vs -> {
                     assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
                     assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
@@ -932,7 +1118,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getTargetHw()).isEqualTo("*");
                     assertThat(vs.getOther()).isEqualTo("*");
                     assertThat(vs.getVersionStartIncluding()).isNull();
-                    assertThat(vs.getVersionStartExcluding()).isNull();
+                    assertThat(vs.getVersionStartExcluding()).isEqualTo("*");
                     assertThat(vs.getVersionEndIncluding()).isNull();
                     assertThat(vs.getVersionEndExcluding()).isEqualTo("7");
                     assertThat(vs.isVulnerable()).isTrue();
@@ -944,6 +1130,35 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getPurlSubpath()).isNull();
                     assertThat(vs.getPurl()).isNull();
                 },
+                // vers:generic/>8
+                vs -> {
+                    assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
+                    assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
+                    assertThat(vs.getPart()).isEqualTo("a");
+                    assertThat(vs.getVendor()).isEqualTo("thinkcmf");
+                    assertThat(vs.getProduct()).isEqualTo("thinkcmf");
+                    assertThat(vs.getVersion()).isEqualTo("*");
+                    assertThat(vs.getUpdate()).isEqualTo("*");
+                    assertThat(vs.getEdition()).isEqualTo("*");
+                    assertThat(vs.getLanguage()).isEqualTo("*");
+                    assertThat(vs.getSwEdition()).isEqualTo("*");
+                    assertThat(vs.getTargetSw()).isEqualTo("*");
+                    assertThat(vs.getTargetHw()).isEqualTo("*");
+                    assertThat(vs.getOther()).isEqualTo("*");
+                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartExcluding()).isEqualTo("8");
+                    assertThat(vs.getVersionEndIncluding()).isNull();
+                    assertThat(vs.getVersionEndExcluding()).isNull();
+                    assertThat(vs.isVulnerable()).isTrue();
+                    assertThat(vs.getPurlType()).isNull();
+                    assertThat(vs.getPurlNamespace()).isNull();
+                    assertThat(vs.getPurlName()).isNull();
+                    assertThat(vs.getPurlVersion()).isNull();
+                    assertThat(vs.getPurlQualifiers()).isNull();
+                    assertThat(vs.getPurlSubpath()).isNull();
+                    assertThat(vs.getPurl()).isNull();
+                },
+                // vers:generic/<13
                 vs -> {
                     assertThat(vs.getCpe22()).isEqualTo("cpe:/a:thinkcmf:thinkcmf");
                     assertThat(vs.getCpe23()).isEqualTo("cpe:2.3:a:thinkcmf:thinkcmf:*:*:*:*:*:*:*:*");
@@ -971,13 +1186,14 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getPurlSubpath()).isNull();
                     assertThat(vs.getPurl()).isNull();
                 },
+                // purl with vers:generic/*
                 vs -> {
                     assertThat(vs.getCpe22()).isNull();
                     assertThat(vs.getCpe23()).isNull();
                     assertThat(vs.getPart()).isNull();
                     assertThat(vs.getVendor()).isNull();
                     assertThat(vs.getProduct()).isNull();
-                    assertThat(vs.getVersion()).isEqualTo("*");
+                    assertThat(vs.getVersion()).isNull();
                     assertThat(vs.getUpdate()).isNull();
                     assertThat(vs.getEdition()).isNull();
                     assertThat(vs.getLanguage()).isNull();
@@ -985,7 +1201,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                     assertThat(vs.getTargetSw()).isNull();
                     assertThat(vs.getTargetHw()).isNull();
                     assertThat(vs.getOther()).isNull();
-                    assertThat(vs.getVersionStartIncluding()).isNull();
+                    assertThat(vs.getVersionStartIncluding()).isEqualTo("0");
                     assertThat(vs.getVersionStartExcluding()).isNull();
                     assertThat(vs.getVersionEndIncluding()).isNull();
                     assertThat(vs.getVersionEndExcluding()).isNull();
@@ -1002,7 +1218,7 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProcessVulnWithInvalidCpeOrPurl() throws Exception {
+    void testProcessVulnWithInvalidCpeOrPurl() throws Exception {
         final var bovJson = """
                 {
                   "components": [
@@ -1068,8 +1284,13 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
                 """;
 
         final Bom bov = generateBomFromJson(bovJson);
+
+        final var dataSourceMock = mock(VulnDataSource.class);
         doReturn(true, false).when(dataSourceMock).hasNext();
         doReturn(bov).when(dataSourceMock).next();
+
+        pluginManager.loadPlugins(List.of(
+                () -> List.of(new TestVulnDataSourceFactory(() -> dataSourceMock))));
 
         task.inform(new NistMirrorEvent());
 
@@ -1107,6 +1328,67 @@ public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
         assertThat(vuln.getVulnerableVersions()).isNull();
         assertThat(vuln.getPatchedVersions()).isNull();
         assertThat(vuln.getVulnerableSoftware()).isEmpty();
+    }
+
+    private static class TestVulnDataSourceFactory implements VulnDataSourceFactory {
+
+        private final boolean enabled;
+        private final Supplier<VulnDataSource> dataSourceSupplier;
+
+        private TestVulnDataSourceFactory(
+                boolean enabled,
+                Supplier<VulnDataSource> dataSourceSupplier) {
+            this.enabled = enabled;
+            this.dataSourceSupplier = dataSourceSupplier;
+        }
+
+        private TestVulnDataSourceFactory(Supplier<VulnDataSource> dataSourceSupplier) {
+            this(true, dataSourceSupplier);
+        }
+
+        @Override
+        public boolean isDataSourceEnabled() {
+            return enabled;
+        }
+
+        @Override
+        public String extensionName() {
+            return "nvd";
+        }
+
+        @Override
+        public Class<? extends VulnDataSource> extensionClass() {
+            return TestVulnDataSource.class;
+        }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
+
+        @Override
+        public void init(ExtensionContext ctx) {
+        }
+
+        @Override
+        public VulnDataSource create() {
+            return dataSourceSupplier.get();
+        }
+
+    }
+
+    private static class TestVulnDataSource implements VulnDataSource {
+
+        @Override
+        public boolean hasNext() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Bom next() {
+            throw new UnsupportedOperationException();
+        }
+
     }
 
 }

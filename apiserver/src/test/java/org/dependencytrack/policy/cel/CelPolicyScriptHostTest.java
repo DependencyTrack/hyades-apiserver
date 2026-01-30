@@ -22,7 +22,7 @@ import com.google.api.expr.v1alpha1.Type;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.dependencytrack.TestCacheManager;
 import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.projectnessie.cel.tools.ScriptCreateException;
 
 import java.util.Collection;
@@ -35,8 +35,8 @@ import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICE
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE_GROUP;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
-import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CelPolicyScriptHostTest {
 

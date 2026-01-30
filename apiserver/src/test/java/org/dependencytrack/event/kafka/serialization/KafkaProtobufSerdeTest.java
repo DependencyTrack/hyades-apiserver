@@ -21,7 +21,7 @@ package org.dependencytrack.event.kafka.serialization;
 import com.google.protobuf.AbstractMessageLite;
 import org.apache.kafka.common.errors.SerializationException;
 import org.dependencytrack.proto.vulnanalysis.v1.Component;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 

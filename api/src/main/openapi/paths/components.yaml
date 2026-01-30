@@ -34,7 +34,7 @@ post:
       content:
         application/problem+json:
           schema:
-            oneOf:
+            anyOf:
               - $ref: "../components/schemas/invalid-request-problem-details.yaml"
               - $ref: "../components/schemas/problem-details.yaml"
     "401":

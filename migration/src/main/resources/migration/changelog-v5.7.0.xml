@@ -1,0 +1,773 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        objectQuotingStrategy="QUOTE_ALL_OBJECTS"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet id="v5.7.0-1" author="sahibamittal">
+        <sql>
+            CREATE UNIQUE INDEX "COMPONENT_NAME_VERSION_ID_IDX"
+            ON "COMPONENT" ("NAME" ASC, "VERSION" DESC, "ID" ASC);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-2" author="nscuro">
+        <modifyDataType tableName="PROJECT" columnName="PURL" newDataType="VARCHAR(1024)"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-3" author="nscuro">
+        <modifyDataType tableName="COMPONENT" columnName="PURLCOORDINATES" newDataType="VARCHAR(1024)"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-4" author="nscuro">
+        <modifyDataType tableName="VULNERABLESOFTWARE" columnName="PURL" newDataType="VARCHAR(1024)"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-5" author="nscuro">
+        <sql>
+            CREATE MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL" AS
+                WITH
+                retention AS(
+                   SELECT COALESCE(
+                     (
+                       SELECT CAST("PROPERTYVALUE" AS INT)
+                         FROM "CONFIGPROPERTY"
+                        WHERE "GROUPNAME" = 'maintenance'
+                          AND "PROPERTYNAME" = 'metrics.retention.days'
+                     )
+                   , 90) AS days
+                ),
+                date_range AS(
+                  SELECT DATE_TRUNC('day', CURRENT_DATE - (INTERVAL '1 day' * day)) AS metrics_date
+                    FROM GENERATE_SERIES(0, GREATEST((SELECT days FROM retention) - 1, 0)) day
+                ),
+                latest_daily_project_metrics AS(
+                  SELECT date_range.metrics_date
+                       , latest_metrics.*
+                    FROM date_range
+                    LEFT JOIN LATERAL (
+                      SELECT DISTINCT ON (pm."PROJECT_ID")
+                             pm.*
+                        FROM "PROJECT" AS p
+                       INNER JOIN "PROJECTMETRICS" AS pm
+                          ON pm."PROJECT_ID" = p."ID"
+                         AND p."INACTIVE_SINCE" IS NULL
+                       WHERE pm."LAST_OCCURRENCE" &lt; date_range.metrics_date + INTERVAL '1 day'
+                         -- Consider data from previous day in case we don't have any for today.
+                         AND pm."LAST_OCCURRENCE" &gt;= date_range.metrics_date - INTERVAL '1 day'
+                       ORDER BY pm."PROJECT_ID", pm."LAST_OCCURRENCE" DESC
+                    ) AS latest_metrics ON TRUE
+                ),
+                daily_metrics AS(
+                  SELECT COUNT(DISTINCT "PROJECT_ID") AS projects
+                       , SUM("COMPONENTS") AS components
+                       , SUM("CRITICAL") AS critical
+                       , metrics_date
+                       , SUM("FINDINGS_AUDITED") AS findings_audited
+                       , SUM("FINDINGS_TOTAL") AS findings_total
+                       , SUM("FINDINGS_UNAUDITED") AS findings_unaudited
+                       , SUM("HIGH") AS high
+                       , SUM("RISKSCORE") as inherited_risk_score
+                       , SUM("LOW") AS low
+                       , SUM("MEDIUM") AS medium
+                       , SUM("POLICYVIOLATIONS_AUDITED") AS policy_violations_audited
+                       , SUM("POLICYVIOLATIONS_FAIL") AS policy_violations_fail
+                       , SUM("POLICYVIOLATIONS_INFO") AS policy_violations_info
+                       , SUM("POLICYVIOLATIONS_LICENSE_AUDITED") AS policy_violations_license_audited
+                       , SUM("POLICYVIOLATIONS_LICENSE_TOTAL") AS policy_violations_license_total
+                       , SUM("POLICYVIOLATIONS_LICENSE_UNAUDITED") AS policy_violations_license_unaudited
+                       , SUM("POLICYVIOLATIONS_OPERATIONAL_AUDITED") AS policy_violations_operational_audited
+                       , SUM("POLICYVIOLATIONS_OPERATIONAL_TOTAL") AS policy_violations_operational_total
+                       , SUM("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED") AS policy_violations_operational_unaudited
+                       , SUM("POLICYVIOLATIONS_SECURITY_AUDITED") AS policy_violations_security_audited
+                       , SUM("POLICYVIOLATIONS_SECURITY_TOTAL") AS policy_violations_security_total
+                       , SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED") AS policy_violations_security_unaudited
+                       , SUM("POLICYVIOLATIONS_TOTAL") AS policy_violations_total
+                       , SUM("POLICYVIOLATIONS_UNAUDITED") AS policy_violations_unaudited
+                       , SUM("POLICYVIOLATIONS_WARN") AS policy_violations_warn
+                       , SUM("SUPPRESSED") AS suppressed
+                       , SUM("UNASSIGNED_SEVERITY") AS unassigned
+                       , SUM("VULNERABILITIES") AS vulnerabilities
+                       , SUM("VULNERABLECOMPONENTS") AS vulnerable_components
+                       , SUM(CASE WHEN "VULNERABLECOMPONENTS" &gt; 0 THEN 1 ELSE 0 END) AS vulnerable_projects
+                    FROM latest_daily_project_metrics
+                   GROUP BY metrics_date
+                )
+                SELECT COALESCE(dm.components, 0) AS "COMPONENTS"
+                     , COALESCE(dm.critical, 0) AS "CRITICAL"
+                     , COALESCE(dm.findings_audited, 0) AS "FINDINGS_AUDITED"
+                     , COALESCE(dm.findings_total, 0) AS "FINDINGS_TOTAL"
+                     , COALESCE(dm.findings_unaudited, 0) AS "FINDINGS_UNAUDITED"
+                     , date_range.metrics_date AS "FIRST_OCCURRENCE"
+                     , COALESCE(dm.high, 0) AS "HIGH"
+                     , COALESCE(dm.inherited_risk_score, 0) AS "INHERITED_RISK_SCORE"
+                     , date_range.metrics_date AS "LAST_OCCURRENCE"
+                     , COALESCE(dm.low, 0) AS "LOW"
+                     , COALESCE(dm.medium, 0) AS "MEDIUM"
+                     , COALESCE(dm.policy_violations_audited, 0) AS "POLICY_VIOLATIONS_AUDITED"
+                     , COALESCE(dm.policy_violations_fail, 0) AS "POLICY_VIOLATIONS_FAIL"
+                     , COALESCE(dm.policy_violations_info, 0) AS "POLICY_VIOLATIONS_INFO"
+                     , COALESCE(dm.policy_violations_license_audited, 0) AS "POLICY_VIOLATIONS_LICENSE_AUDITED"
+                     , COALESCE(dm.policy_violations_license_total, 0) AS "POLICY_VIOLATIONS_LICENSE_TOTAL"
+                     , COALESCE(dm.policy_violations_license_unaudited, 0) AS "POLICY_VIOLATIONS_LICENSE_UNAUDITED"
+                     , COALESCE(dm.policy_violations_operational_audited, 0) AS "POLICY_VIOLATIONS_OPERATIONAL_AUDITED"
+                     , COALESCE(dm.policy_violations_operational_total, 0) AS "POLICY_VIOLATIONS_OPERATIONAL_TOTAL"
+                     , COALESCE(dm.policy_violations_operational_unaudited, 0) AS "POLICY_VIOLATIONS_OPERATIONAL_UNAUDITED"
+                     , COALESCE(dm.policy_violations_security_audited, 0) AS "POLICY_VIOLATIONS_SECURITY_AUDITED"
+                     , COALESCE(dm.policy_violations_security_total, 0) AS "POLICY_VIOLATIONS_SECURITY_TOTAL"
+                     , COALESCE(dm.policy_violations_security_unaudited, 0) AS "POLICY_VIOLATIONS_SECURITY_UNAUDITED"
+                     , COALESCE(dm.policy_violations_total, 0) AS "POLICY_VIOLATIONS_TOTAL"
+                     , COALESCE(dm.policy_violations_unaudited, 0) AS "POLICY_VIOLATIONS_UNAUDITED"
+                     , COALESCE(dm.policy_violations_warn, 0) AS "POLICY_VIOLATIONS_WARN"
+                     , COALESCE(dm.projects, 0) AS "PROJECTS"
+                     , COALESCE(dm.suppressed, 0) AS "SUPPRESSED"
+                     , COALESCE(dm.unassigned, 0) AS "UNASSIGNED"
+                     , COALESCE(dm.vulnerabilities, 0) AS "VULNERABILITIES"
+                     , COALESCE(dm.vulnerable_components, 0) AS "VULNERABLE_COMPONENTS"
+                     , COALESCE(dm.vulnerable_projects, 0) AS "VULNERABLE_PROJECTS"
+                  FROM date_range
+                  LEFT JOIN daily_metrics AS dm
+                    ON date_range.metrics_date = dm.metrics_date
+            WITH DATA
+        </sql>
+
+        <!-- Unique index is required to be able to use REFRESH MATERIALIZED VIEW CONCURRENTLY. -->
+        <createIndex tableName="PORTFOLIOMETRICS_GLOBAL" indexName="PORTFOLIOMETRICS_GLOBAL_LAST_OCCURRENCE_IDX" unique="true">
+            <column name="LAST_OCCURRENCE"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.7.0-6" author="nscuro">
+        <!-- Support aggregation queries that need to find the latest metrics per project. -->
+        <createIndex tableName="PROJECTMETRICS" indexName="PROJECTMETRICS_PROJECT_ID_LAST_OCCURRENCE_DESC_IDX">
+            <column name="PROJECT_ID"/>
+            <column name="LAST_OCCURRENCE" descending="true"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.7.0-7" author="nscuro">
+        <!--
+          Support global search of components by their coordinates.
+          Search is expected to be case-insensitive and have "contains" semantics.
+
+          DataNucleus is not smart enough to use ILIKE for case-insensitivity,
+          so we need to explicitly index on LOWER.
+        -->
+        <sql>
+            CREATE INDEX "COMPONENT_COORDINATES_SEARCH_IDX"
+                ON "COMPONENT" USING gin (LOWER("NAME") gin_trgm_ops, LOWER("VERSION") gin_trgm_ops, LOWER("GROUP") gin_trgm_ops);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-8" author="nscuro">
+        <!--
+          We only allow searching by valid PURLs, which means there will always
+          be some prefix, like "pkg:npm/foo". text_pattern_ops can only support
+          prefix lookups, but is more lightweight than GIN indexes.
+        -->
+        <sql>
+            CREATE INDEX "COMPONENT_PURL_SEARCH_IDX"
+                ON "COMPONENT" (LOWER("PURL") text_pattern_ops)
+             WHERE "PURL" IS NOT NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-9" author="nscuro">
+        <sql splitStatements="true">
+            ALTER TABLE "COMPONENT" DROP CONSTRAINT IF EXISTS "COMPONENT_CLASSIFIER_check";
+            ALTER TABLE "COMPONENT" ADD CONSTRAINT "COMPONENT_CLASSIFIER_check"
+                CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'DATA', 'DEVICE', 'DEVICE_DRIVER', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'MACHINE_LEARNING_MODEL', 'OPERATING_SYSTEM', 'PLATFORM']));
+
+            ALTER TABLE "PROJECT" DROP CONSTRAINT IF EXISTS "PROJECT_CLASSIFIER_check";
+            ALTER TABLE "PROJECT" ADD CONSTRAINT "PROJECT_CLASSIFIER_check"
+                CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'DATA', 'DEVICE', 'DEVICE_DRIVER', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'MACHINE_LEARNING_MODEL', 'OPERATING_SYSTEM', 'PLATFORM']));
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-10" author="nscuro">
+        <dropIndex tableName="PROJECT" indexName="PROJECT_IS_LATEST_IDX"/>
+
+        <!--
+          For projects where currently multiple versions are flagged as latest,
+          keep the flag only for the version with the most recent BOM upload.
+        -->
+        <sql>
+            WITH dupe_latest_project AS (
+              SELECT "ID" AS id
+                   , ROW_NUMBER() OVER(PARTITION BY "NAME" ORDER BY "LAST_BOM_IMPORTED" DESC) AS rn
+                FROM "PROJECT"
+               WHERE "IS_LATEST"
+            )
+            UPDATE "PROJECT"
+               SET "IS_LATEST" = FALSE
+              FROM dupe_latest_project
+             WHERE "ID" = dupe_latest_project.id
+               AND dupe_latest_project.rn > 1
+        </sql>
+
+        <!-- Enforce that only a single version can be marked as latest. -->
+        <sql>
+            CREATE UNIQUE INDEX "PROJECT_IS_LATEST_IDX"
+                ON "PROJECT" ("NAME", "IS_LATEST")
+             WHERE "IS_LATEST"
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-11" author="oxisto">
+        <sql splitStatements="false">
+            DO $$
+            DECLARE
+                mat_view_def TEXT;
+                index_defs TEXT[];
+                index_def TEXT;
+            BEGIN
+                SELECT pg_get_viewdef('"PORTFOLIOMETRICS_GLOBAL"', true)
+                    INTO mat_view_def;
+
+            SELECT array_agg(indexdef)
+                INTO index_defs
+                FROM pg_indexes
+                WHERE tablename = 'PORTFOLIOMETRICS_GLOBAL';
+
+            DROP MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL";
+
+            ALTER TABLE "CONFIGPROPERTY"
+            ALTER COLUMN "PROPERTYVALUE" TYPE TEXT;
+
+            EXECUTE format(
+                'CREATE MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL" AS %s WITH DATA'
+                , TRIM(TRAILING ';' FROM mat_view_def)
+            );
+
+            IF index_defs IS NOT NULL THEN
+                FOREACH index_def IN ARRAY index_defs
+                LOOP
+                    EXECUTE index_def;
+                END LOOP;
+                END IF;
+            END
+            $$;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-12" author="nscuro">
+        <createTable tableName="NOTIFICATION_OUTBOX">
+            <column name="ID" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="NOTIFICATION_OUTBOX_PK"/>
+            </column>
+            <column name="TIMESTAMP" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SCOPE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="GROUP" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LEVEL" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PAYLOAD" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!--
+            Allow autovacuum to be triggered more frequently on the outbox table
+            since it is subject to frequent deletions. The default scale factor
+            of 20% would allow too much bloat to be accumulated.
+        -->
+        <sql>
+            ALTER TABLE "NOTIFICATION_OUTBOX" SET (autovacuum_vacuum_scale_factor = 0.1)
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-13" author="nscuro">
+        <sql splitStatements="true">
+            CREATE TYPE notification_level AS ENUM ('INFORMATIONAL', 'WARNING', 'ERROR');
+
+            ALTER TABLE "NOTIFICATIONRULE"
+            ALTER COLUMN "NOTIFICATION_LEVEL"
+              SET DATA TYPE notification_level USING "NOTIFICATION_LEVEL"::notification_level;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-14" author="nscuro">
+        <createTable tableName="EXTENSION_KV_STORE">
+            <column name="EXTENSION_POINT" type="TEXT"/>
+            <column name="EXTENSION" type="TEXT"/>
+            <column name="KEY" type="TEXT"/>
+            <column name="VALUE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="VERSION" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey
+                tableName="EXTENSION_KV_STORE"
+                columnNames="EXTENSION_POINT, EXTENSION, KEY"
+                constraintName="EXTENSION_KV_STORE_PK"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-15" author="nscuro">
+        <sql>
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = 'vuln.datasource'
+               AND "PROPERTYNAME" IN (
+                     'extension.github.watermark'
+                   , 'extension.nvd.watermark'
+                   , 'extension.osv.watermarks'
+                   );
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-16" author="nscuro">
+        <!--
+            Required to support the COMPONENT_PURL_SEARCH_IDX index,
+            as Postgres doesn't collect statistics on expressions used
+            in indexes by default.
+        -->
+        <sql>
+            CREATE STATISTICS "COMPONENT_PURL_LOWER_STATS"
+                ON LOWER("PURL") FROM "COMPONENT";
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-17" author="nscuro">
+        <createTable tableName="SECRET">
+            <column name="NAME" type="TEXT">
+                <constraints primaryKey="true" primaryKeyName="SECRET_PK"/>
+            </column>
+            <column name="DESCRIPTION" type="TEXT"/>
+            <column name="VALUE" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DEK" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v5.7.0-18" author="oxisto">
+        <createTable tableName="ADVISORY">
+            <column name="ID" autoIncrement="true" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="ADVISORY_PK"/>
+            </column>
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VERSION" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PUBLISHER" type="VARCHAR(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TITLE" type="VARCHAR(2048)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="URL" type="VARCHAR(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FORMAT" type="VARCHAR(255)"/>
+            <column name="CONTENT" type="TEXT"/>
+            <column name="SEEN" type="BOOLEAN"/>
+            <column name="LASTFETCHED" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <sql>
+            ALTER TABLE "ADVISORY"
+            ADD COLUMN "SEARCHVECTOR" tsvector
+            GENERATED ALWAYS AS (to_tsvector('english', coalesce("TITLE", '') || ' ' || coalesce("URL", '') || ' ' ||
+            coalesce("CONTENT", ''))) STORED;
+        </sql>
+        <sql>
+            CREATE INDEX "ADVISORY_SEARCHVECTOR_IDX" ON "ADVISORY" USING GIN ("SEARCHVECTOR");
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-19" author="oxisto">
+        <addColumn tableName="VULNERABILITYALIAS">
+            <column name="CSAF_ID" type="VARCHAR(255)"/>
+        </addColumn>
+        <createIndex indexName="VULNERABILITYALIAS_CSAF_ID_IDX" tableName="VULNERABILITYALIAS">
+            <column name="CSAF_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="v5.7.0-20" author="oxisto">
+        <addColumn tableName="FINDINGATTRIBUTION">
+            <column name="MATCHING_PERCENTAGE" type="SMALLINT"/>
+        </addColumn>
+    </changeSet>
+    <changeSet id="v5.7.0-21" author="oxisto">
+        <createTable tableName="ADVISORIES_VULNERABILITIES">
+            <column name="ADVISORY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VULNERABILITY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey
+                tableName="ADVISORIES_VULNERABILITIES"
+                columnNames="ADVISORY_ID,VULNERABILITY_ID"
+                constraintName="ADVISORIES_VULNERABILITIES_PK"/>
+        <addForeignKeyConstraint
+                baseTableName="ADVISORIES_VULNERABILITIES"
+                baseColumnNames="ADVISORY_ID"
+                referencedTableName="ADVISORY"
+                referencedColumnNames="ID"
+                constraintName="ADVISORIES_VULNERABILITIES_ADVISORY_FK"
+                onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+                baseTableName="ADVISORIES_VULNERABILITIES"
+                baseColumnNames="VULNERABILITY_ID"
+                referencedTableName="VULNERABILITY"
+                referencedColumnNames="ID"
+                constraintName="ADVISORIES_VULNERABILITIES_VULNERABILITY_FK"
+                onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-22" author="nscuro">
+        <sql splitStatements="true">
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE ("GROUPNAME", "PROPERTYNAME") IN (
+               ('integrations', 'defectdojo.sync.cadence')
+             , ('integrations', 'fortify.ssc.sync.cadence')
+             , ('integrations', 'kenna.sync.cadence')
+             , ('scanner', 'npmaudit.enabled')
+             , ('vuln-source', 'github.advisories.access.token')
+             , ('vuln-source', 'github.advisories.alias.sync.enabled')
+             , ('vuln-source', 'github.advisories.enabled')
+             , ('vuln-source', 'google.osv.alias.sync.enabled')
+             , ('vuln-source', 'google.osv.base.url')
+             , ('vuln-source', 'google.osv.enabled')
+             );
+
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" IN ('search-indexes', 'task-scheduler');
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-23" author="nscuro">
+        <createTable tableName="CSAF_AGGREGATOR">
+            <column name="ID" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="CSAF_AGGREGATOR_PK"/>
+            </column>
+            <column name="URL" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAMESPACE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAME" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ENABLED" type="BOOL">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LAST_DISCOVERY_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+        </createTable>
+
+        <createTable tableName="CSAF_PROVIDER">
+            <column name="ID" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="CSAF_PROVIDER_PK"/>
+            </column>
+            <column name="URL" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAMESPACE" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAME" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ENABLED" type="BOOL">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DISCOVERED_FROM" type="UUID"/>
+            <column name="DISCOVERED_AT" type="TIMESTAMPTZ(3)"/>
+            <column name="LATEST_DOCUMENT_RELEASE_DATE" type="TIMESTAMPTZ(3)"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="CSAF_PROVIDER"
+                baseColumnNames="DISCOVERED_FROM"
+                constraintName="CSAF_PROVIDER_DISCOVERED_FROM_FK"
+                referencedTableName="CSAF_AGGREGATOR"
+                referencedColumnNames="ID"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="CSAF_AGGREGATOR" indexName="CSAF_AGGREGATOR_URL_IDX" unique="true">
+            <column name="URL"/>
+        </createIndex>
+
+        <createIndex tableName="CSAF_PROVIDER" indexName="CSAF_PROVIDER_URL_IDX" unique="true">
+            <column name="URL"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.7.0-24" author="nscuro">
+        <sql>
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE ("GROUPNAME", "PROPERTYNAME") IN (
+               ('vuln.datasource', 'extension.csaf.enabled')
+             , ('vuln.datasource', 'extension.csaf.sources')
+             );
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-25" author="nscuro">
+        <sql splitStatements="true">
+            ALTER TABLE "ADVISORY" ADD COLUMN "UUID" UUID;
+            UPDATE "ADVISORY" SET "UUID" = gen_random_uuid();
+
+            ALTER TABLE "ADVISORIES_VULNERABILITIES" ADD COLUMN "ADVISORY_UUID" UUID;
+
+            UPDATE "ADVISORIES_VULNERABILITIES" AS av
+               SET "ADVISORY_UUID" = a."UUID"
+              FROM "ADVISORY" AS a
+             WHERE av."ADVISORY_ID" = a."ID";
+
+            ALTER TABLE "ADVISORIES_VULNERABILITIES" DROP CONSTRAINT "ADVISORIES_VULNERABILITIES_ADVISORY_FK";
+            ALTER TABLE "ADVISORIES_VULNERABILITIES" DROP CONSTRAINT "ADVISORIES_VULNERABILITIES_PK";
+            ALTER TABLE "ADVISORIES_VULNERABILITIES" DROP COLUMN "ADVISORY_ID";
+            ALTER TABLE "ADVISORIES_VULNERABILITIES" RENAME COLUMN "ADVISORY_UUID" TO "ADVISORY_ID";
+
+            ALTER TABLE "ADVISORIES_VULNERABILITIES"
+            ADD CONSTRAINT "ADVISORIES_VULNERABILITIES_PK"
+            PRIMARY KEY ("ADVISORY_ID", "VULNERABILITY_ID");
+
+            ALTER TABLE "ADVISORY" DROP CONSTRAINT "ADVISORY_PK";
+            ALTER TABLE "ADVISORY" DROP COLUMN "ID";
+            ALTER TABLE "ADVISORY" RENAME COLUMN "UUID" TO "ID";
+            ALTER TABLE "ADVISORY" ADD CONSTRAINT "ADVISORY_PK" PRIMARY KEY ("ID");
+
+            ALTER TABLE "ADVISORIES_VULNERABILITIES"
+            ADD CONSTRAINT "ADVISORIES_VULNERABILITIES_ADVISORY_FK"
+            FOREIGN KEY ("ADVISORY_ID") REFERENCES "ADVISORY" ("ID") ON DELETE CASCADE;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-26" author="nscuro">
+        <dropColumn tableName="ADVISORY" columnName="SEEN"/>
+
+        <addColumn tableName="ADVISORY">
+            <column name="SEEN_AT" type="TIMESTAMPTZ(3)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="v5.7.0-27" author="nscuro">
+        <createTable tableName="EXTENSION_RUNTIME_CONFIG">
+            <column name="EXTENSION_POINT" type="TEXT"/>
+            <column name="EXTENSION" type="TEXT"/>
+            <column name="CONFIG" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="UPDATED_AT" type="TIMESTAMPTZ(3)"/>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="EXTENSION_RUNTIME_CONFIG"
+                columnNames="EXTENSION_POINT, EXTENSION"
+                constraintName="EXTENSION_RUNTIME_CONFIG_PK"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-28" author="nscuro">
+        <sql>
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = 'vuln.datasource'
+               AND "PROPERTYNAME" LIKE 'extension.%';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-29" author="nscuro">
+        <dropTable tableName="EVENTSERVICELOG"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-30" author="nscuro">
+        <sql>
+            DELETE FROM "PERMISSION" WHERE "NAME" = 'SECRET_MANAGEMENT_READ';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-31" author="nscuro">
+        <sql>
+            UPDATE "EXTENSION_RUNTIME_CONFIG"
+               SET "EXTENSION_POINT" = 'vuln-data-source'
+             WHERE "EXTENSION_POINT" = 'vuln.datasource';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-32" author="nscuro">
+        <!--
+            Remove watermarks of vuln data sources to force
+            a complete re-ingestion after fixing version range logic.
+        -->
+        <sql>
+            DELETE
+              FROM "EXTENSION_KV_STORE"
+             WHERE "EXTENSION_POINT" = 'vuln-data-source'
+               AND "EXTENSION" IN ('nvd', 'github')
+               AND "KEY" = 'watermark';
+
+            DELETE
+              FROM "EXTENSION_KV_STORE"
+             WHERE "EXTENSION_POINT" = 'vuln-data-source'
+               AND "EXTENSION" = 'osv'
+               AND "KEY" LIKE 'watermark/%';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-33" author="nscuro">
+        <!--
+            Publisher implementations are no longer identified by their (pseudo) class name,
+            but by extension name. Further, templates are no longer mandatory, as direct
+            publishing of notification Protobuf messages is also allowed.
+        -->
+        <sql splitStatements="true">
+            UPDATE "NOTIFICATIONPUBLISHER"
+               SET "PUBLISHER_CLASS" = t.extension_name
+              FROM (
+                VALUES ('ConsolePublisher', 'console')
+                     , ('CsWebexPublisher', 'webex')
+                     , ('JiraPublisher', 'jira')
+                     , ('MattermostPublisher', 'mattermost')
+                     , ('MsTeamsPublisher', 'msteams')
+                     , ('SendMailPublisher', 'email')
+                     , ('SlackPublisher', 'slack')
+                     , ('WebhookPublisher', 'webhook')
+              ) AS t(publisher_class, extension_name)
+             WHERE "PUBLISHER_CLASS" = t.publisher_class;
+
+            ALTER TABLE "NOTIFICATIONPUBLISHER" RENAME COLUMN "PUBLISHER_CLASS" TO "EXTENSION_NAME";
+
+            ALTER TABLE "NOTIFICATIONPUBLISHER" ALTER COLUMN "TEMPLATE_MIME_TYPE" DROP NOT NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-34" author="nscuro">
+        <!--
+            Make NOTIFY_ON more reliable to query on by converting it to a proper array.
+            The previous comma-delimited format necessitated fuzzy LIKE queries.
+        -->
+        <sql splitStatements="true">
+            ALTER TABLE "NOTIFICATIONRULE" ADD COLUMN "NOTIFY_ON_ARRAY" TEXT[];
+
+            UPDATE "NOTIFICATIONRULE"
+               SET "NOTIFY_ON_ARRAY" = STRING_TO_ARRAY("NOTIFY_ON", ',')
+             WHERE "NOTIFY_ON" IS NOT NULL;
+
+            ALTER TABLE "NOTIFICATIONRULE" DROP COLUMN "NOTIFY_ON";
+            ALTER TABLE "NOTIFICATIONRULE" RENAME COLUMN "NOTIFY_ON_ARRAY" TO "NOTIFY_ON";
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-35" author="nscuro">
+        <!--
+            Make publisher configurations query- and mutable by converting it
+            from TEXT to JSONB. Also ensures we only store valid JSON.
+        -->
+        <sql>
+            ALTER TABLE "NOTIFICATIONRULE"
+            ALTER COLUMN "PUBLISHER_CONFIG"
+            TYPE JSONB USING "PUBLISHER_CONFIG"::JSONB;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-36" author="nscuro">
+        <!--
+            Attempt to migrate existing notification rules on a best-effort basis.
+            Disable all modified rules to prevent unintentional breakage.
+            The upgrade notes will state that manual review is necessary.
+        -->
+        <sql splitStatements="true">
+            UPDATE "NOTIFICATIONRULE" AS r
+               SET "PUBLISHER_CONFIG" = NULL
+                 , "ENABLED" = FALSE
+              FROM "NOTIFICATIONPUBLISHER" AS p
+             WHERE p."ID" = r."PUBLISHER"
+               AND p."EXTENSION_NAME" = 'console';
+
+            UPDATE "NOTIFICATIONRULE" AS r
+               SET "PUBLISHER_CONFIG" = JSONB_BUILD_OBJECT(
+                     'recipientAddresses',
+                     CASE
+                       WHEN NULLIF(r."PUBLISHER_CONFIG" ->> 'destination', '') IS NOT NULL
+                       THEN JSONB_BUILD_ARRAY(r."PUBLISHER_CONFIG" ->> 'destination')
+                       ELSE JSONB_BUILD_ARRAY()
+                     END
+                   )
+                 , "ENABLED" = FALSE
+              FROM "NOTIFICATIONPUBLISHER" AS p
+             WHERE p."ID" = r."PUBLISHER"
+               AND p."EXTENSION_NAME" = 'email';
+
+            UPDATE "NOTIFICATIONRULE" AS r
+               SET "PUBLISHER_CONFIG" = JSONB_BUILD_OBJECT(
+                     'projectKey', COALESCE("PUBLISHER_CONFIG" ->> 'destination', 'EXAMPLE')
+                   , 'issueType', COALESCE("PUBLISHER_CONFIG" ->> 'jiraTicketType', 'TASK')
+                   )
+                 , "ENABLED" = FALSE
+              FROM "NOTIFICATIONPUBLISHER" AS p
+             WHERE p."ID" = r."PUBLISHER"
+               AND p."EXTENSION_NAME" = 'jira';
+
+            UPDATE "NOTIFICATIONRULE" AS r
+               SET "PUBLISHER_CONFIG" = JSONB_BUILD_OBJECT(
+                     'destinationUrl', COALESCE("PUBLISHER_CONFIG" ->> 'destination', 'https://example.com')
+                   )
+                 , "ENABLED" = FALSE
+              FROM "NOTIFICATIONPUBLISHER" AS p
+             WHERE p."ID" = r."PUBLISHER"
+               AND p."EXTENSION_NAME" IN ('mattermost', 'msteams', 'slack', 'webex', 'webhook');
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-37" author="nscuro">
+        <createIndex tableName="NOTIFICATIONRULE" indexName="NOTIFICATIONRULE_NAME_IDX" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.7.0-38" author="nscuro">
+        <!--
+            Remove global configuration options for email and Jira,
+            as they're managed in publisher configs going forward.
+        -->
+        <sql splitStatements="true">
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = 'email';
+
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = 'integrations'
+               AND "PROPERTYNAME" LIKE 'jira.%';
+        </sql>
+    </changeSet>
+</databaseChangeLog>

@@ -18,82 +18,43 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.Config;
-import alpine.event.framework.Event;
-import alpine.event.framework.EventService;
-import alpine.event.framework.Subscriber;
-import alpine.test.config.ConfigPropertyRule;
-import alpine.test.config.WithConfigProperty;
-import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
+import com.asahaf.javacron.Schedule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-public class TaskSchedulerTest extends PersistenceCapableTest {
+public class TaskSchedulerTest  {
 
-    private static final Queue<Event> EVENTS = new ConcurrentLinkedQueue<>();
+    private TaskScheduler scheduler;
 
-    public static class TestSubscriber implements Subscriber {
+    @BeforeEach
+    public void beforeEach() {
+        scheduler = new TaskScheduler();
+        scheduler.start();
+    }
 
-        @Override
-        public void inform(final Event event) {
-            EVENTS.add(event);
+    @AfterEach
+    public void afterEach() {
+        if (scheduler != null) {
+            scheduler.close();
         }
-
-    }
-
-    @Rule
-    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
-
-    @BeforeClass
-    public static void setUpClass1() {
-        Config.enableUnitTests();
-
-        EventService.getInstance().subscribe(PortfolioMetricsUpdateEvent.class, TestSubscriber.class);
-    }
-
-    @AfterClass
-    public static void tearDownClass1() {
-        EventService.getInstance().unsubscribe(TestSubscriber.class);
-    }
-
-    @Before
-    public void before() throws Exception {
-        super.before();
-
-        // Force initialization of TaskScheduler.
-        final var ignored = TaskScheduler.getInstance();
-    }
-
-    @After
-    public void after() {
-        TaskScheduler.getInstance().shutdown();
-        EVENTS.clear();
-
-        super.after();
     }
 
     @Test
-    @WithConfigProperty(value = {
-            "task.portfolio.metrics.update.cron=* * * * * *",
-            "task.scheduler.initial.delay=5",
-            "task.scheduler.polling.interval=1000"
-    })
-    public void test() throws Exception {
-        await("Event Dispatch")
+    public void shouldExecuteTaskOnSchedule() throws Exception {
+        final var executed = new AtomicBoolean(false);
+
+        scheduler.schedule("foo", Schedule.create("* * * * * *"), () -> executed.set(true));
+
+        await("Task execution")
                 .atMost(Duration.ofSeconds(3))
-                .untilAsserted(() -> assertThat(EVENTS).hasSize(1));
+                .untilAsserted(() -> assertThat(executed).isTrue());
     }
 
 }

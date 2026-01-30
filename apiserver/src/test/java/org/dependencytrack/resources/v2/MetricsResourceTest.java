@@ -18,19 +18,19 @@
  */
 package org.dependencytrack.resources.v2;
 
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.persistence.jdbi.MetricsTestDao;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.core.Response;
 import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -43,8 +43,8 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 
 public class MetricsResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(new ResourceConfig());
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(new ResourceConfig());
 
     @Test
     public void getCurrentPortfolioMetricsEmptyTest() {

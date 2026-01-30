@@ -30,4 +30,4 @@ openAPI:
 prettyPrint: true
 resourcePackages:
 - alpine.server.resources
-- org.dependencytrack.resources
+- org.dependencytrack.resources.v1

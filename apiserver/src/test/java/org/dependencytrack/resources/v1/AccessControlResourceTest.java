@@ -26,14 +26,14 @@ import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,8 +43,8 @@ public class AccessControlResourceTest extends ResourceTest {
     protected static final String TEST_PASSWORD_HASH = new String(
             PasswordService.createHash("testuser".toCharArray()));
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(AccessControlResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
@@ -70,9 +70,8 @@ public class AccessControlResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
 
         qm.getPersistenceManager().evictAll();
-        assertThat(project.getAccessTeams()).satisfiesExactly(team -> {
-            assertThat(team.getId()).isEqualTo(super.team.getId());
-        });
+        assertThat(project.getAccessTeams()).satisfiesExactly(team ->
+            assertThat(team.getId()).isEqualTo(super.team.getId()));
     }
 
     @Test
@@ -248,7 +247,7 @@ public class AccessControlResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
-        Assert.assertEquals(String.valueOf(0), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(String.valueOf(0), response.getHeaderString(TOTAL_COUNT_HEADER));
 
         // One project assigned to super team
         response = jersey.target(V1_ACL + "/team/" + super.team.getUuid())
@@ -256,7 +255,7 @@ public class AccessControlResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
-        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
     @Test

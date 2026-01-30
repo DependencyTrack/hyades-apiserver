@@ -19,24 +19,23 @@
 
 package org.dependencytrack.model;
 
-import java.util.ArrayList;
-
-import org.dependencytrack.PersistenceCapableTest;
-import org.junit.Assert;
-import org.junit.Test;
-
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
+import org.dependencytrack.PersistenceCapableTest;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
 
 public class UserProjectRoleTest extends PersistenceCapableTest {
 
     @Test
     public void testDefaultConstructor() {
         UserProjectRole userProjectRole = new UserProjectRole();
-        Assert.assertNull(userProjectRole.getUser());
-        Assert.assertNull(userProjectRole.getProject());
-        Assert.assertNull(userProjectRole.getRole());
-        Assert.assertEquals(0, userProjectRole.getId());
+        Assertions.assertNull(userProjectRole.getUser());
+        Assertions.assertNull(userProjectRole.getProject());
+        Assertions.assertNull(userProjectRole.getRole());
+        Assertions.assertEquals(0, userProjectRole.getId());
     }
 
     @Test
@@ -50,16 +49,16 @@ public class UserProjectRoleTest extends PersistenceCapableTest {
 
         UserProjectRole userProjectRole = new UserProjectRole(user, project, role);
 
-        Assert.assertEquals(user, userProjectRole.getUser());
-        Assert.assertEquals(project, userProjectRole.getProject());
-        Assert.assertEquals(role, userProjectRole.getRole());
+        Assertions.assertEquals(user, userProjectRole.getUser());
+        Assertions.assertEquals(project, userProjectRole.getProject());
+        Assertions.assertEquals(role, userProjectRole.getRole());
     }
 
     @Test
     public void testGetAndSetId() {
         UserProjectRole userProjectRole = new UserProjectRole();
         userProjectRole.setId(123L);
-        Assert.assertEquals(123L, userProjectRole.getId());
+        Assertions.assertEquals(123L, userProjectRole.getId());
     }
 
     @Test
@@ -69,7 +68,7 @@ public class UserProjectRoleTest extends PersistenceCapableTest {
         UserProjectRole userProjectRole = new UserProjectRole();
         userProjectRole.setUser(user);
 
-        Assert.assertEquals(user, userProjectRole.getUser());
+        Assertions.assertEquals(user, userProjectRole.getUser());
     }
 
     @Test
@@ -80,7 +79,7 @@ public class UserProjectRoleTest extends PersistenceCapableTest {
         UserProjectRole userProjectRole = new UserProjectRole();
         userProjectRole.setProject(project);
 
-        Assert.assertEquals(project, userProjectRole.getProject());
+        Assertions.assertEquals(project, userProjectRole.getProject());
     }
 
     @Test
@@ -91,7 +90,7 @@ public class UserProjectRoleTest extends PersistenceCapableTest {
         UserProjectRole userProjectRole = new UserProjectRole();
         userProjectRole.setRole(role);
 
-        Assert.assertEquals(role, userProjectRole.getRole());
+        Assertions.assertEquals(role, userProjectRole.getRole());
     }
 
     @Test
@@ -107,6 +106,6 @@ public class UserProjectRoleTest extends PersistenceCapableTest {
         UserProjectRole userProjectRole = new UserProjectRole(user, project, role);
 
         String expected = "UserProjectRole{user='test-user', project='test-project', role='test-role'}";
-        Assert.assertEquals(expected, userProjectRole.toString());
+        Assertions.assertEquals(expected, userProjectRole.toString());
     }
 }

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import javax.jdo.JDOHelper;
 import javax.jdo.PersistenceManager;
@@ -38,13 +38,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class AbstractTest {
 
-    private static PostgreSQLContainer<?> postgresContainer;
+    private static PostgreSQLContainer postgresContainer;
     private static PersistenceManagerFactory pmf;
     protected PersistenceManager pm;
 
     @BeforeAll
     static void beforeAll() {
-        postgresContainer = new PostgreSQLContainer<>("postgres:13-alpine")
+        postgresContainer = new PostgreSQLContainer("postgres:14-alpine")
                 .withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off")
                 .withTmpFs(Map.of("/var/lib/postgresql/data", "rw"));
         postgresContainer.start();
@@ -76,7 +76,7 @@ public abstract class AbstractTest {
         }
     }
 
-    private static PersistenceManagerFactory createPmf(final PostgreSQLContainer<?> postgresContainer) {
+    private static PersistenceManagerFactory createPmf(final PostgreSQLContainer postgresContainer) {
         final URL schemaUrl = JsonbContainsMethod.class.getResource("/schema.sql");
         assertThat(schemaUrl).isNotNull();
 

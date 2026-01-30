@@ -36,7 +36,7 @@ get:
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/list-extensions-response.yaml"
+            $ref: "../components/schemas/extensions/list-extensions-response.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":

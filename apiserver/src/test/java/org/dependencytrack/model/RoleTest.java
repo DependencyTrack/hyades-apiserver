@@ -20,13 +20,12 @@
 package org.dependencytrack.model;
 
 import alpine.model.Permission;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
-
-import org.junit.Assert;
-import org.junit.Test;
 
 public class RoleTest {
 
@@ -34,14 +33,14 @@ public class RoleTest {
     public void testGetAndSetId() {
         Role role = new Role();
         role.setId(123L);
-        Assert.assertEquals(123L, role.getId());
+        Assertions.assertEquals(123L, role.getId());
     }
 
     @Test
     public void testGetAndSetName() {
         Role role = new Role();
         role.setName("Test Role");
-        Assert.assertEquals("Test Role", role.getName());
+        Assertions.assertEquals("Test Role", role.getName());
     }
 
     @Test
@@ -58,9 +57,9 @@ public class RoleTest {
         permissions.add(permission2);
 
         role.setPermissions(permissions);
-        Assert.assertEquals(2, role.getPermissions().size());
-        Assert.assertTrue(role.getPermissions().contains(permission1));
-        Assert.assertTrue(role.getPermissions().contains(permission2));
+        Assertions.assertEquals(2, role.getPermissions().size());
+        Assertions.assertTrue(role.getPermissions().contains(permission1));
+        Assertions.assertTrue(role.getPermissions().contains(permission2));
     }
 
     @Test
@@ -73,10 +72,10 @@ public class RoleTest {
         permission2.setName("Permission2");
 
         boolean added = role.addPermissions(permission1, permission2);
-        Assert.assertTrue(added);
-        Assert.assertEquals(2, role.getPermissions().size());
-        Assert.assertTrue(role.getPermissions().contains(permission1));
-        Assert.assertTrue(role.getPermissions().contains(permission2));
+        Assertions.assertTrue(added);
+        Assertions.assertEquals(2, role.getPermissions().size());
+        Assertions.assertTrue(role.getPermissions().contains(permission1));
+        Assertions.assertTrue(role.getPermissions().contains(permission2));
     }
 
     @Test
@@ -91,10 +90,10 @@ public class RoleTest {
         permission2.setName("Permission2");
 
         boolean added = role.addPermissions(permission2);
-        Assert.assertTrue(added);
-        Assert.assertEquals(2, role.getPermissions().size());
-        Assert.assertTrue(role.getPermissions().contains(permission1));
-        Assert.assertTrue(role.getPermissions().contains(permission2));
+        Assertions.assertTrue(added);
+        Assertions.assertEquals(2, role.getPermissions().size());
+        Assertions.assertTrue(role.getPermissions().contains(permission1));
+        Assertions.assertTrue(role.getPermissions().contains(permission2));
     }
 
     @Test
@@ -102,7 +101,7 @@ public class RoleTest {
         Role role = new Role();
         UUID uuid = UUID.randomUUID();
         role.setUuid(uuid);
-        Assert.assertEquals(uuid, role.getUuid());
+        Assertions.assertEquals(uuid, role.getUuid());
     }
 
     @Test
@@ -120,6 +119,6 @@ public class RoleTest {
         role.addPermissions(permission1, permission2);
 
         String expected = "Role{uuid='123e4567-e89b-12d3-a456-426614174000', name='Test Role', permissions=[Permission1, Permission2]}";
-        Assert.assertEquals(expected, role.toString());
+        Assertions.assertEquals(expected, role.toString());
     }
 }

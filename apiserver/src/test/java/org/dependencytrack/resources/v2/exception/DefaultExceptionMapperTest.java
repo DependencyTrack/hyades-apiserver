@@ -19,15 +19,14 @@
 package org.dependencytrack.resources.v2.exception;
 
 import alpine.server.auth.AuthenticationNotRequired;
-import org.dependencytrack.JerseyTestRule;
-import org.dependencytrack.resources.v2.ResourceConfig;
-import org.junit.ClassRule;
-import org.junit.Test;
-
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.ServerErrorException;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.JerseyTestExtension;
+import org.dependencytrack.resources.v2.ResourceConfig;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,8 +34,8 @@ import static org.dependencytrack.resources.v2.OpenApiValidationClientResponseFi
 
 public class DefaultExceptionMapperTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig()
                     .register(JsonProcessingExceptionMapperTest.TestResource.class));
 

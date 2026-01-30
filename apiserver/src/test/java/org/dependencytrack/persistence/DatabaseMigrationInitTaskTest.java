@@ -18,17 +18,17 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.ConfigPropertyExtension;
 import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.init.InitTaskContext;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jdbi.v3.core.Jdbi;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.postgresql.ds.PGSimpleDataSource;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
@@ -38,16 +38,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class DatabaseMigrationInitTaskTest {
 
-    @Rule
-    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
+    @RegisterExtension
+    private static final ConfigPropertyExtension configProperties = new ConfigPropertyExtension();
 
-    private PostgreSQLContainer<?> postgresContainer;
+    private PostgreSQLContainer postgresContainer;
     private PGSimpleDataSource dataSource;
     private Jdbi jdbi;
 
-    @Before
+    @BeforeEach
     public void setUp() {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
+        postgresContainer = new PostgreSQLContainer(DockerImageName.parse("postgres:14-alpine"))
                 .withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off")
                 .withTmpFs(Map.of("/var/lib/postgresql/data", "rw"));
         postgresContainer.start();
@@ -57,14 +57,14 @@ public class DatabaseMigrationInitTaskTest {
         dataSource.setUser(postgresContainer.getUsername());
         dataSource.setPassword(postgresContainer.getPassword());
 
-        configPropertyRule.setProperty("testcontainers.postgresql.jdbc-url", postgresContainer.getJdbcUrl());
-        configPropertyRule.setProperty("testcontainers.postgresql.username", postgresContainer.getUsername());
-        configPropertyRule.setProperty("testcontainers.postgresql.password", postgresContainer.getPassword());
+        configProperties.setProperty("testcontainers.postgresql.jdbc-url", postgresContainer.getJdbcUrl());
+        configProperties.setProperty("testcontainers.postgresql.username", postgresContainer.getUsername());
+        configProperties.setProperty("testcontainers.postgresql.password", postgresContainer.getPassword());
 
         jdbi = Jdbi.create(dataSource);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         if (postgresContainer != null) {
             postgresContainer.stop();

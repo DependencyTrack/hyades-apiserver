@@ -23,24 +23,27 @@ import alpine.common.util.SystemUtil;
 import org.apache.http.HttpHost;
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
+import uk.org.webcompere.systemstubs.jupiter.SystemStub;
+import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
+@ExtendWith(SystemStubsExtension.class)
 public class ManagedHttpClientFactoryTest {
 
-    @Rule
+    @SystemStub
     public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() {
         Config.enableUnitTests();
     }
 
-    @Before
+    @BeforeEach
     public void before() {
         environmentVariables.set("http_proxy", "http://acme%5Cusername:password@127.0.0.1:1080");
         environmentVariables.set("no_proxy", "localhost:443,127.0.0.1:8080,example.com,www.example.net");
@@ -50,35 +53,35 @@ public class ManagedHttpClientFactoryTest {
     public void instanceTest() {
         HttpClient c1 = ManagedHttpClientFactory.newManagedHttpClient().getHttpClient();
         HttpClient c2 = ManagedHttpClientFactory.newManagedHttpClient().getHttpClient();
-        Assert.assertNotSame(c1, c2);
-        Assert.assertTrue(c1 instanceof CloseableHttpClient);
+        Assertions.assertNotSame(c1, c2);
+        Assertions.assertTrue(c1 instanceof CloseableHttpClient);
     }
 
     @Test
     public void proxyInfoTest() {
         ManagedHttpClientFactory.ProxyInfo proxyInfo = ManagedHttpClientFactory.createProxyInfo();
-        Assert.assertEquals("127.0.0.1", proxyInfo.getHost());
-        Assert.assertEquals(1080, proxyInfo.getPort());
-        Assert.assertEquals("acme", proxyInfo.getDomain());
-        Assert.assertEquals("username", proxyInfo.getUsername());
-        Assert.assertEquals("password", proxyInfo.getPassword());
-        Assert.assertArrayEquals(new String[]{"localhost:443", "127.0.0.1:8080", "example.com", "www.example.net"}, proxyInfo.getNoProxy());
+        Assertions.assertEquals("127.0.0.1", proxyInfo.getHost());
+        Assertions.assertEquals(1080, proxyInfo.getPort());
+        Assertions.assertEquals("acme", proxyInfo.getDomain());
+        Assertions.assertEquals("username", proxyInfo.getUsername());
+        Assertions.assertEquals("password", proxyInfo.getPassword());
+        Assertions.assertArrayEquals(new String[]{"localhost:443", "127.0.0.1:8080", "example.com", "www.example.net"}, proxyInfo.getNoProxy());
     }
 
     @Test
     public void isProxyTest() {
         ManagedHttpClientFactory.ProxyInfo proxyInfo = ManagedHttpClientFactory.createProxyInfo();
-        Assert.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("example.com",443)));
-        Assert.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("example.com",8080)));
-        Assert.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("www.example.com",443)));
-        Assert.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("foo.example.com",80)));
-        Assert.assertTrue(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("fooexample.com",80)));
-        Assert.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("foo.bar.example.com",8000)));
-        Assert.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("www.example.net",80)));
-        Assert.assertTrue(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("foo.example.net",80)));
-        Assert.assertTrue(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("example.org",443)));
-        Assert.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("127.0.0.1",8080)));
-        Assert.assertTrue(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("127.0.0.1",8000)));
+        Assertions.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("example.com",443)));
+        Assertions.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("example.com",8080)));
+        Assertions.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("www.example.com",443)));
+        Assertions.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("foo.example.com",80)));
+        Assertions.assertTrue(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("fooexample.com",80)));
+        Assertions.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("foo.bar.example.com",8000)));
+        Assertions.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("www.example.net",80)));
+        Assertions.assertTrue(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("foo.example.net",80)));
+        Assertions.assertTrue(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("example.org",443)));
+        Assertions.assertFalse(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("127.0.0.1",8080)));
+        Assertions.assertTrue(ManagedHttpClientFactory.isProxy(proxyInfo.getNoProxy(), new HttpHost("127.0.0.1",8000)));
     }
 
     @Test
@@ -90,6 +93,6 @@ public class ManagedHttpClientFactoryTest {
                 + SystemUtil.getOsName() + "; "
                 + SystemUtil.getOsVersion()
                 + ") ManagedHttpClient/";
-        Assert.assertTrue(ManagedHttpClientFactory.getUserAgent().startsWith(expected));
+        Assertions.assertTrue(ManagedHttpClientFactory.getUserAgent().startsWith(expected));
     }
 }

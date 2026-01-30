@@ -18,23 +18,21 @@
  */
 package org.dependencytrack;
 
-import alpine.server.util.DbUtil;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import org.dependencytrack.support.liquibase.MigrationExecutor;
 import org.postgresql.ds.PGSimpleDataSource;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.TestcontainersConfiguration;
 
 import java.lang.management.ManagementFactory;
-import java.sql.Connection;
 import java.util.Map;
 
-public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestContainer> {
+public class PostgresTestContainer extends PostgreSQLContainer {
 
     @SuppressWarnings("resource")
     public PostgresTestContainer() {
-        super(DockerImageName.parse("postgres:13-alpine"));
+        super(DockerImageName.parse("postgres:14-alpine"));
         withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off");
         withUsername("dtrack");
         withPassword("dtrack");
@@ -50,7 +48,7 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
         // NB: Container reuse won't be active unless either:
         //  - The environment variable TESTCONTAINERS_REUSE_ENABLE=true is set
         //  - testcontainers.reuse.enable=true is set in ~/.testcontainers.properties
-        withReuse(true);
+        withReuse(System.getenv("CI") != null);
     }
 
     @Override
@@ -68,13 +66,6 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
         dataSource.setPassword(getPassword());
 
         try {
-            try (final Connection connection = dataSource.getConnection()) {
-                // Ensure that DbUtil#isPostgreSQL will work as expected.
-                // Some legacy code ported over from v4 still uses this.
-                // TODO: Remove once DbUtil#isPostgreSQL is no longer used.
-                DbUtil.initPlatformName(connection);
-            }
-
             new MigrationExecutor(dataSource, "migration/changelog-main.xml").executeMigration();
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute migrations", e);

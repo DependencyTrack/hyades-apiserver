@@ -17,7 +17,12 @@
 get:
   operationId: listTeams
   summary: List all teams
-  description: Returns a paginated list of teams, sorted by name in ascending order
+  description: |-
+    Returns a paginated list of teams, sorted by name in ascending order.
+    
+    Reports `EXACT` total counts for up to 500 items, and `AT_LEAST` past that.
+    
+    Requires permission `ACCESS_MANAGEMENT`.
   tags:
   - Teams
   parameters:
@@ -42,7 +47,10 @@ get:
 post:
   operationId: createTeam
   summary: Create team
-  description: Create a team
+  description: |-
+    Creates a team.
+    
+    Requires permission `ACCESS_MANAGEMENT`.
   tags:
   - Teams
   requestBody:
@@ -59,7 +67,7 @@ post:
       content:
         application/problem+json:
           schema:
-            oneOf:
+            anyOf:
             - $ref: "../components/schemas/invalid-request-problem-details.yaml"
             - $ref: "../components/schemas/problem-details.yaml"
     "401":

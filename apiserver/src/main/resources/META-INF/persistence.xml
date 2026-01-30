@@ -23,7 +23,6 @@
   <persistence-unit name="Alpine">
     <class>alpine.model.ApiKey</class>
     <class>alpine.model.ConfigProperty</class>
-    <class>alpine.model.EventServiceLog</class>
     <class>alpine.model.LdapUser</class>
     <class>alpine.model.ManagedUser</class>
     <class>alpine.model.OidcUser</class>
@@ -33,6 +32,7 @@
     <class>alpine.model.Permission</class>
     <class>alpine.model.Team</class>
     <class>alpine.model.User</class>
+    <class>org.dependencytrack.model.Advisory</class>
     <class>org.dependencytrack.model.AffectedVersionAttribution</class>
     <class>org.dependencytrack.model.Analysis</class>
     <class>org.dependencytrack.model.AnalysisComment</class>

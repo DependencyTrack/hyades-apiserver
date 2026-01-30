@@ -18,23 +18,15 @@
  */
 package org.dependencytrack.init;
 
-import org.dependencytrack.common.ConfigKey;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
-import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import javax.sql.DataSource;
-
-import static alpine.Config.AlpineKey.DATABASE_PASSWORD;
-import static alpine.Config.AlpineKey.DATABASE_URL;
-import static alpine.Config.AlpineKey.DATABASE_USERNAME;
-import static org.dependencytrack.common.ConfigKey.INIT_TASKS_DATABASE_PASSWORD;
-import static org.dependencytrack.common.ConfigKey.INIT_TASKS_DATABASE_URL;
-import static org.dependencytrack.common.ConfigKey.INIT_TASKS_DATABASE_USERNAME;
 
 /**
  * @since 5.6.0
@@ -44,59 +36,41 @@ public final class InitTaskServletContextListener implements ServletContextListe
     private static final Logger LOGGER = LoggerFactory.getLogger(InitTaskServletContextListener.class);
 
     private final Config config;
+    private final DataSourceRegistry dataSourceRegistry;
 
     @SuppressWarnings("unused")
     public InitTaskServletContextListener() {
-        this(ConfigProvider.getConfig());
+        this(ConfigProvider.getConfig(), DataSourceRegistry.getInstance());
     }
 
-    InitTaskServletContextListener(final Config config) {
+    InitTaskServletContextListener(
+            final Config config,
+            final DataSourceRegistry dataSourceRegistry) {
         this.config = config;
+        this.dataSourceRegistry = dataSourceRegistry;
     }
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (!config.getValue(ConfigKey.INIT_TASKS_ENABLED.getPropertyName(), Boolean.class)) {
-            LOGGER.debug(
-                    "Not executing init tasks because {} is disabled",
-                    ConfigKey.INIT_TASKS_ENABLED.getPropertyName());
+        if (!config.getValue("init.tasks.enabled", boolean.class)) {
+            LOGGER.debug("Not executing init tasks because init.tasks.enabled is disabled");
             return;
         }
 
-        final DataSource dataSource;
-        try {
-            dataSource = createDataSource(config);
-        } catch (RuntimeException e) {
-            throw new IllegalStateException("Failed to create data source", e);
-        }
+        final String dataSourceName = config.getValue("init.tasks.datasource.name", String.class);
+        final DataSource dataSource = dataSourceRegistry.get(dataSourceName);
 
         final var taskExecutor = new InitTaskExecutor(config, dataSource);
         taskExecutor.execute();
 
-        if (config.getValue(ConfigKey.INIT_AND_EXIT.getPropertyName(), Boolean.class)) {
-            LOGGER.info(
-                    "Exiting because {} is enabled",
-                    ConfigKey.INIT_AND_EXIT.getPropertyName());
+        if (config.getValue("init.tasks.datasource.close-after-use", boolean.class)) {
+            dataSourceRegistry.close(dataSourceName);
+        }
+
+        if (config.getValue("init.and.exit", boolean.class)) {
+            LOGGER.info("Exiting because init.and.exit is enabled");
             System.exit(0);
         }
-    }
-
-    private DataSource createDataSource(final Config config) {
-        final var dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(
-                config.getOptionalValue(INIT_TASKS_DATABASE_URL.getPropertyName(), String.class)
-                        .or(() -> config.getOptionalValue(DATABASE_URL.getPropertyName(), String.class))
-                        .orElseThrow());
-        dataSource.setUser(
-                config.getOptionalValue(INIT_TASKS_DATABASE_USERNAME.getPropertyName(), String.class)
-                        .or(() -> config.getOptionalValue(DATABASE_USERNAME.getPropertyName(), String.class))
-                        .orElseThrow());
-        dataSource.setPassword(
-                config.getOptionalValue(INIT_TASKS_DATABASE_PASSWORD.getPropertyName(), String.class)
-                        .or(() -> config.getOptionalValue(DATABASE_PASSWORD.getPropertyName(), String.class))
-                        .orElseThrow());
-
-        return dataSource;
     }
 
 }

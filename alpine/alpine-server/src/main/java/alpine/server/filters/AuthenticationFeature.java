@@ -18,36 +18,30 @@
  */
 package alpine.server.filters;
 
-import alpine.Config;
 import alpine.server.auth.AuthenticationNotRequired;
-
 import jakarta.ws.rs.container.DynamicFeature;
 import jakarta.ws.rs.container.ResourceInfo;
 import jakarta.ws.rs.core.FeatureContext;
 import jakarta.ws.rs.ext.Provider;
+
 import java.lang.reflect.Method;
 
 /**
- * Determines if authentication is required or not (via {@link Config.AlpineKey#ENFORCE_AUTHENTICATION}
- * and if so mandates that all resources requested are authenticated unless they are annotated
+ * Mandates that all resources requested are authenticated unless they are annotated
  * with {@link AuthenticationNotRequired}.
  *
- * @see AuthenticationFilter
  * @author Steve Springett
+ * @see AuthenticationFilter
  * @since 1.0.0
  */
 @Provider
 public class AuthenticationFeature implements DynamicFeature {
 
-    private static final boolean ENFORCE_AUTHENTICATION = Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.ENFORCE_AUTHENTICATION);
-
     @Override
     public void configure(ResourceInfo resourceInfo, FeatureContext context) {
-        if (ENFORCE_AUTHENTICATION) {
-            final Method method = resourceInfo.getResourceMethod();
-            if (!method.isAnnotationPresent(AuthenticationNotRequired.class)) {
-                context.register(AuthenticationFilter.class);
-            }
+        final Method method = resourceInfo.getResourceMethod();
+        if (!method.isAnnotationPresent(AuthenticationNotRequired.class)) {
+            context.register(AuthenticationFilter.class);
         }
     }
 

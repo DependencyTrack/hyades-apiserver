@@ -33,15 +33,14 @@ import alpine.persistence.NotSortableException;
 import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
-import alpine.server.util.DbUtil;
 import com.github.packageurl.PackageURL;
 import com.google.common.collect.Lists;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import org.apache.commons.lang3.ClassUtils;
-import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Advisory;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -72,7 +71,6 @@ import org.dependencytrack.model.Role;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.UserProjectRole;
-import org.dependencytrack.model.Vex;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.VulnIdAndSource;
 import org.dependencytrack.model.Vulnerability;
@@ -86,14 +84,14 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.publisher.PublisherClass;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.EffectivePermissionDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
-import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
+import org.jspecify.annotations.NonNull;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
@@ -143,7 +141,6 @@ public class QueryManager extends AlpineQueryManager {
     private RepositoryQueryManager repositoryQueryManager;
     private RoleQueryManager roleQueryManager;
     private ServiceComponentQueryManager serviceComponentQueryManager;
-    private VexQueryManager vexQueryManager;
     private VulnerabilityQueryManager vulnerabilityQueryManager;
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
     private WorkflowStateQueryManager workflowStateQueryManager;
@@ -151,13 +148,13 @@ public class QueryManager extends AlpineQueryManager {
     private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
+    private AdvisoryQueryManager advisoryQueryManager;
 
     /**
      * Default constructor.
      */
     public QueryManager() {
         super();
-        disableL2Cache();
     }
 
     /**
@@ -167,7 +164,6 @@ public class QueryManager extends AlpineQueryManager {
      */
     public QueryManager(final PersistenceManager pm) {
         super(pm);
-        disableL2Cache();
     }
 
     /**
@@ -177,7 +173,6 @@ public class QueryManager extends AlpineQueryManager {
      */
     public QueryManager(final AlpineRequest request) {
         super(request);
-        disableL2Cache();
         this.request = request;
     }
 
@@ -188,7 +183,6 @@ public class QueryManager extends AlpineQueryManager {
      */
     public QueryManager(final PersistenceManager pm, final AlpineRequest request) {
         super(pm, request);
-        disableL2Cache();
         this.request = request;
     }
 
@@ -313,18 +307,6 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-     * Lazy instantiation of VexQueryManager.
-     *
-     * @return a VexQueryManager object
-     */
-    private VexQueryManager getVexQueryManager() {
-        if (vexQueryManager == null) {
-            vexQueryManager = (request == null) ? new VexQueryManager(getPersistenceManager()) : new VexQueryManager(getPersistenceManager(), request);
-        }
-        return vexQueryManager;
-    }
-
-    /**
      * Lazy instantiation of PolicyQueryManager.
      *
      * @return a PolicyQueryManager object
@@ -409,6 +391,17 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
+     * Lazy instantiation of AdvisoryQueryManager.
+     * @return an AdvisoryQueryManager object
+     */
+    private AdvisoryQueryManager getAdvisoryQueryManager() {
+        if (advisoryQueryManager == null) {
+            advisoryQueryManager = (request == null) ? new AdvisoryQueryManager(getPersistenceManager()) : new AdvisoryQueryManager(getPersistenceManager(), request);
+        }
+        return advisoryQueryManager;
+    }
+
+    /**
      * Lazy instantiation of RepositoryQueryManager.
      *
      * @return a RepositoryQueryManager object
@@ -458,26 +451,6 @@ public class QueryManager extends AlpineQueryManager {
             integrityAnalysisQueryManager = (request == null) ? new IntegrityAnalysisQueryManager(getPersistenceManager()) : new IntegrityAnalysisQueryManager(getPersistenceManager(), request);
         }
         return integrityAnalysisQueryManager;
-    }
-
-    private void disableL2Cache() {
-        pm.setProperty(PropertyNames.PROPERTY_CACHE_L2_TYPE, "none");
-    }
-
-    /**
-     * Disables the second level cache for this {@link QueryManager} instance.
-     * <p>
-     * Disabling the L2 cache is useful in situations where large amounts of objects
-     * are created or updated in close succession, and it's unlikely that they'll be
-     * accessed again anytime soon. Keeping those objects in cache would unnecessarily
-     * blow up heap usage.
-     *
-     * @return This {@link QueryManager} instance
-     * @see <a href="https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#cache_level2">L2 Cache docs</a>
-     */
-    public QueryManager withL2CacheDisabled() {
-        disableL2Cache();
-        return this;
     }
 
     /**
@@ -604,10 +577,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<Bom> getAllBoms(Project project) {
         return getBomQueryManager().getAllBoms(project);
-    }
-
-    public Vex createVex(Project project, Date imported, Vex.Format format, String specVersion, Integer vexVersion, String serialNumber) {
-        return getVexQueryManager().createVex(project, imported, format, specVersion, vexVersion, serialNumber);
     }
 
     public PaginatedResult getComponentByHash(String hash) {
@@ -862,10 +831,15 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerabilityQueryManager().contains(vulnerability, component);
     }
 
-    public VulnerableSoftware getVulnerableSoftwareByCpe23(String cpe23,
-                                                           String versionEndExcluding, String versionEndIncluding,
-                                                           String versionStartExcluding, String versionStartIncluding) {
-        return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByCpe23(cpe23, versionEndExcluding, versionEndIncluding, versionStartExcluding, versionStartIncluding);
+    public VulnerableSoftware getVulnerableSoftwareByCpe23(
+            String cpe23,
+            String version,
+            String versionEndExcluding,
+            String versionEndIncluding,
+            String versionStartExcluding,
+            String versionStartIncluding) {
+        return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByCpe23(
+                cpe23, version, versionEndExcluding, versionEndIncluding, versionStartExcluding, versionStartIncluding);
     }
 
     public VulnerableSoftware getVulnerableSoftwareByPurl(
@@ -984,6 +958,10 @@ public class QueryManager extends AlpineQueryManager {
         getMetricsQueryManager().synchronizeVulnerabilityMetrics(metrics);
     }
 
+    public Advisory synchronizeAdvisory(Advisory advisory) {
+        return getAdvisoryQueryManager().synchronizeAdvisory(advisory);
+    }
+
     public PaginatedResult getRepositories() {
         return getRepositoryQueryManager().getRepositories();
     }
@@ -1064,34 +1042,23 @@ public class QueryManager extends AlpineQueryManager {
         return getNotificationQueryManager().getNotificationPublisher(name);
     }
 
-    public NotificationPublisher getDefaultNotificationPublisher(final PublisherClass clazz) {
-        return getNotificationQueryManager().getDefaultNotificationPublisher(clazz);
-    }
-
     public NotificationPublisher getDefaultNotificationPublisherByName(String publisherName) {
         return getNotificationQueryManager().getDefaultNotificationPublisherByName(publisherName);
     }
 
-    public NotificationPublisher createNotificationPublisher(final String name, final String description,
-                                                             final String publisherClass, final String templateContent,
-                                                             final String templateMimeType, final boolean defaultPublisher) {
-        return getNotificationQueryManager().createNotificationPublisher(name, description, publisherClass, templateContent, templateMimeType, defaultPublisher);
+    public NotificationPublisher createNotificationPublisher(
+            @NonNull String name,
+            String description,
+            @NonNull String extensionName,
+            String templateContent,
+            String templateMimeType,
+            boolean defaultPublisher) {
+        return getNotificationQueryManager().createNotificationPublisher(
+                name, description, extensionName, templateContent, templateMimeType, defaultPublisher);
     }
 
     public NotificationPublisher updateNotificationPublisher(NotificationPublisher transientPublisher) {
         return getNotificationQueryManager().updateNotificationPublisher(transientPublisher);
-    }
-
-    public void deleteNotificationPublisher(NotificationPublisher notificationPublisher) {
-        getNotificationQueryManager().deleteNotificationPublisher(notificationPublisher);
-    }
-
-    public void removeProjectFromNotificationRules(final Project project) {
-        getNotificationQueryManager().removeProjectFromNotificationRules(project);
-    }
-
-    public void removeTeamFromNotificationRules(final Team team) {
-        getNotificationQueryManager().removeTeamFromNotificationRules(team);
     }
 
     /**
@@ -1678,17 +1645,7 @@ public class QueryManager extends AlpineQueryManager {
             return "";
         }
 
-        final String clauseTemplate;
-        if (DbUtil.isMssql()) {
-            clauseTemplate = "OFFSET %d ROWS FETCH NEXT %d ROWS ONLY";
-        } else if (DbUtil.isMysql()) {
-            // NB: Order of limit and offset is different for MySQL...
-            return "LIMIT %s OFFSET %s".formatted(pagination.getLimit(), pagination.getOffset());
-        } else {
-            clauseTemplate = "OFFSET %d FETCH NEXT %d ROWS ONLY";
-        }
-
-        return clauseTemplate.formatted(pagination.getOffset(), pagination.getLimit());
+        return "OFFSET %d FETCH NEXT %d ROWS ONLY".formatted(pagination.getOffset(), pagination.getLimit());
     }
 
     /**

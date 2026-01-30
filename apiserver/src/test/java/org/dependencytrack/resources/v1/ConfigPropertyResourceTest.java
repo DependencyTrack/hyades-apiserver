@@ -27,13 +27,13 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.JerseyTestRule;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Arrays;
 
@@ -44,12 +44,12 @@ import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCOR
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW;
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM;
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ConfigPropertyResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(ConfigPropertyResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class));
@@ -64,7 +64,7 @@ public class ConfigPropertyResourceTest extends ResourceTest {
                 .get(Response.class);
         assertEquals(200, response.getStatus(), 0);
         JsonArray json = parseJsonArray(response);
-        Assert.assertNotNull(json);
+        Assertions.assertNotNull(json);
         assertEquals(3, json.size());
         assertEquals("my.group", json.getJsonObject(0).getString("groupName"));
         assertEquals("my.integer", json.getJsonObject(0).getString("propertyName"));
@@ -93,7 +93,7 @@ public class ConfigPropertyResourceTest extends ResourceTest {
                 .post(Entity.entity(request, MediaType.APPLICATION_JSON));
         assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
+        Assertions.assertNotNull(json);
         assertEquals("my.group", json.getString("groupName"));
         assertEquals("my.string", json.getString("propertyName"));
         assertEquals("DEF", json.getString("propertyValue"));
@@ -111,7 +111,7 @@ public class ConfigPropertyResourceTest extends ResourceTest {
                 .post(Entity.entity(request, MediaType.APPLICATION_JSON));
         assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
+        Assertions.assertNotNull(json);
         assertEquals("my.group", json.getString("groupName"));
         assertEquals("my.boolean", json.getString("propertyName"));
         assertEquals("true", json.getString("propertyValue"));
@@ -129,38 +129,12 @@ public class ConfigPropertyResourceTest extends ResourceTest {
                 .post(Entity.entity(request, MediaType.APPLICATION_JSON));
         assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
+        Assertions.assertNotNull(json);
         assertEquals("my.group", json.getString("groupName"));
         assertEquals("my.number", json.getString("propertyName"));
         assertEquals("5.50", json.getString("propertyValue"));
         assertEquals("NUMBER", json.getString("propertyType"));
         assertEquals("A number", json.getString("description"));
-    }
-
-    @Test
-    public void updateBadTaskSchedulerCadenceConfigPropertyTest() {
-        ConfigProperty property = qm.createConfigProperty(ConfigPropertyConstants.TASK_SCHEDULER_LDAP_SYNC_CADENCE.getGroupName(), "my.cadence", "24", IConfigProperty.PropertyType.INTEGER, "A cadence");
-        ConfigProperty request = qm.detach(ConfigProperty.class, property.getId());
-        request.setPropertyValue("-2");
-        Response response = jersey.target(V1_CONFIG_PROPERTY).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity(request, MediaType.APPLICATION_JSON));
-        assertEquals(400, response.getStatus(), 0);
-        String body = getPlainTextBody(response);
-        assertEquals("A Task scheduler cadence ("+request.getPropertyName()+") cannot be inferior to one hour.A value of -2 was provided.", body);
-    }
-
-    @Test
-    public void updateBadIndexConsistencyThresholdConfigPropertyTest() {
-        ConfigProperty property = qm.createConfigProperty(ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_DELTA_THRESHOLD.getGroupName(), ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_DELTA_THRESHOLD.getPropertyName(), "24", IConfigProperty.PropertyType.INTEGER, ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_DELTA_THRESHOLD.getDescription());
-        ConfigProperty request = qm.detach(ConfigProperty.class, property.getId());
-        request.setPropertyValue("-1");
-        Response response = jersey.target(V1_CONFIG_PROPERTY).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity(request, MediaType.APPLICATION_JSON));
-        assertEquals(400, response.getStatus(), 0);
-        String body = getPlainTextBody(response);
-        assertEquals("Lucene index delta threshold ("+request.getPropertyName()+") cannot be inferior to 1 or superior to 100.A value of -1 was provided.", body);
     }
 
     @Test
@@ -173,7 +147,7 @@ public class ConfigPropertyResourceTest extends ResourceTest {
                 .post(Entity.entity(request, MediaType.APPLICATION_JSON));
         assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
+        Assertions.assertNotNull(json);
         assertEquals("my.group", json.getString("groupName"));
         assertEquals("my.url", json.getString("propertyName"));
         assertEquals("http://localhost/path", json.getString("propertyValue"));
@@ -191,7 +165,7 @@ public class ConfigPropertyResourceTest extends ResourceTest {
                 .post(Entity.entity(request, MediaType.APPLICATION_JSON));
         assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
+        Assertions.assertNotNull(json);
         assertEquals("my.group", json.getString("groupName"));
         assertEquals("my.uuid", json.getString("propertyName"));
         assertEquals("fe03c401-b5a1-4b86-bc3b-1b7a68f0f78d", json.getString("propertyValue"));
@@ -209,7 +183,7 @@ public class ConfigPropertyResourceTest extends ResourceTest {
                 .post(Entity.entity(request, MediaType.APPLICATION_JSON));
         assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
+        Assertions.assertNotNull(json);
         assertEquals("my.group", json.getString("groupName"));
         assertEquals("my.encryptedString", json.getString("propertyName"));
         assertEquals("HiddenDecryptedPropertyPlaceholder", json.getString("propertyValue"));
@@ -343,7 +317,7 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
         assertThat(response.getStatus()).isEqualTo(200);
         JsonObject json = parseJsonObject(response);
-        Assert.assertNotNull(json);
+        Assertions.assertNotNull(json);
         assertEquals("risk-score", json.getString("groupName"));
         assertEquals("weight.critical", json.getString("propertyName"));
         assertEquals("8", json.getString("propertyValue"));
@@ -356,27 +330,22 @@ public class ConfigPropertyResourceTest extends ResourceTest {
         ConfigProperty prop1 = qm.createConfigProperty("my.group", "my.string1", "ABC", IConfigProperty.PropertyType.STRING, "A string");
         ConfigProperty prop2 = qm.createConfigProperty("my.group", "my.string2", "DEF", IConfigProperty.PropertyType.STRING, "A string");
         ConfigProperty prop3 = qm.createConfigProperty("my.group", "my.string3", "GHI", IConfigProperty.PropertyType.STRING, "A string");
-        ConfigProperty prop4 = qm.createConfigProperty(ConfigPropertyConstants.TASK_SCHEDULER_LDAP_SYNC_CADENCE.getGroupName(), "my.cadence", "1", IConfigProperty.PropertyType.INTEGER, "A cadence");
         prop1 = qm.detach(ConfigProperty.class, prop1.getId());
         prop2 = qm.detach(ConfigProperty.class, prop2.getId());
         prop3 = qm.detach(ConfigProperty.class, prop3.getId());
-        prop4 = qm.detach(ConfigProperty.class, prop4.getId());
         prop3.setPropertyValue("XYZ");
-        prop4.setPropertyValue("-2");
         Response response = jersey.target(V1_CONFIG_PROPERTY+"/aggregate").request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.entity(Arrays.asList(prop1, prop2, prop3, prop4), MediaType.APPLICATION_JSON));
+                .post(Entity.entity(Arrays.asList(prop1, prop2, prop3), MediaType.APPLICATION_JSON));
         assertEquals(200, response.getStatus(), 0);
         JsonArray json = parseJsonArray(response);
         JsonObject modifiedProp = json.getJsonObject(2);
-        Assert.assertNotNull(modifiedProp);
+        Assertions.assertNotNull(modifiedProp);
         assertEquals("my.group", modifiedProp.getString("groupName"));
         assertEquals("my.string3", modifiedProp.getString("propertyName"));
         assertEquals("XYZ", modifiedProp.getString("propertyValue"));
         assertEquals("STRING", modifiedProp.getString("propertyType"));
         assertEquals("A string", modifiedProp.getString("description"));
-        String body = json.getString(3);
-        assertEquals("A Task scheduler cadence ("+prop4.getPropertyName()+") cannot be inferior to one hour.A value of -2 was provided.", body);
     }
 
     @Test

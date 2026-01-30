@@ -21,6 +21,10 @@ package org.dependencytrack.persistence;
 import alpine.common.config.BuildInfoConfig;
 import alpine.common.config.BuildInfoConfig.ApplicationBuildInfo;
 import alpine.server.auth.PasswordService;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
 import org.apache.commons.lang3.SerializationUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.init.InitTask;
@@ -28,7 +32,6 @@ import org.dependencytrack.init.InitTaskContext;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.DefaultRepository;
 import org.dependencytrack.model.License;
-import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
@@ -38,17 +41,8 @@ import org.jdbi.v3.core.statement.Update;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -57,8 +51,6 @@ import java.util.stream.Stream;
 
 import static alpine.common.config.ConfigUtil.getConfigMapping;
 import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_DEFAULT_OBJECTS_VERSION;
-import static org.dependencytrack.model.ConfigPropertyConstants.NOTIFICATION_TEMPLATE_BASE_DIR;
-import static org.dependencytrack.model.ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED;
 
 /**
  * @since 5.6.0
@@ -150,7 +142,6 @@ public final class DatabaseSeedingInitTask implements InitTask {
             seedDefaultConfigProperties(handle);
             seedDefaultPermissions(handle);
             seedDefaultLicenses(handle);
-            seedDefaultNotificationPublishers(handle);
             seedDefaultRepositories(handle);
 
             final boolean isFirstExecution = defaultObjectsVersion == null;
@@ -415,74 +406,6 @@ public final class DatabaseSeedingInitTask implements InitTask {
                 .bindArray("groupRiskWeights", Integer.class, groupRiskWeights)
                 .bindArray("licenseIds", String.class, licenseIds)
                 .execute();
-    }
-
-    public static void seedDefaultNotificationPublishers(final Handle jdbiHandle) {
-        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
-                INSERT INTO "NOTIFICATIONPUBLISHER" (
-                  "NAME", "PUBLISHER_CLASS", "DEFAULT_PUBLISHER", "DESCRIPTION"
-                , "TEMPLATE", "TEMPLATE_MIME_TYPE", "UUID")
-                VALUES (
-                  :publisherName, :publisherClass, TRUE, :publisherDescription
-                , :templateContent, :templateMimeType, GEN_RANDOM_UUID())
-                ON CONFLICT ("NAME") DO UPDATE
-                SET "PUBLISHER_CLASS" = EXCLUDED."PUBLISHER_CLASS"
-                  , "DESCRIPTION" = EXCLUDED."DESCRIPTION"
-                  , "TEMPLATE" = EXCLUDED."TEMPLATE"
-                  , "TEMPLATE_MIME_TYPE" =  EXCLUDED."TEMPLATE_MIME_TYPE"
-                -- Only update when at least one relevant field has changed.
-                WHERE "NOTIFICATIONPUBLISHER"."PUBLISHER_CLASS" IS DISTINCT FROM EXCLUDED."PUBLISHER_CLASS"
-                   OR "NOTIFICATIONPUBLISHER"."DESCRIPTION" IS DISTINCT FROM EXCLUDED."DESCRIPTION"
-                   OR "NOTIFICATIONPUBLISHER"."TEMPLATE" IS DISTINCT FROM EXCLUDED."TEMPLATE"
-                   OR "NOTIFICATIONPUBLISHER"."TEMPLATE_MIME_TYPE" IS DISTINCT FROM EXCLUDED."TEMPLATE_MIME_TYPE"
-                """);
-
-        final var configPropertyDao = jdbiHandle.attach(ConfigPropertyDao.class);
-        final var templateOverrideEnabled = configPropertyDao.getOptionalValue(
-                NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED, Boolean.class).orElse(false);
-        final var templateOverrideBaseDir = configPropertyDao.getOptionalValue(
-                NOTIFICATION_TEMPLATE_BASE_DIR).orElse(null);
-        if (templateOverrideEnabled && templateOverrideBaseDir == null) {
-            throw new IllegalStateException("%s is enabled but %s is not configured".formatted(
-                    NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getPropertyName(),
-                    NOTIFICATION_TEMPLATE_BASE_DIR.getPropertyName()));
-        }
-
-        for (final DefaultNotificationPublishers publisher : DefaultNotificationPublishers.values()) {
-            final URL templateFileUrl = DatabaseSeedingInitTask.class.getResource(publisher.getPublisherTemplateFile());
-            if (templateFileUrl == null) {
-                throw new IllegalStateException("Template file %s of default publisher %s does not exist".formatted(
-                        publisher.getPublisherTemplateFile(), publisher.getPublisherName()));
-            }
-
-            Path templateFilePath;
-            try {
-                templateFilePath = Paths.get(templateFileUrl.toURI());
-            } catch (URISyntaxException e) {
-                throw new IllegalStateException("Failed to construct path for template file: " + templateFileUrl, e);
-            }
-
-            if (templateOverrideEnabled) {
-                final Path customTemplateFilePath = Paths.get(templateOverrideBaseDir, publisher.getPublisherTemplateFile());
-                if (Files.exists(customTemplateFilePath)) {
-                    templateFilePath = customTemplateFilePath;
-                }
-            }
-
-            final String templateContent;
-            try {
-                templateContent = Files.readString(templateFilePath);
-            } catch (IOException e) {
-                throw new IllegalStateException("Failed to read template file: " + templateFilePath, e);
-            }
-
-            preparedBatch.bindBean(publisher);
-            preparedBatch.bind("templateContent", templateContent);
-            preparedBatch.add();
-        }
-
-        final int publishersCreatedOrUpdated = Arrays.stream(preparedBatch.execute()).sum();
-        LOGGER.debug("Created or updated {} publishers", publishersCreatedOrUpdated);
     }
 
     public static void seedDefaultRepositories(final Handle jdbiHandle) {

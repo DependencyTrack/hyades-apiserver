@@ -20,9 +20,9 @@ package org.dependencytrack.support.liquibase;
 
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.sql.Connection;
@@ -37,8 +37,8 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 class MigrationExecutorTest {
 
     @Container
-    private final PostgreSQLContainer<?> postgresContainer =
-            new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
+    private final PostgreSQLContainer postgresContainer =
+            new PostgreSQLContainer(DockerImageName.parse("postgres:14-alpine"))
                     .withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off")
                     .withTmpFs(Map.of("/var/lib/postgresql/data", "rw"));
 

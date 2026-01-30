@@ -82,13 +82,6 @@ abstract class AbstractConfigPropertyResource extends AbstractApiResource {
         } else if (property.getPropertyType() == IConfigProperty.PropertyType.INTEGER) {
             try {
                 int propertyValue = Integer.parseInt(json.getPropertyValue());
-                if (ConfigPropertyConstants.TASK_SCHEDULER_LDAP_SYNC_CADENCE.getGroupName().equals(json.getGroupName()) && propertyValue <= 0) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("A Task scheduler cadence (" + json.getPropertyName() + ") cannot be inferior to one hour.A value of " + propertyValue + " was provided.").build();
-                }
-                if (ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_DELTA_THRESHOLD.getPropertyName().equals(json.getPropertyName()) && (propertyValue < 1 || propertyValue > 100)) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("Lucene index delta threshold (" + json.getPropertyName() + ") cannot be inferior to 1 or superior to 100.A value of " + propertyValue + " was provided.").build();
-                }
-
                 if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL.getPropertyName().equals(json.getPropertyName()) ||
                         ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH.getPropertyName().equals(json.getPropertyName()) ||
                         ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM.getPropertyName().equals(json.getPropertyName()) ||

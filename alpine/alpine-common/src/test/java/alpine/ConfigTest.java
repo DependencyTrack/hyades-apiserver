@@ -70,7 +70,7 @@ public class ConfigTest {
         final URL propertiesUrl = ConfigTest.class.getResource("/Config_testGetPassThroughProperties.properties");
         assertThat(propertiesUrl).isNotNull();
 
-        System.setProperty("alpine.config.locations", propertiesUrl.getPath());
+        System.setProperty("smallrye.config.locations", propertiesUrl.getPath());
 
         releaseCurrentConfig();
 
@@ -89,7 +89,7 @@ public class ConfigTest {
 
     @Test
     @RestoreEnvironmentVariables
-    @SetEnvironmentVariable(key = "ALPINE_CONFIG_PROFILE", value = "dev")
+    @SetEnvironmentVariable(key = "SMALLRYE_CONFIG_PROFILE", value = "dev")
     @SetEnvironmentVariable(key = "ALPINE_DATABASE_URL", value = "defaultUrl")
     @SetEnvironmentVariable(key = "_DEV_ALPINE_DATABASE_URL", value = "devUrl")
     @SetEnvironmentVariable(key = "ALPINE_DATABASE_USERNAME", value = "defaultUser")
@@ -108,7 +108,7 @@ public class ConfigTest {
     void testDefaultProfile() {
         releaseCurrentConfig();
 
-        assertThat(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_URL)).isEqualTo("prodUrl");
+        assertThat(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_URL)).isEqualTo("defaultUrl");
         assertThat(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_USERNAME)).isEqualTo("defaultUser");
     }
 
@@ -124,7 +124,7 @@ public class ConfigTest {
         final Path tmpPropertiesFile = Files.createTempFile(null, ".properties");
         Files.copy(propertiesUrl.openStream(), tmpPropertiesFile, StandardCopyOption.REPLACE_EXISTING);
 
-        System.setProperty("alpine.config.locations", tmpPropertiesFile.toUri().toString());
+        System.setProperty("smallrye.config.locations", tmpPropertiesFile.toUri().toString());
 
         releaseCurrentConfig();
 

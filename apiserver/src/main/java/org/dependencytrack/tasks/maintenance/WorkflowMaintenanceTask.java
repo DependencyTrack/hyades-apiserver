@@ -24,16 +24,15 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.common.MdcScope;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
-import org.dependencytrack.notification.NotificationEmitter;
+import org.dependencytrack.notification.JdbiNotificationEmitter;
+import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
+import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
-import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
-import org.dependencytrack.proto.notification.v1.Notification;
 import org.jdbi.v3.core.Handle;
 
 import java.time.Duration;
@@ -45,7 +44,7 @@ import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
 import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_TOKEN;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_RETENTION_HOURS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES;
-import static org.dependencytrack.notification.NotificationFactory.createBomProcessingFailedNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createBomProcessingFailedNotification;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
@@ -56,7 +55,6 @@ import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 public class WorkflowMaintenanceTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowMaintenanceTask.class);
-    private final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
 
     @Override
     public void inform(final Event event) {
@@ -146,7 +144,7 @@ public class WorkflowMaintenanceTask implements Subscriber {
                                         subject.getToken(),
                                         subject.getCause()))
                                 .toList();
-                NotificationEmitter.using(jdbiHandle).emitAll(notifications);
+                new JdbiNotificationEmitter(jdbiHandle).emitAll(notifications);
             }
 
             failedStepsResult.numStepsCancelled = Arrays.stream(workflowDao.cancelAllChildrenByParentStepIdAnyOf(failedStepIds)).sum();

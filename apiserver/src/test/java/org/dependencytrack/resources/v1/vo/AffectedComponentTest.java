@@ -23,10 +23,8 @@ import com.github.packageurl.PackageURL;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import org.junit.runners.Suite.SuiteClasses;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import java.sql.Date;
 import java.time.Instant;
@@ -34,14 +32,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(Suite.class)
-@SuiteClasses(value = {
-        AffectedComponentTest.FromVulnerableSoftwareTest.class,
-        AffectedComponentTest.ToVulnerableSoftwareTest.class
-})
 public class AffectedComponentTest {
 
-    public static class FromVulnerableSoftwareTest {
+    @Nested
+    public class FromVulnerableSoftwareTest {
 
         @Test
         public void shouldMapCpe22ToCpeIdentity() {
@@ -221,7 +215,8 @@ public class AffectedComponentTest {
         }
     }
 
-    public static class ToVulnerableSoftwareTest {
+    @Nested
+    public class ToVulnerableSoftwareTest {
 
         @Test
         public void shouldMapCpe22Fields() {

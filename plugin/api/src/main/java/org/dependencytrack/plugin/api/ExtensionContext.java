@@ -19,11 +19,13 @@
 package org.dependencytrack.plugin.api;
 
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
-import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
+import org.jspecify.annotations.Nullable;
 
 import java.net.ProxySelector;
-import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
@@ -35,15 +37,15 @@ public final class ExtensionContext {
     private final ProxySelector proxySelector;
 
     public ExtensionContext(
-            final ConfigRegistry configRegistry,
-            final ExtensionKVStore kvStore,
-            final ProxySelector proxySelector) {
-        this.configRegistry = Objects.requireNonNull(configRegistry, "configRegistry must not be null");
-        this.keyValueStore = Objects.requireNonNull(kvStore, "kvStore must not be null");
+            ConfigRegistry configRegistry,
+            ExtensionKVStore kvStore,
+            @Nullable ProxySelector proxySelector) {
+        this.configRegistry = requireNonNull(configRegistry, "configRegistry must not be null");
+        this.keyValueStore = requireNonNull(kvStore, "kvStore must not be null");
         this.proxySelector = proxySelector != null ? proxySelector : ProxySelector.getDefault();
     }
 
-    public ExtensionContext(final ConfigRegistry configRegistry) {
+    public ExtensionContext(ConfigRegistry configRegistry) {
         this(configRegistry, new InMemoryExtensionKVStore(), null);
     }
 

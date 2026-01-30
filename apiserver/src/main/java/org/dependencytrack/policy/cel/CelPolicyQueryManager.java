@@ -32,8 +32,6 @@ import org.dependencytrack.policy.cel.mapping.ComponentsVulnerabilitiesProjectio
 import org.dependencytrack.policy.cel.mapping.LicenseGroupProjection;
 import org.dependencytrack.policy.cel.mapping.LicenseProjection;
 import org.dependencytrack.policy.cel.mapping.PolicyViolationProjection;
-import org.dependencytrack.policy.cel.mapping.ProjectProjection;
-import org.dependencytrack.policy.cel.mapping.ProjectPropertyProjection;
 import org.dependencytrack.policy.cel.mapping.VulnerabilityProjection;
 
 import javax.jdo.PersistenceManager;
@@ -81,77 +79,6 @@ class CelPolicyQueryManager implements AutoCloseable {
             } finally {
                 query.closeAll();
             }
-        }
-    }
-
-    ProjectProjection fetchProject(final long projectId,
-                                   final Collection<String> projectProtoFieldNames,
-                                   final Collection<String> projectPropertyProtoFieldNames) {
-        // Determine the columns to select from the PROJECT (P) table.
-        String sqlProjectSelectColumns = Stream.concat(
-                        Stream.of(ProjectProjection.ID_FIELD_MAPPING),
-                        getFieldMappings(ProjectProjection.class).stream()
-                                .filter(mapping -> projectProtoFieldNames.contains(mapping.protoFieldName()))
-                )
-                .map(mapping -> "\"P\".\"%s\" AS \"%s\"".formatted(mapping.sqlColumnName(), mapping.javaFieldName()))
-                .collect(Collectors.joining(", "));
-
-        // Determine the columns to select from the PROJECT_PROPERTY (PP) table.
-        // The resulting expression will be used to populate JSON objects, using
-        // the JSONB_BUILD_OBJECT(name1, value1, name2, value2) notation.
-        String sqlPropertySelectColumns = "";
-        if (projectPropertyProtoFieldNames != null) {
-            sqlPropertySelectColumns = getFieldMappings(ProjectPropertyProjection.class).stream()
-                    .filter(mapping -> projectPropertyProtoFieldNames.contains(mapping.protoFieldName()))
-                    .map(mapping -> "'%s', \"PP\".\"%s\"".formatted(mapping.javaFieldName(), mapping.sqlColumnName()))
-                    .collect(Collectors.joining(", "));
-        }
-
-        // Properties will be selected into propertiesJson, tags into tagsJson.
-        // Both these fields are not part of the Project proto, thus their selection
-        // must be added manually.
-        if (!sqlPropertySelectColumns.isBlank()) {
-            sqlProjectSelectColumns += ", \"propertiesJson\"";
-        }
-        if (projectProtoFieldNames.contains("tags")) {
-            sqlProjectSelectColumns += ", \"tagsJson\"";
-        }
-
-        final Query<?> query = pm.newQuery(Query.SQL, """
-                SELECT
-                  %s
-                FROM
-                  "PROJECT" AS "P"
-                LEFT JOIN LATERAL (
-                  SELECT
-                    CAST(JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT(%s)) AS TEXT) AS "propertiesJson"
-                  FROM
-                    "PROJECT_PROPERTY" AS "PP"
-                  WHERE
-                    "PP"."PROJECT_ID" = "P"."ID"
-                ) AS "properties" ON :shouldFetchProperties
-                LEFT JOIN LATERAL (
-                  SELECT
-                    CAST(JSONB_AGG(DISTINCT "T"."NAME") AS TEXT) AS "tagsJson"
-                  FROM
-                    "TAG" AS "T"
-                  INNER JOIN
-                    "PROJECTS_TAGS" AS "PT" ON "PT"."TAG_ID" = "T"."ID"
-                  WHERE
-                    "PT"."PROJECT_ID" = "P"."ID"
-                ) AS "tags" ON :shouldFetchTags
-                WHERE
-                  "ID" = :projectId
-                """.formatted(sqlProjectSelectColumns, sqlPropertySelectColumns));
-        query.setNamedParameters(Map.of(
-                "shouldFetchProperties", !sqlPropertySelectColumns.isBlank(),
-                "shouldFetchTags", projectProtoFieldNames.contains("tags"),
-                "projectId", projectId
-        ));
-        try {
-            return query.executeResultUnique(ProjectProjection.class);
-        } finally {
-            query.closeAll();
         }
     }
 

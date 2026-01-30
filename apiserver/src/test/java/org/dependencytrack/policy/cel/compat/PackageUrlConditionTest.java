@@ -19,8 +19,6 @@
 package org.dependencytrack.policy.cel.compat;
 
 import com.github.packageurl.PackageURL;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
@@ -28,18 +26,17 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@RunWith(JUnitParamsRunner.class)
 public class PackageUrlConditionTest extends PersistenceCapableTest {
 
-    private Object[] parameters() {
+    private static Object[] parameters() {
         return new Object[]{
                 //Matches with exact match
                 new Object[]{PolicyCondition.Operator.MATCHES, "pkg:generic/acme/example-component@1.0", "pkg:generic/acme/example-component@1.0", true},
@@ -66,8 +63,8 @@ public class PackageUrlConditionTest extends PersistenceCapableTest {
         };
     }
 
-    @Test
-    @Parameters(method = "parameters")
+    @ParameterizedTest
+    @MethodSource("parameters")
     public void testCondition(final PolicyCondition.Operator operator, final String conditionPurl, final String componentPurl, final boolean expectViolation) throws Exception{
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
         PolicyCondition condition = qm.createPolicyCondition(policy, PolicyCondition.Subject.PACKAGE_URL, operator, conditionPurl);

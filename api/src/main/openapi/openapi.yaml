@@ -17,7 +17,61 @@
 openapi: 3.0.3
 info:
   title: OWASP Dependency-Track
-  description: REST API of OWASP Dependency-Track
+  description: |-
+    # REST API of OWASP Dependency-Track
+    
+    ## Pagination
+    
+    This API implements token-based pagination.
+    Collection responses typically have the following structure:
+    
+    ```json
+    {
+      "data": [
+        ...
+      ],
+      "_pagination": {
+        "links": {
+          "self": "https://example.com/foo?limit=10",
+          "next": "https://example.com/foo?page_token=abcdefg&limit=10"
+        },
+        "total": {
+          "count": 100,
+          "type": "EXACT"
+        }
+      }
+    }
+    ```
+    
+    `_pagination.links` enables navigation across pages. While the `self` link
+    is always returned, `next` will not be present when no more items exist.
+    
+    To navigate backwards, clients should keep track of the previous `next`
+    link(s) as they paginate through collections. The API does *not* provide
+    `previous` links!
+    
+    Collections that support sorting will only consider the `sort_by`
+    and `sort_direction` query parameters for the request of the first
+    page. For subsequent pages, sorting preferences are bound to the
+    page token. `next` links will not include `sort_by` or `sort_direction`.
+    
+    `page_token`s are opaque strings. Clients should not try to interpret
+    or generate them. Their format may also change without notice.
+    
+    The `total` object discloses how many items exist in the collection
+    *across all pages*. Because counting is expensive, some collections 
+    that hold *a lot* of items may return partial or estimated counts
+    (types `AT_LEAST` or `ESTIMATE` respectively). Which type to expect
+    is usually documented in the operation's description.
+    
+    ## Sorting
+    
+    Items in a collection can be sorted using the `sort_by` and `sort_direction`
+    query parameters. Which fields are sortable is documented in the respective
+    operation's description.
+    
+    Note that if no sortable fields are documented for an operation,
+    sorting is not supported *at all*.
   version: 2.0.0
   contact:
     name: The Dependency-Track Authors
@@ -32,6 +86,8 @@ security:
 servers:
 - url: /api/v2
 tags:
+- name: Advisories
+  description: Endpoints related to advisories
 - name: Components
   description: Endpoints related to components
 - name: Extensions
@@ -40,36 +96,68 @@ tags:
   description: Endpoints related to metrics
 - name: Projects
   description: Endpoints related to projects
+- name: Secrets
+  description: Endpoints related to secrets
 - name: Teams
   description: Endpoints related to teams
 - name: Workflows
   description: Endpoints related to workflows
 
 paths:
+  /advisories:
+    $ref: "./paths/advisories.yaml"
+  /advisories/{id}:
+    $ref: "./paths/advisories__id_.yaml"
+  /advisories/{id}/mark-seen:
+    $ref: "./paths/advisories__id__mark-seen.yaml"
   /components:
     $ref: "./paths/components.yaml"
+  /csaf-aggregators:
+    $ref: "./paths/csaf/aggregators.yaml"
+  /csaf-aggregators/{id}:
+    $ref: "./paths/csaf/aggregators__id_.yaml"
+  /csaf-aggregators/{id}/provider-discovery:
+    $ref: "./paths/csaf/aggregators__id__provider-discovery.yaml"
+  /csaf-providers:
+    $ref: "./paths/csaf/providers.yaml"
+  /csaf-providers/{id}:
+    $ref: "./paths/csaf/providers__id_.yaml"
   /extension-points:
     $ref: "./paths/extension-points.yaml"
   /extension-points/{extensionPointName}/extensions:
     $ref: "./paths/extension-points__name__extensions.yaml"
-  /extension-points/{extensionPointName}/extensions/{extensionName}/configs:
-    $ref: "./paths/extension-points__name__extensions__name__configs.yaml"
-  /projects/{uuid}/clone:
-    $ref: "./paths/projects__uuid__clone.yaml"
-  /projects/{uuid}/components:
-    $ref: "./paths/projects_uuid_components.yaml"
+  /extension-points/{extensionPointName}/extensions/{extensionName}/config:
+    $ref: "./paths/extension-points__name__extensions__name__config.yaml"
+  /extension-points/{extensionPointName}/extensions/{extensionName}/config-schema:
+    $ref: "./paths/extension-points__name__extensions__name__config-schema.yaml"
+  /extension-points/{extensionPointName}/extensions/{extensionName}/test:
+    $ref: "./paths/extension-points__name__extensions__name__test.yaml"
   /metrics/portfolio/current:
     $ref: "./paths/metrics_portfolio_current.yaml"
   /metrics/vulnerabilities:
     $ref: "./paths/metrics_vulnerabilities.yaml"
+  /projects/{uuid}/advisories:
+    $ref: "./paths/projects__uuid__advisories.yaml"
+  /projects/{projectUuid}/advisories/{advisoryId}/findings:
+    $ref: "./paths/projects__projectUuid__advisories__advisoryId__findings.yaml"
+  /projects/{uuid}/clone:
+    $ref: "./paths/projects__uuid__clone.yaml"
+  /projects/{uuid}/components:
+    $ref: "./paths/projects_uuid_components.yaml"
+  /secrets:
+    $ref: "./paths/secrets.yaml"
+  /secrets/{name}:
+    $ref: "./paths/secrets__name_.yaml"
   /teams:
     $ref: "./paths/teams.yaml"
   /teams/{name}:
     $ref: "./paths/teams__name_.yaml"
   /team-memberships:
     $ref: "./paths/team-memberships.yaml"
-  /workflows/{token}:
-    $ref: "./paths/workflows__token__.yaml"
+  /workflow-instances/{id}:
+    $ref: "./paths/workflow-instances__id_.yaml"
+  /workflow-runs:
+    $ref: "./paths/workflow-runs.yaml"
 
 components:
   securitySchemes:

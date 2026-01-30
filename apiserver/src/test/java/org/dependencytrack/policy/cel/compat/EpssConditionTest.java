@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.policy.cel.compat;
 
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
@@ -30,8 +28,8 @@ import org.dependencytrack.model.PolicyCondition.Operator;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigDecimal;
 
@@ -44,10 +42,9 @@ import static org.dependencytrack.model.PolicyCondition.Operator.NUMERIC_LESSER_
 import static org.dependencytrack.model.PolicyCondition.Operator.NUMERIC_LESS_THAN;
 import static org.dependencytrack.model.PolicyCondition.Operator.NUMERIC_NOT_EQUAL;
 
-@RunWith(JUnitParamsRunner.class)
 public class EpssConditionTest extends PersistenceCapableTest {
 
-    private Object[] parameters() {
+    private static Object[] parameters() {
         return new Object[]{
                 // NUMERIC_GREATER_THAN with match.
                 new Object[]{NUMERIC_GREATER_THAN, "0.666", 0.667, true},
@@ -86,8 +83,8 @@ public class EpssConditionTest extends PersistenceCapableTest {
         };
     }
 
-    @Test
-    @Parameters(method = "parameters")
+    @ParameterizedTest
+    @MethodSource("parameters")
     public void evaluateTest(
             final Operator operator,
             final String conditionValue,

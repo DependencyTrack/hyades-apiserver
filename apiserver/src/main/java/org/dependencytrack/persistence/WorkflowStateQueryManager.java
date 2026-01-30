@@ -20,13 +20,13 @@ package org.dependencytrack.persistence;
 
 import alpine.common.logging.Logger;
 import alpine.resources.AlpineRequest;
-import alpine.server.util.DbUtil;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import javax.jdo.datastore.JDOConnection;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -140,22 +140,16 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             throw new IllegalArgumentException("Parent workflow state cannot be null and id of parent cannot be missing to get workflow states hierarchically");
         }
 
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet rs = null;
         List<WorkflowState> results = new ArrayList<>();
-        try {
-            connection = (Connection) pm.getDataStoreConnection();
-            if (DbUtil.isMssql() || DbUtil.isOracle()) { // Microsoft SQL Server and Oracle DB already imply the "RECURSIVE" keyword in the "WITH" clause, therefore it is not needed in the query
-                preparedStatement = connection.prepareStatement("WITH " + CTE_WORKFLOW_STATE_QUERY);
-            } else { // Other Databases need the "RECURSIVE" keyword in the "WITH" clause to correctly execute the query
-                preparedStatement = connection.prepareStatement("WITH RECURSIVE " + CTE_WORKFLOW_STATE_QUERY);
-            }
-            preparedStatement.setLong(1, parentWorkflowState.getId());
-            preparedStatement.setObject(2, parentWorkflowState.getToken());
 
-            preparedStatement.execute();
-            rs = preparedStatement.getResultSet();
+        final JDOConnection jdoConnection = pm.getDataStoreConnection();
+        final var nativeConnection = (Connection) jdoConnection.getNativeConnection();
+        try (final PreparedStatement ps = nativeConnection.prepareStatement("WITH RECURSIVE " + CTE_WORKFLOW_STATE_QUERY)) {
+            ps.setLong(1, parentWorkflowState.getId());
+            ps.setObject(2, parentWorkflowState.getToken());
+            ps.execute();
+
+            final ResultSet rs = ps.getResultSet();
             while (rs.next()) {
                 WorkflowState workflowState = new WorkflowState();
                 workflowState.setId(rs.getLong("ID"));
@@ -175,9 +169,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             LOGGER.error("error in executing workflow state cte query", ex);
             throw new RuntimeException(ex);
         } finally {
-            DbUtil.close(rs);
-            DbUtil.close(preparedStatement);
-            DbUtil.close(connection);
+            jdoConnection.close();
         }
         return results;
     }
@@ -187,24 +179,21 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         if(parentWorkflowState == null || parentWorkflowState.getId() <= 0 ) {
             throw new IllegalArgumentException("Parent workflow state cannot be null and id of parent cannot be missing to get workflow states hierarchically");
         }
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        try {
-            connection = (Connection) pm.getDataStoreConnection();
 
-            preparedStatement = connection.prepareStatement(UPDATE_WORKFLOW_STATES_QUERY);
-            preparedStatement.setString(1, transientStatus.name());
-            preparedStatement.setTimestamp(2, new java.sql.Timestamp(updatedAt.getTime()));
-            preparedStatement.setLong(3, parentWorkflowState.getId());
-            preparedStatement.setObject(4, parentWorkflowState.getToken());
+        final JDOConnection jdoConnection = pm.getDataStoreConnection();
+        final var nativeConnection = (Connection) jdoConnection.getNativeConnection();
+        try (final PreparedStatement ps = nativeConnection.prepareStatement(UPDATE_WORKFLOW_STATES_QUERY)) {
+            ps.setString(1, transientStatus.name());
+            ps.setTimestamp(2, new java.sql.Timestamp(updatedAt.getTime()));
+            ps.setLong(3, parentWorkflowState.getId());
+            ps.setObject(4, parentWorkflowState.getToken());
 
-            return preparedStatement.executeUpdate();
+            return ps.executeUpdate();
         } catch (Exception ex) {
             LOGGER.error("error in executing workflow state cte query to update states", ex);
             throw new RuntimeException(ex);
         } finally {
-            DbUtil.close(preparedStatement);
-            DbUtil.close(connection);
+            jdoConnection.close();
         }
     }
 

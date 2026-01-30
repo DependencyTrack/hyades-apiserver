@@ -21,7 +21,10 @@ package org.dependencytrack.resources.v1;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
-import org.dependencytrack.JerseyTestRule;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Policy;
@@ -29,12 +32,9 @@ import org.dependencytrack.model.Policy.Operator;
 import org.dependencytrack.model.Policy.ViolationState;
 import org.dependencytrack.model.PolicyCondition;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import javax.jdo.JDOObjectNotFoundException;
 import java.util.UUID;
 
@@ -45,8 +45,8 @@ import static org.hamcrest.CoreMatchers.equalTo;
 
 public class PolicyConditionResourceTest extends ResourceTest {
 
-    @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
+    @RegisterExtension
+    static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(PolicyConditionResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)

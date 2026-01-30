@@ -62,33 +62,44 @@ ENV TZ=Etc/UTC \
     DEFAULT_TEMPLATES_OVERRIDE_ENABLED=false \
     DEFAULT_TEMPLATES_OVERRIDE_BASE_DIRECTORY=${DATA_DIR}
 
-# Create the directories where the WAR will be deployed to (${APP_DIR}) and Dependency-Track will store its data (${DATA_DIR})
+# Create the directories where the JAR will be deployed to (${APP_DIR}) and Dependency-Track will store its data (${DATA_DIR})
 # Create a user and assign home directory to a ${DATA_DIR}
 # Ensure UID 1000 & GID 1000 own all the needed directories
 RUN mkdir -p ${APP_DIR} ${DATA_DIR} \
-    && addgroup -S -g ${GID} dtrack || true \
-    && adduser -S -D -G dtrack -H -h ${DATA_DIR} -g "dtrack user" -s /bin/false -u ${UID} dtrack || true \
+    && addgroup -S -g ${GID} dtrack \
+    && adduser -S -D -G dtrack -H -h ${DATA_DIR} -g "dtrack user" -s /bin/false -u ${UID} dtrack \
     && chown -R dtrack:0 ${DATA_DIR} ${APP_DIR} \
     && chmod -R g=u ${DATA_DIR} ${APP_DIR} \
-    && apk add --no-cache gcompat tzdata
+    && apk add --no-cache gcompat tzdata curl
 
-COPY --from=jre-build /work/jre ${JAVA_HOME}
-COPY ./target/dependency-track-apiserver.jar ./src/main/docker/logback-json.xml ${APP_DIR}/
-
-# Specify the user to run as (in numeric format for compatibility with Kubernetes/OpenShift's SCC)
+WORKDIR ${APP_DIR}
 USER ${UID}
 
-# Specify the container working directory
-WORKDIR ${APP_DIR}
+COPY --from=jre-build --chown=${UID}:0 /work/jre ${JAVA_HOME}
+COPY --chown=${UID}:0 ./target/dependency-track-apiserver.jar ./src/main/docker/logback-json.xml ./
 
 # Launch Dependency-Track
-CMD exec java ${JAVA_OPTIONS} ${EXTRA_JAVA_OPTIONS} --add-opens java.base/java.util.concurrent=ALL-UNNAMED -DdependencyTrack.logging.level=${LOGGING_LEVEL} -jar dependency-track-apiserver.jar -context ${CONTEXT}
+CMD [ \
+    "/bin/sh", "-c", \
+    "exec java \
+        ${JAVA_OPTIONS} \
+        ${EXTRA_JAVA_OPTIONS} \
+        --add-opens java.base/java.util.concurrent=ALL-UNNAMED \
+        --enable-native-access=ALL-UNNAMED \
+        --sun-misc-unsafe-memory-access=allow \
+        -DdependencyTrack.logging.level=${LOGGING_LEVEL} \
+        -jar dependency-track-apiserver.jar \
+        -context ${CONTEXT}" \
+]
 
 # Specify which port Dependency-Track listens on
 EXPOSE 8080
 
 # Add a healthcheck using the Dependency-Track version API
-HEALTHCHECK --interval=30s --start-period=60s --timeout=3s CMD wget -t 1 -T 3 --proxy off -q -O /dev/null http://127.0.0.1:8080${CONTEXT}health || exit 1
+HEALTHCHECK --interval=30s --start-period=60s --timeout=3s CMD [ \
+    "/bin/sh", "-c", \
+    "curl -f -s --max-time 3 --noproxy '*' -o /dev/null http://127.0.0.1:8080${CONTEXT}health" \
+]
 
 # metadata labels
 LABEL \

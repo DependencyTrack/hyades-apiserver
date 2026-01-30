@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>dependency-track-parent</artifactId>
-        <version>5.7.0-SNAPSHOT</version>
+        <version>5.7.0-alpha.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>alpine-parent</artifactId>
@@ -37,7 +37,7 @@
         <module>alpine-test</module>
     </modules>
 
-    <name>alpine-parent</name>
+    <name>Alpine :: Parent</name>
     <description>
         An opinionated scaffolding library that jumpstarts Java projects with an API-first design,
         secure defaults, and minimal dependencies.
@@ -75,26 +75,15 @@
         <maven.uuidgenerator.plugin.version>1.0.1</maven.uuidgenerator.plugin.version>
 
         <!-- Dependency Versions -->
-        <lib.angus-mail.version>2.0.5</lib.angus-mail.version>
         <lib.bcrypt.version>0.4</lib.bcrypt.version>
-        <lib.caffeine.version>3.2.3</lib.caffeine.version>
         <lib.commons.collections4.version>4.5.0</lib.commons.collections4.version>
-        <lib.commons.io.version>2.20.0</lib.commons.io.version>
-        <lib.commons.lang3.version>3.19.0</lib.commons.lang3.version>
+        <lib.commons.io.version>2.21.0</lib.commons.io.version>
         <lib.h2.version>2.4.240</lib.h2.version>
-        <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
-        <lib.javassist.version>3.30.2-GA</lib.javassist.version>
-        <lib.jaxb-runtime.version>4.0.6</lib.jaxb-runtime.version>
         <lib.jsonwebtoken.version>0.13.0</lib.jsonwebtoken.version>
-        <lib.jsr305.version>3.0.2</lib.jsr305.version>
-        <lib.logback.version>1.5.20</lib.logback.version>
         <lib.logstash-logback-encoder.version>8.1</lib.logstash-logback-encoder.version>
-        <lib.microprofile-health-api.version>4.0.1</lib.microprofile-health-api.version>
-        <lib.nimbus-oauth2-oidc-sdk.version>11.30</lib.nimbus-oauth2-oidc-sdk.version>
-        <lib.owasp.encoder.version>1.3.1</lib.owasp.encoder.version>
+        <lib.nimbus-oauth2-oidc-sdk.version>11.31.1</lib.nimbus-oauth2-oidc-sdk.version>
         <lib.owasp.security-logging.version>1.1.7</lib.owasp.security-logging.version>
         <lib.parsson.version>1.1.7</lib.parsson.version>
-        <lib.swagger.version>2.2.40</lib.swagger.version>
         <!-- Unit test libraries -->
         <lib.junit-pioneer.version>2.3.0</lib.junit-pioneer.version>
     </properties>
@@ -109,19 +98,8 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
-                <artifactId>commons-lang3</artifactId>
-                <version>${lib.commons.lang3.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.commons</groupId>
                 <artifactId>commons-collections4</artifactId>
                 <version>${lib.commons.collections4.version}</version>
-            </dependency>
-            <!-- JAXB -->
-            <dependency>
-                <groupId>org.glassfish.jaxb</groupId>
-                <artifactId>jaxb-runtime</artifactId>
-                <version>${lib.jaxb-runtime.version}</version>
             </dependency>
             <!-- JSON API specification and default implementation -->
             <dependency>
@@ -129,23 +107,7 @@
                 <artifactId>jakarta.json</artifactId>
                 <version>${lib.parsson.version}</version>
             </dependency>
-            <!-- OpenAPI -->
-            <dependency>
-                <groupId>io.swagger.core.v3</groupId>
-                <artifactId>swagger-annotations-jakarta</artifactId>
-                <version>${lib.swagger.version}</version>
-            </dependency>
             <!-- Persistence -->
-            <dependency>
-                <groupId>com.zaxxer</groupId>
-                <artifactId>HikariCP</artifactId>
-                <version>${lib.hikaricp.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.javassist</groupId>
-                <artifactId>javassist</artifactId>
-                <version>${lib.javassist.version}</version>
-            </dependency>
             <dependency>
                 <groupId>com.h2database</groupId>
                 <artifactId>h2</artifactId>
@@ -167,24 +129,8 @@
                 <artifactId>oauth2-oidc-sdk</artifactId>
                 <version>${lib.nimbus-oauth2-oidc-sdk.version}</version>
             </dependency>
-            <!-- Health -->
-            <dependency>
-                <groupId>org.eclipse.microprofile.health</groupId>
-                <artifactId>microprofile-health-api</artifactId>
-                <version>${lib.microprofile-health-api.version}</version>
-            </dependency>
             <!-- Logging -->
             <!-- Overriding OWASP Security Logging dependencies with newer versions -->
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-classic</artifactId>
-                <version>${lib.logback.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-core</artifactId>
-                <version>${lib.logback.version}</version>
-            </dependency>
             <dependency>
                 <groupId>org.owasp</groupId>
                 <artifactId>security-logging-common</artifactId>
@@ -199,35 +145,6 @@
                 <groupId>net.logstash.logback</groupId>
                 <artifactId>logstash-logback-encoder</artifactId>
                 <version>${lib.logstash-logback-encoder.version}</version>
-            </dependency>
-            <!-- XSS prevention -->
-            <dependency>
-                <groupId>org.owasp.encoder</groupId>
-                <artifactId>encoder</artifactId>
-                <version>${lib.owasp.encoder.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.owasp.encoder</groupId>
-                <artifactId>encoder-jsp</artifactId>
-                <version>${lib.owasp.encoder.version}</version>
-            </dependency>
-            <!-- JavaMail API -->
-            <dependency>
-                <groupId>org.eclipse.angus</groupId>
-                <artifactId>angus-mail</artifactId>
-                <version>${lib.angus-mail.version}</version>
-            </dependency>
-            <!-- Quality -->
-            <dependency>
-                <groupId>com.google.code.findbugs</groupId>
-                <artifactId>jsr305</artifactId>
-                <version>${lib.jsr305.version}</version>
-            </dependency>
-            <!-- Object cache -->
-            <dependency>
-                <groupId>com.github.ben-manes.caffeine</groupId>
-                <artifactId>caffeine</artifactId>
-                <version>${lib.caffeine.version}</version>
             </dependency>
             <!-- Unit Tests -->
             <dependency>
@@ -248,10 +165,6 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
-    <prerequisites>
-        <maven>3.6.0</maven>
-    </prerequisites>
 
     <build>
         <plugins>

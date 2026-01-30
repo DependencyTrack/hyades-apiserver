@@ -23,7 +23,7 @@ import org.dependencytrack.plugin.api.storage.CompareAndDeleteResult;
 import org.dependencytrack.plugin.api.storage.CompareAndPutResult;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.Collections;

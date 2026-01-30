@@ -18,39 +18,90 @@
  */
 package org.dependencytrack.plugin;
 
-import alpine.common.logging.Logger;
-
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.notification.api.publishing.NotificationPublisher;
+import org.dependencytrack.plugin.api.Plugin;
+import org.dependencytrack.secret.management.SecretManager;
+import org.dependencytrack.vulndatasource.api.VulnDataSource;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.ServiceLoader;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.6.0
  */
 public class PluginInitializer implements ServletContextListener {
 
-    private static final Logger LOGGER = Logger.getLogger(PluginInitializer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PluginInitializer.class);
 
-    private final PluginManager pluginManager = PluginManager.getInstance();
+    private final Config config;
+    private @Nullable PluginManager pluginManager;
 
-    private final Config config = ConfigProvider.getConfig();
+    PluginInitializer(Config config) {
+        this.config = config;
+    }
 
-    @Override
-    public void contextInitialized(final ServletContextEvent event) {
-        LOGGER.info("Loading plugins");
-
-        if (!config.getValue("plugin.external.load.enabled", boolean.class)) {
-            pluginManager.setExternalPluginConfig(true, config.getValue("plugin.external.dir", String.class));
-        }
-
-        pluginManager.loadPlugins();
+    @SuppressWarnings("unused") // Used by servlet container.
+    public PluginInitializer() {
+        this(ConfigProvider.getConfig());
     }
 
     @Override
-    public void contextDestroyed(final ServletContextEvent event) {
-        LOGGER.info("Unloading plugins");
-        pluginManager.unloadPlugins();
+    public void contextInitialized(ServletContextEvent event) {
+        LOGGER.info("Initializing plugin system");
+
+        final var secretManager = (SecretManager) event.getServletContext().getAttribute(SecretManager.class.getName());
+        requireNonNull(secretManager, "secretManager has not been initialized");
+
+        final var extensionPoints = List.of(
+                FileStorage.class,
+                NotificationPublisher.class,
+                VulnDataSource.class);
+
+        pluginManager = new PluginManager(
+                config,
+                secretManager::getSecretValue,
+                extensionPoints);
+
+        LOGGER.info("Discovering plugins");
+        final Collection<Plugin> plugins =
+                ServiceLoader.load(Plugin.class).stream()
+                        .map(ServiceLoader.Provider::get)
+                        .toList();
+        for (final Plugin plugin : plugins) {
+            LOGGER.debug("Discovered plugin {}", plugin.getClass().getName());
+        }
+
+        if (config.getValue("plugin.external.load.enabled", boolean.class)) {
+            pluginManager.setExternalPluginConfig(true, config.getValue("plugin.external.dir", String.class));
+        }
+
+        LOGGER.info("Loading plugins");
+        pluginManager.loadPlugins(plugins);
+
+        event.getServletContext().setAttribute(PluginManager.class.getName(), pluginManager);
+    }
+
+    @Override
+    public void contextDestroyed(ServletContextEvent event) {
+        if (pluginManager != null) {
+            LOGGER.info("Closing plugin manager");
+            pluginManager.close();
+        }
+
+        event.getServletContext().removeAttribute(PluginManager.class.getName());
     }
 
 }

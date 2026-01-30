@@ -21,11 +21,8 @@ package alpine.persistence;
 import alpine.common.logging.Logger;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.EventService;
-import alpine.event.framework.LoggableSubscriber;
-import alpine.event.framework.Subscriber;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
-import alpine.model.EventServiceLog;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.MappedLdapGroup;
@@ -42,7 +39,6 @@ import org.datanucleus.store.rdbms.query.JDOQLQuery;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.security.Principal;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -991,62 +987,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      */
     public boolean isOidcGroupMapped(final Team team, final OidcGroup group) {
         return getMappedOidcGroup(team, group) != null;
-    }
-
-    /**
-     * Creates a new EventServiceLog. This method will automatically determine
-     * if the subscriber is an implementation of {@link LoggableSubscriber} and
-     * if so, will log the event. If not, then nothing will be logged and this
-     * method will return null.
-     * @param clazz the class of the subscriber task that handles the event
-     * @return a new EventServiceLog
-     */
-    public EventServiceLog createEventServiceLog(Class<? extends Subscriber> clazz) {
-        if (LoggableSubscriber.class.isAssignableFrom(clazz)) {
-            callInTransaction(() -> {
-                final var log = new EventServiceLog();
-                log.setSubscriberClass(clazz.getCanonicalName());
-                log.setStarted(new Timestamp(new Date().getTime()));
-                return pm.makePersistent(log);
-            });
-        }
-        return null;
-    }
-
-    /**
-     * Updates a EventServiceLog.
-     * @param eventServiceLog the EventServiceLog to update
-     * @return an updated EventServiceLog
-     */
-    public EventServiceLog updateEventServiceLog(EventServiceLog eventServiceLog) {
-        if (eventServiceLog == null) {
-            return null;
-        }
-
-        return callInTransaction(() -> {
-            final EventServiceLog log = getObjectById(EventServiceLog.class, eventServiceLog.getId());
-            if (log != null) {
-                log.setCompleted(new Timestamp(new Date().getTime()));
-                return log;
-            } else {
-                return null;
-            }
-        });
-    }
-
-    /**
-     * Returns the most recent log entry for the specified Subscriber.
-     * If no log entries are found, this method will return null.
-     * @param clazz The LoggableSubscriber class to query on
-     * @return a EventServiceLog
-     * @since 1.0.0
-     */
-    public EventServiceLog getLatestEventServiceLog(final Class<LoggableSubscriber> clazz) {
-        final Query<EventServiceLog> query = pm.newQuery(EventServiceLog.class, "eventClass == :clazz");
-        query.setParameters(clazz);
-        query.setOrdering("completed desc");
-        query.setRange(0, 1);
-        return executeAndCloseUnique(query);
     }
 
     /**

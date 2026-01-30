@@ -39,9 +39,9 @@ import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.MetricsTestDao;
 import org.dependencytrack.tasks.CallbackTask;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Date;
@@ -55,13 +55,13 @@ import static org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask.parti
 @NotThreadSafe
 public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass1() {
-        EventService.getInstance().subscribe(ProjectMetricsUpdateEvent.class, ProjectMetricsUpdateTask.class);
-        EventService.getInstance().subscribe(CallbackEvent.class, CallbackTask.class);
+        EventService.getInstance().subscribe(ProjectMetricsUpdateEvent.class, new ProjectMetricsUpdateTask());
+        EventService.getInstance().subscribe(CallbackEvent.class, new CallbackTask());
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass1() {
         EventService.getInstance().unsubscribe(ProjectMetricsUpdateTask.class);
         EventService.getInstance().unsubscribe(CallbackTask.class);
