@@ -23,6 +23,7 @@ import alpine.event.framework.SingleThreadedEventService;
 import alpine.event.framework.Subscriber;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
+import org.dependencytrack.caching.api.CacheProvider;
 import org.dependencytrack.plugin.PluginManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -52,8 +53,11 @@ class EventSubsystemInitializerTest {
                 config,
                 secretName -> null,
                 Collections.emptyList());
+        final var cacheProviderMock = mock(CacheProvider.class);
         final var servletContextMock = mock(ServletContext.class);
 
+        doReturn(cacheProviderMock)
+                .when(servletContextMock).getAttribute(eq(CacheProvider.class.getName()));
         doReturn(pluginManager)
                 .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
 
