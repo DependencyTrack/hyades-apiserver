@@ -16,6 +16,10 @@
         <appender-ref ref="STDOUT" />
     </logger>
 
+    <logger name="org.dependencytrack.vulnanalysis" level="DEBUG" additivity="false">
+        <appender-ref ref="STDOUT" />
+    </logger>
+
     <logger name="org.eclipse.jetty" level="${dependencyTrack.logging.level:-INFO}" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>

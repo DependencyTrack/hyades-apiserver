@@ -30,6 +30,8 @@ import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.parsers.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.datanucleus.flush.FlushMode;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
@@ -58,7 +60,9 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
 import org.dependencytrack.util.InternalComponentIdentifier;
+import org.dependencytrack.vulnanalysis.VulnAnalysisWorkflow;
 import org.json.JSONArray;
 import org.slf4j.MDC;
 
@@ -154,14 +158,17 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(BomUploadProcessingTask.class);
 
+    private final DexEngine dexEngine;
     private final PluginManager pluginManager;
     private final KafkaEventDispatcher kafkaEventDispatcher;
     private final boolean delayBomProcessedNotification;
 
     public BomUploadProcessingTask(
+            DexEngine dexEngine,
             PluginManager pluginManager,
             KafkaEventDispatcher kafkaEventDispatcher,
             boolean delayBomProcessedNotification) {
+        this.dexEngine = dexEngine;
         this.pluginManager = pluginManager;
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.delayBomProcessedNotification = delayBomProcessedNotification;
@@ -287,7 +294,15 @@ public class BomUploadProcessingTask implements Subscriber {
         final List<ComponentRepositoryMetaAnalysisEvent> repoMetaAnalysisEvents = createRepoMetaAnalysisEvents(processedBom.components());
 
         final var dispatchedEvents = new ArrayList<CompletableFuture<?>>(vulnAnalysisEvents.size() + repoMetaAnalysisEvents.size());
-        dispatchedEvents.addAll(initiateVulnerabilityAnalysis(ctx, vulnAnalysisEvents));
+        //dispatchedEvents.addAll(initiateVulnerabilityAnalysis(ctx, vulnAnalysisEvents));
+        dexEngine.createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withLabels(Map.of("project_uuid", ctx.project.getUuid().toString()))
+                        .withConcurrencyKey("vuln-analysis:" + ctx.project.getUuid())
+                        .withPriority(50)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(ctx.project.getUuid().toString())
+                                .build()));
         dispatchedEvents.addAll(initiateRepoMetaAnalysis(repoMetaAnalysisEvents));
         CompletableFuture.allOf(dispatchedEvents.toArray(new CompletableFuture[0])).join();
     }
