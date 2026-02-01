@@ -21,6 +21,8 @@ package org.dependencytrack.model;
 import org.dependencytrack.PersistenceCapableTest;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class FindingAttributionTest extends PersistenceCapableTest {
@@ -41,7 +43,7 @@ public class FindingAttributionTest extends PersistenceCapableTest {
         component.setName("acme-lib");
         qm.persist(component);
 
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER, null, """
+        qm.addVulnerability(vuln, component, "internal", null, """
                 https://example.com/vulnerability/INT-001\
                 ?component-type=golang\
                 &component-name=go.opentelemetry.io%2Fcontrib%2Finstrumentation%2Fgoogle.golang.org%2Fgrpc%2Fotelgrpc\
@@ -51,9 +53,11 @@ public class FindingAttributionTest extends PersistenceCapableTest {
                 &foo=3d48d174-0dc8-4ca5-83bb-ad697dd79b0f\
                 &bar=bdf18448-0a40-4974-9758-f7b74b799395""");
 
-        final FindingAttribution attribution = qm.getFindingAttribution(vuln, component);
-        assertThat(attribution).isNotNull();
-        assertThat(attribution.getReferenceUrl()).isEqualTo("https://example.com/vulnerability/INT-001");
+        final List<FindingAttribution> attributions = qm.getFindingAttributions(vuln, component);
+        assertThat(attributions).satisfiesExactly(attribution -> {
+            assertThat(attribution).isNotNull();
+            assertThat(attribution.getReferenceUrl()).isEqualTo("https://example.com/vulnerability/INT-001");
+        });
     }
 
     @Test
@@ -72,7 +76,7 @@ public class FindingAttributionTest extends PersistenceCapableTest {
         component.setName("acme-lib");
         qm.persist(component);
 
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER, null, """
+        qm.addVulnerability(vuln, component, "internal", null, """
                 https://example.com/vulnerability/foo\
                 /bdf18448-0a40-4974-9758-f7b74b799395\
                 /ed8e9597-321b-4a7c-a407-cf09d39960a2\
@@ -83,9 +87,10 @@ public class FindingAttributionTest extends PersistenceCapableTest {
                 /11f41751-fa0b-4ee7-9689-1438f920159b\
                 /fa50b01b-7de8-41e9-a84e-1ddea28a2749""");
 
-        final FindingAttribution attribution = qm.getFindingAttribution(vuln, component);
-        assertThat(attribution).isNotNull();
-        assertThat(attribution.getReferenceUrl()).hasSize(255).isEqualTo("""
+        final List<FindingAttribution> attributions = qm.getFindingAttributions(vuln, component);
+        assertThat(attributions).satisfiesExactly(attribution -> {
+            assertThat(attribution).isNotNull();
+            assertThat(attribution.getReferenceUrl()).hasSize(255).isEqualTo("""
                 https://example.com/vulnerability/foo\
                 /bdf18448-0a40-4974-9758-f7b74b799395\
                 /ed8e9597-321b-4a7c-a407-cf09d39960a2\
@@ -93,6 +98,7 @@ public class FindingAttributionTest extends PersistenceCapableTest {
                 /9f36c7fa-0137-4497-a59f-8af49f1dc30b\
                 /48217aa0-06ac-4b2b-a568-cf2575920412\
                 /6f641470-c5f3-4ebf-97f8-365dfd07""");
+        });
     }
 
 }

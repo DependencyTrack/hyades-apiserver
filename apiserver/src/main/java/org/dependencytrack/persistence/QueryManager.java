@@ -43,7 +43,6 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Advisory;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
@@ -77,7 +76,6 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerabilityPolicyBundle;
-import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
@@ -96,7 +94,6 @@ import org.jspecify.annotations.NonNull;
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import javax.jdo.Transaction;
 import javax.jdo.metadata.MemberMetadata;
 import javax.jdo.metadata.TypeMetadata;
 import java.security.Principal;
@@ -763,17 +760,29 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerabilityQueryManager().getVulnerabilityByVulnId(source, vulnId, includeVulnerableSoftware);
     }
 
-    public void addVulnerability(Vulnerability vulnerability, Component component, AnalyzerIdentity analyzerIdentity) {
+    public void addVulnerability(
+            Vulnerability vulnerability,
+            Component component,
+            String analyzerIdentity) {
         getVulnerabilityQueryManager().addVulnerability(vulnerability, component, analyzerIdentity);
     }
 
-    public void addVulnerability(Vulnerability vulnerability, Component component, AnalyzerIdentity analyzerIdentity,
-                                 String alternateIdentifier, String referenceUrl) {
+    public void addVulnerability(
+            Vulnerability vulnerability,
+            Component component,
+            String analyzerIdentity,
+            String alternateIdentifier,
+            String referenceUrl) {
         getVulnerabilityQueryManager().addVulnerability(vulnerability, component, analyzerIdentity, alternateIdentifier, referenceUrl);
     }
 
-    public void addVulnerability(Vulnerability vulnerability, Component component, AnalyzerIdentity analyzerIdentity,
-                                 String alternateIdentifier, String referenceUrl, Date attributedOn) {
+    public void addVulnerability(
+            Vulnerability vulnerability,
+            Component component,
+            String analyzerIdentity,
+            String alternateIdentifier,
+            String referenceUrl,
+            Date attributedOn) {
         getVulnerabilityQueryManager().addVulnerability(vulnerability, component, analyzerIdentity, alternateIdentifier, referenceUrl, attributedOn);
     }
 
@@ -781,16 +790,8 @@ public class QueryManager extends AlpineQueryManager {
         getVulnerabilityQueryManager().removeVulnerability(vulnerability, component);
     }
 
-    public FindingAttribution getFindingAttribution(Vulnerability vulnerability, Component component) {
-        return getVulnerabilityQueryManager().getFindingAttribution(vulnerability, component);
-    }
-
-    void deleteFindingAttributions(Component component) {
-        getVulnerabilityQueryManager().deleteFindingAttributions(component);
-    }
-
-    void deleteFindingAttributions(Project project) {
-        getVulnerabilityQueryManager().deleteFindingAttributions(project);
+    public List<FindingAttribution> getFindingAttributions(Vulnerability vulnerability, Component component) {
+        return getVulnerabilityQueryManager().getFindingAttributions(vulnerability, component);
     }
 
     public List<AffectedVersionAttribution> getAffectedVersionAttributions(Vulnerability vulnerability, VulnerableSoftware vulnerableSoftware) {
@@ -1386,27 +1387,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<RepositoryMetaComponent> getRepositoryMetaComponents(final List<RepositoryQueryManager.RepositoryMetaComponentSearch> list) {
         return getRepositoryQueryManager().getRepositoryMetaComponents(list);
-    }
-
-    /**
-     * Fetch a {@link VulnerabilityScan} by its token.
-     *
-     * @param token The token that uniquely identifies the scan for clients
-     * @return A {@link VulnerabilityScan}, or {@code null} when no {@link VulnerabilityScan} was found
-     */
-    public VulnerabilityScan getVulnerabilityScan(final UUID token) {
-        final Transaction trx = pm.currentTransaction();
-        trx.setOptimistic(true);
-        trx.setRollbackOnly(); // We won't commit anything
-        try {
-            trx.begin();
-            final Query<VulnerabilityScan> scanQuery = pm.newQuery(VulnerabilityScan.class);
-            scanQuery.setFilter("token == :token");
-            scanQuery.setParameters(token);
-            return scanQuery.executeUnique();
-        } finally {
-            trx.rollback();
-        }
     }
 
     public void synchronizeVulnerableSoftware(

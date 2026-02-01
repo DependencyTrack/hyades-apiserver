@@ -20,7 +20,6 @@ package org.dependencytrack.tasks.metrics;
 
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Policy;
@@ -137,14 +136,14 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         componentUnaudited.setProject(project);
         componentUnaudited.setName("acme-lib-a");
         qm.createComponent(componentUnaudited, false);
-        qm.addVulnerability(vuln, componentUnaudited, AnalyzerIdentity.NONE);
+        qm.addVulnerability(vuln, componentUnaudited, "none");
 
         // Create a project with an audited vulnerability.
         var componentAudited = new Component();
         componentAudited.setProject(project);
         componentAudited.setName("acme-lib-b");
         qm.createComponent(componentAudited, false);
-        qm.addVulnerability(vuln, componentAudited, AnalyzerIdentity.NONE);
+        qm.addVulnerability(vuln, componentAudited, "none");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentAudited, vuln)
                         .withState(AnalysisState.NOT_AFFECTED));
@@ -154,7 +153,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         componentSuppressed.setProject(project);
         componentSuppressed.setName("acme-lib-c");
         qm.createComponent(componentSuppressed, false);
-        qm.addVulnerability(vuln, componentSuppressed, AnalyzerIdentity.NONE);
+        qm.addVulnerability(vuln, componentSuppressed, "none");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentSuppressed, vuln)
                         .withState(AnalysisState.FALSE_POSITIVE)

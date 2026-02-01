@@ -19,7 +19,6 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
@@ -78,7 +77,7 @@ public interface FindingDao {
             @Json List<VulnerabilityAlias> vulnAliasesJson,
             BigDecimal epssScore,
             BigDecimal epssPercentile,
-            AnalyzerIdentity analyzerIdentity,
+            String analyzerIdentity,
             Instant attributed_on,
             String alt_id,
             String reference_url,
@@ -98,7 +97,7 @@ public interface FindingDao {
             BigDecimal cvssV4Score,
             Instant vulnPublished,
             List<Integer> cwes,
-            AnalyzerIdentity analyzerIdentity,
+            String analyzerIdentity,
             int affectedProjectCount,
             long totalCount
     ) {
@@ -106,111 +105,134 @@ public interface FindingDao {
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
+            <#-- @ftlvariable name="includeInactive" type="boolean" -->
             <#-- @ftlvariable name="includeSuppressed" type="boolean" -->
-            SELECT "PROJECT"."UUID" AS "projectUuid"
-                 , "PROJECT"."NAME" AS "projectName"
-                 , "PROJECT"."VERSION" AS "projectVersion"
-                 , "COMPONENT"."UUID" AS "componentUuid"
-                 , "COMPONENT"."NAME" AS "componentName"
-                 , "COMPONENT"."GROUP" AS "componentGroup"
-                 , "COMPONENT"."VERSION" AS "componentVersion"
-                 , "COMPONENT"."PURL" AS "componentPurl"
-                 , "COMPONENT"."CPE" AS "componentCpe"
-                 , EXISTS(SELECT 1 FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = "COMPONENT"."ID") AS "componentHasOccurrences"
-                 , "V"."UUID" AS "vulnUuid"
-                 , "V"."SOURCE" AS "vulnSource"
-                 , "V"."VULNID"
-                 , "V"."TITLE" AS "vulnTitle"
-                 , "V"."SUBTITLE" AS "vulnSubtitle"
-                 , "V"."DESCRIPTION" AS "vulnDescription"
-                 , "V"."RECOMMENDATION" AS "vulnRecommendation"
-                 , "V"."PUBLISHED" AS "vulnPublished",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2SCORE"
-                    ELSE "V"."CVSSV2BASESCORE"
-                 END                              AS "cvssV2BaseScore",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3SCORE"
-                    ELSE "V"."CVSSV3BASESCORE"
-                 END                              AS "cvssV3BaseScore",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV4SCORE"
-                    ELSE "V"."CVSSV4SCORE"
-                 END                              AS "cvssV4Score",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2VECTOR"
-                    ELSE "V"."CVSSV2VECTOR"
-                 END                              AS "cvssV2Vector",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3VECTOR"
-                    ELSE "V"."CVSSV3VECTOR"
-                 END                              AS "cvssV3Vector",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV4VECTOR"
-                    ELSE "V"."CVSSV4VECTOR"
-                 END                              AS "cvssV4Vector",
-                  -- TODO: Analysis only has a single score, but OWASP RR defines multiple.
-                  --  How to handle this?
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
-                    ELSE "V"."OWASPRRBUSINESSIMPACTSCORE"
-                 END                              AS "owaspRRBusinessImpactScore",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
-                    ELSE "V"."OWASPRRLIKELIHOODSCORE"
-                 END                              AS "owaspRRLikelihoodScore",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
-                    ELSE "V"."OWASPRRTECHNICALIMPACTSCORE"
-                 END                              AS "owaspRRTechnicalImpactScore",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPVECTOR"
-                    ELSE "V"."OWASPRRVECTOR"
-                 END                              AS "owaspRRVector",
-                 COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity"
-                 , CAST(STRING_TO_ARRAY("V"."CWES", ',') AS INT[]) AS "CWES"
-                 , JSONB_VULN_ALIASES("V"."SOURCE", "V"."VULNID") AS "vulnAliasesJson"
-                 , "EPSS"."SCORE" AS "epssScore"
-                 , "EPSS"."PERCENTILE" AS "epssPercentile"
-                 , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
-                 , "FINDINGATTRIBUTION"."ATTRIBUTED_ON"
-                 , "FINDINGATTRIBUTION"."ALT_ID"
-                 , "FINDINGATTRIBUTION"."REFERENCE_URL"
-                 , "A"."STATE" AS "analysisState"
-                 , "A"."SUPPRESSED"
+            SELECT p."UUID" AS "projectUuid"
+                 , p."NAME" AS "projectName"
+                 , p."VERSION" AS "projectVersion"
+                 , c."UUID" AS "componentUuid"
+                 , c."NAME" AS "componentName"
+                 , c."GROUP" AS "componentGroup"
+                 , c."VERSION" AS "componentVersion"
+                 , c."PURL" AS "componentPurl"
+                 , c."CPE" AS "componentCpe"
+                 , EXISTS(SELECT 1 FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = c."ID") AS "componentHasOccurrences"
+                 , v."UUID" AS "vulnUuid"
+                 , v."SOURCE" AS "vulnSource"
+                 , v."VULNID"
+                 , v."TITLE" AS "vulnTitle"
+                 , v."SUBTITLE" AS "vulnSubtitle"
+                 , v."DESCRIPTION" AS "vulnDescription"
+                 , v."RECOMMENDATION" AS "vulnRecommendation"
+                 , v."PUBLISHED" AS "vulnPublished"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV2SCORE"
+                     ELSE v."CVSSV2BASESCORE"
+                   END AS "cvssV2BaseScore"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV3SCORE"
+                     ELSE v."CVSSV3BASESCORE"
+                   END AS "cvssV3BaseScore"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV4SCORE"
+                     ELSE v."CVSSV4SCORE"
+                   END AS "cvssV4Score"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV2VECTOR"
+                     ELSE v."CVSSV2VECTOR"
+                   END AS "cvssV2Vector"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV3VECTOR"
+                     ELSE v."CVSSV3VECTOR"
+                   END AS "cvssV3Vector"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV4VECTOR"
+                     ELSE v."CVSSV4VECTOR"
+                   END AS "cvssV4Vector"
+                 -- TODO: Analysis only has a single score, but OWASP RR defines multiple.
+                 --  How to handle this?
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."OWASPSCORE"
+                     ELSE v."OWASPRRBUSINESSIMPACTSCORE"
+                   END AS "owaspRRBusinessImpactScore"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."OWASPSCORE"
+                     ELSE v."OWASPRRLIKELIHOODSCORE"
+                   END AS "owaspRRLikelihoodScore"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."OWASPSCORE"
+                     ELSE v."OWASPRRTECHNICALIMPACTSCORE"
+                   END AS "owaspRRTechnicalImpactScore"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."OWASPVECTOR"
+                     ELSE v."OWASPRRVECTOR"
+                   END AS "owaspRRVector"
+                 , COALESCE(a."SEVERITY", v."SEVERITY") AS "vulnSeverity"
+                 , CAST(STRING_TO_ARRAY(v."CWES", ',') AS INT[]) AS "CWES"
+                 , JSONB_VULN_ALIASES(v."SOURCE", v."VULNID") AS "vulnAliasesJson"
+                 , e."SCORE" AS "epssScore"
+                 , e."PERCENTILE" AS "epssPercentile"
+                 , fa."ANALYZERIDENTITY"
+                 , fa."ATTRIBUTED_ON"
+                 , fa."ALT_ID"
+                 , fa."REFERENCE_URL"
+                 , a."STATE" AS "analysisState"
+                 , a."SUPPRESSED"
                  , COUNT(*) OVER() AS "totalCount"
-              FROM "COMPONENT"
-             INNER JOIN "COMPONENTS_VULNERABILITIES"
-                ON "COMPONENT"."ID" = "COMPONENTS_VULNERABILITIES"."COMPONENT_ID"
-             INNER JOIN "VULNERABILITY" AS "V"
-                ON "COMPONENTS_VULNERABILITIES"."VULNERABILITY_ID" = "V"."ID"
-              LEFT JOIN "EPSS"
-                ON "V"."VULNID" = "EPSS"."CVE"
-             INNER JOIN "FINDINGATTRIBUTION"
-                ON "COMPONENT"."ID" = "FINDINGATTRIBUTION"."COMPONENT_ID"
-               AND "V"."ID" = "FINDINGATTRIBUTION"."VULNERABILITY_ID"
-              LEFT JOIN "ANALYSIS" AS "A"
-                ON "COMPONENT"."ID" = "A"."COMPONENT_ID"
-               AND "V"."ID" = "A"."VULNERABILITY_ID"
-               AND "COMPONENT"."PROJECT_ID" = "A"."PROJECT_ID"
-              INNER JOIN "PROJECT"
-                ON "COMPONENT"."PROJECT_ID" = "PROJECT"."ID"
-             WHERE "COMPONENT"."PROJECT_ID" = :projectId
-            <#if !includeSuppressed>
-               AND "A"."SUPPRESSED" IS DISTINCT FROM TRUE
+              FROM "COMPONENT" AS c
+             INNER JOIN "COMPONENTS_VULNERABILITIES" AS cv
+                ON c."ID" = cv."COMPONENT_ID"
+             INNER JOIN "VULNERABILITY" AS v
+                ON cv."VULNERABILITY_ID" = v."ID"
+              LEFT JOIN "EPSS" AS e
+                ON v."VULNID" = e."CVE"
+             INNER JOIN LATERAL (
+               SELECT *
+                 FROM "FINDINGATTRIBUTION" AS fa
+                WHERE c."ID" = fa."COMPONENT_ID"
+                  AND v."ID" = fa."VULNERABILITY_ID"
+            <#if !includeInactive>
+                  AND fa."DELETED_AT" IS NULL
             </#if>
-               AND (:hasAnalysis IS NULL OR ("A"."ID" IS NOT NULL) = :hasAnalysis)
-             ORDER BY "FINDINGATTRIBUTION"."ID"
+                ORDER BY fa."DELETED_AT" DESC NULLS FIRST
+                       , fa."ID"
+                LIMIT 1
+              ) AS fa ON TRUE
+              LEFT JOIN "ANALYSIS" AS a
+                ON c."ID" = a."COMPONENT_ID"
+               AND v."ID" = a."VULNERABILITY_ID"
+               AND c."PROJECT_ID" = a."PROJECT_ID"
+              INNER JOIN "PROJECT" AS p
+                ON c."PROJECT_ID" = p."ID"
+             WHERE c."PROJECT_ID" = :projectId
+            <#if !includeSuppressed>
+               AND a."SUPPRESSED" IS DISTINCT FROM TRUE
+            </#if>
+               AND (:hasAnalysis IS NULL OR (a."ID" IS NOT NULL) = :hasAnalysis)
+             ORDER BY fa."ID"
              ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(FindingRow.class)
-    List<FindingRow> getFindingsByProject(@Bind long projectId, @Define boolean includeSuppressed, @Bind Boolean hasAnalysis);
+    List<FindingRow> getFindingsByProject(
+            @Bind long projectId,
+            @Define boolean includeInactive,
+            @Define boolean includeSuppressed,
+            @Bind Boolean hasAnalysis);
 
     default List<Finding> getFindings(final long projectId, final boolean includeSuppressed) {
-        List<FindingRow> findingRows = getFindingsByProject(projectId, includeSuppressed, null);
+        List<FindingRow> findingRows = getFindingsByProject(projectId, /* includeInactive */ false, includeSuppressed, null);
         List<Finding> findings = findingRows.stream().map(Finding::new).toList();
-        findings = mapComponentLatestVersion(findings);
-        return findings;
+        return mapComponentLatestVersion(findings);
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
@@ -218,102 +240,122 @@ public interface FindingDao {
             <#-- @ftlvariable name="apiOrderByClause" type="String" -->
             <#-- @ftlvariable name="queryFilter" type="String" -->
             <#-- @ftlvariable name="activeFilter" type="Boolean" -->
+            <#-- @ftlvariable name="includeInactiveFindings" type="Boolean" -->
             <#-- @ftlvariable name="suppressedFilter" type="Boolean" -->
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-            SELECT "PROJECT"."UUID" AS "projectUuid"
-                 , "PROJECT"."NAME" AS "projectName"
-                 , "PROJECT"."VERSION" AS "projectVersion"
-                 , "COMPONENT"."UUID" AS "componentUuid"
-                 , "COMPONENT"."NAME" AS "componentName"
-                 , "COMPONENT"."GROUP" AS "componentGroup"
-                 , "COMPONENT"."VERSION" AS "componentVersion"
-                 , "COMPONENT"."PURL" AS "componentPurl"
-                 , "COMPONENT"."CPE" AS "componentCpe"
-                 , EXISTS(SELECT 1 FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = "COMPONENT"."ID") AS "componentHasOccurrences"
-                 , "V"."UUID" AS "vulnUuid"
-                 , "V"."SOURCE" AS "vulnSource"
-                 , "V"."VULNID"
-                 , "V"."TITLE" AS "vulnTitle"
-                 , "V"."SUBTITLE" AS "vulnSubtitle"
-                 , "V"."DESCRIPTION" AS "vulnDescription"
-                 , "V"."RECOMMENDATION" AS "vulnRecommendation"
-                 , "V"."PUBLISHED" AS "vulnPublished",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2SCORE"
-                    ELSE "V"."CVSSV2BASESCORE"
-                 END                              AS "cvssV2BaseScore",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3SCORE"
-                    ELSE "V"."CVSSV3BASESCORE"
-                 END                              AS "cvssV3BaseScore",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV4SCORE"
-                    ELSE "V"."CVSSV4SCORE"
-                 END                              AS "cvssV4Score",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2VECTOR"
-                    ELSE "V"."CVSSV2VECTOR"
-                 END                              AS "cvssV2Vector",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3VECTOR"
-                    ELSE "V"."CVSSV3VECTOR"
-                 END                              AS "cvssV3Vector",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV4VECTOR"
-                    ELSE "V"."CVSSV4VECTOR"
-                 END                              AS "cvssV4Vector",
-                  -- TODO: Analysis only has a single score, but OWASP RR defines multiple.
-                  --  How to handle this?
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
-                    ELSE "V"."OWASPRRBUSINESSIMPACTSCORE"
-                 END                              AS "owaspRRBusinessImpactScore",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
-                    ELSE "V"."OWASPRRLIKELIHOODSCORE"
-                 END                              AS "owaspRRLikelihoodScore",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPSCORE"
-                    ELSE "V"."OWASPRRTECHNICALIMPACTSCORE"
-                 END                              AS "owaspRRTechnicalImpactScore",
-                 CASE
-                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."OWASPVECTOR"
-                    ELSE "V"."OWASPRRVECTOR"
-                 END                              AS "owaspRRVector",
-                 COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity"
-                 , CAST(STRING_TO_ARRAY("V"."CWES", ',') AS INT[]) AS "CWES"
-                 , JSONB_VULN_ALIASES("V"."SOURCE", "V"."VULNID") AS "vulnAliasesJson"
+            SELECT p."UUID" AS "projectUuid"
+                 , p."NAME" AS "projectName"
+                 , p."VERSION" AS "projectVersion"
+                 , c."UUID" AS "componentUuid"
+                 , c."NAME" AS "componentName"
+                 , c."GROUP" AS "componentGroup"
+                 , c."VERSION" AS "componentVersion"
+                 , c."PURL" AS "componentPurl"
+                 , c."CPE" AS "componentCpe"
+                 , EXISTS(SELECT 1 FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = c."ID") AS "componentHasOccurrences"
+                 , v."UUID" AS "vulnUuid"
+                 , v."SOURCE" AS "vulnSource"
+                 , v."VULNID"
+                 , v."TITLE" AS "vulnTitle"
+                 , v."SUBTITLE" AS "vulnSubtitle"
+                 , v."DESCRIPTION" AS "vulnDescription"
+                 , v."RECOMMENDATION" AS "vulnRecommendation"
+                 , v."PUBLISHED" AS "vulnPublished"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV2SCORE"
+                     ELSE v."CVSSV2BASESCORE"
+                   END AS "cvssV2BaseScore"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV3SCORE"
+                     ELSE v."CVSSV3BASESCORE"
+                   END AS "cvssV3BaseScore"
+                 , CASE
+                    WHEN a."SEVERITY" IS NOT NULL
+                    THEN a."CVSSV4SCORE"
+                    ELSE v."CVSSV4SCORE"
+                   END AS "cvssV4Score"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV2VECTOR"
+                     ELSE v."CVSSV2VECTOR"
+                   END AS "cvssV2Vector"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV3VECTOR"
+                     ELSE v."CVSSV3VECTOR"
+                   END AS "cvssV3Vector"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV4VECTOR"
+                     ELSE v."CVSSV4VECTOR"
+                   END AS "cvssV4Vector"
+                 -- TODO: Analysis only has a single score, but OWASP RR defines multiple.
+                 --  How to handle this?
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."OWASPSCORE"
+                     ELSE v."OWASPRRBUSINESSIMPACTSCORE"
+                   END AS "owaspRRBusinessImpactScore"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."OWASPSCORE"
+                     ELSE v."OWASPRRLIKELIHOODSCORE"
+                   END AS "owaspRRLikelihoodScore"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."OWASPSCORE"
+                     ELSE v."OWASPRRTECHNICALIMPACTSCORE"
+                   END AS "owaspRRTechnicalImpactScore"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."OWASPVECTOR"
+                     ELSE v."OWASPRRVECTOR"
+                   END AS "owaspRRVector"
+                 , COALESCE(a."SEVERITY", v."SEVERITY") AS "vulnSeverity"
+                 , CAST(STRING_TO_ARRAY(v."CWES", ',') AS INT[]) AS "CWES"
+                 , JSONB_VULN_ALIASES(v."SOURCE", v."VULNID") AS "vulnAliasesJson"
                  , "EPSS"."SCORE" AS "epssScore"
                  , "EPSS"."PERCENTILE" AS "epssPercentile"
-                 , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
-                 , "FINDINGATTRIBUTION"."ATTRIBUTED_ON"
-                 , "FINDINGATTRIBUTION"."ALT_ID"
-                 , "FINDINGATTRIBUTION"."REFERENCE_URL"
-                 , "A"."STATE" AS "analysisState"
-                 , "A"."SUPPRESSED"
+                 , fa."ANALYZERIDENTITY"
+                 , fa."ATTRIBUTED_ON"
+                 , fa."ALT_ID"
+                 , fa."REFERENCE_URL"
+                 , a."STATE" AS "analysisState"
+                 , a."SUPPRESSED"
                  , COUNT(*) OVER() AS "totalCount"
-              FROM "COMPONENT"
-             INNER JOIN "COMPONENTS_VULNERABILITIES"
-                ON "COMPONENT"."ID" = "COMPONENTS_VULNERABILITIES"."COMPONENT_ID"
-             INNER JOIN "VULNERABILITY" AS "V"
-                ON "COMPONENTS_VULNERABILITIES"."VULNERABILITY_ID" = "V"."ID"
+              FROM "COMPONENT" AS c
+             INNER JOIN "COMPONENTS_VULNERABILITIES" AS cv
+                ON c."ID" = cv."COMPONENT_ID"
+             INNER JOIN "VULNERABILITY" AS v
+                ON cv."VULNERABILITY_ID" = v."ID"
              LEFT JOIN "EPSS"
-                ON "V"."VULNID" = "EPSS"."CVE"
-             INNER JOIN "FINDINGATTRIBUTION"
-                ON "COMPONENT"."ID" = "FINDINGATTRIBUTION"."COMPONENT_ID"
-               AND "V"."ID" = "FINDINGATTRIBUTION"."VULNERABILITY_ID"
-              LEFT JOIN "ANALYSIS" AS "A"
-                ON "COMPONENT"."ID" = "A"."COMPONENT_ID"
-               AND "V"."ID" = "A"."VULNERABILITY_ID"
-               AND "COMPONENT"."PROJECT_ID" = "A"."PROJECT_ID"
-             INNER JOIN "PROJECT"
-                ON "COMPONENT"."PROJECT_ID" = "PROJECT"."ID"
+                ON v."VULNID" = "EPSS"."CVE"
+             INNER JOIN LATERAL (
+               SELECT *
+                 FROM "FINDINGATTRIBUTION" AS fa
+                WHERE c."ID" = fa."COMPONENT_ID"
+                  AND v."ID" = fa."VULNERABILITY_ID"
+            <#if !includeInactiveFindings>
+                  AND fa."DELETED_AT" IS NULL
+            </#if>
+                ORDER BY fa."DELETED_AT" DESC NULLS FIRST
+                       , fa."ID"
+                LIMIT 1
+             ) AS fa ON TRUE
+              LEFT JOIN "ANALYSIS" AS a
+                ON c."ID" = a."COMPONENT_ID"
+               AND v."ID" = a."VULNERABILITY_ID"
+               AND c."PROJECT_ID" = a."PROJECT_ID"
+             INNER JOIN "PROJECT" AS p
+                ON c."PROJECT_ID" = p."ID"
              WHERE ${apiProjectAclCondition}
              <#if !activeFilter>
-                AND "PROJECT"."INACTIVE_SINCE" IS NULL
+                AND p."INACTIVE_SINCE" IS NULL
              </#if>
              <#if !suppressedFilter>
-                AND "A"."SUPPRESSED" IS DISTINCT FROM TRUE
+                AND a."SUPPRESSED" IS DISTINCT FROM TRUE
              </#if>
              <#if queryFilter??>
                 ${queryFilter}
@@ -324,27 +366,29 @@ public interface FindingDao {
              ${apiOffsetLimitClause!}
             """)
     @AllowApiOrdering(alwaysBy = "attribution.id", by = {
-            @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"V\".\"TITLE\""),
-            @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"V\".\"VULNID\""),
+            @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "v.\"TITLE\""),
+            @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "v.\"VULNID\""),
             @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = "\"vulnSeverity\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV4Score", queryName = "\"cvssV4Score\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV3BaseScore", queryName = "\"cvssV3BaseScore\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV2BaseScore", queryName = "\"cvssV2BaseScore\""),
-            @AllowApiOrdering.Column(name = "vulnerability.published", queryName = "\"V\".\"PUBLISHED\""),
-            @AllowApiOrdering.Column(name = "attribution.analyzerIdentity", queryName = "\"FINDINGATTRIBUTION\".\"ANALYZERIDENTITY\""),
-            @AllowApiOrdering.Column(name = "component.projectName", queryName = "concat(\"PROJECT\".\"NAME\", ' ', \"PROJECT\".\"VERSION\")"),
-            @AllowApiOrdering.Column(name = "component.name", queryName = "\"COMPONENT\".\"NAME\""),
-            @AllowApiOrdering.Column(name = "component.version", queryName = "\"COMPONENT\".\"VERSION\""),
-            @AllowApiOrdering.Column(name = "analysis.state", queryName = "\"A\".\"STATE\""),
-            @AllowApiOrdering.Column(name = "analysis.isSuppressed", queryName = "\"A\".\"SUPPRESSED\""),
-            @AllowApiOrdering.Column(name = "attribution.id", queryName = "\"FINDINGATTRIBUTION\".\"ID\""),
-            @AllowApiOrdering.Column(name = "attribution.attributedOn", queryName = "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"")
+            @AllowApiOrdering.Column(name = "vulnerability.published", queryName = "v.\"PUBLISHED\""),
+            @AllowApiOrdering.Column(name = "attribution.analyzerIdentity", queryName = "fa.\"ANALYZERIDENTITY\""),
+            @AllowApiOrdering.Column(name = "component.projectName", queryName = "concat(p.\"NAME\", ' ', p.\"VERSION\")"),
+            @AllowApiOrdering.Column(name = "component.name", queryName = "c.\"NAME\""),
+            @AllowApiOrdering.Column(name = "component.version", queryName = "c.\"VERSION\""),
+            @AllowApiOrdering.Column(name = "analysis.state", queryName = "a.\"STATE\""),
+            @AllowApiOrdering.Column(name = "analysis.isSuppressed", queryName = "a.\"SUPPRESSED\""),
+            @AllowApiOrdering.Column(name = "attribution.id", queryName = "fa.\"ID\""),
+            @AllowApiOrdering.Column(name = "attribution.attributedOn", queryName = "fa.\"ATTRIBUTED_ON\"")
     })
     @DefineNamedBindings
     @AllowUnusedBindings
+    @DefineApiProjectAclCondition(projectIdColumn = "p.\"ID\"")
     @RegisterConstructorMapper(FindingRow.class)
     List<FindingRow> getAllFindings(@Define String queryFilter,
                                     @Define boolean activeFilter,
+                                    @Define boolean includeInactiveFindings,
                                     @Define boolean suppressedFilter,
                                     @BindMap Map<String, Object> params);
 
@@ -359,67 +403,80 @@ public interface FindingDao {
         StringBuilder queryFilter = new StringBuilder();
         Map<String, Object> params = new HashMap<>();
         processFilters(filters, queryFilter, params);
-        return getAllFindings(String.valueOf(queryFilter), showInactive, showSuppressed, params);
+        return getAllFindings(String.valueOf(queryFilter), showInactive, /* includeInactiveFindings */ false, showSuppressed, params);
     }
 
-    @SqlQuery("""
+    @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
             <#-- @ftlvariable name="apiOrderByClause" type="String" -->
             <#-- @ftlvariable name="activeFilter" type="Boolean" -->
+            <#-- @ftlvariable name="includeInactiveFindings" type="Boolean" -->
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-            SELECT "VULNERABILITY"."SOURCE" AS "vulnSource"
-                , "VULNERABILITY"."VULNID"
-                , "VULNERABILITY"."TITLE" AS "vulnTitle"
-                , COALESCE("ANALYSIS"."SEVERITY", "VULNERABILITY"."SEVERITY") AS "vulnSeverity"
-                , CASE
-                    WHEN "ANALYSIS"."SEVERITY" IS NOT NULL THEN "ANALYSIS"."CVSSV2SCORE"
-                    ELSE "VULNERABILITY"."CVSSV2BASESCORE"
-                  END                              AS "cvssV2BaseScore"
-                , CASE
-                    WHEN "ANALYSIS"."SEVERITY" IS NOT NULL THEN "ANALYSIS"."CVSSV3SCORE"
-                    ELSE "VULNERABILITY"."CVSSV3BASESCORE"
-                  END                              AS "cvssV3BaseScore"
-                , CASE
-                    WHEN "ANALYSIS"."SEVERITY" IS NOT NULL THEN "ANALYSIS"."CVSSV4SCORE"
-                    ELSE "VULNERABILITY"."CVSSV4SCORE"
-                  END                              AS "cvssV4Score"
-                , "VULNERABILITY"."PUBLISHED" AS "vulnPublished"
-                , CAST(STRING_TO_ARRAY("VULNERABILITY"."CWES", ',') AS INT[]) AS "CWES"
-                , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
-                , COUNT(DISTINCT "PROJECT"."ID") AS "affectedProjectCount"
-                , COUNT(*) OVER() AS "totalCount"
-            FROM "COMPONENT"
-                INNER JOIN "COMPONENTS_VULNERABILITIES"
-                    ON ("COMPONENT"."ID" = "COMPONENTS_VULNERABILITIES"."COMPONENT_ID")
-                INNER JOIN "VULNERABILITY"
-                    ON ("COMPONENTS_VULNERABILITIES"."VULNERABILITY_ID" = "VULNERABILITY"."ID")
-                INNER JOIN "FINDINGATTRIBUTION"
-                    ON ("COMPONENT"."ID" = "FINDINGATTRIBUTION"."COMPONENT_ID")
-                    AND ("VULNERABILITY"."ID" = "FINDINGATTRIBUTION"."VULNERABILITY_ID")
-                LEFT JOIN "ANALYSIS"
-                    ON ("COMPONENT"."ID" = "ANALYSIS"."COMPONENT_ID")
-                    AND ("VULNERABILITY"."ID" = "ANALYSIS"."VULNERABILITY_ID")
-                    AND ("COMPONENT"."PROJECT_ID" = "ANALYSIS"."PROJECT_ID")
-                INNER JOIN "PROJECT"
-                    ON ("COMPONENT"."PROJECT_ID" = "PROJECT"."ID")
+            SELECT v."SOURCE" AS "vulnSource"
+                 , v."VULNID"
+                 , v."TITLE" AS "vulnTitle"
+                 , COALESCE(a."SEVERITY", v."SEVERITY") AS "vulnSeverity"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV2SCORE"
+                     ELSE v."CVSSV2BASESCORE"
+                   END AS "cvssV2BaseScore"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV3SCORE"
+                     ELSE v."CVSSV3BASESCORE"
+                   END AS "cvssV3BaseScore"
+                 , CASE
+                     WHEN a."SEVERITY" IS NOT NULL
+                     THEN a."CVSSV4SCORE"
+                     ELSE v."CVSSV4SCORE"
+                   END AS "cvssV4Score"
+                 , v."PUBLISHED" AS "vulnPublished"
+                 , CAST(STRING_TO_ARRAY(v."CWES", ',') AS INT[]) AS "CWES"
+                 , fa."ANALYZERIDENTITY"
+                 , COUNT(DISTINCT p."ID") AS "affectedProjectCount"
+                 , COUNT(*) OVER() AS "totalCount"
+              FROM "COMPONENT" AS c
+             INNER JOIN "COMPONENTS_VULNERABILITIES" AS cv
+                ON c."ID" = cv."COMPONENT_ID"
+             INNER JOIN "VULNERABILITY" AS v
+                ON cv."VULNERABILITY_ID" = v."ID"
+             INNER JOIN LATERAL (
+               SELECT *
+                 FROM "FINDINGATTRIBUTION" AS fa
+                WHERE c."ID" = fa."COMPONENT_ID"
+                  AND v."ID" = fa."VULNERABILITY_ID"
+            <#if !includeInactiveFindings>
+                  AND fa."DELETED_AT" IS NULL
+            </#if>
+                ORDER BY fa."DELETED_AT" DESC NULLS FIRST
+                       , fa."ID"
+                LIMIT 1
+             ) AS fa ON TRUE
+              LEFT JOIN "ANALYSIS" AS a
+                ON c."ID" = a."COMPONENT_ID"
+               AND v."ID" = a."VULNERABILITY_ID"
+               AND c."PROJECT_ID" = a."PROJECT_ID"
+             INNER JOIN "PROJECT" AS p
+                ON c."PROJECT_ID" = p."ID"
             WHERE ${apiProjectAclCondition}
             <#if !activeFilter>
-                AND "PROJECT"."INACTIVE_SINCE" IS NULL
+                AND p."INACTIVE_SINCE" IS NULL
             </#if>
             <#if queryFilter??>
                 ${queryFilter}
             </#if>
-            GROUP BY "VULNERABILITY"."ID"
-               , "VULNERABILITY"."SOURCE"
-               , "VULNERABILITY"."VULNID"
-               , "VULNERABILITY"."TITLE"
-               , "vulnSeverity"
-               , "cvssV2BaseScore"
-               , "cvssV3BaseScore"
-               , "cvssV4Score"
-               , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
-               , "VULNERABILITY"."PUBLISHED"
-               , "VULNERABILITY"."CWES"
+            GROUP BY v."ID"
+                  , v."SOURCE"
+                  , v."VULNID"
+                  , v."TITLE"
+                  , "vulnSeverity"
+                  , "cvssV2BaseScore"
+                  , "cvssV3BaseScore"
+                  , "cvssV4Score"
+                  , fa."ANALYZERIDENTITY"
+                  , v."PUBLISHED"
+                  , v."CWES"
             <#if aggregateFilter??>
                 ${aggregateFilter}
             </#if>
@@ -429,22 +486,24 @@ public interface FindingDao {
             ${apiOffsetLimitClause!}
             """)
     @AllowApiOrdering(alwaysBy = "vulnerability.id", by = {
-            @AllowApiOrdering.Column(name = "vulnerability.id", queryName = "\"VULNERABILITY\".\"ID\""),
-            @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"VULNERABILITY\".\"VULNID\""),
-            @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"VULNERABILITY\".\"TITLE\""),
+            @AllowApiOrdering.Column(name = "vulnerability.id", queryName = "v.\"ID\""),
+            @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "v.\"VULNID\""),
+            @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "v.\"TITLE\""),
             @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = "\"vulnSeverity\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV4Score", queryName = "\"cvssV4Score\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV3BaseScore", queryName = "\"cvssV3BaseScore\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV2BaseScore", queryName = "\"cvssV2BaseScore\""),
-            @AllowApiOrdering.Column(name = "vulnerability.published", queryName = "\"VULNERABILITY\".\"PUBLISHED\""),
-            @AllowApiOrdering.Column(name = "attribution.analyzerIdentity", queryName = "\"FINDINGATTRIBUTION\".\"ANALYZERIDENTITY\""),
-            @AllowApiOrdering.Column(name = "vulnerability.affectedProjectCount", queryName = "COUNT(DISTINCT \"PROJECT\".\"ID\")")
+            @AllowApiOrdering.Column(name = "vulnerability.published", queryName = "v.\"PUBLISHED\""),
+            @AllowApiOrdering.Column(name = "attribution.analyzerIdentity", queryName = "fa.\"ANALYZERIDENTITY\""),
+            @AllowApiOrdering.Column(name = "vulnerability.affectedProjectCount", queryName = "COUNT(DISTINCT p.\"ID\")")
     })
     @AllowUnusedBindings
     @DefineNamedBindings
+    @DefineApiProjectAclCondition(projectIdColumn = "p.\"ID\"")
     @RegisterConstructorMapper(GroupedFindingRow.class)
     List<GroupedFindingRow> getGroupedFindings(@Define String queryFilter,
                                                @Define boolean activeFilter,
+                                               @Define boolean includeInactiveFindings,
                                                @Define String aggregateFilter,
                                                @BindMap Map<String, Object> params);
 
@@ -461,36 +520,36 @@ public interface FindingDao {
         processFilters(filters, queryFilter, params);
         StringBuilder aggregateFilter = new StringBuilder();
         processAggregateFilters(filters, aggregateFilter, params);
-        return getGroupedFindings(String.valueOf(queryFilter), showInactive, String.valueOf(aggregateFilter), params);
+        return getGroupedFindings(String.valueOf(queryFilter), showInactive, /* includeInactiveFindings */ false, String.valueOf(aggregateFilter), params);
     }
 
     private void processFilters(Map<String, String> filters, StringBuilder queryFilter, Map<String, Object> params) {
         for (String filter : filters.keySet()) {
             switch (filter) {
                 case "severity" ->
-                        processArrayFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"SEVERITY\"");
+                        processArrayFilter(queryFilter, params, filter, filters.get(filter), "v.\"SEVERITY\"");
                 case "analysisStatus" ->
-                        processArrayFilter(queryFilter, params, filter, filters.get(filter), "\"ANALYSIS\".\"STATE\"");
+                        processArrayFilter(queryFilter, params, filter, filters.get(filter), "a.\"STATE\"");
                 case "vendorResponse" ->
-                        processArrayFilter(queryFilter, params, filter, filters.get(filter), "\"ANALYSIS\".\"RESPONSE\"");
+                        processArrayFilter(queryFilter, params, filter, filters.get(filter), "a.\"RESPONSE\"");
                 case "publishDateFrom" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"PUBLISHED\"", true, true, false);
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "v.\"PUBLISHED\"", true, true, false);
                 case "publishDateTo" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"PUBLISHED\"", false, true, false);
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "v.\"PUBLISHED\"", false, true, false);
                 case "attributedOnDateFrom" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"", true, true, false);
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "fa.\"ATTRIBUTED_ON\"", true, true, false);
                 case "attributedOnDateTo" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"", false, true, false);
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "fa.\"ATTRIBUTED_ON\"", false, true, false);
                 case "textSearchField" ->
                         processInputFilter(queryFilter, params, filter, filters.get(filter), filters.get("textSearchInput"));
                 case "cvssv2From" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV2BASESCORE\"", true, false, false);
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "v.\"CVSSV2BASESCORE\"", true, false, false);
                 case "cvssv2To" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV2BASESCORE\"", false, false, false);
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "v.\"CVSSV2BASESCORE\"", false, false, false);
                 case "cvssv3From" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV3BASESCORE\"", true, false, false);
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "v.\"CVSSV3BASESCORE\"", true, false, false);
                 case "cvssv3To" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV3BASESCORE\"", false, false, false);
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "v.\"CVSSV3BASESCORE\"", false, false, false);
                 case "cvssv4From" ->
                         processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV4SCORE\"", true, false, false);
                 case "cvssv4To" ->
@@ -503,9 +562,9 @@ public interface FindingDao {
         for (String filter : filters.keySet()) {
             switch (filter) {
                 case "occurrencesFrom" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "COUNT(DISTINCT \"PROJECT\".\"ID\")", true, false, true);
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "COUNT(DISTINCT p.\"ID\")", true, false, true);
                 case "occurrencesTo" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "COUNT(DISTINCT \"PROJECT\".\"ID\")", false, false, true);
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "COUNT(DISTINCT p.\"ID\")", false, false, true);
             }
         }
     }
@@ -555,12 +614,12 @@ public interface FindingDao {
             String[] filters = filter.split(",");
             for (int i = 0, length = filters.length; i < length; i++) {
                 switch (filters[i].toUpperCase()) {
-                    case "VULNERABILITY_ID" -> queryFilter.append("\"VULNERABILITY\".\"VULNID\"");
-                    case "VULNERABILITY_TITLE" -> queryFilter.append("\"VULNERABILITY\".\"TITLE\"");
-                    case "COMPONENT_NAME" -> queryFilter.append("\"COMPONENT\".\"NAME\"");
-                    case "COMPONENT_VERSION" -> queryFilter.append("\"COMPONENT\".\"VERSION\"");
+                    case "VULNERABILITY_ID" -> queryFilter.append("v.\"VULNID\"");
+                    case "VULNERABILITY_TITLE" -> queryFilter.append("v.\"TITLE\"");
+                    case "COMPONENT_NAME" -> queryFilter.append("c.\"NAME\"");
+                    case "COMPONENT_VERSION" -> queryFilter.append("c.\"VERSION\"");
                     case "PROJECT_NAME" ->
-                            queryFilter.append("concat(\"PROJECT\".\"NAME\", ' ', \"PROJECT\".\"VERSION\")");
+                            queryFilter.append("concat(p.\"NAME\", ' ', p.\"VERSION\")");
                 }
                 queryFilter.append(" LIKE :").append(paramName);
                 if (i < length - 1) {

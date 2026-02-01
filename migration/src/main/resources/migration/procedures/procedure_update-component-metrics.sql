@@ -51,7 +51,14 @@ BEGIN
                                         ON "A"."COMPONENT_ID" = "v_component"."ID"
                                             AND "A"."COMPONENT_ID" = "CV"."COMPONENT_ID"
                                             AND "A"."VULNERABILITY_ID" = "V"."ID"
-                                        WHERE "A"."SUPPRESSED" != TRUE OR "A"."SUPPRESSED" IS NULL
+                                        WHERE ("A"."SUPPRESSED" != TRUE OR "A"."SUPPRESSED" IS NULL)
+                                          AND EXISTS(
+                                                SELECT 1
+                                                  FROM "FINDINGATTRIBUTION" AS fa
+                                                 WHERE fa."COMPONENT_ID" = "CV"."COMPONENT_ID"
+                                                   AND fa."VULNERABILITY_ID" = "CV"."VULNERABILITY_ID"
+                                                   AND fa."DELETED_AT" IS NULL
+                                          )
     LOOP
       CONTINUE WHEN ("v_vulnerability"."SOURCE" || '|' || "v_vulnerability"."VULNID") = ANY ("v_aliases_seen");
 
@@ -119,6 +126,13 @@ BEGIN
     AND "A"."SUPPRESSED" = FALSE
     AND "A"."STATE" != 'NOT_SET'
     AND "A"."STATE" != 'IN_TRIAGE'
+    AND EXISTS(
+          SELECT 1
+            FROM "FINDINGATTRIBUTION" AS fa
+           WHERE fa."COMPONENT_ID" = "A"."COMPONENT_ID"
+             AND fa."VULNERABILITY_ID" = "A"."VULNERABILITY_ID"
+             AND fa."DELETED_AT" IS NULL
+        )
   INTO "v_findings_audited";
 
   "v_findings_total" = "v_vulnerabilities";
@@ -128,6 +142,13 @@ BEGIN
   FROM "ANALYSIS" AS "A"
   WHERE "A"."COMPONENT_ID" = "v_component"."ID"
     AND "A"."SUPPRESSED" = TRUE
+    AND EXISTS(
+          SELECT 1
+            FROM "FINDINGATTRIBUTION" AS fa
+           WHERE fa."COMPONENT_ID" = "A"."COMPONENT_ID"
+             AND fa."VULNERABILITY_ID" = "A"."VULNERABILITY_ID"
+             AND fa."DELETED_AT" IS NULL
+        )
   INTO "v_findings_suppressed";
 
   FOR "v_policy_violation" IN SELECT "PV"."TYPE", "P"."VIOLATIONSTATE"

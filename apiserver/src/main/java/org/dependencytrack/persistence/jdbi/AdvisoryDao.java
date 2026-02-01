@@ -82,15 +82,24 @@ public interface AdvisoryDao extends PaginationSupport {
                      , a."FORMAT"
                      , a."SEEN_AT"
                      , a."LASTFETCHED"
-                     , COUNT(fa."ID") AS findings_count
+                     , COUNT(cv."VULNERABILITY_ID") AS findings_count
                      , COUNT(*) OVER() AS total_count
-                  FROM "FINDINGATTRIBUTION" AS fa
+                  FROM "COMPONENT" AS c
+                 INNER JOIN "COMPONENTS_VULNERABILITIES" AS cv
+                    ON cv."COMPONENT_ID" = c."ID"
                  INNER JOIN "ADVISORIES_VULNERABILITIES" AS av
-                    ON fa."VULNERABILITY_ID" = av."VULNERABILITY_ID"
+                    ON av."VULNERABILITY_ID" = cv."VULNERABILITY_ID"
                  INNER JOIN "ADVISORY" AS a
                     ON av."ADVISORY_ID" = a."ID"
-                 WHERE fa."PROJECT_ID" = :projectId
+                 WHERE c."PROJECT_ID" = :projectId
                    AND ${apiProjectAclCondition!"TRUE"}
+                   AND EXISTS(
+                         SELECT 1
+                           FROM "FINDINGATTRIBUTION" AS fa
+                          WHERE fa."COMPONENT_ID" = c."ID"
+                            AND fa."VULNERABILITY_ID" = cv."VULNERABILITY_ID"
+                            AND fa."DELETED_AT" IS NULL
+                       )
                  GROUP BY a."ID"
                  ORDER BY a."ID"
                 OFFSET :offset
@@ -101,7 +110,7 @@ public interface AdvisoryDao extends PaginationSupport {
                 .addCustomizer(
                         new DefineApiProjectAclCondition.StatementCustomizer(
                                 JdbiAttributes.ATTRIBUTE_API_PROJECT_ACL_CONDITION,
-                                "fa.\"PROJECT_ID\""))
+                                "c.\"PROJECT_ID\""))
                 .bind("projectId", listQuery.projectId())
                 .bind("offset", offset)
                 .bind("limit", listQuery.limit())
@@ -190,24 +199,42 @@ public interface AdvisoryDao extends PaginationSupport {
                      , (
                          SELECT COUNT(*)
                            FROM (
-                             SELECT DISTINCT fa."COMPONENT_ID"
+                             SELECT DISTINCT c."ID"
                                FROM "ADVISORIES_VULNERABILITIES" AS av
-                              INNER JOIN "FINDINGATTRIBUTION" AS fa
-                                 ON fa."VULNERABILITY_ID" = av."VULNERABILITY_ID"
+                              INNER JOIN "COMPONENTS_VULNERABILITIES" AS cv
+                                 ON cv."VULNERABILITY_ID" = av."VULNERABILITY_ID"
+                              INNER JOIN "COMPONENT" AS c
+                                 ON c."ID" = cv."COMPONENT_ID"
                               WHERE av."ADVISORY_ID" = a."ID"
                                 AND ${apiProjectAclCondition!"TRUE"}
+                                AND EXISTS(
+                                      SELECT 1
+                                        FROM "FINDINGATTRIBUTION" AS fa
+                                       WHERE fa."COMPONENT_ID" = cv."COMPONENT_ID"
+                                         AND fa."VULNERABILITY_ID" = cv."VULNERABILITY_ID"
+                                         AND fa."DELETED_AT" IS NULL
+                                    )
                               LIMIT 1001
                            ) AS t
                        ) AS affected_component_count
                      , (
                          SELECT COUNT(*)
                            FROM (
-                             SELECT DISTINCT fa."PROJECT_ID"
+                             SELECT DISTINCT c."PROJECT_ID"
                                FROM "ADVISORIES_VULNERABILITIES" AS av
-                              INNER JOIN "FINDINGATTRIBUTION" AS fa
-                                 ON fa."VULNERABILITY_ID" = av."VULNERABILITY_ID"
+                              INNER JOIN "COMPONENTS_VULNERABILITIES" AS cv
+                                 ON cv."VULNERABILITY_ID" = av."VULNERABILITY_ID"
+                              INNER JOIN "COMPONENT" AS c
+                                 ON c."ID" = cv."COMPONENT_ID"
                               WHERE av."ADVISORY_ID" = a."ID"
                                 AND ${apiProjectAclCondition!"TRUE"}
+                                AND EXISTS(
+                                      SELECT 1
+                                        FROM "FINDINGATTRIBUTION" AS fa
+                                       WHERE fa."COMPONENT_ID" = cv."COMPONENT_ID"
+                                         AND fa."VULNERABILITY_ID" = cv."VULNERABILITY_ID"
+                                         AND fa."DELETED_AT" IS NULL
+                                    )
                               LIMIT 1001
                            ) AS t
                        ) AS affected_project_count
@@ -229,7 +256,7 @@ public interface AdvisoryDao extends PaginationSupport {
                 .addCustomizer(
                         new DefineApiProjectAclCondition.StatementCustomizer(
                                 JdbiAttributes.ATTRIBUTE_API_PROJECT_ACL_CONDITION,
-                                "fa.\"PROJECT_ID\""))
+                                "c.\"PROJECT_ID\""))
                 .bind("formatFilter", listQuery.format())
                 .bind("searchText", listQuery.searchText())
                 .bind("offset", offset)
@@ -272,31 +299,49 @@ public interface AdvisoryDao extends PaginationSupport {
                  , (
                      SELECT COUNT(*)
                        FROM (
-                         SELECT DISTINCT fa."COMPONENT_ID"
+                         SELECT DISTINCT c."ID"
                            FROM "ADVISORIES_VULNERABILITIES" AS av
-                          INNER JOIN "FINDINGATTRIBUTION" AS fa
-                             ON fa."VULNERABILITY_ID" = av."VULNERABILITY_ID"
+                          INNER JOIN "COMPONENTS_VULNERABILITIES" AS cv
+                             ON cv."VULNERABILITY_ID" = av."VULNERABILITY_ID"
+                          INNER JOIN "COMPONENT" AS c
+                             ON c."ID" = cv."COMPONENT_ID"
                           WHERE av."ADVISORY_ID" = a."ID"
                             AND ${apiProjectAclCondition}
+                            AND EXISTS(
+                                  SELECT 1
+                                    FROM "FINDINGATTRIBUTION" AS fa
+                                   WHERE fa."COMPONENT_ID" = cv."COMPONENT_ID"
+                                     AND fa."VULNERABILITY_ID" = cv."VULNERABILITY_ID"
+                                     AND fa."DELETED_AT" IS NULL
+                                )
                           LIMIT 1001
                        ) AS t
                     ) AS affected_component_count
                  , (
                      SELECT COUNT(*)
                        FROM (
-                         SELECT DISTINCT fa."PROJECT_ID"
+                         SELECT DISTINCT c."PROJECT_ID"
                            FROM "ADVISORIES_VULNERABILITIES" AS av
-                          INNER JOIN "FINDINGATTRIBUTION" AS fa
-                             ON fa."VULNERABILITY_ID" = av."VULNERABILITY_ID"
+                          INNER JOIN "COMPONENTS_VULNERABILITIES" AS cv
+                             ON cv."VULNERABILITY_ID" = av."VULNERABILITY_ID"
+                          INNER JOIN "COMPONENT" AS c
+                             ON c."ID" = cv."COMPONENT_ID"
                           WHERE av."ADVISORY_ID" = a."ID"
                             AND ${apiProjectAclCondition}
+                            AND EXISTS(
+                                  SELECT 1
+                                    FROM "FINDINGATTRIBUTION" AS fa
+                                   WHERE fa."COMPONENT_ID" = cv."COMPONENT_ID"
+                                     AND fa."VULNERABILITY_ID" = cv."VULNERABILITY_ID"
+                                     AND fa."DELETED_AT" IS NULL
+                                )
                           LIMIT 1001
                        ) AS t
                     ) AS affected_project_count
               FROM "ADVISORY" AS a
              WHERE "ID" = :id
             """)
-    @DefineApiProjectAclCondition(projectIdColumn = "fa.\"PROJECT_ID\"")
+    @DefineApiProjectAclCondition(projectIdColumn = "c.\"PROJECT_ID\"")
     @RegisterConstructorMapper(AdvisoryDetailRow.class)
     AdvisoryDetailRow getById(@Bind UUID id);
 

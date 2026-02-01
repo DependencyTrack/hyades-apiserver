@@ -47,7 +47,6 @@ import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
-import org.dependencytrack.event.maintenance.VulnerabilityScanMaintenanceEvent;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
@@ -56,7 +55,6 @@ import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
-import org.dependencytrack.tasks.maintenance.VulnerabilityScanMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.WorkflowMaintenanceTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
@@ -217,10 +215,6 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         "Vulnerability Policy Sync",
                         getCronScheduleForTask(VulnerabilityPolicyFetchTask.class),
                         () -> Event.dispatch(new VulnerabilityPolicyFetchEvent()))
-                .schedule(
-                        "Vulnerability Scan Maintenance",
-                        getCronScheduleForTask(VulnerabilityScanMaintenanceTask.class),
-                        () -> Event.dispatch(new VulnerabilityScanMaintenanceEvent()))
                 .schedule(
                         "Workflow Maintenance",
                         getCronScheduleForTask(WorkflowMaintenanceTask.class),

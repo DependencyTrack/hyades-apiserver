@@ -19,7 +19,6 @@
 package org.dependencytrack.policy.cel.compat;
 
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.Policy.ViolationState;
@@ -83,8 +82,8 @@ public class SeverityConditionTest extends PersistenceCapableTest {
         vulnB.setSource(Vulnerability.Source.INTERNAL);
         qm.persist(vulnB);
 
-        qm.addVulnerability(vulnA, component, AnalyzerIdentity.INTERNAL_ANALYZER);
-        qm.addVulnerability(vulnB, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnA, component, "internal");
+        qm.addVulnerability(vulnB, component, "internal");
 
         new CelPolicyEngine().evaluateProject(project.getUuid());
         if (expectViolation) {
@@ -135,7 +134,7 @@ public class SeverityConditionTest extends PersistenceCapableTest {
         vuln.setOwaspRRVector("(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)");
         qm.persist(vuln);
 
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vuln, component, "internal");
 
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(1);

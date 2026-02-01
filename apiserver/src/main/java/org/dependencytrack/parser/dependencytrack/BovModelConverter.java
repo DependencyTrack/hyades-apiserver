@@ -35,13 +35,11 @@ import org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions;
 import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
 import org.cyclonedx.proto.v1_6.VulnerabilityRating;
 import org.cyclonedx.proto.v1_6.VulnerabilityReference;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.parser.common.resolver.CweResolver;
-import org.dependencytrack.proto.vulnanalysis.v1.Scanner;
 import org.dependencytrack.util.VulnerabilityUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -331,16 +329,6 @@ public final class BovModelConverter {
             case "CVE" -> Vulnerability.Source.NVD;
             case "CSAF" -> Vulnerability.Source.CSAF;
             default -> source != null ? Vulnerability.Source.valueOf(source.getName()) : Vulnerability.Source.INTERNAL;
-        };
-    }
-
-    public static AnalyzerIdentity convert(final Scanner scanner) {
-        return switch (scanner) {
-            case SCANNER_INTERNAL -> AnalyzerIdentity.INTERNAL_ANALYZER;
-            case SCANNER_OSSINDEX -> AnalyzerIdentity.OSSINDEX_ANALYZER;
-            case SCANNER_SNYK -> AnalyzerIdentity.SNYK_ANALYZER;
-            case SCANNER_CSAF -> AnalyzerIdentity.CSAF_ANALYZER;
-            default -> AnalyzerIdentity.NONE;
         };
     }
 

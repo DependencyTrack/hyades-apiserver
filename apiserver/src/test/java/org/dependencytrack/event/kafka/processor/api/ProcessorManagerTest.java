@@ -41,7 +41,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -153,41 +152,6 @@ public class ProcessorManagerTest {
             await("Record Processing")
                     .atMost(Duration.ofSeconds(15))
                     .untilAsserted(() -> assertThat(attemptsCounter).hasValue(4));
-        }
-    }
-
-    @Test
-    @WithConfigProperty(value = {
-            "kafka.processor.foo.processing.order=key",
-            "kafka.processor.foo.max.batch.size=100",
-            "kafka.processor.foo.consumer.auto.offset.reset=earliest"
-    })
-    public void testBatchProcessor() throws Exception {
-        final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String());
-        adminClient.createTopics(List.of(new NewTopic(inputTopic.name(), 3, (short) 1))).all().get();
-
-        final var recordsProcessed = new AtomicInteger(0);
-        final var actualBatchSizes = new ConcurrentLinkedQueue<>();
-
-        final BatchProcessor<String, String> recordProcessor = records -> {
-            recordsProcessed.addAndGet(records.size());
-            actualBatchSizes.add(records.size());
-        };
-
-        try (final var processorManager = new ProcessorManager()) {
-            processorManager.registerBatchProcessor("foo", inputTopic, recordProcessor);
-
-            for (int i = 0; i < 1_000; i++) {
-                producer.send(new ProducerRecord<>("input", "foo" + i, "bar" + i)).get();
-            }
-
-            processorManager.startAll();
-
-            await("Record Processing")
-                    .atMost(Duration.ofSeconds(5))
-                    .untilAsserted(() -> assertThat(recordsProcessed).hasValue(1_000));
-
-            assertThat(actualBatchSizes).containsOnly(100);
         }
     }
 

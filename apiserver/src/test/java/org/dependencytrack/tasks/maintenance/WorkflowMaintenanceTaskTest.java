@@ -22,7 +22,6 @@ import alpine.test.config.ConfigPropertyExtension;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
@@ -142,17 +141,6 @@ class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
         project.setName("acme-app");
         qm.persist(project);
 
-        final var vulnScan = new VulnerabilityScan();
-        vulnScan.setToken(token);
-        vulnScan.setTargetType(VulnerabilityScan.TargetType.PROJECT);
-        vulnScan.setTargetIdentifier(project.getUuid());
-        vulnScan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
-        vulnScan.setExpectedResults(1);
-        vulnScan.setFailureThreshold(0.1);
-        vulnScan.setStartedAt(new Date());
-        vulnScan.setUpdatedAt(vulnScan.getStartedAt());
-        qm.persist(vulnScan);
-
         final var task = new WorkflowMaintenanceTask();
         assertThatNoException().isThrownBy(() -> task.inform(new WorkflowMaintenanceEvent()));
 
@@ -202,17 +190,6 @@ class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
-
-        final var vulnScan = new VulnerabilityScan();
-        vulnScan.setToken(token);
-        vulnScan.setTargetType(VulnerabilityScan.TargetType.PROJECT);
-        vulnScan.setTargetIdentifier(project.getUuid());
-        vulnScan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
-        vulnScan.setExpectedResults(1);
-        vulnScan.setFailureThreshold(0.1);
-        vulnScan.setStartedAt(new Date());
-        vulnScan.setUpdatedAt(vulnScan.getStartedAt());
-        qm.persist(vulnScan);
 
         final var task = new WorkflowMaintenanceTask();
         assertThatNoException().isThrownBy(() -> task.inform(new WorkflowMaintenanceEvent()));

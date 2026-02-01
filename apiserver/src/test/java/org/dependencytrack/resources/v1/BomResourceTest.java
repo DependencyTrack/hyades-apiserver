@@ -46,7 +46,6 @@ import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
@@ -331,7 +330,7 @@ class BomResourceTest extends ResourceTest {
         componentWithVuln.setVersion("1.0.0");
         componentWithVuln.setDirectDependencies("[]");
         qm.createComponent(componentWithVuln, false);
-        qm.addVulnerability(vulnerability, componentWithVuln, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnerability, componentWithVuln, "internal");
 
         var componentWithVulnAndAnalysis = new Component();
         componentWithVulnAndAnalysis.setProject(project);
@@ -339,7 +338,7 @@ class BomResourceTest extends ResourceTest {
         componentWithVulnAndAnalysis.setVersion("1.0.0");
         componentWithVulnAndAnalysis.setDirectDependencies("[]");
         qm.createComponent(componentWithVulnAndAnalysis, false);
-        qm.addVulnerability(vulnerability, componentWithVulnAndAnalysis, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnerability, componentWithVulnAndAnalysis, "internal");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentWithVulnAndAnalysis, vulnerability)
                         .withState(AnalysisState.RESOLVED)
@@ -595,7 +594,7 @@ class BomResourceTest extends ResourceTest {
         componentWithVuln.setVersion("1.0.0");
         componentWithVuln.setDirectDependencies("[]");
         componentWithVuln = qm.createComponent(componentWithVuln, false);
-        qm.addVulnerability(vulnerability, componentWithVuln, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnerability, componentWithVuln, "internal");
 
         var componentWithVulnAndAnalysis = new Component();
         componentWithVulnAndAnalysis.setProject(project);
@@ -603,7 +602,7 @@ class BomResourceTest extends ResourceTest {
         componentWithVulnAndAnalysis.setVersion("1.0.0");
         componentWithVulnAndAnalysis.setDirectDependencies("[]");
         qm.createComponent(componentWithVulnAndAnalysis, false);
-        qm.addVulnerability(vulnerability, componentWithVulnAndAnalysis, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnerability, componentWithVulnAndAnalysis, "internal");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentWithVulnAndAnalysis, vulnerability)
                         .withState(AnalysisState.RESOLVED)
@@ -813,7 +812,7 @@ class BomResourceTest extends ResourceTest {
         componentWithVuln.setVersion("1.0.0");
         componentWithVuln.setDirectDependencies("[]");
         qm.createComponent(componentWithVuln, false);
-        qm.addVulnerability(vulnerability, componentWithVuln, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnerability, componentWithVuln, "internal");
 
         var componentWithVulnAndAnalysis = new Component();
         componentWithVulnAndAnalysis.setProject(project);
@@ -821,7 +820,7 @@ class BomResourceTest extends ResourceTest {
         componentWithVulnAndAnalysis.setVersion("1.0.0");
         componentWithVulnAndAnalysis.setDirectDependencies("[]");
         qm.createComponent(componentWithVulnAndAnalysis, false);
-        qm.addVulnerability(vulnerability, componentWithVulnAndAnalysis, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnerability, componentWithVulnAndAnalysis, "internal");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentWithVulnAndAnalysis, vulnerability)
                         .withState(AnalysisState.RESOLVED)

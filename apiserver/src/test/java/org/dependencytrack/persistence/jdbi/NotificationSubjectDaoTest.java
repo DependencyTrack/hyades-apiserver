@@ -22,7 +22,6 @@ import com.google.protobuf.util.JsonFormat;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
@@ -99,8 +98,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vulnAlias.setGhsaId("GHSA-100");
         qm.synchronizeVulnerabilityAlias(vulnAlias);
 
-        qm.addVulnerability(vulnA, component, AnalyzerIdentity.INTERNAL_ANALYZER);
-        qm.addVulnerability(vulnB, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnA, component, "internal");
+        qm.addVulnerability(vulnB, component, "internal");
 
         // Suppress vulnB, it should not appear in the query results.
         qm.makeAnalysis(
@@ -109,7 +108,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                         .withSuppress(true));
 
         final List<NewVulnerabilitySubject> subjects = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
-                .getForNewVulnerabilities(component.getUuid(), List.of(vulnA.getUuid(), vulnB.getUuid())));
+                .getForNewVulnerabilities(
+                        List.of(component.getId(), component.getId()), List.of(vulnA.getId(), vulnB.getId())));
 
         assertThat(subjects).satisfiesExactly(subject ->
                 assertThatJson(JsonFormat.printer().print(subject))
@@ -219,7 +219,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(3.3));
         qm.persist(vuln);
 
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vuln, component, "internal");
 
         final var analysis = new Analysis();
         analysis.setComponent(component);
@@ -231,7 +231,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         qm.persist(analysis);
 
         final List<NewVulnerabilitySubject> subjects = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
-                .getForNewVulnerabilities(component.getUuid(), List.of(vuln.getUuid())));
+                .getForNewVulnerabilities(List.of(component.getId()), List.of(vuln.getId())));
 
         assertThat(subjects).hasSize(1);
         assertThatJson(JsonFormat.printer().print(subjects.getFirst()))
@@ -322,8 +322,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vulnAlias.setGhsaId("GHSA-100");
         qm.synchronizeVulnerabilityAlias(vulnAlias);
 
-        qm.addVulnerability(vulnA, component, AnalyzerIdentity.INTERNAL_ANALYZER);
-        qm.addVulnerability(vulnB, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnA, component, "internal");
+        qm.addVulnerability(vulnB, component, "internal");
 
         // Suppress vulnB, it should not appear in the query results.
         qm.makeAnalysis(
@@ -430,7 +430,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vuln.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(3.3));
         qm.persist(vuln);
 
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vuln, component, "internal");
 
         final var analysis = new Analysis();
         analysis.setComponent(component);
@@ -523,7 +523,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vulnAlias.setGhsaId("GHSA-100");
         qm.synchronizeVulnerabilityAlias(vulnAlias);
 
-        qm.addVulnerability(vulnA, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnA, component, "internal");
 
         // Suppress vulnB, it should not appear in the query results.
         qm.makeAnalysis(
