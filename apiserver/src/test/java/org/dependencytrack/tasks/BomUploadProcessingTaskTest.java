@@ -36,6 +36,7 @@ import org.cyclonedx.proto.v1_6.OrganizationalEntity;
 import org.cyclonedx.proto.v1_6.Service;
 import org.cyclonedx.proto.v1_6.Tool;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
@@ -110,21 +111,25 @@ import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
+import static org.mockito.Mockito.mock;
 
 class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
+    private DexEngine dexEngineMock;
     private PluginManager pluginManager;
     private BomUploadProcessingTask task;
 
     @BeforeEach
     void beforeEach() {
+        dexEngineMock = mock(DexEngine.class);
+
         pluginManager = new PluginManager(
                 new SmallRyeConfigBuilder().build(),
                 secretName -> null,
                 List.of(FileStorage.class));
         pluginManager.loadPlugins(List.of(new MemoryFileStoragePlugin()));
 
-        task = new BomUploadProcessingTask(pluginManager, new KafkaEventDispatcher(), false);
+        task = new BomUploadProcessingTask(dexEngineMock, pluginManager, new KafkaEventDispatcher(), false);
 
         // Enable processing of CycloneDX BOMs
         qm.createConfigProperty(
@@ -814,7 +819,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-1.xml"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
-        new BomUploadProcessingTask(pluginManager, new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
+        new BomUploadProcessingTask(dexEngineMock, pluginManager, new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 // BOM_PROCESSED notification should not have been sent.
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED));
@@ -830,7 +835,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-empty.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
-        new BomUploadProcessingTask(pluginManager, new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
+        new BomUploadProcessingTask(dexEngineMock, pluginManager, new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
         assertBomProcessedNotification();
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),

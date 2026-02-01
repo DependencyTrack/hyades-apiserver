@@ -40,6 +40,7 @@ import javax.jdo.PersistenceManager;
 import javax.jdo.PersistenceManagerFactory;
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.util.Date;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class JdbiFactory {
@@ -169,7 +170,8 @@ public class JdbiFactory {
                 .installPlugin(new PostgresPlugin())
                 .installPlugin(new Jackson2Plugin())
                 .setTemplateEngine(FreemarkerEngine.instance())
-                .setSqlLogger(new QueryTimingSqlLogger(Metrics.globalRegistry));
+                .setSqlLogger(new QueryTimingSqlLogger(Metrics.globalRegistry))
+                .registerArrayType(Date.class, "TIMESTAMPTZ");
 
         preparedJdbi
                 .getConfig(PaginationConfig.class)

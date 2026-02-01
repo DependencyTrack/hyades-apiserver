@@ -32,6 +32,8 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -43,38 +45,56 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.resources.v1.FindingResource.MEDIA_TYPE_SARIF_JSON;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 public class FindingResourceTest extends ResourceTest {
+
+    private static final DexEngine DEX_ENGINE_MOCK = mock(DexEngine.class);
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(FindingResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bind(DEX_ENGINE_MOCK).to(DexEngine.class);
+                        }
+                    }));
+
+    @AfterEach
+    void afterEach() {
+        Mockito.reset(DEX_ENGINE_MOCK);
+    }
 
     @Test
     public void getFindingsByProjectTest() {
@@ -603,35 +623,39 @@ public class FindingResourceTest extends ResourceTest {
     }
 
     @Test
-    public void testWorkflowStepsShouldBeCreatedOnReanalyze() {
-        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+    public void analyzeProjectShouldCreateVulnAnalysisWorkflowRun() {
+        var project = new Project();
+        project.setName("Acme Example");
+        project = qm.persist(project);
 
-        Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString() +  "/analyze").request()
+        doReturn(UUID.fromString("d93df5a0-f29e-4ee1-9c98-cee4dd243750"))
+                .when(DEX_ENGINE_MOCK).createRun(any(CreateWorkflowRunRequest.class));
+
+        Response response = jersey
+                .target("%s/project/%s/analyze".formatted(V1_FINDING, project.getUuid()))
+                .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json("{}"));
-        Map<String, String> responseMap = response.readEntity(Map.class);
-
-        assertEquals(200, response.getStatus(), 0);
-
-        UUID uuid = UUID.fromString(responseMap.get("token"));
-        assertThat(qm.getAllWorkflowStatesForAToken(uuid)).satisfiesExactlyInAnyOrder(
-                workflowState -> {
-                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.VULN_ANALYSIS);
-                    assertThat(workflowState.getToken()).isEqualTo(uuid);
-                    assertThat(workflowState.getParent()).isNull();
-                    assertThat(workflowState.getStatus()).isEqualTo(PENDING);
-                    assertThat(workflowState.getUpdatedAt()).isNotNull();
-                    assertThat(workflowState.getStartedAt()).isNull();
-                },
-                workflowState -> {
-                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.POLICY_EVALUATION);
-                    assertThat(workflowState.getToken()).isEqualTo(uuid);
-                    assertThat(workflowState.getParent()).isNotNull();
-                    assertThat(workflowState.getStatus()).isEqualTo(PENDING);
-                    assertThat(workflowState.getUpdatedAt()).isNotNull();
-                    assertThat(workflowState.getStartedAt()).isNull();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "token": "d93df5a0-f29e-4ee1-9c98-cee4dd243750"
                 }
-        );
+                """);
+
+        //noinspection unchecked
+        ArgumentCaptor<CreateWorkflowRunRequest<?>> dexCreateRunCaptor =
+                ArgumentCaptor.forClass(CreateWorkflowRunRequest.class);
+        verify(DEX_ENGINE_MOCK).createRun(dexCreateRunCaptor.capture());
+
+        CreateWorkflowRunRequest<?> createDexRunRequest = dexCreateRunCaptor.getValue();
+        assertThat(createDexRunRequest.workflowName()).isEqualTo("vuln-analysis");
+        assertThat(createDexRunRequest.workflowVersion()).isEqualTo(1);
+        assertThat(createDexRunRequest.workflowInstanceId()).isNull();
+        assertThat(createDexRunRequest.labels()).containsEntry("project_uuid", project.getUuid().toString());
+        assertThat(createDexRunRequest.labels()).hasEntrySatisfying("triggered_by", value -> assertThat(value).startsWith("odt_"));
+        assertThat(createDexRunRequest.concurrencyKey()).isEqualTo("vuln-analysis:" + project.getUuid());
+        assertThat(createDexRunRequest.priority()).isEqualTo(75);
     }
 
     @Test

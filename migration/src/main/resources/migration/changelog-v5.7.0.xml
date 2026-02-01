@@ -781,4 +781,43 @@
             <column name="CVSSV4SCORE" type="numeric"/>
         </addColumn>
     </changeSet>
+
+    <changeSet id="v5.7.0-40" author="nscuro">
+        <!--
+            Change unique constraint on FINDINGATTRIBUTION to include ANALYZERIDENTITY.
+            This allows multiple analyzers to report the same finding,
+            enabling proper attribution tracking and suppression logic.
+        -->
+        <dropIndex tableName="FINDINGATTRIBUTION" indexName="FINDINGATTRIBUTION_COMPOUND_IDX"/>
+        <createIndex tableName="FINDINGATTRIBUTION" indexName="FINDINGATTRIBUTION_COMPOUND_IDX" unique="true">
+            <column name="COMPONENT_ID"/>
+            <column name="VULNERABILITY_ID"/>
+            <column name="ANALYZERIDENTITY"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.7.0-41" author="nscuro">
+        <sql>
+            UPDATE "FINDINGATTRIBUTION"
+               SET "ANALYZERIDENTITY" = t.name_new
+              FROM (
+                VALUES ('INTERNAL_ANALYZER', 'internal')
+                     , ('OSSINDEX_ANALYZER', 'oss-index')
+                     , ('SNYK_ANALYZER', 'snyk')
+              ) AS t(name_old, name_new)
+             WHERE "ANALYZERIDENTITY" = t.name_old;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-42" author="nscuro">
+        <sql>
+            UPDATE "VULNERABLESOFTWARE"
+               SET "PART" = LOWER("PART")
+                 , "VENDOR" = LOWER("VENDOR")
+                 , "PRODUCT" = LOWER("PRODUCT")
+             WHERE "PART" != LOWER("PART")
+                OR "VENDOR" != LOWER("VENDOR")
+                OR "PRODUCT" != LOWER("PRODUCT");
+        </sql>
+    </changeSet>
 </databaseChangeLog>

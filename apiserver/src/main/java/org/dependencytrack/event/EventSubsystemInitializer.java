@@ -24,6 +24,7 @@ import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
@@ -104,12 +105,16 @@ public class EventSubsystemInitializer implements ServletContextListener {
 
         final var kafkaEventDispatcher = new KafkaEventDispatcher();
 
+        final var dexEngine = (DexEngine) event.getServletContext().getAttribute(DexEngine.class.getName());
+        requireNonNull(dexEngine, "dexEngine has not been initialized");
+
         final var pluginManager = (PluginManager) event.getServletContext().getAttribute(PluginManager.class.getName());
         requireNonNull(pluginManager, "pluginManager has not been initialized");
 
         eventService.subscribe(
                 BomUploadEvent.class,
                 new BomUploadProcessingTask(
+                        dexEngine,
                         pluginManager,
                         kafkaEventDispatcher,
                         config.getOptionalValue("tmp.delay.bom.processed.notification", boolean.class).orElse(false)));
