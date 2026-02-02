@@ -100,7 +100,7 @@
 
         <!-- Dependency versions -->
         <lib.archunit.version>1.4.1</lib.archunit.version>
-        <lib.assertj.version>3.27.6</lib.assertj.version>
+        <lib.assertj.version>3.27.7</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.caffeine.version>3.2.3</lib.caffeine.version>
         <lib.cel-java.version>0.6.0</lib.cel-java.version>
