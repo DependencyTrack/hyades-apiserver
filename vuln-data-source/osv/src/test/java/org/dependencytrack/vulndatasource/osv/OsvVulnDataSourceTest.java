@@ -163,7 +163,7 @@ class OsvVulnDataSourceTest {
                     "id": "OSV-789",
                     "summary": "Test vulnerability",
                     "affected": [],
-                    "modified": "2022-06-09T07:01:32.587163Z"
+                    "modified": "2022-06-09T07:01:32.587Z"
                 }
                 """;
             zos.write(advisoryJson.getBytes());
@@ -200,7 +200,7 @@ class OsvVulnDataSourceTest {
                                      "ratings" : [ {
                                        "severity" : "SEVERITY_UNKNOWN"
                                      } ],
-                                     "updated": "2022-06-09T07:01:32Z",
+                                     "updated": "2022-06-09T07:01:32.587Z",
                                      "properties" : [
                                          {
                                            "name" : "dependency-track:vuln:title",
