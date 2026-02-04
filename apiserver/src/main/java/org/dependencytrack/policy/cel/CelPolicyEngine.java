@@ -276,7 +276,6 @@ public class CelPolicyEngine {
      */
     private List<Pair<PolicyCondition, CelPolicyScript>> getApplicableConditionScriptPairs(final CelPolicyQueryManager celQm, final Project project) {
         final List<Policy> policies = celQm.getApplicablePolicies(project);
-        // Add GEM policies to the list here?
         if (policies.isEmpty()) {
             return emptyList();
         }
