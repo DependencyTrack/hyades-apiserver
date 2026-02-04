@@ -81,7 +81,7 @@ public class ModelConverterTest {
                               "cwes": [601],
                               "description": "Spring Security OAuth, versions 2.3 prior to 2.3.5, and 2.2 prior to 2.2.4, and 2.1 prior to 2.1.4, and 2.0 prior to 2.0.17, and older unsupported versions could be susceptible to an open redirector attack that can leak an authorization code.\\n\\nA malicious user or attacker can craft a request to the authorization endpoint using the authorization code grant type, and specify a manipulated redirection URI via the \\"redirect_uri\\" parameter. This can cause the authorization server to redirect the resource owner user-agent to a URI under the control of the attacker with the leaked authorization code.\\n\\nThis vulnerability exposes applications that meet all of the following requirements: Act in the role of an Authorization Server (e.g. @EnableAuthorizationServer) and uses the DefaultRedirectResolver in the AuthorizationEndpoint. \\n\\nThis vulnerability does not expose applications that: Act in the role of an Authorization Server and uses a different RedirectResolver implementation other than DefaultRedirectResolver, act in the role of a Resource Server only (e.g. @EnableResourceServer), act in the role of a Client only (e.g. @EnableOAuthClient).",
                               "published": "2019-03-14T15:39:30Z",
-                              "updated": "2022-06-09T07:01:32Z",
+                              "updated": "2022-06-09T07:01:32.587Z",
                               "credits": {
                                 "individuals": [{
                                   "name": "Skywalker"
@@ -158,8 +158,8 @@ public class ModelConverterTest {
                                "severity": "SEVERITY_UNKNOWN"
                              }],
                              "description": "faker.js had it's version updated to 6.6.6 in NPM (which reports it as having 2,571 dependent packages that rely upon it) and the GitHub repo has been wiped of content. This appears to have been done intentionally as the repo only has a single commit (so it was likjely deleted, recreated and a single commit with \\"endgame\\" added). It appears that both GitHub and NPM have locked out the original developer accountbut that the faker.js package is still broken. Please note that this issue is directly related to GSD-2022-1000007 and appears to be part of the same incident. A fork of the repo with the original code appears to now be available at https://github.com/faker-js/faker",
-                             "published": "2022-01-09T02:46:05Z",
-                             "updated": "2022-01-09T11:37:01Z",
+                             "published": "2022-01-09T02:46:05.199Z",
+                             "updated": "2022-01-09T11:37:01.199Z",
                              "affects": [{
                                 "ref": "${json-unit.any-string}",
                                 "versions": [
@@ -235,8 +235,8 @@ public class ModelConverterTest {
                                "severity": "SEVERITY_UNKNOWN"
                              }],
                              "description": "faker.js had it's version updated to 6.6.6 in NPM (which reports it as having 2,571 dependent packages that rely upon it) and the GitHub repo has been wiped of content. This appears to have been done intentionally as the repo only has a single commit (so it was likjely deleted, recreated and a single commit with \\"endgame\\" added). It appears that both GitHub and NPM have locked out the original developer accountbut that the faker.js package is still broken. Please note that this issue is directly related to GSD-2022-1000007 and appears to be part of the same incident. A fork of the repo with the original code appears to now be available at https://github.com/faker-js/faker",
-                             "published": "2022-01-09T02:46:05Z",
-                             "updated": "2022-01-09T11:37:01Z",
+                             "published": "2022-01-09T02:46:05.199Z",
+                             "updated": "2022-01-09T11:37:01.199Z",
                              "properties": [
                                 {
                                    "name": "dependency-track:vuln:title",
@@ -301,8 +301,8 @@ public class ModelConverterTest {
                                "severity": "SEVERITY_MEDIUM"
                              }],
                              "description": "details",
-                             "published": "2022-06-19T00:00:52Z",
-                             "updated": "2022-06-19T00:00:52Z",
+                             "published": "2022-06-19T00:00:52.240Z",
+                             "updated": "2022-06-19T00:00:52.240Z",
                              "affects": [{
                                "ref": "${json-unit.any-string}",
                                "versions": [{
@@ -578,4 +578,42 @@ public class ModelConverterTest {
                         }
                         """);
     }
+
+    @Test
+    void shouldIgnoreInvalidTimestamps() throws Exception {
+        final var advisory = MAPPER.readValue(/* language=JSON */ """
+                {
+                  "id": "DEBIAN-CVE-2026-23040",
+                  "modified": "0001-01-01T00:00:00Z",
+                  "published": "0001-01-01T00:00:00Z"
+                }
+                """, Osv.class);
+
+        final Bom bov = ModelConverter.convert(advisory, false, "Debian");
+
+        assertThatJson(JsonFormat.printer().print(bov)).isEqualTo(/* language=JSON */ """
+                {
+                  "vulnerabilities": [
+                    {
+                      "id": "DEBIAN-CVE-2026-23040",
+                      "source": {
+                        "name": "OSV"
+                      },
+                      "ratings": [
+                        {
+                          "severity": "SEVERITY_UNKNOWN"
+                        }
+                      ],
+                      "properties": [
+                        {
+                          "name": "internal:osv:ecosystem",
+                          "value": "Debian"
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """);
+    }
+
 }
