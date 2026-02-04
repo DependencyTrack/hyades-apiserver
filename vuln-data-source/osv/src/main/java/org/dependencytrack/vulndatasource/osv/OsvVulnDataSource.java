@@ -186,6 +186,8 @@ final class OsvVulnDataSource implements VulnDataSource {
         }
 
         final Path filePath = currentEcosystemFileIterator.next();
+        LOGGER.debug("Reading advisory {}", filePath);
+
         final Osv osv;
         try {
             osv = objectMapper.readValue(filePath.toFile(), Osv.class);
@@ -239,6 +241,7 @@ final class OsvVulnDataSource implements VulnDataSource {
     }
 
     private void downloadEcosystemFilesAll(final String ecosystem, final Path destDirPath) {
+        LOGGER.info("Downloading all advisories for ecosystem {}", ecosystem);
         final var request = HttpRequest.newBuilder()
                 .uri(URI.create("%s/%s/all.zip".formatted(dataUrl, ecosystem)))
                 .build();
@@ -253,6 +256,7 @@ final class OsvVulnDataSource implements VulnDataSource {
             throw new IllegalStateException("Interrupted while downloading advisory archive", e);
         }
 
+        LOGGER.info("Extracting advisories for ecosystem {} to {}", ecosystem, destDirPath);
         try (final InputStream responseBodyInputStream = response.body();
              final var zipInputStream = new ZipInputStream(responseBodyInputStream)) {
             ZipEntry zipEntry;
@@ -315,6 +319,8 @@ final class OsvVulnDataSource implements VulnDataSource {
     }
 
     private void closeCurrentEcosystem() {
+        LOGGER.info("Closing ecosystem {}", currentEcosystem);
+
         if (currentEcosystemFileStream != null) {
             currentEcosystemFileStream.close();
             currentEcosystemFileIterator = null;

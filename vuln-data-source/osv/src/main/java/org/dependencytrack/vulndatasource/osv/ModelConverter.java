@@ -92,9 +92,6 @@ final class ModelConverter {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     static Bom convert(final Osv osv, final boolean isAliasSyncEnabled, final String currentEcosystem) {
-        if (osv.getWithdrawn() != null) {
-            return null;
-        }
         Bom.Builder cyclonedxBom = Bom.newBuilder();
         return cyclonedxBom
                 .addVulnerabilities(extractVulnerability(osv, isAliasSyncEnabled, cyclonedxBom, currentEcosystem))
