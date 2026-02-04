@@ -22,7 +22,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import com.google.protobuf.Timestamp;
+import com.google.protobuf.util.Timestamps;
 import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.proto.v1_6.Advisory;
 import org.cyclonedx.proto.v1_6.Bom;
@@ -113,12 +113,26 @@ final class ModelConverter {
 
         Optional.ofNullable(osv.getPublished())
                 .map(Date::toInstant)
-                .map(instant -> Timestamp.newBuilder().setSeconds(instant.getEpochSecond()))
+                .map(instant -> {
+                    try {
+                        return Timestamps.fromMillis(instant.toEpochMilli());
+                    } catch (IllegalArgumentException e) {
+                        LOGGER.warn("Ignoring invalid published timestamp for advisory {}", osv.getId(), e);
+                        return null;
+                    }
+                })
                 .ifPresent(vulnerability::setPublished);
 
         Optional.ofNullable(osv.getModified())
                 .map(Date::toInstant)
-                .map(instant -> Timestamp.newBuilder().setSeconds(instant.getEpochSecond()))
+                .map(instant -> {
+                    try {
+                        return Timestamps.fromMillis(instant.toEpochMilli());
+                    } catch (IllegalArgumentException e) {
+                        LOGGER.warn("Ignoring invalid modified timestamp for advisory {}", osv.getId(), e);
+                        return null;
+                    }
+                })
                 .ifPresent(vulnerability::setUpdated);
 
         if (osv.getDatabaseSpecific() != null) {
@@ -291,6 +305,9 @@ final class ModelConverter {
 
         for (Affected osvAffectedObj : osvAffectedArray) {
             Package packageObj = osvAffectedObj.getPackage();
+            if (packageObj == null) {
+                continue;
+            }
             String purl = packageObj.getPurl();
             if (purl == null) {
                 LOGGER.debug("affected node for vulnerability {} does not provide a PURL; Skipping", vulnId);
@@ -507,6 +524,12 @@ final class ModelConverter {
             return ratings;
         }
         cvssList.forEach(cvssItem -> {
+            // https://ossf.github.io/osv-schema/#severitytype-field
+            if (cvssItem.getType() != org.dependencytrack.vulndatasource.osv.schema.Severity.Type.CVSS_V_2
+                    && cvssItem.getType() != org.dependencytrack.vulndatasource.osv.schema.Severity.Type.CVSS_V_3
+                    && cvssItem.getType() != org.dependencytrack.vulndatasource.osv.schema.Severity.Type.CVSS_V_4) {
+                return;
+            }
             String vector = cvssItem.getScore();
             if (vector == null) {
                 return;
