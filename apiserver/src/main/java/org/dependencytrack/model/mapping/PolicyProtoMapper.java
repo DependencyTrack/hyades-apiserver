@@ -109,7 +109,7 @@ public class PolicyProtoMapper {
         maybeSet(asDouble(vuln.getCvssV3ImpactSubScore()), protoBuilder::setCvssv3ImpactSubscore);
         maybeSet(asDouble(vuln.getCvssV3ExploitabilitySubScore()), protoBuilder::setCvssv3ExploitabilitySubscore);
         maybeSet(vuln::getCvssV3Vector, protoBuilder::setCvssv3Vector);
-        maybeSet(asDouble(vuln.getCvssV4BaseScore()), protoBuilder::setCvssv4BaseScore);
+        maybeSet(asDouble(vuln.getCvssV4Score()), protoBuilder::setCvssv4Score);
         maybeSet(vuln::getCvssV4Vector, protoBuilder::setCvssv4Vector);
         maybeSet(asDouble(vuln.getOwaspRRBusinessImpactScore()), protoBuilder::setOwaspRrBusinessImpactScore);
         maybeSet(asDouble(vuln.getOwaspRRLikelihoodScore()), protoBuilder::setOwaspRrLikelihoodScore);

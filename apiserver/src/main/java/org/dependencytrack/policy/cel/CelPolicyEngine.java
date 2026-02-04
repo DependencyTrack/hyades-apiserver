@@ -488,7 +488,7 @@ public class CelPolicyEngine {
         Optional.ofNullable(projection.cvssV3BaseScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv3BaseScore);
         Optional.ofNullable(projection.cvssV3ImpactSubScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv3ImpactSubscore);
         Optional.ofNullable(projection.cvssV3ExploitabilitySubScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv3ExploitabilitySubscore);
-        Optional.ofNullable(projection.cvssV4BaseScore).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv4BaseScore);
+        Optional.ofNullable(projection.cvssV4Score).map(BigDecimal::doubleValue).ifPresent(builder::setCvssv4Score);
         Optional.ofNullable(projection.owaspRrLikelihoodScore).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrLikelihoodScore);
         Optional.ofNullable(projection.owaspRrTechnicalImpactScore).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrTechnicalImpactScore);
         Optional.ofNullable(projection.owaspRrBusinessImpactScore).map(BigDecimal::doubleValue).ifPresent(builder::setOwaspRrBusinessImpactScore);
@@ -507,7 +507,7 @@ public class CelPolicyEngine {
         final Severity severity = VulnerabilityUtil.getSeverity(projection.severity,
                 projection.cvssV2BaseScore,
                 projection.cvssV3BaseScore,
-                projection.cvssV4BaseScore,
+                projection.cvssV4Score,
                 projection.owaspRrLikelihoodScore,
                 projection.owaspRrTechnicalImpactScore,
                 projection.owaspRrBusinessImpactScore);

@@ -773,7 +773,7 @@
 
     <changeSet id="v5.7.0-39" author="sahibamittal">
         <addColumn tableName="VULNERABILITY">
-            <column name="CVSSV4BASESCORE" type="numeric"/>
+            <column name="CVSSV4SCORE" type="numeric"/>
             <column name="CVSSV4VECTOR" type="VARCHAR(255)"/>
         </addColumn>
         <addColumn tableName="ANALYSIS">

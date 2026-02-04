@@ -108,8 +108,8 @@ public interface NotificationSubjectDao extends SqlObject {
               END                              AS "vulnCvssV3BaseScore",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV4SCORE"
-                ELSE "V"."CVSSV4BASESCORE"
-              END                              AS "vulnCvssV4BaseScore",
+                ELSE "V"."CVSSV4SCORE"
+              END                              AS "vulnCvssV4Score",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2VECTOR"
                 ELSE "V"."CVSSV2VECTOR"
@@ -203,8 +203,8 @@ public interface NotificationSubjectDao extends SqlObject {
               END                              AS "vulnCvssV3BaseScore",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV4SCORE"
-                ELSE "V"."CVSSV4BASESCORE"
-              END                              AS "vulnCvssV4BaseScore",
+                ELSE "V"."CVSSV4SCORE"
+              END                              AS "vulnCvssV4Score",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2VECTOR"
                 ELSE "V"."CVSSV2VECTOR"
@@ -298,8 +298,8 @@ public interface NotificationSubjectDao extends SqlObject {
               END                              AS "vulnCvssV3BaseScore",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV4SCORE"
-                ELSE "V"."CVSSV4BASESCORE"
-              END                              AS "vulnCvssV4BaseScore",
+                ELSE "V"."CVSSV4SCORE"
+              END                              AS "vulnCvssV4Score",
               CASE
                 WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2VECTOR"
                 ELSE "V"."CVSSV2VECTOR"
@@ -478,8 +478,8 @@ public interface NotificationSubjectDao extends SqlObject {
                                END AS "vulnCvssV3BaseScore"
                              , CASE WHEN "A"."SEVERITY" IS NOT NULL
                                     THEN "A"."CVSSV4SCORE"
-                                    ELSE "V"."CVSSV4BASESCORE"
-                               END AS "vulnCvssV4BaseScore"
+                                    ELSE "V"."CVSSV4SCORE"
+                               END AS "vulnCvssV4Score"
                              , CASE WHEN "A"."SEVERITY" IS NOT NULL
                                     THEN "A"."CVSSV2VECTOR"
                                     ELSE "V"."CVSSV2VECTOR"

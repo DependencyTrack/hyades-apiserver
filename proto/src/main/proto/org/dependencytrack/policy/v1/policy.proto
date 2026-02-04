@@ -144,7 +144,7 @@ message Vulnerability {
   optional double epss_score = 33;
   optional double epss_percentile = 34;
   optional string cvssv4_vector = 35;
-  optional double cvssv4_base_score = 36;
+  optional double cvssv4_score = 36;
 
   message Alias {
     string id = 1;

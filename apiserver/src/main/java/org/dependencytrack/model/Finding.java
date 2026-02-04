@@ -77,7 +77,7 @@ public class Finding implements Serializable {
         }
         optValue(vulnerability, "cvssV2BaseScore", findingRow.cvssV2BaseScore());
         optValue(vulnerability, "cvssV3BaseScore", findingRow.cvssV3BaseScore());
-        optValue(vulnerability, "cvssV4BaseScore", findingRow.cvssV4BaseScore());
+        optValue(vulnerability, "cvssV4Score", findingRow.cvssV4Score());
         optValue(vulnerability, "cvssV2Vector", findingRow.cvssV2Vector());
         optValue(vulnerability, "cvssV3Vector", findingRow.cvssV3Vector());
         optValue(vulnerability, "cvssV4Vector", findingRow.cvssV4Vector());

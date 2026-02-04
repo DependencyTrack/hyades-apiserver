@@ -977,10 +977,10 @@ public class ModelConverter {
             }
             cdxVulnerability.addRating(rating);
         }
-        if (vulnerability.getCvssV4BaseScore() != null) {
+        if (vulnerability.getCvssV4Score() != null) {
             org.cyclonedx.model.vulnerability.Vulnerability.Rating rating = new org.cyclonedx.model.vulnerability.Vulnerability.Rating();
             rating.setSource(convertDtVulnSourceToCdxVulnSource(Vulnerability.Source.valueOf(vulnerability.getSource())));
-            rating.setScore(vulnerability.getCvssV4BaseScore().doubleValue());
+            rating.setScore(vulnerability.getCvssV4Score().doubleValue());
             rating.setVector(vulnerability.getCvssV4Vector());
             if (rating.getScore() >= 9.0) {
                 rating.setSeverity(org.cyclonedx.model.vulnerability.Vulnerability.Rating.Severity.CRITICAL);
@@ -1001,7 +1001,7 @@ public class ModelConverter {
             rating.setVector(vulnerability.getOwaspRRVector());
             cdxVulnerability.addRating(rating);
         }
-        if (vulnerability.getCvssV2BaseScore() == null && vulnerability.getCvssV3BaseScore() == null && vulnerability.getCvssV4BaseScore() == null && vulnerability.getOwaspRRLikelihoodScore() == null) {
+        if (vulnerability.getCvssV2BaseScore() == null && vulnerability.getCvssV3BaseScore() == null && vulnerability.getCvssV4Score() == null && vulnerability.getOwaspRRLikelihoodScore() == null) {
             org.cyclonedx.model.vulnerability.Vulnerability.Rating rating = new org.cyclonedx.model.vulnerability.Vulnerability.Rating();
             rating.setSeverity(convertDtSeverityToCdxSeverity(vulnerability.getSeverity()));
             rating.setSource(convertDtVulnSourceToCdxVulnSource(Vulnerability.Source.valueOf(vulnerability.getSource())));

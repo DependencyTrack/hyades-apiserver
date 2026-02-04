@@ -160,12 +160,12 @@ public final class BovModelConverter {
 
             if (!appliedMethods.contains(SCORE_METHOD_CVSSV4) && (rating.getMethod().equals(SCORE_METHOD_CVSSV4))) {
                 vuln.setCvssV4Vector(trimToNull(rating.getVector()));
-                vuln.setCvssV4BaseScore(BigDecimal.valueOf(rating.getScore()));
+                vuln.setCvssV4Score(BigDecimal.valueOf(rating.getScore()));
                 if (rating.hasVector()) {
                     final Cvss cvss = Cvss.fromVector(rating.getVector());
                     final Score score = cvss.calculateScore();
                     if (rating.getScore() == 0.0) {
-                        vuln.setCvssV4BaseScore(BigDecimal.valueOf(score.getBaseScore()));
+                        vuln.setCvssV4Score(BigDecimal.valueOf(score.getBaseScore()));
                     }
                 }
                 appliedMethods.add(SCORE_METHOD_CVSSV4);
@@ -218,7 +218,7 @@ public final class BovModelConverter {
                 vuln.getSeverity(),
                 vuln.getCvssV2BaseScore(),
                 vuln.getCvssV3BaseScore(),
-                vuln.getCvssV4BaseScore(),
+                vuln.getCvssV4Score(),
                 vuln.getOwaspRRLikelihoodScore(),
                 vuln.getOwaspRRTechnicalImpactScore(),
                 vuln.getOwaspRRBusinessImpactScore()

@@ -273,7 +273,7 @@ class BovModelConverterTest {
         assertThat(vuln.getVulnId()).isEqualTo("SNYK-PYTHON-DJANGO-2968205");
         assertThat(vuln.getSource()).isEqualTo(Vulnerability.Source.SNYK.name());
         assertThat(vuln.getCvssV4Vector()).isEqualTo("CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:A");
-        assertThat(vuln.getCvssV4BaseScore()).isEqualTo("7.0");
+        assertThat(vuln.getCvssV4Score()).isEqualTo("7.0");
     }
 
     @Nested

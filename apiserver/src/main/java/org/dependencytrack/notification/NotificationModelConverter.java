@@ -273,8 +273,8 @@ public final class NotificationModelConverter {
         if (vuln.getCvssV3BaseScore() != null) {
             builder.setCvssV3(vuln.getCvssV3BaseScore().doubleValue());
         }
-        if (vuln.getCvssV4BaseScore() != null) {
-            builder.setCvssV4(vuln.getCvssV4BaseScore().doubleValue());
+        if (vuln.getCvssV4Score() != null) {
+            builder.setCvssV4(vuln.getCvssV4Score().doubleValue());
         }
         if (vuln.getCvssV2Vector() != null) {
             builder.setCvssV2Vector(vuln.getCvssV2Vector());
