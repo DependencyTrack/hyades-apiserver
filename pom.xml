@@ -139,7 +139,7 @@
         <lib.okhttp.version>5.3.2</lib.okhttp.version>
         <lib.open-vulnerability-clients.version>9.0.3</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
-        <lib.pebble.version>4.1.0</lib.pebble.version>
+        <lib.pebble.version>4.1.1</lib.pebble.version>
         <lib.postgresql.version>42.7.9</lib.postgresql.version>
         <lib.protobuf-java.version>4.33.5</lib.protobuf-java.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
