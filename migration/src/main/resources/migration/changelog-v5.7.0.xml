@@ -770,4 +770,20 @@
                AND "PROPERTYNAME" LIKE 'jira.%';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-39" author="nscuro">
+        <!--
+            Add timestamp columns for when vulnerabilities where created or updated,
+            which is required or auditing purposes and, occasionally, optimistic locking.
+
+            CREATED and UPDATED columns already exist, but refer to modification times
+            in the corresponding upstream database (e.g. the NVD).
+        -->
+        <addColumn tableName="VULNERABILITY">
+            <column name="RECORD_CREATED_AT" type="TIMESTAMPTZ(6)" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="RECORD_UPDATED_AT" type="TIMESTAMPTZ(6)"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
