@@ -26,6 +26,7 @@ import io.github.jeremylong.openvulnerability.client.nvd.DefCveItem;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +59,7 @@ final class NvdVulnDataSource implements VulnDataSource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NvdVulnDataSource.class);
 
-    private final WatermarkManager watermarkManager;
+    private final @Nullable WatermarkManager watermarkManager;
     private final String feedsUrl;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
@@ -72,7 +73,7 @@ final class NvdVulnDataSource implements VulnDataSource {
     private Bom nextItem;
 
     NvdVulnDataSource(
-            final WatermarkManager watermarkManager,
+            final @Nullable WatermarkManager watermarkManager,
             final ObjectMapper objectMapper,
             final HttpClient httpClient,
             final String feedsUrl) {
@@ -147,15 +148,17 @@ final class NvdVulnDataSource implements VulnDataSource {
 
         final Vulnerability vuln = bov.getVulnerabilities(0);
 
-        final Instant updatedAt = vuln.hasUpdated()
-                ? Instant.ofEpochMilli(Timestamps.toMillis(vuln.getUpdated()))
-                : null;
-        watermarkManager.maybeAdvance(updatedAt);
+        if (watermarkManager != null) {
+            final Instant updatedAt = vuln.hasUpdated()
+                    ? Instant.ofEpochMilli(Timestamps.toMillis(vuln.getUpdated()))
+                    : null;
+            watermarkManager.maybeAdvance(updatedAt);
+        }
     }
 
     @Override
     public void close() {
-        if (completedSuccessfully) {
+        if (completedSuccessfully && watermarkManager != null) {
             // Feed file contents are not ordered by modification date.
             // Committing the watermark is only safe when *all* feed files
             // have been successfully processed.
@@ -173,7 +176,8 @@ final class NvdVulnDataSource implements VulnDataSource {
         LOGGER.info("Opening {}", currentFeed);
 
         final NvdDataFeedMetadata feedMetadata = retrieveFeedMetadata(currentFeed);
-        if (watermarkManager.getWatermark() != null
+        if (watermarkManager != null
+            && watermarkManager.getWatermark() != null
             && !watermarkManager.getWatermark().isBefore(feedMetadata.lastModifiedAt())) {
             LOGGER.info("Skipping {}: Below watermark", currentFeed);
             currentFeedIndex++;
@@ -220,7 +224,7 @@ final class NvdVulnDataSource implements VulnDataSource {
             return null;
         }
 
-        final Instant watermark = watermarkManager.getWatermark();
+        final Instant watermark = watermarkManager != null ? watermarkManager.getWatermark() : null;
 
         DefCveItem defCveItem = null;
         while (defCveItem == null) {
