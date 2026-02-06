@@ -88,6 +88,7 @@ public class CelPolicyScriptHostTest {
                 // Scores are necessary to calculate severity...
                 "cvssv2_base_score",
                 "cvssv3_base_score",
+                "cvssv4_score",
                 "owasp_rr_likelihood_score",
                 "owasp_rr_technical_impact_score",
                 "owasp_rr_business_impact_score",

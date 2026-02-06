@@ -26,6 +26,8 @@ import io.github.jeremylong.openvulnerability.client.nvd.CvssV2;
 import io.github.jeremylong.openvulnerability.client.nvd.CvssV2Data;
 import io.github.jeremylong.openvulnerability.client.nvd.CvssV3;
 import io.github.jeremylong.openvulnerability.client.nvd.CvssV3Data;
+import io.github.jeremylong.openvulnerability.client.nvd.CvssV4;
+import io.github.jeremylong.openvulnerability.client.nvd.CvssV4Data;
 import io.github.jeremylong.openvulnerability.client.nvd.DefCveItem;
 import io.github.jeremylong.openvulnerability.client.nvd.LangString;
 import io.github.jeremylong.openvulnerability.client.nvd.Metrics;
@@ -355,6 +357,23 @@ final class ModelConverter {
                                 .setMethod(ScoreMethod.SCORE_METHOD_CVSSV31)
                                 .setVector(cvss.getVectorString())
                                 .setSeverity(mapSeverity(cvss.getBaseSeverity()))
+                                .setSource(determineMetricSource(baseMetric.getSource()))
+                                .build())
+                        .ifPresent(ratings::add);
+            });
+        }
+
+        // CVSS V4
+        List<CvssV4> baseMetricV4 = metrics.getCvssMetricV40();
+        if (baseMetricV4 != null) {
+            baseMetricV4.forEach(baseMetric -> {
+                CvssV4Data cvss = baseMetric.getCvssData();
+                Optional.ofNullable(cvss)
+                        .map(cvss4 -> VulnerabilityRating.newBuilder()
+                                .setScore(Double.parseDouble(NumberFormat.getInstance(Locale.US).format(cvss.getBaseScore())))
+                                .setMethod(ScoreMethod.SCORE_METHOD_CVSSV4)
+                                .setVector(cvss.getVectorString())
+                                .setSeverity(mapSeverity(String.valueOf(cvss.getBaseSeverity())))
                                 .setSource(determineMetricSource(baseMetric.getSource()))
                                 .build())
                         .ifPresent(ratings::add);
