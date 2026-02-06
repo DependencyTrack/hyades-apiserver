@@ -25,6 +25,7 @@ import org.cyclonedx.proto.v1_6.Property;
 import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.osv.schema.Osv;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +65,7 @@ final class OsvVulnDataSource implements VulnDataSource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OsvVulnDataSource.class);
 
-    private final WatermarkManager watermarkManager;
+    private final @Nullable WatermarkManager watermarkManager;
     private final ObjectMapper objectMapper;
     private final String dataUrl;
     private final List<String> ecosystems;
@@ -80,7 +81,7 @@ final class OsvVulnDataSource implements VulnDataSource {
     private final boolean isAliasSyncEnabled;
 
     OsvVulnDataSource(
-            final WatermarkManager watermarkManager,
+            final @Nullable WatermarkManager watermarkManager,
             final ObjectMapper objectMapper,
             final String dataUrl,
             final Collection<String> ecosystems,
@@ -111,7 +112,9 @@ final class OsvVulnDataSource implements VulnDataSource {
             }
 
             successfullyCompletedEcosystems.add(currentEcosystem);
-            watermarkManager.maybeCommit(List.of(currentEcosystem));
+            if (watermarkManager != null) {
+                watermarkManager.maybeCommit(List.of(currentEcosystem));
+            }
             closeCurrentEcosystem();
             currentEcosystemIndex++;
         }
@@ -125,7 +128,9 @@ final class OsvVulnDataSource implements VulnDataSource {
                     return true;
                 }
                 successfullyCompletedEcosystems.add(currentEcosystem);
-                watermarkManager.maybeCommit(List.of(currentEcosystem));
+                if (watermarkManager != null) {
+                    watermarkManager.maybeCommit(List.of(currentEcosystem));
+                }
                 closeCurrentEcosystem();
             }
             currentEcosystemIndex++;
@@ -164,19 +169,23 @@ final class OsvVulnDataSource implements VulnDataSource {
             throw new IllegalArgumentException();
         }
 
-        final Instant updatedAt = vuln.hasUpdated()
-                ? Instant.ofEpochMilli(Timestamps.toMillis(vuln.getUpdated()))
-                : null;
-        if (updatedAt == null) {
-            throw new IllegalArgumentException();
-        }
+        if (watermarkManager != null) {
+            final Instant updatedAt = vuln.hasUpdated()
+                    ? Instant.ofEpochMilli(Timestamps.toMillis(vuln.getUpdated()))
+                    : null;
+            if (updatedAt == null) {
+                throw new IllegalArgumentException();
+            }
 
-        watermarkManager.maybeAdvance(ecosystem, updatedAt);
+            watermarkManager.maybeAdvance(ecosystem, updatedAt);
+        }
     }
 
     @Override
     public void close() {
-        watermarkManager.maybeCommit(successfullyCompletedEcosystems);
+        if (watermarkManager != null) {
+            watermarkManager.maybeCommit(successfullyCompletedEcosystems);
+        }
         closeCurrentEcosystem();
     }
 
@@ -228,13 +237,18 @@ final class OsvVulnDataSource implements VulnDataSource {
             throw new UncheckedIOException("Failed to create temp directory", e);
         }
 
-        final Instant watermark = watermarkManager.getWatermark(ecosystem);
-        if (watermark == null) {
-            LOGGER.debug("No watermark found; Downloading all advisories");
+        if (watermarkManager == null) {
+            LOGGER.debug("Incremental mirroring disabled; Downloading all advisories");
             downloadEcosystemFilesAll(ecosystem, tempDirPath);
         } else {
-            LOGGER.debug("Downloading advisories changed since {}", watermark);
-            downloadEcosystemFilesIncremental(ecosystem, watermark, tempDirPath);
+            final Instant watermark = watermarkManager.getWatermark(ecosystem);
+            if (watermark == null) {
+                LOGGER.debug("No watermark found; Downloading all advisories");
+                downloadEcosystemFilesAll(ecosystem, tempDirPath);
+            } else {
+                LOGGER.debug("Downloading advisories changed since {}", watermark);
+                downloadEcosystemFilesIncremental(ecosystem, watermark, tempDirPath);
+            }
         }
 
         return tempDirPath;

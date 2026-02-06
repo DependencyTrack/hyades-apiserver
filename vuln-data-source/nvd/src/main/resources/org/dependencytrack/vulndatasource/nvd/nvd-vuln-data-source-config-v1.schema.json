@@ -18,6 +18,13 @@
       "description": "The URL to download CVE feeds from.  \n**Must** serve [JSON 2.0 feed files](https://nvd.nist.gov/vuln/data-feeds#divJson20Feeds).",
       "format": "uri",
       "minLength": 1
+    },
+    "incrementalMirroringEnabled": {
+      "type": "boolean",
+      "title": "Incremental Mirroring Enabled",
+      "description": "Whether incremental mirroring is enabled. When enabled (default), watermark logic will be used to only mirror new or updated vulnerabilities. When disabled, full mirroring will be performed on each run.",
+      "default": true,
+      "existingJavaType": "boolean"
     }
   },
   "required": [

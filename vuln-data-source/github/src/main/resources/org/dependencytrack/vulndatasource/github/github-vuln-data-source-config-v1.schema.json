@@ -30,6 +30,13 @@
       "description": "Access token to authenticate with the GitHub API.  \n**The token is only required for authentication and does not require any permissions**.  \nBoth [fine-grained](https://github.com/settings/personal-access-tokens/new) and [classic](https://github.com/settings/tokens/new) access tokens work.",
       "minLength": 1,
       "x-secret-ref": true
+    },
+    "incrementalMirroringEnabled": {
+      "type": "boolean",
+      "title": "Incremental Mirroring Enabled",
+      "description": "Whether incremental mirroring is enabled. When enabled (default), watermark logic will be used to only mirror new or updated vulnerabilities. When disabled, full mirroring will be performed on each run.",
+      "default": true,
+      "existingJavaType": "boolean"
     }
   },
   "required": [

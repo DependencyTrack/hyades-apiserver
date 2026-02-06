@@ -29,6 +29,7 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
+import org.jspecify.annotations.Nullable;
 
 import java.net.URI;
 import java.time.Clock;
@@ -83,13 +84,15 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
 
-        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), this.kvStore);
+        final @Nullable WatermarkManager watermarkManager = config.isIncrementalMirroringEnabled()
+                ? WatermarkManager.create(Clock.systemUTC(), this.kvStore)
+                : null;
 
         final GitHubSecurityAdvisoryClientBuilder clientBuilder = aGitHubSecurityAdvisoryClient()
                 .withHttpClientSupplier(httpClientSupplier)
                 .withEndpoint(config.getApiUrl().toString())
                 .withApiKey(config.getApiToken());
-        if (watermarkManager.getWatermark() != null) {
+        if (watermarkManager != null && watermarkManager.getWatermark() != null) {
             clientBuilder.withUpdatedSinceFilter(
                     ZonedDateTime.ofInstant(watermarkManager.getWatermark(), ZoneOffset.UTC));
         }
@@ -103,7 +106,8 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
         final var defaultConfig = new GithubVulnDataSourceConfigV1()
                 .withEnabled(false)
                 .withAliasSyncEnabled(true)
-                .withApiUrl(URI.create("https://api.github.com/graphql"));
+                .withApiUrl(URI.create("https://api.github.com/graphql"))
+                .withIncrementalMirroringEnabled(true);
 
         return RuntimeConfigSpec.of(defaultConfig, config -> {
             if (!config.isEnabled()) {
