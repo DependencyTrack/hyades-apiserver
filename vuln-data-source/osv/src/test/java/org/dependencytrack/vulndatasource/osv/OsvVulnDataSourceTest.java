@@ -41,10 +41,12 @@ import java.util.zip.ZipOutputStream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -52,6 +54,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class OsvVulnDataSourceTest {
 
@@ -143,6 +146,242 @@ class OsvVulnDataSourceTest {
     void testCloseWithCompletedEcosystems() {
         vulnDataSource.close();
         verify(watermarkManagerMock).maybeCommit(any(Set.class));
+    }
+
+    @Test
+    void testIncrementalMirroringEnabledUsesWatermark() throws Exception {
+        // Test that when incremental mirroring is enabled, watermark manager is used
+        final WatermarkManager watermarkManager = mock(WatermarkManager.class);
+        final String ecosystem = "maven";
+        final Instant existingWatermark = Instant.parse("2024-01-01T12:00:00Z");
+
+        // Mock watermark manager to return an existing watermark
+        when(watermarkManager.getWatermark(ecosystem)).thenReturn(existingWatermark);
+
+        var wireMockServer = new WireMockServer(options().dynamicPort());
+        wireMockServer.start();
+        WireMock.configureFor("localhost", wireMockServer.port());
+
+        // Stub for incremental download (modified IDs CSV endpoint)
+        stubFor(get(urlEqualTo("/" + ecosystem + "/modified_id.csv"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withBody("")
+                        .withHeader("Content-Type", "text/csv")));
+
+        OsvVulnDataSource dataSource = new OsvVulnDataSource(
+                watermarkManager,
+                objectMapper,
+                "http://localhost:" + wireMockServer.port(),
+                List.of(ecosystem),
+                HttpClient.newHttpClient(),
+                false
+        );
+
+        // Step 1: When hasNext() is called, it should check for watermark
+        dataSource.hasNext();
+
+        // Step 2: Verify that getWatermark was called (incremental mirroring enabled)
+        verify(watermarkManager).getWatermark(ecosystem);
+
+        // Step 3: Verify that all.zip was NOT requested (incremental download should be used instead)
+        WireMock.verify(0, getRequestedFor(urlEqualTo("/" + ecosystem + "/all.zip")));
+
+        // Step 4: Verify that modified_id.csv endpoint was requested (incremental download path)
+        WireMock.verify(getRequestedFor(urlEqualTo("/" + ecosystem + "/modified_id.csv")));
+
+        // Step 5: Verify close calls maybeCommit on watermark manager
+        dataSource.close();
+        verify(watermarkManager).maybeCommit(any(Set.class));
+
+        wireMockServer.stop();
+    }
+
+    @Test
+    void testIncrementalMirroringEnabledNoWatermarkDownloadsAll() throws Exception {
+        // Test that when incremental mirroring is enabled but no watermark exists, all files are downloaded
+        final WatermarkManager watermarkManager = mock(WatermarkManager.class);
+        final String ecosystem = "maven";
+
+        // Mock watermark manager to return null (no existing watermark)
+        when(watermarkManager.getWatermark(ecosystem)).thenReturn(null);
+
+        var wireMockServer = new WireMockServer(options().dynamicPort());
+        wireMockServer.start();
+        WireMock.configureFor("localhost", wireMockServer.port());
+
+        // Create in-memory ZIP for all.zip download
+        ByteArrayOutputStream zipBytes = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(zipBytes)) {
+            ZipEntry entry = new ZipEntry("osv-advisory.json");
+            zos.putNextEntry(entry);
+            String advisoryJson = """
+                {
+                    "id": "OSV-789",
+                    "summary": "Test vulnerability",
+                    "affected": [],
+                    "modified": "2022-06-09T07:01:32.587Z"
+                }
+                """;
+            zos.write(advisoryJson.getBytes());
+            zos.closeEntry();
+        }
+
+        stubFor(get(urlEqualTo("/" + ecosystem + "/all.zip"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withBody(zipBytes.toByteArray())
+                        .withHeader("Content-Type", "application/zip")));
+
+        OsvVulnDataSource dataSource = new OsvVulnDataSource(
+                watermarkManager,
+                objectMapper,
+                "http://localhost:" + wireMockServer.port(),
+                List.of(ecosystem),
+                HttpClient.newHttpClient(),
+                false
+        );
+
+        // Step 1: When hasNext() is called, it should check for watermark
+        dataSource.hasNext();
+
+        // Step 2: Verify that getWatermark was called (watermark manager is used)
+        verify(watermarkManager).getWatermark(ecosystem);
+
+        // Step 3: Verify that all.zip was requested (download all when no watermark exists)
+        WireMock.verify(getRequestedFor(urlEqualTo("/" + ecosystem + "/all.zip")));
+
+        // Step 4: Verify that modified_id.csv endpoint was NOT requested (no incremental download when no watermark)
+        WireMock.verify(0, getRequestedFor(urlEqualTo("/" + ecosystem + "/modified_id.csv")));
+
+        // Step 5: Verify close calls maybeCommit on watermark manager
+        dataSource.close();
+        verify(watermarkManager).maybeCommit(any(Set.class));
+
+        wireMockServer.stop();
+    }
+
+    @Test
+    void testIncrementalMirroringDisabledDownloadsAll() throws Exception {
+        // Test that when incremental mirroring is disabled, all files are downloaded and watermark is not used
+        final String ecosystem = "maven";
+
+        var wireMockServer = new WireMockServer(options().dynamicPort());
+        wireMockServer.start();
+        WireMock.configureFor("localhost", wireMockServer.port());
+
+        // Create in-memory ZIP for all.zip download
+        ByteArrayOutputStream zipBytes = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(zipBytes)) {
+            ZipEntry entry = new ZipEntry("osv-advisory.json");
+            zos.putNextEntry(entry);
+            String advisoryJson = """
+                {
+                    "id": "OSV-789",
+                    "summary": "Test vulnerability",
+                    "affected": [],
+                    "modified": "2022-06-09T07:01:32.587Z"
+                }
+                """;
+            zos.write(advisoryJson.getBytes());
+            zos.closeEntry();
+        }
+
+        stubFor(get(urlEqualTo("/" + ecosystem + "/all.zip"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withBody(zipBytes.toByteArray())
+                        .withHeader("Content-Type", "application/zip")));
+
+        // Create data source WITHOUT watermark manager (incremental mirroring disabled)
+        OsvVulnDataSource dataSource = new OsvVulnDataSource(
+                null, // watermark manager is null when incremental mirroring is disabled
+                objectMapper,
+                "http://localhost:" + wireMockServer.port(),
+                List.of(ecosystem),
+                HttpClient.newHttpClient(),
+                false
+        );
+
+        // Step 1: When hasNext() is called, it should download all files directly (no watermark check)
+        dataSource.hasNext();
+
+        // Step 2: Verify that all.zip was requested (download all when incremental mirroring is disabled)
+        WireMock.verify(getRequestedFor(urlEqualTo("/" + ecosystem + "/all.zip")));
+
+        // Step 3: Verify that modified_id.csv endpoint was NOT requested (incremental download not used)
+        WireMock.verify(0, getRequestedFor(urlEqualTo("/" + ecosystem + "/modified_id.csv")));
+
+        // Step 4: Test markProcessed - should not call watermark manager and should not throw exception
+        Instant updatedAt = Instant.parse("2024-01-01T12:00:00Z");
+        Bom bom = Bom.newBuilder()
+                .addVulnerabilities(Vulnerability.newBuilder()
+                        .setUpdated(Timestamps.fromMillis(updatedAt.toEpochMilli()))
+                        .addProperties(Property.newBuilder()
+                                .setName(CycloneDxPropertyNames.PROPERTY_OSV_ECOSYSTEM)
+                                .setValue(ecosystem))
+                        .build())
+                .build();
+
+        assertThatNoException()
+                .isThrownBy(() -> dataSource.markProcessed(bom));
+
+        // Step 5: Test close - should not call watermark manager and should not throw exception
+        assertThatNoException()
+                .isThrownBy(dataSource::close);
+
+        wireMockServer.stop();
+    }
+
+    @Test
+    void testMarkProcessedWithIncrementalMirroringDisabled() {
+        // Test that markProcessed works when watermark manager is null (incremental mirroring disabled)
+        OsvVulnDataSource dataSourceWithoutWatermark = new OsvVulnDataSource(
+                null, // watermark manager is null when incremental mirroring is disabled
+                objectMapper,
+                "http://localhost",
+                List.of("maven"),
+                mock(HttpClient.class),
+                false
+        );
+
+        Instant updatedAt = Instant.parse("2024-01-01T12:00:00Z");
+
+        Bom bom = Bom.newBuilder()
+                .addVulnerabilities(Vulnerability.newBuilder()
+                        .setUpdated(Timestamps.fromMillis(updatedAt.toEpochMilli()))
+                        .addProperties(Property.newBuilder()
+                                .setName(CycloneDxPropertyNames.PROPERTY_OSV_ECOSYSTEM)
+                                .setValue("maven"))
+                        .build())
+                .build();
+
+        // Step 1: Verify markProcessed does not throw exception when watermark manager is null
+        assertThatNoException()
+                .isThrownBy(() -> dataSourceWithoutWatermark.markProcessed(bom));
+
+        // Step 2: Verify that watermark manager methods were NOT called (since it's null)
+        // This is implicit - if watermark manager was used, it would throw NullPointerException
+    }
+
+    @Test
+    void testCloseWithIncrementalMirroringDisabled() {
+        // Test that close works when watermark manager is null (incremental mirroring disabled)
+        OsvVulnDataSource dataSourceWithoutWatermark = new OsvVulnDataSource(
+                null, // watermark manager is null when incremental mirroring is disabled
+                objectMapper,
+                "http://localhost",
+                List.of("maven"),
+                mock(HttpClient.class),
+                false
+        );
+
+        // Step 1: Verify close does not throw exception when watermark manager is null
+        assertThatNoException()
+                .isThrownBy(dataSourceWithoutWatermark::close);
+
+        // Step 2: Verify that watermark manager methods were NOT called (since it's null)
+        // This is implicit - if watermark manager was used, it would throw NullPointerException
     }
 
     @Test

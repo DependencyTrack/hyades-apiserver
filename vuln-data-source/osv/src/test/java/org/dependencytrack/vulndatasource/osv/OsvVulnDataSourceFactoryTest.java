@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.vulndatasource.osv;
 
+import java.lang.reflect.Field;
+
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.testing.AbstractExtensionFactoryTest;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
@@ -29,6 +31,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull VulnDataSource, @NonNull OsvVulnDataSourceFactory> {
 
@@ -86,6 +89,98 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
         final VulnDataSource dataSource = factory.create();
         assertThat(dataSource).isNotNull();
         dataSource.close();
+    }
+
+    @Test
+    void createShouldCreateWatermarkManagerWhenIncrementalMirroringEnabled() throws Exception {
+        final var config = (OsvVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(true);
+        config.setIncrementalMirroringEnabled(true); // Explicitly enable incremental mirroring
+
+        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
+
+        factory.init(new ExtensionContext(configRegistry));
+
+        // Step 1: Create data source
+        final VulnDataSource dataSource = factory.create();
+        assertThat(dataSource).isNotNull();
+        assertThat(dataSource).isInstanceOf(OsvVulnDataSource.class);
+
+        // Step 2: Verify watermark manager is NOT null when incremental mirroring is enabled
+        final OsvVulnDataSource osvDataSource = (OsvVulnDataSource) dataSource;
+        final Field watermarkManagerField = OsvVulnDataSource.class.getDeclaredField("watermarkManager");
+        watermarkManagerField.setAccessible(true);
+        final Object watermarkManager = watermarkManagerField.get(osvDataSource);
+        assertThat(watermarkManager)
+                .as("Watermark manager should be created when incremental mirroring is enabled")
+                .isNotNull();
+
+        // Step 3: Verify data source can be closed without errors
+        assertThatNoException()
+                .isThrownBy(dataSource::close);
+    }
+
+    @Test
+    void createShouldNotCreateWatermarkManagerWhenIncrementalMirroringDisabled() throws Exception {
+        final var config = (OsvVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(true);
+        config.setIncrementalMirroringEnabled(false); // Disable incremental mirroring
+
+        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
+
+        factory.init(new ExtensionContext(configRegistry));
+
+        // Step 1: Create data source
+        final VulnDataSource dataSource = factory.create();
+        assertThat(dataSource).isNotNull();
+        assertThat(dataSource).isInstanceOf(OsvVulnDataSource.class);
+
+        // Step 2: Verify watermark manager IS null when incremental mirroring is disabled
+        final OsvVulnDataSource osvDataSource = (OsvVulnDataSource) dataSource;
+        final Field watermarkManagerField = OsvVulnDataSource.class.getDeclaredField("watermarkManager");
+        watermarkManagerField.setAccessible(true);
+        final Object watermarkManager = watermarkManagerField.get(osvDataSource);
+        assertThat(watermarkManager)
+                .as("Watermark manager should be null when incremental mirroring is disabled")
+                .isNull();
+
+        // Step 3: Verify data source can be closed without errors (no watermark manager to commit)
+        assertThatNoException()
+                .isThrownBy(dataSource::close);
+    }
+
+    @Test
+    void createShouldDefaultToIncrementalMirroringEnabled() throws Exception {
+        final var config = (OsvVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(true);
+        // Don't set incrementalMirroringEnabled - should default to true
+
+        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
+
+        factory.init(new ExtensionContext(configRegistry));
+
+        // Step 1: Create data source with default config (incremental mirroring not explicitly set)
+        final VulnDataSource dataSource = factory.create();
+        assertThat(dataSource).isNotNull();
+        assertThat(dataSource).isInstanceOf(OsvVulnDataSource.class);
+
+        // Step 2: Verify watermark manager is NOT null by default (incremental mirroring enabled by default)
+        final OsvVulnDataSource osvDataSource = (OsvVulnDataSource) dataSource;
+        final Field watermarkManagerField = OsvVulnDataSource.class.getDeclaredField("watermarkManager");
+        watermarkManagerField.setAccessible(true);
+        final Object watermarkManager = watermarkManagerField.get(osvDataSource);
+        assertThat(watermarkManager)
+                .as("Watermark manager should be created by default (incremental mirroring enabled by default)")
+                .isNotNull();
+
+        // Step 3: Verify default config value is true
+        assertThat(config.isIncrementalMirroringEnabled())
+                .as("Default value of incrementalMirroringEnabled should be true")
+                .isTrue();
+
+        // Step 4: Verify data source can be closed without errors
+        assertThatNoException()
+                .isThrownBy(dataSource::close);
     }
 
 }
