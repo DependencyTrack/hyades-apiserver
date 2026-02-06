@@ -28,12 +28,22 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 public interface ExtensionConfigDao {
 
     @SqlQuery("""
+            SELECT EXISTS(
+              SELECT 1
+                FROM "EXTENSION_RUNTIME_CONFIG"
+               WHERE "EXTENSION_POINT" = :extensionPointName
+                 AND "EXTENSION" = :extensionName
+            )
+            """)
+    boolean exists(@Bind String extensionPointName, @Bind String extensionName);
+
+    @SqlQuery("""
             SELECT "CONFIG"
               FROM "EXTENSION_RUNTIME_CONFIG"
              WHERE "EXTENSION_POINT" = :extensionPointName
                AND "EXTENSION" = :extensionName
             """)
-    String getConfig(@Bind String extensionPointName, @Bind String extensionName);
+    String get(@Bind String extensionPointName, @Bind String extensionName);
 
     @SqlUpdate("""
             INSERT INTO "EXTENSION_RUNTIME_CONFIG" ("EXTENSION_POINT", "EXTENSION", "CONFIG", "CREATED_AT")
@@ -44,6 +54,6 @@ public interface ExtensionConfigDao {
               , "UPDATED_AT" = NOW()
             WHERE "EXTENSION_RUNTIME_CONFIG"."CONFIG" IS DISTINCT FROM EXCLUDED."CONFIG"
             """)
-    boolean saveConfig(@Bind String extensionPointName, @Bind String extensionName, @Bind String config);
+    boolean save(@Bind String extensionPointName, @Bind String extensionName, @Bind String config);
 
 }
