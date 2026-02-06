@@ -166,7 +166,7 @@ class ExtensionsResourceTest extends ResourceTest {
 
         useJdbiTransaction(
                 handle -> handle.attach(ExtensionConfigDao.class)
-                        .saveConfig("dummy", "dummy-extension", /* language=JSON */ """
+                        .save("dummy", "dummy-extension", /* language=JSON */ """
                                 {
                                   "requiredString": "yay!"
                                 }
@@ -230,7 +230,7 @@ class ExtensionsResourceTest extends ResourceTest {
         assertThat(getPlainTextBody(response)).isEmpty();
 
         final String savedConfig = withJdbiHandle(
-                handle -> handle.attach(ExtensionConfigDao.class).getConfig("dummy", "dummy-extension"));
+                handle -> handle.attach(ExtensionConfigDao.class).get("dummy", "dummy-extension"));
         assertThatJson(savedConfig).isEqualTo(/* language=JSON */ """
                 {
                   "requiredString": "foo",
@@ -249,7 +249,7 @@ class ExtensionsResourceTest extends ResourceTest {
         useJdbiTransaction(
                 handle -> handle
                         .attach(ExtensionConfigDao.class)
-                        .saveConfig("dummy", "dummy-extension", /* language=JSON */ """
+                        .save("dummy", "dummy-extension", /* language=JSON */ """
                                 {
                                   "requiredString": "foo",
                                   "optionalString": "bar"
