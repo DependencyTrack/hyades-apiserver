@@ -67,8 +67,10 @@ public interface FindingDao {
             List<Integer> cwes,
             BigDecimal cvssV2BaseScore,
             BigDecimal cvssV3BaseScore,
+            BigDecimal cvssV4Score,
             String cvssV2Vector,
             String cvssV3Vector,
+            String cvssV4Vector,
             BigDecimal owaspRRLikelihoodScore,
             BigDecimal owaspRRTechnicalImpactScore,
             BigDecimal owaspRRBusinessImpactScore,
@@ -93,6 +95,7 @@ public interface FindingDao {
             Severity vulnSeverity,
             BigDecimal cvssV2BaseScore,
             BigDecimal cvssV3BaseScore,
+            BigDecimal cvssV4Score,
             Instant vulnPublished,
             List<Integer> cwes,
             AnalyzerIdentity analyzerIdentity,
@@ -131,6 +134,10 @@ public interface FindingDao {
                     ELSE "V"."CVSSV3BASESCORE"
                  END                              AS "cvssV3BaseScore",
                  CASE
+                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV4SCORE"
+                    ELSE "V"."CVSSV4SCORE"
+                 END                              AS "cvssV4Score",
+                 CASE
                     WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2VECTOR"
                     ELSE "V"."CVSSV2VECTOR"
                  END                              AS "cvssV2Vector",
@@ -138,6 +145,10 @@ public interface FindingDao {
                     WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3VECTOR"
                     ELSE "V"."CVSSV3VECTOR"
                  END                              AS "cvssV3Vector",
+                 CASE
+                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV4VECTOR"
+                    ELSE "V"."CVSSV4VECTOR"
+                 END                              AS "cvssV4Vector",
                   -- TODO: Analysis only has a single score, but OWASP RR defines multiple.
                   --  How to handle this?
                  CASE
@@ -236,6 +247,10 @@ public interface FindingDao {
                     ELSE "V"."CVSSV3BASESCORE"
                  END                              AS "cvssV3BaseScore",
                  CASE
+                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV4SCORE"
+                    ELSE "V"."CVSSV4SCORE"
+                 END                              AS "cvssV4Score",
+                 CASE
                     WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV2VECTOR"
                     ELSE "V"."CVSSV2VECTOR"
                  END                              AS "cvssV2Vector",
@@ -243,6 +258,10 @@ public interface FindingDao {
                     WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV3VECTOR"
                     ELSE "V"."CVSSV3VECTOR"
                  END                              AS "cvssV3Vector",
+                 CASE
+                    WHEN "A"."SEVERITY" IS NOT NULL THEN "A"."CVSSV4VECTOR"
+                    ELSE "V"."CVSSV4VECTOR"
+                 END                              AS "cvssV4Vector",
                   -- TODO: Analysis only has a single score, but OWASP RR defines multiple.
                   --  How to handle this?
                  CASE
@@ -308,6 +327,7 @@ public interface FindingDao {
             @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"V\".\"TITLE\""),
             @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"V\".\"VULNID\""),
             @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = "\"vulnSeverity\""),
+            @AllowApiOrdering.Column(name = "vulnerability.cvssV4Score", queryName = "\"cvssV4Score\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV3BaseScore", queryName = "\"cvssV3BaseScore\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV2BaseScore", queryName = "\"cvssV2BaseScore\""),
             @AllowApiOrdering.Column(name = "vulnerability.published", queryName = "\"V\".\"PUBLISHED\""),
@@ -359,6 +379,10 @@ public interface FindingDao {
                     WHEN "ANALYSIS"."SEVERITY" IS NOT NULL THEN "ANALYSIS"."CVSSV3SCORE"
                     ELSE "VULNERABILITY"."CVSSV3BASESCORE"
                   END                              AS "cvssV3BaseScore"
+                , CASE
+                    WHEN "ANALYSIS"."SEVERITY" IS NOT NULL THEN "ANALYSIS"."CVSSV4SCORE"
+                    ELSE "VULNERABILITY"."CVSSV4SCORE"
+                  END                              AS "cvssV4Score"
                 , "VULNERABILITY"."PUBLISHED" AS "vulnPublished"
                 , CAST(STRING_TO_ARRAY("VULNERABILITY"."CWES", ',') AS INT[]) AS "CWES"
                 , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
@@ -392,6 +416,7 @@ public interface FindingDao {
                , "vulnSeverity"
                , "cvssV2BaseScore"
                , "cvssV3BaseScore"
+               , "cvssV4Score"
                , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
                , "VULNERABILITY"."PUBLISHED"
                , "VULNERABILITY"."CWES"
@@ -408,6 +433,7 @@ public interface FindingDao {
             @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"VULNERABILITY\".\"VULNID\""),
             @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"VULNERABILITY\".\"TITLE\""),
             @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = "\"vulnSeverity\""),
+            @AllowApiOrdering.Column(name = "vulnerability.cvssV4Score", queryName = "\"cvssV4Score\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV3BaseScore", queryName = "\"cvssV3BaseScore\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV2BaseScore", queryName = "\"cvssV2BaseScore\""),
             @AllowApiOrdering.Column(name = "vulnerability.published", queryName = "\"VULNERABILITY\".\"PUBLISHED\""),
@@ -465,6 +491,10 @@ public interface FindingDao {
                         processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV3BASESCORE\"", true, false, false);
                 case "cvssv3To" ->
                         processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV3BASESCORE\"", false, false, false);
+                case "cvssv4From" ->
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV4SCORE\"", true, false, false);
+                case "cvssv4To" ->
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV4SCORE\"", false, false, false);
             }
         }
     }

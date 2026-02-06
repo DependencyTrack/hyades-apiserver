@@ -38,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV2;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV4;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_OWASP;
 
 class BovModelConverterTest {
@@ -253,6 +254,26 @@ class BovModelConverterTest {
         var range = "vers:earth/<=6.0.7";
         List<Vers> versConverted = BovModelConverter.convertRangeToVersList(range);
         assertThat(versConverted.getFirst().toString()).isEqualTo("vers:earth/<=6.0.7");
+    }
+
+    @Test
+    public void testConvertWithRatingsWithCvssV4() {
+        final Bom bovInput = Bom.newBuilder().addVulnerabilities(
+                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                        .setId("SNYK-PYTHON-DJANGO-2968205")
+                        .setSource(Source.newBuilder().setName("SNYK").build())
+                        .addRatings(VulnerabilityRating.newBuilder()
+                                .setSource(Source.newBuilder().setName("SNYK").build())
+                                .setMethod(SCORE_METHOD_CVSSV4)
+                                .setScore(7)
+                                .setVector("CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:A"))
+                        .build()).build();
+        final Vulnerability vuln = BovModelConverter.convert(bovInput, bovInput.getVulnerabilities(0), true);
+        assertThat(vuln).isNotNull();
+        assertThat(vuln.getVulnId()).isEqualTo("SNYK-PYTHON-DJANGO-2968205");
+        assertThat(vuln.getSource()).isEqualTo(Vulnerability.Source.SNYK.name());
+        assertThat(vuln.getCvssV4Vector()).isEqualTo("CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H/E:A");
+        assertThat(vuln.getCvssV4Score()).isEqualTo("7.0");
     }
 
     @Nested
@@ -564,5 +585,4 @@ class BovModelConverterTest {
         }
 
     }
-
 }

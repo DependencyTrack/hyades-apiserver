@@ -42,9 +42,9 @@ import org.cyclonedx.proto.v1_6.VulnerabilityReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import us.springett.cvss.Cvss;
-import us.springett.cvss.CvssV2;
 import us.springett.cvss.CvssV3;
 import us.springett.cvss.CvssV3_1;
+import us.springett.cvss.CvssV4;
 import us.springett.cvss.MalformedVectorException;
 
 import java.time.Instant;
@@ -165,10 +165,19 @@ final class ModelConverter {
     }
 
     private static Optional<VulnerabilityRating> parseRating(final SecurityAdvisory advisory) {
-        if (advisory.getCvssSeverities() != null
-                && advisory.getCvssSeverities().getCvssV3() != null
-                && StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV3().getVectorString()) != null) {
-            final String cvssVector = StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV3().getVectorString());
+        String cvssVector = null;
+
+        if (advisory.getCvssSeverities() != null) {
+            if (advisory.getCvssSeverities().getCvssV4() != null
+                    && StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV4().getVectorString()) != null) {
+                cvssVector = StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV4().getVectorString());
+            } else if (advisory.getCvssSeverities().getCvssV3() != null
+                    && StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV3().getVectorString()) != null) {
+                cvssVector = StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV3().getVectorString());
+            }
+        }
+
+        if (cvssVector != null) {
             final Cvss cvss;
             try {
                 cvss = Cvss.fromVector(cvssVector);
@@ -185,21 +194,22 @@ final class ModelConverter {
                     .setVector(cvss.getVector())
                     .setScore(cvss.calculateScore().getBaseScore())
                     .setSeverity(calculateCvssSeverity(cvss));
-            if (cvss instanceof CvssV3_1) {
+            if (cvss instanceof CvssV4) {
+                return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV4).build());
+            } else if (cvss instanceof CvssV3_1) {
                 return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV31).build());
             } else if (cvss instanceof CvssV3) {
                 return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV3).build());
-            } else if (cvss instanceof CvssV2) {
-                return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV2).build());
             }
-        } else if (advisory.getSeverity() != null && StringUtils.trimToNull(advisory.getSeverity().value()) != null) {
+        }
+
+        if (advisory.getSeverity() != null && StringUtils.trimToNull(advisory.getSeverity().value()) != null) {
             return Optional.of(VulnerabilityRating.newBuilder()
                     .setSource(SOURCE)
                     .setMethod(ScoreMethod.SCORE_METHOD_OTHER)
                     .setSeverity(mapSeverity(StringUtils.trimToNull(advisory.getSeverity().value())))
                     .build());
         }
-
         return Optional.empty();
     }
 
@@ -333,18 +343,10 @@ final class ModelConverter {
         }
 
         final double baseScore = cvss.calculateScore().getBaseScore();
-        if (cvss instanceof us.springett.cvss.CvssV3 || cvss instanceof io.github.jeremylong.openvulnerability.client.nvd.CvssV3) {
+        if (cvss instanceof us.springett.cvss.CvssV3 || cvss instanceof us.springett.cvss.CvssV4) {
             if (baseScore >= 9) {
                 return SEVERITY_CRITICAL;
             } else if (baseScore >= 7) {
-                return SEVERITY_HIGH;
-            } else if (baseScore >= 4) {
-                return SEVERITY_MEDIUM;
-            } else if (baseScore > 0) {
-                return SEVERITY_LOW;
-            }
-        } else if (cvss instanceof CvssV2) {
-            if (baseScore >= 7) {
                 return SEVERITY_HIGH;
             } else if (baseScore >= 4) {
                 return SEVERITY_MEDIUM;

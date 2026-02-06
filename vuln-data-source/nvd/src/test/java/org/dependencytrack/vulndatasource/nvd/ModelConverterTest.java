@@ -529,6 +529,117 @@ class ModelConverterTest {
     }
 
     @Test
+    void testConversionWithCvssV4Rating() throws Exception {
+        final byte[] cveBytes = Files.readAllBytes(Path.of(getClass().getClassLoader().getResource(
+                "CVE-2017-5638-cvssv4-rating.json").toURI()));
+        final DefCveItem cveItem = new ObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .registerModule(new JavaTimeModule()).readValue(cveBytes, DefCveItem.class);
+
+        final Bom bov = ModelConverter.convert(cveItem);
+        assertThatJson(JsonFormat.printer().print(bov))
+                .when(Option.IGNORING_ARRAY_ORDER)
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "components": [
+                            {
+                              "type": "CLASSIFICATION_APPLICATION",
+                              "bomRef": "75ac6763-42e2-39f2-838a-eb3e00504078",
+                              "publisher": "apache",
+                              "name": "struts",
+                              "cpe": "cpe:2.3:a:apache:struts:2.5.1:*:*:*:*:*:*:*"
+                            },
+                            {
+                              "type": "CLASSIFICATION_APPLICATION",
+                              "bomRef": "9089ce23-523f-3fdf-95e9-2df36449b2a3",
+                              "publisher": "apache",
+                              "name": "struts",
+                              "cpe": "cpe:2.3:a:apache:struts:2.3.6:*:*:*:*:*:*:*"
+                            },
+                            {
+                              "type": "CLASSIFICATION_APPLICATION",
+                              "bomRef": "bfc945db-1092-3bf0-b1fc-4e27662cb680",
+                              "publisher": "apache",
+                              "name": "struts",
+                              "cpe": "cpe:2.3:a:apache:struts:2.3.5:*:*:*:*:*:*:*"
+                            },
+                            {
+                              "type": "CLASSIFICATION_APPLICATION",
+                              "bomRef": "d2244973-f448-32a0-8e82-5725aaef62b5",
+                              "publisher": "apache",
+                              "name": "struts",
+                              "cpe": "cpe:2.3:a:apache:struts:2.5:*:*:*:*:*:*:*"
+                            }
+                          ],
+                          "externalReferences": [
+                            {
+                              "url": "http://blog.talosintelligence.com/2017/03/apache-0-day-exploited.html"
+                            }
+                          ],
+                          "vulnerabilities": [
+                            {
+                              "id": "CVE-2017-5638",
+                              "source": {
+                                "name": "NVD"
+                              },
+                              "ratings": [
+                                {
+                                  "source": {
+                                    "name": "NVD"
+                                  },
+                                  "score": 10.0,
+                                  "severity": "SEVERITY_CRITICAL",
+                                  "method": "SCORE_METHOD_CVSSV4",
+                                  "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H"
+                                }
+                              ],
+                              "cwes": [
+                                20
+                              ],
+                              "description": "The Jakarta Multipart parser in Apache Struts 2 2.3.x before 2.3.32 and 2.5.x before 2.5.10.1 has incorrect exception handling and error-message generation during file-upload attempts, which allows remote attackers to execute arbitrary commands via a crafted Content-Type, Content-Disposition, or Content-Length HTTP header, as exploited in the wild in March 2017 with a Content-Type header containing a #cmd= string.",
+                              "published": "2017-03-11T02:59:00Z",
+                              "updated": "2021-02-24T12:15:16Z",
+                              "affects": [
+                                {
+                                  "ref": "75ac6763-42e2-39f2-838a-eb3e00504078",
+                                  "versions": [
+                                    {
+                                      "version": "2.5.1"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "ref": "9089ce23-523f-3fdf-95e9-2df36449b2a3",
+                                  "versions": [
+                                    {
+                                      "version": "2.3.6"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "ref": "bfc945db-1092-3bf0-b1fc-4e27662cb680",
+                                  "versions": [
+                                    {
+                                      "version": "2.3.5"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "ref": "d2244973-f448-32a0-8e82-5725aaef62b5",
+                                  "versions": [
+                                    {
+                                      "version": "2.5"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                        """);
+    }
+
+    @Test
     public void testConversionWithIgnoringAmbiguousRunningOnCpeMatchesAlt() throws Exception {
         final byte[] cveBytes = Files.readAllBytes(Path.of(getClass().getClassLoader().getResource(
                 "cve-2024-23113.json").toURI()));

@@ -770,4 +770,15 @@
                AND "PROPERTYNAME" LIKE 'jira.%';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-39" author="sahibamittal">
+        <addColumn tableName="VULNERABILITY">
+            <column name="CVSSV4SCORE" type="numeric"/>
+            <column name="CVSSV4VECTOR" type="VARCHAR(255)"/>
+        </addColumn>
+        <addColumn tableName="ANALYSIS">
+            <column name="CVSSV4VECTOR" type="VARCHAR(255)"/>
+            <column name="CVSSV4SCORE" type="numeric"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
