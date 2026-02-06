@@ -76,7 +76,7 @@ public final class ConfigRegistryImpl implements MutableConfigRegistry {
         requireNonNull(secretResolver, "secretResolver is not initialized");
 
         final String configJson = withJdbiHandle(
-                handle -> handle.attach(ExtensionConfigDao.class).getConfig(
+                handle -> handle.attach(ExtensionConfigDao.class).get(
                         extensionPointName, extensionName));
         if (configJson == null) {
             return Optional.empty();
@@ -113,8 +113,18 @@ public final class ConfigRegistryImpl implements MutableConfigRegistry {
         final String configJson = runtimeConfigMapper.serialize(config);
 
         return inJdbiTransaction(
-                handle -> handle.attach(ExtensionConfigDao.class).saveConfig(
+                handle -> handle.attach(ExtensionConfigDao.class).save(
                         extensionPointName, extensionName, configJson));
+    }
+
+    boolean hasRuntimeConfig() {
+        if (runtimeConfigSpec == null) {
+            return false;
+        }
+
+        return withJdbiHandle(
+                handle -> handle.attach(ExtensionConfigDao.class).exists(
+                        extensionPointName, extensionName));
     }
 
 }

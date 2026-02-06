@@ -156,7 +156,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
 
         final String configJson = withJdbiHandle(
                 getAlpineRequest(),
-                handle -> handle.attach(ExtensionConfigDao.class).getConfig(
+                handle -> handle.attach(ExtensionConfigDao.class).get(
                         extensionPointName, extensionName));
         if (configJson == null) {
             throw new NotFoundException();
@@ -211,7 +211,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
 
         final boolean updated = inJdbiTransaction(
                 getAlpineRequest(),
-                handle -> handle.attach(ExtensionConfigDao.class).saveConfig(
+                handle -> handle.attach(ExtensionConfigDao.class).save(
                         extensionPointName, extensionName, configJson));
         if (!updated) {
             return Response.notModified().build();
