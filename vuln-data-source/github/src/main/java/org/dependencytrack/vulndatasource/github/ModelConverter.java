@@ -42,7 +42,6 @@ import org.cyclonedx.proto.v1_6.VulnerabilityReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import us.springett.cvss.Cvss;
-import us.springett.cvss.CvssV2;
 import us.springett.cvss.CvssV3;
 import us.springett.cvss.CvssV3_1;
 import us.springett.cvss.CvssV4;
@@ -201,8 +200,6 @@ final class ModelConverter {
                 return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV31).build());
             } else if (cvss instanceof CvssV3) {
                 return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV3).build());
-            } else if (cvss instanceof CvssV2) {
-                return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV2).build());
             }
         }
 
@@ -346,21 +343,10 @@ final class ModelConverter {
         }
 
         final double baseScore = cvss.calculateScore().getBaseScore();
-        if (cvss instanceof us.springett.cvss.CvssV3
-                || cvss instanceof io.github.jeremylong.openvulnerability.client.nvd.CvssV3
-                || cvss instanceof us.springett.cvss.CvssV4
-                || cvss instanceof io.github.jeremylong.openvulnerability.client.nvd.CvssV4) {
+        if (cvss instanceof us.springett.cvss.CvssV3 || cvss instanceof us.springett.cvss.CvssV4) {
             if (baseScore >= 9) {
                 return SEVERITY_CRITICAL;
             } else if (baseScore >= 7) {
-                return SEVERITY_HIGH;
-            } else if (baseScore >= 4) {
-                return SEVERITY_MEDIUM;
-            } else if (baseScore > 0) {
-                return SEVERITY_LOW;
-            }
-        } else if (cvss instanceof CvssV2) {
-            if (baseScore >= 7) {
                 return SEVERITY_HIGH;
             } else if (baseScore >= 4) {
                 return SEVERITY_MEDIUM;
