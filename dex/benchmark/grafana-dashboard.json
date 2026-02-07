@@ -36,8 +36,8 @@
     },
     {
       "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "P44368ADAD746BC27"
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -92,31 +92,16 @@
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "P44368ADAD746BC27"
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "select status, count(*)\n  from dex_workflow_run\n group by status",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "exemplar": false,
+          "expr": "max by (status) (dt_dex_engine_workflow_runs_current{instance=~\"$instance\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
         }
       ],
       "title": "Workflow Runs By Status",
@@ -222,8 +207,8 @@
     },
     {
       "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "P44368ADAD746BC27"
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -301,32 +286,30 @@
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "P44368ADAD746BC27"
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "with cte_queue as (\n  select name\n       , capacity\n    from dex_workflow_task_queue\n)\nselect name\n     , capacity\n     , (select count(*) from (select 1 from dex_workflow_task where queue_name = cte_queue.name limit cte_queue.capacity) as limited) as depth\n  from cte_queue",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
+          "exemplar": false,
+          "expr": "max by (queueName) (dt_dex_engine_workflow_task_queue_depth{instance=~\"$instance\"})",
+          "instant": true,
+          "legendFormat": "{{queueName}}",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
           },
-          "table": "dex_activity_task"
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max by (queueName) (dt_dex_engine_workflow_task_queue_capacity{instance=~\"$instance\"})",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "B"
         }
       ],
       "title": "Workflow Task Queue Depth",
@@ -336,35 +319,19 @@
           "options": {
             "applyTo": {
               "id": "byName",
-              "options": "depth"
+              "options": "Value"
             },
-            "configRefId": "A",
+            "configRefId": "B",
             "mappings": [
               {
-                "fieldName": "capacity",
+                "fieldName": "default",
                 "handlerKey": "max"
               },
               {
-                "fieldName": "depth",
-                "handlerKey": "field.value"
-              },
-              {
-                "fieldName": "name",
-                "handlerKey": "field.name"
+                "fieldName": "Time",
+                "handlerKey": "__ignore"
               }
             ]
-          }
-        },
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "byVariable": false,
-            "include": {
-              "names": [
-                "name",
-                "depth"
-              ]
-            }
           }
         }
       ],
@@ -372,8 +339,8 @@
     },
     {
       "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "P44368ADAD746BC27"
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -452,32 +419,30 @@
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "P44368ADAD746BC27"
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "with cte_queue as (\n  select name\n       , capacity\n    from dex_activity_task_queue\n)\nselect name\n     , capacity\n     , (select count(*) from (select 1 from dex_activity_task where queue_name = cte_queue.name and status = 'QUEUED' limit cte_queue.capacity) as limited) as depth\n  from cte_queue",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
+          "exemplar": false,
+          "expr": "max by (queueName) (dt_dex_engine_activity_task_queue_depth{instance=~\"$instance\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
           },
-          "table": "dex_activity_task"
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max (dt_dex_engine_activity_task_queue_capacity)",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "B"
         }
       ],
       "title": "Activity Task Queue Depth",
@@ -487,34 +452,19 @@
           "options": {
             "applyTo": {
               "id": "byName",
-              "options": "depth"
+              "options": "Value"
             },
-            "configRefId": "A",
+            "configRefId": "B",
             "mappings": [
               {
-                "fieldName": "name",
-                "handlerKey": "field.name"
+                "fieldName": "Time",
+                "handlerKey": "__ignore"
               },
               {
-                "fieldName": "capacity",
+                "fieldName": "max (dt_dex_engine_activity_task_queue_capacity)",
                 "handlerKey": "max"
-              },
-              {
-                "fieldName": "depth",
-                "handlerKey": "field.value"
               }
             ]
-          }
-        },
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "include": {
-              "names": [
-                "name",
-                "depth"
-              ]
-            }
           }
         }
       ],
@@ -2930,6 +2880,6 @@
   "timezone": "utc",
   "title": "dex",
   "uid": "e4adcc8d-3d35-4dd1-a447-e83b97321501",
-  "version": 1,
+  "version": 2,
   "weekStart": "monday"
 }
