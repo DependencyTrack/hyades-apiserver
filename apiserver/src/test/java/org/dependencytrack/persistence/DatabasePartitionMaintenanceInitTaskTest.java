@@ -18,13 +18,14 @@
  */
 package org.dependencytrack.persistence;
 
+import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.init.InitTaskContext;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
-import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Test;
-import org.postgresql.ds.PGSimpleDataSource;
 
+import javax.sql.DataSource;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
@@ -36,17 +37,18 @@ public class DatabasePartitionMaintenanceInitTaskTest extends PersistenceCapable
 
     @Test
     public void testMetricsPartitionsForTodayAndTomorrow() throws Exception {
-        final var dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(postgresContainer.getJdbcUrl());
-        dataSource.setUser(postgresContainer.getUsername());
-        dataSource.setPassword(postgresContainer.getPassword());
+        final DataSource dataSource = DataSourceRegistry.getInstance().getDefault();
 
-        new DatabasePartitionMaintenanceInitTask().execute(new InitTaskContext(ConfigProvider.getConfig(), dataSource));
-
-        var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
-        var tomorrow = LocalDate.now().plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);
+        new DatabasePartitionMaintenanceInitTask().execute(
+                new InitTaskContext(new SmallRyeConfigBuilder().build(), dataSource));
 
         useJdbiHandle(handle -> {
+            final LocalDate todayDate = handle.createQuery("SELECT CURRENT_DATE")
+                    .mapTo(LocalDate.class)
+                    .one();
+            var today = todayDate.format(DateTimeFormatter.BASIC_ISO_DATE);
+            var tomorrow = todayDate.plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);
+
             var metricsDao = handle.attach(MetricsDao.class);
             assertThat(Collections.frequency(metricsDao.getProjectMetricsPartitions(), "\"PROJECTMETRICS_%s\"".formatted(today))).isEqualTo(1);
             assertThat(Collections.frequency(metricsDao.getProjectMetricsPartitions(), "\"PROJECTMETRICS_%s\"".formatted(tomorrow))).isEqualTo(1);
