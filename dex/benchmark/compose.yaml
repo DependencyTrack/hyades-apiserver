@@ -34,8 +34,12 @@ services:
         condition: service_healthy
       dex-init:
         condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     environment:
-      RUNS_COUNT: "100000"
+      RUNS_COUNT: "1000000"
       BATCH_SIZE: "25000"
     restart: no
 
@@ -102,7 +106,7 @@ services:
     ports:
     - "127.0.0.1:9090:9090"
     volumes:
-    - "./prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+    - "./prometheus.yml:/etc/prometheus/prometheus.yml:ro,Z"
     - "prometheus-data:/prometheus"
     restart: unless-stopped
 
@@ -118,9 +122,9 @@ services:
     - "127.0.0.1:3000:3000"
     volumes:
     - "grafana-data:/var/lib/grafana"
-    - "./grafana-dashboard.json:/etc/dashboards/dex.json:ro"
-    - "./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:r"
-    - "./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro"
+    - "./grafana-dashboard.json:/etc/dashboards/dex.json:ro,Z"
+    - "./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro,Z"
+    - "./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro,Z"
     restart: unless-stopped
 
 volumes:

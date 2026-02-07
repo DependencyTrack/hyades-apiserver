@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.dex;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
@@ -97,7 +98,7 @@ class DexEngineInitializerTest {
         doReturn(secretManager)
                 .when(servletContextMock).getAttribute(eq(SecretManager.class.getName()));
 
-        initializer = new DexEngineInitializer(config, dataSourceRegistry);
+        initializer = new DexEngineInitializer(config, dataSourceRegistry, new SimpleMeterRegistry());
         initializer.contextInitialized(new ServletContextEvent(servletContextMock));
 
         final var engineCaptor = ArgumentCaptor.forClass(DexEngine.class);

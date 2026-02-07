@@ -156,6 +156,7 @@ final class DexEngineImpl implements DexEngine {
 
     private volatile Status status = Status.CREATED;
     private @Nullable DexEngineLeaderElection leaderElection;
+    private @Nullable DexEngineMetricsCollector metricsCollector;
     private @Nullable WorkflowTaskScheduler workflowTaskScheduler;
     private @Nullable ActivityTaskScheduler activityTaskScheduler;
     private @Nullable ExecutorService eventListenerExecutor;
@@ -170,10 +171,10 @@ final class DexEngineImpl implements DexEngine {
         this.jdbi = JdbiFactory.create(config.dataSource(), config.pageTokenEncoder());
         this.runsCreatedCounter = Counter
                 .builder("dt.dex.engine.runs.created")
-                .withRegistry(config.meterRegistry());
+                .withRegistry(config.metrics().meterRegistry());
         this.runsCompletedCounter = Counter
                 .builder("dt.dex.engine.runs.completed")
-                .withRegistry(config.meterRegistry());
+                .withRegistry(config.metrics().meterRegistry());
 
     }
 
@@ -185,7 +186,7 @@ final class DexEngineImpl implements DexEngine {
         Gauge
                 .builder("dt.dex.engine.info", () -> 1)
                 .tag("instanceId", config.instanceId())
-                .register(config.meterRegistry());
+                .register(config.metrics().meterRegistry());
 
         LOGGER.debug("Initializing history cache");
         final var runHistoryCacheBuilder = Caffeine.newBuilder()
@@ -196,7 +197,7 @@ final class DexEngineImpl implements DexEngine {
         }
         runHistoryCache = runHistoryCacheBuilder.build();
         new CaffeineCacheMetrics<>(runHistoryCache, "DexEngine-RunHistoryCache", null)
-                .bindTo(config.meterRegistry());
+                .bindTo(config.metrics().meterRegistry());
 
         LOGGER.debug("Registering default event listeners");
         runsCompletedEventListeners.add(this::invalidateCompletedRunsHistoryCache);
@@ -214,14 +215,26 @@ final class DexEngineImpl implements DexEngine {
                 jdbi,
                 config.leaderElection().leaseDuration(),
                 config.leaderElection().leaseCheckInterval(),
-                config.meterRegistry());
+                config.metrics().meterRegistry());
         leaderElection.start();
+
+        if (config.metrics().isCollectorEnabled()) {
+            LOGGER.debug("Starting metrics collector");
+            metricsCollector = new DexEngineMetricsCollector(
+                    jdbi,
+                    config.metrics().collectorInitialDelay(),
+                    config.metrics().collectorInterval(),
+                    config.metrics().meterRegistry());
+            metricsCollector.start();
+        } else {
+            LOGGER.debug("Not starting metrics collector because it is disabled");
+        }
 
         LOGGER.debug("Starting workflow task scheduler");
         workflowTaskScheduler = new WorkflowTaskScheduler(
                 jdbi,
                 leaderElection::isLeader,
-                config.meterRegistry(),
+                config.metrics().meterRegistry(),
                 config.workflowTaskScheduler().pollInterval(),
                 config.workflowTaskScheduler().pollBackoffFunction());
         workflowTaskScheduler.start();
@@ -230,7 +243,7 @@ final class DexEngineImpl implements DexEngine {
         activityTaskScheduler = new ActivityTaskScheduler(
                 jdbi,
                 leaderElection::isLeader,
-                config.meterRegistry(),
+                config.metrics().meterRegistry(),
                 config.activityTaskScheduler().pollInterval(),
                 config.activityTaskScheduler().pollBackoffFunction());
         activityTaskScheduler.start();
@@ -241,7 +254,7 @@ final class DexEngineImpl implements DexEngine {
                 this::flushExternalEvents,
                 config.externalEventBuffer().flushInterval(),
                 config.externalEventBuffer().maxBatchSize(),
-                config.meterRegistry());
+                config.metrics().meterRegistry());
         externalEventBuffer.start();
 
         // The buffer's flush interval should be long enough to allow
@@ -256,7 +269,7 @@ final class DexEngineImpl implements DexEngine {
                 this::flushTaskEvents,
                 config.taskEventBuffer().flushInterval(),
                 config.taskEventBuffer().maxBatchSize(),
-                config.meterRegistry());
+                config.metrics().meterRegistry());
         taskEventBuffer.start();
 
         LOGGER.debug("Starting activity task heartbeat buffer");
@@ -265,7 +278,7 @@ final class DexEngineImpl implements DexEngine {
                 this::processActivityTaskHeartbeats,
                 config.activityTaskHeartbeatBuffer().flushInterval(),
                 config.activityTaskHeartbeatBuffer().maxBatchSize(),
-                config.meterRegistry());
+                config.metrics().meterRegistry());
         activityTaskHeartbeatBuffer.start();
 
         LOGGER.debug("Starting maintenance worker");
@@ -338,6 +351,12 @@ final class DexEngineImpl implements DexEngine {
             LOGGER.debug("Waiting for task event buffer to stop");
             taskEventBuffer.close();
             taskEventBuffer = null;
+        }
+
+        if (metricsCollector != null) {
+            LOGGER.debug("Waiting for metrics collector to stop");
+            metricsCollector.close();
+            metricsCollector = null;
         }
 
         if (leaderElection != null) {
@@ -469,7 +488,7 @@ final class DexEngineImpl implements DexEngine {
                 metadataRegistry,
                 options.queueName(),
                 options.maxConcurrency(),
-                config.meterRegistry());
+                config.metrics().meterRegistry());
 
         if (taskWorkerByName.putIfAbsent("activity/" + options.name(), worker) != null) {
             throw new IllegalStateException(
@@ -492,7 +511,7 @@ final class DexEngineImpl implements DexEngine {
                 options.minPollInterval(),
                 options.pollBackoffFunction(),
                 options.maxConcurrency(),
-                config.meterRegistry());
+                config.metrics().meterRegistry());
 
         if (taskWorkerByName.putIfAbsent("workflow/" + options.name(), worker) != null) {
             throw new IllegalStateException(

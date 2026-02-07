@@ -184,7 +184,12 @@ public class Application {
         dexEngineConfig.taskEventBuffer().setMaxBatchSize(250);
         dexEngineConfig.taskEventBuffer().setFlushInterval(Duration.ofMillis(50));
         if (meterRegistry != null) {
-            dexEngineConfig.setMeterRegistry(meterRegistry);
+            dexEngineConfig.metrics().setMeterRegistry(meterRegistry);
+            dexEngineConfig.metrics().setCollectorEnabled(true);
+            dexEngineConfig.metrics().setCollectorInitialDelay(Duration.ofSeconds(5));
+            dexEngineConfig.metrics().setCollectorInterval(Duration.ofSeconds(10));
+        } else {
+            dexEngineConfig.metrics().setCollectorEnabled(false);
         }
 
         final var dexEngineFactory = ServiceLoader.load(DexEngineFactory.class).findFirst().orElseThrow();
