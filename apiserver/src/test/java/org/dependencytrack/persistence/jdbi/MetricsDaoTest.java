@@ -139,19 +139,26 @@ public class MetricsDaoTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testCreateMetricsPartitionsForToday() {
-        metricsDao.createMetricsPartitionsForDate(LocalDate.now().toString(), LocalDate.now().plusDays(1).toString());
-        var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+    public void testCreateMetricsPartitions() {
+        metricsDao.createMetricsPartitions();
 
-        var metricsPartition = metricsDao.getProjectMetricsPartitions();
-        assertThat(metricsPartition.contains("\"PROJECTMETRICS_%s\"".formatted(today))).isTrue();
+        final LocalDate todayDate = jdbiHandle.createQuery("SELECT CURRENT_DATE")
+                .mapTo(LocalDate.class)
+                .one();
+        var today = todayDate.format(DateTimeFormatter.BASIC_ISO_DATE);
+        var tomorrow = todayDate.plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);
 
-        metricsPartition = metricsDao.getDependencyMetricsPartitions();
-        assertThat(metricsPartition.contains("\"DEPENDENCYMETRICS_%s\"".formatted(today))).isTrue();
+        var projectPartitions = metricsDao.getProjectMetricsPartitions();
+        assertThat(projectPartitions).contains("\"PROJECTMETRICS_%s\"".formatted(today));
+        assertThat(projectPartitions).contains("\"PROJECTMETRICS_%s\"".formatted(tomorrow));
+
+        var dependencyPartitions = metricsDao.getDependencyMetricsPartitions();
+        assertThat(dependencyPartitions).contains("\"DEPENDENCYMETRICS_%s\"".formatted(today));
+        assertThat(dependencyPartitions).contains("\"DEPENDENCYMETRICS_%s\"".formatted(tomorrow));
 
         // If called again on the same day with partitions already created,
-        // It won't create more.
-        metricsDao.createMetricsPartitionsForDate(LocalDate.now().toString(), LocalDate.now().plusDays(1).toString());
+        // it won't create more.
+        metricsDao.createMetricsPartitions();
         assertThat(Collections.frequency(metricsDao.getProjectMetricsPartitions(), "\"PROJECTMETRICS_%s\"".formatted(today))).isEqualTo(1);
         assertThat(Collections.frequency(metricsDao.getDependencyMetricsPartitions(), "\"DEPENDENCYMETRICS_%s\"".formatted(today))).isEqualTo(1);
     }
