@@ -23,8 +23,6 @@ import org.dependencytrack.init.InitTaskContext;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 
-import java.time.LocalDate;
-
 /**
  * @since 5.6.0
  */
@@ -43,12 +41,7 @@ public final class DatabasePartitionMaintenanceInitTask implements InitTask {
     @Override
     public void execute(final InitTaskContext ctx) throws Exception {
         final var jdbi = JdbiFactory.createLocalJdbi(ctx.dataSource());
-
-        jdbi.useTransaction(handle -> {
-            var metricsDao = handle.attach(MetricsDao.class);
-            metricsDao.createMetricsPartitionsForDate(LocalDate.now().toString(), LocalDate.now().plusDays(1).toString());
-            metricsDao.createMetricsPartitionsForDate(LocalDate.now().plusDays(1).toString(), LocalDate.now().plusDays(2).toString());
-        });
+        jdbi.useTransaction(handle -> handle.attach(MetricsDao.class).createMetricsPartitions());
     }
 
 }

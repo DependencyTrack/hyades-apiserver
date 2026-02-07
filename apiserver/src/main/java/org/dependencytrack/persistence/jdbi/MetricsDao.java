@@ -29,23 +29,23 @@ import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.statement.SqlCall;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * @since 5.6.0
  */
 public interface MetricsDao extends SqlObject {
+
+    Pattern VALID_TABLE_IDENTIFIER_PATTERN = Pattern.compile("^\"[A-Z][A-Z0-9_]+\"$");
 
     record ListVulnerabilityMetricsPageToken(int year, int month) implements PageToken {
     }
@@ -289,11 +289,6 @@ public interface MetricsDao extends SqlObject {
     @RegisterBeanMapper(DependencyMetrics.class)
     DependencyMetrics getMostRecentDependencyMetrics(@Bind long componentId);
 
-    @SqlCall("""
-            CALL "UPDATE_COMPONENT_METRICS"(:uuid)
-            """)
-    void updateComponentMetrics(@Bind UUID uuid);
-
     @SqlQuery("""
             SELECT metrics.*, metrics."RISKSCORE" AS inherited_risk_score
               FROM UNNEST(:componentIds) AS component(id)
@@ -327,64 +322,86 @@ public interface MetricsDao extends SqlObject {
     @SqlUpdate("""
             DO $$
             DECLARE
-                today DATE := DATE '${targetDate}';
-                tomorrow DATE := DATE '${nextDate}';
-                partition_suffix TEXT := to_char(today, 'YYYYMMDD');
+                target_date DATE;
+                next_date DATE;
+                partition_suffix TEXT;
                 partition_name TEXT;
                 partition_exists BOOLEAN;
                 table_name TEXT;
+                day_offset INT;
                 metric_tables TEXT[] := ARRAY['PROJECTMETRICS', 'DEPENDENCYMETRICS'];
             BEGIN
-                FOREACH table_name IN ARRAY metric_tables
-                LOOP
-                    partition_name := format('%s_%s', table_name, partition_suffix);
-                    SELECT EXISTS (
-                        SELECT 1 FROM pg_class WHERE relname = partition_name
-                    ) INTO partition_exists;
-            
-                    IF NOT partition_exists THEN
-                        EXECUTE format(
-                            'CREATE TABLE IF NOT EXISTS %I (LIKE %I INCLUDING ALL);',
-                            partition_name,
-                            table_name
-                        );
-                        EXECUTE format(
-                            'ALTER TABLE %I ATTACH PARTITION %I FOR VALUES FROM (%L) TO (%L);',
-                            table_name,
-                            partition_name,
-                            today,
-                            tomorrow
-                        );
-                    END IF;
+                FOR day_offset IN 0..1 LOOP
+                    target_date := CURRENT_DATE + day_offset;
+                    next_date := CURRENT_DATE + day_offset + 1;
+                    partition_suffix := to_char(target_date, 'YYYYMMDD');
+
+                    FOREACH table_name IN ARRAY metric_tables
+                    LOOP
+                        partition_name := format('%s_%s', table_name, partition_suffix);
+                        SELECT EXISTS (
+                            SELECT 1 FROM pg_class WHERE relname = partition_name
+                        ) INTO partition_exists;
+
+                        IF NOT partition_exists THEN
+                            EXECUTE format(
+                                'CREATE TABLE IF NOT EXISTS %I (LIKE %I INCLUDING ALL);',
+                                partition_name,
+                                table_name
+                            );
+                            EXECUTE format(
+                                'ALTER TABLE %I ATTACH PARTITION %I FOR VALUES FROM (%L) TO (%L);',
+                                table_name,
+                                partition_name,
+                                target_date,
+                                next_date
+                            );
+                        END IF;
+                    END LOOP;
                 END LOOP;
             END;
             $$;
             """)
-    void createMetricsPartitionsForDate(@Define("targetDate") String targetDate, @Define("nextDate") String nextDate);
+    void createMetricsPartitions();
+
+    @SqlQuery("""
+            SELECT inhrelid::regclass::text AS partition_name
+            FROM pg_inherits
+            WHERE inhparent = CAST(:parentTable AS regclass)
+              AND to_date(split_part(replace(inhrelid::regclass::text, '"', ''), '_', 2), 'YYYYMMDD') <= CURRENT_DATE - :retentionDays
+            ORDER BY partition_name
+            """)
+    List<String> getExpiredPartitions(@Bind String parentTable, @Bind int retentionDays);
 
     default int deleteProjectMetricsForRetentionDuration(Duration retentionDuration) {
-        List<String> metricsPartitions = getProjectMetricsPartitions();
-        return dropOldPartitions(metricsPartitions, retentionDuration);
+        final List<String> expired = getExpiredPartitions(
+                "\"PROJECTMETRICS\"", (int) retentionDuration.toDays());
+        return dropPartitions("\"PROJECTMETRICS\"", expired);
     }
 
     default int deleteComponentMetricsForRetentionDuration(Duration retentionDuration) {
-        List<String> metricsPartitions = getDependencyMetricsPartitions();
-        return dropOldPartitions(metricsPartitions, retentionDuration);
+        final List<String> expired = getExpiredPartitions(
+                "\"DEPENDENCYMETRICS\"", (int) retentionDuration.toDays());
+        return dropPartitions("\"DEPENDENCYMETRICS\"", expired);
     }
 
-    default int dropOldPartitions(final List<String> metricsPartitions, final Duration retentionDuration) {
-        LocalDate cutoffDate = LocalDate.now().minusDays(retentionDuration.toDays());
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+    default int dropPartitions(final String parentTable, final List<String> partitions) {
+        requireValidTableIdentifier(parentTable);
+
         int deletedCount = 0;
-        for (String partition : metricsPartitions) {
-            String[] parts = partition.replace("\"", "").split("_");
-            LocalDate partitionDate = LocalDate.parse(parts[1], formatter);
-            if (partitionDate.isBefore(cutoffDate) || partitionDate.isEqual(cutoffDate)) {
-                String sql = String.format("DROP TABLE IF EXISTS %s CASCADE;", partition);
-                getHandle().execute(sql);
-                deletedCount++;
-            }
+        for (final String partition : partitions) {
+            requireValidTableIdentifier(partition);
+            getHandle().execute("ALTER TABLE %s DETACH PARTITION %s CONCURRENTLY".formatted(parentTable, partition));
+            getHandle().execute("DROP TABLE IF EXISTS %s CASCADE".formatted(partition));
+            deletedCount++;
         }
+
         return deletedCount;
+    }
+
+    private static void requireValidTableIdentifier(final String identifier) {
+        if (!VALID_TABLE_IDENTIFIER_PATTERN.matcher(identifier).matches()) {
+            throw new IllegalArgumentException("Invalid identifier: " + identifier);
+        }
     }
 }
