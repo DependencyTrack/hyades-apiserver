@@ -19,6 +19,7 @@
 package org.dependencytrack.dex;
 
 import io.github.resilience4j.core.IntervalFunction;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
@@ -80,16 +81,18 @@ public final class DexEngineInitializer implements ServletContextListener {
 
     private final Config config;
     private final DataSourceRegistry dataSourceRegistry;
+    private final MeterRegistry meterRegistry;
     private @Nullable DexEngine engine;
 
-    DexEngineInitializer(Config config, DataSourceRegistry dataSourceRegistry) {
+    DexEngineInitializer(Config config, DataSourceRegistry dataSourceRegistry, MeterRegistry meterRegistry) {
         this.config = config;
         this.dataSourceRegistry = dataSourceRegistry;
+        this.meterRegistry = meterRegistry;
     }
 
     @SuppressWarnings("unused") // Used by servlet container.
     public DexEngineInitializer() {
-        this(ConfigProvider.getConfig(), DataSourceRegistry.getInstance());
+        this(ConfigProvider.getConfig(), DataSourceRegistry.getInstance(), Metrics.globalRegistry);
     }
 
     @Override
@@ -213,7 +216,6 @@ public final class DexEngineInitializer implements ServletContextListener {
         final DataSource dataSource = dataSourceRegistry.get(dataSourceName);
 
         final var engineConfig = new DexEngineConfig(dataSource);
-        engineConfig.setMeterRegistry(Metrics.globalRegistry);
         engineConfig.setPageTokenEncoder(new EncryptedPageTokenEncoder());
 
         // Leader election.
@@ -223,6 +225,17 @@ public final class DexEngineInitializer implements ServletContextListener {
         config.getOptionalValue("dt.dex-engine.leader-election.lease-check-interval-ms", long.class)
                 .map(Duration::ofMillis)
                 .ifPresent(engineConfig.leaderElection()::setLeaseCheckInterval);
+
+        // Metrics.
+        engineConfig.metrics().setMeterRegistry(meterRegistry);
+        config.getOptionalValue("dt.dex-engine.metrics.collector.enabled", boolean.class)
+                .ifPresent(engineConfig.metrics()::setCollectorEnabled);
+        config.getOptionalValue("dt.dex-engine.metrics.collector.initial-delay-ms", long.class)
+                .map(Duration::ofMillis)
+                .ifPresent(engineConfig.metrics()::setCollectorInitialDelay);
+        config.getOptionalValue("dt.dex-engine.metrics.collector.interval-ms", long.class)
+                .map(Duration::ofMillis)
+                .ifPresent(engineConfig.metrics()::setCollectorInterval);
 
         // Workflow task scheduler.
         config.getOptionalValue("dt.dex-engine.workflow-task-scheduler.poll-interval-ms", long.class)

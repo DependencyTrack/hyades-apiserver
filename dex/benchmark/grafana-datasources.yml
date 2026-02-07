@@ -1,16 +1,6 @@
 ---
 apiVersion: 1
 datasources:
-- name: Postgres
-  type: postgres
-  url: postgres:5432
-  user: dex
-  secureJsonData:
-    password: dex
-  jsonData:
-    database: dex
-    sslmode: disable
-    maxOpenConns: 10
 - name: Prometheus
   type: prometheus
   access: proxy

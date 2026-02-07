@@ -77,7 +77,7 @@ final class DexEngineLeaderElection implements Closeable {
 
         executor = Executors.newSingleThreadScheduledExecutor(
                 Thread.ofPlatform()
-                        .name("LeaderElection")
+                        .name(getClass().getSimpleName())
                         .factory());
         executor.scheduleAtFixedRate(
                 this::checkAndRenewLease,

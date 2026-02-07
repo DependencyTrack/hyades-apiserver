@@ -217,6 +217,60 @@ public class DexEngineConfig {
 
     }
 
+    public static class MetricsConfig {
+
+        private MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        private boolean collectorEnabled = true;
+        private Duration collectorInitialDelay = Duration.ofSeconds(15);
+        private Duration collectorInterval = Duration.ofSeconds(30);
+
+        private MetricsConfig() {
+        }
+
+        public MeterRegistry meterRegistry() {
+            return meterRegistry;
+        }
+
+        public void setMeterRegistry(MeterRegistry meterRegistry) {
+            this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry must not be null");
+        }
+
+        public boolean isCollectorEnabled() {
+            return collectorEnabled;
+        }
+
+        public void setCollectorEnabled(boolean collectorEnabled) {
+            this.collectorEnabled = collectorEnabled;
+        }
+
+        public Duration collectorInitialDelay() {
+            return collectorInitialDelay;
+        }
+
+        public void setCollectorInitialDelay(Duration collectorInitialDelay) {
+            this.collectorInitialDelay = requireNonNull(collectorInitialDelay, "collectorInitialDelay must not be null");
+        }
+
+        public Duration collectorInterval() {
+            return collectorInterval;
+        }
+
+        public void setCollectorInterval(Duration collectorInterval) {
+            this.collectorInterval = requireNonNull(collectorInterval, "collectorInterval must not be null");
+        }
+
+        @Override
+        public String toString() {
+            return new StringJoiner(", ", MetricsConfig.class.getSimpleName() + "[", "]")
+                    .add("meterRegistry=" + meterRegistry)
+                    .add("collectorEnabled=" + collectorEnabled)
+                    .add("collectorInitialDelay=" + collectorInitialDelay)
+                    .add("collectorInterval=" + collectorInterval)
+                    .toString();
+        }
+
+    }
+
     public static class TaskSchedulerConfig {
 
         private Duration pollInterval = Duration.ofMillis(100);
@@ -259,10 +313,10 @@ public class DexEngineConfig {
     private final BufferConfig taskEventsBufferConfig = new BufferConfig();
     private final BufferConfig activityTaskHeartbeatBufferConfig = new BufferConfig();
     private final MaintenanceConfig maintenanceConfig = new MaintenanceConfig();
+    private final MetricsConfig metricsConfig = new MetricsConfig();
     private final TaskSchedulerConfig workflowTaskSchedulerConfig = new TaskSchedulerConfig();
     private final TaskSchedulerConfig activityTaskSchedulerConfig = new TaskSchedulerConfig();
 
-    private MeterRegistry meterRegistry = new SimpleMeterRegistry();
     private PageTokenEncoder pageTokenEncoder = new SimplePageTokenEncoder();
 
     public DexEngineConfig(DataSource dataSource) {
@@ -317,23 +371,19 @@ public class DexEngineConfig {
         return maintenanceConfig;
     }
 
+    /**
+     * @return Metrics config.
+     */
+    public MetricsConfig metrics() {
+        return metricsConfig;
+    }
+
     public TaskSchedulerConfig workflowTaskScheduler() {
         return workflowTaskSchedulerConfig;
     }
 
     public TaskSchedulerConfig activityTaskScheduler() {
         return activityTaskSchedulerConfig;
-    }
-
-    /**
-     * @return {@link MeterRegistry} to bind metrics to.
-     */
-    public MeterRegistry meterRegistry() {
-        return meterRegistry;
-    }
-
-    public void setMeterRegistry(MeterRegistry meterRegistry) {
-        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry must not be null");
     }
 
     public PageTokenEncoder pageTokenEncoder() {
@@ -355,9 +405,9 @@ public class DexEngineConfig {
                 .add("taskEventsBufferConfig=" + taskEventsBufferConfig)
                 .add("activityTaskHeartbeatBufferConfig=" + activityTaskHeartbeatBufferConfig)
                 .add("maintenanceConfig=" + maintenanceConfig)
+                .add("metricsConfig=" + metricsConfig)
                 .add("workflowTaskSchedulerConfig=" + workflowTaskSchedulerConfig)
                 .add("activityTaskSchedulerConfig=" + activityTaskSchedulerConfig)
-                .add("meterRegistry=" + meterRegistry)
                 .add("pageTokenEncoder=" + pageTokenEncoder)
                 .toString();
     }
