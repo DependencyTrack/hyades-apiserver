@@ -241,6 +241,13 @@ final class WorkflowTaskScheduler implements Closeable {
     }
 
     private boolean processQueue(Handle handle, Queue queue) {
+        // Disable JIT for this transaction. The scheduling query uses
+        // multiple correlated subqueries which throws off Postgres'
+        // row estimates, leading it to enable JIT.
+        // Unfortunately, JIT adds more overhead (>200ms) than the
+        // query actually ends up running for (<50ms even for large backlogs).
+        handle.execute("set local jit = off");
+
         final Update update = handle.createUpdate("""
                 with
                 cte_queue_depth as (
@@ -293,6 +300,15 @@ final class WorkflowTaskScheduler implements Closeable {
                              from dex_workflow_run as executing
                             where executing.concurrency_key = run.concurrency_key
                               and executing.status in ('RUNNING', 'SUSPENDED')
+                         )
+                         -- No other run with the same concurrency key has a task already queued.
+                         and not exists(
+                           select 1
+                             from dex_workflow_task as task
+                            inner join dex_workflow_run as queued
+                               on queued.id = task.workflow_run_id
+                            where queued.concurrency_key = run.concurrency_key
+                              and task.queue_name = :queueName
                          )
                        )
                      )
