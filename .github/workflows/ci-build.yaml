@@ -41,11 +41,10 @@ jobs:
     uses: ./.github/workflows/_meta-build.yaml
     with:
       app-version: "snapshot"
-      publish-container: ${{ github.ref == 'refs/heads/main' }}
+      publish-container: ${{ github.ref_name == 'main' || startsWith(github.ref_name, 'feature-') }}
       ref-name: ${{ github.ref_name }}
     permissions:
       packages: write # Required to push images to ghcr.io
-      security-events: write # Required to upload trivy's SARIF output
     secrets:
       registry-0-usr: ${{ github.repository_owner }}
       registry-0-psw: ${{ github.repository_owner == 'DependencyTrack' && secrets.BOT_IMAGE_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
