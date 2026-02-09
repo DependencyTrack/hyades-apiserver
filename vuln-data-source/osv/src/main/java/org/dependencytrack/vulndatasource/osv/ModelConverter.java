@@ -442,8 +442,7 @@ final class ModelConverter {
 
         String severity = null;
         if (databaseSpecific != null) {
-            if (databaseSpecific.getAdditionalProperties().containsKey("cvss")) {
-                String cvssVector = (String) databaseSpecific.getAdditionalProperties().get("cvss");
+            if (databaseSpecific.getAdditionalProperties().get("cvss") instanceof final String cvssVector) {
                 try {
                     Cvss cvss = Cvss.fromVector(cvssVector);
                     if (cvss != null) {
