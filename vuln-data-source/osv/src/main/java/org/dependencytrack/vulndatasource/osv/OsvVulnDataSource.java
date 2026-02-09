@@ -168,7 +168,8 @@ final class OsvVulnDataSource implements VulnDataSource {
                 ? Instant.ofEpochMilli(Timestamps.toMillis(vuln.getUpdated()))
                 : null;
         if (updatedAt == null) {
-            throw new IllegalArgumentException();
+            LOGGER.warn("Vulnerability {} has no updated timestamp; Cannot advance watermark", vuln.getId());
+            return;
         }
 
         watermarkManager.maybeAdvance(ecosystem, updatedAt);
