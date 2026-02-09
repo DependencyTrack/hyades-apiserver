@@ -45,12 +45,14 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class OsvVulnDataSourceTest {
@@ -124,7 +126,7 @@ class OsvVulnDataSourceTest {
     }
 
     @Test
-    void testExceptionWhenMissingUpdated() {
+    void testNoExceptionWhenMissingUpdated() {
         Vulnerability vuln = Vulnerability.newBuilder()
                 .addProperties(Property.newBuilder()
                         .setName(CycloneDxPropertyNames.PROPERTY_OSV_ECOSYSTEM)
@@ -135,8 +137,10 @@ class OsvVulnDataSourceTest {
                 .addVulnerabilities(vuln)
                 .build();
 
-        assertThatExceptionOfType(IllegalArgumentException.class)
+        assertThatNoException()
                 .isThrownBy(() -> vulnDataSource.markProcessed(bom));
+
+        verify(watermarkManagerMock, never()).maybeAdvance(eq("maven"), any(Instant.class));
     }
 
     @Test
