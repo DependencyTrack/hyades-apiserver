@@ -93,8 +93,7 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
     public RuntimeConfigSpec runtimeConfigSpec() {
         final var defaultConfig = new NvdVulnDataSourceConfigV1()
                 .withEnabled(true)
-                .withCveFeedsUrl(URI.create("https://nvd.nist.gov/feeds"))
-                .withIncrementalMirroringEnabled(true);
+                .withCveFeedsUrl(URI.create("https://nvd.nist.gov/feeds"));
 
         return RuntimeConfigSpec.of(defaultConfig, config -> {
             if (!config.isEnabled()) {
@@ -122,11 +121,7 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
 
-        final @Nullable WatermarkManager watermarkManager = config.isIncrementalMirroringEnabled()
-                ? WatermarkManager.create(kvStore)
-                : null;
-
-        return new NvdVulnDataSource(watermarkManager, objectMapper, httpClient, config.getCveFeedsUrl().toString());
+        return new NvdVulnDataSource(null, objectMapper, httpClient, config.getCveFeedsUrl().toString());
     }
 
     @Override

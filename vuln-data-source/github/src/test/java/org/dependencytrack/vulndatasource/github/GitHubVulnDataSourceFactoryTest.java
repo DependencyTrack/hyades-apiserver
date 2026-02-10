@@ -91,96 +91,27 @@ class GitHubVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonN
     }
 
     @Test
-    void createShouldCreateWatermarkManagerWhenIncrementalMirroringEnabled() throws Exception {
+    void createShouldNotCreateWatermarkManager() throws Exception {
         final var config = (GithubVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
         config.setEnabled(true);
         config.setApiToken("dummy");
-        config.setIncrementalMirroringEnabled(true); // Explicitly enable incremental mirroring
 
         final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
 
         factory.init(new ExtensionContext(configRegistry));
 
-        // Step 1: Create data source
         final VulnDataSource dataSource = factory.create();
         assertThat(dataSource).isNotNull();
         assertThat(dataSource).isInstanceOf(GitHubVulnDataSource.class);
 
-        // Step 2: Verify watermark manager is NOT null when incremental mirroring is enabled
         final GitHubVulnDataSource githubDataSource = (GitHubVulnDataSource) dataSource;
         final Field watermarkManagerField = GitHubVulnDataSource.class.getDeclaredField("watermarkManager");
         watermarkManagerField.setAccessible(true);
         final Object watermarkManager = watermarkManagerField.get(githubDataSource);
         assertThat(watermarkManager)
-                .as("Watermark manager should be created when incremental mirroring is enabled")
-                .isNotNull();
-
-        // Step 3: Verify data source can be closed without errors
-        assertThatNoException()
-                .isThrownBy(dataSource::close);
-    }
-
-    @Test
-    void createShouldNotCreateWatermarkManagerWhenIncrementalMirroringDisabled() throws Exception {
-        final var config = (GithubVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
-        config.setEnabled(true);
-        config.setApiToken("dummy");
-        config.setIncrementalMirroringEnabled(false); // Disable incremental mirroring
-
-        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
-
-        factory.init(new ExtensionContext(configRegistry));
-
-        // Step 1: Create data source
-        final VulnDataSource dataSource = factory.create();
-        assertThat(dataSource).isNotNull();
-        assertThat(dataSource).isInstanceOf(GitHubVulnDataSource.class);
-
-        // Step 2: Verify watermark manager IS null when incremental mirroring is disabled
-        final GitHubVulnDataSource githubDataSource = (GitHubVulnDataSource) dataSource;
-        final Field watermarkManagerField = GitHubVulnDataSource.class.getDeclaredField("watermarkManager");
-        watermarkManagerField.setAccessible(true);
-        final Object watermarkManager = watermarkManagerField.get(githubDataSource);
-        assertThat(watermarkManager)
-                .as("Watermark manager should be null when incremental mirroring is disabled")
+                .as("Watermark manager should be null (incremental mirroring not used for GitHub)")
                 .isNull();
 
-        // Step 3: Verify data source can be closed without errors (no watermark manager to commit)
-        assertThatNoException()
-                .isThrownBy(dataSource::close);
-    }
-
-    @Test
-    void createShouldDefaultToIncrementalMirroringEnabled() throws Exception {
-        final var config = (GithubVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
-        config.setEnabled(true);
-        config.setApiToken("dummy");
-        // Don't set incrementalMirroringEnabled - should default to true
-
-        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
-
-        factory.init(new ExtensionContext(configRegistry));
-
-        // Step 1: Create data source with default config (incremental mirroring not explicitly set)
-        final VulnDataSource dataSource = factory.create();
-        assertThat(dataSource).isNotNull();
-        assertThat(dataSource).isInstanceOf(GitHubVulnDataSource.class);
-
-        // Step 2: Verify watermark manager is NOT null by default (incremental mirroring enabled by default)
-        final GitHubVulnDataSource githubDataSource = (GitHubVulnDataSource) dataSource;
-        final Field watermarkManagerField = GitHubVulnDataSource.class.getDeclaredField("watermarkManager");
-        watermarkManagerField.setAccessible(true);
-        final Object watermarkManager = watermarkManagerField.get(githubDataSource);
-        assertThat(watermarkManager)
-                .as("Watermark manager should be created by default (incremental mirroring enabled by default)")
-                .isNotNull();
-
-        // Step 3: Verify default config value is true
-        assertThat(config.isIncrementalMirroringEnabled())
-                .as("Default value of incrementalMirroringEnabled should be true")
-                .isTrue();
-
-        // Step 4: Verify data source can be closed without errors
         assertThatNoException()
                 .isThrownBy(dataSource::close);
     }

@@ -26,15 +26,10 @@ import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
-import org.jspecify.annotations.Nullable;
 
 import java.net.URI;
-import java.time.Clock;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 
 import static io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityAdvisoryClientBuilder.aGitHubSecurityAdvisoryClient;
 
@@ -44,7 +39,6 @@ import static io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityA
 final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
 
     private ConfigRegistry configRegistry;
-    private ExtensionKVStore kvStore;
     private HttpAsyncClientSupplier httpClientSupplier;
 
     @Override
@@ -65,7 +59,6 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
     @Override
     public void init(final ExtensionContext ctx) {
         this.configRegistry = ctx.configRegistry();
-        this.kvStore = ctx.kvStore();
         this.httpClientSupplier = () -> HttpAsyncClients.custom()
                 .setRetryStrategy(new GitHubHttpRequestRetryStrategy())
                 .setProxySelector(ctx.proxySelector())
@@ -84,21 +77,13 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
 
-        final @Nullable WatermarkManager watermarkManager = config.isIncrementalMirroringEnabled()
-                ? WatermarkManager.create(Clock.systemUTC(), this.kvStore)
-                : null;
-
-        final GitHubSecurityAdvisoryClientBuilder clientBuilder = aGitHubSecurityAdvisoryClient()
+        final GitHubSecurityAdvisoryClient client = aGitHubSecurityAdvisoryClient()
                 .withHttpClientSupplier(httpClientSupplier)
                 .withEndpoint(config.getApiUrl().toString())
-                .withApiKey(config.getApiToken());
-        if (watermarkManager != null && watermarkManager.getWatermark() != null) {
-            clientBuilder.withUpdatedSinceFilter(
-                    ZonedDateTime.ofInstant(watermarkManager.getWatermark(), ZoneOffset.UTC));
-        }
-        final GitHubSecurityAdvisoryClient client = clientBuilder.build();
+                .withApiKey(config.getApiToken())
+                .build();
 
-        return new GitHubVulnDataSource(watermarkManager, client, config.getAliasSyncEnabled());
+        return new GitHubVulnDataSource(null, client, config.getAliasSyncEnabled());
     }
 
     @Override
@@ -106,8 +91,7 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
         final var defaultConfig = new GithubVulnDataSourceConfigV1()
                 .withEnabled(false)
                 .withAliasSyncEnabled(true)
-                .withApiUrl(URI.create("https://api.github.com/graphql"))
-                .withIncrementalMirroringEnabled(true);
+                .withApiUrl(URI.create("https://api.github.com/graphql"));
 
         return RuntimeConfigSpec.of(defaultConfig, config -> {
             if (!config.isEnabled()) {
