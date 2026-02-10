@@ -8,10 +8,10 @@ and [Temporal](https://github.com/temporalio/temporal).
 ## Structure
 
 * [`api`](api) contains the public API for authoring durable workflows.
+* [`benchmark`](benchmark) contains a simple benchmarking setup.
 * [`engine-api`](engine-api) contains the public API for interacting with the engine.
 * [`engine-migration`](engine-migration) contains database migrations of the engine.
 * [`engine`](engine) contains the actual engine implementation.
-* [`proto`](proto) contains Protobuf message definitions.
 * [`testing`](testing) contains supporting classes for testing workflows.
 
 `api` and `engine-api` have been separated from the core engine to make the respective
@@ -22,6 +22,5 @@ The [Java module system](https://dev.java/learn/modules/intro/) is used to enfor
 
 ## Documentation
 
-- [Concepts](docs/CONCEPTS.md)
-- [Design](docs/DESIGN.md)
-- [Common Patterns](docs/PATTERNS.md)
+* [Architecture / design documentation](https://dependencytrack.github.io/hyades/snapshot/architecture/design/durable-execution)
+* [Usage documentation]: https://dependencytrack.github.io/hyades/snapshot/development/durable-execution/
