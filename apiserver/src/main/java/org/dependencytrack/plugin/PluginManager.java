@@ -19,6 +19,8 @@
 package org.dependencytrack.plugin;
 
 import alpine.common.logging.Logger;
+import org.dependencytrack.cache.api.CacheManager;
+import org.dependencytrack.cache.api.NamespacedCacheManager;
 import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.common.ProxySelector;
 import org.dependencytrack.plugin.api.ExtensionContext;
@@ -75,6 +77,7 @@ public class PluginManager implements Closeable {
     private static final Pattern EXTENSION_NAME_PATTERN = EXTENSION_POINT_NAME_PATTERN;
 
     private final Config config;
+    private final CacheManager cacheManager;
     private final RuntimeConfigMapper runtimeConfigMapper;
     private final Function<String, @Nullable String> secretResolver;
     private final SequencedMap<Class<? extends Plugin>, Plugin> loadedPluginByClass;
@@ -91,9 +94,11 @@ public class PluginManager implements Closeable {
 
     public PluginManager(
             Config config,
+            CacheManager cacheManager,
             Function<String, @Nullable String> secretResolver,
             Collection<Class<? extends ExtensionPoint>> extensionPointClasses) {
         this.config = config;
+        this.cacheManager = cacheManager;
         this.secretResolver = secretResolver;
         this.runtimeConfigMapper = RuntimeConfigMapper.getInstance();
         this.loadedPluginByClass = new LinkedHashMap<>();
@@ -414,9 +419,20 @@ public class PluginManager implements Closeable {
         final var keyValueStore = new DatabaseExtensionKVStore(
                 extensionPointMetadata.name(), extensionIdentity.name());
 
+        final var cacheProvider = new NamespacedCacheManager(
+                this.cacheManager,
+                "%s.%s".formatted(
+                        extensionPointMetadata.name(),
+                        extensionIdentity.name()));
+
         LOGGER.debug("Initializing extension");
         try {
-            extensionFactory.init(new ExtensionContext(configRegistry, keyValueStore, new ProxySelector()));
+            extensionFactory.init(
+                    new ExtensionContext(
+                            configRegistry,
+                            cacheProvider,
+                            keyValueStore,
+                            new ProxySelector()));
         } catch (RuntimeException e) {
             throw new IllegalStateException(
                     "Failed to initialize extension %s from plugin %s".formatted(

@@ -23,6 +23,7 @@ import alpine.event.framework.SingleThreadedEventService;
 import alpine.event.framework.Subscriber;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
+import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.plugin.PluginManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -50,6 +51,7 @@ class EventSubsystemInitializerTest {
         final var singleThreadedEventServiceMock = mock(SingleThreadedEventService.class);
         final var pluginManager = new PluginManager(
                 config,
+                new NoopCacheManager(),
                 secretName -> null,
                 Collections.emptyList());
         final var servletContextMock = mock(ServletContext.class);

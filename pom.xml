@@ -36,6 +36,7 @@
         <module>plugin</module>
         <module>proto</module>
         <module>notification</module>
+        <module>cache</module>
         <module>file-storage</module>
         <module>migration</module>
         <module>secret-management</module>

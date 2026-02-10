@@ -21,6 +21,8 @@ package org.dependencytrack.plugin;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.cache.api.CacheManager;
+import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.filestorage.local.LocalFileStoragePlugin;
 import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
 import org.dependencytrack.filestorage.s3.S3FileStoragePlugin;
@@ -60,6 +62,8 @@ class PluginInitializerTest extends PersistenceCapableTest {
         final Config config = ConfigProvider.getConfig();
 
         final var servletContextMock = mock(ServletContext.class);
+        doReturn(new NoopCacheManager())
+                .when(servletContextMock).getAttribute(eq(CacheManager.class.getName()));
         doReturn(new TestSecretManager())
                 .when(servletContextMock).getAttribute(eq(SecretManager.class.getName()));
 

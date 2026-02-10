@@ -24,6 +24,7 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.persistence.jdbi.ExtensionConfigDao;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.ExtensionContext;
@@ -78,6 +79,7 @@ class ExtensionsResourceTest extends ResourceTest {
     void beforeEach() {
         pluginManager = new PluginManager(
                 new SmallRyeConfigBuilder().build(),
+                new NoopCacheManager(),
                 secretManager::getSecretValue,
                 List.of(DummyExtensionPoint.class));
     }

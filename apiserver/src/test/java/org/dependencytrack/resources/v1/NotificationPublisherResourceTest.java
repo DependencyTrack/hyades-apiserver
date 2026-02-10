@@ -28,6 +28,7 @@ import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.notification.DefaultNotificationPublisherInitializer;
@@ -73,6 +74,7 @@ class NotificationPublisherResourceTest extends ResourceTest {
     static void beforeAll() {
         pluginManager = new PluginManager(
                 new SmallRyeConfigBuilder().build(),
+                new NoopCacheManager(),
                 secretName -> null,
                 List.of(org.dependencytrack.notification.api.publishing.NotificationPublisher.class));
         pluginManager.loadPlugins(List.of(new DefaultNotificationPublishersPlugin()));
