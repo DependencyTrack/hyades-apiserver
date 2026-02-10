@@ -20,6 +20,8 @@ package org.dependencytrack.plugin;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.plugin.api.Plugin;
@@ -80,6 +82,10 @@ public class PluginInitializer implements ServletContextListener {
                         .toList();
         for (final Plugin plugin : plugins) {
             LOGGER.debug("Discovered plugin {}", plugin.getClass().getName());
+        }
+
+        if (config.getValue("plugin.external.load.enabled", boolean.class)) {
+            pluginManager.setExternalPluginConfig(true, config.getValue("plugin.external.dir", String.class));
         }
 
         LOGGER.info("Loading plugins");
