@@ -29,7 +29,9 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.DigestOutputStream;
@@ -45,8 +47,9 @@ import static org.dependencytrack.filestorage.api.FileStorage.requireValidFileNa
  */
 final class LocalFileStorage implements FileStorage {
 
-    static final String EXTENSION_NAME = "local";
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorage.class);
+
+    static final String EXTENSION_NAME = "local";
 
     private final Path baseDirPath;
     private final int compressionLevel;
@@ -65,10 +68,8 @@ final class LocalFileStorage implements FileStorage {
         if (Files.isDirectory(filePath)) {
             throw new IOException("Path %s exists, but is a directory".formatted(fileName));
         }
-        if (!Files.exists(filePath.getParent())) {
-            LOGGER.debug("Creating parent directories of {}", filePath);
-            Files.createDirectories(filePath.getParent());
-        }
+
+        Files.createDirectories(filePath.getParent());
 
         final Path relativeFilePath = baseDirPath.relativize(filePath);
         final URI locationUri = URI.create("%s:///%s".formatted(EXTENSION_NAME, relativeFilePath));
@@ -80,11 +81,25 @@ final class LocalFileStorage implements FileStorage {
             throw new IllegalStateException(e);
         }
 
-        try (final var fileOutputStream = Files.newOutputStream(filePath);
-             final var bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
-             final var digestOutputStream = new DigestOutputStream(bufferedOutputStream, messageDigest);
-             final var zstdOutputStream = new ZstdOutputStream(digestOutputStream, compressionLevel)) {
-            contentStream.transferTo(zstdOutputStream);
+        if (contentStream.markSupported()) {
+            contentStream.mark(Integer.MAX_VALUE);
+        }
+
+        try {
+            writeFile(filePath, contentStream, messageDigest);
+        } catch (NoSuchFileException e) {
+            // Parent directory may have been removed by a concurrent delete operation.
+            // Retry, but we can only safely do that if the content stream supports marking.
+            if (!contentStream.markSupported()) {
+                throw e;
+            }
+
+            Files.createDirectories(filePath.getParent());
+
+            contentStream.reset();
+            messageDigest.reset();
+
+            writeFile(filePath, contentStream, messageDigest);
         }
 
         return FileMetadata.newBuilder()
@@ -110,7 +125,40 @@ final class LocalFileStorage implements FileStorage {
 
         final Path filePath = resolveFilePath(fileMetadata);
 
-        return Files.deleteIfExists(filePath);
+        final boolean deleted = Files.deleteIfExists(filePath);
+        if (deleted) {
+            try {
+                deleteEmptyParentDirs(filePath.getParent());
+            } catch (IOException e) {
+                LOGGER.warn("Failed to delete empty parent directories of {}", filePath, e);
+            }
+        }
+
+        return deleted;
+    }
+
+    private void writeFile(Path filePath, InputStream contentStream, MessageDigest messageDigest) throws IOException {
+        try (final var fileOutputStream = Files.newOutputStream(filePath);
+             final var bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
+             final var digestOutputStream = new DigestOutputStream(bufferedOutputStream, messageDigest);
+             final var zstdOutputStream = new ZstdOutputStream(digestOutputStream, compressionLevel)) {
+            contentStream.transferTo(zstdOutputStream);
+        }
+    }
+
+    private void deleteEmptyParentDirs(Path dirPath) throws IOException {
+        while (dirPath != null && dirPath.startsWith(baseDirPath) && !dirPath.equals(baseDirPath)) {
+            try {
+                Files.delete(dirPath);
+            } catch (DirectoryNotEmptyException e) {
+                break;
+            } catch (NoSuchFileException e) {
+                // Another concurrent delete operation has likely
+                // removed this directory already. Keep going.
+            }
+
+            dirPath = dirPath.getParent();
+        }
     }
 
     private Path resolveFilePath(final String filePath) {

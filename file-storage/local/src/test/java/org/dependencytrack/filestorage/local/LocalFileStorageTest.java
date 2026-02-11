@@ -84,6 +84,7 @@ class LocalFileStorageTest {
         final boolean deleted = storage.delete(fileMetadata);
         assertThat(deleted).isTrue();
         assertThatExceptionOfType(NoSuchFileException.class).isThrownBy(() -> storage.get(fileMetadata));
+        assertThat(tempDirPath.resolve("foo")).doesNotExist();
     }
 
     @Test
@@ -184,6 +185,23 @@ class LocalFileStorageTest {
                                 .setLocation("local:///foo/bar")
                                 .setSha256Digest("some-digest")
                                 .build()));
+    }
+
+    @Test
+    @SuppressWarnings("resource")
+    void deleteShouldNotDeleteNonEmptyParentDirs() throws Exception {
+        final var storageFactory = new LocalFileStorageFactory();
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                "directory", tempDirPath.toAbsolutePath().toString()))));
+
+        final FileStorage storage = storageFactory.create();
+
+        final FileMetadata fileMetadataA = storage.store("foo/a", new ByteArrayInputStream("a".getBytes()));
+        storage.store("foo/b", new ByteArrayInputStream("b".getBytes()));
+
+        storage.delete(fileMetadataA);
+        assertThat(tempDirPath.resolve("foo/a")).doesNotExist();
+        assertThat(tempDirPath.resolve("foo")).exists();
     }
 
     @Test
