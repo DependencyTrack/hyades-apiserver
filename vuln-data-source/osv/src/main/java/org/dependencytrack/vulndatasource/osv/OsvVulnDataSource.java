@@ -25,7 +25,6 @@ import org.cyclonedx.proto.v1_6.Property;
 import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.osv.schema.Osv;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

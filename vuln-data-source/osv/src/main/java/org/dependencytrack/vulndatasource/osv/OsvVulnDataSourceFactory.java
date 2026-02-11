@@ -72,11 +72,11 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
     @Override
     public RuntimeConfigSpec runtimeConfigSpec() {
         final var defaultConfig = new OsvVulnDataSourceConfigV1()
+                .withIncrementalMirroringEnabled(true)
                 .withEnabled(false)
                 .withAliasSyncEnabled(false)
                 .withDataUrl(URI.create("https://storage.googleapis.com/osv-vulnerabilities"))
-                .withEcosystems(Set.of("Go", "Maven", "npm", "NuGet", "PyPI"))
-                .withIncrementalMirroringEnabled(true);
+                .withEcosystems(Set.of("Go", "Maven", "npm", "NuGet", "PyPI"));
 
         return RuntimeConfigSpec.of(defaultConfig, config -> {
             if (!config.isEnabled()) {
