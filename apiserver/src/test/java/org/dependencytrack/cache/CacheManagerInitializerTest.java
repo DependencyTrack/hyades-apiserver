@@ -34,7 +34,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-class CacheInitializerTest extends PersistenceCapableTest {
+class CacheManagerInitializerTest extends PersistenceCapableTest {
 
     @Test
     void shouldInitializeCacheProvider() {
@@ -44,7 +44,7 @@ class CacheInitializerTest extends PersistenceCapableTest {
                         Map.entry("dt.cache.provider.database.datasource.name", "default")))
                 .build();
 
-        final var initializer = new CacheInitializer(config);
+        final var initializer = new CacheManagerInitializer(config);
 
         final var servletContextMock = mock(ServletContext.class);
 
@@ -59,7 +59,7 @@ class CacheInitializerTest extends PersistenceCapableTest {
     void shouldThrowWhenNoCacheProviderConfigured() {
         final var config = new SmallRyeConfigBuilder().build();
 
-        final var initializer = new CacheInitializer(config);
+        final var initializer = new CacheManagerInitializer(config);
 
         assertThatExceptionOfType(NoSuchElementException.class)
                 .isThrownBy(() -> initializer.contextInitialized(null))
@@ -72,7 +72,7 @@ class CacheInitializerTest extends PersistenceCapableTest {
                 .withDefaultValue("dt.cache.provider", "does-not-exist")
                 .build();
 
-        final var initializer = new CacheInitializer(config);
+        final var initializer = new CacheManagerInitializer(config);
 
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> initializer.contextInitialized(null))

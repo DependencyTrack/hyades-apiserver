@@ -22,7 +22,7 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.secret.management.SecretManager;
-import org.dependencytrack.secret.management.SecretManagerFactory;
+import org.dependencytrack.secret.management.SecretManagerProvider;
 import org.dependencytrack.secret.management.cache.CachingSecretManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -54,16 +54,18 @@ public final class SecretManagerInitializer implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent event) {
         final String providerName = config.getValue("dt.secret-management.provider", String.class);
-        final var secretManagerFactory = ServiceLoader.load(SecretManagerFactory.class).stream()
-                .map(ServiceLoader.Provider::get)
-                .filter(factory -> providerName.equals(factory.name()))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException(
-                        "No secret management provider found for name: " + providerName));
+        LOGGER.info("Initializing secret manager for provider '{}'", providerName);
 
-        LOGGER.info("Initializing secret management provider: {}", secretManagerFactory.name());
+        final var secretManagerProvider =
+                ServiceLoader.load(SecretManagerProvider.class).stream()
+                        .map(ServiceLoader.Provider::get)
+                        .filter(factory -> providerName.equals(factory.name()))
+                        .findAny()
+                        .orElseThrow(() -> new IllegalStateException(
+                                "No secret management provider found for name: " + providerName));
+
         secretManager = CachingSecretManager.maybeWrap(
-                secretManagerFactory.create(config, new EncryptedPageTokenEncoder()),
+                secretManagerProvider.create(config, new EncryptedPageTokenEncoder()),
                 config);
 
         event.getServletContext().setAttribute(

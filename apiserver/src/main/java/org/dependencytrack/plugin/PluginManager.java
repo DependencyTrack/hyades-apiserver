@@ -419,7 +419,7 @@ public class PluginManager implements Closeable {
         final var keyValueStore = new DatabaseExtensionKVStore(
                 extensionPointMetadata.name(), extensionIdentity.name());
 
-        final var cacheProvider = new NamespacedCacheManager(
+        final var extensionCacheManager = new NamespacedCacheManager(
                 this.cacheManager,
                 "%s.%s".formatted(
                         extensionPointMetadata.name(),
@@ -430,7 +430,7 @@ public class PluginManager implements Closeable {
             extensionFactory.init(
                     new ExtensionContext(
                             configRegistry,
-                            cacheProvider,
+                            extensionCacheManager,
                             keyValueStore,
                             new ProxySelector()));
         } catch (RuntimeException e) {

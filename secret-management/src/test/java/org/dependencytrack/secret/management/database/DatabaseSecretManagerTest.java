@@ -97,7 +97,7 @@ class DatabaseSecretManagerTest {
 
         dataSourceRegistry = new DataSourceRegistry(config);
 
-        secretManager = new DatabaseSecretManagerFactory(dataSourceRegistry)
+        secretManager = new DatabaseSecretManagerProvider(dataSourceRegistry)
                 .create(config, new SimplePageTokenEncoder());
     }
 
@@ -429,7 +429,7 @@ class DatabaseSecretManagerTest {
                             Map.entry("dt.secret-management.database.kek-keyset.path", newKekKeysetFilePath.toString()),
                             Map.entry("dt.secret-management.database.kek-keyset.create-if-missing", "false")))
                     .build();
-            final var newSecretManagerFactory = new DatabaseSecretManagerFactory(dataSourceRegistry);
+            final var newSecretManagerFactory = new DatabaseSecretManagerProvider(dataSourceRegistry);
 
             try (final var newSecretManager = newSecretManagerFactory.create(config, new SimplePageTokenEncoder())) {
                 // Verify that the existing secret can still be decrypted.

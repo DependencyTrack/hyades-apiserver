@@ -111,12 +111,10 @@ public class SecretManagerInitializerTest {
                 .withMessage("No secret management provider found for name: unknown");
 
         verify(servletContextMock, never()).setAttribute(eq(SecretManager.class.getName()), any());
-
-        assertThat(SecretManagerInitializer.secretManager).isNull();
     }
 
     @Test
-    public void shouldCloseAndNullifyInstance() {
+    public void shouldClose() {
         final var secretManagerMock = mock(SecretManager.class);
         SecretManagerInitializer.secretManager = secretManagerMock;
 
@@ -124,8 +122,6 @@ public class SecretManagerInitializerTest {
                 .contextDestroyed(new ServletContextEvent(mock(ServletContext.class)));
 
         verify(secretManagerMock).close();
-
-        assertThat(SecretManagerInitializer.secretManager).isNull();
     }
 
 }

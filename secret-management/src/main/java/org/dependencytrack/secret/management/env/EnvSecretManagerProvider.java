@@ -20,7 +20,7 @@ package org.dependencytrack.secret.management.env;
 
 import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.secret.management.SecretManager;
-import org.dependencytrack.secret.management.SecretManagerFactory;
+import org.dependencytrack.secret.management.SecretManagerProvider;
 import org.eclipse.microprofile.config.Config;
 import org.slf4j.LoggerFactory;
 
@@ -30,16 +30,16 @@ import java.util.Map;
 /**
  * @since 5.7.0
  */
-public final class EnvSecretManagerFactory implements SecretManagerFactory {
+public final class EnvSecretManagerProvider implements SecretManagerProvider {
 
     private final Map<String, String> env;
 
-    EnvSecretManagerFactory(Map<String, String> env) {
+    EnvSecretManagerProvider(Map<String, String> env) {
         this.env = env;
     }
 
     @SuppressWarnings("unused") // Used by ServiceLoader.
-    public EnvSecretManagerFactory() {
+    public EnvSecretManagerProvider() {
         this(System.getenv());
     }
 
