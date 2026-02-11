@@ -41,10 +41,13 @@ import java.util.zip.ZipOutputStream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -54,6 +57,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class OsvVulnDataSourceTest {
 
@@ -225,6 +229,141 @@ class OsvVulnDataSourceTest {
 
         dataSource.close();
         verify(watermarkManagerMock).maybeCommit(any());
+    }
+
+    @Test
+    void nullWatermarkManager_performsFullDownload() throws Exception {
+        var wireMockServer = new WireMockServer(options().dynamicPort());
+        wireMockServer.start();
+        WireMock.configureFor("localhost", wireMockServer.port());
+        ByteArrayOutputStream zipBytes = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(zipBytes)) {
+            ZipEntry entry = new ZipEntry("osv-advisory.json");
+            zos.putNextEntry(entry);
+            String advisoryJson = """
+                {
+                    "id": "OSV-2024-001",
+                    "summary": "Test",
+                    "affected": [],
+                    "modified": "2024-01-01T00:00:00Z"
+                }
+                """;
+            zos.write(advisoryJson.getBytes());
+            zos.closeEntry();
+        }
+        stubFor(get(urlEqualTo("/maven/all.zip"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withBody(zipBytes.toByteArray())
+                        .withHeader("Content-Type", "application/zip")));
+
+        try (var dataSource = new OsvVulnDataSource(
+                null,
+                objectMapper,
+                "http://localhost:" + wireMockServer.port(),
+                List.of("maven"),
+                HttpClient.newHttpClient(),
+                false)) {
+            assertTrue(dataSource.hasNext());
+            Bom first = dataSource.next();
+            assertThat(first.getVulnerabilitiesList()).hasSize(1);
+            dataSource.markProcessed(first);
+            assertThat(dataSource.hasNext()).isFalse();
+        }
+
+        com.github.tomakehurst.wiremock.client.WireMock.verify(getRequestedFor(urlEqualTo("/maven/all.zip")));
+        com.github.tomakehurst.wiremock.client.WireMock.verify(0, getRequestedFor(urlPathMatching(".*/modified_id\\.csv")));
+    }
+
+    @Test
+    void watermarkManagerReturnsNull_performsFullDownload() throws Exception {
+        when(watermarkManagerMock.getWatermark("maven")).thenReturn(null);
+        var wireMockServer = new WireMockServer(options().dynamicPort());
+        wireMockServer.start();
+        WireMock.configureFor("localhost", wireMockServer.port());
+        ByteArrayOutputStream zipBytes = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(zipBytes)) {
+            ZipEntry entry = new ZipEntry("osv-advisory.json");
+            zos.putNextEntry(entry);
+            String advisoryJson = """
+                {
+                    "id": "OSV-2024-002",
+                    "summary": "Test",
+                    "affected": [],
+                    "modified": "2024-01-02T00:00:00Z"
+                }
+                """;
+            zos.write(advisoryJson.getBytes());
+            zos.closeEntry();
+        }
+        stubFor(get(urlEqualTo("/maven/all.zip"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withBody(zipBytes.toByteArray())
+                        .withHeader("Content-Type", "application/zip")));
+
+        try (var dataSource = new OsvVulnDataSource(
+                watermarkManagerMock,
+                objectMapper,
+                "http://localhost:" + wireMockServer.port(),
+                List.of("maven"),
+                HttpClient.newHttpClient(),
+                false)) {
+            assertTrue(dataSource.hasNext());
+            Bom first = dataSource.next();
+            assertThat(first.getVulnerabilitiesList().get(0).getId()).isEqualTo("OSV-2024-002");
+            dataSource.markProcessed(first);
+            assertThat(dataSource.hasNext()).isFalse();
+        }
+
+        com.github.tomakehurst.wiremock.client.WireMock.verify(getRequestedFor(urlEqualTo("/maven/all.zip")));
+        com.github.tomakehurst.wiremock.client.WireMock.verify(0, getRequestedFor(urlPathMatching(".*/modified_id\\.csv")));
+    }
+
+    @Test
+    void watermarkManagerReturnsInstant_performsIncrementalDownload() throws Exception {
+        when(watermarkManagerMock.getWatermark("maven")).thenReturn(Instant.parse("2024-01-01T00:00:00Z"));
+        var wireMockServer = new WireMockServer(options().dynamicPort());
+        wireMockServer.start();
+        WireMock.configureFor("localhost", wireMockServer.port());
+        String csvBody = "2025-01-01T00:00:00Z,OSV-123\n";
+        stubFor(get(urlEqualTo("/maven/modified_id.csv"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "text/csv")
+                        .withBody(csvBody)));
+        String advisoryJson = """
+            {
+                "id": "OSV-123",
+                "summary": "Incremental advisory",
+                "affected": [],
+                "modified": "2025-01-01T00:00:00Z"
+            }
+            """;
+        stubFor(get(urlEqualTo("/maven/OSV-123.json"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(advisoryJson)));
+
+        try (var dataSource = new OsvVulnDataSource(
+                watermarkManagerMock,
+                objectMapper,
+                "http://localhost:" + wireMockServer.port(),
+                List.of("maven"),
+                HttpClient.newHttpClient(),
+                false)) {
+            assertTrue(dataSource.hasNext());
+            Bom first = dataSource.next();
+            assertThat(first.getVulnerabilitiesList()).hasSize(1);
+            assertThat(first.getVulnerabilitiesList().getFirst().getId()).isEqualTo("OSV-123");
+            dataSource.markProcessed(first);
+            assertThat(dataSource.hasNext()).isFalse();
+        }
+
+        com.github.tomakehurst.wiremock.client.WireMock.verify(getRequestedFor(urlEqualTo("/maven/modified_id.csv")));
+        com.github.tomakehurst.wiremock.client.WireMock.verify(getRequestedFor(urlEqualTo("/maven/OSV-123.json")));
+        com.github.tomakehurst.wiremock.client.WireMock.verify(0, getRequestedFor(urlEqualTo("/maven/all.zip")));
     }
 
 }

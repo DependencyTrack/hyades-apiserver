@@ -27,6 +27,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.lang.reflect.Field;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -86,6 +88,44 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
         final VulnDataSource dataSource = factory.create();
         assertThat(dataSource).isNotNull();
         dataSource.close();
+    }
+
+    @Test
+    void createWhenIncrementalMirroringDisabled_shouldCreateDataSourceWithNullWatermarkManager() throws Exception {
+        final var config = (OsvVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(true);
+        config.setIncrementalMirroringEnabled(false);
+
+        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
+        factory.init(new ExtensionContext(configRegistry));
+
+        try (VulnDataSource dataSource = factory.create()) {
+            assertThat(dataSource).isNotNull();
+            assertThat((dataSource).getClass() == OsvVulnDataSource.class);
+            assertThat(getWatermarkManager(dataSource)).isNull();
+        }
+    }
+
+    @Test
+    void createWhenIncrementalMirroringEnabled_shouldCreateDataSourceWithWatermarkManager() throws Exception {
+        final var config = (OsvVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(true);
+        config.setIncrementalMirroringEnabled(true);
+
+        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
+        factory.init(new ExtensionContext(configRegistry));
+
+        try (VulnDataSource dataSource = factory.create()) {
+            assertThat(dataSource).isNotNull();
+            assertThat((dataSource).getClass() == OsvVulnDataSource.class);
+            assertThat(getWatermarkManager(dataSource)).isNotNull();
+        }
+    }
+
+    private static Object getWatermarkManager(VulnDataSource dataSource) throws Exception {
+        final Field field = OsvVulnDataSource.class.getDeclaredField("watermarkManager");
+        field.setAccessible(true);
+        return field.get(dataSource);
     }
 
 }
