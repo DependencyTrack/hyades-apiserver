@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.vulndatasource.github;
 
-import java.lang.reflect.Field;
-
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.testing.AbstractExtensionFactoryTest;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
@@ -31,7 +29,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatNoException;
 
 class GitHubVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull VulnDataSource, @NonNull GitHubVulnDataSourceFactory> {
 
@@ -88,32 +85,6 @@ class GitHubVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonN
         final VulnDataSource dataSource = factory.create();
         assertThat(dataSource).isNotNull();
         dataSource.close();
-    }
-
-    @Test
-    void createShouldNotCreateWatermarkManager() throws Exception {
-        final var config = (GithubVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
-        config.setEnabled(true);
-        config.setApiToken("dummy");
-
-        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
-
-        factory.init(new ExtensionContext(configRegistry));
-
-        final VulnDataSource dataSource = factory.create();
-        assertThat(dataSource).isNotNull();
-        assertThat(dataSource).isInstanceOf(GitHubVulnDataSource.class);
-
-        final GitHubVulnDataSource githubDataSource = (GitHubVulnDataSource) dataSource;
-        final Field watermarkManagerField = GitHubVulnDataSource.class.getDeclaredField("watermarkManager");
-        watermarkManagerField.setAccessible(true);
-        final Object watermarkManager = watermarkManagerField.get(githubDataSource);
-        assertThat(watermarkManager)
-                .as("Watermark manager should be null (incremental mirroring not used for GitHub)")
-                .isNull();
-
-        assertThatNoException()
-                .isThrownBy(dataSource::close);
     }
 
 }

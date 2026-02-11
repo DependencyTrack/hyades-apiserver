@@ -75,12 +75,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>io.github.jeremylong</groupId>
             <artifactId>open-vulnerability-clients</artifactId>
         </dependency>
@@ -120,18 +114,16 @@
                 <artifactId>jsonschema2pojo-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>runtime-config-schema</id>
-                        <phase>generate-sources</phase>
                         <goals>
                             <goal>generate</goal>
                         </goals>
-                        <configuration>
-                            <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/vulndatasource/nvd</sourceDirectory>
-                            <targetPackage>org.dependencytrack.vulndatasource.nvd</targetPackage>
-                            <generateBuilders>true</generateBuilders>
-                        </configuration>
                     </execution>
                 </executions>
+                <configuration>
+                    <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/vulndatasource/nvd</sourceDirectory>
+                    <targetPackage>org.dependencytrack.vulndatasource.nvd</targetPackage>
+                    <generateBuilders>true</generateBuilders>
+                </configuration>
             </plugin>
         </plugins>
     </build>

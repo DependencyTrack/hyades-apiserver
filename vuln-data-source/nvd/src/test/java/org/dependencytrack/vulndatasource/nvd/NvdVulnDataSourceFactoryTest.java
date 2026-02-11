@@ -38,10 +38,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import java.lang.reflect.Field;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
 
 class NvdVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull VulnDataSource, @NonNull NvdVulnDataSourceFactory> {
 
@@ -206,31 +203,6 @@ class NvdVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
                     });
         }
 
-    }
-
-    @Test
-    void createShouldNotCreateWatermarkManager() throws Exception {
-        final var config = (NvdVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
-        config.setEnabled(true);
-
-        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
-
-        factory.init(new ExtensionContext(configRegistry));
-
-        final VulnDataSource dataSource = factory.create();
-        assertThat(dataSource).isNotNull();
-        assertThat(dataSource).isInstanceOf(NvdVulnDataSource.class);
-
-        final NvdVulnDataSource nvdDataSource = (NvdVulnDataSource) dataSource;
-        final Field watermarkManagerField = NvdVulnDataSource.class.getDeclaredField("watermarkManager");
-        watermarkManagerField.setAccessible(true);
-        final Object watermarkManager = watermarkManagerField.get(nvdDataSource);
-        assertThat(watermarkManager)
-                .as("Watermark manager should be null (incremental mirroring not used for NVD)")
-                .isNull();
-
-        assertThatNoException()
-                .isThrownBy(dataSource::close);
     }
 
 }

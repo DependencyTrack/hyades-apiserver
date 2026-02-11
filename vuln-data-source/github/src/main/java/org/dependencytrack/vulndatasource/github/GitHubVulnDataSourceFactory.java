@@ -26,10 +26,14 @@ import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 
 import java.net.URI;
+import java.time.Clock;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 
 import static io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityAdvisoryClientBuilder.aGitHubSecurityAdvisoryClient;
 
@@ -39,6 +43,7 @@ import static io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityA
 final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
 
     private ConfigRegistry configRegistry;
+    private ExtensionKVStore kvStore;
     private HttpAsyncClientSupplier httpClientSupplier;
 
     @Override
@@ -59,6 +64,7 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
     @Override
     public void init(final ExtensionContext ctx) {
         this.configRegistry = ctx.configRegistry();
+        this.kvStore = ctx.kvStore();
         this.httpClientSupplier = () -> HttpAsyncClients.custom()
                 .setRetryStrategy(new GitHubHttpRequestRetryStrategy())
                 .setProxySelector(ctx.proxySelector())
@@ -77,13 +83,19 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
 
-        final GitHubSecurityAdvisoryClient client = aGitHubSecurityAdvisoryClient()
+        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), this.kvStore);
+
+        final GitHubSecurityAdvisoryClientBuilder clientBuilder = aGitHubSecurityAdvisoryClient()
                 .withHttpClientSupplier(httpClientSupplier)
                 .withEndpoint(config.getApiUrl().toString())
-                .withApiKey(config.getApiToken())
-                .build();
+                .withApiKey(config.getApiToken());
+        if (watermarkManager.getWatermark() != null) {
+            clientBuilder.withUpdatedSinceFilter(
+                    ZonedDateTime.ofInstant(watermarkManager.getWatermark(), ZoneOffset.UTC));
+        }
+        final GitHubSecurityAdvisoryClient client = clientBuilder.build();
 
-        return new GitHubVulnDataSource(null, client, config.getAliasSyncEnabled());
+        return new GitHubVulnDataSource(watermarkManager, client, config.getAliasSyncEnabled());
     }
 
     @Override

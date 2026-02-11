@@ -121,7 +121,9 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
 
-        return new NvdVulnDataSource(null, objectMapper, httpClient, config.getCveFeedsUrl().toString());
+        final var watermarkManager = WatermarkManager.create(kvStore);
+
+        return new NvdVulnDataSource(watermarkManager, objectMapper, httpClient, config.getCveFeedsUrl().toString());
     }
 
     @Override
