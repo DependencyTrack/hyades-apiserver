@@ -232,7 +232,7 @@ class OsvVulnDataSourceTest {
     }
 
     @Test
-    void nullWatermarkManager_performsFullDownload() throws Exception {
+    void nullWatermarkManagerPerformsFullDownload() throws Exception {
         var wireMockServer = new WireMockServer(options().dynamicPort());
         wireMockServer.start();
         WireMock.configureFor("localhost", wireMockServer.port());
@@ -271,12 +271,12 @@ class OsvVulnDataSourceTest {
             assertThat(dataSource.hasNext()).isFalse();
         }
 
-        com.github.tomakehurst.wiremock.client.WireMock.verify(getRequestedFor(urlEqualTo("/maven/all.zip")));
-        com.github.tomakehurst.wiremock.client.WireMock.verify(0, getRequestedFor(urlPathMatching(".*/modified_id\\.csv")));
+        WireMock.verify(getRequestedFor(urlEqualTo("/maven/all.zip")));
+        WireMock.verify(0, getRequestedFor(urlPathMatching(".*/modified_id\\.csv")));
     }
 
     @Test
-    void watermarkManagerReturnsNull_performsFullDownload() throws Exception {
+    void watermarkManagerReturnsNullPerformsFullDownload() throws Exception {
         when(watermarkManagerMock.getWatermark("maven")).thenReturn(null);
         var wireMockServer = new WireMockServer(options().dynamicPort());
         wireMockServer.start();
@@ -316,12 +316,12 @@ class OsvVulnDataSourceTest {
             assertThat(dataSource.hasNext()).isFalse();
         }
 
-        com.github.tomakehurst.wiremock.client.WireMock.verify(getRequestedFor(urlEqualTo("/maven/all.zip")));
-        com.github.tomakehurst.wiremock.client.WireMock.verify(0, getRequestedFor(urlPathMatching(".*/modified_id\\.csv")));
+        WireMock.verify(getRequestedFor(urlEqualTo("/maven/all.zip")));
+        WireMock.verify(0, getRequestedFor(urlPathMatching(".*/modified_id\\.csv")));
     }
 
     @Test
-    void watermarkManagerReturnsInstant_performsIncrementalDownload() throws Exception {
+    void watermarkManagerReturnsInstantPerformsIncrementalDownload() throws Exception {
         when(watermarkManagerMock.getWatermark("maven")).thenReturn(Instant.parse("2024-01-01T00:00:00Z"));
         var wireMockServer = new WireMockServer(options().dynamicPort());
         wireMockServer.start();
@@ -361,9 +361,9 @@ class OsvVulnDataSourceTest {
             assertThat(dataSource.hasNext()).isFalse();
         }
 
-        com.github.tomakehurst.wiremock.client.WireMock.verify(getRequestedFor(urlEqualTo("/maven/modified_id.csv")));
-        com.github.tomakehurst.wiremock.client.WireMock.verify(getRequestedFor(urlEqualTo("/maven/OSV-123.json")));
-        com.github.tomakehurst.wiremock.client.WireMock.verify(0, getRequestedFor(urlEqualTo("/maven/all.zip")));
+        WireMock.verify(getRequestedFor(urlEqualTo("/maven/modified_id.csv")));
+        WireMock.verify(getRequestedFor(urlEqualTo("/maven/OSV-123.json")));
+        WireMock.verify(0, getRequestedFor(urlEqualTo("/maven/all.zip")));
     }
 
 }

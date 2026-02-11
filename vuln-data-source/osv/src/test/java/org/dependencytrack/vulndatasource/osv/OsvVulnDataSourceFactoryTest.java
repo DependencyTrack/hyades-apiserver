@@ -91,7 +91,7 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
     }
 
     @Test
-    void createWhenIncrementalMirroringDisabled_shouldCreateDataSourceWithNullWatermarkManager() throws Exception {
+    void createWhenIncrementalMirroringDisabledShouldCreateDataSourceWithNullWatermarkManager() throws Exception {
         final var config = (OsvVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
         config.setEnabled(true);
         config.setIncrementalMirroringEnabled(false);
@@ -107,7 +107,7 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
     }
 
     @Test
-    void createWhenIncrementalMirroringEnabled_shouldCreateDataSourceWithWatermarkManager() throws Exception {
+    void createWhenIncrementalMirroringEnabledShouldCreateDataSourceWithWatermarkManager() throws Exception {
         final var config = (OsvVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
         config.setEnabled(true);
         config.setIncrementalMirroringEnabled(true);
