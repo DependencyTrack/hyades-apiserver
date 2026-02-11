@@ -25,11 +25,13 @@ services:
     ports:
     - "127.0.0.1:8080:8080"
     volumes:
-    - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    # For rootless Podman, set the DOCKER_SOCK environment variable:
+    # export DOCKER_SOCK="$(podman system info --format='{{.Host.RemoteSocket.Path}}')"
+    - "${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro"
     restart: unless-stopped
 
   frontend:
-    image: "ghcr.io/dependencytrack/hyades-frontend:${DT_VERSION:-snapshot}"
+    image: "ghcr.io/dependencytrack/hyades-frontend:${DT_FRONTEND_VERSION:-snapshot}"
     environment:
       API_BASE_URL: "http://localhost:8080"
     ports:
@@ -37,7 +39,7 @@ services:
     restart: unless-stopped
 
   apiserver:
-    image: "ghcr.io/dependencytrack/hyades-apiserver:${DT_VERSION:-snapshot}"
+    image: "ghcr.io/dependencytrack/hyades-apiserver:${DT_APISERVER_VERSION:-snapshot}"
     labels:
       traefik.enable: "true"
       traefik.http.routers.myapp.rule: "PathPrefix(`/api`)"
@@ -50,8 +52,10 @@ services:
       endpoint_mode: dnsrr
       mode: replicated
       replicas: 3
+      resources:
+        limits:
+          memory: 1g
     environment:
-      EXTRA_JAVA_OPTIONS: "-Xmx1g"
       DT_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/dtrack"
       DT_DATASOURCE_USERNAME: "dtrack"
       DT_DATASOURCE_PASSWORD: "dtrack"
