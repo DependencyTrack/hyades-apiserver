@@ -34,28 +34,28 @@ import java.util.ServiceLoader;
 /**
  * @since 5.7.0
  */
-public final class CacheInitializer implements ServletContextListener {
+public final class CacheManagerInitializer implements ServletContextListener {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CacheInitializer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CacheManagerInitializer.class);
 
     private final Config config;
     private @Nullable CacheManager cacheManager;
 
-    CacheInitializer(Config config) {
+    CacheManagerInitializer(Config config) {
         this.config = config;
     }
 
     @SuppressWarnings("unused") // Used by servlet container.
-    public CacheInitializer() {
+    public CacheManagerInitializer() {
         this(ConfigProvider.getConfig());
     }
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
         final String providerName = config.getValue("dt.cache.provider", String.class);
-        LOGGER.info("Initializing cache provider: {}", providerName);
+        LOGGER.info("Initializing cache manager for provider '{}'", providerName);
 
-        final CacheProvider providerFactory =
+        final CacheProvider cacheProvider =
                 ServiceLoader.load(CacheProvider.class).stream()
                         .map(ServiceLoader.Provider::get)
                         .filter(factory -> providerName.equals(factory.name()))
@@ -63,7 +63,7 @@ public final class CacheInitializer implements ServletContextListener {
                         .orElseThrow(() -> new IllegalStateException(
                                 "No cache provider found for name: " + providerName));
 
-        cacheManager = providerFactory.create();
+        cacheManager = cacheProvider.create();
         event.getServletContext().setAttribute(
                 CacheManager.class.getName(),
                 cacheManager);
@@ -72,12 +72,13 @@ public final class CacheInitializer implements ServletContextListener {
     @Override
     public void contextDestroyed(ServletContextEvent event) {
         if (cacheManager != null) {
-            LOGGER.info("Closing cache provider");
+            LOGGER.info("Closing cache manager");
             try {
                 cacheManager.close();
             } catch (IOException e) {
-                LOGGER.warn("Failed to close cache provider", e);
+                LOGGER.warn("Failed to close cache manager", e);
             }
+            cacheManager = null;
         }
     }
 

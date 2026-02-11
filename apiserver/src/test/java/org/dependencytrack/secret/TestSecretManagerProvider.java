@@ -16,27 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.secret.management;
+package org.dependencytrack.secret;
 
 import org.dependencytrack.common.pagination.PageTokenEncoder;
+import org.dependencytrack.secret.management.SecretManager;
+import org.dependencytrack.secret.management.SecretManagerProvider;
 import org.eclipse.microprofile.config.Config;
 
-/**
- * @since 5.7.0
- */
-public interface SecretManagerFactory {
+public final class TestSecretManagerProvider implements SecretManagerProvider {
 
-    /**
-     * @return Name of the manager provided by this factory.
-     * Should be identical to the corresponding {@link SecretManager#name()}.
-     */
-    String name();
+    @Override
+    public String name() {
+        return TestSecretManager.NAME;
+    }
 
-    /**
-     * Create an instance of the secret manager.
-     *
-     * @return A secret manager instance.
-     */
-    SecretManager create(Config config, PageTokenEncoder pageTokenEncoder);
+    @Override
+    public SecretManager create(Config config, PageTokenEncoder pageTokenEncoder) {
+        return new TestSecretManager();
+    }
 
 }

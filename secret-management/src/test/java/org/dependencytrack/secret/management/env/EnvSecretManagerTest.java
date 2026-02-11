@@ -38,7 +38,7 @@ class EnvSecretManagerTest {
 
     @BeforeEach
     void beforeEach() {
-        secretManager = new EnvSecretManagerFactory(
+        secretManager = new EnvSecretManagerProvider(
                 Map.of("dt_secret_name", "value"))
                 .create(null, new SimplePageTokenEncoder());
     }
@@ -122,7 +122,7 @@ class EnvSecretManagerTest {
 
     @Test
     void listSecretMetadataShouldSupportPagination() {
-        secretManager = new EnvSecretManagerFactory(
+        secretManager = new EnvSecretManagerProvider(
                 Map.of(
                         "dt_secret_alpha", "v1",
                         "dt_secret_beta", "v2",
@@ -148,7 +148,7 @@ class EnvSecretManagerTest {
 
     @Test
     void listSecretMetadataShouldSupportSearchText() {
-        secretManager = new EnvSecretManagerFactory(
+        secretManager = new EnvSecretManagerProvider(
                 Map.of(
                         "dt_secret_alpha", "v1",
                         "dt_secret_beta", "v2",
@@ -166,7 +166,7 @@ class EnvSecretManagerTest {
 
     @Test
     void listSecretMetadataShouldSupportSearchTextWithPagination() {
-        secretManager = new EnvSecretManagerFactory(
+        secretManager = new EnvSecretManagerProvider(
                 Map.of(
                         "dt_secret_foo1", "v1",
                         "dt_secret_foo2", "v2",

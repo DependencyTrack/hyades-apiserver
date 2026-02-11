@@ -21,7 +21,7 @@ package org.dependencytrack.secret.management.database;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.secret.management.SecretManager;
-import org.dependencytrack.secret.management.SecretManagerFactory;
+import org.dependencytrack.secret.management.SecretManagerProvider;
 import org.eclipse.microprofile.config.Config;
 
 import javax.sql.DataSource;
@@ -29,16 +29,16 @@ import javax.sql.DataSource;
 /**
  * @since 5.7.0
  */
-public final class DatabaseSecretManagerFactory implements SecretManagerFactory {
+public final class DatabaseSecretManagerProvider implements SecretManagerProvider {
 
     private final DataSourceRegistry dataSourceRegistry;
 
-    DatabaseSecretManagerFactory(DataSourceRegistry dataSourceRegistry) {
+    DatabaseSecretManagerProvider(DataSourceRegistry dataSourceRegistry) {
         this.dataSourceRegistry = dataSourceRegistry;
     }
 
     @SuppressWarnings("unused")
-    public DatabaseSecretManagerFactory() {
+    public DatabaseSecretManagerProvider() {
         this(DataSourceRegistry.getInstance());
     }
 

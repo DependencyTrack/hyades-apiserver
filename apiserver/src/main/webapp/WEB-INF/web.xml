@@ -35,7 +35,7 @@
         <listener-class>org.dependencytrack.init.InitTaskServletContextListener</listener-class>
     </listener>
     <listener>
-        <listener-class>org.dependencytrack.cache.CacheInitializer</listener-class>
+        <listener-class>org.dependencytrack.cache.CacheManagerInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.secret.SecretManagerInitializer</listener-class>

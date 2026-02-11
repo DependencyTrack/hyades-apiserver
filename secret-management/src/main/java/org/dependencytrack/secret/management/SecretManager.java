@@ -33,7 +33,7 @@ import static java.util.Objects.requireNonNull;
 public interface SecretManager extends Closeable {
 
     /**
-     * @return Name of the manager. Should be identical to the corresponding {@link SecretManagerFactory#name()}.
+     * @return Name of the manager. Should be identical to the corresponding {@link SecretManagerProvider#name()}.
      */
     String name();
 
