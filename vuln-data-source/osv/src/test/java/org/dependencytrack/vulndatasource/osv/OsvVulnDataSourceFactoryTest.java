@@ -29,7 +29,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.vulndatasource.osv.WatermarkManager.getWatermarkManager;
 
 class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull VulnDataSource, @NonNull OsvVulnDataSourceFactory> {
 
@@ -100,8 +99,7 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
 
         try (VulnDataSource dataSource = factory.create()) {
             assertThat(dataSource).isNotNull();
-            assertThat(dataSource).isInstanceOf(OsvVulnDataSource.class);
-            assertThat(getWatermarkManager(dataSource)).isNull();
+            assertThat(((OsvVulnDataSource)dataSource).getWatermarkManager()).isNull();
         }
     }
 
@@ -116,10 +114,8 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
 
         try (VulnDataSource dataSource = factory.create()) {
             assertThat(dataSource).isNotNull();
-            assertThat(dataSource).isInstanceOf(OsvVulnDataSource.class);
-            assertThat(getWatermarkManager(dataSource)).isNotNull();
+            assertThat(((OsvVulnDataSource)dataSource).getWatermarkManager()).isNotNull();
         }
     }
-
 
 }

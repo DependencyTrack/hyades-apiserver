@@ -416,4 +416,7 @@ final class OsvVulnDataSource implements VulnDataSource {
         }
     }
 
+     WatermarkManager getWatermarkManager() {
+        return watermarkManager;
+    }
 }

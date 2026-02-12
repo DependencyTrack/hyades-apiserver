@@ -19,11 +19,8 @@
 package org.dependencytrack.vulndatasource.osv;
 
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
-import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
@@ -99,10 +96,5 @@ final class WatermarkManager {
         }
     }
 
-    static Object getWatermarkManager(VulnDataSource dataSource) throws Exception {
-        final Field field = dataSource.getClass().getDeclaredField("watermarkManager");
-        field.setAccessible(true);
-        return field.get(dataSource);
-    }
 
 }
