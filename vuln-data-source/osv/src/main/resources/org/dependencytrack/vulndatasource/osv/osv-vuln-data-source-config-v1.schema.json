@@ -6,13 +6,6 @@
     "org.dependencytrack.plugin.api.config.RuntimeConfig"
   ],
   "properties": {
-    "incrementalMirroringEnabled": {
-      "type": "boolean",
-      "title": "Incremental Mirroring Enabled",
-      "description": "Whether incremental mirroring is enabled. When enabled (default), watermark logic will be used to only mirror new or updated vulnerabilities. When disabled, full mirroring will be performed on each run.",
-      "default": true,
-      "existingJavaType": "boolean"
-    },
     "enabled": {
       "type": "boolean",
       "title": "Enabled",
@@ -23,6 +16,13 @@
       "type": "boolean",
       "title": "Alias Synchronization Enabled",
       "description": "Whether to include alias information in vulnerability data."
+    },
+    "incrementalMirroringEnabled": {
+      "type": "boolean",
+      "title": "Incremental Mirroring Enabled",
+      "description": "Whether incremental mirroring is enabled. When enabled (default), watermark logic will be used to only mirror new or updated vulnerabilities. When disabled, full mirroring will be performed on each run.",
+      "default": true,
+      "existingJavaType": "boolean"
     },
     "dataUrl": {
       "type": "string",

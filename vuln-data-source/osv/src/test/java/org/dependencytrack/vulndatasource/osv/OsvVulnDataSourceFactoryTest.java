@@ -31,6 +31,7 @@ import java.lang.reflect.Field;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.dependencytrack.vulndatasource.osv.WatermarkManager.getWatermarkManager;
 
 class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull VulnDataSource, @NonNull OsvVulnDataSourceFactory> {
 
@@ -101,7 +102,7 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
 
         try (VulnDataSource dataSource = factory.create()) {
             assertThat(dataSource).isNotNull();
-            assertThat((dataSource).getClass() == OsvVulnDataSource.class);
+            assertThat(dataSource).isInstanceOf(OsvVulnDataSource.class);
             assertThat(getWatermarkManager(dataSource)).isNull();
         }
     }
@@ -117,15 +118,10 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
 
         try (VulnDataSource dataSource = factory.create()) {
             assertThat(dataSource).isNotNull();
-            assertThat((dataSource).getClass() == OsvVulnDataSource.class);
+            assertThat(dataSource).isInstanceOf(OsvVulnDataSource.class);
             assertThat(getWatermarkManager(dataSource)).isNotNull();
         }
     }
 
-    private static Object getWatermarkManager(VulnDataSource dataSource) throws Exception {
-        final Field field = OsvVulnDataSource.class.getDeclaredField("watermarkManager");
-        field.setAccessible(true);
-        return field.get(dataSource);
-    }
 
 }
