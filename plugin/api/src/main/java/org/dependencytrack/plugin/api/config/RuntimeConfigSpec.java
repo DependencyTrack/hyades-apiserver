@@ -87,9 +87,8 @@ public final class RuntimeConfigSpec {
                     .replaceAll("([a-z])([A-Z])", "$1-$2")
                     .toLowerCase();
 
-            final String schemaResourcePath = "%s/%s.schema.json".formatted(
-                    configClass.getPackageName().replaceAll("\\.", "/"), configClassNameKebab);
-            schema = new RuntimeConfigSchemaSource.Resource(schemaResourcePath).getSchema(configClass);
+            final String schemaFileName = configClassNameKebab + ".schema.json";
+            schema = new RuntimeConfigSchemaSource.Resource(schemaFileName).getSchema(configClass);
         }
 
         return requireNonNull(schema, "schema must not be null");

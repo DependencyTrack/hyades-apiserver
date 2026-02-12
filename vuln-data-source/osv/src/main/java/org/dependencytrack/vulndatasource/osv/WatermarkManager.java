@@ -21,7 +21,6 @@ package org.dependencytrack.vulndatasource.osv;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
@@ -96,5 +95,6 @@ final class WatermarkManager {
             pendingRecordByEcosystem.put(ecosystem, committedRecord);
         }
     }
+
 
 }

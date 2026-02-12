@@ -27,6 +27,7 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
+import org.jspecify.annotations.Nullable;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -71,6 +72,7 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
     @Override
     public RuntimeConfigSpec runtimeConfigSpec() {
         final var defaultConfig = new OsvVulnDataSourceConfigV1()
+                .withIncrementalMirroringEnabled(true)
                 .withEnabled(false)
                 .withAliasSyncEnabled(false)
                 .withDataUrl(URI.create("https://storage.googleapis.com/osv-vulnerabilities"))
@@ -101,7 +103,9 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
 
-        final var watermarkManager = WatermarkManager.create(config.getEcosystems(), kvStore);
+        final @Nullable WatermarkManager watermarkManager = config.isIncrementalMirroringEnabled()
+                ? WatermarkManager.create(config.getEcosystems(), kvStore)
+                : null;
 
         return new OsvVulnDataSource(
                 watermarkManager,

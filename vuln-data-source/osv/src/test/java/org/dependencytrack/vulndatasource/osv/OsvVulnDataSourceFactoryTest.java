@@ -88,4 +88,34 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
         dataSource.close();
     }
 
+    @Test
+    void createWhenIncrementalMirroringDisabledShouldCreateDataSourceWithNullWatermarkManager() throws Exception {
+        final var config = (OsvVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(true);
+        config.setIncrementalMirroringEnabled(false);
+
+        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
+        factory.init(new ExtensionContext(configRegistry));
+
+        try (VulnDataSource dataSource = factory.create()) {
+            assertThat(dataSource).isNotNull();
+            assertThat(((OsvVulnDataSource)dataSource).getWatermarkManager()).isNull();
+        }
+    }
+
+    @Test
+    void createWhenIncrementalMirroringEnabledShouldCreateDataSourceWithWatermarkManager() throws Exception {
+        final var config = (OsvVulnDataSourceConfigV1) factory.runtimeConfigSpec().defaultConfig();
+        config.setEnabled(true);
+        config.setIncrementalMirroringEnabled(true);
+
+        final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
+        factory.init(new ExtensionContext(configRegistry));
+
+        try (VulnDataSource dataSource = factory.create()) {
+            assertThat(dataSource).isNotNull();
+            assertThat(((OsvVulnDataSource)dataSource).getWatermarkManager()).isNotNull();
+        }
+    }
+
 }

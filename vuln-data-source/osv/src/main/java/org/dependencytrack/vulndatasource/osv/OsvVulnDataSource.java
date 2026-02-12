@@ -111,7 +111,9 @@ final class OsvVulnDataSource implements VulnDataSource {
             }
 
             successfullyCompletedEcosystems.add(currentEcosystem);
-            watermarkManager.maybeCommit(List.of(currentEcosystem));
+            if (watermarkManager != null) {
+                watermarkManager.maybeCommit(List.of(currentEcosystem));
+            }
             closeCurrentEcosystem();
             currentEcosystemIndex++;
         }
@@ -125,7 +127,9 @@ final class OsvVulnDataSource implements VulnDataSource {
                     return true;
                 }
                 successfullyCompletedEcosystems.add(currentEcosystem);
-                watermarkManager.maybeCommit(List.of(currentEcosystem));
+                if (watermarkManager != null) {
+                    watermarkManager.maybeCommit(List.of(currentEcosystem));
+                }
                 closeCurrentEcosystem();
             }
             currentEcosystemIndex++;
@@ -172,12 +176,16 @@ final class OsvVulnDataSource implements VulnDataSource {
             return;
         }
 
-        watermarkManager.maybeAdvance(ecosystem, updatedAt);
+        if (watermarkManager != null) {
+            watermarkManager.maybeAdvance(ecosystem, updatedAt);
+        }
     }
 
     @Override
     public void close() {
-        watermarkManager.maybeCommit(successfullyCompletedEcosystems);
+        if (watermarkManager != null) {
+            watermarkManager.maybeCommit(successfullyCompletedEcosystems);
+        }
         closeCurrentEcosystem();
     }
 
@@ -229,13 +237,18 @@ final class OsvVulnDataSource implements VulnDataSource {
             throw new UncheckedIOException("Failed to create temp directory", e);
         }
 
-        final Instant watermark = watermarkManager.getWatermark(ecosystem);
-        if (watermark == null) {
-            LOGGER.debug("No watermark found; Downloading all advisories");
+        if (watermarkManager == null) {
+            LOGGER.debug("Incremental mirroring disabled; Downloading all advisories");
             downloadEcosystemFilesAll(ecosystem, tempDirPath);
-        } else {
-            LOGGER.debug("Downloading advisories changed since {}", watermark);
-            downloadEcosystemFilesIncremental(ecosystem, watermark, tempDirPath);
+        }else {
+            final Instant watermark = watermarkManager.getWatermark(ecosystem);
+            if (watermark == null) {
+                LOGGER.debug("No watermark found; Downloading all advisories");
+                downloadEcosystemFilesAll(ecosystem, tempDirPath);
+            } else {
+                LOGGER.debug("Downloading advisories changed since {}", watermark);
+                downloadEcosystemFilesIncremental(ecosystem, watermark, tempDirPath);
+            }
         }
 
         return tempDirPath;
@@ -403,4 +416,7 @@ final class OsvVulnDataSource implements VulnDataSource {
         }
     }
 
+     WatermarkManager getWatermarkManager() {
+        return watermarkManager;
+    }
 }
