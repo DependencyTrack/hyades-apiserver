@@ -21,18 +21,17 @@ package alpine.event.framework;
 import alpine.common.util.ThreadUtil;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
-import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 
 /**
  * A publish/subscribe (pub/sub) event service that provides the ability to publish events and
  * asynchronously inform all subscribers to subscribed events.
  *
- * This class will use a configurable number of worker threads when processing events.
+ * This class will use virtual threads with a semaphore-based concurrency limit
+ * when processing events.
  *
  * @see alpine.Config.AlpineKey#WORKER_THREADS
  * @see alpine.Config.AlpineKey#WORKER_THREAD_MULTIPLIER
@@ -47,29 +46,33 @@ public final class EventService extends BaseEventService {
     private static final String EXECUTOR_NAME = "Alpine-EventService";
 
     static {
-        final var threadFactory = BasicThreadFactory.builder()
-                .namingPattern(EXECUTOR_NAME + "-%d")
-                .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                .build();
-        final int threadPoolSize = ThreadUtil.determineNumberOfWorkerThreads();
-        final var executor = new ThreadPoolExecutor(
-                threadPoolSize,
-                threadPoolSize,
-                0L,
-                TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(),
-                threadFactory);
-        INSTANCE = new EventService(executor);
-        new ExecutorServiceMetrics(executor, EXECUTOR_NAME, null)
+        final ExecutorConfig config = createExecutorConfig();
+        INSTANCE = new EventService(config.executor(), config.semaphore());
+        new ExecutorServiceMetrics(INSTANCE.getExecutor(), EXECUTOR_NAME, null)
                 .bindTo(Metrics.globalRegistry);
     }
 
-    private EventService(final ExecutorService executor) {
-        super(executor);
+    private EventService(ExecutorService executor, Semaphore semaphore) {
+        super(executor, semaphore);
     }
 
     public static EventService getInstance() {
         return INSTANCE;
+    }
+
+    @Override
+    ExecutorConfig executorConfig() {
+        return createExecutorConfig();
+    }
+
+    private static ExecutorConfig createExecutorConfig() {
+        final ExecutorService executor = Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual()
+                        .name(EXECUTOR_NAME + "-", 0)
+                        .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
+                        .factory());
+        final var semaphore = new Semaphore(ThreadUtil.determineNumberOfWorkerThreads());
+        return new ExecutorConfig(executor, semaphore);
     }
 
 }
