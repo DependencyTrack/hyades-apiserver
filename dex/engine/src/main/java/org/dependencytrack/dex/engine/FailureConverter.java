@@ -203,7 +203,7 @@ final class FailureConverter {
     }
 
     private static final Pattern STACK_TRACE_ELEMENT_PATTERN = Pattern.compile(
-            "^(?<className>[\\w.$]+)\\.(?<methodName>[\\w.$]+)(?:\\((?<fileName>[\\w.]+):(?<lineNumber>-?\\d+)\\))?$");
+            "^(?<className>[\\w.$:/]+)\\.(?<methodName>[\\w.$]+|<\\w+>)(?:\\((?<fileName>[\\w.]+):(?<lineNumber>-?\\d+)\\))?$");
 
     private static StackTraceElement @Nullable [] deserializeStackTrace(final @Nullable String stackTrace) {
         if (stackTrace == null || stackTrace.isEmpty()) {
@@ -214,7 +214,7 @@ final class FailureConverter {
                 .map(serializedElement -> {
                     final Matcher matcher = STACK_TRACE_ELEMENT_PATTERN.matcher(serializedElement);
                     if (!matcher.find()) {
-                        throw new IllegalArgumentException("Malformed stack trace element: " + stackTrace);
+                        throw new IllegalArgumentException("Malformed stack trace element: " + serializedElement);
                     }
 
                     return new StackTraceElement(
