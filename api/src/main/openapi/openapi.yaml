@@ -158,6 +158,10 @@ paths:
     $ref: "./paths/workflow-instances__id_.yaml"
   /workflow-runs:
     $ref: "./paths/workflow-runs.yaml"
+  /workflow-runs/{id}:
+    $ref: "./paths/workflow-runs__id_.yaml"
+  /workflow-runs/{id}/events:
+    $ref: "./paths/workflow-runs__id__events.yaml"
 
 components:
   securitySchemes:

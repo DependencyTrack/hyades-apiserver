@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.dex.engine.persistence.jdbi;
 
-import org.dependencytrack.dex.engine.persistence.model.WorkflowRunHistoryEntry;
+import org.dependencytrack.dex.engine.api.WorkflowRunHistoryEntry;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.jdbi.v3.core.config.ConfigRegistry;
 import org.jdbi.v3.core.mapper.ColumnMapper;
@@ -29,7 +29,6 @@ import org.jspecify.annotations.Nullable;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
 
@@ -47,7 +46,6 @@ final class WorkflowRunHistoryEntryRowMapper implements RowMapper<WorkflowRunHis
         requireNonNull(workflowEventColumnMapper);
 
         return new WorkflowRunHistoryEntry(
-                rs.getObject("workflow_run_id", UUID.class),
                 rs.getInt("sequence_number"),
                 workflowEventColumnMapper.map(rs, "event", ctx));
     }

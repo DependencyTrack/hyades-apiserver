@@ -16,14 +16,11 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence.model;
+package org.dependencytrack.dex.engine.api;
 
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 
-import java.util.UUID;
-
 public record WorkflowRunHistoryEntry(
-        UUID workflowRunId,
         int sequenceNumber,
         WorkflowEvent event) {
 }

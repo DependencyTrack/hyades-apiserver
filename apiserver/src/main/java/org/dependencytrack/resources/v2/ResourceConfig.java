@@ -25,11 +25,14 @@ import alpine.server.filters.GZipInterceptor;
 import alpine.server.filters.HeaderFilter;
 import alpine.server.filters.RequestIdFilter;
 import alpine.server.filters.RequestMdcEnrichmentFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.ws.rs.ext.ContextResolver;
 import org.dependencytrack.cache.CacheManagerBinder;
 import org.dependencytrack.dex.DexEngineBinder;
 import org.dependencytrack.filters.JerseyMetricsApplicationEventListener;
 import org.dependencytrack.plugin.PluginManagerBinder;
 import org.dependencytrack.secret.SecretManagerBinder;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 
@@ -49,6 +52,15 @@ public final class ResourceConfig extends org.glassfish.jersey.server.ResourceCo
         property(PROVIDER_PACKAGES, getClass().getPackageName());
         property(PROVIDER_SCANNING_RECURSIVE, true);
         property(WADL_FEATURE_DISABLE, true);
+
+        final var objectMapper = new ObjectMapper();
+        register((ContextResolver<ObjectMapper>) type -> objectMapper);
+        register(new AbstractBinder() {
+            @Override
+            protected void configure() {
+                bind(objectMapper).to(ObjectMapper.class);
+            }
+        });
 
         register(ApiFilter.class);
         register(AuthenticationFeature.class);
