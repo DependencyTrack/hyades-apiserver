@@ -42,22 +42,31 @@ public final class SingleThreadedEventService extends BaseEventService {
     private static final String EXECUTOR_NAME = "Alpine-SingleThreadedEventService";
 
     static {
-        final var threadFactory = BasicThreadFactory.builder()
-                .namingPattern(EXECUTOR_NAME)
-                .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                .build();
-        final var executor = Executors.newFixedThreadPool(1, threadFactory);
-        INSTANCE = new SingleThreadedEventService(executor);
-        new ExecutorServiceMetrics(executor, EXECUTOR_NAME, null)
+        final ExecutorConfig config = createExecutorConfig();
+        INSTANCE = new SingleThreadedEventService(config.executor());
+        new ExecutorServiceMetrics(INSTANCE.getExecutor(), EXECUTOR_NAME, null)
                 .bindTo(Metrics.globalRegistry);
     }
 
-    private SingleThreadedEventService(final ExecutorService executor) {
-        super(executor);
+    private SingleThreadedEventService(ExecutorService executor) {
+        super(executor, null);
     }
 
     public static SingleThreadedEventService getInstance() {
         return INSTANCE;
+    }
+
+    @Override
+    ExecutorConfig executorConfig() {
+        return createExecutorConfig();
+    }
+
+    private static ExecutorConfig createExecutorConfig() {
+        final var threadFactory = BasicThreadFactory.builder()
+                .namingPattern(EXECUTOR_NAME)
+                .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
+                .build();
+        return new ExecutorConfig(Executors.newFixedThreadPool(1, threadFactory), null);
     }
 
 }
