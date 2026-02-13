@@ -20,9 +20,6 @@ package org.dependencytrack.policy.cel.persistence;
 
 import alpine.common.logging.Logger;
 import com.google.api.expr.v1alpha1.Type;
-import com.google.protobuf.Descriptors.Descriptor;
-import com.google.protobuf.Descriptors.FieldDescriptor;
-import com.google.protobuf.Message;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.dependencytrack.policy.cel.mapping.ComponentProjection;
 import org.dependencytrack.policy.cel.mapping.ProjectProjection;
@@ -31,17 +28,17 @@ import org.dependencytrack.policy.cel.mapping.VulnerabilityProjection;
 import org.dependencytrack.proto.policy.v1.Component;
 import org.dependencytrack.proto.policy.v1.Project;
 import org.dependencytrack.proto.policy.v1.Vulnerability;
+import org.jdbi.v3.sqlobject.config.KeyColumn;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
@@ -91,14 +88,15 @@ public interface CelPolicyDao {
               ) AS "tags" ON TRUE
             </#if>
             WHERE
-              "P"."UUID" = :uuid
+              "P"."ID" = :id
             """)
     @RegisterRowMapper(CelPolicyProjectRowMapper.class)
-    Project getProject(@Define List<String> fetchColumns, @Define List<String> fetchPropertyColumns, UUID uuid);
+    Project getProject(@Define List<String> fetchColumns, @Define List<String> fetchPropertyColumns, long id);
 
     @SqlQuery("""
             SELECT
-              ${fetchColumns?join(", ")}
+              "C"."ID" AS "db_id"
+              <#if fetchColumns?size gt 0>, ${fetchColumns?join(", ")}</#if>
             FROM
               "COMPONENT" AS "C"
             <#if fetchColumns?seq_contains("\\"published_at\\"")>
@@ -122,14 +120,16 @@ public interface CelPolicyDao {
               ) AS "repoMeta" ON TRUE
             </#if>
             WHERE
-              "C"."UUID" = :uuid
+              "C"."ID" = ANY(:ids)
             """)
+    @KeyColumn("db_id")
     @RegisterRowMapper(CelPolicyComponentRowMapper.class)
-    Component getComponent(@Define List<String> fetchColumns, UUID uuid);
+    Map<Long, Component> getComponents(@Define List<String> fetchColumns, long[] ids);
 
     @SqlQuery("""
             SELECT DISTINCT
-              ${fetchColumns?join(", ")}
+              "V"."ID" AS "db_id"
+              <#if fetchColumns?size gt 0>, ${fetchColumns?join(", ")}</#if>
             FROM
               "VULNERABILITY" AS "V"
             <#if fetchColumns?seq_contains("\\"aliases\\"")>
@@ -162,30 +162,24 @@ public interface CelPolicyDao {
                 LEFT JOIN "EPSS" AS "EP" ON "V"."VULNID" = "EP"."CVE"
             </#if>
             WHERE
-              "V"."UUID" = :uuid
+              "V"."ID" = ANY(:ids)
             """)
+    @KeyColumn("db_id")
     @RegisterRowMapper(CelPolicyVulnerabilityRowMapper.class)
-    Vulnerability getVulnerability(@Define List<String> fetchColumns, UUID uuid);
+    Map<Long, Vulnerability> getVulnerabilities(@Define List<String> fetchColumns, long[] ids);
 
-    default Project loadRequiredFields(final Project project, final MultiValuedMap<Type, String> requirements) {
+    default Project loadRequiredFields(long projectId, final MultiValuedMap<Type, String> requirements) {
         final Collection<String> projectRequirements = requirements.get(TYPE_PROJECT);
         if (projectRequirements == null || projectRequirements.isEmpty()) {
-            return project;
-        }
-
-        final Set<String> fieldsToLoad = determineFieldsToLoad(Project.getDescriptor(), project, projectRequirements);
-        if (fieldsToLoad.isEmpty()) {
-            LOGGER.debug("All required fields are already loaded for message of type %s"
-                    .formatted(Project.getDescriptor().getFullName()));
-            return project;
+            return Project.getDefaultInstance();
         }
 
         final List<String> sqlSelectColumns = getFieldMappings(ProjectProjection.class).stream()
-                .filter(fieldMapping -> fieldsToLoad.contains(fieldMapping.protoFieldName()))
+                .filter(fieldMapping -> projectRequirements.contains(fieldMapping.protoFieldName()))
                 .map(fieldMapping -> "\"P\".\"%s\" AS \"%s\"".formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName()))
                 .collect(Collectors.toList());
 
-        if (fieldsToLoad.contains("metadata")
+        if (projectRequirements.contains("metadata")
             && requirements.containsKey(TYPE_PROJECT_METADATA)) {
             if (requirements.get(TYPE_PROJECT_METADATA).contains("tools")) {
                 sqlSelectColumns.add("\"PM\".\"TOOLS\" AS \"metadata_tools\"");
@@ -195,12 +189,12 @@ public interface CelPolicyDao {
             }
         }
 
-        if (fieldsToLoad.contains("is_active")) {
+        if (projectRequirements.contains("is_active")) {
             sqlSelectColumns.add("\"P\".\"INACTIVE_SINCE\" AS \"inactive_since\"");
         }
 
         final var sqlPropertySelectColumns = new ArrayList<String>();
-        if (fieldsToLoad.contains("properties") && requirements.containsKey(TYPE_PROJECT_PROPERTY)) {
+        if (projectRequirements.contains("properties") && requirements.containsKey(TYPE_PROJECT_PROPERTY)) {
             sqlSelectColumns.add("\"properties\"");
 
             getFieldMappings(ProjectPropertyProjection.class).stream()
@@ -208,109 +202,87 @@ public interface CelPolicyDao {
                     .map(mapping -> "'%s', \"PP\".\"%s\"".formatted(mapping.protoFieldName(), mapping.sqlColumnName()))
                     .forEach(sqlPropertySelectColumns::add);
         }
-        if (fieldsToLoad.contains("tags")) {
+        if (projectRequirements.contains("tags")) {
             sqlSelectColumns.add("\"tags\"");
         }
 
-        final Project fetchedProject = getProject(sqlSelectColumns, sqlPropertySelectColumns, UUID.fromString(project.getUuid()));
+        final Project fetchedProject = getProject(sqlSelectColumns, sqlPropertySelectColumns, projectId);
         if (fetchedProject == null) {
             throw new NoSuchElementException();
         }
 
-        return project.toBuilder().mergeFrom(fetchedProject).build();
+        return fetchedProject;
     }
 
-    default Component loadRequiredFields(final Component component, final MultiValuedMap<Type, String> requirements) {
+    /**
+     * Batch-load required fields for multiple {@link Component}s in a single query.
+     *
+     * @return A {@link Map} keyed by component DB ID, containing components with required fields loaded
+     */
+    default Map<Long, Component> loadRequiredComponentFields(final Collection<Long> componentIds,
+                                                             final MultiValuedMap<Type, String> requirements) {
         final Collection<String> componentRequirements = requirements.get(TYPE_COMPONENT);
         if (componentRequirements == null || componentRequirements.isEmpty()) {
-            return component;
-        }
-
-        final Set<String> fieldsToLoad = determineFieldsToLoad(Component.getDescriptor(), component, componentRequirements);
-        if (fieldsToLoad.isEmpty()) {
-            LOGGER.debug("All required fields are already loaded for message of type %s"
-                    .formatted(Component.getDescriptor().getFullName()));
-            return component;
+            final var result = new HashMap<Long, Component>();
+            for (long componentId : componentIds) {
+                result.put(componentId, Component.getDefaultInstance());
+            }
+            return result;
         }
 
         final List<String> sqlSelectColumns = getFieldMappings(ComponentProjection.class).stream()
-                .filter(fieldMapping -> fieldsToLoad.contains(fieldMapping.protoFieldName()))
+                .filter(fieldMapping -> componentRequirements.contains(fieldMapping.protoFieldName()))
                 .map(fieldMapping -> "\"C\".\"%s\" AS \"%s\"".formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName()))
                 .collect(Collectors.toList());
-        if (fieldsToLoad.contains("latest_version")) {
+
+        if (componentRequirements.contains("latest_version")) {
             sqlSelectColumns.add("\"latest_version\"");
         }
-        if (fieldsToLoad.contains("published_at")) {
+        if (componentRequirements.contains("published_at")) {
             sqlSelectColumns.add("\"published_at\"");
         }
 
-        final Component fetchedComponent = getComponent(sqlSelectColumns, UUID.fromString(component.getUuid()));
-        if (fetchedComponent == null) {
-            throw new NoSuchElementException();
-        }
-
-        return component.toBuilder().mergeFrom(fetchedComponent).build();
+        return getComponents(sqlSelectColumns, componentIds.stream().mapToLong(Long::longValue).toArray());
     }
 
-    default Vulnerability loadRequiredFields(final Vulnerability vuln, final MultiValuedMap<Type, String> requirements) {
+    /**
+     * Batch-load required fields for multiple {@link Vulnerability}s in a single query.
+     *
+     * @return A {@link Map} keyed by vulnerability DB ID, containing vulnerabilities with required fields loaded
+     */
+    default Map<Long, Vulnerability> loadRequiredVulnerabilityFields(final Collection<Long> vulnIds,
+                                                                     final MultiValuedMap<Type, String> requirements) {
         final Collection<String> vulnRequirements = requirements.get(TYPE_VULNERABILITY);
         if (vulnRequirements == null || vulnRequirements.isEmpty()) {
-            return vuln;
-        }
-
-        final Set<String> fieldsToLoad = determineFieldsToLoad(Vulnerability.getDescriptor(), vuln, vulnRequirements);
-        if (fieldsToLoad.isEmpty()) {
-            LOGGER.debug("All required fields are already loaded for message of type %s"
-                    .formatted(Vulnerability.getDescriptor().getFullName()));
-            return vuln;
+            final var result = new HashMap<Long, Vulnerability>();
+            for (long vulnId : vulnIds) {
+                result.put(vulnId, Vulnerability.getDefaultInstance());
+            }
+            return result;
         }
 
         final List<String> sqlSelectColumns = getFieldMappings(VulnerabilityProjection.class).stream()
-                .filter(fieldMapping -> fieldsToLoad.contains(fieldMapping.protoFieldName()))
+                .filter(fieldMapping -> vulnRequirements.contains(fieldMapping.protoFieldName()))
                 .map(fieldMapping -> {
                     if ("cwes".equals(fieldMapping.protoFieldName())) {
                         return "STRING_TO_ARRAY(\"V\".\"%s\", ',') AS \"%s\""
                                 .formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName());
                     }
-
                     return "\"V\".\"%s\" AS \"%s\"".formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName());
                 })
                 .collect(Collectors.toList());
-        if (fieldsToLoad.contains("aliases")) {
+
+        if (vulnRequirements.contains("aliases")) {
             sqlSelectColumns.add("\"aliases\"");
         }
-        if (fieldsToLoad.contains("epss_score")) {
+        if (vulnRequirements.contains("epss_score")) {
             sqlSelectColumns.add("\"EP\".\"SCORE\" AS \"epss_score\"");
         }
-        if (fieldsToLoad.contains("epss_percentile")) {
+        if (vulnRequirements.contains("epss_percentile")) {
             sqlSelectColumns.add("\"EP\".\"PERCENTILE\" AS \"epss_percentile\"");
         }
-        final Vulnerability fetchedVuln = getVulnerability(sqlSelectColumns, UUID.fromString(vuln.getUuid()));
-        if (fetchedVuln == null) {
-            throw new NoSuchElementException();
-        }
 
-        return vuln.toBuilder().mergeFrom(fetchedVuln).build();
-    }
-
-    private static Set<String> determineFieldsToLoad(final Descriptor typeDescriptor, final Message typeInstance, final Collection<String> requiredFields) {
-        final var fieldsToLoad = new HashSet<String>();
-        for (final String fieldName : requiredFields) {
-            final FieldDescriptor fieldDescriptor = typeDescriptor.findFieldByName(fieldName);
-            if (fieldDescriptor == null) {
-                LOGGER.warn("Field %s is required but does not exist for type %s"
-                        .formatted(fieldName, typeDescriptor.getFullName()));
-                continue;
-            }
-
-            if (fieldDescriptor.isRepeated() && typeInstance.getRepeatedFieldCount(fieldDescriptor) == 0) {
-                // There's no way differentiate between repeated fields being not set or just empty.
-                fieldsToLoad.add(fieldName);
-            } else if (!fieldDescriptor.isRepeated() && !typeInstance.hasField(fieldDescriptor)) {
-                fieldsToLoad.add(fieldName);
-            }
-        }
-        return fieldsToLoad;
+        return getVulnerabilities(sqlSelectColumns, vulnIds.stream().mapToLong(Long::longValue).toArray());
     }
 
 }
