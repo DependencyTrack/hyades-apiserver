@@ -70,6 +70,16 @@ test:
 	@$(MVND) $(MVN_FLAGS) -Dcheckstyle.skip -Dcyclonedx.skip verify
 .PHONY: test
 
+test-single:
+	@$(MVND) $(MVN_FLAGS) test \
+		-Dmaven.build.cache.enabled=false \
+		-Dcheckstyle.skip \
+		-Dcyclonedx.skip \
+		-pl "$(MODULE)" \
+		-am \
+		-Dtest="$(TEST)"
+.PHONY: test-single
+
 apiserver-dev:
 	@$(MVN) $(MVN_FLAGS) -Pquick,dev-services -pl apiserver -am verify
 .PHONY: apiserver-dev
