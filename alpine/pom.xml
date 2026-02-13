@@ -81,7 +81,7 @@
         <lib.h2.version>2.4.240</lib.h2.version>
         <lib.jsonwebtoken.version>0.13.0</lib.jsonwebtoken.version>
         <lib.logstash-logback-encoder.version>8.1</lib.logstash-logback-encoder.version>
-        <lib.nimbus-oauth2-oidc-sdk.version>11.32</lib.nimbus-oauth2-oidc-sdk.version>
+        <lib.nimbus-oauth2-oidc-sdk.version>11.33</lib.nimbus-oauth2-oidc-sdk.version>
         <lib.owasp.security-logging.version>1.1.7</lib.owasp.security-logging.version>
         <lib.parsson.version>1.1.7</lib.parsson.version>
         <!-- Unit test libraries -->
