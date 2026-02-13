@@ -22,11 +22,10 @@ import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.Page.TotalCount;
 import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.common.pagination.SortDirection;
+import org.dependencytrack.dex.engine.api.WorkflowRunHistoryEntry;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
-import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.dex.engine.persistence.model.WorkflowRunHistoryEntry;
-import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -246,27 +245,63 @@ public final class WorkflowRunDao extends AbstractDao {
         return new Page<>(resultItems, encodePageToken(nextPageToken), totalCount);
     }
 
-    record ListRunHistoryPageToken(int lastSequenceNumber) implements PageToken {
+    record ListRunHistoryPageToken(
+            @Nullable Integer fromSequenceNumber,
+            int lastSequenceNumber,
+            SortDirection sortDirection) implements PageToken {
     }
 
-    public Page<WorkflowEvent> listRunEvents(final ListWorkflowRunEventsRequest request) {
+    public Page<WorkflowRunHistoryEntry> listRunHistory(ListWorkflowRunHistoryRequest request) {
         requireNonNull(request, "request must not be null");
-
-        final Query query = jdbiHandle.createQuery("""
-                select *
-                  from dex_workflow_history
-                 where workflow_run_id = :runId
-                   and sequence_number > :lastSequenceNumber
-                 order by sequence_number
-                 limit :limit
-                """);
 
         final var decodedPageToken = decodePageToken(request.pageToken(), ListRunHistoryPageToken.class);
 
+        final Integer fromSequenceNumber;
+        final SortDirection sortDirection;
+        final int lastSequenceNumber;
+
+        if (decodedPageToken != null) {
+            fromSequenceNumber = decodedPageToken.fromSequenceNumber();
+            sortDirection = decodedPageToken.sortDirection();
+            lastSequenceNumber = decodedPageToken.lastSequenceNumber();
+        } else {
+            fromSequenceNumber = request.fromSequenceNumber();
+            sortDirection = request.sortDirection() == null ? SortDirection.ASC : request.sortDirection();
+            if (sortDirection == SortDirection.DESC) {
+                lastSequenceNumber = Integer.MAX_VALUE;
+            } else if (fromSequenceNumber != null) {
+                lastSequenceNumber = fromSequenceNumber;
+            } else {
+                lastSequenceNumber = -1;
+            }
+        }
+
+        final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
+                <#-- @ftlvariable name="sortDirection" type="org.dependencytrack.common.pagination.SortDirection" -->
+                <#-- @ftlvariable name="fromSequenceNumber" type="boolean" -->
+                select *
+                  from dex_workflow_history
+                 where workflow_run_id = :runId
+                <#if sortDirection == 'ASC'>
+                   and sequence_number > :lastSequenceNumber
+                 order by sequence_number
+                <#else>
+                  <#if fromSequenceNumber>
+                   and sequence_number > :fromSequenceNumber
+                  </#if>
+                   and sequence_number < :lastSequenceNumber
+                 order by sequence_number desc
+                </#if>
+                 limit :limit
+                """);
+
         final List<WorkflowRunHistoryEntry> rows = query
                 .bind("runId", request.runId())
-                .bind("lastSequenceNumber", decodedPageToken != null ? decodedPageToken.lastSequenceNumber() : -1)
+                .bind("fromSequenceNumber", fromSequenceNumber)
+                .bind("lastSequenceNumber", lastSequenceNumber)
                 .bind("limit", request.limit() + 1)
+                .define("sortDirection", sortDirection)
+                .defineNamedBindings()
                 .mapTo(WorkflowRunHistoryEntry.class)
                 .list();
 
@@ -275,12 +310,13 @@ public final class WorkflowRunDao extends AbstractDao {
                 : rows;
 
         final ListRunHistoryPageToken nextPageToken = rows.size() == (request.limit() + 1)
-                ? new ListRunHistoryPageToken(resultRows.getLast().sequenceNumber())
+                ? new ListRunHistoryPageToken(
+                fromSequenceNumber,
+                resultRows.getLast().sequenceNumber(),
+                sortDirection)
                 : null;
 
-        return new Page<>(
-                resultRows.stream().map(WorkflowRunHistoryEntry::event).toList(),
-                encodePageToken(nextPageToken));
+        return new Page<>(resultRows, encodePageToken(nextPageToken));
     }
 
 }

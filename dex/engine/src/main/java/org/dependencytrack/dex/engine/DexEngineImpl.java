@@ -47,6 +47,7 @@ import org.dependencytrack.dex.engine.api.TaskQueue;
 import org.dependencytrack.dex.engine.api.TaskType;
 import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.WorkflowRun;
+import org.dependencytrack.dex.engine.api.WorkflowRunHistoryEntry;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.event.DexEngineEvent;
@@ -56,7 +57,7 @@ import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEventListen
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.dex.engine.api.request.ListTaskQueuesRequest;
-import org.dependencytrack.dex.engine.api.request.ListWorkflowRunEventsRequest;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.dex.engine.api.request.UpdateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.response.CreateWorkflowRunResponse;
@@ -636,10 +637,11 @@ final class DexEngineImpl implements DexEngine {
         final List<WorkflowEvent> eventHistory = jdbi.withHandle(handle -> {
             final var dao = new WorkflowRunDao(handle);
 
-            return PageIterator.stream(
-                            pageToken -> dao.listRunEvents(
-                                    new ListWorkflowRunEventsRequest(id)
-                                            .withPageToken(pageToken)))
+            return PageIterator
+                    .stream(pageToken -> dao.listRunHistory(
+                            new ListWorkflowRunHistoryRequest(id)
+                                    .withPageToken(pageToken)))
+                    .map(WorkflowRunHistoryEntry::event)
                     .toList();
         });
         if (eventHistory.isEmpty()) {
@@ -780,8 +782,8 @@ final class DexEngineImpl implements DexEngine {
     }
 
     @Override
-    public Page<WorkflowEvent> listRunEvents(ListWorkflowRunEventsRequest request) {
-        return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRunEvents(request));
+    public Page<WorkflowRunHistoryEntry> listRunHistory(ListWorkflowRunHistoryRequest request) {
+        return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRunHistory(request));
     }
 
     @Override

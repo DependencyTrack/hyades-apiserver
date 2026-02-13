@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.resources.v2;
 
+import com.google.protobuf.util.Timestamps;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
@@ -25,10 +26,15 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.Page.TotalCount;
 import org.dependencytrack.common.pagination.SortDirection;
+import org.dependencytrack.dex.api.payload.PayloadConverters;
 import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunHistoryEntry;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.dex.proto.event.v1.RunCompleted;
+import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +49,7 @@ import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -126,6 +133,81 @@ class WorkflowsResourceTest extends ResourceTest {
 
         final Response response = jersey
                 .target("/workflow-instances/foo")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type":"about:blank",
+                  "status": 404,
+                  "title": "Not Found",
+                  "detail": "The requested resource could not be found."
+                }
+                """);
+    }
+
+    @Test
+    void getWorkflowRunShouldReturnMetadataOfWorkflowRun() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
+        final var runId = UUID.fromString("724c0700-4eeb-45f0-8ff4-8bba369c0174");
+        final var workflowRunMetadata = new WorkflowRunMetadata(
+                runId,
+                "workflowName",
+                66,
+                "workflowInstanceId",
+                "taskQueueName",
+                WorkflowRunStatus.RUNNING,
+                "customStatus",
+                12,
+                "concurrencyKey",
+                Map.of("foo", "bar"),
+                Instant.ofEpochMilli(666666),
+                Instant.ofEpochMilli(777777),
+                Instant.ofEpochMilli(888888),
+                null);
+
+        doReturn(workflowRunMetadata)
+                .when(DEX_ENGINE_MOCK).getRunMetadataById(eq(runId));
+
+        final Response response = jersey
+                .target("/workflow-runs/%s".formatted(runId))
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "id": "724c0700-4eeb-45f0-8ff4-8bba369c0174",
+                  "workflow_name": "workflowName",
+                  "workflow_version": 66,
+                  "workflow_instance_id": "workflowInstanceId",
+                  "task_queue_name": "taskQueueName",
+                  "status": "RUNNING",
+                  "created_at": 666666,
+                  "priority": 12,
+                  "concurrency_key": "concurrencyKey",
+                  "labels": {
+                    "foo": "bar"
+                  },
+                  "updated_at": 777777,
+                  "started_at": 888888
+                }
+                """);
+    }
+
+    @Test
+    void getWorkflowRunShouldReturnNotFoundWhenNoMatchingRunExists() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
+        final var runId = UUID.fromString("724c0700-4eeb-45f0-8ff4-8bba369c0174");
+
+        doReturn(null)
+                .when(DEX_ENGINE_MOCK).getRunMetadataById(eq(runId));
+
+        final Response response = jersey
+                .target("/workflow-runs/%s".formatted(runId))
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -242,6 +324,92 @@ class WorkflowsResourceTest extends ResourceTest {
         assertThat(capturedRequest.pageToken()).isEqualTo("nextPageToken");
         assertThat(capturedRequest.sortDirection()).isEqualTo(SortDirection.DESC);
         assertThat(capturedRequest.sortBy()).isEqualTo(ListWorkflowRunsRequest.SortBy.CREATED_AT);
+    }
+
+    @Test
+    public void listWorkflowRunHistoryShouldReturnWorkflowRunHistory() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
+        final var event = WorkflowEvent.newBuilder()
+                .setId(-1)
+                .setTimestamp(Timestamps.fromSeconds(666666))
+                .setRunCompleted(RunCompleted.newBuilder()
+                        .setStatus(WORKFLOW_RUN_STATUS_COMPLETED)
+                        .setCustomStatus("customStatus")
+                        .setResult(PayloadConverters.stringConverter().convertToPayload("payload"))
+                        .build())
+                .build();
+
+        doReturn(new Page<>(List.of(new WorkflowRunHistoryEntry(0, event)), null).withTotalCount(1, TotalCount.Type.EXACT))
+                .when(DEX_ENGINE_MOCK).listRunHistory(any(ListWorkflowRunHistoryRequest.class));
+
+        final Response response = jersey
+                .target("/workflow-runs/de10c1ec-959e-486d-a031-deb97963ff7c/events")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "events": [
+                            {
+                              "sequence_number": 0,
+                              "event": {
+                                "id": -1,
+                                "timestamp": "1970-01-08T17:11:06Z",
+                                "runCompleted": {
+                                  "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+                                  "customStatus": "customStatus",
+                                  "result": {
+                                    "binaryContent": {
+                                      "mediaType": "text/plain",
+                                      "data": "cGF5bG9hZA=="
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "_pagination": {
+                            "links": {
+                              "self": "${json-unit.any-string}"
+                            },
+                            "total": {
+                              "count": 1,
+                              "type": "EXACT"
+                            }
+                          }
+                        }
+                        """);
+    }
+
+    @Test
+    void listWorkflowRunEventsShouldPassQueryParametersToDexEngine() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
+        doReturn(Page.empty())
+                .when(DEX_ENGINE_MOCK).listRunHistory(any(ListWorkflowRunHistoryRequest.class));
+
+        final Response response = jersey
+                .target("/workflow-runs/de10c1ec-959e-486d-a031-deb97963ff7c/events")
+                .queryParam("from_sequence_number", 42)
+                .queryParam("limit", 25)
+                .queryParam("sort_direction", "DESC")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        final var requestCaptor = ArgumentCaptor.forClass(ListWorkflowRunHistoryRequest.class);
+        verify(DEX_ENGINE_MOCK).listRunHistory(requestCaptor.capture());
+
+        final ListWorkflowRunHistoryRequest capturedRequest = requestCaptor.getValue();
+        assertThat(capturedRequest.runId()).isEqualTo(UUID.fromString("de10c1ec-959e-486d-a031-deb97963ff7c"));
+        assertThat(capturedRequest.fromSequenceNumber()).isEqualTo(42);
+        assertThat(capturedRequest.limit()).isEqualTo(25);
+        assertThat(capturedRequest.sortDirection()).isEqualTo(SortDirection.DESC);
+        assertThat(capturedRequest.pageToken()).isNull();
     }
 
 }
