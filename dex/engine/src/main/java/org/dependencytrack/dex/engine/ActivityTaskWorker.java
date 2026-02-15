@@ -25,6 +25,7 @@ import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskCompletedEvent;
 import org.dependencytrack.dex.engine.TaskEvent.ActivityTaskFailedEvent;
 import org.dependencytrack.dex.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.dex.proto.payload.v1.Payload;
+import org.slf4j.MDC;
 
 import java.time.Duration;
 import java.util.List;
@@ -69,28 +70,33 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     void process(final ActivityTask task) {
-        final ActivityMetadata activityMetadata;
-        try {
-            activityMetadata = metadataRegistry.getActivityMetadata(task.activityName());
-        } catch (NoSuchElementException e) {
-            logger.warn("Activity {} does not exist", task.activityName());
-            abandon(task);
-            return;
-        }
+        try (var ignoredMdcWorkflowRunId = MDC.putCloseable("workflowRunId", task.id().workflowRunId().toString());
+             var ignoredMdcActivityName = MDC.putCloseable("activityName", task.activityName());
+             var ignoredMdcActivityTaskAttempt = MDC.putCloseable("activityTaskAttempt", String.valueOf(task.attempt()))) {
+            final ActivityMetadata activityMetadata;
+            try {
+                activityMetadata = metadataRegistry.getActivityMetadata(task.activityName());
+            } catch (NoSuchElementException e) {
+                logger.warn("Activity does not exist");
+                abandon(task);
+                return;
+            }
 
-        final var ctx = new ActivityContextImpl(engine, task, activityMetadata.lockTimeout());
-        final var arg = activityMetadata.argumentConverter().convertFromPayload(task.argument());
+            final var ctx = new ActivityContextImpl(engine, task, activityMetadata.lockTimeout());
+            final var arg = activityMetadata.argumentConverter().convertFromPayload(task.argument());
 
-        activeContexts.add(ctx);
-        try {
-            final Object activityResult = activityMetadata.executor().execute(ctx, arg);
-            final Payload result = activityMetadata.resultConverter().convertToPayload(activityResult);
+            activeContexts.add(ctx);
+            try {
+                final Object activityResult = activityMetadata.executor().execute(ctx, arg);
+                final Payload result = activityMetadata.resultConverter().convertToPayload(activityResult);
 
-            engine.onTaskEvent(new ActivityTaskCompletedEvent(task, result));
-        } catch (Exception e) {
-            engine.onTaskEvent(new ActivityTaskFailedEvent(task, e));
-        } finally {
-            activeContexts.remove(ctx);
+                engine.onTaskEvent(new ActivityTaskCompletedEvent(task, result));
+            } catch (Exception e) {
+                logger.warn("Failed to execute activity", e);
+                engine.onTaskEvent(new ActivityTaskFailedEvent(task, e));
+            } finally {
+                activeContexts.remove(ctx);
+            }
         }
     }
 
