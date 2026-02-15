@@ -28,6 +28,7 @@ import org.dependencytrack.dex.proto.event.v1.RunStarted;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.dependencytrack.dex.proto.event.v1.WorkflowTaskCompleted;
 import org.dependencytrack.dex.proto.event.v1.WorkflowTaskStarted;
+import org.slf4j.MDC;
 
 import java.time.Duration;
 import java.util.List;
@@ -68,87 +69,91 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     void process(final WorkflowTask task) {
-        final WorkflowMetadata workflowMetadata;
-        try {
-            workflowMetadata = metadataRegistry.getWorkflowMetadata(task.workflowName());
-        } catch (NoSuchElementException e) {
-            logger.warn("Workflow {} does not exist", task.workflowName());
-            abandon(task);
-            return;
-        }
-
-        // Hydrate workflow run state from the history.
-        final var workflowRunState = new WorkflowRunState(task.workflowRunId(), task.history());
-        if (workflowRunState.status() != null && workflowRunState.status().isTerminal()) {
-            logger.warn("""
-                    Task was scheduled despite the workflow run already being in terminal state {}. \
-                    Discarding {} events in the run's inbox.""", workflowRunState.status(), task.inbox().size());
-
-            // TODO: Discard the inbox events without modifying the workflow run.
-            // TODO: Consider logging discarded events.
-            abandon(task);
-            return;
-        }
-
-        // Inject a WorkflowTaskStarted event.
-        // Its timestamp will be used as deterministic "now" timestamp while processing new events.
-        workflowRunState.applyEvent(
-                WorkflowEvent.newBuilder()
-                        .setId(-1)
-                        .setTimestamp(Timestamps.now())
-                        .setWorkflowTaskStarted(WorkflowTaskStarted.getDefaultInstance())
-                        .build());
-
-        int eventsAdded = 0;
-        for (final WorkflowEvent newEvent : task.inbox()) {
-            workflowRunState.applyEvent(newEvent);
-            eventsAdded++;
-
-            // Inject a RunStarted event when encountering a RunCreated event.
-            // This is mainly to populate the run's startedAt timestamp,
-            // so we can differentiate between when a run was created vs.
-            // when it was eventually picked up.
-            if (newEvent.hasRunCreated()) {
-                workflowRunState.applyEvent(
-                        WorkflowEvent.newBuilder()
-                                .setId(-1)
-                                .setTimestamp(Timestamps.now())
-                                .setRunStarted(RunStarted.getDefaultInstance())
-                                .build());
-                eventsAdded++;
+        try (var ignoredMdcWorkflowName = MDC.putCloseable("workflowName", task.workflowName());
+             var ignoredMdcWorkflowInstanceId = MDC.putCloseable("workflowInstanceId", task.workflowInstanceId());
+             var ignoredMdcWorkflowRunId = MDC.putCloseable("workflowRunId", task.workflowRunId().toString())) {
+            final WorkflowMetadata workflowMetadata;
+            try {
+                workflowMetadata = metadataRegistry.getWorkflowMetadata(task.workflowName());
+            } catch (NoSuchElementException e) {
+                logger.warn("Workflow does not exist");
+                abandon(task);
+                return;
             }
+
+            // Hydrate workflow run state from the history.
+            final var workflowRunState = new WorkflowRunState(task.workflowRunId(), task.history());
+            if (workflowRunState.status() != null && workflowRunState.status().isTerminal()) {
+                logger.warn("""
+                        Task was scheduled despite the workflow run already being in terminal state {}. \
+                        Discarding {} events in the run's inbox.""", workflowRunState.status(), task.inbox().size());
+
+                // TODO: Discard the inbox events without modifying the workflow run.
+                // TODO: Consider logging discarded events.
+                abandon(task);
+                return;
+            }
+
+            // Inject a WorkflowTaskStarted event.
+            // Its timestamp will be used as deterministic "now" timestamp while processing new events.
+            workflowRunState.applyEvent(
+                    WorkflowEvent.newBuilder()
+                            .setId(-1)
+                            .setTimestamp(Timestamps.now())
+                            .setWorkflowTaskStarted(WorkflowTaskStarted.getDefaultInstance())
+                            .build());
+
+            int eventsAdded = 0;
+            for (final WorkflowEvent newEvent : task.inbox()) {
+                workflowRunState.applyEvent(newEvent);
+                eventsAdded++;
+
+                // Inject a RunStarted event when encountering a RunCreated event.
+                // This is mainly to populate the run's startedAt timestamp,
+                // so we can differentiate between when a run was created vs.
+                // when it was eventually picked up.
+                if (newEvent.hasRunCreated()) {
+                    workflowRunState.applyEvent(
+                            WorkflowEvent.newBuilder()
+                                    .setId(-1)
+                                    .setTimestamp(Timestamps.now())
+                                    .setRunStarted(RunStarted.getDefaultInstance())
+                                    .build());
+                    eventsAdded++;
+                }
+            }
+
+            if (eventsAdded == 0) {
+                logger.warn("No new events");
+                return;
+            }
+
+            final var ctx = new WorkflowContextImpl<>(
+                    task.workflowRunId(),
+                    task.workflowName(),
+                    task.workflowVersion(),
+                    task.priority(),
+                    task.labels(),
+                    engine.executorMetadataRegistry(),
+                    workflowMetadata.executor(),
+                    workflowMetadata.argumentConverter(),
+                    workflowMetadata.resultConverter(),
+                    workflowRunState.eventHistory(),
+                    workflowRunState.newEvents());
+            final WorkflowRunExecutionResult executionResult = ctx.execute();
+
+            workflowRunState.setCustomStatus(executionResult.customStatus());
+            workflowRunState.processCommands(executionResult.commands());
+            workflowRunState.applyEvent(
+                    WorkflowEvent.newBuilder()
+                            .setId(-1)
+                            .setTimestamp(Timestamps.now())
+                            .setWorkflowTaskCompleted(WorkflowTaskCompleted.getDefaultInstance())
+                            .build());
+
+
+            engine.onTaskEvent(new WorkflowTaskCompletedEvent(task, workflowRunState));
         }
-
-        if (eventsAdded == 0) {
-            logger.warn("No new events");
-            return;
-        }
-
-        final var ctx = new WorkflowContextImpl<>(
-                task.workflowRunId(),
-                task.workflowName(),
-                task.workflowVersion(),
-                task.priority(),
-                task.labels(),
-                engine.executorMetadataRegistry(),
-                workflowMetadata.executor(),
-                workflowMetadata.argumentConverter(),
-                workflowMetadata.resultConverter(),
-                workflowRunState.eventHistory(),
-                workflowRunState.newEvents());
-        final WorkflowRunExecutionResult executionResult = ctx.execute();
-
-        workflowRunState.setCustomStatus(executionResult.customStatus());
-        workflowRunState.processCommands(executionResult.commands());
-        workflowRunState.applyEvent(
-                WorkflowEvent.newBuilder()
-                        .setId(-1)
-                        .setTimestamp(Timestamps.now())
-                        .setWorkflowTaskCompleted(WorkflowTaskCompleted.getDefaultInstance())
-                        .build());
-
-
-        engine.onTaskEvent(new WorkflowTaskCompletedEvent(task, workflowRunState));
     }
 
     @Override
