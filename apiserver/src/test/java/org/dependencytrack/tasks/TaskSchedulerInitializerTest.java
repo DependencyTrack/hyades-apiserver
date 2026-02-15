@@ -66,7 +66,6 @@ public class TaskSchedulerInitializerTest {
                 "Vulnerability Database Maintenance",
                 "Vulnerability Metrics Update",
                 "Vulnerability Policy Sync",
-                "Vulnerability Scan Maintenance",
                 "Workflow Maintenance");
 
         assertThat(scheduler.isRunning()).isTrue();

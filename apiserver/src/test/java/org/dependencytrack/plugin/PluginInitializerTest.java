@@ -29,6 +29,9 @@ import org.dependencytrack.filestorage.s3.S3FileStoragePlugin;
 import org.dependencytrack.notification.publishing.DefaultNotificationPublishersPlugin;
 import org.dependencytrack.secret.TestSecretManager;
 import org.dependencytrack.secret.management.SecretManager;
+import org.dependencytrack.vulnanalysis.internal.InternalVulnAnalyzerPlugin;
+import org.dependencytrack.vulnanalysis.ossindex.OssIndexVulnAnalyzerPlugin;
+import org.dependencytrack.vulnanalysis.snyk.SnykVulnAnalyzerPlugin;
 import org.dependencytrack.vulndatasource.github.GitHubVulnDataSourcePlugin;
 import org.dependencytrack.vulndatasource.nvd.NvdVulnDataSourcePlugin;
 import org.dependencytrack.vulndatasource.osv.OsvVulnDataSourcePlugin;
@@ -88,14 +91,18 @@ class PluginInitializerTest extends PersistenceCapableTest {
                 .containsExactlyInAnyOrder(
                         "file-storage",
                         "notification-publisher",
+                        "vuln-analyzer",
                         "vuln-data-source");
         assertThat(pluginManager.getLoadedPlugins()).satisfiesExactlyInAnyOrder(
                 plugin -> assertThat(plugin).isInstanceOf(DefaultNotificationPublishersPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(GitHubVulnDataSourcePlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(InternalVulnAnalyzerPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(LocalFileStoragePlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(MemoryFileStoragePlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(NvdVulnDataSourcePlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(OssIndexVulnAnalyzerPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(OsvVulnDataSourcePlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(SnykVulnAnalyzerPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(S3FileStoragePlugin.class));
 
         initializer.contextDestroyed(new ServletContextEvent(servletContextMock));

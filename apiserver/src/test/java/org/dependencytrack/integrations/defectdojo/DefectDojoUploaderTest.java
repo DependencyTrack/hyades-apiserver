@@ -23,7 +23,6 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import jakarta.ws.rs.core.MediaType;
 import org.apache.http.HttpHeaders;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
@@ -154,7 +153,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         vuln.setSeverity(Severity.HIGH);
         qm.persist(vuln);
 
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vuln, component, "internal");
 
         qm.createProjectProperty(project, "integrations", "defectdojo.engagementId",
                 "666", IConfigProperty.PropertyType.STRING, null);
@@ -217,7 +216,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                                         "projectVersion" : "1.0.0"
                                       },
                                       "attribution": {
-                                        "analyzerIdentity": "INTERNAL_ANALYZER",
+                                        "analyzerIdentity": "internal",
                                         "attributedOn": "${json-unit.any-string}"
                                       },
                                       "vulnerability": {
@@ -406,7 +405,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         vuln.setSeverity(Severity.HIGH);
         qm.persist(vuln);
 
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vuln, component, "internal");
 
         qm.createProjectProperty(project, "integrations", "defectdojo.engagementId",
                 "666", IConfigProperty.PropertyType.STRING, null);
@@ -474,7 +473,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                                         "projectVersion" : "1.0.0"
                                       },
                                       "attribution": {
-                                        "analyzerIdentity": "INTERNAL_ANALYZER",
+                                        "analyzerIdentity": "internal",
                                         "attributedOn": "${json-unit.any-string}"
                                       },
                                       "vulnerability": {
@@ -775,7 +774,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         vuln.setSeverity(Severity.HIGH);
         qm.persist(vuln);
 
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vuln, component, "internal");
 
         qm.createProjectProperty(project, "integrations", "defectdojo.engagementId",
                 engagementId, IConfigProperty.PropertyType.STRING, null);

@@ -40,6 +40,7 @@
         <module>file-storage</module>
         <module>migration</module>
         <module>secret-management</module>
+        <module>vuln-analysis</module>
         <module>vuln-data-source</module>
         <module>apiserver</module>
         <module>coverage-report</module>

@@ -25,7 +25,6 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
@@ -65,7 +64,7 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
         unknownVexSourceVulnerability.setSeverity(Severity.HIGH);
         unknownVexSourceVulnerability.setComponents(List.of(component));
         unknownVexSourceVulnerability = qm.createVulnerability(unknownVexSourceVulnerability, false);
-        qm.addVulnerability(unknownVexSourceVulnerability, component, AnalyzerIdentity.NONE);
+        qm.addVulnerability(unknownVexSourceVulnerability, component, "none");
 
         var mismatchVexSourceVulnerability = new Vulnerability();
         mismatchVexSourceVulnerability.setVulnId("CVE-2020-25650");
@@ -73,7 +72,7 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
         mismatchVexSourceVulnerability.setSeverity(Severity.HIGH);
         mismatchVexSourceVulnerability.setComponents(List.of(component));
         mismatchVexSourceVulnerability = qm.createVulnerability(mismatchVexSourceVulnerability, false);
-        qm.addVulnerability(mismatchVexSourceVulnerability, component, AnalyzerIdentity.NONE);
+        qm.addVulnerability(mismatchVexSourceVulnerability, component, "none");
 
         var noVexSourceVulnerability = new Vulnerability();
         noVexSourceVulnerability.setVulnId("CVE-2020-25651");
@@ -81,7 +80,7 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
         noVexSourceVulnerability.setSeverity(Severity.HIGH);
         noVexSourceVulnerability.setComponents(List.of(component));
         noVexSourceVulnerability = qm.createVulnerability(noVexSourceVulnerability, false);
-        qm.addVulnerability(noVexSourceVulnerability, component, AnalyzerIdentity.NONE);
+        qm.addVulnerability(noVexSourceVulnerability, component, "none");
 
         // Build vulnerabilities for each available and known vulnerability source
         for (var source : sources) {
@@ -92,7 +91,7 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
             vulnerability.setSeverity(Severity.HIGH);
             vulnerability.setComponents(List.of(component));
             vulnerability = qm.createVulnerability(vulnerability, false);
-            qm.addVulnerability(vulnerability, component, AnalyzerIdentity.NONE);
+            qm.addVulnerability(vulnerability, component, "none");
 
             var audit = new org.cyclonedx.model.vulnerability.Vulnerability();
             audit.setBomRef(UUID.randomUUID().toString());

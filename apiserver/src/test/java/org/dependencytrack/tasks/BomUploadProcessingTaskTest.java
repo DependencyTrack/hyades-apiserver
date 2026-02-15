@@ -37,6 +37,7 @@ import org.cyclonedx.proto.v1_6.Service;
 import org.cyclonedx.proto.v1_6.Tool;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.cache.api.NoopCacheManager;
+import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
@@ -52,7 +53,6 @@ import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
@@ -111,14 +111,18 @@ import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
+import static org.mockito.Mockito.mock;
 
 class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
+    private DexEngine dexEngineMock;
     private PluginManager pluginManager;
     private BomUploadProcessingTask task;
 
     @BeforeEach
     void beforeEach() {
+        dexEngineMock = mock(DexEngine.class);
+
         pluginManager = new PluginManager(
                 new SmallRyeConfigBuilder().build(),
                 new NoopCacheManager(),
@@ -126,7 +130,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 List.of(FileStorage.class));
         pluginManager.loadPlugins(List.of(new MemoryFileStoragePlugin()));
 
-        task = new BomUploadProcessingTask(pluginManager, new KafkaEventDispatcher(), false);
+        task = new BomUploadProcessingTask(dexEngineMock, pluginManager, new KafkaEventDispatcher(), false);
 
         // Enable processing of CycloneDX BOMs
         qm.createConfigProperty(
@@ -156,7 +160,6 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()));
         qm.getPersistenceManager().refresh(project);
         qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
@@ -289,8 +292,6 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
-        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier());
-        assertThat(vulnerabilityScan).isNotNull();
         var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
         assertThat(workflowStatus.getStartedAt()).isNotNull();
     }
@@ -316,7 +317,6 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()));
         qm.getPersistenceManager().refresh(project);
         qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
@@ -380,8 +380,6 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
-        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier());
-        assertThat(vulnerabilityScan).isNotNull();
         var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
         assertThat(workflowStatus.getStartedAt()).isNotNull();
     }
@@ -439,8 +437,6 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         final List<Component> components = qm.getAllComponents(project);
         assertThat(components).isEmpty();
-        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier());
-        assertThat(vulnerabilityScan).isNull();
     }
 
     @Test
@@ -614,21 +610,6 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 .filter(Objects::isNull)
                 .count();
         assertThat(componentsWithoutDirectDependencies).isEqualTo(6378);
-
-        // A VulnerabilityScan should've been initiated properly.
-        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier());
-        assertThat(vulnerabilityScan).isNotNull();
-        assertThat(vulnerabilityScan.getTargetType()).isEqualTo(VulnerabilityScan.TargetType.PROJECT);
-        assertThat(vulnerabilityScan.getTargetIdentifier()).isEqualTo(project.getUuid());
-        assertThat(vulnerabilityScan.getExpectedResults()).isEqualTo(9056);
-        assertThat(vulnerabilityScan.getReceivedResults()).isZero();
-
-        // Verify that all vulnerability analysis commands have been sent.
-        final long vulnAnalysisCommandsSent = kafkaMockProducer.history().stream()
-                .map(ProducerRecord::topic)
-                .filter(KafkaTopics.VULN_ANALYSIS_COMMAND.name()::equals)
-                .count();
-        assertThat(vulnAnalysisCommandsSent).isEqualTo(9056);
 
         // Verify that all repository meta analysis commands have been sent.
         final long repoMetaAnalysisCommandsSent = kafkaMockProducer.history().stream()
@@ -816,12 +797,11 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-1.xml"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
-        new BomUploadProcessingTask(pluginManager, new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
+        new BomUploadProcessingTask(dexEngineMock, pluginManager, new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 // BOM_PROCESSED notification should not have been sent.
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()));
     }
 
@@ -832,7 +812,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-empty.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
-        new BomUploadProcessingTask(pluginManager, new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
+        new BomUploadProcessingTask(dexEngineMock, pluginManager, new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
         assertBomProcessedNotification();
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
@@ -851,10 +831,8 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
-                // (No REPO_META_ANALYSIS_COMMAND event because the component doesn't have a PURL)
-        );
+        // No REPO_META_ANALYSIS_COMMAND event because the component doesn't have a PURL.
+        assertThat(kafkaMockProducer.history()).isEmpty();
 
         assertThat(qm.getAllComponents(project))
                 .satisfiesExactly(component -> assertThat(component.getName()).isEqualTo("acme-lib"));
@@ -876,10 +854,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()));
+        assertThat(kafkaMockProducer.history()).isEmpty();
 
         assertThat(qm.getAllComponents(project)).satisfiesExactly(
                 component -> {
@@ -913,8 +888,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()));
+        assertThat(kafkaMockProducer.history()).isEmpty();
 
         assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
             assertThat(component.getLicense()).isNull();
@@ -940,8 +914,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()));
+        assertThat(kafkaMockProducer.history()).isEmpty();
 
         assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
             assertThat(component.getResolvedLicense()).isNotNull();
@@ -963,8 +936,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()));
+        assertThat(kafkaMockProducer.history()).isEmpty();
 
         assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
             assertThat(component.getLicense()).isNull();
@@ -1199,8 +1171,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()));
+        assertThat(kafkaMockProducer.history()).isEmpty();
 
         assertThat(qm.getAllComponents(project)).isNotEmpty();
         assertThat(qm.getAllServiceComponents(project)).isNotEmpty();
@@ -1721,7 +1692,6 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()));
         qm.getPersistenceManager().refresh(project);
         qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
@@ -1792,8 +1762,6 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
-        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier());
-        assertThat(vulnerabilityScan).isNotNull();
         var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
         assertThat(workflowStatus.getStartedAt()).isNotNull();
     }

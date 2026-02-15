@@ -26,18 +26,13 @@ import org.dependencytrack.common.health.HealthCheckRegistry;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.kafka.processor.api.ProcessorManager;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.policy.cel.CelVulnerabilityPolicyEvaluator;
-import org.eclipse.microprofile.config.Config;
-import org.eclipse.microprofile.config.ConfigProvider;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.common.ConfigKey.VULNERABILITY_POLICY_ANALYSIS_ENABLED;
 
 public class ProcessorInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(ProcessorInitializer.class);
 
-    private final Config config = ConfigProvider.getConfig();
     private ProcessorManager processorManager;
 
     @Override
@@ -55,16 +50,6 @@ public class ProcessorInitializer implements ServletContextListener {
         processorManager = new ProcessorManager();
         processorManager.registerProcessor(RepositoryMetaResultProcessor.PROCESSOR_NAME,
                 KafkaTopics.REPO_META_ANALYSIS_RESULT, new RepositoryMetaResultProcessor());
-        processorManager.registerProcessor(
-                VulnerabilityScanResultProcessor.PROCESSOR_NAME,
-                KafkaTopics.VULN_ANALYSIS_RESULT,
-                new VulnerabilityScanResultProcessor(
-                        pluginManager,
-                        config.getOptionalValue(VULNERABILITY_POLICY_ANALYSIS_ENABLED.getPropertyName(), boolean.class).orElse(false)
-                                ? new CelVulnerabilityPolicyEvaluator()
-                                : null));
-        processorManager.registerBatchProcessor(ProcessedVulnerabilityScanResultProcessor.PROCESSOR_NAME,
-                KafkaTopics.VULN_ANALYSIS_RESULT_PROCESSED, new ProcessedVulnerabilityScanResultProcessor());
 
         healthCheckRegistry.addCheck(new ProcessorsHealthCheck(processorManager));
         processorManager.startAll();

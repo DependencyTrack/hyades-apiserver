@@ -50,7 +50,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.ComponentProjection;
@@ -65,13 +64,10 @@ import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.model.VulnerabilityAnalysisLevel;
-import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ComponentMetaDao;
-import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
@@ -80,7 +76,6 @@ import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
 import org.jdbi.v3.core.Handle;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -89,7 +84,6 @@ import java.util.UUID;
 import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.calculateIntegrityResult;
 import static org.dependencytrack.model.FetchStatus.NOT_AVAILABLE;
 import static org.dependencytrack.model.FetchStatus.PROCESSED;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -513,12 +507,6 @@ public class ComponentResource extends AbstractApiResource {
                     }
                 }
 
-                final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
-                try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
-                    jdbiHandle.attach(VulnerabilityScanDao.class).createVulnerabilityScan(
-                            VulnerabilityScan.TargetType.COMPONENT.name(), component.getUuid(), vulnAnalysisEvent.token(), 1, Instant.now());
-                }
-                kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
                 return Response.status(Response.Status.CREATED).entity(component).build();
             });
         }
@@ -643,12 +631,6 @@ public class ComponentResource extends AbstractApiResource {
                         }
                     }
 
-                    final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, false);
-                    try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
-                        jdbiHandle.attach(VulnerabilityScanDao.class).createVulnerabilityScan(
-                                VulnerabilityScan.TargetType.COMPONENT.name(), component.getUuid(), vulnAnalysisEvent.token(), 1, Instant.now());
-                    }
-                    kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
                     return Response.ok(component).build();
                 } else {
                     return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();

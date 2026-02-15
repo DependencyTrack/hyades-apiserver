@@ -48,6 +48,8 @@ import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentCommon;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentCsaf;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentNotification;
+import org.dependencytrack.proto.internal.workflow.v1.ArgumentVulnanalysis;
+import org.dependencytrack.proto.internal.workflow.v1.ResultVulnanalysis;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -86,6 +88,8 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                                 .add(ArgumentCommon.getDescriptor().getMessageTypes())
                                 .add(ArgumentCsaf.getDescriptor().getMessageTypes())
                                 .add(ArgumentNotification.getDescriptor().getMessageTypes())
+                                .add(ArgumentVulnanalysis.getDescriptor().getMessageTypes())
+                                .add(ResultVulnanalysis.getDescriptor().getMessageTypes())
                                 .build());
     }
 

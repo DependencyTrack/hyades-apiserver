@@ -329,21 +329,20 @@ BEGIN
       , "ANALYZERIDENTITY"
       , "ATTRIBUTED_ON"
       , "REFERENCE_URL"
-      , "UUID"
       )
       SELECT target_project.id
            , tmp_component_mapping.target_id
-           , "VULNERABILITY_ID"
-           , "ALT_ID"
-           , "ANALYZERIDENTITY"
-           , "ATTRIBUTED_ON"
-           , "REFERENCE_URL"
-           , gen_random_uuid()
-        FROM "FINDINGATTRIBUTION"
+           , fa."VULNERABILITY_ID"
+           , fa."ALT_ID"
+           , fa."ANALYZERIDENTITY"
+           , fa."ATTRIBUTED_ON"
+           , fa."REFERENCE_URL"
+        FROM "FINDINGATTRIBUTION" AS fa
        INNER JOIN tmp_component_mapping
-          ON tmp_component_mapping.source_id = "COMPONENT_ID"
-       WHERE "PROJECT_ID" = source_project.id
-       ORDER BY "VULNERABILITY_ID"
+          ON tmp_component_mapping.source_id = fa."COMPONENT_ID"
+       WHERE fa."PROJECT_ID" = source_project.id
+         AND fa."DELETED_AT" IS NULL
+       ORDER BY fa."VULNERABILITY_ID"
               , tmp_component_mapping.target_id;
 
       IF include_findings_audit_history THEN

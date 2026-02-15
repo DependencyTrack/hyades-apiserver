@@ -21,7 +21,6 @@ package org.dependencytrack.integrations;
 import alpine.Config;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
@@ -79,7 +78,7 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
                 "vuln-recommendation", Instant.now(), Severity.CRITICAL, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), BigDecimal.valueOf(8.4),
                 "cvssV2-vector", "cvssV3-vector", "cvssV4-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
                 "owasp-vector", null, BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
-                AnalyzerIdentity.OSSINDEX_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true, 1);
+                "oss-index", Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true, 1);
         Finding findingWithoutAlias = new Finding(findingRow);
 
         var alias = new VulnerabilityAlias();
@@ -108,7 +107,7 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
                 "vuln-recommendation", Instant.now(), Severity.HIGH, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), BigDecimal.valueOf(8.4),
                 "cvssV2-vector", "cvssV3-vector", "cvssV4vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
                 "owasp-vector", List.of(alias, other), BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
-                AnalyzerIdentity.INTERNAL_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true, 1);
+                "internal", Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true, 1);
         Finding findingWithAlias = new Finding(findingRow);
 
         FindingPackagingFormat fpf = new FindingPackagingFormat(
@@ -122,8 +121,8 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         assertEquals("component-name-1", findings.getJSONObject(0).getJSONObject("component").getString("name"));
         assertEquals("component-name-2", findings.getJSONObject(1).getJSONObject("component").getString("name"));
 
-        assertEquals(AnalyzerIdentity.OSSINDEX_ANALYZER, findings.getJSONObject(0).getJSONObject("attribution").get("analyzerIdentity"));
-        assertEquals(AnalyzerIdentity.INTERNAL_ANALYZER, findings.getJSONObject(1).getJSONObject("attribution").get("analyzerIdentity"));
+        assertEquals("oss-index", findings.getJSONObject(0).getJSONObject("attribution").get("analyzerIdentity"));
+        assertEquals("internal", findings.getJSONObject(1).getJSONObject("attribution").get("analyzerIdentity"));
 
         assertEquals(Severity.CRITICAL.toString(), findings.getJSONObject(0).getJSONObject("vulnerability").get("severity"));
         assertEquals(Severity.HIGH.toString(), findings.getJSONObject(1).getJSONObject("vulnerability").get("severity"));

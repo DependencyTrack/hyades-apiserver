@@ -21,7 +21,6 @@ package org.dependencytrack.persistence.jdbi;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.model.Advisory;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao.ListAdvisoriesRow;
@@ -115,9 +114,9 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
         advisory.addVulnerability(vuln);
 
         // Add vulnerability to components
-        qm.addVulnerability(vuln, component1, AnalyzerIdentity.INTERNAL_ANALYZER, "Test1", "http://test.com/1", new Date());
-        qm.addVulnerability(vuln, component2, AnalyzerIdentity.INTERNAL_ANALYZER, "Test2", "http://test.com/2", new Date());
-        qm.addVulnerability(vuln, component3, AnalyzerIdentity.INTERNAL_ANALYZER, "Test3", "http://test.com/3", new Date());
+        qm.addVulnerability(vuln, component1, "internal", "Test1", "http://test.com/1", new Date());
+        qm.addVulnerability(vuln, component2, "internal", "Test2", "http://test.com/2", new Date());
+        qm.addVulnerability(vuln, component3, "internal", "Test3", "http://test.com/3", new Date());
 
         // Test: Verify affected counts
         Page<ListAdvisoriesRow> results = advisoryDao.list(new ListAdvisoriesQuery().withFormat("CSAF"));

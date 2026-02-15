@@ -30,7 +30,6 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
@@ -106,7 +105,7 @@ public class VexResourceTest extends ResourceTest {
         componentWithVuln.setVersion("1.0.0");
         componentWithVuln.setDirectDependencies("[]");
         qm.createComponent(componentWithVuln, false);
-        qm.addVulnerability(vulnA, componentWithVuln, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnA, componentWithVuln, "internal");
 
         var componentWithVulnAndAnalysis = new Component();
         componentWithVulnAndAnalysis.setProject(project);
@@ -114,7 +113,7 @@ public class VexResourceTest extends ResourceTest {
         componentWithVulnAndAnalysis.setVersion("1.0.0");
         componentWithVulnAndAnalysis.setDirectDependencies("[]");
         qm.createComponent(componentWithVulnAndAnalysis, false);
-        qm.addVulnerability(vulnB, componentWithVulnAndAnalysis, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnB, componentWithVulnAndAnalysis, "internal");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentWithVulnAndAnalysis, vulnB)
                         .withState(AnalysisState.RESOLVED)
@@ -458,14 +457,14 @@ public class VexResourceTest extends ResourceTest {
         vuln.setSource(Vulnerability.Source.INTERNAL);
         vuln.setSeverity(Severity.HIGH);
         qm.createVulnerability(vuln, false);
-        qm.addVulnerability(vuln, componentAWithVuln, AnalyzerIdentity.NONE);
+        qm.addVulnerability(vuln, componentAWithVuln, "none");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentAWithVuln, vuln)
                         .withState(AnalysisState.RESOLVED)
                         .withResponse(AnalysisResponse.UPDATE)
                         .withSuppress(true));
 
-        qm.addVulnerability(vuln, componentBWithVuln, AnalyzerIdentity.NONE);
+        qm.addVulnerability(vuln, componentBWithVuln, "none");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentBWithVuln, vuln)
                         .withState(AnalysisState.RESOLVED)
@@ -565,14 +564,14 @@ public class VexResourceTest extends ResourceTest {
         vuln.setSource(Vulnerability.Source.INTERNAL);
         vuln.setSeverity(Severity.HIGH);
         qm.createVulnerability(vuln, false);
-        qm.addVulnerability(vuln, componentAWithVuln, AnalyzerIdentity.NONE);
+        qm.addVulnerability(vuln, componentAWithVuln, "none");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentAWithVuln, vuln)
                         .withState(AnalysisState.IN_TRIAGE)
                         .withResponse(AnalysisResponse.UPDATE)
                         .withSuppress(true));
 
-        qm.addVulnerability(vuln, componentBWithVuln, AnalyzerIdentity.NONE);
+        qm.addVulnerability(vuln, componentBWithVuln, "none");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentBWithVuln, vuln)
                         .withState(AnalysisState.EXPLOITABLE)

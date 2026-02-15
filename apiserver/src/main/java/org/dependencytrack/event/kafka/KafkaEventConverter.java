@@ -20,13 +20,8 @@ package org.dependencytrack.event.kafka;
 
 import alpine.event.framework.Event;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
-import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.proto.repometaanalysis.v1.AnalysisCommand;
-import org.dependencytrack.proto.vulnanalysis.v1.Component;
-import org.dependencytrack.proto.vulnanalysis.v1.ScanCommand;
-import org.dependencytrack.proto.vulnanalysis.v1.ScanKey;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -41,34 +36,8 @@ public final class KafkaEventConverter {
     static KafkaEvent<?, ?> convert(final Event event) {
         return switch (event) {
             case ComponentRepositoryMetaAnalysisEvent e -> convert(e);
-            case ComponentVulnerabilityAnalysisEvent e -> convert(e);
             default -> throw new IllegalArgumentException("Unable to convert event " + event);
         };
-    }
-
-    static KafkaEvent<ScanKey, ScanCommand> convert(final ComponentVulnerabilityAnalysisEvent event) {
-        final var componentBuilder = Component.newBuilder()
-                .setUuid(event.uuid().toString());
-        Optional.ofNullable(event.cpe()).ifPresent(componentBuilder::setCpe);
-        Optional.ofNullable(event.purl()).ifPresent(componentBuilder::setPurl);
-        Optional.ofNullable(event.swidTagId()).ifPresent(componentBuilder::setSwidTagId);
-        Optional.ofNullable(event.internal()).ifPresent(componentBuilder::setInternal);
-
-        final var scanKey = ScanKey.newBuilder()
-                .setScanToken(event.token().toString())
-                .setComponentUuid(event.uuid().toString())
-                .build();
-
-        final var scanCommand = ScanCommand.newBuilder()
-                .setComponent(componentBuilder)
-                .build();
-
-        return new KafkaEvent<>(
-                KafkaTopics.VULN_ANALYSIS_COMMAND,
-                scanKey, scanCommand,
-                Map.of(KafkaEventHeaders.VULN_ANALYSIS_LEVEL, event.level().name(),
-                        KafkaEventHeaders.IS_NEW_COMPONENT, String.valueOf(event.isNewComponent()))
-        );
     }
 
     static KafkaEvent<String, AnalysisCommand> convert(final ComponentRepositoryMetaAnalysisEvent event) {
