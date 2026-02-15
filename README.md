@@ -8,3 +8,7 @@ https://github.com/DependencyTrack/
 
 If you're interested in what Hyades is all about, please refer to the Hyades repository:
 https://github.com/DependencyTrack/hyades
+
+## Developing
+
+Refer to [`DEVELOPING.md`](DEVELOPING.md).

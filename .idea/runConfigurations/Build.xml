@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Checkstyle" type="MavenRunConfiguration" factoryName="Maven">
+  <configuration default="false" name="Build" type="MavenRunConfiguration" factoryName="Maven">
     <MavenSettings>
       <option name="myGeneralSettings" />
       <option name="myRunnerSettings" />
@@ -11,13 +11,16 @@
           </option>
           <option name="goals">
             <list>
-              <option value="checkstyle:check" />
+              <option value="clean" />
+              <option value="package" />
             </list>
           </option>
           <option name="multimoduleDir" />
           <option name="pomFileName" />
           <option name="profilesMap">
-            <map />
+            <map>
+              <entry key="quick" value="true" />
+            </map>
           </option>
           <option name="projectsCmdOptionValues">
             <list />
