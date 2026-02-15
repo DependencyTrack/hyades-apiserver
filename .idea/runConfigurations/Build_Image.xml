@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Build API Server Image" type="docker-deploy" factoryName="dockerfile" server-name="Docker">
+  <configuration default="false" name="Build Image" type="docker-deploy" factoryName="dockerfile" server-name="Docker">
     <deployment type="dockerfile">
       <settings>
         <option name="imageTag" value="ghcr.io/dependencytrack/hyades-apiserver:local" />

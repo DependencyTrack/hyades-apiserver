@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Build API Server" type="MavenRunConfiguration" factoryName="Maven">
+  <configuration default="false" name="Lint" type="MavenRunConfiguration" factoryName="Maven">
     <MavenSettings>
       <option name="myGeneralSettings" />
       <option name="myRunnerSettings" />
@@ -11,19 +11,14 @@
           </option>
           <option name="goals">
             <list>
-              <option value="-pl" />
-              <option value="apiserver" />
-              <option value="-am" />
-              <option value="clean" />
-              <option value="package" />
+              <option value="validate" />
+              <option value="-Dmaven.build.cache.enabled=false" />
             </list>
           </option>
           <option name="multimoduleDir" />
           <option name="pomFileName" />
           <option name="profilesMap">
-            <map>
-              <entry key="quick" value="true" />
-            </map>
+            <map />
           </option>
           <option name="projectsCmdOptionValues">
             <list />

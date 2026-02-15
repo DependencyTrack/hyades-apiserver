@@ -1,185 +1,134 @@
-# Hacking on OWASP Dependency-Track
+# Developing
 
-Want to hack on Dependency-Track? Awesome, here's what you need to know to get started!
-
-> Please be sure to read [`CONTRIBUTING.md`](./CONTRIBUTING.md) and
-> [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) as well.
-
-## Repositories
-
-As of now, the Dependency-Track project consists of two separate repositories:
-
-* [DependencyTrack/dependency-track](https://github.com/DependencyTrack/dependency-track) - The main application, also
-  referred to as API server, based on Java and [Alpine](https://github.com/stevespringett/Alpine).
-* [DependencyTrack/frontend](https://github.com/DependencyTrack/frontend) - The frontend, a single page application (
-  SPA), based on JavaScript and [Vue](https://vuejs.org/).
-
-This document primarily covers the API server. Please refer to the frontend repository for frontend-specific
-instructions.
+> Please also read [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md).
 
 ## Prerequisites
 
-There are a few things you'll need on your journey:
-
 * JDK 21+ ([Temurin](https://adoptium.net/temurin/releases) distribution recommended)
-* Maven (comes bundled with IntelliJ and Eclipse)
-* A Java IDE of your preference (we recommend IntelliJ, but any other IDE is fine as well)
-* Docker (optional)
+* Maven 3.9+
+* Docker or Podman (required for [tests](#testing) and [dev mode](#dev-mode))
+* A Java IDE (IntelliJ recommended)
 
-> We provide common [run configurations](https://www.jetbrains.com/help/idea/run-debug-configuration.html) for IntelliJ
-> in the [`.idea/runConfigurations`](.idea/runConfigurations) directory for convenience. IntelliJ will automatically pick those up when you open this
-> repository.
+> [!TIP]
+> We recommend [sdkman](https://sdkman.io/) for managing JDK and Maven installations,
+> and [mvnd](https://github.com/apache/maven-mvnd) for faster builds.
+> The `Makefile` automatically uses `mvnd` when available, falling back to `mvn`.
+
+> [!NOTE]
+> This guide uses [`make`](https://www.gnu.org/software/make/) commands for brevity,
+> and we recommend that you use `make` if you prefer CLI-centric workflows.
+> If using `make` is not an option, you can inspect the full commands in [`Makefile`](Makefile)
+> and use them for your own custom workflows.
+> 
+> For IDE-centric workflows, we provide equivalent IntelliJ [run configurations](.idea/runConfigurations).
 
 ## Core Technologies
 
-Knowing about the core technologies used by the API server may help you with understanding its codebase.
+| Technology                                                                                  | Purpose                   |
+|:--------------------------------------------------------------------------------------------|:--------------------------|
+| [Jakarta REST (JAX-RS)](https://projects.eclipse.org/projects/ee4j.rest)                    | REST API specification    |
+| [Jersey](https://eclipse-ee4j.github.io/jersey/)                                            | JAX-RS implementation     |
+| [OpenAPI](https://www.openapis.org/)                                                        | API specification         |
+| [JDO](https://db.apache.org/jdo/)                                                           | Persistence specification |
+| [DataNucleus](https://www.datanucleus.org/products/accessplatform/jdo/getting_started.html) | JDO implementation        |
+| [JDBI](https://jdbi.org/)                                                                   | Database access           |
+| [Liquibase](https://www.liquibase.com/)                                                     | Database migrations       |
+| [MicroProfile Config](https://microprofile.io/specifications/microprofile-config/)          | Configuration             |
+| [Jetty](https://www.eclipse.org/jetty/)                                                     | Servlet container         |
+| [Apache Kafka](https://kafka.apache.org/)                                                   | Event streaming           |
+| [PostgreSQL](https://www.postgresql.org/)                                                   | Database                  |
+| [Testcontainers](https://testcontainers.com/)                                               | Integration testing       |
+| [Protocol Buffers](https://protobuf.dev/)                                                   | Serialization             |
 
-| Technology                                                                                      | Purpose                   |
-|:------------------------------------------------------------------------------------------------|:--------------------------|
-| [JAX-RS](https://projects.eclipse.org/projects/ee4j.rest)                                       | REST API specification    |
-| [Jersey](https://eclipse-ee4j.github.io/jersey/)                                                | JAX-RS implementation     |
-| [Java Data Objects (JDO)](https://db.apache.org/jdo/)                                           | Persistence specification |
-| [DataNucleus](https://www.datanucleus.org/products/accessplatform/jdo/getting_started.html)     | JDO implementation        |
-| [Jetty](https://www.eclipse.org/jetty/)                                                         | Servlet Container         |
-| [Alpine](https://github.com/stevespringett/Alpine)                                              | Framework / Scaffolding   |
+> [!NOTE]
+> We're currently in the process of phasing out Kafka.
 
 ## Building
 
-Build an executable JAR:
+Build the project:
 
 ```shell
-mvn -Pquick clean package
+make build
 ```
 
-The resulting file is placed in `./apiserver/target` as `dependency-track-apiserver.jar`.
-The JAR ships with 
-an [embedded Jetty server](https://github.com/stevespringett/Alpine/tree/master/alpine-executable-war),
-there's no need to deploy it in an application server like Tomcat or WildFly.
+> [!TIP]
+> (Re-) building the entire project via `make build` is cheap due to [build caching](#build-cache).
+> You generally don't need to build modules selectively.
 
-## Running
+The resulting JAR is placed in `./apiserver/target` as `dependency-track-apiserver.jar`.
+It ships with an embedded Jetty server, there's no need to deploy it in an application
+server like Tomcat or WildFly.
 
-To run a previously built executable JAR, just invoke it with `java -jar`, e.g.:
+Build a container image:
 
 ```shell
-java -jar ./apiserver/target/dependency-track-apiserver.jar
+make build-image
 ```
 
-The API server will be available at `http://127.0.0.1:8080`.
-
-Additional configuration (e.g. database connection details) can be provided as usual via `application.properties`
-or environment variables. Refer to
-the [configuration documentation](https://docs.dependencytrack.org/getting-started/configuration/).
-
-## Debugging
-
-To build and run the API server in one go, invoke the Jetty Maven plugin as follows:
-
-```shell
-mvn -pl apiserver -Pquick jetty:run
-```
-
-The above command is also suitable for debugging. For IntelliJ, simply *Debug* the [Jetty](.idea/runConfigurations/Jetty.run.xml) run
-configuration.
-
-> [!NOTE]
-> In order for the API server module to "see" changes in other modules, you may need to install
-> the other modules to your local Maven repository first:
-> 
-> ```shell
-> mvn -Pquick install
-> ```
-
-## Debugging with Frontend
-
-Start the API server via the Jetty Maven plugin (see [Debugging](#debugging) above). The API server will listen on
-`http://127.0.0.1:8080`.
-
-Clone the frontend repository, install its required dependencies and launch the Vue development server:
-
-```shell
-git clone https://github.com/DependencyTrack/frontend.git dependency-track-frontend
-cd ./dependency-track-frontend
-npm ci
-npm run serve
-```
-
-Per default, the Vue development server will listen on port `8080`. If that port is taken, it will choose a higher,
-unused port (typically `8081`). Due to this behavior, it is important to always start the API server first, unless
-you want to fiddle with default configurations of both API server and frontend.
-
-Now visit `http://127.0.0.1:8081` in your browser and use Dependency-Track as usual.
-
-## Debugging with Dev Services
-
-To launch the API server with Dev Services, execute the following command:
-
-```shell
-mvn -pl apiserver -am -Pquick -Pdev-services verify
-```
-
-In this mode, the application will automatically launch containers for:
-
-* Frontend
-* Kafka
-* PostgreSQL
-
-on startup and configure itself to use them. The containers are disposed of when the application stops. 
-The containers are exposed on randomized ports, which will be logged during startup.
+This produces the image `ghcr.io/dependencytrack/hyades-apiserver:local`.
 
 ## Testing
 
-To run all tests:
+Run all tests:
 
 ```shell
-mvn clean verify
+make test
 ```
 
-Depending on your machine, this will take roughly 10-30min. Unless you modified central parts of the application,
-starting single tests separately via IDE is a better choice.
+Run a single test class:
+
+```shell
+make test-single MODULE=apiserver TEST=FooTest
+```
+
+Run multiple test classes:
+
+```shell
+make test-single MODULE=apiserver TEST="FooTest,BarTest"
+```
+
+Run a single test method:
+
+```shell
+make test-single MODULE=apiserver TEST="FooTest#testFoo"
+```
+
+## Dev Mode
+
+Dev mode launches the API server with auto-provisioned containers for PostgreSQL, Kafka,
+and the frontend. Containers are created on startup and disposed of on shutdown.
+
+```shell
+make apiserver-dev
+```
+
+The API server will be available at `http://localhost:8080`.
+Frontend, Kafka, and PostgreSQL ports are logged during startup.
+
+Dev mode specific configuration can be made in [`application-dev.properties`](apiserver/src/main/resources/application-dev.properties).
 
 ## DataNucleus Bytecode Enhancement
 
-Occasionally when running tests without Maven from within your IDE, you will run into failures due to exceptions
-similar to this one:
+Classes annotated with `@PersistenceCapable` must be
+[enhanced](https://www.datanucleus.org/products/accessplatform/jdo/enhancer.html)
+post-compilation. Maven handles this automatically, but IDEs run their own builds
+and may skip the enhancement step.
 
-```
-org.datanucleus.exceptions.NucleusUserException: Found Meta-Data for class org.dependencytrack.model.Component but this class is either not enhanced or you have multiple copies of the persistence API jar in your CLASSPATH!! Make sure all persistable classes are enhanced before running DataNucleus and/or the CLASSPATH is correct.
-```
-
-This happens because DataNucleus requires classes annotated with `@PersistenceCapable` to
-be [enhanced](https://www.datanucleus.org/products/accessplatform/jdo/enhancer.html).
-Enhancement is performed on compiled bytecode and thus has to be performed post-compilation
-(`process-classes` [lifecycle phase](https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html#Lifecycle_Reference)
-in Maven).
-During a Maven build,
-the [DataNucleus Maven plugin](https://www.datanucleus.org/products/accessplatform/jdo/enhancer.html#maven)
-takes care of this.
-
-Because most IDEs run their own build when executing tests, effectively bypassing Maven, bytecode enhancement is not
-performed, and exceptions as that shown above are raised. If this happens, you can manually kick off the bytecode
-enhancement like this:
+If you see `NucleusUserException: Found Meta-Data for class ... but this class is either not enhanced`
+when running tests from your IDE, run:
 
 ```shell
-mvn -Pquick \
-  -pl alpine/alpine-model,apiserver \
-  -Dmaven.build.cache.enabled=false \
-  process-classes
+make datanucleus-enhance
 ```
 
-Now just execute the test again, and it should just work.
+Then re-run the test. Ensure your IDE is not cleaning the `target` directory before execution.
 
-> If you're still running into issues, ensure that your IDE is not cleaning the workspace
-> (removing the `target` directory) before executing the test.
+## Build Cache
 
-## Building Container Images
-
-Ensure you've built the API server JAR.
-
-To build the API server image:
+We use Maven [build caching](https://maven.apache.org/extensions/maven-build-cache-extension/) to speed
+up builds. If you encounter stale or unexplainable build issues, try clearing the cache and see if it
+resolves your issues:
 
 ```shell
-docker build --build-arg \
-  -t dependencytrack/hyades-apiserver:local \
-  -f ./apiserver/src/main/docker/Dockerfile \
-  ./apiserver
+make clean-build-cache
 ```
