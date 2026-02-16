@@ -33,6 +33,7 @@ import liquibase.resource.ClassLoaderResourceAccessor;
 import liquibase.ui.LoggerUIService;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
 import java.util.HashMap;
 
 /**
@@ -67,20 +68,22 @@ public class MigrationExecutor {
         scopeAttributes.put(Scope.Attr.ui.name(), new LoggerUIService());
 
         Scope.child(scopeAttributes, () -> {
-            final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
-            if (changeLogTableName != null) {
-                database.setDatabaseChangeLogTableName(changeLogTableName);
-            }
-            if (changeLogLockTableName != null) {
-                database.setDatabaseChangeLogLockTableName(changeLogLockTableName);
-            }
-            final var liquibase = new Liquibase(changelogResourcePath, new ClassLoaderResourceAccessor(), database);
+            try (final Connection connection = dataSource.getConnection()) {
+                final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(connection));
+                if (changeLogTableName != null) {
+                    database.setDatabaseChangeLogTableName(changeLogTableName);
+                }
+                if (changeLogLockTableName != null) {
+                    database.setDatabaseChangeLogLockTableName(changeLogLockTableName);
+                }
+                final var liquibase = new Liquibase(changelogResourcePath, new ClassLoaderResourceAccessor(), database);
 
-            final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
-            updateCommand.addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, liquibase.getDatabase());
-            updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
-            updateCommand.addArgumentValue(ShowSummaryArgument.SHOW_SUMMARY_OUTPUT, UpdateSummaryOutputEnum.LOG);
-            updateCommand.execute();
+                final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
+                updateCommand.addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, liquibase.getDatabase());
+                updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
+                updateCommand.addArgumentValue(ShowSummaryArgument.SHOW_SUMMARY_OUTPUT, UpdateSummaryOutputEnum.LOG);
+                updateCommand.execute();
+            }
         });
     }
 
