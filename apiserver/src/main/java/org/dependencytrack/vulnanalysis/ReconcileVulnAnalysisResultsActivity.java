@@ -27,21 +27,26 @@ import org.dependencytrack.dex.api.ActivityContext;
 import org.dependencytrack.dex.api.ActivitySpec;
 import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.model.FindingAttributionKey;
+import org.dependencytrack.model.FindingKey;
 import org.dependencytrack.model.VulnIdAndSource;
 import org.dependencytrack.notification.JdbiNotificationEmitter;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.parser.dependencytrack.BovModelConverter;
+import org.dependencytrack.persistence.jdbi.AnalysisDao.Analysis;
+import org.dependencytrack.persistence.jdbi.AnalysisDao.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.plugin.NoSuchExtensionException;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyEvaluator;
+import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyOperation;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg.AnalyzerResult;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 import org.jdbi.v3.core.Handle;
-import org.jdbi.v3.core.statement.Query;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,13 +55,10 @@ import org.slf4j.MDC;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -65,6 +67,7 @@ import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_VULN_ANALYZER_NAME;
 import static org.dependencytrack.notification.api.NotificationFactory.createNewVulnerabilityNotification;
 import static org.dependencytrack.parser.dependencytrack.BovModelConverter.convert;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -177,9 +180,11 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
             final Long internalVulnId = extractInternalVulnId(vdrVuln);
 
-            vulnDetails.merge(vulnIdAndSource,
+            vulnDetails.merge(
+                    vulnIdAndSource,
                     new ReportedVulnerability(vdrVuln, analyzerName, internalVulnId),
                     (existing, incoming) -> {
+                        // Prefer vulnerabilities identified from the internal database.
                         if (existing.internalVulnId() != null) {
                             return existing;
                         }
@@ -299,451 +304,10 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
         LOGGER.debug("Synchronizing batch of {} vulnerabilities", convertedVulnByVulnIdAndSource.size());
 
-        final var results = new HashMap<VulnIdAndSource, Long>(convertedVulnByVulnIdAndSource.size());
-
-        // If all vulnerabilities are internal, we don't need to sync anything
-        // and can simply short-circuit here, without performing any SQL queries.
-        for (final var entry : convertedVulnByVulnIdAndSource.entrySet()) {
-            if (entry.getValue().internalVulnId() != null) {
-                results.put(entry.getKey(), entry.getValue().internalVulnId());
-            }
-        }
-        if (results.size() == convertedVulnByVulnIdAndSource.size()) {
-            return results;
-        }
-
-        final int vulnsToSyncCount = convertedVulnByVulnIdAndSource.size() - results.size();
-        final var vulnIds = new String[vulnsToSyncCount];
-        final var sources = new String[vulnsToSyncCount];
-        final var friendlyVulnIds = new String[vulnsToSyncCount];
-        final var titles = new String[vulnsToSyncCount];
-        final var subTitles = new String[vulnsToSyncCount];
-        final var descriptions = new String[vulnsToSyncCount];
-        final var details = new String[vulnsToSyncCount];
-        final var recommendations = new String[vulnsToSyncCount];
-        final var references = new String[vulnsToSyncCount];
-        final var credits = new String[vulnsToSyncCount];
-        final var createdArray = new Date[vulnsToSyncCount];
-        final var publishedArray = new Date[vulnsToSyncCount];
-        final var updatedArray = new Date[vulnsToSyncCount];
-        final var cwesArray = new String[vulnsToSyncCount];
-        final var cvssV2BaseScores = new Double[vulnsToSyncCount];
-        final var cvssV2ImpactSubScores = new Double[vulnsToSyncCount];
-        final var cvssV2ExploitabilitySubScores = new Double[vulnsToSyncCount];
-        final var cvssV2Vectors = new String[vulnsToSyncCount];
-        final var cvssV3BaseScores = new Double[vulnsToSyncCount];
-        final var cvssV3ImpactSubScores = new Double[vulnsToSyncCount];
-        final var cvssV3ExploitabilitySubScores = new Double[vulnsToSyncCount];
-        final var cvssV3Vectors = new String[vulnsToSyncCount];
-        final var owaspRRLikelihoodScores = new Double[vulnsToSyncCount];
-        final var owaspRRTechnicalImpactScores = new Double[vulnsToSyncCount];
-        final var owaspRRBusinessImpactScores = new Double[vulnsToSyncCount];
-        final var owaspRRVectors = new String[vulnsToSyncCount];
-        final var severities = new String[vulnsToSyncCount];
-        final var vulnerableVersions = new String[vulnsToSyncCount];
-        final var patchedVersions = new String[vulnsToSyncCount];
-        final var canUpdateArray = new boolean[vulnsToSyncCount];
-
-        // Determining whether a vulnerability is updatable requires
-        // checking for which vulnerability sources mirroring is enabled.
-        // To prevent excessive checks that all come to the same conclusion,
-        // maintain a local cache of check results.
-        final var canUpdateCache = new HashMap<Map.Entry<org.dependencytrack.model.Vulnerability.Source, String>, Boolean>();
-
-        int i = 0;
-        for (final var entry : convertedVulnByVulnIdAndSource.entrySet()) {
-            if (entry.getValue().internalVulnId() != null) {
-                // Internal vulnerabilities have already been dealt with.
-                continue;
-            }
-
-            final org.dependencytrack.model.Vulnerability vuln = entry.getValue().vuln();
-            vulnIds[i] = vuln.getVulnId();
-            sources[i] = vuln.getSource();
-            friendlyVulnIds[i] = vuln.getFriendlyVulnId();
-            titles[i] = vuln.getTitle();
-            subTitles[i] = vuln.getSubTitle();
-            descriptions[i] = vuln.getDescription();
-            details[i] = vuln.getDetail();
-            recommendations[i] = vuln.getRecommendation();
-            references[i] = vuln.getReferences();
-            credits[i] = vuln.getCredits();
-            createdArray[i] = vuln.getCreated();
-            publishedArray[i] = vuln.getPublished();
-            updatedArray[i] = vuln.getUpdated();
-            cwesArray[i] = (vuln.getCwes() != null && !vuln.getCwes().isEmpty())
-                    ? vuln.getCwes().stream().map(String::valueOf).collect(Collectors.joining(","))
-                    : null;
-            cvssV2BaseScores[i] = vuln.getCvssV2BaseScore() != null
-                    ? vuln.getCvssV2BaseScore().doubleValue()
-                    : null;
-            cvssV2ImpactSubScores[i] = vuln.getCvssV2ImpactSubScore() != null
-                    ? vuln.getCvssV2ImpactSubScore().doubleValue()
-                    : null;
-            cvssV2ExploitabilitySubScores[i] = vuln.getCvssV2ExploitabilitySubScore() != null
-                    ? vuln.getCvssV2ExploitabilitySubScore().doubleValue()
-                    : null;
-            cvssV2Vectors[i] = vuln.getCvssV2Vector();
-            cvssV3BaseScores[i] = vuln.getCvssV3BaseScore() != null
-                    ? vuln.getCvssV3BaseScore().doubleValue()
-                    : null;
-            cvssV3ImpactSubScores[i] = vuln.getCvssV3ImpactSubScore() != null
-                    ? vuln.getCvssV3ImpactSubScore().doubleValue()
-                    : null;
-            cvssV3ExploitabilitySubScores[i] = vuln.getCvssV3ExploitabilitySubScore() != null
-                    ? vuln.getCvssV3ExploitabilitySubScore().doubleValue()
-                    : null;
-            cvssV3Vectors[i] = vuln.getCvssV3Vector();
-            owaspRRLikelihoodScores[i] = vuln.getOwaspRRLikelihoodScore() != null
-                    ? vuln.getOwaspRRLikelihoodScore().doubleValue()
-                    : null;
-            owaspRRTechnicalImpactScores[i] = vuln.getOwaspRRTechnicalImpactScore() != null
-                    ? vuln.getOwaspRRTechnicalImpactScore().doubleValue()
-                    : null;
-            owaspRRBusinessImpactScores[i] = vuln.getOwaspRRBusinessImpactScore() != null
-                    ? vuln.getOwaspRRBusinessImpactScore().doubleValue()
-                    : null;
-            owaspRRVectors[i] = vuln.getOwaspRRVector();
-            severities[i] = vuln.getSeverity() != null
-                    ? vuln.getSeverity().name()
-                    : null;
-            vulnerableVersions[i] = vuln.getVulnerableVersions();
-            patchedVersions[i] = vuln.getPatchedVersions();
-            canUpdateArray[i] = canUpdateCache.computeIfAbsent(
-                    Map.entry(
-                            org.dependencytrack.model.Vulnerability.Source.valueOf(vuln.getSource()),
-                            entry.getValue().analyzerName()),
-                    k -> canUpdateVulnerability(k.getKey(), k.getValue()));
-            i++;
-        }
-
-        // NB: The SQL statement is huge, but it avoids a multitude of potential
-        // concurrency issues that would overwise require (optimistic) locking and retries,
-        // while simultaneously being significantly more efficient than doing all of it in-memory.
-        useJdbiTransaction(handle -> {
-            final Query query = handle.createQuery("""
-                    WITH
-                    cte_input AS (
-                      SELECT vuln_id
-                           , source
-                           , friendly_vuln_id
-                           , title
-                           , sub_title
-                           , description
-                           , detail
-                           , recommendation
-                           , "references"
-                           , credits
-                           , created
-                           , published
-                           , updated
-                           , cwes
-                           , cvss_v2_base_score
-                           , cvss_v2_impact_sub_score
-                           , cvss_v2_exploitability_sub_score
-                           , cvss_v2_vector
-                           , cvss_v3_base_score
-                           , cvss_v3_impact_sub_score
-                           , cvss_v3_exploitability_sub_score
-                           , cvss_v3_vector
-                           , owasp_rr_likelihood_score
-                           , owasp_rr_technical_impact_score
-                           , owasp_rr_business_impact_score
-                           , owasp_rr_vector
-                           , "severity"
-                           , vulnerable_versions
-                           , patched_versions
-                           , can_update
-                        FROM UNNEST (
-                          :vulnIds
-                        , :sources
-                        , :friendlyVulnIds
-                        , :titles
-                        , :subTitles
-                        , :descriptions
-                        , :details
-                        , :recommendations
-                        , :references
-                        , :credits
-                        , :createdArray
-                        , :publishedArray
-                        , :updatedArray
-                        , :cwesArray
-                        , :cvssV2BaseScores
-                        , :cvssV2ImpactSubScores
-                        , :cvssV2ExploitabilitySubScores
-                        , :cvssV2Vectors
-                        , :cvssV3BaseScores
-                        , :cvssV3ImpactSubScores
-                        , :cvssV3ExploitabilitySubScores
-                        , :cvssV3Vectors
-                        , :owaspRRLikelihoodScores
-                        , :owaspRRTechnicalImpactScores
-                        , :owaspRRBusinessImpactScores
-                        , :owaspRRVectors
-                        , :severities
-                        , :vulnerableVersions
-                        , :patchedVersions
-                        , :canUpdateArray
-                        ) AS t (
-                          vuln_id
-                        , source
-                        , friendly_vuln_id
-                        , title
-                        , sub_title
-                        , description
-                        , detail
-                        , recommendation
-                        , "references"
-                        , credits
-                        , created
-                        , published
-                        , updated
-                        , cwes
-                        , cvss_v2_base_score
-                        , cvss_v2_impact_sub_score
-                        , cvss_v2_exploitability_sub_score
-                        , cvss_v2_vector
-                        , cvss_v3_base_score
-                        , cvss_v3_impact_sub_score
-                        , cvss_v3_exploitability_sub_score
-                        , cvss_v3_vector
-                        , owasp_rr_likelihood_score
-                        , owasp_rr_technical_impact_score
-                        , owasp_rr_business_impact_score
-                        , owasp_rr_vector
-                        , "severity"
-                        , vulnerable_versions
-                        , patched_versions
-                        , can_update
-                        )
-                    ),
-                    cte_modified AS (
-                      INSERT INTO "VULNERABILITY" AS v (
-                        "VULNID"
-                      , "SOURCE"
-                      , "FRIENDLYVULNID"
-                      , "TITLE"
-                      , "SUBTITLE"
-                      , "DESCRIPTION"
-                      , "DETAIL"
-                      , "RECOMMENDATION"
-                      , "REFERENCES"
-                      , "CREDITS"
-                      , "CREATED"
-                      , "PUBLISHED"
-                      , "UPDATED"
-                      , "CWES"
-                      , "CVSSV2BASESCORE"
-                      , "CVSSV2IMPACTSCORE"
-                      , "CVSSV2EXPLOITSCORE"
-                      , "CVSSV2VECTOR"
-                      , "CVSSV3BASESCORE"
-                      , "CVSSV3IMPACTSCORE"
-                      , "CVSSV3EXPLOITSCORE"
-                      , "CVSSV3VECTOR"
-                      , "OWASPRRLIKELIHOODSCORE"
-                      , "OWASPRRTECHNICALIMPACTSCORE"
-                      , "OWASPRRBUSINESSIMPACTSCORE"
-                      , "OWASPRRVECTOR"
-                      , "SEVERITY"
-                      , "VULNERABLEVERSIONS"
-                      , "PATCHEDVERSIONS"
-                      , "UUID"
-                      )
-                      SELECT vuln_id
-                           , source
-                           , friendly_vuln_id
-                           , title
-                           , sub_title
-                           , description
-                           , detail
-                           , recommendation
-                           , "references"
-                           , credits
-                           , created
-                           , published
-                           , updated
-                           , cwes
-                           , cvss_v2_base_score
-                           , cvss_v2_impact_sub_score
-                           , cvss_v2_exploitability_sub_score
-                           , cvss_v2_vector
-                           , cvss_v3_base_score
-                           , cvss_v3_impact_sub_score
-                           , cvss_v3_exploitability_sub_score
-                           , cvss_v3_vector
-                           , owasp_rr_likelihood_score
-                           , owasp_rr_technical_impact_score
-                           , owasp_rr_business_impact_score
-                           , owasp_rr_vector
-                           , CAST("severity" AS severity)
-                           , vulnerable_versions
-                           , patched_versions
-                           , GEN_RANDOM_UUID()
-                        FROM cte_input
-                       ORDER BY vuln_id
-                              , source
-                      ON CONFLICT ("VULNID", "SOURCE") DO UPDATE
-                      SET "FRIENDLYVULNID" = EXCLUDED."FRIENDLYVULNID"
-                        , "TITLE" = EXCLUDED."TITLE"
-                        , "SUBTITLE" = EXCLUDED."SUBTITLE"
-                        , "DESCRIPTION" = EXCLUDED."DESCRIPTION"
-                        , "DETAIL" = EXCLUDED."DETAIL"
-                        , "RECOMMENDATION" = EXCLUDED."RECOMMENDATION"
-                        , "REFERENCES" = EXCLUDED."REFERENCES"
-                        , "CREDITS" = EXCLUDED."CREDITS"
-                        , "CREATED" = EXCLUDED."CREATED"
-                        , "PUBLISHED" = EXCLUDED."PUBLISHED"
-                        , "UPDATED" = EXCLUDED."UPDATED"
-                        , "CWES" = EXCLUDED."CWES"
-                        , "CVSSV2BASESCORE" = EXCLUDED."CVSSV2BASESCORE"
-                        , "CVSSV2IMPACTSCORE" = EXCLUDED."CVSSV2IMPACTSCORE"
-                        , "CVSSV2EXPLOITSCORE" = EXCLUDED."CVSSV2EXPLOITSCORE"
-                        , "CVSSV2VECTOR" = EXCLUDED."CVSSV2VECTOR"
-                        , "CVSSV3BASESCORE" = EXCLUDED."CVSSV3BASESCORE"
-                        , "CVSSV3IMPACTSCORE" = EXCLUDED."CVSSV3IMPACTSCORE"
-                        , "CVSSV3EXPLOITSCORE" = EXCLUDED."CVSSV3EXPLOITSCORE"
-                        , "CVSSV3VECTOR" = EXCLUDED."CVSSV3VECTOR"
-                        , "OWASPRRLIKELIHOODSCORE" = EXCLUDED."OWASPRRLIKELIHOODSCORE"
-                        , "OWASPRRTECHNICALIMPACTSCORE" = EXCLUDED."OWASPRRTECHNICALIMPACTSCORE"
-                        , "OWASPRRBUSINESSIMPACTSCORE" = EXCLUDED."OWASPRRBUSINESSIMPACTSCORE"
-                        , "OWASPRRVECTOR" = EXCLUDED."OWASPRRVECTOR"
-                        , "SEVERITY" = EXCLUDED."SEVERITY"
-                        , "VULNERABLEVERSIONS" = EXCLUDED."VULNERABLEVERSIONS"
-                        , "PATCHEDVERSIONS" = EXCLUDED."PATCHEDVERSIONS"
-                      WHERE TRUE
-                        -- Only update when allowed to.
-                        AND EXISTS (
-                              SELECT 1
-                                FROM cte_input AS i
-                               WHERE i.vuln_id = v."VULNID"
-                                 AND i.source = v."SOURCE"
-                                 AND i.can_update
-                            )
-                        -- Only update when the incoming data is not older than the existing data.
-                        AND (v."UPDATED" IS NULL OR EXCLUDED."UPDATED" > v."UPDATED")
-                        -- Only update when any relevant field changed.
-                        AND (
-                              v."FRIENDLYVULNID"
-                            , v."TITLE"
-                            , v."SUBTITLE"
-                            , v."DESCRIPTION"
-                            , v."DETAIL"
-                            , v."RECOMMENDATION"
-                            , v."REFERENCES"
-                            , v."CREDITS"
-                            , v."CREATED"
-                            , v."PUBLISHED"
-                            , v."UPDATED"
-                            , v."CWES"
-                            , v."CVSSV2BASESCORE"
-                            , v."CVSSV2IMPACTSCORE"
-                            , v."CVSSV2EXPLOITSCORE"
-                            , v."CVSSV2VECTOR"
-                            , v."CVSSV3BASESCORE"
-                            , v."CVSSV3IMPACTSCORE"
-                            , v."CVSSV3EXPLOITSCORE"
-                            , v."CVSSV3VECTOR"
-                            , v."OWASPRRLIKELIHOODSCORE"
-                            , v."OWASPRRTECHNICALIMPACTSCORE"
-                            , v."OWASPRRBUSINESSIMPACTSCORE"
-                            , v."OWASPRRVECTOR"
-                            , v."SEVERITY"
-                            , v."VULNERABLEVERSIONS"
-                            , v."PATCHEDVERSIONS"
-                            ) IS DISTINCT FROM (
-                              EXCLUDED."FRIENDLYVULNID"
-                            , EXCLUDED."TITLE"
-                            , EXCLUDED."SUBTITLE"
-                            , EXCLUDED."DESCRIPTION"
-                            , EXCLUDED."DETAIL"
-                            , EXCLUDED."RECOMMENDATION"
-                            , EXCLUDED."REFERENCES"
-                            , EXCLUDED."CREDITS"
-                            , EXCLUDED."CREATED"
-                            , EXCLUDED."PUBLISHED"
-                            , EXCLUDED."UPDATED"
-                            , EXCLUDED."CWES"
-                            , EXCLUDED."CVSSV2BASESCORE"
-                            , EXCLUDED."CVSSV2IMPACTSCORE"
-                            , EXCLUDED."CVSSV2EXPLOITSCORE"
-                            , EXCLUDED."CVSSV2VECTOR"
-                            , EXCLUDED."CVSSV3BASESCORE"
-                            , EXCLUDED."CVSSV3IMPACTSCORE"
-                            , EXCLUDED."CVSSV3EXPLOITSCORE"
-                            , EXCLUDED."CVSSV3VECTOR"
-                            , EXCLUDED."OWASPRRLIKELIHOODSCORE"
-                            , EXCLUDED."OWASPRRTECHNICALIMPACTSCORE"
-                            , EXCLUDED."OWASPRRBUSINESSIMPACTSCORE"
-                            , EXCLUDED."OWASPRRVECTOR"
-                            , EXCLUDED."SEVERITY"
-                            , EXCLUDED."VULNERABLEVERSIONS"
-                            , EXCLUDED."PATCHEDVERSIONS"
-                            )
-                      RETURNING "VULNID"
-                              , "SOURCE"
-                              , "ID"
-                    )
-                    SELECT "VULNID"
-                         , "SOURCE"
-                         , "ID"
-                      FROM cte_modified
-                     UNION ALL
-                    SELECT v."VULNID"
-                         , v."SOURCE"
-                         , v."ID"
-                      FROM "VULNERABILITY" AS v
-                     INNER JOIN cte_input AS i
-                        ON i.vuln_id = v."VULNID"
-                       AND i.source = v."SOURCE"
-                     WHERE NOT EXISTS (
-                                 SELECT 1
-                                   FROM cte_modified AS m
-                                  WHERE m."VULNID" = i.vuln_id
-                                    AND m."SOURCE" = i.source
-                               )
-                    """);
-
-            query
-                    .bind("vulnIds", vulnIds)
-                    .bind("sources", sources)
-                    .bind("friendlyVulnIds", friendlyVulnIds)
-                    .bind("titles", titles)
-                    .bind("subTitles", subTitles)
-                    .bind("descriptions", descriptions)
-                    .bind("details", details)
-                    .bind("recommendations", recommendations)
-                    .bind("references", references)
-                    .bind("credits", credits)
-                    .bind("createdArray", createdArray)
-                    .bind("publishedArray", publishedArray)
-                    .bind("updatedArray", updatedArray)
-                    .bind("cwesArray", cwesArray)
-                    .bind("cvssV2BaseScores", cvssV2BaseScores)
-                    .bind("cvssV2ImpactSubScores", cvssV2ImpactSubScores)
-                    .bind("cvssV2ExploitabilitySubScores", cvssV2ExploitabilitySubScores)
-                    .bind("cvssV2Vectors", cvssV2Vectors)
-                    .bind("cvssV3BaseScores", cvssV3BaseScores)
-                    .bind("cvssV3ImpactSubScores", cvssV3ImpactSubScores)
-                    .bind("cvssV3ExploitabilitySubScores", cvssV3ExploitabilitySubScores)
-                    .bind("cvssV3Vectors", cvssV3Vectors)
-                    .bind("owaspRRLikelihoodScores", owaspRRLikelihoodScores)
-                    .bind("owaspRRTechnicalImpactScores", owaspRRTechnicalImpactScores)
-                    .bind("owaspRRBusinessImpactScores", owaspRRBusinessImpactScores)
-                    .bind("owaspRRVectors", owaspRRVectors)
-                    .bind("severities", severities)
-                    .bind("vulnerableVersions", vulnerableVersions)
-                    .bind("patchedVersions", patchedVersions)
-                    .bind("canUpdateArray", canUpdateArray)
-                    .map((rs, ctx) -> Map.entry(
-                            new VulnIdAndSource(rs.getString("VULNID"), rs.getString("SOURCE")),
-                            rs.getLong("ID")))
-                    .stream()
-                    .forEach(entry -> results.put(entry.getKey(), entry.getValue()));
-        });
-
-        return results;
+        return inJdbiTransaction(
+                handle -> new VulnerabilityDao(handle).syncMany(
+                        convertedVulnByVulnIdAndSource,
+                        this::canUpdateVulnerability));
     }
 
     private void reconcileFindings(
@@ -757,44 +321,57 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             throw new TerminalApplicationFailureException("Project does not exist");
         }
 
-        final List<FindingAttribution> existingFindingAttributions =
-                withJdbiHandle(handle -> getExistingFindingAttributions(handle, projectId));
-        final Map<FindingKey, List<FindingAttribution>> existingFindingByKey =
-                existingFindingAttributions.stream()
-                        .collect(Collectors.groupingBy(FindingKey::of));
+        // Fetch all existing finding attributions for the project.
+        // This excludes attributions that have previously been soft-deleted.
+        // Group them by finding key for easier access during reconciliation.
+        final List<FindingDao.FindingAttribution> existingAttributions =
+                withJdbiHandle(handle -> new FindingDao(handle).getExistingAttributions(projectId));
+        final Map<FindingKey, List<FindingDao.FindingAttribution>> existingAttributionsByFindingKey =
+                existingAttributions.stream()
+                        .collect(Collectors.groupingBy(
+                                attribution -> new FindingKey(attribution.componentId(), attribution.vulnDbId())));
 
         LOGGER.debug(
                 "Found {} existing finding attribution(s) and {} unique finding(s)",
-                existingFindingAttributions.size(),
-                existingFindingByKey.size());
+                existingAttributions.size(),
+                existingAttributionsByFindingKey.size());
 
-        // Determine which findings and finding attributions need to be created.
-        final var createFindingCommands = new HashSet<CreateFindingCommand>();
-        final var createFindingAttributionCommands = new HashSet<CreateFindingAttributionCommand>();
+        final var findingsToCreate = new HashSet<FindingKey>();
+        final var createAttributionCommands = new HashSet<FindingDao.CreateAttributionCommand>();
+        final var reportedAttributionKeys = new HashSet<FindingAttributionKey>();
 
         for (final ReportedFinding reportedFinding : reportedFindings) {
             final Long vulnDbId = vulnDbIdByVulnIdAndSource.get(reportedFinding.vulnIdAndSource());
             if (vulnDbId == null) {
-                LOGGER.warn("Vulnerability {} not found in database; Skipping", reportedFinding.vulnIdAndSource());
+                LOGGER.warn(
+                        "Vulnerability {} not found in database; Skipping",
+                        reportedFinding.vulnIdAndSource());
                 continue;
             }
 
+            reportedAttributionKeys.add(
+                    new FindingAttributionKey(
+                            new FindingKey(reportedFinding.componentId(), vulnDbId),
+                            reportedFinding.analyzerName()));
+
             final var findingKey = new FindingKey(reportedFinding.componentId(), vulnDbId);
-            final List<FindingAttribution> existingFindingAttributionsForKey = existingFindingByKey.get(findingKey);
+            final List<FindingDao.FindingAttribution> existingFindingAttributionsForKey =
+                    existingAttributionsByFindingKey.get(findingKey);
 
-            final boolean findingExists = existingFindingAttributionsForKey != null
-                    && !existingFindingAttributionsForKey.isEmpty();
-            final boolean hasAttribution = existingFindingAttributionsForKey != null
-                    && existingFindingAttributionsForKey.stream()
-                    .anyMatch(ef -> ef.analyzerName().equals(reportedFinding.analyzerName()));
-
+            final boolean findingExists =
+                    existingFindingAttributionsForKey != null
+                            && !existingFindingAttributionsForKey.isEmpty();
             if (!findingExists) {
-                createFindingCommands.add(new CreateFindingCommand(findingKey));
+                findingsToCreate.add(findingKey);
             }
 
+            final boolean hasAttribution =
+                    existingFindingAttributionsForKey != null
+                            && existingFindingAttributionsForKey.stream()
+                            .anyMatch(ef -> ef.analyzerName().equals(reportedFinding.analyzerName()));
             if (!hasAttribution) {
-                createFindingAttributionCommands.add(
-                        new CreateFindingAttributionCommand(
+                createAttributionCommands.add(
+                        new FindingDao.CreateAttributionCommand(
                                 vulnDbId,
                                 reportedFinding.componentId(),
                                 projectId,
@@ -802,61 +379,57 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             }
         }
 
-        // Determine which findings are no longer reported and need their attributions removed.
-        final Set<FindingAttributionKey> reportedFindingAttributionKeys = reportedFindings.stream()
-                .map(finding -> {
-                    final Long vulnDbId = vulnDbIdByVulnIdAndSource.get(finding.vulnIdAndSource());
-                    return vulnDbId != null
-                            ? new FindingAttributionKey(finding.componentId(), vulnDbId, finding.analyzerName())
-                            : null;
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        // Determine which attributions are no longer applicable, and should be deleted.
+        final var attributionIdsToDelete = new HashSet<Long>();
+        for (final FindingDao.FindingAttribution existingAttribution : existingAttributions) {
+            final var attributionKey = new FindingAttributionKey(
+                    new FindingKey(existingAttribution.componentId(), existingAttribution.vulnDbId()),
+                    existingAttribution.analyzerName());
 
-        final var deleteFindingAttributionCommands = new HashSet<DeleteFindingAttributionCommand>();
-
-        for (final FindingAttribution existingAttribution : existingFindingAttributions) {
-            final var attributionKey = FindingAttributionKey.of(existingAttribution);
-
-            // NB: We can't make assumptions for failed analyzers.
-            // If an analyzer previously reported the finding,
+            // NB: If an analyzer previously reported the finding,
             // and now failed, we cannot assume that the finding
             // is no longer reported. So keep it in that case.
-            if (!reportedFindingAttributionKeys.contains(attributionKey)
+            if (!reportedAttributionKeys.contains(attributionKey)
                     && !failedAnalyzers.contains(attributionKey.analyzerName())) {
-                deleteFindingAttributionCommands.add(
-                        new DeleteFindingAttributionCommand(existingAttribution.id()));
+                attributionIdsToDelete.add(existingAttribution.id());
             }
         }
 
-        // TODO: Evaluate vulnerability policies for all active findings.
+        // Evaluate vulnerability policies, if there are any.
+        // Only evaluate policies for active findings (i.e. those with >=1 attributions).
+        final Map<Long, Set<Long>> vulnDbIdsByComponentId =
+                computeActiveFindings(
+                        existingAttributionsByFindingKey,
+                        attributionIdsToDelete,
+                        findingsToCreate,
+                        createAttributionCommands);
+        final Map<Long, Map<Long, VulnerabilityPolicy>> policyResults =
+                evaluateVulnPolicies(projectId, vulnDbIdsByComponentId);
 
+        // Flush all computed changes to the database in a single transaction.
+        // Note that this is done for both performance and idempotency reasons.
+        // Since this activity may be retried, we cannot commit partial changes.
         useJdbiTransaction(handle -> {
             final var notificationSubjectDao = handle.attach(NotificationSubjectDao.class);
+            final var findingDao = new FindingDao(handle);
 
-            final List<FindingKey> createdFindings = createFindings(handle, createFindingCommands);
-            if (!createdFindings.isEmpty()) {
-                LOGGER.debug("Created {} new finding(s)", createdFindings.size());
-            }
+            final List<FindingKey> createdFindings = findingDao.createFindings(findingsToCreate);
+            LOGGER.debug("Created {} new finding(s)", createdFindings.size());
 
-            final int attributionsCreated = createFindingAttributions(handle, createFindingAttributionCommands);
-            if (attributionsCreated > 0) {
-                LOGGER.debug("Created {} new attribution(s)", attributionsCreated);
-            }
+            final int attributionsCreated = findingDao.createAttributions(createAttributionCommands);
+            LOGGER.debug("Created {} new attribution(s)", attributionsCreated);
 
-            final int attributionsDeleted = deleteAttributions(handle, deleteFindingAttributionCommands);
-            if (attributionsDeleted > 0) {
-                LOGGER.debug("Removed {} stale attribution(s)", attributionsDeleted);
-            }
+            final int attributionsDeleted = findingDao.deleteAttributions(attributionIdsToDelete);
+            LOGGER.debug("Removed {} stale attribution(s)", attributionsDeleted);
 
-            // TODO: Apply policy results (create/update analyses)
+            applyVulnPolicyResults(handle, projectId, policyResults);
 
             // TODO: Clean this up.
             final var notifyComponentIds = new ArrayList<Long>();
             final var notifyVulnIds = new ArrayList<Long>();
             createdFindings.forEach(createdFinding -> {
                 notifyComponentIds.add(createdFinding.componentId());
-                notifyVulnIds.add(createdFinding.vulnerabilityId());
+                notifyVulnIds.add(createdFinding.vulnDbId());
             });
             final List<Notification> notifications = notificationSubjectDao
                     .getForNewVulnerabilities(notifyComponentIds, notifyVulnIds)
@@ -913,26 +486,163 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         }
     }
 
-    private record FindingKey(long componentId, long vulnerabilityId) {
+    private static Map<Long, Set<Long>> computeActiveFindings(
+            Map<FindingKey, List<FindingDao.FindingAttribution>> existingAttributionsByFindingKey,
+            Set<Long> attributionIdsToDelete,
+            Set<FindingKey> findingsToCreate,
+            Set<FindingDao.CreateAttributionCommand> createAttributionCommands) {
+        final var activeFindings = new HashMap<Long, Set<Long>>();
 
-        private static FindingKey of(FindingAttribution finding) {
-            return new FindingKey(finding.componentId(), finding.vulnId());
+        // Consider existing findings as active if at least one
+        // existing attribution is NOT scheduled for deletion.
+        for (final var entry : existingAttributionsByFindingKey.entrySet()) {
+            final FindingKey findingKey = entry.getKey();
+            final List<FindingDao.FindingAttribution> existingAttributions = entry.getValue();
+
+            final boolean allAttributionsDeleted = existingAttributions.stream()
+                    .map(FindingDao.FindingAttribution::id)
+                    .allMatch(attributionIdsToDelete::contains);
+            if (!allAttributionsDeleted) {
+                activeFindings
+                        .computeIfAbsent(findingKey.componentId(), k -> new HashSet<>())
+                        .add(findingKey.vulnDbId());
+            }
         }
 
+        // Findings that are scheduled for creation are inherently active.
+        for (final FindingKey findingKey : findingsToCreate) {
+            activeFindings
+                    .computeIfAbsent(findingKey.componentId(), k -> new HashSet<>())
+                    .add(findingKey.vulnDbId());
+        }
+
+        // Handle the case where a finding:
+        //   * Was previously reported by analyzer A.
+        //   * Is no longer reported by analyzer A (i.e. its attribution is in attributionIdsToDelete).
+        //   * Is now reported by analyzer B.
+        // Because the finding already existed, it won't be in findingsToCreate.
+        // But an attribution for analyzer B is scheduled for creation,
+        // which tells us that the finding is still active.
+        for (final FindingDao.CreateAttributionCommand command : createAttributionCommands) {
+            activeFindings
+                    .computeIfAbsent(command.componentId(), k -> new HashSet<>())
+                    .add(command.vulnDbId());
+        }
+
+        return activeFindings;
     }
 
-    private record FindingAttributionKey(
-            long componentId,
-            long vulnerabilityId,
-            String analyzerName) {
-
-        private static FindingAttributionKey of(FindingAttribution finding) {
-            return new FindingAttributionKey(
-                    finding.componentId(),
-                    finding.vulnId(),
-                    finding.analyzerName());
+    private Map<Long, Map<Long, VulnerabilityPolicy>> evaluateVulnPolicies(
+            long projectId,
+            Map<Long, Set<Long>> vulnIdsByComponentId) {
+        if (vulnIdsByComponentId.isEmpty()) {
+            return Map.of();
         }
 
+        final Map<Long, Map<Long, VulnerabilityPolicy>> evaluationResult =
+                vulnPolicyEvaluator.evaluateAll(projectId, vulnIdsByComponentId);
+        if (evaluationResult.isEmpty()) {
+            LOGGER.debug("Vulnerability policy evaluation did not yield any results");
+            return Map.of();
+        }
+
+        // Policies with mode LOG do not require any database changes.
+        // Log them now, and omit them from the result returned by this method.
+        final var applicableResult = new HashMap<Long, Map<Long, VulnerabilityPolicy>>();
+        for (final var entry : evaluationResult.entrySet()) {
+            final long componentId = entry.getKey();
+            final Map<Long, VulnerabilityPolicy> policyByVulnDbId = entry.getValue();
+
+            for (final var vulnEntry : policyByVulnDbId.entrySet()) {
+                final long vulnDbId = vulnEntry.getKey();
+                final VulnerabilityPolicy policy = vulnEntry.getValue();
+
+                if (policy.getOperationMode() == VulnerabilityPolicyOperation.LOG) {
+                    LOGGER.info(
+                            "Vulnerability policy '{}' matched for component {} and vulnerability {}",
+                            policy.getName(),
+                            componentId,
+                            vulnDbId);
+                    continue;
+                }
+
+                applicableResult
+                        .computeIfAbsent(componentId, k -> new HashMap<>())
+                        .put(vulnEntry.getKey(), policy);
+            }
+        }
+
+        return applicableResult;
+    }
+
+    private void applyVulnPolicyResults(
+            Handle handle,
+            long projectId,
+            Map<Long, Map<Long, VulnerabilityPolicy>> policyResults) {
+        if (policyResults.isEmpty()) {
+            return;
+        }
+
+        final var analysisDao = new org.dependencytrack.persistence.jdbi.AnalysisDao(handle);
+
+        // Retrieve existing analyses for all findings for which we have applicable policy results.
+        final Set<FindingKey> findingKeys = policyResults.entrySet().stream()
+                .flatMap(entry -> {
+                    final long componentId = entry.getKey();
+                    return entry.getValue().keySet().stream()
+                            .map(vulnDbId -> new FindingKey(componentId, vulnDbId));
+                })
+                .collect(Collectors.toSet());
+        final Map<FindingKey, Analysis> existingAnalysisByFindingKey = analysisDao.getForFindings(projectId, findingKeys);
+        LOGGER.debug("Found {} existing analyses for {} finding(s)", existingAnalysisByFindingKey.size(), findingKeys.size());
+
+        // Reconcile the current state of analyses with the desired state as defined by policies.
+        final var reconcileResults = new ArrayList<AnalysisReconciler.Result>();
+        for (final var componentEntry : policyResults.entrySet()) {
+            final long componentId = componentEntry.getKey();
+            final Map<Long, VulnerabilityPolicy> policyByVulnDbId = componentEntry.getValue();
+
+            for (final var vulnEntry : policyByVulnDbId.entrySet()) {
+                final long vulnDbId = vulnEntry.getKey();
+                final VulnerabilityPolicy policy = vulnEntry.getValue();
+
+                final var findingKey = new FindingKey(componentId, vulnDbId);
+                final Analysis existingAnalysis = existingAnalysisByFindingKey.get(findingKey);
+                LOGGER.debug("Reconciling analysis for {}", findingKey);
+
+                final var analysisReconciler = new AnalysisReconciler(projectId, componentId, vulnDbId, existingAnalysis);
+                final AnalysisReconciler.Result reconcileResult = analysisReconciler.reconcile(policy);
+                if (reconcileResult != null) {
+                    reconcileResults.add(reconcileResult);
+                }
+            }
+        }
+
+        if (reconcileResults.isEmpty()) {
+            LOGGER.debug("All analyses are already in desired state");
+            return;
+        }
+
+        // Create or update analyses according to the reconciliation results.
+        final List<MakeAnalysisCommand> makeAnalysisCommands =
+                reconcileResults.stream()
+                        .map(AnalysisReconciler.Result::makeAnalysisCommand)
+                        .toList();
+        final Map<FindingKey, Long> modifiedAnalysisIdByFindingKey = analysisDao.makeAnalyses(makeAnalysisCommands);
+        LOGGER.debug("Modified {} analysis record(s)", modifiedAnalysisIdByFindingKey.size());
+
+        // Populate the audit trail for analyses that have actually changed.
+        final var createCommentCommands = new ArrayList<org.dependencytrack.persistence.jdbi.AnalysisDao.CreateCommentCommand>();
+        for (final var reconcileResult : reconcileResults) {
+            final Long analysisId = modifiedAnalysisIdByFindingKey.get(reconcileResult.findingKey());
+            if (analysisId != null) {
+                createCommentCommands.addAll(reconcileResult.createCommentCommands(analysisId));
+            }
+        }
+        final int commentsCreated = analysisDao.createComments(createCommentCommands);
+        LOGGER.debug("Created {} analysis comment(s)", commentsCreated);
+
+        // TODO: Emit notifications for changed analyses.
     }
 
     private record ReportedFinding(
@@ -945,155 +655,6 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             Vulnerability vdrVuln,
             String analyzerName,
             @Nullable Long internalVulnId) {
-    }
-
-    private record ConvertedVulnerability(
-            org.dependencytrack.model.@Nullable Vulnerability vuln,
-            String analyzerName,
-            @Nullable Long internalVulnId) {
-    }
-
-    private record CreateFindingCommand(FindingKey findingKey) {
-    }
-
-    private record CreateFindingAttributionCommand(
-            long vulnId,
-            long componentId,
-            long projectId,
-            String analyzerName) {
-    }
-
-    private record DeleteFindingAttributionCommand(long id) {
-    }
-
-    private record FindingAttribution(
-            long id,
-            long componentId,
-            long vulnId,
-            String analyzerName) {
-    }
-
-    private static List<FindingAttribution> getExistingFindingAttributions(Handle handle, long projectId) {
-        return handle.createQuery("""
-                        SELECT fa."ID"
-                             , cv."COMPONENT_ID"
-                             , cv."VULNERABILITY_ID"
-                             , fa."ANALYZERIDENTITY"
-                          FROM "COMPONENTS_VULNERABILITIES" AS cv
-                         INNER JOIN "COMPONENT" AS c
-                            ON c."ID" = cv."COMPONENT_ID"
-                         INNER JOIN "FINDINGATTRIBUTION" AS fa
-                            ON fa."COMPONENT_ID" = cv."COMPONENT_ID"
-                           AND fa."VULNERABILITY_ID" = cv."VULNERABILITY_ID"
-                           AND fa."DELETED_AT" IS NULL
-                         WHERE c."PROJECT_ID" = :projectId
-                        """)
-                .bind("projectId", projectId)
-                .map((rs, ctx) -> new FindingAttribution(
-                        rs.getLong("ID"),
-                        rs.getLong("COMPONENT_ID"),
-                        rs.getLong("VULNERABILITY_ID"),
-                        rs.getString("ANALYZERIDENTITY")))
-                .list();
-    }
-
-    private static List<FindingKey> createFindings(Handle handle, Collection<CreateFindingCommand> commands) {
-        if (commands.isEmpty()) {
-            return List.of();
-        }
-
-        final var componentIds = new long[commands.size()];
-        final var vulnIds = new long[commands.size()];
-
-        int i = 0;
-        for (final CreateFindingCommand command : commands) {
-            componentIds[i] = command.findingKey().componentId();
-            vulnIds[i] = command.findingKey().vulnerabilityId();
-            i++;
-        }
-
-        return handle.createUpdate("""
-                        INSERT INTO "COMPONENTS_VULNERABILITIES" ("COMPONENT_ID", "VULNERABILITY_ID")
-                        SELECT *
-                          FROM UNNEST(:componentIds, :vulnIds)
-                            AS t(component_id, vuln_id)
-                         ORDER BY component_id
-                                , vuln_id
-                        ON CONFLICT DO NOTHING
-                        RETURNING "COMPONENT_ID"
-                                , "VULNERABILITY_ID"
-                        """)
-                .bind("componentIds", componentIds)
-                .bind("vulnIds", vulnIds)
-                .executeAndReturnGeneratedKeys()
-                .map((rs, ctx) -> new FindingKey(
-                        rs.getLong("COMPONENT_ID"),
-                        rs.getLong("VULNERABILITY_ID")))
-                .list();
-    }
-
-    private static int createFindingAttributions(Handle handle, Collection<CreateFindingAttributionCommand> commands) {
-        if (commands.isEmpty()) {
-            return 0;
-        }
-
-        final var vulnIds = new long[commands.size()];
-        final var componentIds = new long[commands.size()];
-        final var projectIds = new long[commands.size()];
-        final var analyzerIdentities = new String[commands.size()];
-
-        int i = 0;
-        for (final CreateFindingAttributionCommand command : commands) {
-            vulnIds[i] = command.vulnId();
-            componentIds[i] = command.componentId();
-            projectIds[i] = command.projectId();
-            analyzerIdentities[i] = command.analyzerName();
-            i++;
-        }
-
-        return handle.createUpdate("""
-                        INSERT INTO "FINDINGATTRIBUTION" AS fa (
-                          "VULNERABILITY_ID"
-                        , "COMPONENT_ID"
-                        , "PROJECT_ID"
-                        , "ANALYZERIDENTITY"
-                        , "ATTRIBUTED_ON"
-                        )
-                        SELECT vuln_id
-                             , component_id
-                             , project_id
-                             , analyzer_identity
-                             , NOW()
-                          FROM UNNEST(:vulnIds, :componentIds, :projectIds, :analyzerIdentities)
-                            AS t(vuln_id, component_id, project_id, analyzer_identity)
-                         ORDER BY vuln_id
-                                , component_id
-                                , analyzer_identity
-                        ON CONFLICT ("VULNERABILITY_ID", "COMPONENT_ID", "ANALYZERIDENTITY") DO UPDATE
-                        SET "ATTRIBUTED_ON" = EXCLUDED."ATTRIBUTED_ON"
-                          , "DELETED_AT" = NULL
-                        WHERE fa."DELETED_AT" IS NOT NULL
-                        """)
-                .bind("vulnIds", vulnIds)
-                .bind("componentIds", componentIds)
-                .bind("projectIds", projectIds)
-                .bind("analyzerIdentities", analyzerIdentities)
-                .execute();
-    }
-
-    private static int deleteAttributions(Handle handle, Collection<DeleteFindingAttributionCommand> commands) {
-        if (commands.isEmpty()) {
-            return 0;
-        }
-
-        return handle.createUpdate("""
-                        UPDATE "FINDINGATTRIBUTION"
-                           SET "DELETED_AT" = NOW()
-                         WHERE "ID" = ANY(:ids)
-                           AND "DELETED_AT" IS NULL
-                        """)
-                .bind("ids", commands.stream().map(DeleteFindingAttributionCommand::id).toArray(Long[]::new))
-                .execute();
     }
 
 }

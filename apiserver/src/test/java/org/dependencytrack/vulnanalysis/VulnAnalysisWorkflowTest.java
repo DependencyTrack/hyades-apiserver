@@ -32,15 +32,26 @@ import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.dex.testing.WorkflowTestExtension;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
+import org.dependencytrack.model.AnalysisComment;
+import org.dependencytrack.model.AnalysisJustification;
+import org.dependencytrack.model.AnalysisResponse;
+import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.dependencytrack.persistence.jdbi.FindingDao.FindingRow;
+import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.policy.cel.CelVulnerabilityPolicyEvaluator;
+import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
+import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
+import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyOperation;
+import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyRating;
 import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerRes;
@@ -56,7 +67,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -233,6 +246,531 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         assertThat(findings).isEmpty();
 
         assertThat(qm.getNotificationOutbox()).isEmpty();
+    }
+
+    @Test
+    void analysisThroughPolicyNewAnalysisTest() {
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INT-100");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln.setSeverity(Severity.CRITICAL);
+        vuln = qm.persist(vuln);
+
+        final var vs = new VulnerableSoftware();
+        vs.setPurlType("maven");
+        vs.setPurlNamespace("com.example");
+        vs.setPurlName("acme-lib");
+        vs.setVersionStartIncluding("1.0.0");
+        vs.setVersionEndExcluding("2.0.0");
+        vs.setVulnerable(true);
+        vs.addVulnerability(vuln);
+        qm.persist(vs);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project = qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("com.example");
+        component.setName("acme-lib");
+        component.setVersion("1.1.0");
+        component.setPurl("pkg:maven/com.example/acme-lib@1.1.0");
+        qm.persist(component);
+
+        final var policyAnalysis = new VulnerabilityPolicyAnalysis();
+        policyAnalysis.setState(VulnerabilityPolicyAnalysis.State.NOT_AFFECTED);
+        policyAnalysis.setJustification(VulnerabilityPolicyAnalysis.Justification.CODE_NOT_REACHABLE);
+        policyAnalysis.setVendorResponse(VulnerabilityPolicyAnalysis.Response.WILL_NOT_FIX);
+        policyAnalysis.setDetails("Policy details");
+
+        final var cvssV3Rating = new VulnerabilityPolicyRating();
+        cvssV3Rating.setMethod(VulnerabilityPolicyRating.Method.CVSSV3);
+        cvssV3Rating.setVector("CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:H/A:L");
+        cvssV3Rating.setScore(3.7);
+        cvssV3Rating.setSeverity(VulnerabilityPolicyRating.Severity.LOW);
+
+        createPolicy("testPolicy", "testAuthor",
+                List.of("has(component.name)", "project.version != \"\""),
+                policyAnalysis, List.of(cvssV3Rating));
+
+        final UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAnalysis(component, vuln)).satisfies(analysis -> {
+            assertThat(analysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+            assertThat(analysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE);
+            assertThat(analysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
+            assertThat(analysis.getAnalysisDetails()).isEqualTo("Policy details");
+            assertThat(analysis.isSuppressed()).isFalse();
+            assertThat(analysis.getSeverity()).isEqualTo(Severity.LOW);
+            assertThat(analysis.getCvssV3Vector()).isEqualTo("CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:H/A:L");
+            assertThat(analysis.getCvssV3Score()).isEqualByComparingTo("3.7");
+            assertThat(analysis.getAnalysisComments())
+                    .extracting(AnalysisComment::getComment)
+                    .containsExactly(
+                            """
+                                    Matched on condition(s):
+                                    - has(component.name)
+                                    - project.version != \"\"""",
+                            "Analysis: NOT_SET → NOT_AFFECTED",
+                            "Justification: NOT_SET → CODE_NOT_REACHABLE",
+                            "Vendor Response: NOT_SET → WILL_NOT_FIX",
+                            "Details: Policy details",
+                            "Severity: UNASSIGNED → LOW",
+                            "CVSSv3 Vector: (None) → CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:H/A:L",
+                            "CVSSv3 Score: (None) → 3.7");
+        });
+
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification ->
+                assertThat(notification.getGroup()).isEqualTo(GROUP_NEW_VULNERABILITY));
+    }
+
+    @Test
+    void analysisThroughPolicyNewAnalysisSuppressionTest() {
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INT-101");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln.setSeverity(Severity.CRITICAL);
+        vuln = qm.persist(vuln);
+
+        final var vs = new VulnerableSoftware();
+        vs.setPurlType("maven");
+        vs.setPurlNamespace("com.example");
+        vs.setPurlName("acme-lib");
+        vs.setVersionStartIncluding("1.0.0");
+        vs.setVersionEndExcluding("2.0.0");
+        vs.setVulnerable(true);
+        vs.addVulnerability(vuln);
+        qm.persist(vs);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project = qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("com.example");
+        component.setName("acme-lib");
+        component.setVersion("1.1.0");
+        component.setPurl("pkg:maven/com.example/acme-lib@1.1.0");
+        qm.persist(component);
+
+        final var policyAnalysis = new VulnerabilityPolicyAnalysis();
+        policyAnalysis.setState(VulnerabilityPolicyAnalysis.State.FALSE_POSITIVE);
+        policyAnalysis.setSuppress(true);
+
+        final var cvssV4Rating = new VulnerabilityPolicyRating();
+        cvssV4Rating.setMethod(VulnerabilityPolicyRating.Method.CVSSV4);
+        cvssV4Rating.setVector("CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N");
+        cvssV4Rating.setScore(0.0);
+        cvssV4Rating.setSeverity(VulnerabilityPolicyRating.Severity.LOW);
+
+        createPolicy("suppressPolicy", "testAuthor",
+                List.of("true"),
+                policyAnalysis, List.of(cvssV4Rating));
+
+        final UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAnalysis(component, vuln)).satisfies(analysis -> {
+            assertThat(analysis.getAnalysisState()).isEqualTo(AnalysisState.FALSE_POSITIVE);
+            assertThat(analysis.isSuppressed()).isTrue();
+            assertThat(analysis.getSeverity()).isEqualTo(Severity.LOW);
+            assertThat(analysis.getCvssV4Vector()).isEqualTo("CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N");
+            assertThat(analysis.getCvssV4Score()).isEqualByComparingTo("0.0");
+            assertThat(analysis.getAnalysisComments())
+                    .extracting(AnalysisComment::getComment)
+                    .containsExactly(
+                            """
+                                    Matched on condition(s):
+                                    - true""",
+                            "Analysis: NOT_SET → FALSE_POSITIVE",
+                            "Suppressed",
+                            "Severity: UNASSIGNED → LOW",
+                            "CVSSv4 Vector: (None) → CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:N/SA:N",
+                            "CVSSv4 Score: (None) → 0.0");
+        });
+
+        // Suppressed finding should NOT generate a NEW_VULNERABILITY notification.
+        assertThat(qm.getNotificationOutbox()).isEmpty();
+    }
+
+    @Test
+    void analysisThroughPolicyExistingDifferentAnalysisTest() {
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INT-102");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln.setSeverity(Severity.CRITICAL);
+        vuln = qm.persist(vuln);
+
+        final var vs = new VulnerableSoftware();
+        vs.setPurlType("maven");
+        vs.setPurlNamespace("com.example");
+        vs.setPurlName("acme-lib");
+        vs.setVersionStartIncluding("1.0.0");
+        vs.setVersionEndExcluding("2.0.0");
+        vs.setVulnerable(true);
+        vs.addVulnerability(vuln);
+        qm.persist(vs);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project = qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("com.example");
+        component.setName("acme-lib");
+        component.setVersion("1.1.0");
+        component.setPurl("pkg:maven/com.example/acme-lib@1.1.0");
+        qm.persist(component);
+
+        qm.addVulnerability(vuln, component, "internal");
+
+        // Pre-create analysis with different values than the policy will set.
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(component, vuln)
+                        .withState(AnalysisState.IN_TRIAGE)
+                        .withJustification(AnalysisJustification.NOT_SET)
+                        .withResponse(AnalysisResponse.NOT_SET)
+                        .withDetails("old details")
+                        .withSuppress(false)
+                        .withOptions(Set.of(
+                                MakeAnalysisCommand.Option.OMIT_AUDIT_TRAIL,
+                                MakeAnalysisCommand.Option.OMIT_NOTIFICATION)));
+
+        final var policyAnalysis = new VulnerabilityPolicyAnalysis();
+        policyAnalysis.setState(VulnerabilityPolicyAnalysis.State.NOT_AFFECTED);
+        policyAnalysis.setJustification(VulnerabilityPolicyAnalysis.Justification.CODE_NOT_REACHABLE);
+        policyAnalysis.setVendorResponse(VulnerabilityPolicyAnalysis.Response.WILL_NOT_FIX);
+        policyAnalysis.setDetails("new details");
+        policyAnalysis.setSuppress(true);
+
+        final var cvssV3Rating = new VulnerabilityPolicyRating();
+        cvssV3Rating.setMethod(VulnerabilityPolicyRating.Method.CVSSV3);
+        cvssV3Rating.setVector("CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:H/A:L");
+        cvssV3Rating.setScore(3.7);
+        cvssV3Rating.setSeverity(VulnerabilityPolicyRating.Severity.LOW);
+
+        createPolicy("updatePolicy", "testAuthor",
+                List.of("has(component.name)"),
+                policyAnalysis, List.of(cvssV3Rating));
+
+        final UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAnalysis(component, vuln)).satisfies(analysis -> {
+            assertThat(analysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+            assertThat(analysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE);
+            assertThat(analysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
+            assertThat(analysis.getAnalysisDetails()).isEqualTo("new details");
+            assertThat(analysis.isSuppressed()).isTrue();
+            assertThat(analysis.getSeverity()).isEqualTo(Severity.LOW);
+            assertThat(analysis.getCvssV3Vector()).isEqualTo("CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:H/A:L");
+            assertThat(analysis.getCvssV3Score()).isEqualByComparingTo("3.7");
+            assertThat(analysis.getAnalysisComments())
+                    .extracting(AnalysisComment::getComment)
+                    .containsExactly(
+                            """
+                                    Matched on condition(s):
+                                    - has(component.name)""",
+                            "Analysis: IN_TRIAGE → NOT_AFFECTED",
+                            "Justification: NOT_SET → CODE_NOT_REACHABLE",
+                            "Vendor Response: NOT_SET → WILL_NOT_FIX",
+                            "Details: new details",
+                            "Suppressed",
+                            "Severity: UNASSIGNED → LOW",
+                            "CVSSv3 Vector: (None) → CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:H/A:L",
+                            "CVSSv3 Score: (None) → 3.7");
+        });
+
+        // Existing finding should not trigger NEW_VULNERABILITY notification.
+        assertThat(qm.getNotificationOutbox()).isEmpty();
+    }
+
+    @Test
+    void analysisThroughPolicyExistingEqualAnalysisTest() {
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INT-103");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln = qm.persist(vuln);
+
+        final var vs = new VulnerableSoftware();
+        vs.setPurlType("maven");
+        vs.setPurlNamespace("com.example");
+        vs.setPurlName("acme-lib");
+        vs.setVersionStartIncluding("1.0.0");
+        vs.setVersionEndExcluding("2.0.0");
+        vs.setVulnerable(true);
+        vs.addVulnerability(vuln);
+        qm.persist(vs);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project = qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("com.example");
+        component.setName("acme-lib");
+        component.setVersion("1.1.0");
+        component.setPurl("pkg:maven/com.example/acme-lib@1.1.0");
+        qm.persist(component);
+
+        qm.addVulnerability(vuln, component, "internal");
+
+        // Pre-create analysis with values that exactly match the policy.
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(component, vuln)
+                        .withState(AnalysisState.NOT_AFFECTED)
+                        .withSuppress(false)
+                        .withOptions(Set.of(
+                                MakeAnalysisCommand.Option.OMIT_AUDIT_TRAIL,
+                                MakeAnalysisCommand.Option.OMIT_NOTIFICATION)));
+
+        final var policyAnalysis = new VulnerabilityPolicyAnalysis();
+        policyAnalysis.setState(VulnerabilityPolicyAnalysis.State.NOT_AFFECTED);
+
+        createPolicy("matchingPolicy", "testAuthor",
+                List.of("true"),
+                policyAnalysis, null);
+
+        final UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAnalysis(component, vuln)).satisfies(analysis -> {
+            assertThat(analysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+            assertThat(analysis.getAnalysisComments()).isEmpty();
+        });
+    }
+
+    @Test
+    void analysisThroughPolicyWithPoliciesNotYetValidOrNotValidAnymoreTest() {
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INT-104");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln = qm.persist(vuln);
+
+        final var vs = new VulnerableSoftware();
+        vs.setPurlType("maven");
+        vs.setPurlNamespace("com.example");
+        vs.setPurlName("acme-lib");
+        vs.setVersionStartIncluding("1.0.0");
+        vs.setVersionEndExcluding("2.0.0");
+        vs.setVulnerable(true);
+        vs.addVulnerability(vuln);
+        qm.persist(vs);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project = qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("com.example");
+        component.setName("acme-lib");
+        component.setVersion("1.1.0");
+        component.setPurl("pkg:maven/com.example/acme-lib@1.1.0");
+        qm.persist(component);
+
+        // Policy with validFrom in the future.
+        final var futureAnalysis = new VulnerabilityPolicyAnalysis();
+        futureAnalysis.setState(VulnerabilityPolicyAnalysis.State.FALSE_POSITIVE);
+
+        final var futurePolicy = new VulnerabilityPolicy();
+        futurePolicy.setName("futurePolicy");
+        futurePolicy.setConditions(List.of("true"));
+        futurePolicy.setAnalysis(futureAnalysis);
+        futurePolicy.setValidFrom(ZonedDateTime.now().plusDays(30));
+        withJdbiHandle(handle -> handle.attach(VulnerabilityPolicyDao.class).create(futurePolicy));
+
+        // Policy with validUntil in the past.
+        final var expiredAnalysis = new VulnerabilityPolicyAnalysis();
+        expiredAnalysis.setState(VulnerabilityPolicyAnalysis.State.RESOLVED);
+
+        final var expiredPolicy = new VulnerabilityPolicy();
+        expiredPolicy.setName("expiredPolicy");
+        expiredPolicy.setConditions(List.of("true"));
+        expiredPolicy.setAnalysis(expiredAnalysis);
+        expiredPolicy.setValidUntil(ZonedDateTime.now().minusDays(30));
+        withJdbiHandle(handle -> handle.attach(VulnerabilityPolicyDao.class).create(expiredPolicy));
+
+        final UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAnalysis(component, vuln)).isNull();
+    }
+
+    @Test
+    void analysisThroughPolicyWithAnalysisUpdateNotOnStateOrSuppressionTest() {
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INT-105");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln = qm.persist(vuln);
+
+        final var vs = new VulnerableSoftware();
+        vs.setPurlType("maven");
+        vs.setPurlNamespace("com.example");
+        vs.setPurlName("acme-lib");
+        vs.setVersionStartIncluding("1.0.0");
+        vs.setVersionEndExcluding("2.0.0");
+        vs.setVulnerable(true);
+        vs.addVulnerability(vuln);
+        qm.persist(vs);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project = qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("com.example");
+        component.setName("acme-lib");
+        component.setVersion("1.1.0");
+        component.setPurl("pkg:maven/com.example/acme-lib@1.1.0");
+        qm.persist(component);
+
+        qm.addVulnerability(vuln, component, "internal");
+
+        // Pre-create analysis with same state/suppressed as policy but different details.
+        qm.makeAnalysis(
+                new MakeAnalysisCommand(component, vuln)
+                        .withState(AnalysisState.NOT_AFFECTED)
+                        .withDetails("old details")
+                        .withSuppress(false)
+                        .withOptions(Set.of(
+                                MakeAnalysisCommand.Option.OMIT_AUDIT_TRAIL,
+                                MakeAnalysisCommand.Option.OMIT_NOTIFICATION)));
+
+        final var policyAnalysis = new VulnerabilityPolicyAnalysis();
+        policyAnalysis.setState(VulnerabilityPolicyAnalysis.State.NOT_AFFECTED);
+        policyAnalysis.setDetails("new details");
+
+        createPolicy("detailsPolicy", "testAuthor",
+                List.of("true"),
+                policyAnalysis, null);
+
+        final UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAnalysis(component, vuln)).satisfies(analysis -> {
+            assertThat(analysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+            assertThat(analysis.getAnalysisDetails()).isEqualTo("new details");
+            assertThat(analysis.isSuppressed()).isFalse();
+            assertThat(analysis.getAnalysisComments())
+                    .extracting(AnalysisComment::getComment)
+                    .containsExactly(
+                            """
+                                    Matched on condition(s):
+                                    - true""",
+                            "Details: new details");
+        });
+
+        // No state or suppression change, so no NEW_VULNERABILITY or PROJECT_AUDIT_CHANGE.
+        assertThat(qm.getNotificationOutbox()).isEmpty();
+    }
+
+    @Test
+    void analysisThroughPolicyWithPoliciesLoggableTest() {
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INT-106");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln = qm.persist(vuln);
+
+        final var vs = new VulnerableSoftware();
+        vs.setPurlType("maven");
+        vs.setPurlNamespace("com.example");
+        vs.setPurlName("acme-lib");
+        vs.setVersionStartIncluding("1.0.0");
+        vs.setVersionEndExcluding("2.0.0");
+        vs.setVulnerable(true);
+        vs.addVulnerability(vuln);
+        qm.persist(vs);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project = qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("com.example");
+        component.setName("acme-lib");
+        component.setVersion("1.1.0");
+        component.setPurl("pkg:maven/com.example/acme-lib@1.1.0");
+        qm.persist(component);
+
+        final var policyAnalysis = new VulnerabilityPolicyAnalysis();
+        policyAnalysis.setState(VulnerabilityPolicyAnalysis.State.FALSE_POSITIVE);
+
+        final var policy = new VulnerabilityPolicy();
+        policy.setName("logPolicy");
+        policy.setConditions(List.of("true"));
+        policy.setAnalysis(policyAnalysis);
+        policy.setOperationMode(VulnerabilityPolicyOperation.LOG);
+        withJdbiHandle(handle -> handle.attach(VulnerabilityPolicyDao.class).create(policy));
+
+        final UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAnalysis(component, vuln)).isNull();
+    }
+
+    private static void createPolicy(
+            String name,
+            String author,
+            List<String> conditions,
+            VulnerabilityPolicyAnalysis analysis,
+            List<VulnerabilityPolicyRating> ratings) {
+        final var policy = new VulnerabilityPolicy();
+        policy.setName(name);
+        policy.setAuthor(author);
+        policy.setConditions(conditions);
+        policy.setAnalysis(analysis);
+        policy.setRatings(ratings);
+        withJdbiHandle(handle -> handle.attach(VulnerabilityPolicyDao.class).create(policy));
     }
 
 }
