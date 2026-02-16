@@ -36,17 +36,12 @@ final class FindingDao {
         return handle
                 .createQuery("""
                         SELECT fa."ID"
-                             , cv."COMPONENT_ID"
-                             , cv."VULNERABILITY_ID"
+                             , fa."COMPONENT_ID"
+                             , fa."VULNERABILITY_ID"
                              , fa."ANALYZERIDENTITY"
-                          FROM "COMPONENTS_VULNERABILITIES" AS cv
-                         INNER JOIN "COMPONENT" AS c
-                            ON c."ID" = cv."COMPONENT_ID"
-                         INNER JOIN "FINDINGATTRIBUTION" AS fa
-                            ON fa."COMPONENT_ID" = cv."COMPONENT_ID"
-                           AND fa."VULNERABILITY_ID" = cv."VULNERABILITY_ID"
+                          FROM "FINDINGATTRIBUTION" AS fa
+                         WHERE fa."PROJECT_ID" = :projectId
                            AND fa."DELETED_AT" IS NULL
-                         WHERE c."PROJECT_ID" = :projectId
                         """)
                 .bind("projectId", projectId)
                 .map((rs, ctx) -> new FindingAttribution(
