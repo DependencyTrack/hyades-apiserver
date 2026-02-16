@@ -283,8 +283,6 @@ final class InternalVulnAnalyzer implements VulnAnalyzer {
                     queries.add(query);
                 }
             }
-
-            i++;
         }
 
         return jdbi.withHandle(handle -> handle
@@ -302,7 +300,6 @@ final class InternalVulnAnalyzer implements VulnAnalyzer {
         } else if (component.parsedCpe() != null && component.parsedCpe().getVersion() != null) {
             componentVersion = component.parsedCpe().getVersion();
         } else {
-            LOGGER.warn("");
             return false;
         }
 
@@ -475,8 +472,8 @@ final class InternalVulnAnalyzer implements VulnAnalyzer {
 
     private static <T> List<List<T>> partition(List<T> list) {
         final var partitions = new ArrayList<List<T>>();
-        for (int i = 0; i < list.size(); i += 100) {
-            partitions.add(list.subList(i, Math.min(i + 100, list.size())));
+        for (int i = 0; i < list.size(); i += 25) {
+            partitions.add(list.subList(i, Math.min(i + 25, list.size())));
         }
 
         return partitions;
