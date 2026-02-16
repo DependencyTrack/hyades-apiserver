@@ -78,6 +78,7 @@ import static org.dependencytrack.dex.api.payload.PayloadConverters.protoConvert
 import static org.dependencytrack.dex.api.payload.PayloadConverters.voidConverter;
 import static org.dependencytrack.notification.NotificationTestUtil.createCatchAllNotificationRule;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABILITY;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
@@ -328,8 +329,11 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
                             "CVSSv3 Score: (None) → 3.7");
         });
 
-        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification ->
-                assertThat(notification.getGroup()).isEqualTo(GROUP_NEW_VULNERABILITY));
+        assertThat(qm.getNotificationOutbox())
+                .extracting(org.dependencytrack.notification.proto.v1.Notification::getGroup)
+                .containsExactlyInAnyOrder(
+                        GROUP_NEW_VULNERABILITY,
+                        GROUP_PROJECT_AUDIT_CHANGE);
     }
 
     @Test
@@ -404,8 +408,10 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
                             "CVSSv4 Score: (None) → 0.0");
         });
 
-        // Suppressed finding should NOT generate a NEW_VULNERABILITY notification.
-        assertThat(qm.getNotificationOutbox()).isEmpty();
+        // Suppressed finding should NOT generate a NEW_VULNERABILITY notification,
+        // but should still generate a PROJECT_AUDIT_CHANGE notification.
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification ->
+                assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE));
     }
 
     @Test
@@ -503,8 +509,10 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
                             "CVSSv3 Score: (None) → 3.7");
         });
 
-        // Existing finding should not trigger NEW_VULNERABILITY notification.
-        assertThat(qm.getNotificationOutbox()).isEmpty();
+        // Existing finding should not trigger NEW_VULNERABILITY notification,
+        // but state and suppression changed, so PROJECT_AUDIT_CHANGE should be emitted.
+        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification ->
+                assertThat(notification.getGroup()).isEqualTo(GROUP_PROJECT_AUDIT_CHANGE));
     }
 
     @Test

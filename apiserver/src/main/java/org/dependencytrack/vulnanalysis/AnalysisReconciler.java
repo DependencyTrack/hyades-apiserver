@@ -206,11 +206,13 @@ final class AnalysisReconciler {
             final var comments = new ArrayList<String>();
             boolean hasChanged = false;
 
-            hasChanged |= diffField(comments, AnalysisCommentField.STATE, state, desiredState);
+            final boolean analysisStateChanged = diffField(comments, AnalysisCommentField.STATE, state, desiredState);
+            hasChanged |= analysisStateChanged;
             hasChanged |= diffField(comments, AnalysisCommentField.JUSTIFICATION, justification, desiredJustification);
             hasChanged |= diffField(comments, AnalysisCommentField.RESPONSE, response, desiredResponse);
             hasChanged |= diffField(comments, AnalysisCommentField.DETAILS, details, desiredDetails);
-            hasChanged |= diffField(comments, AnalysisCommentField.SUPPRESSED, suppressed, desiredSuppressed);
+            final boolean suppressionChanged = diffField(comments, AnalysisCommentField.SUPPRESSED, suppressed, desiredSuppressed);
+            hasChanged |= suppressionChanged;
             hasChanged |= diffField(comments, AnalysisCommentField.SEVERITY, severity, desiredSeverity);
             hasChanged |= diffField(comments, AnalysisCommentField.CVSSV2_VECTOR, cvssV2Vector, desiredCvssV2Vector);
             hasChanged |= diffField(comments, AnalysisCommentField.CVSSV2_SCORE, cvssV2Score, desiredCvssV2Score);
@@ -257,7 +259,9 @@ final class AnalysisReconciler {
                     new FindingKey(componentId, vulnDbId),
                     command,
                     commenter,
-                    comments);
+                    comments,
+                    analysisStateChanged,
+                    suppressionChanged);
         }
     }
 
@@ -278,7 +282,9 @@ final class AnalysisReconciler {
             FindingKey findingKey,
             MakeAnalysisCommand makeAnalysisCommand,
             String commenter,
-            List<String> comments) {
+            List<String> comments,
+            boolean analysisStateChanged,
+            boolean suppressionChanged) {
 
         List<CreateCommentCommand> createCommentCommands(long analysisId) {
             return comments.stream()

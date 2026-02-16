@@ -31,6 +31,7 @@ import org.dependencytrack.notification.proto.v1.NewVulnerabilitySubject;
 import org.dependencytrack.notification.proto.v1.NewVulnerableDependencySubject;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
+import org.dependencytrack.persistence.jdbi.query.GetProjectAuditChangeNotificationSubjectQuery;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -532,10 +533,14 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
 
         var policyAnalysis = qm.getAnalysis(component, vulnA);
 
-        final Optional<VulnerabilityAnalysisDecisionChangeSubject> optionalSubject = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
-                .getForProjectAuditChange(component.getUuid(), vulnA.getUuid(), policyAnalysis.getAnalysisState(), policyAnalysis.isSuppressed()));
+        final List<VulnerabilityAnalysisDecisionChangeSubject> subjects =
+                withJdbiHandle(handle -> handle
+                        .attach(NotificationSubjectDao.class)
+                        .getForProjectAuditChanges(List.of(
+                                new GetProjectAuditChangeNotificationSubjectQuery(
+                                        component.getId(), vulnA.getId(), policyAnalysis.getAnalysisState(), policyAnalysis.isSuppressed()))));
 
-        assertThat(optionalSubject.get()).satisfies(subject ->
+        assertThat(subjects).satisfiesExactly(subject ->
                 assertThatJson(JsonFormat.printer().print(subject))
                         .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
                         .withMatcher("componentUuid", equalTo(component.getUuid().toString()))

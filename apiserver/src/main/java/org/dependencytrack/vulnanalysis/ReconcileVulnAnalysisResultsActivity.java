@@ -32,11 +32,13 @@ import org.dependencytrack.model.FindingKey;
 import org.dependencytrack.model.VulnIdAndSource;
 import org.dependencytrack.notification.JdbiNotificationEmitter;
 import org.dependencytrack.notification.proto.v1.Notification;
+import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.jdbi.AnalysisDao.Analysis;
 import org.dependencytrack.persistence.jdbi.AnalysisDao.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.persistence.jdbi.query.GetProjectAuditChangeNotificationSubjectQuery;
 import org.dependencytrack.plugin.NoSuchExtensionException;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
@@ -66,6 +68,7 @@ import java.util.stream.Collectors;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_VULN_ANALYZER_NAME;
 import static org.dependencytrack.notification.api.NotificationFactory.createNewVulnerabilityNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityAnalysisDecisionChangeNotification;
 import static org.dependencytrack.parser.dependencytrack.BovModelConverter.convert;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
@@ -422,16 +425,18 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             final int attributionsDeleted = findingDao.deleteAttributions(attributionIdsToDelete);
             LOGGER.debug("Removed {} stale attribution(s)", attributionsDeleted);
 
-            applyVulnPolicyResults(handle, projectId, policyResults);
+            final List<Notification> auditChangeNotifications =
+                    applyVulnPolicyResults(handle, projectId, policyResults);
 
             // TODO: Clean this up.
+            final var notifications = new ArrayList<>(auditChangeNotifications);
             final var notifyComponentIds = new ArrayList<Long>();
             final var notifyVulnIds = new ArrayList<Long>();
             createdFindings.forEach(createdFinding -> {
                 notifyComponentIds.add(createdFinding.componentId());
                 notifyVulnIds.add(createdFinding.vulnDbId());
             });
-            final List<Notification> notifications = notificationSubjectDao
+            notificationSubjectDao
                     .getForNewVulnerabilities(notifyComponentIds, notifyVulnIds)
                     .stream()
                     .map(subject -> createNewVulnerabilityNotification(
@@ -439,7 +444,9 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                             subject.getComponent(),
                             subject.getVulnerability(),
                             "TODO"))
-                    .toList();
+                    .forEach(notifications::add);
+
+
             LOGGER.debug("Emitting {} notification(s)", notifications.size());
             new JdbiNotificationEmitter(handle).emitAll(notifications);
         });
@@ -575,12 +582,12 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         return applicableResult;
     }
 
-    private void applyVulnPolicyResults(
+    private List<Notification> applyVulnPolicyResults(
             Handle handle,
             long projectId,
             Map<Long, Map<Long, VulnerabilityPolicy>> policyResults) {
         if (policyResults.isEmpty()) {
-            return;
+            return List.of();
         }
 
         final var analysisDao = new org.dependencytrack.persistence.jdbi.AnalysisDao(handle);
@@ -620,7 +627,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
         if (reconcileResults.isEmpty()) {
             LOGGER.debug("All analyses are already in desired state");
-            return;
+            return List.of();
         }
 
         // Create or update analyses according to the reconciliation results.
@@ -642,7 +649,43 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         final int commentsCreated = analysisDao.createComments(createCommentCommands);
         LOGGER.debug("Created {} analysis comment(s)", commentsCreated);
 
-        // TODO: Emit notifications for changed analyses.
+        // Build notifications for analyses where state or suppression changed.
+        final List<AnalysisReconciler.Result> auditChangeResults =
+                reconcileResults.stream()
+                        .filter(result -> result.analysisStateChanged() || result.suppressionChanged())
+                        .toList();
+        if (auditChangeResults.isEmpty()) {
+            return List.of();
+        }
+
+        final List<GetProjectAuditChangeNotificationSubjectQuery> notificationSubjectQueries =
+                auditChangeResults.stream()
+                        .map(result -> new GetProjectAuditChangeNotificationSubjectQuery(
+                                result.findingKey().componentId(),
+                                result.findingKey().vulnDbId(),
+                                result.makeAnalysisCommand().state(),
+                                result.makeAnalysisCommand().suppressed()))
+                        .toList();
+
+        final var notificationSubjectDao = handle.attach(NotificationSubjectDao.class);
+        final List<VulnerabilityAnalysisDecisionChangeSubject> subjects =
+                notificationSubjectDao.getForProjectAuditChanges(notificationSubjectQueries);
+
+        final var notifications = new ArrayList<Notification>(subjects.size());
+        for (int i = 0; i < subjects.size(); i++) {
+            final AnalysisReconciler.Result result = auditChangeResults.get(i);
+            final VulnerabilityAnalysisDecisionChangeSubject subject = subjects.get(i);
+            notifications.add(
+                    createVulnerabilityAnalysisDecisionChangeNotification(
+                            subject.getProject(),
+                            subject.getComponent(),
+                            subject.getVulnerability(),
+                            subject.getAnalysis(),
+                            result.analysisStateChanged(),
+                            result.suppressionChanged()));
+        }
+
+        return notifications;
     }
 
     private record ReportedFinding(
