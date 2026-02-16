@@ -128,11 +128,11 @@
         <lib.json-schema-validator.version>1.5.9</lib.json-schema-validator.version>
         <lib.json-unit.version>5.1.0</lib.json-unit.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
-        <lib.junit-jupiter.version>6.0.2</lib.junit-jupiter.version>
+        <lib.junit-jupiter.version>6.0.3</lib.junit-jupiter.version>
         <lib.kafka-clients.version>4.1.1</lib.kafka-clients.version>
         <lib.kotlin.version>2.3.10</lib.kotlin.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
-        <lib.logback.version>1.5.29</lib.logback.version>
+        <lib.logback.version>1.5.32</lib.logback.version>
         <lib.micrometer.version>1.16.3</lib.micrometer.version>
         <lib.microprofile-config.version>3.1</lib.microprofile-config.version>
         <lib.microprofile-health.version>4.0.1</lib.microprofile-health.version>
