@@ -54,6 +54,7 @@ final class AnalysisReconciler {
     private final long projectId;
     private final long componentId;
     private final long vulnDbId;
+    private final @Nullable Long vulnPolicyId;
     private final @Nullable AnalysisState state;
     private final @Nullable AnalysisJustification justification;
     private final @Nullable AnalysisResponse response;
@@ -77,6 +78,7 @@ final class AnalysisReconciler {
         this.projectId = projectId;
         this.componentId = componentId;
         this.vulnDbId = vulnDbId;
+        this.vulnPolicyId = existing != null ? existing.vulnPolicyId() : null;
         this.state = existing != null ? existing.state() : AnalysisState.NOT_SET;
         this.justification = existing != null ? existing.justification() : AnalysisJustification.NOT_SET;
         this.response = existing != null ? existing.response() : AnalysisResponse.NOT_SET;
@@ -263,6 +265,66 @@ final class AnalysisReconciler {
                     analysisStateChanged,
                     suppressionChanged);
         }
+    }
+
+    @Nullable Result reconcileForNoPolicy() {
+        final var comments = new ArrayList<String>();
+        boolean hasChanged = false;
+
+        final boolean analysisStateChanged = diffField(comments, AnalysisCommentField.STATE, state, AnalysisState.NOT_SET);
+        hasChanged |= analysisStateChanged;
+        hasChanged |= diffField(comments, AnalysisCommentField.JUSTIFICATION, justification, AnalysisJustification.NOT_SET);
+        hasChanged |= diffField(comments, AnalysisCommentField.RESPONSE, response, AnalysisResponse.NOT_SET);
+        hasChanged |= diffField(comments, AnalysisCommentField.DETAILS, details, null);
+        final boolean suppressionChanged = diffField(comments, AnalysisCommentField.SUPPRESSED, suppressed, false);
+        hasChanged |= suppressionChanged;
+        hasChanged |= diffField(comments, AnalysisCommentField.SEVERITY, severity, null);
+        hasChanged |= diffField(comments, AnalysisCommentField.CVSSV2_VECTOR, cvssV2Vector, null);
+        hasChanged |= diffField(comments, AnalysisCommentField.CVSSV2_SCORE, cvssV2Score, null);
+        hasChanged |= diffField(comments, AnalysisCommentField.CVSSV3_VECTOR, cvssV3Vector, null);
+        hasChanged |= diffField(comments, AnalysisCommentField.CVSSV3_SCORE, cvssV3Score, null);
+        hasChanged |= diffField(comments, AnalysisCommentField.CVSSV4_VECTOR, cvssV4Vector, null);
+        hasChanged |= diffField(comments, AnalysisCommentField.CVSSV4_SCORE, cvssV4Score, null);
+        hasChanged |= diffField(comments, AnalysisCommentField.OWASP_VECTOR, owaspVector, null);
+        hasChanged |= diffField(comments, AnalysisCommentField.OWASP_SCORE, owaspScore, null);
+
+        if (this.vulnPolicyId != null) {
+            hasChanged = true;
+        }
+
+        if (!hasChanged) {
+            return null;
+        }
+
+        final var command = new MakeAnalysisCommand(
+                this.projectId,
+                this.componentId,
+                this.vulnDbId,
+                null,
+                AnalysisState.NOT_SET,
+                AnalysisJustification.NOT_SET,
+                AnalysisResponse.NOT_SET,
+                null,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null);
+
+        comments.addFirst("No longer covered by any policy");
+
+        return new Result(
+                new FindingKey(componentId, vulnDbId),
+                command,
+                "[Policy{None}]",
+                comments,
+                analysisStateChanged,
+                suppressionChanged);
     }
 
     private static boolean diffField(

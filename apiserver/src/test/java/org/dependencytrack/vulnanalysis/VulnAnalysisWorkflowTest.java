@@ -32,6 +32,7 @@ import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.dex.testing.WorkflowTestExtension;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
+import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -66,6 +67,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -79,6 +81,7 @@ import static org.dependencytrack.dex.api.payload.PayloadConverters.voidConverte
 import static org.dependencytrack.notification.NotificationTestUtil.createCatchAllNotificationRule;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABILITY;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
@@ -764,6 +767,149 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
 
         qm.getPersistenceManager().evictAll();
         assertThat(qm.getAnalysis(component, vuln)).isNull();
+    }
+
+    @Test
+    void analysisThroughPolicyResetOnNoMatchTest() {
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setGroup("com.example");
+        component.setName("acme-lib");
+        component.setVersion("1.1.0");
+        component.setPurl("pkg:maven/com.example/acme-lib@1.1.0");
+        component.setProject(project);
+        qm.persist(component);
+
+        final var policyAnalysis = new VulnerabilityPolicyAnalysis();
+        policyAnalysis.setState(VulnerabilityPolicyAnalysis.State.FALSE_POSITIVE);
+        policyAnalysis.setJustification(VulnerabilityPolicyAnalysis.Justification.CODE_NOT_REACHABLE);
+        policyAnalysis.setVendorResponse(VulnerabilityPolicyAnalysis.Response.WILL_NOT_FIX);
+        policyAnalysis.setSuppress(true);
+        final var policy = new VulnerabilityPolicy();
+        policy.setName("Foo");
+        policy.setConditions(List.of("component.name == \"some-other-name\""));
+        policy.setAnalysis(policyAnalysis);
+        policy.setOperationMode(VulnerabilityPolicyOperation.APPLY);
+        withJdbiHandle(handle -> handle.attach(VulnerabilityPolicyDao.class).create(policy));
+
+        // Create vulnerability with existing analysis that was previously applied by the above policy,
+        // but is no longer current.
+        final var vulnA = new Vulnerability();
+        vulnA.setVulnId("CVE-100");
+        vulnA.setSource(Vulnerability.Source.NVD);
+        vulnA.setSeverity(Severity.CRITICAL);
+        qm.persist(vulnA);
+        qm.addVulnerability(vulnA, component, "internal");
+        final var analysisA = new Analysis();
+        analysisA.setComponent(component);
+        analysisA.setVulnerability(vulnA);
+        analysisA.setAnalysisState(AnalysisState.NOT_AFFECTED);
+        analysisA.setAnalysisJustification(AnalysisJustification.CODE_NOT_REACHABLE);
+        analysisA.setAnalysisResponse(AnalysisResponse.WILL_NOT_FIX);
+        analysisA.setAnalysisDetails("Because I say so.");
+        analysisA.setSeverity(Severity.MEDIUM);
+        analysisA.setCvssV2Vector("oldCvssV2Vector");
+        analysisA.setCvssV2Score(BigDecimal.valueOf(1.1));
+        analysisA.setCvssV3Vector("oldCvssV3Vector");
+        analysisA.setCvssV3Score(BigDecimal.valueOf(2.2));
+        analysisA.setOwaspVector("oldOwaspVector");
+        analysisA.setOwaspScore(BigDecimal.valueOf(3.3));
+        analysisA.setCvssV4Vector("oldCvssV4Vector");
+        analysisA.setCvssV4Score(BigDecimal.valueOf(4.4));
+        analysisA.setSuppressed(true);
+        qm.persist(analysisA);
+        useJdbiHandle(jdbiHandle -> jdbiHandle.createUpdate("""
+                        UPDATE
+                          "ANALYSIS"
+                        SET
+                          "VULNERABILITY_POLICY_ID" = (SELECT "ID" FROM "VULNERABILITY_POLICY" WHERE "NAME" = :vulnPolicyName)
+                        WHERE
+                          "ID" = :analysisId
+                        """)
+                .bind("vulnPolicyName", policy.getName())
+                .bind("analysisId", analysisA.getId())
+                .execute());
+
+        // Create another vulnerability with existing analysis that was manually applied.
+        final var vulnB = new Vulnerability();
+        vulnB.setVulnId("CVE-200");
+        vulnB.setSource(Vulnerability.Source.NVD);
+        vulnB.setSeverity(Severity.HIGH);
+        qm.persist(vulnB);
+        qm.addVulnerability(vulnB, component, "internal");
+        final var analysisB = new Analysis();
+        analysisB.setComponent(component);
+        analysisB.setVulnerability(vulnB);
+        analysisB.setAnalysisState(AnalysisState.NOT_AFFECTED);
+        qm.persist(analysisB);
+
+        // Ensure that CVE-100 and CVE-200 will still be reported.
+        final var vsVulnA = new VulnerableSoftware();
+        vsVulnA.setPurlType("maven");
+        vsVulnA.setPurlNamespace("com.example");
+        vsVulnA.setPurlName("acme-lib");
+        vsVulnA.setVersionStartIncluding("1.0.0");
+        vsVulnA.setVersionEndExcluding("2.0.0");
+        vsVulnA.setVulnerable(true);
+        vsVulnA.addVulnerability(vulnA);
+        qm.persist(vsVulnA);
+        final var vsB = new VulnerableSoftware();
+        vsB.setPurlType("maven");
+        vsB.setPurlNamespace("com.example");
+        vsB.setPurlName("acme-lib");
+        vsB.setVersionStartIncluding("1.0.0");
+        vsB.setVersionEndExcluding("2.0.0");
+        vsB.setVulnerable(true);
+        vsB.addVulnerability(vulnB);
+        qm.persist(vsB);
+
+        final UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        qm.getPersistenceManager().evictAll();
+
+        // The analysis that was previously applied via policy must have been reverted.
+        assertThat(qm.getAnalysis(component, vulnA)).satisfies(a -> {
+            assertThat(a.getAnalysisState()).isEqualTo(AnalysisState.NOT_SET);
+            assertThat(a.getVulnerabilityPolicyId()).isNull();
+            assertThat(a.isSuppressed()).isFalse();
+            assertThat(a.getAnalysisComments())
+                    .extracting(AnalysisComment::getCommenter)
+                    .containsOnly("[Policy{None}]");
+            assertThat(a.getAnalysisComments())
+                    .extracting(AnalysisComment::getComment)
+                    .containsExactlyInAnyOrder(
+                            "No longer covered by any policy",
+                            "Analysis: NOT_AFFECTED → NOT_SET",
+                            "Justification: CODE_NOT_REACHABLE → NOT_SET",
+                            "Vendor Response: WILL_NOT_FIX → NOT_SET",
+                            "Details: (None)",
+                            "Severity: MEDIUM → UNASSIGNED",
+                            "CVSSv2 Vector: oldCvssV2Vector → (None)",
+                            "CVSSv2 Score: 1.1 → (None)",
+                            "CVSSv3 Vector: oldCvssV3Vector → (None)",
+                            "CVSSv3 Score: 2.2 → (None)",
+                            "OWASP Vector: oldOwaspVector → (None)",
+                            "OWASP Score: 3.3 → (None)",
+                            "CVSSv4 Vector: oldCvssV4Vector → (None)",
+                            "CVSSv4 Score: 4.4 → (None)",
+                            "Unsuppressed");
+        });
+
+        // The manually applied analysis must not be touched.
+        assertThat(qm.getAnalysis(component, vulnB)).satisfies(a -> {
+            assertThat(a.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+            assertThat(a.getVulnerabilityPolicyId()).isNull();
+            assertThat(a.getAnalysisComments()).isEmpty();
+        });
     }
 
     private static void createPolicy(

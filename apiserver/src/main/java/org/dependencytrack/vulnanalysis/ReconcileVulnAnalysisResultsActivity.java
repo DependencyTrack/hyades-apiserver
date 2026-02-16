@@ -34,6 +34,7 @@ import org.dependencytrack.notification.JdbiNotificationEmitter;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.dependencytrack.parser.dependencytrack.BovModelConverter;
+import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.persistence.jdbi.AnalysisDao.Analysis;
 import org.dependencytrack.persistence.jdbi.AnalysisDao.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
@@ -426,7 +427,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             LOGGER.debug("Removed {} stale attribution(s)", attributionsDeleted);
 
             final List<Notification> auditChangeNotifications =
-                    applyVulnPolicyResults(handle, projectId, policyResults);
+                    applyVulnPolicyResults(handle, projectId, policyResults, vulnDbIdsByComponentId);
 
             // TODO: Clean this up.
             final var notifications = new ArrayList<>(auditChangeNotifications);
@@ -585,43 +586,67 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
     private List<Notification> applyVulnPolicyResults(
             Handle handle,
             long projectId,
-            Map<Long, Map<Long, VulnerabilityPolicy>> policyResults) {
-        if (policyResults.isEmpty()) {
-            return List.of();
-        }
+            Map<Long, Map<Long, VulnerabilityPolicy>> policyResults,
+            Map<Long, Set<Long>> activeFindings) {
+        final var analysisDao = new AnalysisDao(handle);
+        final var reconcileResults = new ArrayList<AnalysisReconciler.Result>();
 
-        final var analysisDao = new org.dependencytrack.persistence.jdbi.AnalysisDao(handle);
-
-        // Retrieve existing analyses for all findings for which we have applicable policy results.
-        final Set<FindingKey> findingKeys = policyResults.entrySet().stream()
+        // Collect finding keys that have applicable policy results.
+        final Set<FindingKey> policyFindingKeys = policyResults.entrySet().stream()
                 .flatMap(entry -> {
                     final long componentId = entry.getKey();
                     return entry.getValue().keySet().stream()
                             .map(vulnDbId -> new FindingKey(componentId, vulnDbId));
                 })
                 .collect(Collectors.toSet());
-        final Map<FindingKey, Analysis> existingAnalysisByFindingKey = analysisDao.getForFindings(projectId, findingKeys);
-        LOGGER.debug("Found {} existing analyses for {} finding(s)", existingAnalysisByFindingKey.size(), findingKeys.size());
 
-        // Reconcile the current state of analyses with the desired state as defined by policies.
-        final var reconcileResults = new ArrayList<AnalysisReconciler.Result>();
-        for (final var componentEntry : policyResults.entrySet()) {
-            final long componentId = componentEntry.getKey();
-            final Map<Long, VulnerabilityPolicy> policyByVulnDbId = componentEntry.getValue();
+        // Apply policies to findings that have matching policy results.
+        if (!policyFindingKeys.isEmpty()) {
+            final Map<FindingKey, Analysis> existingAnalysisByFindingKey =
+                    analysisDao.getForProjectFindings(projectId, policyFindingKeys);
+            LOGGER.debug("Found {} existing analyses for {} finding(s) with policy results",
+                    existingAnalysisByFindingKey.size(), policyFindingKeys.size());
 
-            for (final var vulnEntry : policyByVulnDbId.entrySet()) {
-                final long vulnDbId = vulnEntry.getKey();
-                final VulnerabilityPolicy policy = vulnEntry.getValue();
+            for (final var componentEntry : policyResults.entrySet()) {
+                final long componentId = componentEntry.getKey();
+                final Map<Long, VulnerabilityPolicy> policyByVulnDbId = componentEntry.getValue();
 
-                final var findingKey = new FindingKey(componentId, vulnDbId);
-                final Analysis existingAnalysis = existingAnalysisByFindingKey.get(findingKey);
-                LOGGER.debug("Reconciling analysis for {}", findingKey);
+                for (final var vulnEntry : policyByVulnDbId.entrySet()) {
+                    final long vulnDbId = vulnEntry.getKey();
+                    final VulnerabilityPolicy policy = vulnEntry.getValue();
 
-                final var analysisReconciler = new AnalysisReconciler(projectId, componentId, vulnDbId, existingAnalysis);
-                final AnalysisReconciler.Result reconcileResult = analysisReconciler.reconcile(policy);
-                if (reconcileResult != null) {
-                    reconcileResults.add(reconcileResult);
+                    final var findingKey = new FindingKey(componentId, vulnDbId);
+                    final Analysis existingAnalysis = existingAnalysisByFindingKey.get(findingKey);
+                    LOGGER.debug("Reconciling analysis for {}", findingKey);
+
+                    final var analysisReconciler = new AnalysisReconciler(projectId, componentId, vulnDbId, existingAnalysis);
+                    final AnalysisReconciler.Result reconcileResult = analysisReconciler.reconcile(policy);
+                    if (reconcileResult != null) {
+                        reconcileResults.add(reconcileResult);
+                    }
                 }
+            }
+        }
+
+        // Reset stale analyses that were previously applied by a policy,
+        // but whose corresponding finding no longer has a matching policy.
+        // This may happen when policies are removed, or their conditions are modified.
+        final Map<FindingKey, Analysis> staleAnalysisByFindingKey =
+                analysisDao.getForProjectWithPolicyApplied(projectId, policyFindingKeys);
+        for (final var entry : staleAnalysisByFindingKey.entrySet()) {
+            final FindingKey findingKey = entry.getKey();
+            final Analysis analysis = entry.getValue();
+
+            final Set<Long> activeVulnIds = activeFindings.get(findingKey.componentId());
+            if (activeVulnIds == null || !activeVulnIds.contains(findingKey.vulnDbId())) {
+                continue;
+            }
+
+            LOGGER.debug("Un-applying stale policy analysis for {}", findingKey);
+            final var reconciler = new AnalysisReconciler(projectId, findingKey.componentId(), findingKey.vulnDbId(), analysis);
+            final AnalysisReconciler.Result unapplyResult = reconciler.reconcileForNoPolicy();
+            if (unapplyResult != null) {
+                reconcileResults.add(unapplyResult);
             }
         }
 
@@ -639,7 +664,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         LOGGER.debug("Modified {} analysis record(s)", modifiedAnalysisIdByFindingKey.size());
 
         // Populate the audit trail for analyses that have actually changed.
-        final var createCommentCommands = new ArrayList<org.dependencytrack.persistence.jdbi.AnalysisDao.CreateCommentCommand>();
+        final var createCommentCommands = new ArrayList<AnalysisDao.CreateCommentCommand>();
         for (final var reconcileResult : reconcileResults) {
             final Long analysisId = modifiedAnalysisIdByFindingKey.get(reconcileResult.findingKey());
             if (analysisId != null) {
