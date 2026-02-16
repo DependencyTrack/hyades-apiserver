@@ -24,6 +24,8 @@ import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.FindingKey;
 import org.dependencytrack.model.Severity;
 import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.mapper.RowMapper;
+import org.jdbi.v3.core.statement.SqlStatements;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
@@ -40,6 +42,7 @@ public final class AnalysisDao {
 
     public record Analysis(
             long id,
+            @Nullable Long vulnPolicyId,
             @Nullable AnalysisState state,
             @Nullable AnalysisJustification justification,
             @Nullable AnalysisResponse response,
@@ -56,7 +59,36 @@ public final class AnalysisDao {
             @Nullable Double owaspScore) {
     }
 
-    public Map<FindingKey, Analysis> getForFindings(long projectId, Collection<FindingKey> findingKeys) {
+    private static final RowMapper<Map.Entry<FindingKey, Analysis>> FINDING_ANALYSIS_ROW_MAPPER =
+            (rs, ctx) -> Map.entry(
+                    new FindingKey(rs.getLong("COMPONENT_ID"), rs.getLong("VULNERABILITY_ID")),
+                    new Analysis(
+                            rs.getLong("ID"),
+                            rs.getObject("VULNERABILITY_POLICY_ID", Long.class),
+                            rs.getString("STATE") != null
+                                    ? AnalysisState.valueOf(rs.getString("STATE"))
+                                    : null,
+                            rs.getString("JUSTIFICATION") != null
+                                    ? AnalysisJustification.valueOf(rs.getString("JUSTIFICATION"))
+                                    : null,
+                            rs.getString("RESPONSE") != null
+                                    ? AnalysisResponse.valueOf(rs.getString("RESPONSE"))
+                                    : null,
+                            rs.getString("DETAILS"),
+                            rs.getBoolean("SUPPRESSED"),
+                            rs.getString("SEVERITY") != null
+                                    ? Severity.valueOf(rs.getString("SEVERITY"))
+                                    : null,
+                            rs.getString("CVSSV2VECTOR"),
+                            rs.getObject("CVSSV2SCORE", Double.class),
+                            rs.getString("CVSSV3VECTOR"),
+                            rs.getObject("CVSSV3SCORE", Double.class),
+                            rs.getString("CVSSV4VECTOR"),
+                            rs.getObject("CVSSV4SCORE", Double.class),
+                            rs.getString("OWASPVECTOR"),
+                            rs.getObject("OWASPSCORE", Double.class)));
+
+    public Map<FindingKey, Analysis> getForProjectFindings(long projectId, Collection<FindingKey> findingKeys) {
         if (findingKeys.isEmpty()) {
             return Map.of();
         }
@@ -74,9 +106,9 @@ public final class AnalysisDao {
         return handle
                 .createQuery("""
                         SELECT "ID"
-                             , "PROJECT_ID"
                              , "COMPONENT_ID"
                              , "VULNERABILITY_ID"
+                             , "VULNERABILITY_POLICY_ID"
                              , "STATE"
                              , "JUSTIFICATION"
                              , "RESPONSE"
@@ -99,32 +131,58 @@ public final class AnalysisDao {
                 .bind("projectId", projectId)
                 .bind("componentIds", componentIds)
                 .bind("vulnerabilityIds", vulnerabilityIds)
-                .map((rs, ctx) -> Map.entry(
-                        new FindingKey(rs.getLong("COMPONENT_ID"), rs.getLong("VULNERABILITY_ID")),
-                        new Analysis(
-                                rs.getLong("ID"),
-                                rs.getString("STATE") != null
-                                        ? AnalysisState.valueOf(rs.getString("STATE"))
-                                        : null,
-                                rs.getString("JUSTIFICATION") != null
-                                        ? AnalysisJustification.valueOf(rs.getString("JUSTIFICATION"))
-                                        : null,
-                                rs.getString("RESPONSE") != null
-                                        ? AnalysisResponse.valueOf(rs.getString("RESPONSE"))
-                                        : null,
-                                rs.getString("DETAILS"),
-                                rs.getBoolean("SUPPRESSED"),
-                                rs.getString("SEVERITY") != null
-                                        ? Severity.valueOf(rs.getString("SEVERITY"))
-                                        : null,
-                                rs.getString("CVSSV2VECTOR"),
-                                rs.getObject("CVSSV2SCORE", Double.class),
-                                rs.getString("CVSSV3VECTOR"),
-                                rs.getObject("CVSSV3SCORE", Double.class),
-                                rs.getString("CVSSV4VECTOR"),
-                                rs.getObject("CVSSV4SCORE", Double.class),
-                                rs.getString("OWASPVECTOR"),
-                                rs.getObject("OWASPSCORE", Double.class))))
+                .map(FINDING_ANALYSIS_ROW_MAPPER)
+                .stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    public Map<FindingKey, Analysis> getForProjectWithPolicyApplied(long projectId, Collection<FindingKey> excludeFindingKeys) {
+        final var excludeComponentIds = new long[excludeFindingKeys.size()];
+        final var excludeVulnIds = new long[excludeFindingKeys.size()];
+
+        int i = 0;
+        for (final FindingKey findingKey : excludeFindingKeys) {
+            excludeComponentIds[i] = findingKey.componentId();
+            excludeVulnIds[i] = findingKey.vulnDbId();
+            i++;
+        }
+
+        return handle
+                .createQuery("""
+                        SELECT "ID"
+                             , "COMPONENT_ID"
+                             , "VULNERABILITY_ID"
+                             , "VULNERABILITY_POLICY_ID"
+                             , "STATE"
+                             , "JUSTIFICATION"
+                             , "RESPONSE"
+                             , "DETAILS"
+                             , "SUPPRESSED"
+                             , "SEVERITY"
+                             , "CVSSV2VECTOR"
+                             , CAST("CVSSV2SCORE" AS DOUBLE PRECISION) AS "CVSSV2SCORE"
+                             , "CVSSV3VECTOR"
+                             , CAST("CVSSV3SCORE" AS DOUBLE PRECISION) AS "CVSSV3SCORE"
+                             , "CVSSV4VECTOR"
+                             , CAST("CVSSV4SCORE" AS DOUBLE PRECISION) AS "CVSSV4SCORE"
+                             , "OWASPVECTOR"
+                             , CAST("OWASPSCORE" AS DOUBLE PRECISION) AS "OWASPSCORE"
+                          FROM "ANALYSIS"
+                         WHERE "PROJECT_ID" = :projectId
+                           AND "VULNERABILITY_POLICY_ID" IS NOT NULL
+                        <#if hasExclusions>
+                           AND ("COMPONENT_ID", "VULNERABILITY_ID") NOT IN (
+                                 SELECT *
+                                   FROM UNNEST(:excludeComponentIds, :excludeVulnIds)
+                               )
+                        </#if>
+                        """)
+                .bind("projectId", projectId)
+                .bind("excludeComponentIds", excludeComponentIds)
+                .bind("excludeVulnIds", excludeVulnIds)
+                .define("hasExclusions", !excludeFindingKeys.isEmpty())
+                .configure(SqlStatements.class, cfg -> cfg.setUnusedBindingAllowed(true))
+                .map(FINDING_ANALYSIS_ROW_MAPPER)
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
