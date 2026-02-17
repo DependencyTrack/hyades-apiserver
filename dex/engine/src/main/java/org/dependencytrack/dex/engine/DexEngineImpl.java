@@ -1340,7 +1340,13 @@ final class DexEngineImpl implements DexEngine {
                                                 .build())
                                         .build()));
             } else {
-                final Duration retryDelay = getRetryDelay(retryPolicy, task.attempt() + 1);
+                final Duration retryAfter =
+                        event.exception() instanceof ApplicationFailureException afe
+                                ? afe.retryAfter()
+                                : null;
+                final Duration retryDelay = retryAfter == null
+                        ? getRetryDelay(retryPolicy, task.attempt() + 1)
+                        : retryAfter;
                 final Instant retryAt = event.timestamp().plus(retryDelay);
 
                 retriesToSchedule.add(
