@@ -23,6 +23,7 @@ import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityContext;
 import org.dependencytrack.dex.api.ActivitySpec;
+import org.dependencytrack.dex.api.failure.ApplicationFailureException;
 import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
@@ -120,8 +121,8 @@ public final class PublishNotificationActivity implements Activity<PublishNotifi
                 publisher.publish(publishCtx, notification);
             } catch (RuntimeException | IOException e) {
                 if (e instanceof final RetryablePublishException rpe) {
-                    LOGGER.debug("Failed to publish with retryable cause", e);
-                    throw rpe;
+                    throw new ApplicationFailureException(
+                            "Failed to publish notification with retryable cause", rpe, rpe.getRetryAfter());
                 }
 
                 throw new TerminalApplicationFailureException(

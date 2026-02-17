@@ -131,7 +131,7 @@ public final class WorkflowRunDao extends AbstractDao {
             // When no page token was provided (i.e., first page was requested),
             // determine the total number of records across all pages.
             // Since count queries are expensive, and the table is expected to
-            // hold a lot of records, only count up to 501 records.
+            // hold a lot of records, only count up to 5001 records.
             //
             // Note that this query must not contain the keyset pagination conditions
             // since that would cause it to report inaccurate results.
@@ -142,7 +142,7 @@ public final class WorkflowRunDao extends AbstractDao {
                         select 1
                           from dex_workflow_run
                          where ${whereConditions?join(" and ")}
-                         limit 501
+                         limit 5001
                       ) as t
                     """);
             final long totalCountValue = totalCountQuery
@@ -151,8 +151,8 @@ public final class WorkflowRunDao extends AbstractDao {
                     .mapTo(long.class)
                     .one();
             totalCount = new TotalCount(
-                    Math.min(totalCountValue, 500),
-                    totalCountValue > 500
+                    Math.min(totalCountValue, 5000),
+                    totalCountValue > 5000
                             ? TotalCount.Type.AT_LEAST
                             : TotalCount.Type.EXACT);
             sortBy = request.sortBy() == null
