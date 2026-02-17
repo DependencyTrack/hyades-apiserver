@@ -33,6 +33,7 @@
     <modules>
         <module>api</module>
         <module>provider-database</module>
+        <module>provider-memory</module>
     </modules>
 
     <properties>
