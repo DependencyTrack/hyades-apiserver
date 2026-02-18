@@ -18,8 +18,9 @@
  */
 package org.dependencytrack.vulnanalysis.ossindex;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.cyclonedx.proto.v1_6.Bom;
@@ -61,30 +62,22 @@ import java.util.Set;
 final class OssIndexVulnAnalyzer implements VulnAnalyzer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OssIndexVulnAnalyzer.class);
-    private static final int OSS_INDEX_BATCH_SIZE = 128;
+    private static final JavaType COMPONENT_REPORTS_TYPE =
+            TypeFactory.defaultInstance().constructCollectionType(List.class, ComponentReport.class);
+    private static final JavaType REPORTED_VULNS_TYPE =
+            TypeFactory.defaultInstance().constructCollectionType(List.class, ComponentReportVulnerability.class);
+    private static final int REQUEST_BATCH_SIZE = 128;
     private static final int CACHE_BATCH_SIZE = 500;
     private static final Set<String> SUPPORTED_PURL_TYPES = Set.of(
-            "cargo",
-            "cocoapods",
-            "composer",
-            "conan",
-            "conda",
-            "cran",
-            "gem",
-            "golang",
-            "maven",
-            "npm",
-            "nuget",
-            "pypi",
-            "rpm",
-            "swift");
+            "cargo", "cocoapods", "composer", "conan", "conda",
+            "cran", "gem", "golang", "maven", "npm", "nuget",
+            "pypi", "rpm", "swift");
 
     private final Cache resultsCache;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final URI apiUrl;
-    private final String username;
-    private final String apiToken;
+    private final String basicAuthCredentials;
 
     OssIndexVulnAnalyzer(
             Cache resultsCache,
@@ -97,114 +90,191 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
         this.apiUrl = apiUrl;
-        this.username = username;
-        this.apiToken = apiToken;
+        this.basicAuthCredentials = Base64.getEncoder().encodeToString(
+                "%s:%s".formatted(username, apiToken).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public Bom analyze(Bom bom) {
-        final var bomRefsByPurl = new LinkedHashMap<String, List<String>>();
+        final Map<String, Set<String>> bomRefsByPurl = collectAnalyzablePurls(bom);
+        if (bomRefsByPurl.isEmpty()) {
+            LOGGER.debug("No analyzable PURLs found; Skipping analysis");
+            return Bom.getDefaultInstance();
+        }
+
+        final var reportedVulnsByPurl = new HashMap<String, List<ComponentReportVulnerability>>(bomRefsByPurl.size());
+        final var purlsToAnalyze = new LinkedHashSet<>(bomRefsByPurl.keySet());
+
+        // Try to populate results from cache.
+        // Do so in batches as to not overwhelm cache providers.
+        for (final var purlBatch : partition(List.copyOf(bomRefsByPurl.keySet()), CACHE_BATCH_SIZE)) {
+            final Map<String, byte[]> cachedBytesByPurl = resultsCache.getMany(Set.copyOf(purlBatch));
+            LOGGER.debug("Found cached results for {}/{} PURLs", cachedBytesByPurl.size(), purlBatch.size());
+
+            for (final var entry : cachedBytesByPurl.entrySet()) {
+                final String purl = entry.getKey();
+                final byte[] cachedBytes = entry.getValue();
+
+                purlsToAnalyze.remove(purl);
+
+                if (cachedBytes == null) {
+                    continue;
+                }
+
+                try {
+                    reportedVulnsByPurl.put(purl, objectMapper.readValue(cachedBytes, REPORTED_VULNS_TYPE));
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to deserialize cached component report for PURL '{}'; Will re-fetch", purl, e);
+                    purlsToAnalyze.add(entry.getKey());
+                }
+            }
+        }
+
+        reportedVulnsByPurl.putAll(analyzePurls(purlsToAnalyze));
+
+        return assembleVdr(reportedVulnsByPurl, bomRefsByPurl);
+    }
+
+    private Map<String, Set<String>> collectAnalyzablePurls(Bom bom) {
+        final var bomRefsByPurl = new LinkedHashMap<String, Set<String>>();
 
         for (final Component component : bom.getComponentsList()) {
+            if (!component.hasBomRef() || !component.hasPurl()) {
+                continue;
+            }
             if (component.getPropertiesCount() > 0
                     && component.getPropertiesList().stream()
                     .map(Property::getName)
                     .anyMatch("dependencytrack:internal:is-internal-component"::equalsIgnoreCase)) {
                 continue;
             }
-            if (component.hasPurl()) {
-                try {
-                    final var purl = new PackageURL(component.getPurl());
-                    if (!SUPPORTED_PURL_TYPES.contains(purl.getType())) {
-                        continue;
-                    }
-
-                    bomRefsByPurl
-                            .computeIfAbsent(purl.getCoordinates(), k -> new ArrayList<>())
-                            .add(component.getBomRef());
-                } catch (MalformedPackageURLException e) {
-                    LOGGER.warn("Failed to parse purl '{}'; Skipping", component.getPurl(), e);
-                }
-            }
-        }
-
-        if (bomRefsByPurl.isEmpty()) {
-            LOGGER.debug("No analyzable PURLs found; Skipping analysis");
-            return Bom.getDefaultInstance();
-        }
-
-        final var componentReports = new ArrayList<ComponentReport>(bomRefsByPurl.size());
-        final var purlsToFetch = new LinkedHashSet<>(bomRefsByPurl.keySet());
-
-        for (final var batch : partition(List.copyOf(bomRefsByPurl.keySet()), CACHE_BATCH_SIZE)) {
-            final Map<String, byte @Nullable []> cachedBytes = resultsCache.getMany(Set.copyOf(batch));
-            for (final var entry : cachedBytes.entrySet()) {
-                purlsToFetch.remove(entry.getKey());
-
-                if (entry.getValue() == null) {
+            
+            try {
+                final var purl = new PackageURL(component.getPurl());
+                if (!SUPPORTED_PURL_TYPES.contains(purl.getType())) {
                     continue;
                 }
 
+                bomRefsByPurl
+                        .computeIfAbsent(purl.getCoordinates(), k -> new HashSet<>())
+                        .add(component.getBomRef());
+            } catch (MalformedPackageURLException e) {
+                LOGGER.warn("Failed to parse PURL '{}'; Skipping", component.getPurl(), e);
+            }
+        }
+
+        return bomRefsByPurl;
+    }
+
+    private Map<String, List<ComponentReportVulnerability>> analyzePurls(Collection<String> purls) {
+        if (purls.isEmpty()) {
+            return Map.of();
+        }
+
+        final var reportedVulnsByPurl = new HashMap<String, List<ComponentReportVulnerability>>(purls.size());
+
+        for (final var purlBatch : partition(List.copyOf(purls), REQUEST_BATCH_SIZE)) {
+            reportedVulnsByPurl.putAll(analyzePurlBatch(purlBatch));
+        }
+
+        return reportedVulnsByPurl;
+    }
+
+    private Map<String, List<ComponentReportVulnerability>> analyzePurlBatch(Collection<String> purlBatch) {
+        if (purlBatch.isEmpty()) {
+            return Map.of();
+        }
+
+        LOGGER.debug("Fetching component reports for {} PURLs", purlBatch.size());
+
+        final List<ComponentReport> batchReports;
+        try {
+            batchReports = getComponentReports(purlBatch);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to retrieve component report", e);
+        }
+
+        final var reportedVulnsByPurl = new HashMap<String, List<ComponentReportVulnerability>>(batchReports.size());
+        final var entriesToCache = new HashMap<String, byte @Nullable []>(purlBatch.size());
+
+        for (final var report : batchReports) {
+            if (report.vulnerabilities() != null && !report.vulnerabilities().isEmpty()) {
+                reportedVulnsByPurl.put(report.coordinates(), report.vulnerabilities());
                 try {
-                    componentReports.add(objectMapper.readValue(entry.getValue(), ComponentReport.class));
+                    entriesToCache.put(report.coordinates(), objectMapper.writeValueAsBytes(report.vulnerabilities()));
                 } catch (IOException e) {
-                    LOGGER.warn(
-                            "Failed to deserialize cached component report for coordinates '{}'; Will re-fetch",
-                            entry.getKey(), e);
-                    purlsToFetch.add(entry.getKey());
+                    LOGGER.warn("Failed to serialize component report for PURL '{}'; Skipping cache", report.coordinates(), e);
                 }
             }
         }
 
-        if (!purlsToFetch.isEmpty()) {
-            for (final var purlPartition : partition(List.copyOf(purlsToFetch), OSS_INDEX_BATCH_SIZE)) {
-                LOGGER.debug("Fetching component reports for {} coordinates", purlPartition.size());
-
-                final List<ComponentReport> batchReports;
-                try {
-                    batchReports = getComponentReports(purlPartition);
-                } catch (IOException e) {
-                    throw new UncheckedIOException("Failed to retrieve component report", e);
-                }
-
-                final var entriesToCache = new HashMap<String, byte @Nullable []>(purlPartition.size());
-                final var fetchedPurls = new HashSet<String>(batchReports.size());
-
-                for (final var report : batchReports) {
-                    fetchedPurls.add(report.coordinates());
-                    if (report.vulnerabilities() != null && !report.vulnerabilities().isEmpty()) {
-                        try {
-                            entriesToCache.put(report.coordinates(), objectMapper.writeValueAsBytes(report));
-                        } catch (IOException e) {
-                            LOGGER.warn("Failed to serialize component report for coordinates '{}'; Skipping cache",
-                                    report.coordinates(), e);
-                        }
-                    } else {
-                        entriesToCache.put(report.coordinates(), null);
-                    }
-                }
-
-                for (final String purl : purlPartition) {
-                    if (!fetchedPurls.contains(purl)) {
-                        entriesToCache.put(purl, null);
-                    }
-                }
-
-                resultsCache.putMany(entriesToCache);
-                componentReports.addAll(batchReports);
+        for (final String purl : purlBatch) {
+            if (!reportedVulnsByPurl.containsKey(purl)) {
+                entriesToCache.put(purl, null);
             }
         }
 
+        resultsCache.putMany(entriesToCache);
+        return reportedVulnsByPurl;
+    }
+
+    private List<ComponentReport> getComponentReports(Collection<String> coordinates) throws IOException {
+        if (coordinates.isEmpty()) {
+            return List.of();
+        }
+
+        final var requestBody = new ComponentReportRequest(coordinates);
+        final byte[] requestBytes = objectMapper.writeValueAsBytes(requestBody);
+
+        final var request = HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl + "/api/v3/component-report"))
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Basic " + basicAuthCredentials)
+                .timeout(Duration.ofSeconds(10))
+                .POST(BodyPublishers.ofByteArray(requestBytes))
+                .build();
+
+        final HttpResponse<InputStream> response;
+        try {
+            response = httpClient.send(request, BodyHandlers.ofInputStream());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Request interrupted", e);
+        }
+
+        try (final InputStream bodyInputStream = response.body()) {
+            if (response.statusCode() == 200) {
+                return objectMapper.readValue(bodyInputStream, COMPONENT_REPORTS_TYPE);
+            }
+
+            throw new IOException("OSS Index API request failed with status " + response.statusCode());
+        }
+    }
+
+    private Bom assembleVdr(
+            Map<String, List<ComponentReportVulnerability>> reportedVulnsByPurl,
+            Map<String, Set<String>> bomRefsByPurl) {
         final var vulnBuilderByVulnId = new HashMap<String, Vulnerability.Builder>();
 
-        for (final var componentReport : componentReports) {
-            for (final ComponentReportVulnerability reportedVuln : componentReport.vulnerabilities()) {
+        for (final var entry : reportedVulnsByPurl.entrySet()) {
+            final String purl = entry.getKey();
+            final List<ComponentReportVulnerability> reportedVulns = entry.getValue();
+
+            final Set<String> bomRefs = bomRefsByPurl.get(purl);
+            if (bomRefs == null) {
+                LOGGER.warn("""
+                        Received vulnerabilities for PURL '{}', but no component \
+                        with this PURL was submitted for analysis""", purl);
+                continue;
+            }
+
+            for (final var reportedVuln : reportedVulns) {
                 final Vulnerability.Builder vulnBuilder =
                         vulnBuilderByVulnId.computeIfAbsent(
                                 reportedVuln.id(),
                                 ignored -> OssIndexModelConverter.convert(reportedVuln));
 
-                final List<String> bomRefs = bomRefsByPurl.get(componentReport.coordinates());
                 for (final String bomRef : bomRefs) {
                     vulnBuilder.addAffects(
                             VulnerabilityAffects.newBuilder()
@@ -221,46 +291,6 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
                                 .map(Vulnerability.Builder::build)
                                 .toList())
                 .build();
-    }
-
-    List<ComponentReport> getComponentReports(Collection<String> coordinates) throws IOException {
-        if (coordinates.isEmpty()) {
-            return List.of();
-        }
-
-        final var requestBody = new ComponentReportRequest(coordinates);
-        final byte[] requestBytes = objectMapper.writeValueAsBytes(requestBody);
-
-        final var requestBuilder = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl + "/api/v3/component-report"))
-                .header("Accept", "application/json")
-                .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(10))
-                .POST(BodyPublishers.ofByteArray(requestBytes));
-
-        if (username != null && apiToken != null) {
-            final String credentials = username + ":" + apiToken;
-            final String encoded = Base64.getEncoder()
-                    .encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
-            requestBuilder.header("Authorization", "Basic " + encoded);
-        }
-
-        final HttpResponse<InputStream> response;
-        try {
-            response = httpClient.send(requestBuilder.build(), BodyHandlers.ofInputStream());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Request interrupted", e);
-        }
-
-        try (final InputStream bodyInputStream = response.body()) {
-            if (response.statusCode() == 200) {
-                return objectMapper.readValue(bodyInputStream, new TypeReference<>() {
-                });
-            }
-
-            throw new IOException("OSS Index API request failed with status " + response.statusCode());
-        }
     }
 
     private static <T> List<List<T>> partition(List<T> list, int batchSize) {
