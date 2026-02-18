@@ -40,6 +40,7 @@ import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.listener.DelayedBomProcessedNotificationEmitter;
 import org.dependencytrack.dex.listener.LegacyWorkflowStepCompleter;
+import org.dependencytrack.dex.listener.ProjectVulnAnalysisCompleteNotificationEmitter;
 import org.dependencytrack.notification.PublishNotificationActivity;
 import org.dependencytrack.notification.PublishNotificationWorkflow;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
@@ -227,6 +228,7 @@ public final class DexEngineInitializer implements ServletContextListener {
         }
 
         engine.addEventListener(new LegacyWorkflowStepCompleter());
+        engine.addEventListener(new ProjectVulnAnalysisCompleteNotificationEmitter());
         if (config
                 .getOptionalValue("tmp.delay.bom.processed.notification", boolean.class)
                 .orElse(false)) {
