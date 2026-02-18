@@ -53,7 +53,6 @@ import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
 import org.dependencytrack.notification.proto.v1.Notification;
@@ -272,7 +271,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     //vuln analysis has not been handled yet, so it will be in pending state
                     assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
-                    assertThat(state.getStartedAt()).isBefore(Date.from(Instant.now()));
+                    assertThat(state.getStartedAt()).isNull();
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
@@ -292,8 +291,6 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
-        var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
-        assertThat(workflowStatus.getStartedAt()).isNotNull();
     }
 
     @Test
@@ -360,7 +357,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     //vuln analysis has not been handled yet, so it will be in pending state
                     assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
-                    assertThat(state.getStartedAt()).isBefore(Date.from(Instant.now()));
+                    assertThat(state.getStartedAt()).isNull();
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
@@ -380,8 +377,6 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
-        var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
-        assertThat(workflowStatus.getStartedAt()).isNotNull();
     }
 
     @Test
@@ -1742,7 +1737,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     //vuln analysis has not been handled yet, so it will be in pending state
                     assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
                     assertThat(state.getStatus()).isEqualTo(PENDING);
-                    assertThat(state.getStartedAt()).isBefore(Date.from(Instant.now()));
+                    assertThat(state.getStartedAt()).isNull();
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 },
                 state -> {
@@ -1762,8 +1757,6 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                 }
         );
-        var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
-        assertThat(workflowStatus.getStartedAt()).isNotNull();
     }
 
     @Test
