@@ -38,6 +38,8 @@ import org.dependencytrack.dex.engine.api.DexEngineFactory;
 import org.dependencytrack.dex.engine.api.TaskType;
 import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
+import org.dependencytrack.dex.listener.DelayedBomProcessedNotificationEmitter;
+import org.dependencytrack.dex.listener.LegacyWorkflowStepCompleter;
 import org.dependencytrack.notification.PublishNotificationActivity;
 import org.dependencytrack.notification.PublishNotificationWorkflow;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
@@ -222,6 +224,13 @@ public final class DexEngineInitializer implements ServletContextListener {
             final TaskWorkerOptions workerOptions =
                     getTaskWorkerOptions(config, TaskType.ACTIVITY, workerName);
             engine.registerTaskWorker(workerOptions);
+        }
+
+        engine.addEventListener(new LegacyWorkflowStepCompleter());
+        if (config
+                .getOptionalValue("tmp.delay.bom.processed.notification", boolean.class)
+                .orElse(false)) {
+            engine.addEventListener(new DelayedBomProcessedNotificationEmitter());
         }
 
         LOGGER.info("Starting durable execution engine");
