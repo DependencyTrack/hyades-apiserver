@@ -64,7 +64,7 @@
         <dependency>
             <groupId>io.prometheus</groupId>
             <artifactId>prometheus-metrics-exporter-httpserver</artifactId>
-            <version>1.4.3</version>
+            <version>1.5.0</version>
         </dependency>
 
         <dependency>
