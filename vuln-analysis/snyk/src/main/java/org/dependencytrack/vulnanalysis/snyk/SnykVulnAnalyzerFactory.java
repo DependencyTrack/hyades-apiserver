@@ -18,14 +18,36 @@
  */
 package org.dependencytrack.vulnanalysis.snyk;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.RuntimeConfig;
+import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzerFactory;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzerRequirement;
+import org.jspecify.annotations.Nullable;
 
+import java.net.URI;
+import java.net.http.HttpClient;
 import java.util.EnumSet;
 
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
+import static java.util.Objects.requireNonNull;
+
+/**
+ * @since 5.7.0
+ */
 final class SnykVulnAnalyzerFactory implements VulnAnalyzerFactory {
+
+    private static final String DEFAULT_API_VERSION = "2025-11-05";
+
+    private @Nullable ConfigRegistry configRegistry;
+    private @Nullable CacheManager cacheManager;
+    private @Nullable HttpClient httpClient;
+    private @Nullable ObjectMapper objectMapper;
 
     @Override
     public String extensionName() {
@@ -39,21 +61,84 @@ final class SnykVulnAnalyzerFactory implements VulnAnalyzerFactory {
 
     @Override
     public void init(ExtensionContext ctx) {
+        configRegistry = ctx.configRegistry();
+        cacheManager = ctx.cacheManager();
+        httpClient = HttpClient.newBuilder()
+                .proxy(ctx.proxySelector())
+                .build();
+        objectMapper = new ObjectMapper()
+                .disable(FAIL_ON_UNKNOWN_PROPERTIES);
     }
 
     @Override
     public VulnAnalyzer create() {
-        return new SnykVulnAnalyzer();
+        requireNonNull(configRegistry);
+        requireNonNull(cacheManager);
+        requireNonNull(httpClient);
+        requireNonNull(objectMapper);
+
+        final var config = configRegistry.getRuntimeConfig(SnykVulnAnalyzerConfigV1.class);
+        if (!config.isEnabled()) {
+            throw new IllegalStateException("Analyzer is disabled");
+        }
+
+        final String apiVersion = configRegistry.getDeploymentConfig()
+                .getOptionalValue("api-version", String.class)
+                .orElse(DEFAULT_API_VERSION);
+
+        return new SnykVulnAnalyzer(
+                cacheManager.getCache("results"),
+                httpClient,
+                objectMapper,
+                config.getApiBaseUrl(),
+                config.getOrgId(),
+                config.getApiToken(),
+                apiVersion);
     }
 
     @Override
     public boolean isEnabled() {
-        return false;
+        requireNonNull(configRegistry);
+        return configRegistry.getRuntimeConfig(SnykVulnAnalyzerConfigV1.class).isEnabled();
     }
 
     @Override
     public EnumSet<VulnAnalyzerRequirement> analyzerRequirements() {
         return EnumSet.of(VulnAnalyzerRequirement.COMPONENT_PURL);
+    }
+
+    @Override
+    public RuntimeConfigSpec runtimeConfigSpec() {
+        return RuntimeConfigSpec.of(
+                new SnykVulnAnalyzerConfigV1()
+                        .withEnabled(false)
+                        .withApiBaseUrl(URI.create("https://api.snyk.io")),
+                config -> {
+                    if (!config.isEnabled()) {
+                        return;
+                    }
+                    if (config.getApiBaseUrl() == null) {
+                        throw new IllegalStateException("No API base URL provided");
+                    }
+                    if (config.getOrgId() == null) {
+                        throw new IllegalStateException("No organization ID provided");
+                    }
+                    if (config.getApiToken() == null) {
+                        throw new IllegalStateException("No API token provided");
+                    }
+                });
+    }
+
+    @Override
+    public ExtensionTestResult test(@Nullable RuntimeConfig runtimeConfig) {
+        return VulnAnalyzerFactory.super.test(runtimeConfig);
+    }
+
+    @Override
+    public void close() {
+        if (httpClient != null) {
+            httpClient.close();
+        }
     }
 
 }
