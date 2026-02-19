@@ -114,7 +114,7 @@ public class FindingAttribution implements Serializable {
         this.analyzerIdentity = analyzerIdentity;
         this.attributedOn = new Date();
         this.alternateIdentifier = alternateIdentifier;
-        this.referenceUrl = maybeTrimUrl(referenceUrl);
+        this.referenceUrl = referenceUrl;
     }
 
     public long getId() {
@@ -179,7 +179,7 @@ public class FindingAttribution implements Serializable {
     }
 
     public void setReferenceUrl(String referenceUrl) {
-        this.referenceUrl = maybeTrimUrl(referenceUrl);
+        this.referenceUrl = referenceUrl;
     }
 
     public Date getDeletedAt() {
@@ -190,16 +190,4 @@ public class FindingAttribution implements Serializable {
         this.deletedAt = deletedAt;
     }
 
-    private static String maybeTrimUrl(final String url) {
-        if (url == null || url.length() <= 255) {
-            return url;
-        }
-
-        final String[] parts = url.split("\\?", 2);
-        if (parts.length == 2 && parts[0].length() <= 255) {
-            return parts[0];
-        }
-
-        return parts[0].substring(0, 255);
-    }
 }

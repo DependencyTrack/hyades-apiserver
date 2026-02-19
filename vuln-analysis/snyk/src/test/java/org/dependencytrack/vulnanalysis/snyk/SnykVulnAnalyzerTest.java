@@ -178,6 +178,10 @@ class SnykVulnAnalyzerTest {
                         {
                           "name": "dependency-track:vuln:title",
                           "value": "Denial of Service (DoS)"
+                        },
+                        {
+                          "name": "dependency-track:vuln:reference-url",
+                          "value": "https://security.snyk.io/vuln/SNYK-JAVA-COMFASTERXMLJACKSONCORE-3038426"
                         }
                       ],
                       "references": [

@@ -20,6 +20,7 @@ package org.dependencytrack.vulnanalysis;
 
 import org.dependencytrack.model.FindingKey;
 import org.jdbi.v3.core.Handle;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
@@ -97,6 +98,7 @@ final class FindingDao {
         final var componentIds = new long[commands.size()];
         final var projectIds = new long[commands.size()];
         final var analyzerIdentities = new String[commands.size()];
+        final var referenceUrls = new String[commands.size()];
 
         int i = 0;
         for (final CreateAttributionCommand command : commands) {
@@ -104,6 +106,7 @@ final class FindingDao {
             componentIds[i] = command.componentId();
             projectIds[i] = command.projectId();
             analyzerIdentities[i] = command.analyzerName();
+            referenceUrls[i] = command.referenceUrl();
             i++;
         }
 
@@ -115,26 +118,30 @@ final class FindingDao {
                         , "PROJECT_ID"
                         , "ANALYZERIDENTITY"
                         , "ATTRIBUTED_ON"
+                        , "REFERENCE_URL"
                         )
                         SELECT vuln_id
                              , component_id
                              , project_id
                              , analyzer_identity
                              , NOW()
-                          FROM UNNEST(:vulnIds, :componentIds, :projectIds, :analyzerIdentities)
-                            AS t(vuln_id, component_id, project_id, analyzer_identity)
+                             , reference_url
+                          FROM UNNEST(:vulnIds, :componentIds, :projectIds, :analyzerIdentities, :referenceUrls)
+                            AS t(vuln_id, component_id, project_id, analyzer_identity, reference_url)
                          ORDER BY vuln_id
                                 , component_id
                                 , analyzer_identity
                         ON CONFLICT ("VULNERABILITY_ID", "COMPONENT_ID", "ANALYZERIDENTITY") DO UPDATE
                         SET "ATTRIBUTED_ON" = EXCLUDED."ATTRIBUTED_ON"
                           , "DELETED_AT" = NULL
+                          , "REFERENCE_URL" = EXCLUDED."REFERENCE_URL"
                         WHERE fa."DELETED_AT" IS NOT NULL
                         """)
                 .bind("vulnIds", vulnIds)
                 .bind("componentIds", componentIds)
                 .bind("projectIds", projectIds)
                 .bind("analyzerIdentities", analyzerIdentities)
+                .bind("referenceUrls", referenceUrls)
                 .execute();
     }
 
@@ -165,7 +172,8 @@ final class FindingDao {
             long vulnDbId,
             long componentId,
             long projectId,
-            String analyzerName) {
+            String analyzerName,
+            @Nullable String referenceUrl) {
     }
 
 }

@@ -876,4 +876,12 @@
         -->
         <dropTable tableName="VULNERABILITYSCAN"/>
     </changeSet>
+
+    <changeSet id="v5.7.0-45" author="nscuro">
+        <!--
+            Remove the length constraint from FINDINGATTRIBUTION's REFERENCE_URL
+            column, to accommodate long URLs such as those generated from OSS Index.
+        -->
+        <modifyDataType tableName="FINDINGATTRIBUTION" columnName="REFERENCE_URL" newDataType="TEXT"/>
+    </changeSet>
 </databaseChangeLog>

@@ -85,6 +85,12 @@ final class SnykModelConverter {
                             .build());
         }
 
+        vulnBuilder.addProperties(
+                Property.newBuilder()
+                        .setName("dependency-track:vuln:reference-url")
+                        .setValue("https://security.snyk.io/vuln/" + vulnId)
+                        .build());
+
         if (attrs.description() != null) {
             vulnBuilder.setDescription(attrs.description());
         }
