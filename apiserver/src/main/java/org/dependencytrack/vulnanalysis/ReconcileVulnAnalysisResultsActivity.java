@@ -84,6 +84,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
     private static final Logger LOGGER = LoggerFactory.getLogger(ReconcileVulnAnalysisResultsActivity.class);
 
     private static final String INTERNAL_VULN_ID_PROPERTY = "dependencytrack:internal:vulnerability-id";
+    private static final String REFERENCE_URL_PROPERTY = "dependency-track:vuln:reference-url";
 
     private final PluginManager pluginManager;
     private final VulnerabilityPolicyEvaluator vulnPolicyEvaluator;
@@ -183,6 +184,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             final var vulnIdAndSource = new VulnIdAndSource(vdrVuln.getId(), source);
 
             final Long internalVulnId = extractInternalVulnId(vdrVuln);
+            final String referenceUrl = extractReferenceUrl(vdrVuln);
 
             vulnDetails.merge(
                     vulnIdAndSource,
@@ -205,7 +207,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             for (final VulnerabilityAffects affects : vdrVuln.getAffectsList()) {
                 try {
                     final long componentId = Long.parseLong(affects.getRef());
-                    findings.add(new ReportedFinding(componentId, vulnIdAndSource, analyzerName));
+                    findings.add(new ReportedFinding(componentId, vulnIdAndSource, analyzerName, referenceUrl));
                 } catch (NumberFormatException e) {
                     LOGGER.warn(
                             "Encountered invalid BOM ref '{}' for vulnerability '{}'",
@@ -225,6 +227,17 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                 } catch (NumberFormatException e) {
                     LOGGER.warn("Invalid internal vulnerability ID: {}", prop.getValue());
                 }
+            }
+        }
+
+        return null;
+    }
+
+    private static @Nullable String extractReferenceUrl(Vulnerability vuln) {
+        for (final Property prop : vuln.getPropertiesList()) {
+            if (REFERENCE_URL_PROPERTY.equals(prop.getName())
+                    && (prop.getValue().startsWith("http://") || prop.getValue().startsWith("https://"))) {
+                return prop.getValue();
             }
         }
 
@@ -379,7 +392,8 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                                 vulnDbId,
                                 reportedFinding.componentId(),
                                 projectId,
-                                reportedFinding.analyzerName()));
+                                reportedFinding.analyzerName(),
+                                reportedFinding.referenceUrl()));
             }
         }
 
@@ -716,7 +730,8 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
     private record ReportedFinding(
             long componentId,
             VulnIdAndSource vulnIdAndSource,
-            String analyzerName) {
+            String analyzerName,
+            @Nullable String referenceUrl) {
     }
 
     private record ReportedVulnerability(

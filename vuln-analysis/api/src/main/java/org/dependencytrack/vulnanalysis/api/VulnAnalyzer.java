@@ -99,6 +99,33 @@ public interface VulnAnalyzer extends ExtensionPoint {
      *   ]
      * }
      * }</pre>
+     * <p>
+     * Vulnerabilities MAY include a {@code dependency-track:vuln:reference-url} property,
+     * containing a URL that links to the analyzer-specific advisory or issue page for the
+     * vulnerability. Example:
+     * <pre>{@code
+     * {
+     *   "vulnerabilities": [
+     *     {
+     *       "id": "CVE-2024-1234",
+     *       "source": {
+     *         "name": "NVD"
+     *       },
+     *       "properties": [
+     *         {
+     *           "name": "dependency-track:vuln:reference-url",
+     *           "value": "https://security.snyk.io/vuln/SNYK-JAVA-EXAMPLE-1234"
+     *         }
+     *       ],
+     *       "affects": [
+     *         {
+     *           "ref": "cd72ef49-93b2-4452-b81e-1a9249fce4b5"
+     *         }
+     *       ]
+     *     }
+     *   ]
+     * }
+     * }</pre>
      *
      * @param bom the CycloneDX BOM to analyze.
      * @return A CycloneDX VDR containing discovered vulnerabilities.

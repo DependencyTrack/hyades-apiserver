@@ -81,6 +81,14 @@ final class OssIndexModelConverter {
                             .build());
         }
 
+        if (reportedVuln.reference() != null) {
+            vulnBuilder.addProperties(
+                    Property.newBuilder()
+                            .setName("dependency-track:vuln:reference-url")
+                            .setValue(reportedVuln.reference())
+                            .build());
+        }
+
         if (reportedVuln.description() != null) {
             vulnBuilder.setDescription(reportedVuln.description());
         }

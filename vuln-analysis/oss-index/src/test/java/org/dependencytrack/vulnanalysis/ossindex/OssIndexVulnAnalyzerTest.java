@@ -175,6 +175,10 @@ class OssIndexVulnAnalyzerTest {
                         {
                           "name":"dependency-track:vuln:title",
                           "value": "[CVE-2020-36518] CWE-787: Out-of-bounds Write"
+                        },
+                        {
+                          "name": "dependency-track:vuln:reference-url",
+                          "value": "https://ossindex.sonatype.org/vulnerability/CVE-2020-36518?component-type=maven&component-name=com.fasterxml.jackson.core%2Fjackson-databind&utm_source=mozilla&utm_medium=integration&utm_content=5.0"
                         }
                       ]
                     }
