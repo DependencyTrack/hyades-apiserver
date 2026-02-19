@@ -23,6 +23,8 @@ import org.dependencytrack.plugin.api.ExtensionFactory;
 import java.util.EnumSet;
 
 /**
+ * An {@link ExtensionFactory} for creating {@link VulnAnalyzer} instances.
+ *
  * @since 5.7.0
  */
 public interface VulnAnalyzerFactory extends ExtensionFactory<VulnAnalyzer> {
@@ -32,8 +34,26 @@ public interface VulnAnalyzerFactory extends ExtensionFactory<VulnAnalyzer> {
         return 0;
     }
 
+    /**
+     * @return Whether the analyzer is enabled.
+     */
     boolean isEnabled();
 
+    /**
+     * Declares which component data the analyzer needs to perform its analysis.
+     * <p>
+     * For example, an analyzer that queries the NVD by CPE would return
+     * {@link VulnAnalyzerRequirement#COMPONENT_CPE}.
+     * <p>
+     * Requirements are aggregated across all enabled analyzers. The resulting BOM passed to
+     * {@link VulnAnalyzer#analyze(org.cyclonedx.proto.v1_6.Bom)} may thus contain more
+     * data than any single analyzer requested. Requirements are satisfied on a best-effort basis,
+     * and components provided to analyzers may lack the requested fields.
+     * <p>
+     * Note that group, name, and version is always provided for all components.
+     *
+     * @return Requirements for this analyzer.
+     */
     EnumSet<VulnAnalyzerRequirement> analyzerRequirements();
 
 }
