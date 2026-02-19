@@ -363,21 +363,30 @@ public interface AdvisoryDao extends PaginationSupport {
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-            
-            SELECT "COMPONENT"."NAME" AS "name"
-               , "MATCHING_PERCENTAGE" AS "confidence"
-               , "DESCRIPTION" AS "desc"
-               , "GROUP" AS "group"
-               , "COMPONENT"."VERSION" AS "version"
-               , "COMPONENT"."UUID" AS "componentUuid"
-            FROM "FINDINGATTRIBUTION"
-            INNER JOIN "COMPONENT" ON "FINDINGATTRIBUTION"."COMPONENT_ID" = "COMPONENT"."ID"
-            INNER JOIN "ADVISORIES_VULNERABILITIES"
-              ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
-            INNER JOIN "ADVISORY" ON "ADVISORIES_VULNERABILITIES"."ADVISORY_ID" = "ADVISORY"."ID"
-            WHERE "FINDINGATTRIBUTION"."PROJECT_ID" = :projectId
-            AND "ADVISORY_ID" = :advisoryId
-            
+            SELECT c."NAME" AS "name"
+                 , fa."MATCHING_PERCENTAGE" AS "confidence"
+                 , c."DESCRIPTION" AS "desc"
+                 , c."GROUP" AS "group"
+                 , c."VERSION" AS "version"
+                 , c."UUID" AS "componentUuid"
+              FROM "COMPONENTS_VULNERABILITIES" AS cv
+             INNER JOIN "COMPONENT" AS c
+                ON cv."COMPONENT_ID" = c."ID"
+             INNER JOIN "ADVISORIES_VULNERABILITIES" AS av
+                ON cv."VULNERABILITY_ID" = av."VULNERABILITY_ID"
+             INNER JOIN "ADVISORY" AS a
+                ON av."ADVISORY_ID" = a."ID"
+              INNER JOIN LATERAL (
+                SELECT "MATCHING_PERCENTAGE"
+                  FROM "FINDINGATTRIBUTION" AS fa
+                 WHERE fa."COMPONENT_ID" = cv."COMPONENT_ID"
+                   AND fa."VULNERABILITY_ID" = cv."VULNERABILITY_ID"
+                   AND fa."DELETED_AT" IS NULL
+                 ORDER BY fa."ID"
+                 LIMIT 1
+              ) AS fa ON TRUE
+             WHERE c."PROJECT_ID" = :projectId
+               AND a."ID" = :advisoryId
              ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(ProjectAdvisoryFindingRow.class)

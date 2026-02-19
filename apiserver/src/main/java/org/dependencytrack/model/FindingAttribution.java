@@ -41,7 +41,7 @@ import java.util.Date;
  * @since 4.0.0
  */
 @PersistenceCapable
-@Index(name = "FINDINGATTRIBUTION_COMPOUND_IDX", members = {"component", "vulnerability"})
+@Index(name = "FINDINGATTRIBUTION_COMPOUND_IDX", members = {"component", "vulnerability", "analyzerIdentity"}, unique = "true")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class FindingAttribution implements Serializable {
 
