@@ -24,15 +24,10 @@ import org.dependencytrack.dex.api.ActivitySpec;
 import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
-import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * @since 5.7.0
@@ -42,10 +37,10 @@ public final class DeleteFilesActivity implements Activity<DeleteFilesArgument, 
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DeleteFilesActivity.class);
 
-    private final PluginManager pluginManager;
+    private final FileStorage fileStorage;
 
-    public DeleteFilesActivity(PluginManager pluginManager) {
-        this.pluginManager = pluginManager;
+    public DeleteFilesActivity(FileStorage fileStorage) {
+        this.fileStorage = fileStorage;
     }
 
     @Override
@@ -59,19 +54,10 @@ public final class DeleteFilesActivity implements Activity<DeleteFilesArgument, 
             return null;
         }
 
-        final Map<String, List<FileMetadata>> fileMetadataByProvider =
-                argument.getFileMetadataList().stream()
-                        .collect(Collectors.groupingBy(FileMetadata::getProviderName));
-
-        for (final String providerName : fileMetadataByProvider.keySet()) {
-            try (final var fileStorage = pluginManager.getExtension(FileStorage.class, providerName)) {
-
-                // TODO: Call fileStorage#deleteMany here once available.
-                for (final FileMetadata fileMetadata : fileMetadataByProvider.get(providerName)) {
-                    LOGGER.debug("Deleting file {}", fileMetadata.getLocation());
-                    fileStorage.delete(fileMetadata);
-                }
-            }
+        // TODO: Call fileStorage#deleteMany here once available.
+        for (final FileMetadata fileMetadata : argument.getFileMetadataList()) {
+            LOGGER.debug("Deleting file {}", fileMetadata.getLocation());
+            fileStorage.delete(fileMetadata);
         }
 
         return null;

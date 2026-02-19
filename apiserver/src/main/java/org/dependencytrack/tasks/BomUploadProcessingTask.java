@@ -57,7 +57,6 @@ import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
-import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.json.JSONArray;
 import org.slf4j.MDC;
@@ -154,15 +153,15 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(BomUploadProcessingTask.class);
 
-    private final PluginManager pluginManager;
+    private final FileStorage fileStorage;
     private final KafkaEventDispatcher kafkaEventDispatcher;
     private final boolean delayBomProcessedNotification;
 
     public BomUploadProcessingTask(
-            PluginManager pluginManager,
+            FileStorage fileStorage,
             KafkaEventDispatcher kafkaEventDispatcher,
             boolean delayBomProcessedNotification) {
-        this.pluginManager = pluginManager;
+        this.fileStorage = fileStorage;
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.delayBomProcessedNotification = delayBomProcessedNotification;
     }
@@ -179,8 +178,7 @@ public class BomUploadProcessingTask implements Subscriber {
         try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, ctx.project.getUuid().toString());
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
-             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString());
-             var fileStorage = pluginManager.getExtension(FileStorage.class, event.getFileMetadata().getProviderName())) {
+             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString())) {
             final byte[] cdxBomBytes;
             try (final InputStream cdxBomStream = fileStorage.get(event.getFileMetadata())) {
                 cdxBomBytes = cdxBomStream.readAllBytes();

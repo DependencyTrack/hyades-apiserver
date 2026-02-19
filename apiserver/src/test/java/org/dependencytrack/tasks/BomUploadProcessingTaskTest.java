@@ -20,7 +20,6 @@ package org.dependencytrack.tasks;
 
 import alpine.model.IConfigProperty.PropertyType;
 import com.github.packageurl.PackageURL;
-import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
@@ -36,12 +35,11 @@ import org.cyclonedx.proto.v1_6.OrganizationalEntity;
 import org.cyclonedx.proto.v1_6.Service;
 import org.cyclonedx.proto.v1_6.Tool;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.filestorage.api.FileStorage;
-import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
+import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
@@ -60,7 +58,6 @@ import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
-import org.dependencytrack.plugin.PluginManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -114,19 +111,13 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransactio
 
 class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
-    private PluginManager pluginManager;
+    private FileStorage fileStorage;
     private BomUploadProcessingTask task;
 
     @BeforeEach
     void beforeEach() {
-        pluginManager = new PluginManager(
-                new SmallRyeConfigBuilder().build(),
-                new NoopCacheManager(),
-                secretName -> null,
-                List.of(FileStorage.class));
-        pluginManager.loadPlugins(List.of(new MemoryFileStoragePlugin()));
-
-        task = new BomUploadProcessingTask(pluginManager, new KafkaEventDispatcher(), false);
+        fileStorage = new MemoryFileStorage();
+        task = new BomUploadProcessingTask(fileStorage, new KafkaEventDispatcher(), false);
 
         // Enable processing of CycloneDX BOMs
         qm.createConfigProperty(
@@ -638,7 +629,8 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(repoMetaAnalysisCommandsSent).isEqualTo(9056);
     }
 
-    @Test // https://github.com/DependencyTrack/dependency-track/issues/2519
+    @Test
+        // https://github.com/DependencyTrack/dependency-track/issues/2519
     void informIssue2519Test() throws Exception {
         final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -656,7 +648,8 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         }
     }
 
-    @Test // https://github.com/DependencyTrack/dependency-track/issues/2859
+    @Test
+        // https://github.com/DependencyTrack/dependency-track/issues/2859
     void informIssue2859Test() {
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -711,7 +704,8 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         });
     }
 
-    @Test // https://github.com/DependencyTrack/dependency-track/issues/1905
+    @Test
+        // https://github.com/DependencyTrack/dependency-track/issues/1905
     void informIssue1905Test() throws Exception {
         final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -816,7 +810,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-1.xml"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
-        new BomUploadProcessingTask(pluginManager, new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
+        new BomUploadProcessingTask(fileStorage, new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 // BOM_PROCESSED notification should not have been sent.
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED));
@@ -832,7 +826,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-empty.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
-        new BomUploadProcessingTask(pluginManager, new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
+        new BomUploadProcessingTask(fileStorage, new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
         assertBomProcessedNotification();
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
@@ -973,7 +967,8 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         });
     }
 
-    @Test // https://github.com/DependencyTrack/dependency-track/issues/3433
+    @Test
+        // https://github.com/DependencyTrack/dependency-track/issues/3433
     void informIssue3433Test() throws Exception {
         final var license = new License();
         license.setLicenseId("GPL-3.0-or-later");
@@ -1017,7 +1012,8 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         });
     }
 
-    @Test // https://github.com/DependencyTrack/dependency-track/issues/3498
+    @Test
+        // https://github.com/DependencyTrack/dependency-track/issues/3498
     void informUpdateExistingLicenseTest() throws Exception {
         final var existingLicense = new License();
         existingLicense.setLicenseId("GPL-3.0-or-later");
@@ -1107,7 +1103,8 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
     }
 
-    @Test // https://github.com/DependencyTrack/dependency-track/issues/3498
+    @Test
+        // https://github.com/DependencyTrack/dependency-track/issues/3498
     void informDeleteExistingLicenseTest() throws Exception {
         final var existingLicense = new License();
         existingLicense.setLicenseId("GPL-3.0-or-later");
@@ -1391,7 +1388,8 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         });
     }
 
-    @Test // https://github.com/DependencyTrack/dependency-track/issues/3957
+    @Test
+        // https://github.com/DependencyTrack/dependency-track/issues/3957
     void informIssue3957Test() throws Exception {
         final var licenseA = new License();
         licenseA.setLicenseId("GPL-1.0");
@@ -1952,8 +1950,7 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     private FileMetadata storeBomFile(final String testFileName) throws Exception {
         final Path bomFilePath = Paths.get(resourceToURL("/unit/" + testFileName).toURI());
 
-        try (final var fileInputStream = Files.newInputStream(bomFilePath);
-             final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
+        try (final var fileInputStream = Files.newInputStream(bomFilePath)) {
             return fileStorage.store(
                     "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()),
                     fileInputStream);
@@ -1961,11 +1958,9 @@ class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     }
 
     private FileMetadata storeBomFile(final byte[] bomBytes) throws Exception {
-        try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
-            return fileStorage.store(
-                    "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()),
-                    new ByteArrayInputStream(bomBytes));
-        }
+        return fileStorage.store(
+                "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()),
+                new ByteArrayInputStream(bomBytes));
     }
 
     private FileMetadata createTempBomProtoFile() throws Exception {

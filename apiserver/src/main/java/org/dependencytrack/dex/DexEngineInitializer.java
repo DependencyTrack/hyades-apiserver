@@ -38,6 +38,7 @@ import org.dependencytrack.dex.engine.api.DexEngineFactory;
 import org.dependencytrack.dex.engine.api.TaskType;
 import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
+import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.notification.PublishNotificationActivity;
 import org.dependencytrack.notification.PublishNotificationWorkflow;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
@@ -105,11 +106,14 @@ public final class DexEngineInitializer implements ServletContextListener {
         final var healthCheckRegistry = (HealthCheckRegistry) servletContext.getAttribute(HealthCheckRegistry.class.getName());
         requireNonNull(healthCheckRegistry, "healthCheckRegistry has not been initialized");
 
+        final var fileStorage = (FileStorage) servletContext.getAttribute(FileStorage.class.getName());
+        requireNonNull(fileStorage, "fileStorage has not been initialized");
+
         final var pluginManager = (PluginManager) servletContext.getAttribute(PluginManager.class.getName());
         requireNonNull(pluginManager, "pluginManager has not been initialized");
 
         final var secretManager = (SecretManager) servletContext.getAttribute(SecretManager.class.getName());
-        requireNonNull(pluginManager, "secretManager has not been initialized");
+        requireNonNull(secretManager, "secretManager has not been initialized");
 
         final var templateRendererFactory = new PebbleNotificationTemplateRendererFactory(
                 Map.of("baseUrl", () -> withJdbiHandle(
@@ -138,7 +142,7 @@ public final class DexEngineInitializer implements ServletContextListener {
                 Duration.ofMinutes(1));
 
         engine.registerActivity(
-                new DeleteFilesActivity(pluginManager),
+                new DeleteFilesActivity(fileStorage),
                 protoConverter(DeleteFilesArgument.class),
                 voidConverter(),
                 Duration.ofMinutes(1));
@@ -155,6 +159,7 @@ public final class DexEngineInitializer implements ServletContextListener {
         engine.registerActivity(
                 new PublishNotificationActivity(
                         pluginManager,
+                        fileStorage,
                         secretManager::getSecretValue,
                         templateRendererFactory),
                 protoConverter(PublishNotificationActivityArg.class),

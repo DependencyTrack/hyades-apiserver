@@ -67,15 +67,18 @@ public final class PublishNotificationActivity implements Activity<PublishNotifi
     private static final Logger LOGGER = LoggerFactory.getLogger(PublishNotificationActivity.class);
 
     private final PluginManager pluginManager;
+    private final FileStorage fileStorage;
     private final RuntimeConfigMapper configMapper;
     private final Function<String, @Nullable String> secretResolver;
     private final PebbleNotificationTemplateRendererFactory notificationTemplateRendererFactory;
 
     public PublishNotificationActivity(
             PluginManager pluginManager,
+            FileStorage fileStorage,
             Function<String, @Nullable String> secretResolver,
             PebbleNotificationTemplateRendererFactory notificationTemplateRendererFactory) {
         this.pluginManager = pluginManager;
+        this.fileStorage = fileStorage;
         this.configMapper = RuntimeConfigMapper.getInstance();
         this.secretResolver = secretResolver;
         this.notificationTemplateRendererFactory = notificationTemplateRendererFactory;
@@ -172,11 +175,8 @@ public final class PublishNotificationActivity implements Activity<PublishNotifi
             final FileMetadata fileMetadata = argument.getNotificationFileMetadata();
             LOGGER.debug("Retrieving notification from {}", fileMetadata.getLocation());
 
-            try (final var fileStorage = pluginManager.getExtension(FileStorage.class, fileMetadata.getProviderName());
-                 final InputStream fileInputStream = fileStorage.get(argument.getNotificationFileMetadata())) {
+            try (final InputStream fileInputStream = fileStorage.get(argument.getNotificationFileMetadata())) {
                 return Notification.parseFrom(fileInputStream);
-            } catch (NoSuchExtensionException e) {
-                throw new TerminalApplicationFailureException(e);
             } catch (FileNotFoundException e) {
                 throw new TerminalApplicationFailureException("Notification file not found", e);
             } catch (IOException e) {
