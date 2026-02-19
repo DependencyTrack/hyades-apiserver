@@ -32,7 +32,7 @@ import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.dex.testing.WorkflowTestExtension;
 import org.dependencytrack.filestorage.api.FileStorage;
-import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
+import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
@@ -69,6 +69,7 @@ class PublishNotificationWorkflowTest extends PersistenceCapableTest {
             new WorkflowTestExtension(postgresContainer);
 
     private PluginManager pluginManager;
+    private FileStorage fileStorage;
 
     @BeforeEach
     void beforeEach() {
@@ -76,10 +77,11 @@ class PublishNotificationWorkflowTest extends PersistenceCapableTest {
                 new SmallRyeConfigBuilder().build(),
                 new NoopCacheManager(),
                 secretName -> null,
-                List.of(FileStorage.class, NotificationPublisher.class));
+                List.of(NotificationPublisher.class));
         pluginManager.loadPlugins(List.of(
-                new MemoryFileStoragePlugin(),
                 new DefaultNotificationPublishersPlugin()));
+
+        fileStorage = new MemoryFileStorage();
 
         final DexEngine engine = workflowTest.getEngine();
 
@@ -91,13 +93,14 @@ class PublishNotificationWorkflowTest extends PersistenceCapableTest {
         engine.registerActivity(
                 new PublishNotificationActivity(
                         pluginManager,
+                        fileStorage,
                         secretName -> null,
                         new PebbleNotificationTemplateRendererFactory(Collections.emptyMap())),
                 protoConverter(PublishNotificationActivityArg.class),
                 voidConverter(),
                 Duration.ofSeconds(15));
         engine.registerActivity(
-                new DeleteFilesActivity(pluginManager),
+                new DeleteFilesActivity(fileStorage),
                 protoConverter(DeleteFilesArgument.class),
                 voidConverter(),
                 Duration.ofSeconds(15));
@@ -215,13 +218,10 @@ class PublishNotificationWorkflowTest extends PersistenceCapableTest {
 
         final NotificationRule rule = createRule("console");
 
-        final FileMetadata fileMetadata;
-        try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
-            fileMetadata = fileStorage.store(
-                    "notification-%s.bin".formatted(notification.getId()),
-                    "application/protobuf",
-                    new ByteArrayInputStream(notification.toByteArray()));
-        }
+        final FileMetadata fileMetadata = fileStorage.store(
+                "notification-%s.bin".formatted(notification.getId()),
+                "application/protobuf",
+                new ByteArrayInputStream(notification.toByteArray()));
 
         final var argument = PublishNotificationWorkflowArg.newBuilder()
                 .setNotificationId(notification.getId())
@@ -237,10 +237,8 @@ class PublishNotificationWorkflowTest extends PersistenceCapableTest {
         assertThat(run).isNotNull();
         assertThat(run.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
 
-        try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
-            assertThatExceptionOfType(java.nio.file.NoSuchFileException.class)
-                    .isThrownBy(() -> fileStorage.get(fileMetadata));
-        }
+        assertThatExceptionOfType(java.nio.file.NoSuchFileException.class)
+                .isThrownBy(() -> fileStorage.get(fileMetadata));
     }
 
 

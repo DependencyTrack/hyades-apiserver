@@ -161,17 +161,17 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>file-storage-local</artifactId>
+            <artifactId>file-storage-provider-local</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>file-storage-memory</artifactId>
+            <artifactId>file-storage-provider-memory</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>file-storage-s3</artifactId>
+            <artifactId>file-storage-provider-s3</artifactId>
             <version>${project.version}</version>
         </dependency>
 

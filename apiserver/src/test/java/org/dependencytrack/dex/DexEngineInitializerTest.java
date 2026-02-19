@@ -27,6 +27,8 @@ import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.migration.MigrationExecutor;
+import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.secret.TestSecretManager;
 import org.dependencytrack.secret.management.SecretManager;
@@ -94,6 +96,8 @@ class DexEngineInitializerTest {
         final var servletContextMock = mock(ServletContext.class);
         doReturn(healthCheckRegistry)
                 .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
+        doReturn(new MemoryFileStorage())
+                .when(servletContextMock).getAttribute(eq(FileStorage.class.getName()));
         doReturn(new PluginManager(config, new NoopCacheManager(), secretManager::getSecretValue, Collections.emptyList()))
                 .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
         doReturn(secretManager)

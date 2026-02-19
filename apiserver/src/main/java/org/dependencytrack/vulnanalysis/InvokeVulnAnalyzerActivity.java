@@ -54,9 +54,11 @@ public final class InvokeVulnAnalyzerActivity implements Activity<InvokeVulnAnal
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InvokeVulnAnalyzerActivity.class);
 
+    private final FileStorage fileStorage;
     private final PluginManager pluginManager;
 
-    public InvokeVulnAnalyzerActivity(PluginManager pluginManager) {
+    public InvokeVulnAnalyzerActivity(FileStorage fileStorage, PluginManager pluginManager) {
+        this.fileStorage = fileStorage;
         this.pluginManager = pluginManager;
     }
 
@@ -100,8 +102,7 @@ public final class InvokeVulnAnalyzerActivity implements Activity<InvokeVulnAnal
     }
 
     private Bom getBom(FileMetadata fileMetadata) throws IOException {
-        try (final var fileStorage = pluginManager.getExtension(FileStorage.class, fileMetadata.getProviderName());
-             final InputStream bomInputStream = fileStorage.get(fileMetadata)) {
+        try (final InputStream bomInputStream = fileStorage.get(fileMetadata)) {
             return Bom.parseFrom(bomInputStream);
         } catch (FileNotFoundException | NoSuchExtensionException e) {
             throw new TerminalApplicationFailureException(e);
@@ -119,12 +120,10 @@ public final class InvokeVulnAnalyzerActivity implements Activity<InvokeVulnAnal
     }
 
     private FileMetadata storeVdr(ActivityContext ctx, String analyzerName, Bom vdr) throws IOException {
-        try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
-            return fileStorage.store(
-                    "vuln-analysis/%s/vdr_%s.proto".formatted(ctx.workflowRunId(), analyzerName),
-                    "application/protobuf",
-                    new ByteArrayInputStream(vdr.toByteArray()));
-        }
+        return fileStorage.store(
+                "vuln-analysis/%s/vdr_%s.proto".formatted(ctx.workflowRunId(), analyzerName),
+                "application/protobuf",
+                new ByteArrayInputStream(vdr.toByteArray()));
     }
 
 }

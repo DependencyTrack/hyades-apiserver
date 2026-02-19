@@ -88,12 +88,15 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
     private static final String INTERNAL_VULN_ID_PROPERTY = "dependencytrack:internal:vulnerability-id";
     private static final String REFERENCE_URL_PROPERTY = "dependency-track:vuln:reference-url";
 
+    private final FileStorage fileStorage;
     private final PluginManager pluginManager;
     private final VulnerabilityPolicyEvaluator vulnPolicyEvaluator;
 
     public ReconcileVulnAnalysisResultsActivity(
+            FileStorage fileStorage,
             PluginManager pluginManager,
             VulnerabilityPolicyEvaluator vulnPolicyEvaluator) {
+        this.fileStorage = fileStorage;
         this.pluginManager = pluginManager;
         this.vulnPolicyEvaluator = vulnPolicyEvaluator;
     }
@@ -134,9 +137,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                     }
 
                     final Bom vdr;
-                    try (final var fileStorage = pluginManager.getExtension(
-                            FileStorage.class, result.getVdrFileMetadata().getProviderName());
-                         final InputStream vdrInputStream = fileStorage.get(result.getVdrFileMetadata())) {
+                    try (final InputStream vdrInputStream = fileStorage.get(result.getVdrFileMetadata())) {
                         vdr = Bom.parseFrom(vdrInputStream);
                     } catch (FileNotFoundException e) {
                         LOGGER.warn("Could not find VDR file from analyzer; Considering it to have failed", e);
@@ -486,9 +487,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
     private List<Long> readNewComponentIds(
             org.dependencytrack.filestorage.proto.v1.FileMetadata contextFileMetadata) {
-        try (final var fileStorage = pluginManager.getExtension(
-                FileStorage.class, contextFileMetadata.getProviderName());
-             final InputStream inputStream = fileStorage.get(contextFileMetadata)) {
+        try (final InputStream inputStream = fileStorage.get(contextFileMetadata)) {
             final VulnAnalysisWorkflowContext context = VulnAnalysisWorkflowContext.parseFrom(inputStream);
             return context.getNewComponentIdsList();
         } catch (Exception e) {

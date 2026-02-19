@@ -56,7 +56,6 @@ import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
-import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
 import org.dependencytrack.util.InternalComponentIdentifier;
@@ -159,17 +158,17 @@ public class BomUploadProcessingTask implements Subscriber {
     private static final Logger LOGGER = Logger.getLogger(BomUploadProcessingTask.class);
 
     private final DexEngine dexEngine;
-    private final PluginManager pluginManager;
+    private final FileStorage fileStorage;
     private final KafkaEventDispatcher kafkaEventDispatcher;
     private final boolean delayBomProcessedNotification;
 
     public BomUploadProcessingTask(
             DexEngine dexEngine,
-            PluginManager pluginManager,
+            FileStorage fileStorage,
             KafkaEventDispatcher kafkaEventDispatcher,
             boolean delayBomProcessedNotification) {
         this.dexEngine = dexEngine;
-        this.pluginManager = pluginManager;
+        this.fileStorage = fileStorage;
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.delayBomProcessedNotification = delayBomProcessedNotification;
     }
@@ -186,8 +185,7 @@ public class BomUploadProcessingTask implements Subscriber {
         try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, ctx.project.getUuid().toString());
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
-             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString());
-             var fileStorage = pluginManager.getExtension(FileStorage.class, event.getFileMetadata().getProviderName())) {
+             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString())) {
             final byte[] cdxBomBytes;
             try (final InputStream cdxBomStream = fileStorage.get(event.getFileMetadata())) {
                 cdxBomBytes = cdxBomStream.readAllBytes();
@@ -1138,7 +1136,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 .addAllNewComponentIds(newComponentIds)
                 .build();
 
-        try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
+        try {
             return fileStorage.store(
                     "vuln-analysis/context/%s.proto".formatted(ctx.token),
                     "application/protobuf",

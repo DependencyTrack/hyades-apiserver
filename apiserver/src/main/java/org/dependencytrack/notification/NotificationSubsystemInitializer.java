@@ -23,7 +23,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.dex.engine.api.DexEngine;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.filestorage.api.FileStorage;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jspecify.annotations.Nullable;
@@ -51,16 +51,16 @@ public final class NotificationSubsystemInitializer implements ServletContextLis
 
         final ServletContext servletContext = event.getServletContext();
 
-        final var pluginManager = (PluginManager) servletContext.getAttribute(PluginManager.class.getName());
-        requireNonNull(pluginManager, "pluginManager has not been initialized");
+        final var fileStorage = (FileStorage) servletContext.getAttribute(FileStorage.class.getName());
+        requireNonNull(fileStorage, "fileStorage has not been initialized");
 
         final var dexEngine = (DexEngine) servletContext.getAttribute(DexEngine.class.getName());
-        requireNonNull(pluginManager, "dexEngine has not been initialized");
+        requireNonNull(dexEngine, "dexEngine has not been initialized");
 
         LOGGER.info("Starting outbox relay");
         relay = new NotificationOutboxRelay(
                 dexEngine,
-                pluginManager,
+                fileStorage,
                 handle -> new NotificationRouter(handle, Metrics.globalRegistry),
                 Metrics.globalRegistry,
                 config.getValue("notification.outbox-relay.poll-interval-ms", long.class),

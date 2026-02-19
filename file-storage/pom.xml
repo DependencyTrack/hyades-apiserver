@@ -32,9 +32,9 @@
 
     <modules>
         <module>api</module>
-        <module>local</module>
-        <module>memory</module>
-        <module>s3</module>
+        <module>provider-local</module>
+        <module>provider-memory</module>
+        <module>provider-s3</module>
     </modules>
 
     <properties>

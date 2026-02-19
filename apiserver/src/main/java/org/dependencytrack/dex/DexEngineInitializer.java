@@ -41,6 +41,7 @@ import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.listener.DelayedBomProcessedNotificationEmitter;
 import org.dependencytrack.dex.listener.LegacyWorkflowStepCompleter;
 import org.dependencytrack.dex.listener.ProjectVulnAnalysisCompleteNotificationEmitter;
+import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.notification.PublishNotificationActivity;
 import org.dependencytrack.notification.PublishNotificationWorkflow;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
@@ -119,11 +120,14 @@ public final class DexEngineInitializer implements ServletContextListener {
         final var healthCheckRegistry = (HealthCheckRegistry) servletContext.getAttribute(HealthCheckRegistry.class.getName());
         requireNonNull(healthCheckRegistry, "healthCheckRegistry has not been initialized");
 
+        final var fileStorage = (FileStorage) servletContext.getAttribute(FileStorage.class.getName());
+        requireNonNull(fileStorage, "fileStorage has not been initialized");
+
         final var pluginManager = (PluginManager) servletContext.getAttribute(PluginManager.class.getName());
         requireNonNull(pluginManager, "pluginManager has not been initialized");
 
         final var secretManager = (SecretManager) servletContext.getAttribute(SecretManager.class.getName());
-        requireNonNull(pluginManager, "secretManager has not been initialized");
+        requireNonNull(secretManager, "secretManager has not been initialized");
 
         final var templateRendererFactory = new PebbleNotificationTemplateRendererFactory(
                 Map.of("baseUrl", () -> withJdbiHandle(
@@ -157,7 +161,7 @@ public final class DexEngineInitializer implements ServletContextListener {
                 Duration.ofMinutes(1));
 
         engine.registerActivity(
-                new DeleteFilesActivity(pluginManager),
+                new DeleteFilesActivity(fileStorage),
                 protoConverter(DeleteFilesArgument.class),
                 voidConverter(),
                 Duration.ofMinutes(1));
@@ -172,18 +176,19 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(5));
         engine.registerActivity(
-                new InvokeVulnAnalyzerActivity(pluginManager),
+                new InvokeVulnAnalyzerActivity(fileStorage, pluginManager),
                 protoConverter(InvokeVulnAnalyzerArg.class),
                 protoConverter(InvokeVulnAnalyzerRes.class),
                 Duration.ofMinutes(5));
         engine.registerActivity(
-                new PrepareVulnAnalysisActivity(pluginManager),
+                new PrepareVulnAnalysisActivity(fileStorage, pluginManager),
                 protoConverter(PrepareVulnAnalysisArg.class),
                 protoConverter(PrepareVulnAnalysisRes.class),
                 Duration.ofMinutes(5));
         engine.registerActivity(
                 new PublishNotificationActivity(
                         pluginManager,
+                        fileStorage,
                         secretManager::getSecretValue,
                         templateRendererFactory),
                 protoConverter(PublishNotificationActivityArg.class),
@@ -191,6 +196,7 @@ public final class DexEngineInitializer implements ServletContextListener {
                 Duration.ofMinutes(1));
         engine.registerActivity(
                 new ReconcileVulnAnalysisResultsActivity(
+                        fileStorage,
                         pluginManager,
                         new CelVulnerabilityPolicyEvaluator()),
                 protoConverter(ReconcileVulnAnalysisResultsArg.class),

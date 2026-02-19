@@ -72,7 +72,6 @@ import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
@@ -120,7 +119,7 @@ public class BomResource extends AbstractApiResource {
     private static final Logger LOGGER = Logger.getLogger(BomResource.class);
 
     @Inject
-    private PluginManager pluginManager;
+    private FileStorage fileStorage;
 
     @GET
     @Path("/cyclonedx/project/{uuid}")
@@ -618,11 +617,9 @@ public class BomResource extends AbstractApiResource {
         //   * application/x.vnd.cyclonedx+protobuf
         //  Consider also attaching the detected version, i.e. application/vnd.cyclonedx+xml; version=1.6
         //  See https://cyclonedx.org/specification/overview/ -> Media Types.
-        try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
-            return fileStorage.store(
-                    "bom-upload/%s_%s".formatted(Instant.now().toEpochMilli(), project.getUuid()),
-                    new ByteArrayInputStream(bomBytes));
-        }
+        return fileStorage.store(
+                "bom-upload/%s_%s".formatted(Instant.now().toEpochMilli(), project.getUuid()),
+                new ByteArrayInputStream(bomBytes));
     }
 
     static void validate(

@@ -63,9 +63,11 @@ public final class PrepareVulnAnalysisActivity implements Activity<PrepareVulnAn
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PrepareVulnAnalysisActivity.class);
 
+    private final FileStorage fileStorage;
     private final PluginManager pluginManager;
 
-    public PrepareVulnAnalysisActivity(PluginManager pluginManager) {
+    public PrepareVulnAnalysisActivity(FileStorage fileStorage, PluginManager pluginManager) {
+        this.fileStorage = fileStorage;
         this.pluginManager = pluginManager;
     }
 
@@ -184,7 +186,7 @@ public final class PrepareVulnAnalysisActivity implements Activity<PrepareVulnAn
     }
 
     private FileMetadata storeBom(ActivityContext ctx, Bom bom) throws IOException {
-        try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
+        try {
             return fileStorage.store(
                     "vuln-analysis/%s/bom.proto".formatted(ctx.workflowRunId()),
                     "application/protobuf",

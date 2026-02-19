@@ -25,6 +25,8 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.plugin.PluginManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -60,6 +62,8 @@ class EventSubsystemInitializerTest {
 
         doReturn(dexEngineMock)
                 .when(servletContextMock).getAttribute(eq(DexEngine.class.getName()));
+        doReturn(new MemoryFileStorage())
+                .when(servletContextMock).getAttribute(eq(FileStorage.class.getName()));
         doReturn(pluginManager)
                 .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
 

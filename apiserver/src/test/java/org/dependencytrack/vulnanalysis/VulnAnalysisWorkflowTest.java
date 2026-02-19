@@ -31,7 +31,7 @@ import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.dex.testing.WorkflowTestExtension;
 import org.dependencytrack.filestorage.api.FileStorage;
-import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
+import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
@@ -94,11 +94,14 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
     private final WorkflowTestExtension workflowTest
             = new WorkflowTestExtension(postgresContainer);
 
+    private FileStorage fileStorage;
     private PluginManager pluginManager;
 
     @BeforeEach
     void beforeEach() {
         createCatchAllNotificationRule(qm, NotificationScope.PORTFOLIO);
+
+        fileStorage = new MemoryFileStorage();
 
         pluginManager = new PluginManager(
                 new SmallRyeConfigBuilder()
@@ -106,10 +109,8 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
                         .build(),
                 new NoopCacheManager(),
                 secretName -> null,
-                List.of(FileStorage.class, VulnAnalyzer.class));
-        pluginManager.loadPlugins(List.of(
-                new MemoryFileStoragePlugin(),
-                new InternalVulnAnalyzerPlugin()));
+                List.of(VulnAnalyzer.class));
+        pluginManager.loadPlugins(List.of(new InternalVulnAnalyzerPlugin()));
 
         final DexEngine engine = workflowTest.getEngine();
 
@@ -119,22 +120,23 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
                 voidConverter(),
                 Duration.ofSeconds(5));
         engine.registerActivity(
-                new DeleteFilesActivity(pluginManager),
+                new DeleteFilesActivity(fileStorage),
                 protoConverter(DeleteFilesArgument.class),
                 voidConverter(),
                 Duration.ofSeconds(5));
         engine.registerActivity(
-                new InvokeVulnAnalyzerActivity(pluginManager),
+                new InvokeVulnAnalyzerActivity(fileStorage, pluginManager),
                 protoConverter(InvokeVulnAnalyzerArg.class),
                 protoConverter(InvokeVulnAnalyzerRes.class),
                 Duration.ofSeconds(5));
         engine.registerActivity(
-                new PrepareVulnAnalysisActivity(pluginManager),
+                new PrepareVulnAnalysisActivity(fileStorage, pluginManager),
                 protoConverter(PrepareVulnAnalysisArg.class),
                 protoConverter(PrepareVulnAnalysisRes.class),
                 Duration.ofSeconds(5));
         engine.registerActivity(
                 new ReconcileVulnAnalysisResultsActivity(
+                        fileStorage,
                         pluginManager,
                         new CelVulnerabilityPolicyEvaluator()),
                 protoConverter(ReconcileVulnAnalysisResultsArg.class),
@@ -241,16 +243,13 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         component.setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.9.8");
         qm.persist(component);
 
-        final FileMetadata contextFileMetadata;
-        try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
-            final var context = VulnAnalysisWorkflowContext.newBuilder()
-                    .addNewComponentIds(component.getId())
-                    .build();
-            contextFileMetadata = fileStorage.store(
-                    "vuln-analysis/context/test.proto",
-                    "application/protobuf",
-                    new ByteArrayInputStream(context.toByteArray()));
-        }
+        final var context = VulnAnalysisWorkflowContext.newBuilder()
+                .addNewComponentIds(component.getId())
+                .build();
+        final FileMetadata contextFileMetadata = fileStorage.store(
+                "vuln-analysis/context/test.proto",
+                "application/protobuf",
+                new ByteArrayInputStream(context.toByteArray()));
 
         final UUID runId = workflowTest.getEngine().createRun(
                 new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)

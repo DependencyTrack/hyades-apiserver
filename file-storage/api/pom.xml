@@ -36,14 +36,14 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>plugin-api</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.jspecify</groupId>
-            <artifactId>jspecify</artifactId>
+            <groupId>org.eclipse.microprofile.config</groupId>
+            <artifactId>microprofile-config-api</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
