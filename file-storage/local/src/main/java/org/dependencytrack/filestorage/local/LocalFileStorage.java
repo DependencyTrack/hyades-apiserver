@@ -28,8 +28,12 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
+import java.nio.file.DirectoryNotEmptyException;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.DigestOutputStream;
@@ -65,10 +69,6 @@ final class LocalFileStorage implements FileStorage {
         if (Files.isDirectory(filePath)) {
             throw new IOException("Path %s exists, but is a directory".formatted(fileName));
         }
-        if (!Files.exists(filePath.getParent())) {
-            LOGGER.debug("Creating parent directories of {}", filePath);
-            Files.createDirectories(filePath.getParent());
-        }
 
         final Path relativeFilePath = baseDirPath.relativize(filePath);
         final URI locationUri = URI.create("%s:///%s".formatted(EXTENSION_NAME, relativeFilePath));
@@ -80,7 +80,7 @@ final class LocalFileStorage implements FileStorage {
             throw new IllegalStateException(e);
         }
 
-        try (final var fileOutputStream = Files.newOutputStream(filePath);
+        try (final var fileOutputStream = openOutputStream(filePath);
              final var bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
              final var digestOutputStream = new DigestOutputStream(bufferedOutputStream, messageDigest);
              final var zstdOutputStream = new ZstdOutputStream(digestOutputStream, compressionLevel)) {
@@ -110,7 +110,44 @@ final class LocalFileStorage implements FileStorage {
 
         final Path filePath = resolveFilePath(fileMetadata);
 
-        return Files.deleteIfExists(filePath);
+        final boolean deleted = Files.deleteIfExists(filePath);
+        if (deleted) {
+            deleteEmptyParentDirectories(filePath.getParent());
+        }
+
+        return deleted;
+    }
+
+    private OutputStream openOutputStream(Path filePath) throws IOException {
+        // Concurrent directory cleanup from delete() can race with directory creation
+        // and file open, causing various FileSystemExceptions. Retry a bounded number
+        // of times to handle these transient race conditions.
+        final int maxAttempts = 3;
+        for (int attempt = 1; ; attempt++) {
+            try {
+                Files.createDirectories(filePath.getParent());
+                return Files.newOutputStream(filePath);
+            } catch (FileSystemException e) {
+                if (attempt >= maxAttempts) {
+                    throw e;
+                }
+            }
+        }
+    }
+
+    private void deleteEmptyParentDirectories(Path dirPath) {
+        while (dirPath != null && dirPath.startsWith(baseDirPath) && !dirPath.equals(baseDirPath)) {
+            try {
+                Files.delete(dirPath);
+            } catch (DirectoryNotEmptyException | NoSuchFileException e) {
+                break;
+            } catch (IOException e) {
+                LOGGER.warn("Failed to delete empty directory {}", dirPath, e);
+                break;
+            }
+
+            dirPath = dirPath.getParent();
+        }
     }
 
     private Path resolveFilePath(final String filePath) {
