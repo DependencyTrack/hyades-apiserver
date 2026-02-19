@@ -21,7 +21,6 @@ package org.dependencytrack.plugin;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.cache.api.CacheManager;
-import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.plugin.api.Plugin;
 import org.dependencytrack.secret.management.SecretManager;
@@ -68,7 +67,6 @@ public class PluginInitializer implements ServletContextListener {
         requireNonNull(secretManager, "secretManager has not been initialized");
 
         final var extensionPoints = List.of(
-                FileStorage.class,
                 NotificationPublisher.class,
                 VulnDataSource.class);
 

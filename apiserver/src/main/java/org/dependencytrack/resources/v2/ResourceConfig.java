@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.ext.ContextResolver;
 import org.dependencytrack.cache.CacheManagerBinder;
 import org.dependencytrack.dex.DexEngineBinder;
+import org.dependencytrack.filestorage.FileStorageBinder;
 import org.dependencytrack.filters.JerseyMetricsApplicationEventListener;
 import org.dependencytrack.plugin.PluginManagerBinder;
 import org.dependencytrack.secret.SecretManagerBinder;
@@ -75,6 +76,7 @@ public final class ResourceConfig extends org.glassfish.jersey.server.ResourceCo
 
         register(CacheManagerBinder.class);
         register(DexEngineBinder.class);
+        register(FileStorageBinder.class);
         register(PluginManagerBinder.class);
         register(SecretManagerBinder.class);
     }

@@ -34,7 +34,6 @@ import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.persistence.jdbi.NotificationOutboxDao;
-import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
 import org.jdbi.v3.core.Handle;
 import org.jspecify.annotations.Nullable;
@@ -77,7 +76,7 @@ final class NotificationOutboxRelay implements Closeable {
     private static final String OUTCOME_METER_TAG_NAME = "outcome";
 
     private final DexEngine dexEngine;
-    private final PluginManager pluginManager;
+    private final FileStorage fileStorage;
     private final Function<Handle, NotificationRouter> routerFactory;
     private final MeterRegistry meterRegistry;
     private final long pollIntervalMillis;
@@ -94,14 +93,14 @@ final class NotificationOutboxRelay implements Closeable {
 
     public NotificationOutboxRelay(
             DexEngine dexEngine,
-            PluginManager pluginManager,
+            FileStorage fileStorage,
             Function<Handle, NotificationRouter> routerFactory,
             MeterRegistry meterRegistry,
             long pollIntervalMillis,
             int batchSize,
             int largeNotificationThresholdBytes) {
         this.dexEngine = requireNonNull(dexEngine, "dexEngine must not be null");
-        this.pluginManager = requireNonNull(pluginManager, "pluginManager must not be null");
+        this.fileStorage = requireNonNull(fileStorage, "fileStorage must not be null");
         this.routerFactory = requireNonNull(routerFactory, "routerFactory must not be null");
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry must not be null");
         if (pollIntervalMillis <= 0) {
@@ -305,7 +304,7 @@ final class NotificationOutboxRelay implements Closeable {
                             notification.getSerializedSize(),
                             largeNotificationThresholdBytes);
 
-                    try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
+                    try {
                         final FileMetadata fileMetadata = fileStorage.store(
                                 "notifications/%s.proto".formatted(notification.getId()),
                                 "application/protobuf",

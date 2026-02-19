@@ -32,6 +32,7 @@ import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityScanMaintenanceEvent;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
+import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.CallbackTask;
@@ -104,13 +105,16 @@ public class EventSubsystemInitializer implements ServletContextListener {
 
         final var kafkaEventDispatcher = new KafkaEventDispatcher();
 
+        final var fileStorage = (FileStorage) event.getServletContext().getAttribute(FileStorage.class.getName());
+        requireNonNull(fileStorage, "fileStorage has not been initialized");
+
         final var pluginManager = (PluginManager) event.getServletContext().getAttribute(PluginManager.class.getName());
         requireNonNull(pluginManager, "pluginManager has not been initialized");
 
         eventService.subscribe(
                 BomUploadEvent.class,
                 new BomUploadProcessingTask(
-                        pluginManager,
+                        fileStorage,
                         kafkaEventDispatcher,
                         config.getOptionalValue("tmp.delay.bom.processed.notification", boolean.class).orElse(false)));
         eventService.subscribe(VexUploadEvent.class, new VexUploadProcessingTask());

@@ -19,9 +19,8 @@
 package org.dependencytrack.filestorage.api;
 
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
-import org.dependencytrack.plugin.api.ExtensionPoint;
-import org.dependencytrack.plugin.api.ExtensionPointSpec;
 
+import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,8 +31,9 @@ import static java.util.Objects.requireNonNull;
 /**
  * @since 5.6.0
  */
-@ExtensionPointSpec(name = "file-storage", required = true)
-public interface FileStorage extends ExtensionPoint {
+public interface FileStorage extends Closeable {
+
+    String name();
 
     Pattern VALID_NAME_PATTERN = Pattern.compile("[a-zA-Z0-9_/\\-.]+");
 
@@ -92,6 +92,10 @@ public interface FileStorage extends ExtensionPoint {
 
     // TODO: deleteMany. Some remote storage backends support batch deletes.
     //  https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjects.html
+
+    @Override
+    default void close() throws IOException {
+    }
 
     static void requireValidFileName(String fileName) {
         requireNonNull(fileName, "fileName must not be null");

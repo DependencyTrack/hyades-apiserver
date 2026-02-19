@@ -19,19 +19,16 @@
 package org.dependencytrack.notification;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.filestorage.api.FileStorage;
-import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
+import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.notification.api.TestNotificationFactory;
 import org.dependencytrack.notification.proto.v1.Notification;
-import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,7 +59,7 @@ import static org.mockito.Mockito.times;
 class NotificationOutboxRelayTest extends PersistenceCapableTest {
 
     private DexEngine dexEngineMock;
-    private PluginManager pluginManager;
+    private FileStorage fileStorage;
     private NotificationRouter routerMock;
     private NotificationOutboxRelay relay;
     private final int largeNotificationThresholdBytes = 512;
@@ -70,16 +67,11 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
     @BeforeEach
     void beforeEach() {
         dexEngineMock = mock(DexEngine.class);
-        pluginManager = new PluginManager(
-                new SmallRyeConfigBuilder().build(),
-                new NoopCacheManager(),
-                secretName -> null,
-                List.of(FileStorage.class));
-        pluginManager.loadPlugins(List.of(new MemoryFileStoragePlugin()));
+        fileStorage = new MemoryFileStorage();
         routerMock = mock(NotificationRouter.class);
         relay = new NotificationOutboxRelay(
                 dexEngineMock,
-                pluginManager,
+                fileStorage,
                 ignored -> routerMock,
                 new SimpleMeterRegistry(),
                 /* pollIntervalMillis */ 10,
@@ -91,9 +83,6 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
     void afterEach() {
         if (relay != null) {
             relay.close();
-        }
-        if (pluginManager != null) {
-            pluginManager.close();
         }
     }
 
@@ -234,8 +223,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
             assertThat(workflowArg.hasNotificationFileMetadata()).isTrue();
 
             final FileMetadata fileMetadata = workflowArg.getNotificationFileMetadata();
-            try (final var fileStorage = pluginManager.getExtension(FileStorage.class);
-                 final InputStream fileInputStream = fileStorage.get(fileMetadata)) {
+            try (final InputStream fileInputStream = fileStorage.get(fileMetadata)) {
                 assertThat(fileInputStream).isNotNull();
                 final var storedNotification = Notification.parseFrom(fileInputStream);
                 assertThat(storedNotification).isEqualTo(notification);
@@ -255,7 +243,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
             assertThatExceptionOfType(NullPointerException.class)
                     .isThrownBy(() -> new NotificationOutboxRelay(
                             null,
-                            pluginManager,
+                            fileStorage,
                             ignored -> routerMock,
                             new SimpleMeterRegistry(),
                             /* pollIntervalMillis */ 100,
@@ -264,7 +252,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
         }
 
         @Test
-        void shouldThrowWhenPluginManagerIsNull() {
+        void shouldThrowWhenFileStorageIsNull() {
             assertThatExceptionOfType(NullPointerException.class)
                     .isThrownBy(() -> new NotificationOutboxRelay(
                             dexEngineMock,
@@ -281,7 +269,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
             assertThatExceptionOfType(NullPointerException.class)
                     .isThrownBy(() -> new NotificationOutboxRelay(
                             dexEngineMock,
-                            pluginManager,
+                            fileStorage,
                             null,
                             new SimpleMeterRegistry(),
                             /* pollIntervalMillis */ 100,
@@ -294,7 +282,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
             assertThatExceptionOfType(NullPointerException.class)
                     .isThrownBy(() -> new NotificationOutboxRelay(
                             dexEngineMock,
-                            pluginManager,
+                            fileStorage,
                             ignored -> routerMock,
                             null,
                             /* pollIntervalMillis */ 100,
@@ -307,7 +295,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> new NotificationOutboxRelay(
                             dexEngineMock,
-                            pluginManager,
+                            fileStorage,
                             ignored -> routerMock,
                             new SimpleMeterRegistry(),
                             /* pollIntervalMillis */ 0,
@@ -320,7 +308,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> new NotificationOutboxRelay(
                             dexEngineMock,
-                            pluginManager,
+                            fileStorage,
                             ignored -> routerMock,
                             new SimpleMeterRegistry(),
                             /* pollIntervalMillis */ 100,

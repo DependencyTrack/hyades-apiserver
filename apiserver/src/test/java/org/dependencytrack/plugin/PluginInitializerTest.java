@@ -23,9 +23,6 @@ import jakarta.servlet.ServletContextEvent;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.cache.api.NoopCacheManager;
-import org.dependencytrack.filestorage.local.LocalFileStoragePlugin;
-import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
-import org.dependencytrack.filestorage.s3.S3FileStoragePlugin;
 import org.dependencytrack.notification.publishing.DefaultNotificationPublishersPlugin;
 import org.dependencytrack.secret.TestSecretManager;
 import org.dependencytrack.secret.management.SecretManager;
@@ -86,17 +83,13 @@ class PluginInitializerTest extends PersistenceCapableTest {
         assertThat(pluginManager.getExtensionPoints())
                 .extracting(ExtensionPointMetadata::name)
                 .containsExactlyInAnyOrder(
-                        "file-storage",
                         "notification-publisher",
                         "vuln-data-source");
         assertThat(pluginManager.getLoadedPlugins()).satisfiesExactlyInAnyOrder(
                 plugin -> assertThat(plugin).isInstanceOf(DefaultNotificationPublishersPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(GitHubVulnDataSourcePlugin.class),
-                plugin -> assertThat(plugin).isInstanceOf(LocalFileStoragePlugin.class),
-                plugin -> assertThat(plugin).isInstanceOf(MemoryFileStoragePlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(NvdVulnDataSourcePlugin.class),
-                plugin -> assertThat(plugin).isInstanceOf(OsvVulnDataSourcePlugin.class),
-                plugin -> assertThat(plugin).isInstanceOf(S3FileStoragePlugin.class));
+                plugin -> assertThat(plugin).isInstanceOf(OsvVulnDataSourcePlugin.class));
 
         initializer.contextDestroyed(new ServletContextEvent(servletContextMock));
 

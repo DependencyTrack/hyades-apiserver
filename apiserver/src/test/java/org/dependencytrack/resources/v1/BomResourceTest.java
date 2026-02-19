@@ -27,7 +27,6 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
 import com.fasterxml.jackson.core.StreamReadConstraints;
-import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Entity;
@@ -41,9 +40,8 @@ import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.filestorage.api.FileStorage;
-import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
+import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -66,7 +64,6 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.proto.v1.BomValidationFailedSubject;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
-import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
@@ -74,9 +71,7 @@ import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -120,7 +115,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 
 class BomResourceTest extends ResourceTest {
 
-    private static PluginManager pluginManager;
+    private static final FileStorage fileStorage = new MemoryFileStorage();
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
@@ -132,26 +127,9 @@ class BomResourceTest extends ResourceTest {
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
-                            bindFactory(() -> pluginManager).to(PluginManager.class);
+                            bindFactory(() -> fileStorage).to(FileStorage.class);
                         }
                     }));
-
-    @BeforeAll
-    static void beforeAll() {
-        pluginManager = new PluginManager(
-                new SmallRyeConfigBuilder().build(),
-                new NoopCacheManager(),
-                secretName -> null,
-                List.of(FileStorage.class));
-        pluginManager.loadPlugins(List.of(new MemoryFileStoragePlugin()));
-    }
-
-    @AfterAll
-    static void afterAll() {
-        if (pluginManager != null) {
-            pluginManager.close();
-        }
-    }
 
     @Test
     void exportProjectAsCycloneDxTest() {
