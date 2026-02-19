@@ -47,6 +47,7 @@ import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyEvaluator;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyOperation;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg.AnalyzerResult;
+import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 import org.jdbi.v3.core.Handle;
@@ -69,6 +70,7 @@ import java.util.stream.Collectors;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_VULN_ANALYZER_NAME;
 import static org.dependencytrack.notification.api.NotificationFactory.createNewVulnerabilityNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createNewVulnerableDependencyNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityAnalysisDecisionChangeNotification;
 import static org.dependencytrack.parser.dependencytrack.BovModelConverter.convert;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
@@ -164,6 +166,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             LOGGER.debug("Synchronized {} vulnerabilities", vulnDbIdByVulnIdAndSource.size());
 
             reconcileFindings(
+                    arg,
                     projectUuid,
                     reportedFindings,
                     vulnDbIdByVulnIdAndSource,
@@ -328,6 +331,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
     }
 
     private void reconcileFindings(
+            ReconcileVulnAnalysisResultsArg arg,
             UUID projectUuid,
             List<ReportedFinding> reportedFindings,
             Map<VulnIdAndSource, Long> vulnDbIdByVulnIdAndSource,
@@ -461,10 +465,38 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                             "TODO"))
                     .forEach(notifications::add);
 
+            if (arg.hasContextFileMetadata()) {
+                final List<Long> newComponentIds = readNewComponentIds(arg.getContextFileMetadata());
+                if (!newComponentIds.isEmpty()) {
+                    notificationSubjectDao
+                            .getForNewVulnerableDependencies(newComponentIds)
+                            .stream()
+                            .map(subject -> createNewVulnerableDependencyNotification(
+                                    subject.getProject(),
+                                    subject.getComponent(),
+                                    subject.getVulnerabilitiesList()))
+                            .forEach(notifications::add);
+                }
+            }
 
             LOGGER.debug("Emitting {} notification(s)", notifications.size());
             new JdbiNotificationEmitter(handle).emitAll(notifications);
         });
+    }
+
+    private List<Long> readNewComponentIds(
+            org.dependencytrack.filestorage.proto.v1.FileMetadata contextFileMetadata) {
+        try (final var fileStorage = pluginManager.getExtension(
+                FileStorage.class, contextFileMetadata.getProviderName());
+             final InputStream inputStream = fileStorage.get(contextFileMetadata)) {
+            final VulnAnalysisWorkflowContext context = VulnAnalysisWorkflowContext.parseFrom(inputStream);
+            return context.getNewComponentIdsList();
+        } catch (Exception e) {
+            LOGGER.warn("""
+                    Failed to read context file; NEW_VULNERABLE_DEPENDENCY notifications \
+                    will not be emitted""", e);
+            return List.of();
+        }
     }
 
     private boolean canUpdateVulnerability(

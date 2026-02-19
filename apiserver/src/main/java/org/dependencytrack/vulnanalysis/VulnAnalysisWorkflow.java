@@ -79,6 +79,11 @@ public final class VulnAnalysisWorkflow implements Workflow<VulnAnalysisWorkflow
             return null;
         }
 
+        final FileMetadata contextFileMetadata =
+                arg.hasContextFileMetadata()
+                        ? arg.getContextFileMetadata()
+                        : null;
+
         var analyzerResults = List.<AnalyzerResult>of();
         try {
             final Map<String, Awaitable<InvokeVulnAnalyzerRes>> awaitableByAnalyzerName =
@@ -89,13 +94,13 @@ public final class VulnAnalysisWorkflow implements Workflow<VulnAnalysisWorkflow
                             preparationResult.getBomFileMetadata());
 
             analyzerResults = awaitAnalyzerResults(ctx, awaitableByAnalyzerName);
-            reconcileResults(ctx, arg.getProjectUuid(), analyzerResults);
+            reconcileResults(ctx, arg.getProjectUuid(), analyzerResults, contextFileMetadata);
         } catch (Exception e) {
-            deleteFiles(ctx, preparationResult.getBomFileMetadata(), analyzerResults);
+            deleteFiles(ctx, preparationResult.getBomFileMetadata(), analyzerResults, contextFileMetadata);
             throw e;
         }
 
-        deleteFiles(ctx, preparationResult.getBomFileMetadata(), analyzerResults);
+        deleteFiles(ctx, preparationResult.getBomFileMetadata(), analyzerResults, contextFileMetadata);
         return null;
     }
 
@@ -194,25 +199,36 @@ public final class VulnAnalysisWorkflow implements Workflow<VulnAnalysisWorkflow
         return results;
     }
 
-    private void reconcileResults(WorkflowContext<?> ctx, String projectUuid, List<AnalyzerResult> results) {
+    private void reconcileResults(
+            WorkflowContext<?> ctx,
+            String projectUuid,
+            List<AnalyzerResult> results,
+            @Nullable FileMetadata contextFileMetadata) {
+        final var argBuilder = ReconcileVulnAnalysisResultsArg.newBuilder()
+                .setProjectUuid(projectUuid)
+                .addAllAnalyzerResults(results);
+        if (contextFileMetadata != null) {
+            argBuilder.setContextFileMetadata(contextFileMetadata);
+        }
         ctx.activity(ReconcileVulnAnalysisResultsActivity.class)
-                .call(ReconcileVulnAnalysisResultsArg.newBuilder()
-                        .setProjectUuid(projectUuid)
-                        .addAllAnalyzerResults(results)
-                        .build())
+                .call(argBuilder.build())
                 .await();
     }
 
     private void deleteFiles(
             WorkflowContext<?> ctx,
             FileMetadata bomFileMetadata,
-            List<AnalyzerResult> analyzerResults) {
+            List<AnalyzerResult> analyzerResults,
+            @Nullable FileMetadata contextFileMetadata) {
         final var filesToDelete = new ArrayList<FileMetadata>();
         filesToDelete.add(bomFileMetadata);
         analyzerResults.stream()
                 .filter(AnalyzerResult::hasVdrFileMetadata)
                 .map(AnalyzerResult::getVdrFileMetadata)
                 .forEach(filesToDelete::add);
+        if (contextFileMetadata != null) {
+            filesToDelete.add(contextFileMetadata);
+        }
 
         ctx.activity(DeleteFilesActivity.class)
                 .call(DeleteFilesArgument.newBuilder()

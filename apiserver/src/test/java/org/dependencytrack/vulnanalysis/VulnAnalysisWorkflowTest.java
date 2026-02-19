@@ -32,6 +32,7 @@ import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.dex.testing.WorkflowTestExtension;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStoragePlugin;
+import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
 import org.dependencytrack.model.AnalysisJustification;
@@ -60,6 +61,7 @@ import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisArg;
 import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisRes;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
+import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.dependencytrack.vulnanalysis.internal.InternalVulnAnalyzerPlugin;
 import org.junit.jupiter.api.AfterEach;
@@ -67,6 +69,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.ZonedDateTime;
@@ -80,6 +83,7 @@ import static org.dependencytrack.dex.api.payload.PayloadConverters.protoConvert
 import static org.dependencytrack.dex.api.payload.PayloadConverters.voidConverter;
 import static org.dependencytrack.notification.NotificationTestUtil.createCatchAllNotificationRule;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABILITY;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABLE_DEPENDENCY;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -206,6 +210,61 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
             assertThat(notification.getGroup()).isEqualTo(GROUP_NEW_VULNERABILITY);
         });
+    }
+
+    @Test
+    void shouldEmitNewVulnerableDependencyNotification() throws Exception {
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INT-123");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln = qm.persist(vuln);
+
+        final var vs = new VulnerableSoftware();
+        vs.setPurlType("maven");
+        vs.setPurlNamespace("com.fasterxml.jackson.core");
+        vs.setPurlName("jackson-databind");
+        vs.setVersionStartIncluding("2.9.0");
+        vs.setVersionEndExcluding("3");
+        vs.setVulnerable(true);
+        vs.addVulnerability(vuln);
+        qm.persist(vs);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project = qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("com.fasterxml.jackson.core");
+        component.setName("jackson-databind");
+        component.setVersion("2.9.8");
+        component.setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.9.8");
+        qm.persist(component);
+
+        final FileMetadata contextFileMetadata;
+        try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
+            final var context = VulnAnalysisWorkflowContext.newBuilder()
+                    .addNewComponentIds(component.getId())
+                    .build();
+            contextFileMetadata = fileStorage.store(
+                    "vuln-analysis/context/test.proto",
+                    "application/protobuf",
+                    new ByteArrayInputStream(context.toByteArray()));
+        }
+
+        final UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .setContextFileMetadata(contextFileMetadata)
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThat(qm.getNotificationOutbox())
+                .extracting(org.dependencytrack.notification.proto.v1.Notification::getGroup)
+                .containsExactlyInAnyOrder(
+                        GROUP_NEW_VULNERABILITY,
+                        GROUP_NEW_VULNERABLE_DEPENDENCY);
     }
 
     @Test

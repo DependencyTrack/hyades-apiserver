@@ -39,6 +39,7 @@ import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
 import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -57,13 +58,16 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
+import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.vulnanalysis.VulnAnalysisWorkflow;
 import org.json.JSONArray;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
@@ -287,6 +291,14 @@ public class BomUploadProcessingTask implements Subscriber {
         }
 
         if (!processedBom.components().isEmpty()) {
+            final var workflowArgBuilder = VulnAnalysisWorkflowArg.newBuilder()
+                    .setProjectUuid(ctx.project.getUuid().toString());
+
+            final FileMetadata contextFileMetadata = storeVulnAnalysisContext(ctx, processedBom.components());
+            if (contextFileMetadata != null) {
+                workflowArgBuilder.setContextFileMetadata(contextFileMetadata);
+            }
+
             dexEngine.createRun(
                     new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
                             .withLabels(Map.ofEntries(
@@ -294,9 +306,7 @@ public class BomUploadProcessingTask implements Subscriber {
                                     Map.entry(WF_LABEL_PROJECT_UUID, ctx.project.getUuid().toString())))
                             .withConcurrencyKey("vuln-analysis:" + ctx.project.getUuid())
                             .withPriority(50)
-                            .withArgument(VulnAnalysisWorkflowArg.newBuilder()
-                                    .setProjectUuid(ctx.project.getUuid().toString())
-                                    .build()));
+                            .withArgument(workflowArgBuilder.build()));
         } else {
             // No components to be sent for vulnerability analysis.
             // If the BOM_PROCESSED notification was delayed, dispatch it now.
@@ -1113,6 +1123,32 @@ public class BomUploadProcessingTask implements Subscriber {
                         ctx.bomSpecVersion,
                         ctx.token.toString(),
                         throwable.getMessage()));
+    }
+
+    private @Nullable FileMetadata storeVulnAnalysisContext(Context ctx, Collection<Component> components) {
+        final List<Long> newComponentIds = components.stream()
+                .filter(Component::isNew)
+                .map(Component::getId)
+                .toList();
+        if (newComponentIds.isEmpty()) {
+            return null;
+        }
+
+        final var context = VulnAnalysisWorkflowContext.newBuilder()
+                .addAllNewComponentIds(newComponentIds)
+                .build();
+
+        try (final var fileStorage = pluginManager.getExtension(FileStorage.class)) {
+            return fileStorage.store(
+                    "vuln-analysis/context/%s.proto".formatted(ctx.token),
+                    "application/protobuf",
+                    new ByteArrayInputStream(context.toByteArray()));
+        } catch (Exception e) {
+            LOGGER.warn("""
+                    Failed to store vuln analysis context; \
+                    NEW_VULNERABLE_DEPENDENCY notifications will not be emitted""", e);
+            return null;
+        }
     }
 
     private static List<ComponentRepositoryMetaAnalysisEvent> createRepoMetaAnalysisEvents(final Collection<Component> components) {
