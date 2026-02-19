@@ -22,28 +22,28 @@ import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 class LocalFileStorageTest {
 
+    @TempDir
     private Path tempDirPath;
-
-    @BeforeEach
-    void before() throws Exception {
-        tempDirPath = Files.createTempDirectory(null);
-        tempDirPath.toFile().deleteOnExit();
-    }
 
     @Test
     @SuppressWarnings("resource")
@@ -217,6 +217,96 @@ class LocalFileStorageTest {
                                 .setLocation("foo:///bar")
                                 .build()))
                 .withMessage("foo:///bar: Unexpected scheme foo, expected local");
+    }
+
+    @Test
+    @SuppressWarnings("resource")
+    void shouldDeleteEmptyParentDirectoriesOnDelete() throws Exception {
+        final var storageFactory = new LocalFileStorageFactory();
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                "directory", tempDirPath.toAbsolutePath().toString()))));
+
+        final FileStorage storage = storageFactory.create();
+
+        final FileMetadata fileMetadata = storage.store("a/b/c", new ByteArrayInputStream("data".getBytes()));
+        assertThat(tempDirPath.resolve("a/b/c")).exists();
+
+        assertThat(storage.delete(fileMetadata)).isTrue();
+        assertThat(tempDirPath.resolve("a/b/c")).doesNotExist();
+        assertThat(tempDirPath.resolve("a/b")).doesNotExist();
+        assertThat(tempDirPath.resolve("a")).doesNotExist();
+        assertThat(tempDirPath).exists();
+    }
+
+    @Test
+    @SuppressWarnings("resource")
+    void shouldNotDeleteNonEmptyParentDirectoryOnDelete() throws Exception {
+        final var storageFactory = new LocalFileStorageFactory();
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                "directory", tempDirPath.toAbsolutePath().toString()))));
+
+        final FileStorage storage = storageFactory.create();
+
+        final FileMetadata fileMetadataC = storage.store("a/b/c", new ByteArrayInputStream("data".getBytes()));
+        storage.store("a/b/d", new ByteArrayInputStream("data".getBytes()));
+
+        assertThat(storage.delete(fileMetadataC)).isTrue();
+        assertThat(tempDirPath.resolve("a/b/c")).doesNotExist();
+        assertThat(tempDirPath.resolve("a/b")).exists();
+        assertThat(tempDirPath.resolve("a/b/d")).exists();
+    }
+
+    @Test
+    @SuppressWarnings("resource")
+    void shouldNotDeleteBaseDirOnDelete() throws Exception {
+        final var storageFactory = new LocalFileStorageFactory();
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                "directory", tempDirPath.toAbsolutePath().toString()))));
+
+        final FileStorage storage = storageFactory.create();
+
+        final FileMetadata fileMetadata = storage.store("foo", new ByteArrayInputStream("data".getBytes()));
+        assertThat(storage.delete(fileMetadata)).isTrue();
+        assertThat(tempDirPath).exists();
+    }
+
+    @Test
+    @SuppressWarnings("resource")
+    void shouldHandleConcurrentStoreAndDelete() {
+        final var storageFactory = new LocalFileStorageFactory();
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                "directory", tempDirPath.toAbsolutePath().toString()))));
+
+        final FileStorage storage = storageFactory.create();
+
+        final int threads = 8;
+        final int iterations = 50;
+        final var barrier = new CyclicBarrier(threads);
+
+        try (final ExecutorService executor = Executors.newFixedThreadPool(threads)) {
+            final var futures = new ArrayList<Future<?>>();
+            for (int t = 0; t < threads; t++) {
+                final int threadId = t;
+                futures.add(executor.submit(() -> {
+                    barrier.await();
+                    for (int i = 0; i < iterations; i++) {
+                        final String fileName = "shared/dir/%d-%d".formatted(threadId, i);
+                        final FileMetadata metadata = storage.store(fileName, new ByteArrayInputStream("foo".getBytes()));
+                        storage.delete(metadata);
+                    }
+
+                    return null;
+                }));
+            }
+
+            assertThatNoException().isThrownBy(() -> {
+                for (final Future<?> future : futures) {
+                    future.get();
+                }
+            });
+        }
+
+        assertThat(tempDirPath).exists();
     }
 
 }
