@@ -25,8 +25,19 @@ import "org/dependencytrack/filestorage/v1/filestorage.proto";
 option java_multiple_files = true;
 option java_package = "org.dependencytrack.proto.internal.workflow.v1";
 
+// Supplementary context for the vuln-analysis workflow.
+// This context is expected to hold data of potentially extensive
+// size, and should thus only be passed via file storage metadata.
+message VulnAnalysisWorkflowContext {
+  // IDs of components that were identified as new.
+  // May be used to determine for which components a NEW_VULNERABLE_DEPENDENCY
+  // notification shall be emitted.
+  repeated int64 new_component_ids = 1;
+}
+
 message VulnAnalysisWorkflowArg {
   string project_uuid = 1;
+  optional org.dependencytrack.filestorage.v1.FileMetadata context_file_metadata = 2;
 }
 
 message PrepareVulnAnalysisArg {
@@ -42,6 +53,7 @@ message InvokeVulnAnalyzerArg {
 message ReconcileVulnAnalysisResultsArg {
   string project_uuid = 1;
   repeated AnalyzerResult analyzer_results = 2;
+  optional org.dependencytrack.filestorage.v1.FileMetadata context_file_metadata = 3;
 
   message AnalyzerResult {
     string analyzer_name = 1;

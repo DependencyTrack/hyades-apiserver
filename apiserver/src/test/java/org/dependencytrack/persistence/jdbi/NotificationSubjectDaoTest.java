@@ -38,7 +38,6 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -336,11 +335,11 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                         .withState(AnalysisState.FALSE_POSITIVE)
                         .withSuppress(true));
 
-        final Optional<NewVulnerableDependencySubject> optionalSubject = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
-                .getForNewVulnerableDependency(component.getUuid()));
+        final List<NewVulnerableDependencySubject> subjects = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
+                .getForNewVulnerableDependencies(List.of(component.getId())));
 
-        assertThat(optionalSubject).isPresent();
-        assertThatJson(JsonFormat.printer().print(optionalSubject.get()))
+        assertThat(subjects).hasSize(1);
+        assertThatJson(JsonFormat.printer().print(subjects.getFirst()))
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
                 .withMatcher("componentUuid", equalTo(component.getUuid().toString()))
                 .withMatcher("vulnUuid", equalTo(vulnA.getUuid().toString()))
@@ -446,11 +445,11 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         analysis.setCvssV3Score(BigDecimal.valueOf(10.0));
         qm.persist(analysis);
 
-        final Optional<NewVulnerableDependencySubject> optionalSubject = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
-                .getForNewVulnerableDependency(component.getUuid()));
+        final List<NewVulnerableDependencySubject> subjects = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
+                .getForNewVulnerableDependencies(List.of(component.getId())));
 
-        assertThat(optionalSubject).isPresent();
-        assertThatJson(JsonFormat.printer().print(optionalSubject.get()))
+        assertThat(subjects).hasSize(1);
+        assertThatJson(JsonFormat.printer().print(subjects.getFirst()))
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
                 .withMatcher("componentUuid", equalTo(component.getUuid().toString()))
                 .withMatcher("vulnUuid", equalTo(vuln.getUuid().toString()))
