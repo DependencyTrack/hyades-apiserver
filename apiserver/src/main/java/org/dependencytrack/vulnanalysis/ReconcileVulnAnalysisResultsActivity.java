@@ -20,16 +20,17 @@ package org.dependencytrack.vulnanalysis;
 
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
 import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityContext;
 import org.dependencytrack.dex.api.ActivitySpec;
 import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.FindingAttributionKey;
 import org.dependencytrack.model.FindingKey;
 import org.dependencytrack.model.VulnIdAndSource;
+import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.JdbiNotificationEmitter;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
@@ -40,7 +41,6 @@ import org.dependencytrack.persistence.jdbi.AnalysisDao.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.query.GetProjectAuditChangeNotificationSubjectQuery;
-import org.dependencytrack.plugin.NoSuchExtensionException;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyEvaluator;
@@ -48,8 +48,6 @@ import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyOperation;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg.AnalyzerResult;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
-import org.dependencytrack.vulndatasource.api.VulnDataSource;
-import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 import org.jdbi.v3.core.Handle;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -59,12 +57,15 @@ import org.slf4j.MDC;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
@@ -120,7 +121,13 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             final var reportedFindings = new ArrayList<ReportedFinding>();
             final var vulnDetailsByKey = new HashMap<VulnIdAndSource, ReportedVulnerability>();
 
-            for (final AnalyzerResult result : arg.getAnalyzerResultsList()) {
+            // Sort analyzer results by name for deterministic merge order.
+            // When multiple analyzers report the same vulnerability,
+            // we'll only use the data of the first one.
+            final var sortedResults = new ArrayList<>(arg.getAnalyzerResultsList());
+            sortedResults.sort(Comparator.comparing(AnalyzerResult::getAnalyzerName));
+
+            for (final AnalyzerResult result : sortedResults) {
                 final String analyzerName = result.getAnalyzerName();
                 try (var ignoredMdcAnalyzerName = MDC.putCloseable(MDC_VULN_ANALYZER_NAME, analyzerName)) {
                     LOGGER.debug("Processing analyzer results");
@@ -155,15 +162,18 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             }
 
             LOGGER.debug(
-                    "Extracted {} findings and {} unique vulnerabilities from VDRs",
+                    "Collected {} findings and {} unique vulnerabilities from VDRs",
                     reportedFindings.size(),
                     vulnDetailsByKey.size());
 
-            final Map<VulnIdAndSource, ConvertedVulnerability> convertedVulns = convertVulns(vulnDetailsByKey);
+            final List<Vulnerability> convertedVulns = convertVulns(vulnDetailsByKey);
             LOGGER.debug("Converted {} vulnerabilities", convertedVulns.size());
 
+            final var vulnUpdatePolicy = new VulnerabilityUpdatePolicy(pluginManager);
+
             LOGGER.debug("Synchronizing {} vulnerabilities", convertedVulns.size());
-            final Map<VulnIdAndSource, Long> vulnDbIdByVulnIdAndSource = syncVulns(convertedVulns);
+            final Map<VulnIdAndSource, Long> vulnDbIdByVulnIdAndSource =
+                    syncVulns(convertedVulns, vulnUpdatePolicy::isUpdatableByAnalyzer);
             LOGGER.debug("Synchronized {} vulnerabilities", vulnDbIdByVulnIdAndSource.size());
 
             reconcileFindings(
@@ -177,24 +187,35 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         return null;
     }
 
+    private record ReportedVulnerability(
+            org.cyclonedx.proto.v1_6.Vulnerability vdrVuln,
+            @Nullable Long internalVulnId) {
+    }
+
+    private record ReportedFinding(
+            long componentId,
+            VulnIdAndSource vulnIdAndSource,
+            String analyzerName,
+            @Nullable String referenceUrl) {
+    }
+
     private static void collectFindingsFromVdr(
             String analyzerName,
             Bom vdr,
             List<ReportedFinding> findings,
-            Map<VulnIdAndSource, ReportedVulnerability> vulnDetails) {
-        for (final Vulnerability vdrVuln : vdr.getVulnerabilitiesList()) {
-            final org.dependencytrack.model.Vulnerability.Source source =
+            Map<VulnIdAndSource, ReportedVulnerability> reportedVulnByVulnIdAndSource) {
+        for (final org.cyclonedx.proto.v1_6.Vulnerability vdrVuln : vdr.getVulnerabilitiesList()) {
+            final Vulnerability.Source source =
                     BovModelConverter.extractSource(vdrVuln.getId(), vdrVuln.getSource());
             final var vulnIdAndSource = new VulnIdAndSource(vdrVuln.getId(), source);
 
             final Long internalVulnId = extractInternalVulnId(vdrVuln);
             final String referenceUrl = extractReferenceUrl(vdrVuln);
 
-            vulnDetails.merge(
+            reportedVulnByVulnIdAndSource.merge(
                     vulnIdAndSource,
-                    new ReportedVulnerability(vdrVuln, analyzerName, internalVulnId),
+                    new ReportedVulnerability(vdrVuln, internalVulnId),
                     (existing, incoming) -> {
-                        // Prefer vulnerabilities identified from the internal database.
                         if (existing.internalVulnId() != null) {
                             return existing;
                         }
@@ -202,10 +223,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                             return incoming;
                         }
 
-                        final int existingPriority = getSourcePriority(existing.vdrVuln().getSource().getName());
-                        final int incomingPriority = getSourcePriority(incoming.vdrVuln().getSource().getName());
-
-                        return existingPriority <= incomingPriority ? existing : incoming;
+                        return existing;
                     });
 
             for (final VulnerabilityAffects affects : vdrVuln.getAffectsList()) {
@@ -223,7 +241,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         }
     }
 
-    private static @Nullable Long extractInternalVulnId(Vulnerability vuln) {
+    private static @Nullable Long extractInternalVulnId(org.cyclonedx.proto.v1_6.Vulnerability vuln) {
         for (final Property prop : vuln.getPropertiesList()) {
             if (INTERNAL_VULN_ID_PROPERTY.equals(prop.getName())) {
                 try {
@@ -237,7 +255,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         return null;
     }
 
-    private static @Nullable String extractReferenceUrl(Vulnerability vuln) {
+    private static @Nullable String extractReferenceUrl(org.cyclonedx.proto.v1_6.Vulnerability vuln) {
         for (final Property prop : vuln.getPropertiesList()) {
             if (REFERENCE_URL_PROPERTY.equals(prop.getName())
                     && (prop.getValue().startsWith("http://") || prop.getValue().startsWith("https://"))) {
@@ -248,41 +266,35 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         return null;
     }
 
-    private static int getSourcePriority(String source) {
-        return switch (source.toUpperCase()) {
-            case "NVD" -> 0;
-            case "GITHUB" -> 1;
-            case "OSV" -> 2;
-            case "OSSINDEX" -> 3;
-            case "SNYK" -> 4;
-            default -> 99;
-        };
-    }
-
-    private Map<VulnIdAndSource, ConvertedVulnerability> convertVulns(
-            Map<VulnIdAndSource, ReportedVulnerability> detailsByVulnIdAndSource) {
-        if (detailsByVulnIdAndSource.isEmpty()) {
-            return Map.of();
+    private List<Vulnerability> convertVulns(
+            Map<VulnIdAndSource, ReportedVulnerability> reportedVulnByVulnIdAndSource) {
+        if (reportedVulnByVulnIdAndSource.isEmpty()) {
+            return List.of();
         }
 
-        final var converted = new HashMap<VulnIdAndSource, ConvertedVulnerability>();
+        final var converted = new ArrayList<Vulnerability>(reportedVulnByVulnIdAndSource.size());
 
-        for (final var entry : detailsByVulnIdAndSource.entrySet()) {
+        for (final var entry : reportedVulnByVulnIdAndSource.entrySet()) {
             final VulnIdAndSource vulnIdAndSource = entry.getKey();
-            final ReportedVulnerability extracted = entry.getValue();
+            final ReportedVulnerability reportedVuln = entry.getValue();
 
-            if (extracted.internalVulnId() != null) {
-                converted.put(vulnIdAndSource, new ConvertedVulnerability(
-                        null, extracted.analyzerName(), extracted.internalVulnId()));
+            if (reportedVuln.internalVulnId() != null) {
+                final var vuln = new Vulnerability();
+                vuln.setId(reportedVuln.internalVulnId());
+                vuln.setVulnId(vulnIdAndSource.vulnId());
+                vuln.setSource(vulnIdAndSource.source());
+                converted.add(vuln);
                 continue;
             }
 
             try {
-                final Bom miniBom = Bom.newBuilder()
-                        .addVulnerabilities(extracted.vdrVuln())
-                        .build();
-                final org.dependencytrack.model.Vulnerability vuln = convert(miniBom, extracted.vdrVuln(), true);
-                converted.put(vulnIdAndSource, new ConvertedVulnerability(vuln, extracted.analyzerName(), null));
+                final Vulnerability vuln = convert(
+                        Bom.newBuilder()
+                                .addVulnerabilities(reportedVuln.vdrVuln())
+                                .build(),
+                        reportedVuln.vdrVuln(),
+                        true);
+                converted.add(vuln);
             } catch (RuntimeException e) {
                 LOGGER.warn("Failed to convert vulnerability {}: {}", vulnIdAndSource, e.getMessage());
             }
@@ -292,43 +304,40 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
     }
 
     private Map<VulnIdAndSource, Long> syncVulns(
-            Map<VulnIdAndSource, ConvertedVulnerability> convertedVulnByVulnIdAndSource) {
-        if (convertedVulnByVulnIdAndSource.size() <= 100) {
-            return syncVulnsBatch(convertedVulnByVulnIdAndSource);
+            List<Vulnerability> vulns,
+            Predicate<String> canUpdatePredicate) {
+        if (vulns.size() <= 100) {
+            return syncVulnsBatch(vulns, canUpdatePredicate);
         }
 
-        final var syncedVulns = new HashMap<VulnIdAndSource, Long>(convertedVulnByVulnIdAndSource.size());
+        final var syncedVulns = new HashMap<VulnIdAndSource, Long>(vulns.size());
 
-        final var batch = new HashMap<VulnIdAndSource, ConvertedVulnerability>(100);
-        for (final var entry : convertedVulnByVulnIdAndSource.entrySet()) {
-            final VulnIdAndSource vulnIdAndSource = entry.getKey();
-            final ConvertedVulnerability convertedVuln = entry.getValue();
-
-            batch.put(vulnIdAndSource, convertedVuln);
+        final var batch = new ArrayList<Vulnerability>(100);
+        for (final Vulnerability vuln : vulns) {
+            batch.add(vuln);
             if (batch.size() >= 100) {
-                syncedVulns.putAll(syncVulnsBatch(batch));
+                syncedVulns.putAll(syncVulnsBatch(batch, canUpdatePredicate));
                 batch.clear();
             }
         }
         if (!batch.isEmpty()) {
-            syncedVulns.putAll(syncVulnsBatch(batch));
+            syncedVulns.putAll(syncVulnsBatch(batch, canUpdatePredicate));
         }
 
         return syncedVulns;
     }
 
     private Map<VulnIdAndSource, Long> syncVulnsBatch(
-            Map<VulnIdAndSource, ConvertedVulnerability> convertedVulnByVulnIdAndSource) {
-        if (convertedVulnByVulnIdAndSource.isEmpty()) {
+            Collection<Vulnerability> vulns,
+            Predicate<String> canUpdatePredicate) {
+        if (vulns.isEmpty()) {
             return Map.of();
         }
 
-        LOGGER.debug("Synchronizing batch of {} vulnerabilities", convertedVulnByVulnIdAndSource.size());
+        LOGGER.debug("Synchronizing batch of {} vulnerabilities", vulns.size());
 
         return inJdbiTransaction(
-                handle -> new VulnerabilityDao(handle).syncMany(
-                        convertedVulnByVulnIdAndSource,
-                        this::canUpdateVulnerability));
+                handle -> new VulnerabilityDao(handle).syncAll(vulns, canUpdatePredicate));
     }
 
     private void reconcileFindings(
@@ -485,8 +494,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         });
     }
 
-    private List<Long> readNewComponentIds(
-            org.dependencytrack.filestorage.proto.v1.FileMetadata contextFileMetadata) {
+    private List<Long> readNewComponentIds(FileMetadata contextFileMetadata) {
         try (final InputStream inputStream = fileStorage.get(contextFileMetadata)) {
             final VulnAnalysisWorkflowContext context = VulnAnalysisWorkflowContext.parseFrom(inputStream);
             return context.getNewComponentIdsList();
@@ -495,47 +503,6 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                     Failed to read context file; NEW_VULNERABLE_DEPENDENCY notifications \
                     will not be emitted""", e);
             return List.of();
-        }
-    }
-
-    private boolean canUpdateVulnerability(
-            org.dependencytrack.model.Vulnerability.Source source,
-            String analyzerName) {
-        if ("internal".equals(analyzerName)) {
-            return false;
-        }
-        if (org.dependencytrack.model.Vulnerability.Source.INTERNAL == source) {
-            return false;
-        }
-        return isAuthoritativeSource(source, analyzerName)
-                || (canBeMirrored(source) && !isMirroringEnabled(source));
-    }
-
-    private static boolean isAuthoritativeSource(
-            org.dependencytrack.model.Vulnerability.Source source,
-            String analyzerName) {
-        return switch (analyzerName) {
-            case "oss-index" -> org.dependencytrack.model.Vulnerability.Source.OSSINDEX == source;
-            case "snyk" -> org.dependencytrack.model.Vulnerability.Source.SNYK == source;
-            case "vuln-db" -> org.dependencytrack.model.Vulnerability.Source.VULNDB == source;
-            default -> false;
-        };
-    }
-
-    private static boolean canBeMirrored(org.dependencytrack.model.Vulnerability.Source source) {
-        return switch (source) {
-            case GITHUB, NVD, OSV, CSAF -> true;
-            default -> false;
-        };
-    }
-
-    private boolean isMirroringEnabled(org.dependencytrack.model.Vulnerability.Source source) {
-        try {
-            final var dataSourceFactory = (VulnDataSourceFactory) pluginManager
-                    .getFactory(VulnDataSource.class, source.name().toLowerCase());
-            return dataSourceFactory.isDataSourceEnabled();
-        } catch (NoSuchExtensionException e) {
-            return false;
         }
     }
 
@@ -756,19 +723,6 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         }
 
         return notifications;
-    }
-
-    private record ReportedFinding(
-            long componentId,
-            VulnIdAndSource vulnIdAndSource,
-            String analyzerName,
-            @Nullable String referenceUrl) {
-    }
-
-    private record ReportedVulnerability(
-            Vulnerability vdrVuln,
-            String analyzerName,
-            @Nullable Long internalVulnId) {
     }
 
 }
