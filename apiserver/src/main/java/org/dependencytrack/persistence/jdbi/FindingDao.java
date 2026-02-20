@@ -105,6 +105,7 @@ public interface FindingDao {
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
+            <#-- @ftlvariable name="apiOrderByClause" type="String" -->
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
             <#-- @ftlvariable name="includeSuppressed" type="boolean" -->
             SELECT "PROJECT"."UUID" AS "projectUuid"
@@ -200,9 +201,25 @@ public interface FindingDao {
                AND "A"."SUPPRESSED" IS DISTINCT FROM TRUE
             </#if>
                AND (:hasAnalysis IS NULL OR ("A"."ID" IS NOT NULL) = :hasAnalysis)
+            <#if apiOrderByClause??>
+              ${apiOrderByClause}
+            <#else>
              ORDER BY "FINDINGATTRIBUTION"."ID"
+            </#if>
              ${apiOffsetLimitClause!}
             """)
+    @AllowApiOrdering(alwaysBy = "attribution.id", by = {
+            @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"V\".\"VULNID\""),
+            @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = "\"vulnSeverity\""),
+            @AllowApiOrdering.Column(name = "attribution.analyzerIdentity", queryName = "\"FINDINGATTRIBUTION\".\"ANALYZERIDENTITY\""),
+            @AllowApiOrdering.Column(name = "component.group", queryName = "\"COMPONENT\".\"GROUP\""),
+            @AllowApiOrdering.Column(name = "component.name", queryName = "\"COMPONENT\".\"NAME\""),
+            @AllowApiOrdering.Column(name = "component.version", queryName = "\"COMPONENT\".\"VERSION\""),
+            @AllowApiOrdering.Column(name = "analysis.state", queryName = "\"A\".\"STATE\""),
+            @AllowApiOrdering.Column(name = "analysis.isSuppressed", queryName = "\"A\".\"SUPPRESSED\""),
+            @AllowApiOrdering.Column(name = "attribution.id", queryName = "\"FINDINGATTRIBUTION\".\"ID\""),
+            @AllowApiOrdering.Column(name = "attribution.attributedOn", queryName = "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"")
+    })
     @RegisterConstructorMapper(FindingRow.class)
     List<FindingRow> getFindingsByProject(@Bind long projectId, @Define boolean includeSuppressed, @Bind Boolean hasAnalysis);
 
