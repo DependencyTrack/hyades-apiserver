@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.ProxySelector;
+import java.time.Duration;
 
 /**
  * @since 5.7.0
@@ -45,27 +46,33 @@ public final class S3FileStorageProvider implements FileStorageProvider {
 
     @Override
     public FileStorage create(Config config, ProxySelector proxySelector) {
-        final String endpoint = config.getValue("dt.file-storage.s3.endpoint", String.class);
-        final String bucketName = config.getValue("dt.file-storage.s3.bucket", String.class);
-        final String accessKey = config.getOptionalValue("dt.file-storage.s3.access.key", String.class).orElse(null);
-        final String secretKey = config.getOptionalValue("dt.file-storage.s3.secret.key", String.class).orElse(null);
-        final String region = config.getOptionalValue("dt.file-storage.s3.region", String.class).orElse(null);
-
-        final var httpClient = new OkHttpClient.Builder()
-                .proxySelector(proxySelector)
-                .build();
+        final var httpClientBuilder = new OkHttpClient.Builder()
+                .proxySelector(proxySelector);
+        config.getOptionalValue("dt.file-storage.s3.connect-timeout-ms", long.class)
+                .map(Duration::ofMillis)
+                .ifPresent(httpClientBuilder::connectTimeout);
+        config.getOptionalValue("dt.file-storage.s3.read-timeout-ms", long.class)
+                .map(Duration::ofMillis)
+                .ifPresent(httpClientBuilder::readTimeout);
+        config.getOptionalValue("dt.file-storage.s3.write-timeout-ms", long.class)
+                .map(Duration::ofMillis)
+                .ifPresent(httpClientBuilder::writeTimeout);
+        final OkHttpClient httpClient = httpClientBuilder.build();
 
         final var clientBuilder = MinioClient.builder()
                 .httpClient(httpClient, /* close */ true)
-                .endpoint(endpoint);
+                .endpoint(config.getValue("dt.file-storage.s3.endpoint", String.class));
+
+        final var accessKey = config.getOptionalValue("dt.file-storage.s3.access.key", String.class).orElse(null);
+        final var secretKey = config.getOptionalValue("dt.file-storage.s3.secret.key", String.class).orElse(null);
         if (accessKey != null && secretKey != null) {
             clientBuilder.credentials(accessKey, secretKey);
         }
-        if (region != null) {
-            clientBuilder.region(region);
-        }
+
+        config.getOptionalValue("dt.file-storage.s3.region", String.class).ifPresent(clientBuilder::region);
         final MinioClient s3Client = clientBuilder.build();
 
+        final var bucketName = config.getValue("dt.file-storage.s3.bucket", String.class);
         LOGGER.debug("Verifying existence of bucket {}", bucketName);
         requireBucketExists(s3Client, bucketName);
 

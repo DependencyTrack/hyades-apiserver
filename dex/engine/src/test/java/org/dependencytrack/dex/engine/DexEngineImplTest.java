@@ -349,8 +349,7 @@ class DexEngineImplTest {
     @Test
     void shouldWaitForTimerToElapse() {
         registerWorkflow("test", (ctx, arg) -> {
-            // Sleep for a moment so we get an opportunity to cancel the run.
-            ctx.createTimer("Sleep for 3 seconds", Duration.ofSeconds(5)).await();
+            ctx.createTimer("Sleep", Duration.ofMillis(5)).await();
             return null;
         });
         registerWorkflowWorker("workflow-worker", 1);
@@ -371,7 +370,7 @@ class DexEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_CREATED);
-                    assertThat(entry.getTimerCreated().getName()).isEqualTo("Sleep for 3 seconds");
+                    assertThat(entry.getTimerCreated().getName()).isEqualTo("Sleep");
                 },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_STARTED),
@@ -385,7 +384,7 @@ class DexEngineImplTest {
         registerWorkflow("test", (ctx, arg) -> {
             final var timers = new ArrayList<Awaitable<Void>>(3);
             for (int i = 0; i < 3; i++) {
-                timers.add(ctx.createTimer("sleep" + i, Duration.ofSeconds(3)));
+                timers.add(ctx.createTimer("sleep" + i, Duration.ofMillis(5)));
             }
 
             for (final Awaitable<Void> timer : timers) {
@@ -549,8 +548,8 @@ class DexEngineImplTest {
     @Test
     void shouldSuspendAndResumeRunWhenRequested() {
         registerWorkflow("test", (ctx, arg) -> {
-            // Sleep for a moment so we get an opportunity to suspend the run.
-            ctx.createTimer("sleep", Duration.ofSeconds(3)).await();
+            // Block for a moment so we get an opportunity to suspend the run.
+            ctx.waitForExternalEvent("foo", voidConverter(), Duration.ofSeconds(3)).await();
             return null;
         });
         registerWorkflowWorker("workflow-worker", 1);
@@ -562,6 +561,7 @@ class DexEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.SUSPENDED);
 
+        engine.sendExternalEvent(new ExternalEvent(runId, "foo", null)).join();
         engine.requestRunResumption(runId);
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
