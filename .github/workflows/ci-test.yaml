@@ -73,6 +73,18 @@ jobs:
           TESTCONTAINERS_REUSE_ENABLE: "true"
         run: make test
 
+      - name: Generate test report
+        if: ${{ always() }}
+        run: mvn -B surefire-report:report-only -Daggregate=true -DlinkXRef=false
+
+      - name: Upload test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # tag=v6.0.0
+        with:
+          name: test-report
+          path: target/reports/
+          if-no-files-found: warn
+
       # Publishing coverage to Codacy is only possible for builds of push events.
       # PRs from forks do not get access to repository secrets.
       # https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
