@@ -24,6 +24,7 @@ import alpine.event.framework.Subscriber;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import org.dependencytrack.cache.api.NoopCacheManager;
+import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.plugin.PluginManager;
@@ -49,6 +50,7 @@ class EventSubsystemInitializerTest {
         // Test against "production" config for more realistic test coverage.
         final Config config = ConfigProvider.getConfig();
 
+        final var dexEngineMock = mock(DexEngine.class);
         final var eventServiceMock = mock(EventService.class);
         final var singleThreadedEventServiceMock = mock(SingleThreadedEventService.class);
         final var pluginManager = new PluginManager(
@@ -58,6 +60,8 @@ class EventSubsystemInitializerTest {
                 Collections.emptyList());
         final var servletContextMock = mock(ServletContext.class);
 
+        doReturn(dexEngineMock)
+                .when(servletContextMock).getAttribute(eq(DexEngine.class.getName()));
         doReturn(new MemoryFileStorage())
                 .when(servletContextMock).getAttribute(eq(FileStorage.class.getName()));
         doReturn(pluginManager)

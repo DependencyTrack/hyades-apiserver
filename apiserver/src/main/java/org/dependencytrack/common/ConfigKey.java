@@ -36,7 +36,6 @@ public enum ConfigKey implements Config.Key {
     KAFKA_TRUST_STORE_PASSWORD("kafka.truststore.password", ""),
     KAFKA_TRUST_STORE_PATH("kafka.truststore.path", ""),
 
-    TMP_DELAY_BOM_PROCESSED_NOTIFICATION("tmp.delay.bom.processed.notification", "false"),
     INTEGRITY_INITIALIZER_ENABLED("integrity.initializer.enabled", "false"),
     INTEGRITY_CHECK_ENABLED("integrity.check.enabled", "false"),
     VULNERABILITY_POLICY_ANALYSIS_ENABLED("vulnerability.policy.analysis.enabled", false),

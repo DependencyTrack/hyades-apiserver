@@ -24,7 +24,6 @@ import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyViolation;
@@ -123,7 +122,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         componentUnaudited.setProject(projectUnaudited);
         componentUnaudited.setName("acme-lib-a");
         qm.createComponent(componentUnaudited, false);
-        qm.addVulnerability(vuln, componentUnaudited, AnalyzerIdentity.NONE);
+        qm.addVulnerability(vuln, componentUnaudited, "none");
 
         // Create a project with an audited vulnerability.
         var projectAudited = new Project();
@@ -137,7 +136,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         componentAudited.setProject(projectAudited);
         componentAudited.setName("acme-lib-b");
         qm.createComponent(componentAudited, false);
-        qm.addVulnerability(vuln, componentAudited, AnalyzerIdentity.NONE);
+        qm.addVulnerability(vuln, componentAudited, "none");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentAudited, vuln)
                         .withState(AnalysisState.NOT_AFFECTED));
@@ -151,7 +150,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         componentSuppressed.setProject(projectSuppressed);
         componentSuppressed.setName("acme-lib-c");
         qm.createComponent(componentSuppressed, false);
-        qm.addVulnerability(vuln, componentSuppressed, AnalyzerIdentity.NONE);
+        qm.addVulnerability(vuln, componentSuppressed, "none");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentSuppressed, vuln)
                         .withState(AnalysisState.FALSE_POSITIVE)

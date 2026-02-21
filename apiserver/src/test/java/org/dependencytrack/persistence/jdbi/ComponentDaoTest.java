@@ -22,7 +22,6 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.IntegrityAnalysis;
@@ -91,7 +90,7 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         vuln.setVulnId("INT-123");
         vuln.setSource(Vulnerability.Source.INTERNAL);
         qm.persist(vuln);
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vuln, component, "internal");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(component, vuln)
                         .withState(AnalysisState.NOT_AFFECTED)

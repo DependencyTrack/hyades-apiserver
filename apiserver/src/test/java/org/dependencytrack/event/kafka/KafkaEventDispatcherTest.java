@@ -22,9 +22,7 @@ import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
-import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
-import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,32 +65,6 @@ public class KafkaEventDispatcherTest {
             assertThat(record.key()).asString().isEqualTo("pkg:maven/foo/bar@1.2.3");
             assertThat(record.value()).isNotNull();
             assertThat(record.headers()).isEmpty();
-        });
-    }
-
-    @Test
-    public void testDispatchEventWithComponentVulnerabilityAnalysisEvent() {
-        final var event = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), UUID.randomUUID(),
-                "purl", "cpe", "swidTagId", /* internal */ false,
-                VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS, /* isNew */ true);
-        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchEvent(event);
-        assertThat(mockProducer.completeNext()).isTrue();
-        assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
-
-        assertThat(mockProducer.history()).satisfiesExactly(record -> {
-            assertThat(record.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
-            assertThat(record.key()).isNotNull();
-            assertThat(record.value()).isNotNull();
-            assertThat(record.headers()).satisfiesExactlyInAnyOrder(
-                    header -> {
-                        assertThat(header.key()).isEqualTo(KafkaEventHeaders.VULN_ANALYSIS_LEVEL);
-                        assertThat(header.value()).asString().isEqualTo("BOM_UPLOAD_ANALYSIS");
-                    },
-                    header -> {
-                        assertThat(header.key()).isEqualTo(KafkaEventHeaders.IS_NEW_COMPONENT);
-                        assertThat(header.value()).asString().isEqualTo("true");
-                    }
-            );
         });
     }
 

@@ -26,6 +26,9 @@ import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.notification.publishing.DefaultNotificationPublishersPlugin;
 import org.dependencytrack.secret.TestSecretManager;
 import org.dependencytrack.secret.management.SecretManager;
+import org.dependencytrack.vulnanalysis.internal.InternalVulnAnalyzerPlugin;
+import org.dependencytrack.vulnanalysis.ossindex.OssIndexVulnAnalyzerPlugin;
+import org.dependencytrack.vulnanalysis.snyk.SnykVulnAnalyzerPlugin;
 import org.dependencytrack.vulndatasource.github.GitHubVulnDataSourcePlugin;
 import org.dependencytrack.vulndatasource.nvd.NvdVulnDataSourcePlugin;
 import org.dependencytrack.vulndatasource.osv.OsvVulnDataSourcePlugin;
@@ -84,12 +87,16 @@ class PluginInitializerTest extends PersistenceCapableTest {
                 .extracting(ExtensionPointMetadata::name)
                 .containsExactlyInAnyOrder(
                         "notification-publisher",
+                        "vuln-analyzer",
                         "vuln-data-source");
         assertThat(pluginManager.getLoadedPlugins()).satisfiesExactlyInAnyOrder(
                 plugin -> assertThat(plugin).isInstanceOf(DefaultNotificationPublishersPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(GitHubVulnDataSourcePlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(InternalVulnAnalyzerPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(NvdVulnDataSourcePlugin.class),
-                plugin -> assertThat(plugin).isInstanceOf(OsvVulnDataSourcePlugin.class));
+                plugin -> assertThat(plugin).isInstanceOf(OssIndexVulnAnalyzerPlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(OsvVulnDataSourcePlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(SnykVulnAnalyzerPlugin.class));
 
         initializer.contextDestroyed(new ServletContextEvent(servletContextMock));
 

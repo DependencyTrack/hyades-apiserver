@@ -31,10 +31,8 @@ import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
-import javax.jdo.annotations.Unique;
 import java.io.Serializable;
 import java.util.Date;
-import java.util.UUID;
 
 /**
  * Model class for tracking the attribution of vulnerability identification.
@@ -43,7 +41,7 @@ import java.util.UUID;
  * @since 4.0.0
  */
 @PersistenceCapable
-@Index(name = "FINDINGATTRIBUTION_COMPOUND_IDX", members = {"component", "vulnerability"})
+@Index(name = "FINDINGATTRIBUTION_COMPOUND_IDX", members = {"component", "vulnerability", "analyzerIdentity"}, unique = "true")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class FindingAttribution implements Serializable {
 
@@ -62,7 +60,7 @@ public class FindingAttribution implements Serializable {
 
     @Persistent
     @Column(name = "ANALYZERIDENTITY", allowsNull = "false")
-    private AnalyzerIdentity analyzerIdentity;
+    private String analyzerIdentity;
 
     @Persistent(defaultFetchGroup = "true")
     @ForeignKey(name = "FINDINGATTRIBUTION_COMPONENT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
@@ -97,23 +95,26 @@ public class FindingAttribution implements Serializable {
     @Column(name = "REFERENCE_URL", allowsNull = "true")
     private String referenceUrl;
 
-    @Persistent(customValueStrategy = "uuid")
-    @Unique(name = "FINDINGATTRIBUTION_UUID_IDX")
-    @Column(name = "UUID", sqlType = "UUID", allowsNull = "false")
-    @NotNull
-    private UUID uuid;
+    @Persistent
+    @Column(name = "DELETED_AT", allowsNull = "true")
+    @JsonIgnore
+    private Date deletedAt;
 
     public FindingAttribution() {}
 
-    public FindingAttribution(Component component, Vulnerability vulnerability, AnalyzerIdentity analyzerIdentity,
-                              String alternateIdentifier, String referenceUrl) {
+    public FindingAttribution(
+            Component component,
+            Vulnerability vulnerability,
+            String analyzerIdentity,
+            String alternateIdentifier,
+            String referenceUrl) {
         this.component = component;
         this.project = component.getProject();
         this.vulnerability = vulnerability;
         this.analyzerIdentity = analyzerIdentity;
         this.attributedOn = new Date();
         this.alternateIdentifier = alternateIdentifier;
-        this.referenceUrl = maybeTrimUrl(referenceUrl);
+        this.referenceUrl = referenceUrl;
     }
 
     public long getId() {
@@ -132,11 +133,11 @@ public class FindingAttribution implements Serializable {
         this.attributedOn = attributedOn;
     }
 
-    public AnalyzerIdentity getAnalyzerIdentity() {
+    public String getAnalyzerIdentity() {
         return analyzerIdentity;
     }
 
-    public void setAnalyzerIdentity(AnalyzerIdentity analyzerIdentity) {
+    public void setAnalyzerIdentity(String analyzerIdentity) {
         this.analyzerIdentity = analyzerIdentity;
     }
 
@@ -178,27 +179,15 @@ public class FindingAttribution implements Serializable {
     }
 
     public void setReferenceUrl(String referenceUrl) {
-        this.referenceUrl = maybeTrimUrl(referenceUrl);
+        this.referenceUrl = referenceUrl;
     }
 
-    public UUID getUuid() {
-        return uuid;
+    public Date getDeletedAt() {
+        return deletedAt;
     }
 
-    public void setUuid(UUID uuid) {
-        this.uuid = uuid;
+    public void setDeletedAt(Date deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
-    private static String maybeTrimUrl(final String url) {
-        if (url == null || url.length() <= 255) {
-            return url;
-        }
-
-        final String[] parts = url.split("\\?", 2);
-        if (parts.length == 2 && parts[0].length() <= 255) {
-            return parts[0];
-        }
-
-        return parts[0].substring(0, 255);
-    }
 }

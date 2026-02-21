@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.model;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * @param vulnId {@link Vulnerability#getVulnId()}
  * @param source {@link Vulnerability#getSource()}
@@ -25,8 +27,17 @@ package org.dependencytrack.model;
  */
 public record VulnIdAndSource(String vulnId, Vulnerability.Source source) {
 
+    public VulnIdAndSource {
+        requireNonNull(vulnId, "vulnId must not be null");
+        requireNonNull(source, "source must not be null");
+    }
+
     public VulnIdAndSource(String vulnId, String source) {
         this(vulnId, Vulnerability.Source.valueOf(source));
+    }
+
+    public static VulnIdAndSource of(Vulnerability vuln) {
+        return new VulnIdAndSource(vuln.getVulnId(), vuln.getSource());
     }
 
 }
