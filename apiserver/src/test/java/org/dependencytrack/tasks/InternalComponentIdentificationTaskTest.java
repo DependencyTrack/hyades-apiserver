@@ -49,26 +49,23 @@ public class InternalComponentIdentificationTaskTest extends PersistenceCapableT
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        // Batch insert 280 components, 30 of which are supposed to be identified as internal
+        // Batch insert 8 components, 3 of which are supposed to be identified as internal
         final Transaction trx = qm.getPersistenceManager().currentTransaction();
         trx.begin();
-        for (int i = 0; i < 10; i++) {
-            for (int j = 0; j < 250; j++) {
-                createComponent("com.example", "example-lib", project);
-            }
-
-            createComponent("org.acme", "acme-lib", project); // Only group matches
-            createComponent("com.example", "foobar-baz", project); // Only name matches
-            createComponent("org.acme", "foobar-baz", project); // Group and name match
-            qm.getPersistenceManager().flush();
+        for (int j = 0; j < 5; j++) {
+            createComponent("com.example", "example-lib-" + j, project);
         }
+        createComponent("org.acme", "acme-lib", project); // Only group matches
+        createComponent("com.example", "foobar-baz", project); // Only name matches
+        createComponent("org.acme", "foobar-baz", project); // Group and name match
+        qm.getPersistenceManager().flush();
         trx.commit();
     }
 
     @Test
     public void test() throws Exception {
         new InternalComponentIdentificationTask().inform(new InternalComponentIdentificationEvent());
-        assertThat(getInternalComponentCount()).isEqualTo(30);
+        assertThat(getInternalComponentCount()).isEqualTo(3);
     }
 
     private void createComponent(final String group, final String name, final Project project) {

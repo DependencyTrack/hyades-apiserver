@@ -24,8 +24,11 @@ import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.eclipse.microprofile.config.Config;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -43,29 +46,25 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class S3FileStorageTest {
 
-    private MinIOContainer minioContainer;
-    private MinioClient s3Client;
+    private static MinIOContainer minioContainer;
 
-    @BeforeEach
-    void beforeEach() throws Exception {
+    @BeforeAll
+    static void beforeAll() throws Exception {
         minioContainer = new MinIOContainer(DockerImageName.parse("minio/minio:latest"));
         minioContainer.start();
 
-        s3Client = MinioClient.builder()
+        try (var s3Client = MinioClient.builder()
                 .endpoint(minioContainer.getS3URL())
                 .credentials(minioContainer.getUserName(), minioContainer.getPassword())
-                .build();
-
-        s3Client.makeBucket(MakeBucketArgs.builder()
-                .bucket("test")
-                .build());
+                .build()) {
+            s3Client.makeBucket(MakeBucketArgs.builder()
+                    .bucket("test")
+                    .build());
+        }
     }
 
-    @AfterEach
-    void afterEach() throws Exception {
-        if (s3Client != null) {
-            s3Client.close();
-        }
+    @AfterAll
+    static void afterAll() {
         if (minioContainer != null) {
             minioContainer.stop();
         }
@@ -90,15 +89,13 @@ class S3FileStorageTest {
 
     @Test
     void shouldThrowWhenBucketExistenceCheckFailed() {
-        final String s3Url = minioContainer.getS3URL();
-        minioContainer.stop();
-
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> createStorage(Map.ofEntries(
-                        Map.entry("dt.file-storage.s3.endpoint", s3Url),
+                        Map.entry("dt.file-storage.s3.endpoint", "http://localhost:1"),
                         Map.entry("dt.file-storage.s3.access.key", "minioadmin"),
                         Map.entry("dt.file-storage.s3.secret.key", "minioadmin"),
-                        Map.entry("dt.file-storage.s3.bucket", "does-not-exist"))))
+                        Map.entry("dt.file-storage.s3.bucket", "does-not-exist"),
+                        Map.entry("dt.file-storage.s3.connect-timeout-ms", "500"))))
                 .withMessage("Failed to determine if bucket does-not-exist exists");
     }
 
@@ -134,21 +131,9 @@ class S3FileStorageTest {
     @Test
     void storeShouldThrowWhenFileHasInvalidName() throws Exception {
         try (final FileStorage storage = createStorage()) {
-            minioContainer.stop();
-
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> storage.store("foo$bar", new ByteArrayInputStream("bar".getBytes())))
                     .withMessage("fileName 'foo$bar' does not match pattern: [a-zA-Z0-9_/\\-.]+");
-        }
-    }
-
-    @Test
-    void storeShouldThrowWhenHostIsUnavailable() throws Exception {
-        try (final FileStorage storage = createStorage()) {
-            minioContainer.stop();
-
-            assertThatExceptionOfType(IOException.class)
-                    .isThrownBy(() -> storage.store("foo", new ByteArrayInputStream("bar".getBytes())));
         }
     }
 
@@ -165,19 +150,6 @@ class S3FileStorageTest {
     }
 
     @Test
-    void getShouldThrowWhenHostIsUnavailable() throws Exception {
-        try (final FileStorage storage = createStorage()) {
-            final FileMetadata fileMetadata = storage.store("foo", new ByteArrayInputStream("bar".getBytes()));
-
-            minioContainer.stop();
-
-            assertThatExceptionOfType(IOException.class)
-                    .isThrownBy(() -> storage.get(fileMetadata))
-                    .withCauseInstanceOf(ConnectException.class);
-        }
-    }
-
-    @Test
     void deleteShouldReturnTrueWhenFileDoesNotExist() throws Exception {
         try (final FileStorage storage = createStorage()) {
             assertThat(storage.delete(
@@ -187,17 +159,80 @@ class S3FileStorageTest {
         }
     }
 
-    @Test
-    void deleteShouldThrowWhenHostIsUnavailable() throws Exception {
-        try (final FileStorage storage = createStorage()) {
-            final FileMetadata fileMetadata = storage.store("foo", new ByteArrayInputStream("bar".getBytes()));
+    @Nested
+    class WhenHostIsUnavailable {
 
-            minioContainer.stop();
+        private MinIOContainer ephemeralContainer;
 
-            assertThatExceptionOfType(IOException.class)
-                    .isThrownBy(() -> storage.delete(fileMetadata))
-                    .withCauseInstanceOf(ConnectException.class);
+        @BeforeEach
+        void beforeEach() throws Exception {
+            ephemeralContainer = new MinIOContainer(DockerImageName.parse("minio/minio:latest"));
+            ephemeralContainer.start();
+
+            try (var s3Client = MinioClient.builder()
+                    .endpoint(ephemeralContainer.getS3URL())
+                    .credentials(ephemeralContainer.getUserName(), ephemeralContainer.getPassword())
+                    .build()) {
+                s3Client.makeBucket(MakeBucketArgs.builder()
+                        .bucket("test")
+                        .build());
+            }
         }
+
+        @AfterEach
+        void afterEach() {
+            if (ephemeralContainer != null) {
+                ephemeralContainer.stop();
+            }
+        }
+
+        @Test
+        void storeShouldThrowWhenHostIsUnavailable() throws Exception {
+            try (final FileStorage storage = createEphemeralStorage()) {
+                ephemeralContainer.stop();
+
+                assertThatExceptionOfType(IOException.class)
+                        .isThrownBy(() -> storage.store("foo", new ByteArrayInputStream("bar".getBytes())));
+            }
+        }
+
+        @Test
+        void getShouldThrowWhenHostIsUnavailable() throws Exception {
+            try (final FileStorage storage = createEphemeralStorage()) {
+                final FileMetadata fileMetadata = storage.store("foo", new ByteArrayInputStream("bar".getBytes()));
+
+                ephemeralContainer.stop();
+
+                assertThatExceptionOfType(IOException.class)
+                        .isThrownBy(() -> storage.get(fileMetadata))
+                        .withCauseInstanceOf(ConnectException.class);
+            }
+        }
+
+        @Test
+        void deleteShouldThrowWhenHostIsUnavailable() throws Exception {
+            try (final FileStorage storage = createEphemeralStorage()) {
+                final FileMetadata fileMetadata = storage.store("foo", new ByteArrayInputStream("bar".getBytes()));
+
+                ephemeralContainer.stop();
+
+                assertThatExceptionOfType(IOException.class)
+                        .isThrownBy(() -> storage.delete(fileMetadata))
+                        .withCauseInstanceOf(ConnectException.class);
+            }
+        }
+
+        private FileStorage createEphemeralStorage() {
+            return createStorage(Map.ofEntries(
+                    Map.entry("dt.file-storage.s3.endpoint", ephemeralContainer.getS3URL()),
+                    Map.entry("dt.file-storage.s3.access.key", ephemeralContainer.getUserName()),
+                    Map.entry("dt.file-storage.s3.secret.key", ephemeralContainer.getPassword()),
+                    Map.entry("dt.file-storage.s3.bucket", "test"),
+                    Map.entry("dt.file-storage.s3.connect-timeout-ms", "500"),
+                    Map.entry("dt.file-storage.s3.read-timeout-ms", "500"),
+                    Map.entry("dt.file-storage.s3.write-timeout-ms", "500")));
+        }
+
     }
 
     private FileStorage createStorage() {
