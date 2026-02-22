@@ -70,6 +70,7 @@ import java.util.stream.Collectors;
 
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_VULN_ANALYZER_NAME;
+import static org.dependencytrack.notification.api.NotificationFactory.createAnalyzerErrorNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createNewVulnerabilityNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createNewVulnerableDependencyNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityAnalysisDecisionChangeNotification;
@@ -459,6 +460,12 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
             // TODO: Clean this up.
             final var notifications = new ArrayList<>(auditChangeNotifications);
+            for (final String failedAnalyzer : failedAnalyzers) {
+                notifications.add(createAnalyzerErrorNotification(
+                        "Vulnerability analyzer '%s' failed for project '%s'".formatted(
+                                failedAnalyzer, projectUuid)));
+            }
+
             final var notifyComponentIds = new ArrayList<Long>();
             final var notifyVulnIds = new ArrayList<Long>();
             createdFindings.forEach(createdFinding -> {

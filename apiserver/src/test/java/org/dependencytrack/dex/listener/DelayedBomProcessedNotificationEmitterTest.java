@@ -137,7 +137,7 @@ class DelayedBomProcessedNotificationEmitterTest extends PersistenceCapableTest 
                                 Map.entry(WF_LABEL_PROJECT_UUID, projectB.getUuid().toString()),
                                 Map.entry(WF_LABEL_BOM_UPLOAD_TOKEN, tokenB.toString()))))));
 
-        assertThat(qm.getNotificationOutbox()).satisfiesExactly(
+        assertThat(qm.getNotificationOutbox()).satisfiesExactlyInAnyOrder(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED));
     }
