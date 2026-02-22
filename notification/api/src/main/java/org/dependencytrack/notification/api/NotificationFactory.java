@@ -48,6 +48,7 @@ import org.dependencytrack.notification.proto.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.notification.proto.v1.Vulnerability;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysis;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
+import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
@@ -243,11 +244,11 @@ public final class NotificationFactory {
             Project project,
             Component component,
             Vulnerability vulnerability,
-            String vulnerabilityAnalysisLevel) {
+            VulnerabilityAnalysisTrigger analysisTrigger) {
         requireNonNull(project, "project must not be null");
         requireNonNull(component, "component must not be null");
         requireNonNull(vulnerability, "vulnerability must not be null");
-        requireNonNull(vulnerabilityAnalysisLevel, "vulnerabilityAnalysisLevel must not be null");
+        requireNonNull(analysisTrigger, "analysisTrigger must not be null");
 
         var title = "New Vulnerability Identified on Project: [" + project.getName();
         if (project.hasVersion()) {
@@ -272,7 +273,13 @@ public final class NotificationFactory {
                                 .setProject(project)
                                 .setComponent(component)
                                 .setVulnerability(vulnerability)
-                                .setVulnerabilityAnalysisLevel(vulnerabilityAnalysisLevel)
+                                .setAnalysisTrigger(analysisTrigger)
+                                .setVulnerabilityAnalysisLevel(switch (analysisTrigger) {
+                                    case VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD -> "BOM_UPLOAD_ANALYSIS";
+                                    case VULNERABILITY_ANALYSIS_TRIGGER_SCHEDULE -> "PERIODIC_ANALYSIS";
+                                    case VULNERABILITY_ANALYSIS_TRIGGER_MANUAL -> "MANUAL_ANALYSIS";
+                                    default -> "UNKNOWN";
+                                })
                                 .setAffectedProjectsReference(
                                         BackReference.newBuilder()
                                                 .setApiUri("/api/v1/vulnerability/source/%s/vuln/%s/projects".formatted(

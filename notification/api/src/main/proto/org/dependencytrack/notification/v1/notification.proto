@@ -101,13 +101,16 @@ message NewVulnerabilitySubject {
   Project project = 2;
   Vulnerability vulnerability = 3;
   BackReference affected_projects_reference = 4;
-  optional string vulnerability_analysis_level = 5;
+  optional string vulnerability_analysis_level = 5 [deprecated = true];
   // List of projects affected by the vulnerability.
   // DEPRECATED: This list only holds one item, and it is identical to the one in the project field.
   // The field is kept for backward compatibility of JSON notifications, but consumers should not expect multiple projects here.
   // Transmitting all affected projects in one notification is not feasible for large portfolios,
   // see https://github.com/DependencyTrack/hyades/issues/467 for details.
   repeated Project affected_projects = 6 [deprecated = true];
+
+  // The trigger of the analysis that identified the vulnerability.
+  VulnerabilityAnalysisTrigger analysis_trigger = 7;
 }
 
 message NewVulnerableDependencySubject {
@@ -256,4 +259,18 @@ message PolicyViolationAnalysis {
   PolicyViolation policy_violation = 3;
   optional string state = 4;
   optional bool suppressed = 5;
+}
+
+enum VulnerabilityAnalysisTrigger {
+  // No trigger specified.
+  VULNERABILITY_ANALYSIS_TRIGGER_UNSPECIFIED = 0;
+
+  // The analysis was triggered by a BOM upload.
+  VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD = 1;
+
+  // The analysis was triggered by a schedule.
+  VULNERABILITY_ANALYSIS_TRIGGER_SCHEDULE = 2;
+
+  // The analysis was triggered manually.
+  VULNERABILITY_ANALYSIS_TRIGGER_MANUAL = 3;
 }
