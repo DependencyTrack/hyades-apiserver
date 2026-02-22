@@ -107,8 +107,9 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
                 .toList();
 
         final var response = ListAdvisoriesResponse.builder()
-                .advisories(responseItems)
-                .pagination(createPaginationMetadata(getUriInfo(), advisoriesPage))
+                .items(responseItems)
+                .nextPageToken(advisoriesPage.nextPageToken())
+                .total(convertTotalCount(advisoriesPage.totalCount()))
                 .build();
 
         return Response.ok(response).build();
@@ -287,8 +288,9 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
                 .toList();
 
         final var response = ListProjectAdvisoriesResponse.builder()
-                .advisories(responseItems)
-                .pagination(createPaginationMetadata(getUriInfo(), projectAdvisories))
+                .items(responseItems)
+                .nextPageToken(projectAdvisories.nextPageToken())
+                .total(convertTotalCount(projectAdvisories.totalCount()))
                 .build();
 
         return Response.ok(response).build();

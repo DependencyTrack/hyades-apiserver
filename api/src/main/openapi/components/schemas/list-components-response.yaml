@@ -18,10 +18,9 @@ type: object
 allOf:
 - $ref: "./paginated-response.yaml"
 properties:
-  components:
+  items:
     type: array
     items:
       $ref: "./list-components-response-item.yaml"
 required:
-- _pagination
-- components
+- items

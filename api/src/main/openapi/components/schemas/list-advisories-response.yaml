@@ -16,12 +16,12 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 allOf:
-  - $ref: "./paginated-response.yaml"
+- $ref: "./paginated-response.yaml"
 properties:
-  advisories:
+  items:
     type: array
     items:
       $ref: "./list-advisories-response-item.yaml"
 required:
-  - advisories
-  - _pagination
+- total
+- items

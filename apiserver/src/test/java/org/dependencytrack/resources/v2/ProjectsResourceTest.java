@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.net.URI;
 import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -57,7 +56,7 @@ public class ProjectsResourceTest extends ResourceTest {
         final JsonObject responseJson = parseJsonObject(response);
         assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
                 {
-                  "components" : [ {
+                  "items" : [ {
                         "name" : "component-name",
                         "version" : "3.0",
                         "group" : "component-group",
@@ -83,29 +82,22 @@ public class ProjectsResourceTest extends ResourceTest {
                         "uuid" : "${json-unit.any-string}"
                       }
                   ],
-                  "_pagination": {
-                      "links": {
-                        "self": "${json-unit.any-string}",
-                        "next": "${json-unit.any-string}"
-                      }
-                  }
+                  "next_page_token": "${json-unit.any-string}"
                 }
                 """);
 
-        final var nextPageUri = URI.create(
-                responseJson
-                        .getJsonObject("_pagination")
-                        .getJsonObject("links")
-                        .getString("next"));
+        final String nextPageToken = responseJson.getString("next_page_token");
 
-        response = jersey.target(nextPageUri)
+        response = jersey.target("/projects/" + project.getUuid() + "/components")
+                .queryParam("limit", 2)
+                .queryParam("page_token", nextPageToken)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "components" : [ {
+                  "items" : [ {
                        "name" : "component-name",
                        "version" : "1.0",
                        "group" : "component-group",
@@ -117,12 +109,7 @@ public class ProjectsResourceTest extends ResourceTest {
                        },
                        "uuid" : "${json-unit.any-string}"
                       }
-                  ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}"
-                    }
-                  }
+                  ]
                 }
                 """);
     }

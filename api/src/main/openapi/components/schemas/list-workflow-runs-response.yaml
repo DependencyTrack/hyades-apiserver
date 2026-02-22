@@ -18,10 +18,10 @@ type: object
 allOf:
 - $ref: "./paginated-response.yaml"
 properties:
-  workflow_runs:
+  items:
     type: array
     items:
       $ref: "./workflow-run-metadata.yaml"
 required:
-- _pagination
-- workflow_runs
+- total
+- items

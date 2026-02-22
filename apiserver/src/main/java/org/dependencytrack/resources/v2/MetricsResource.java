@@ -20,9 +20,7 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
 import jakarta.ws.rs.Path;
-import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
 import org.dependencytrack.api.v2.MetricsApi;
 import org.dependencytrack.api.v2.model.ListVulnerabilityMetricsResponse;
 import org.dependencytrack.api.v2.model.ListVulnerabilityMetricsResponseItem;
@@ -38,9 +36,6 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 @Path("/")
 public class MetricsResource extends AbstractApiResource implements MetricsApi {
-
-    @Context
-    private UriInfo uriInfo;
 
     @Override
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -92,7 +87,7 @@ public class MetricsResource extends AbstractApiResource implements MetricsApi {
                 handle -> handle.attach(MetricsDao.class).getVulnerabilityMetrics(limit, pageToken));
 
         final var response = ListVulnerabilityMetricsResponse.builder()
-                .metrics(metricsPage.items().stream()
+                .items(metricsPage.items().stream()
                         .<ListVulnerabilityMetricsResponseItem>map(
                                 metricRow -> ListVulnerabilityMetricsResponseItem.builder()
                                         .year(metricRow.year())
@@ -101,7 +96,8 @@ public class MetricsResource extends AbstractApiResource implements MetricsApi {
                                         .observedAt(metricRow.measuredAt().getEpochSecond())
                                         .build())
                         .toList())
-                .pagination(createPaginationMetadata(uriInfo, metricsPage))
+                .nextPageToken(metricsPage.nextPageToken())
+                .total(convertTotalCount(metricsPage.totalCount()))
                 .build();
 
         return Response.ok(response).build();

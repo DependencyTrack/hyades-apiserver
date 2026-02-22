@@ -18,10 +18,10 @@ type: object
 allOf:
 - $ref: "./paginated-response.yaml"
 properties:
-  advisories:
+  items:
     type: array
     items:
       $ref: "./list-project-advisories-response-item.yaml"
 required:
-- advisories
-- _pagination
+- total
+- items

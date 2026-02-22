@@ -67,7 +67,7 @@ public class TeamsResource extends AbstractApiResource implements TeamsApi {
                 handle -> handle.attach(TeamDao.class).listTeams(limit, pageToken));
 
         final var response = ListTeamsResponse.builder()
-                .teams(teamsPage.items().stream()
+                .items(teamsPage.items().stream()
                         .<ListTeamsResponseItem>map(
                                 teamRow -> ListTeamsResponseItem.builder()
                                         .name(teamRow.name())
@@ -75,7 +75,8 @@ public class TeamsResource extends AbstractApiResource implements TeamsApi {
                                         .members(teamRow.members())
                                         .build())
                         .toList())
-                .pagination(createPaginationMetadata(uriInfo, teamsPage))
+                .nextPageToken(teamsPage.nextPageToken())
+                .total(convertTotalCount(teamsPage.totalCount()))
                 .build();
 
         return Response.ok(response).build();
@@ -155,14 +156,15 @@ public class TeamsResource extends AbstractApiResource implements TeamsApi {
                 handle -> handle.attach(TeamDao.class).listTeamMembers(team, user, limit, pageToken));
 
         final var response = ListTeamMembershipsResponse.builder()
-                .memberships(membershipsPage.items().stream()
+                .items(membershipsPage.items().stream()
                         .<ListTeamMembershipsResponseItem>map(
                                 membershipRow -> ListTeamMembershipsResponseItem.builder()
                                         .teamName(membershipRow.teamName())
                                         .username(membershipRow.username())
                                         .build())
                         .toList())
-                .pagination(createPaginationMetadata(uriInfo, membershipsPage))
+                .nextPageToken(membershipsPage.nextPageToken())
+                .total(convertTotalCount(membershipsPage.totalCount()))
                 .build();
 
         return Response.ok(response).build();

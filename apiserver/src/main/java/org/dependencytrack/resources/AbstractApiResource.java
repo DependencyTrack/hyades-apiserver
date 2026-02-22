@@ -20,9 +20,6 @@ package org.dependencytrack.resources;
 
 import alpine.common.logging.Logger;
 import alpine.server.resources.AlpineResource;
-import jakarta.ws.rs.core.UriInfo;
-import org.dependencytrack.api.v2.model.PaginationLinks;
-import org.dependencytrack.api.v2.model.PaginationMetadata;
 import org.dependencytrack.api.v2.model.TotalCount;
 import org.dependencytrack.api.v2.model.TotalCountType;
 import org.dependencytrack.common.MdcScope;
@@ -33,6 +30,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.jdbi.v3.core.Handle;
+import org.jspecify.annotations.Nullable;
 import org.owasp.security.logging.SecurityMarkers;
 
 import java.util.Map;
@@ -133,36 +131,17 @@ public abstract class AbstractApiResource extends AlpineResource {
         }
     }
 
-    protected PaginationMetadata createPaginationMetadata(
-            final UriInfo uriInfo, final Page<?> page) {
-        final var linksBuilder = PaginationLinks.builder()
-                .self(uriInfo.getRequestUri());
-        if (page.nextPageToken() != null) {
-            linksBuilder.next(
-                    uriInfo.getRequestUriBuilder()
-                            .replaceQueryParam("page_token", page.nextPageToken())
-                            // Clear sorting parameters, they're included in the
-                            // page token for subsequent requests.
-                            .replaceQueryParam("sort_by")
-                            .replaceQueryParam("sort_direction")
-                            .build());
+    protected @Nullable TotalCount convertTotalCount(Page.@Nullable TotalCount totalCount) {
+        if (totalCount == null) {
+            return null;
         }
 
-        TotalCount totalCount = null;
-        if (page.totalCount() != null) {
-            totalCount = TotalCount.builder()
-                    .count(page.totalCount().value())
-                    .type(switch (page.totalCount().type()) {
-                        case AT_LEAST -> TotalCountType.AT_LEAST;
-                        case ESTIMATE -> TotalCountType.ESTIMATE;
-                        case EXACT -> TotalCountType.EXACT;
-                    })
-                    .build();
-        }
-
-        return PaginationMetadata.builder()
-                .links(linksBuilder.build())
-                .total(totalCount)
+        return TotalCount.builder()
+                .count(totalCount.value())
+                .type(switch (totalCount.type()) {
+                    case AT_LEAST -> TotalCountType.AT_LEAST;
+                    case EXACT -> TotalCountType.EXACT;
+                })
                 .build();
     }
 

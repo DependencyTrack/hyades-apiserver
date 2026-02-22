@@ -154,10 +154,11 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                         .withLimit(limit));
 
         final var response = ListWorkflowRunsResponse.builder()
-                .workflowRuns(runsPage.items().stream()
+                .items(runsPage.items().stream()
                         .map(WorkflowsResource::convert)
                         .toList())
-                .pagination(createPaginationMetadata(getUriInfo(), runsPage))
+                .nextPageToken(runsPage.nextPageToken())
+                .total(convertTotalCount(runsPage.totalCount()))
                 .build();
 
         return Response.ok(response).build();
@@ -197,10 +198,11 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                                 .withLimit(limit));
 
         final var response = ListWorkflowRunEventsResponse.builder()
-                .events(historyEntryPage.items().stream()
+                .items(historyEntryPage.items().stream()
                         .map(entry -> convert(entry, eventJsonPrinter, objectMapper))
                         .toList())
-                .pagination(createPaginationMetadata(getUriInfo(), historyEntryPage))
+                .nextPageToken(historyEntryPage.nextPageToken())
+                .total(convertTotalCount(historyEntryPage.totalCount()))
                 .build();
 
         return Response.ok(response).build();

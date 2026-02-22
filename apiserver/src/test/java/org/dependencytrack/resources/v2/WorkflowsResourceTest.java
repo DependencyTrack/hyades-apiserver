@@ -252,7 +252,7 @@ class WorkflowsResourceTest extends ResourceTest {
         assertThatJson(getPlainTextBody(response))
                 .isEqualTo(/* language=JSON */ """
                         {
-                          "workflow_runs": [
+                          "items": [
                             {
                               "id": "724c0700-4eeb-45f0-8ff4-8bba369c0174",
                               "workflow_name": "workflowName",
@@ -270,14 +270,9 @@ class WorkflowsResourceTest extends ResourceTest {
                               "started_at": 888888
                             }
                           ],
-                          "_pagination": {
-                            "links": {
-                              "self": "${json-unit.any-string}"
-                            },
-                            "total": {
-                              "count": 1,
-                              "type": "EXACT"
-                            }
+                          "total": {
+                            "count": 1,
+                            "type": "EXACT"
                           }
                         }
                         """);
@@ -352,7 +347,7 @@ class WorkflowsResourceTest extends ResourceTest {
         assertThatJson(getPlainTextBody(response))
                 .isEqualTo(/* language=JSON */ """
                         {
-                          "events": [
+                          "items": [
                             {
                               "sequence_number": 0,
                               "event": {
@@ -371,14 +366,9 @@ class WorkflowsResourceTest extends ResourceTest {
                               }
                             }
                           ],
-                          "_pagination": {
-                            "links": {
-                              "self": "${json-unit.any-string}"
-                            },
-                            "total": {
-                              "count": 1,
-                              "type": "EXACT"
-                            }
+                          "total": {
+                            "count": 1,
+                            "type": "EXACT"
                           }
                         }
                         """);

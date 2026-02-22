@@ -22,7 +22,7 @@ properties:
     minimum: 0
     description: >-
       The total number of records across all pages.
-      Might be an exact count, a lower bound, or an estimate.
+      Might be an exact count, or a lower bound.
       Refer to the `type` field for the applicable semantics.
   type:
     $ref: "./total-count-type.yaml"

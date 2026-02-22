@@ -405,15 +405,10 @@ class SecretsResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "secrets": [],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}"
-                    },
-                    "total": {
-                      "count": 0,
-                      "type": "EXACT"
-                    }
+                  "items": [],
+                  "total": {
+                    "count": 0,
+                    "type": "EXACT"
                   }
                 }
                 """);
@@ -440,7 +435,7 @@ class SecretsResourceTest extends ResourceTest {
                 .withOptions(Option.IGNORING_ARRAY_ORDER)
                 .isEqualTo(/* language=JSON */ """
                         {
-                          "secrets": [
+                          "items": [
                             {
                               "name": "bar",
                               "description": "bar-description",
@@ -458,14 +453,9 @@ class SecretsResourceTest extends ResourceTest {
                               "created_at": "${json-unit.any-number}"
                             }
                           ],
-                          "_pagination": {
-                            "links": {
-                              "self": "${json-unit.any-string}"
-                            },
-                            "total": {
-                              "count": 3,
-                              "type": "EXACT"
-                            }
+                          "total": {
+                            "count": 3,
+                            "type": "EXACT"
                           }
                         }
                         """);

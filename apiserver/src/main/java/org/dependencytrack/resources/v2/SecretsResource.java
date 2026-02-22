@@ -135,11 +135,12 @@ public class SecretsResource extends AbstractApiResource implements SecretsApi {
                         .withLimit(limit));
 
         final var response = ListSecretsResponse.builder()
-                .secrets(
+                .items(
                         secretsPage.items().stream()
                                 .map(this::convert)
                                 .toList())
-                .pagination(createPaginationMetadata(getUriInfo(), secretsPage))
+                .nextPageToken(secretsPage.nextPageToken())
+                .total(convertTotalCount(secretsPage.totalCount()))
                 .build();
 
         return Response.ok(response).build();

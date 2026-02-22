@@ -21,45 +21,38 @@ info:
     # REST API of OWASP Dependency-Track
     
     ## Pagination
-    
+
     This API implements token-based pagination.
-    Collection responses typically have the following structure:
-    
+    Collection responses have the following structure:
+
     ```json
     {
-      "data": [
-        ...
-      ],
-      "_pagination": {
-        "links": {
-          "self": "https://example.com/foo?limit=10",
-          "next": "https://example.com/foo?page_token=abcdefg&limit=10"
-        },
-        "total": {
-          "count": 100,
-          "type": "EXACT"
-        }
+      "items": [...],
+      "next_page_token": "abcdefg",
+      "total": {
+        "count": 100,
+        "type": "EXACT"
       }
     }
     ```
-    
-    `_pagination.links` enables navigation across pages. While the `self` link
-    is always returned, `next` will not be present when no more items exist.
-    
-    To navigate backwards, clients should keep track of the previous `next`
-    link(s) as they paginate through collections. The API does *not* provide
-    `previous` links!
-    
+
+    `next_page_token` is present when more items exist, and absent otherwise.
+    To fetch the next page, pass it as the `page_token` query parameter.
+
+    To navigate backwards, clients should keep track of previous page tokens
+    as they paginate through collections. The API does *not* provide
+    backward navigation!
+
     Collections that support sorting will only consider the `sort_by`
     and `sort_direction` query parameters for the request of the first
     page. For subsequent pages, sorting preferences are bound to the
-    page token. `next` links will not include `sort_by` or `sort_direction`.
-    
-    `page_token`s are opaque strings. Clients should not try to interpret
-    or generate them. Their format may also change without notice.
-    
+    page token.
+
+    Page tokens are opaque strings. Clients should not try to interpret
+    or generate them. Their format may change without notice.
+
     The `total` object discloses how many items exist in the collection
-    *across all pages*. Because counting is expensive, some collections 
+    *across all pages*. Because counting is expensive, some collections
     that hold *a lot* of items may return partial or estimated counts
     (types `AT_LEAST` or `ESTIMATE` respectively). Which type to expect
     is usually documented in the operation's description.

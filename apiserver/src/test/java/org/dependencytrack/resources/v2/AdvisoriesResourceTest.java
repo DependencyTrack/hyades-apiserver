@@ -91,7 +91,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "advisories": [
+                  "items": [
                     {
                       "id": "${json-unit.any-string}",
                       "title": "Test Advisory 1",
@@ -118,14 +118,9 @@ public class AdvisoriesResourceTest extends ResourceTest {
                       "format": "CSAF"
                     }
                   ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}"
-                    },
-                    "total": {
-                      "count": 2,
-                      "type": "EXACT"
-                    }
+                  "total": {
+                    "count": 2,
+                    "type": "EXACT"
                   }
                 }
                 """);
@@ -169,7 +164,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
 
         JsonObject json = parseJsonObject(response);
-        JsonArray advisories = json.getJsonArray("advisories");
+        JsonArray advisories = json.getJsonArray("items");
         assertThat(advisories).hasSize(1);
         assertThat(advisories.getJsonObject(0).getString("title"))
                 .isEqualTo("CSAF Advisory");
@@ -376,7 +371,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "advisories": [
+                  "items": [
                     {
                       "id": "${json-unit.any-string}",
                       "publisher": "ACME Inc.",
@@ -389,14 +384,9 @@ public class AdvisoriesResourceTest extends ResourceTest {
                       "findings_count": 1
                     }
                   ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}"
-                    },
-                    "total": {
-                      "count": 1,
-                      "type": "EXACT"
-                    }
+                  "total": {
+                    "count": 1,
+                    "type": "EXACT"
                   }
                 }
                 """);
