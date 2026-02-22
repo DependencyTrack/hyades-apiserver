@@ -73,6 +73,7 @@ import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_SYSTEM;
+import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD;
 
 /**
  * Factory for test notifications.
@@ -199,7 +200,7 @@ public final class TestNotificationFactory {
                 createProject(),
                 createComponent(),
                 createVulnerability(),
-                "BOM_UPLOAD_ANALYSIS");
+                VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD);
     }
 
     public static Notification createNewVulnerableDependencyTestNotification() {

@@ -25,6 +25,13 @@ import "org/dependencytrack/filestorage/v1/filestorage.proto";
 option java_multiple_files = true;
 option java_package = "org.dependencytrack.proto.internal.workflow.v1";
 
+enum VulnAnalysisTrigger {
+  VULN_ANALYSIS_TRIGGER_UNSPECIFIED = 0;
+  VULN_ANALYSIS_TRIGGER_BOM_UPLOAD = 1;
+  VULN_ANALYSIS_TRIGGER_SCHEDULE = 2;
+  VULN_ANALYSIS_TRIGGER_MANUAL = 3;
+}
+
 // Supplementary context for the vuln-analysis workflow.
 // This context is expected to hold data of potentially extensive
 // size, and should thus only be passed via file storage metadata.
@@ -37,7 +44,8 @@ message VulnAnalysisWorkflowContext {
 
 message VulnAnalysisWorkflowArg {
   string project_uuid = 1;
-  optional org.dependencytrack.filestorage.v1.FileMetadata context_file_metadata = 2;
+  VulnAnalysisTrigger trigger = 2;
+  optional org.dependencytrack.filestorage.v1.FileMetadata context_file_metadata = 3;
 }
 
 message PrepareVulnAnalysisArg {
@@ -52,8 +60,9 @@ message InvokeVulnAnalyzerArg {
 
 message ReconcileVulnAnalysisResultsArg {
   string project_uuid = 1;
-  repeated AnalyzerResult analyzer_results = 2;
-  optional org.dependencytrack.filestorage.v1.FileMetadata context_file_metadata = 3;
+  VulnAnalysisTrigger analysis_trigger = 2;
+  repeated AnalyzerResult analyzer_results = 3;
+  optional org.dependencytrack.filestorage.v1.FileMetadata context_file_metadata = 4;
 
   message AnalyzerResult {
     string analyzer_name = 1;

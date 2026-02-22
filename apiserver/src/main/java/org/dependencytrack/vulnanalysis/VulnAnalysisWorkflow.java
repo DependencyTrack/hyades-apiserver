@@ -35,6 +35,7 @@ import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisArg;
 import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisRes;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg.AnalyzerResult;
+import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisTrigger;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
@@ -94,7 +95,7 @@ public final class VulnAnalysisWorkflow implements Workflow<VulnAnalysisWorkflow
                             preparationResult.getBomFileMetadata());
 
             analyzerResults = awaitAnalyzerResults(ctx, awaitableByAnalyzerName);
-            reconcileResults(ctx, arg.getProjectUuid(), analyzerResults, contextFileMetadata);
+            reconcileResults(ctx, arg.getProjectUuid(), arg.getTrigger(), analyzerResults, contextFileMetadata);
         } catch (Exception e) {
             deleteFiles(ctx, preparationResult.getBomFileMetadata(), analyzerResults, contextFileMetadata);
             throw e;
@@ -202,10 +203,12 @@ public final class VulnAnalysisWorkflow implements Workflow<VulnAnalysisWorkflow
     private void reconcileResults(
             WorkflowContext<?> ctx,
             String projectUuid,
+            VulnAnalysisTrigger analysisTrigger,
             List<AnalyzerResult> results,
             @Nullable FileMetadata contextFileMetadata) {
         final var argBuilder = ReconcileVulnAnalysisResultsArg.newBuilder()
                 .setProjectUuid(projectUuid)
+                .setAnalysisTrigger(analysisTrigger)
                 .addAllAnalyzerResults(results);
         if (contextFileMetadata != null) {
             argBuilder.setContextFileMetadata(contextFileMetadata);

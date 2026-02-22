@@ -74,6 +74,11 @@ import static org.dependencytrack.notification.api.NotificationFactory.createAna
 import static org.dependencytrack.notification.api.NotificationFactory.createNewVulnerabilityNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createNewVulnerableDependencyNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityAnalysisDecisionChangeNotification;
+import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.UNRECOGNIZED;
+import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD;
+import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_MANUAL;
+import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_SCHEDULE;
+import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_UNSPECIFIED;
 import static org.dependencytrack.parser.dependencytrack.BovModelConverter.convert;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
@@ -479,7 +484,13 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                             subject.getProject(),
                             subject.getComponent(),
                             subject.getVulnerability(),
-                            "TODO"))
+                            switch (arg.getAnalysisTrigger()) {
+                                case VULN_ANALYSIS_TRIGGER_BOM_UPLOAD -> VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD;
+                                case VULN_ANALYSIS_TRIGGER_SCHEDULE -> VULNERABILITY_ANALYSIS_TRIGGER_SCHEDULE;
+                                case VULN_ANALYSIS_TRIGGER_MANUAL -> VULNERABILITY_ANALYSIS_TRIGGER_MANUAL;
+                                case VULN_ANALYSIS_TRIGGER_UNSPECIFIED -> VULNERABILITY_ANALYSIS_TRIGGER_UNSPECIFIED;
+                                case UNRECOGNIZED -> UNRECOGNIZED;
+                            }))
                     .forEach(notifications::add);
 
             if (arg.hasContextFileMetadata()) {
