@@ -31,7 +31,6 @@ import org.dependencytrack.persistence.jdbi.MetricsTestDao;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -210,7 +209,7 @@ public class MetricsResourceTest extends ResourceTest {
         final JsonObject responseJson = parseJsonObject(response);
         assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
                 {
-                  "metrics" :
+                  "items" :
                   [
                       {
                         "observed_at" : "${json-unit.any-number}",
@@ -225,29 +224,22 @@ public class MetricsResourceTest extends ResourceTest {
                         "count" : 2
                       }
                   ],
-                  "_pagination" : {
-                    "links" : {
-                      "self" : "${json-unit.any-string}",
-                      "next": "${json-unit.any-string}"
-                    }
-                  }
+                  "next_page_token": "${json-unit.any-string}"
                 }
                 """);
 
-        final var nextPageUri = URI.create(
-                responseJson
-                        .getJsonObject("_pagination")
-                        .getJsonObject("links")
-                        .getString("next"));
+        final String nextPageToken = responseJson.getString("next_page_token");
 
-        response = jersey.target(nextPageUri)
+        response = jersey.target("/metrics/vulnerabilities")
+                .queryParam("limit", 2)
+                .queryParam("page_token", nextPageToken)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "metrics" :
+                  "items" :
                   [
                       {
                         "observed_at" : "${json-unit.any-number}",
@@ -255,12 +247,7 @@ public class MetricsResourceTest extends ResourceTest {
                         "month" : 3,
                         "count" : 3
                       }
-                  ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}"
-                    }
-                  }
+                  ]
                 }
                 """);
     }

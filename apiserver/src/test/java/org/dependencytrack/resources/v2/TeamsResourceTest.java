@@ -30,7 +30,6 @@ import org.dependencytrack.auth.Permissions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.net.URI;
 import java.util.List;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -57,7 +56,7 @@ public class TeamsResourceTest extends ResourceTest {
         final JsonObject responseJson = parseJsonObject(response);
         assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
                 {
-                  "teams": [
+                  "items": [
                     {
                       "name": "Test Users",
                       "api_keys": 1,
@@ -69,47 +68,35 @@ public class TeamsResourceTest extends ResourceTest {
                       "members": 0
                     }
                   ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}",
-                      "next": "${json-unit.any-string}"
-                    },
-                    "total": {
-                      "count": 3,
-                      "type": "EXACT"
-                    }
+                  "next_page_token": "${json-unit.any-string}",
+                  "total": {
+                    "count": 3,
+                    "type": "EXACT"
                   }
                 }
                 """);
 
-        final var nextPageUri = URI.create(
-                responseJson
-                        .getJsonObject("_pagination")
-                        .getJsonObject("links")
-                        .getString("next"));
+        final String nextPageToken = responseJson.getString("next_page_token");
 
-        response = jersey.target(nextPageUri)
+        response = jersey.target("/teams")
+                .queryParam("limit", 2)
+                .queryParam("page_token", nextPageToken)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "teams": [
+                  "items": [
                     {
                       "name": "team1",
                       "api_keys": 0,
                       "members": 0
                     }
                   ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}"
-                    },
-                    "total": {
-                      "count": 3,
-                      "type": "EXACT"
-                    }
+                  "total": {
+                    "count": 3,
+                    "type": "EXACT"
                   }
                 }
                 """);
@@ -284,7 +271,7 @@ public class TeamsResourceTest extends ResourceTest {
         final JsonObject responseJson = parseJsonObject(response);
         assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
                 {
-                  "memberships": [
+                  "items": [
                     {
                       "team_name": "team-a",
                       "username": "bar"
@@ -294,46 +281,34 @@ public class TeamsResourceTest extends ResourceTest {
                       "username": "foo"
                     }
                   ],
-                  "_pagination": {
-                      "links": {
-                        "self": "${json-unit.any-string}",
-                        "next": "${json-unit.any-string}"
-                      },
-                      "total": {
-                        "count": 3,
-                        "type": "EXACT"
-                      }
+                  "next_page_token": "${json-unit.any-string}",
+                  "total": {
+                    "count": 3,
+                    "type": "EXACT"
                   }
                 }
                 """);
 
-        final var nextPageUri = URI.create(
-                responseJson
-                        .getJsonObject("_pagination")
-                        .getJsonObject("links")
-                        .getString("next"));
+        final String nextPageToken = responseJson.getString("next_page_token");
 
-        response = jersey.target(nextPageUri)
+        response = jersey.target("/team-memberships")
+                .queryParam("limit", 2)
+                .queryParam("page_token", nextPageToken)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "memberships": [
+                  "items": [
                     {
                       "team_name": "team-b",
                       "username": "aaa"
                     }
                   ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}"
-                    },
-                    "total": {
-                      "count": 3,
-                      "type": "EXACT"
-                    }
+                  "total": {
+                    "count": 3,
+                    "type": "EXACT"
                   }
                 }
                 """);
@@ -357,20 +332,15 @@ public class TeamsResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "memberships": [
+                  "items": [
                     {
                       "team_name": "team-b",
                       "username": "bar"
                     }
                   ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}"
-                    },
-                    "total": {
-                      "count": 1,
-                      "type": "EXACT"
-                    }
+                  "total": {
+                    "count": 1,
+                    "type": "EXACT"
                   }
                 }
                 """);
@@ -394,20 +364,15 @@ public class TeamsResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "memberships": [
+                  "items": [
                     {
                       "team_name": "team-b",
                       "username": "bar"
                     }
                   ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}"
-                    },
-                    "total": {
-                      "count": 1,
-                      "type": "EXACT"
-                    }
+                  "total": {
+                    "count": 1,
+                    "type": "EXACT"
                   }
                 }
                 """);

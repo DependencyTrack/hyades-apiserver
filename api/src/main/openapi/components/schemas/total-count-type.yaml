@@ -17,5 +17,4 @@
 type: string
 enum:
 - AT_LEAST
-- ESTIMATE
 - EXACT

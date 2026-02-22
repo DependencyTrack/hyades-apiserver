@@ -68,7 +68,7 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
                     .listProjectComponents(projectId, onlyOutdated, onlyDirect, limit, pageToken);
 
             final var response = ListComponentsResponse.builder()
-                    .components(componentsPage.items().stream()
+                    .items(componentsPage.items().stream()
                             .<ListComponentsResponseItem>map(
                                     componentRow -> ListComponentsResponseItem.builder()
                                             .name(componentRow.getName())
@@ -90,7 +90,8 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
                                             .version(componentRow.getVersion())
                                             .build())
                             .toList())
-                    .pagination(createPaginationMetadata(uriInfo, componentsPage))
+                    .nextPageToken(componentsPage.nextPageToken())
+                    .total(convertTotalCount(componentsPage.totalCount()))
                     .build();
             return Response.ok(response).build();
         });

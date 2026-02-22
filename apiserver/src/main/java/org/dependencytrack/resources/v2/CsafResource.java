@@ -195,8 +195,9 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
                 .toList();
 
         final var response = ListCsafAggregatorsResponse.builder()
-                .aggregators(responseItems)
-                .pagination(createPaginationMetadata(getUriInfo(), aggregatorsPage))
+                .items(responseItems)
+                .nextPageToken(aggregatorsPage.nextPageToken())
+                .total(convertTotalCount(aggregatorsPage.totalCount()))
                 .build();
 
         return Response.ok(response).build();
@@ -368,8 +369,9 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
                 .toList();
 
         final var response = ListCsafProvidersResponse.builder()
-                .providers(responseItems)
-                .pagination(createPaginationMetadata(getUriInfo(), sourcesPage))
+                .items(responseItems)
+                .nextPageToken(sourcesPage.nextPageToken())
+                .total(convertTotalCount(sourcesPage.totalCount()))
                 .build();
 
         return Response.ok(response).build();
