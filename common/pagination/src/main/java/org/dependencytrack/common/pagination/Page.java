@@ -44,12 +44,6 @@ public record Page<T>(
             EXACT,
 
             /**
-             * {@code value} represents an estimated count of the total
-             * number of elements in the collection.
-             */
-            ESTIMATE,
-
-            /**
              * {@code value} represents a bounded count of the total
              * number of elements in the collection. There are more
              * than {@code value} elements, but exactly how many is

@@ -19,7 +19,15 @@ extends:
 - ["./zalando.yaml", "all"]
 formats:
 - "oas3"
+functions:
+- paginated-response-uses-items
 rules:
+  paginated-response-must-use-items-array:
+    message: "{{error}}"
+    severity: error
+    given: "$.paths.*.get.responses.*.content.application/json.schema"
+    then:
+      function: paginated-response-uses-items
   # Override the path naming rule to exclude CSAF extension point paths
   # These paths use "vuln.datasource" which doesn't conform to lowercase-with-hyphens
   must-use-lowercase-with-hypens-for-path-segements:

@@ -217,7 +217,7 @@ class CsafResourceTest extends ResourceTest {
         final JsonObject responseJson = parseJsonObject(response);
         assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
                 {
-                  "aggregators": [
+                  "items": [
                     {
                       "id": "${json-unit.any-string}",
                       "namespace": "https://0.example.com",
@@ -227,33 +227,26 @@ class CsafResourceTest extends ResourceTest {
                       "created_at": "${json-unit.any-number}"
                     }
                   ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}",
-                      "next": "${json-unit.any-string}"
-                    },
-                    "total": {
-                      "type": "EXACT",
-                      "count": 2
-                    }
+                  "next_page_token": "${json-unit.any-string}",
+                  "total": {
+                    "type": "EXACT",
+                    "count": 2
                   }
                 }
                 """);
 
-        final var nextPageUri = URI.create(
-                responseJson
-                        .getJsonObject("_pagination")
-                        .getJsonObject("links")
-                        .getString("next"));
+        final String nextPageToken = responseJson.getString("next_page_token");
 
-        response = jersey.target(nextPageUri)
+        response = jersey.target("/csaf-aggregators")
+                .queryParam("limit", 1)
+                .queryParam("page_token", nextPageToken)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "aggregators": [
+                  "items": [
                     {
                       "id": "${json-unit.any-string}",
                       "namespace": "https://1.example.com",
@@ -263,14 +256,9 @@ class CsafResourceTest extends ResourceTest {
                       "created_at": "${json-unit.any-number}"
                     }
                   ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}"
-                    },
-                    "total": {
-                      "type": "EXACT",
-                      "count": 2
-                    }
+                  "total": {
+                    "type": "EXACT",
+                    "count": 2
                   }
                 }
                 """);
@@ -301,15 +289,13 @@ class CsafResourceTest extends ResourceTest {
                 .withOptions(Option.IGNORING_EXTRA_FIELDS)
                 .isEqualTo(/* language=JSON */ """
                         {
-                          "aggregators": [
+                          "items": [
                             {
                               "name": "Foo"
                             }
                           ],
-                          "_pagination": {
-                            "total": {
-                              "count": 1
-                            }
+                          "total": {
+                            "count": 1
                           }
                         }
                         """);
@@ -324,7 +310,7 @@ class CsafResourceTest extends ResourceTest {
                 .withOptions(Option.IGNORING_EXTRA_FIELDS)
                 .isEqualTo(/* language=JSON */ """
                         {
-                          "aggregators": [
+                          "items": [
                             {
                               "name": "Bar"
                             },
@@ -332,10 +318,8 @@ class CsafResourceTest extends ResourceTest {
                               "name": "Foo"
                             }
                           ],
-                          "_pagination": {
-                            "total": {
-                              "count": 2
-                            }
+                          "total": {
+                            "count": 2
                           }
                         }
                         """);
@@ -610,7 +594,7 @@ class CsafResourceTest extends ResourceTest {
         final JsonObject responseJson = parseJsonObject(response);
         assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
                 {
-                  "providers": [
+                  "items": [
                     {
                       "id": "${json-unit.any-string}",
                       "namespace": "https://0.example.com",
@@ -620,33 +604,26 @@ class CsafResourceTest extends ResourceTest {
                       "created_at": "${json-unit.any-number}"
                     }
                   ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}",
-                      "next": "${json-unit.any-string}"
-                    },
-                    "total": {
-                      "type": "EXACT",
-                      "count": 2
-                    }
+                  "next_page_token": "${json-unit.any-string}",
+                  "total": {
+                    "type": "EXACT",
+                    "count": 2
                   }
                 }
                 """);
 
-        final var nextPageUri = URI.create(
-                responseJson
-                        .getJsonObject("_pagination")
-                        .getJsonObject("links")
-                        .getString("next"));
+        final String nextPageToken = responseJson.getString("next_page_token");
 
-        response = jersey.target(nextPageUri)
+        response = jersey.target("/csaf-providers")
+                .queryParam("limit", 1)
+                .queryParam("page_token", nextPageToken)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "providers": [
+                  "items": [
                     {
                       "id": "${json-unit.any-string}",
                       "namespace": "https://1.example.com",
@@ -656,14 +633,9 @@ class CsafResourceTest extends ResourceTest {
                       "created_at": "${json-unit.any-number}"
                     }
                   ],
-                  "_pagination": {
-                    "links": {
-                      "self": "${json-unit.any-string}"
-                    },
-                    "total": {
-                      "type": "EXACT",
-                      "count": 2
-                    }
+                  "total": {
+                    "type": "EXACT",
+                    "count": 2
                   }
                 }
                 """);
@@ -694,15 +666,13 @@ class CsafResourceTest extends ResourceTest {
                 .withOptions(Option.IGNORING_EXTRA_FIELDS)
                 .isEqualTo(/* language=JSON */ """
                         {
-                          "providers": [
+                          "items": [
                             {
                               "name": "Foo"
                             }
                           ],
-                          "_pagination": {
-                            "total": {
-                              "count": 1
-                            }
+                          "total": {
+                            "count": 1
                           }
                         }
                         """);
@@ -717,7 +687,7 @@ class CsafResourceTest extends ResourceTest {
                 .withOptions(Option.IGNORING_EXTRA_FIELDS)
                 .isEqualTo(/* language=JSON */ """
                         {
-                          "providers": [
+                          "items": [
                             {
                               "name": "Bar"
                             },
@@ -725,10 +695,8 @@ class CsafResourceTest extends ResourceTest {
                               "name": "Foo"
                             }
                           ],
-                          "_pagination": {
-                            "total": {
-                              "count": 2
-                            }
+                          "total": {
+                            "count": 2
                           }
                         }
                         """);
@@ -768,15 +736,13 @@ class CsafResourceTest extends ResourceTest {
                 .withOptions(Option.IGNORING_EXTRA_FIELDS)
                 .isEqualTo(/* language=JSON */ """
                         {
-                          "providers": [
+                          "items": [
                             {
                               "name": "Foo"
                             }
                           ],
-                          "_pagination": {
-                            "total": {
-                              "count": 1
-                            }
+                          "total": {
+                            "count": 1
                           }
                         }
                         """);
@@ -791,15 +757,13 @@ class CsafResourceTest extends ResourceTest {
                 .withOptions(Option.IGNORING_EXTRA_FIELDS)
                 .isEqualTo(/* language=JSON */ """
                         {
-                          "providers": [
+                          "items": [
                             {
                               "name": "Bar"
                             }
                           ],
-                          "_pagination": {
-                            "total": {
-                              "count": 1
-                            }
+                          "total": {
+                            "count": 1
                           }
                         }
                         """);

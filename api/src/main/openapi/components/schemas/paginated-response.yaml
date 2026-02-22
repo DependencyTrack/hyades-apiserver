@@ -16,32 +16,12 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  _pagination:
-    title: Pagination Metadata
-    description: Metadata of paginated responses
-    type: object
-    properties:
-      links:
-        title: Pagination Links
-        description: Links to navigate through the collection
-        type: object
-        properties:
-          self:
-            type: string
-            format: uri
-            description: Link to the current page of the collection
-          next:
-            type: string
-            format: uri
-            description: >-
-              Link to the next page of the collection.
-              If not present, no more items exist.
-        required:
-        - self
-      total:
-        $ref: "./total-count.yaml"
-    required:
-    - links
+  next_page_token:
+    type: string
+    description: >-
+      Token to retrieve the next page. Absent when no more items exist.
+  total:
+    $ref: "./total-count.yaml"
 # Enable inheritance for schemas that extend this object via allOf.
 # https://github.com/OpenAPITools/openapi-generator/pull/14172
 x-parent: true
