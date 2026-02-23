@@ -37,6 +37,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
+import org.dependencytrack.persistence.jdbi.VulnerabilityAliasDao;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -44,6 +45,7 @@ import java.util.Date;
 import java.util.List;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE;
@@ -251,7 +253,7 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
         final var alias = new VulnerabilityAlias();
         alias.setCveId("CVE-001");
         alias.setGhsaId("GHSA-001");
-        qm.synchronizeVulnerabilityAlias(alias);
+        useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle).sync(alias));
 
         final var epss = new Epss();
         epss.setCve("CVE-001");
@@ -286,10 +288,6 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                             {
                               "id": "GHSA-001",
                               "source": "GITHUB"
-                            },
-                            {
-                              "id": "CVE-001",
-                              "source": "NVD"
                             }
                           ],
                           "cwes": [

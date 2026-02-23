@@ -800,4 +800,124 @@
                 ON "CACHE_ENTRY" ("CACHE_NAME", "CREATED_AT" DESC);
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-41-tag" author="nscuro">
+        <tagDatabase tag="pre-normalize-vulnerability-alias"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-41" author="nscuro">
+        <!-- Normalize the VULNERABILITYALIAS table as per ADR-014. -->
+        <createTable tableName="VULNERABILITY_ALIAS">
+            <column name="GROUP_ID" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SOURCE" type="TEXT"/>
+            <column name="VULN_ID" type="TEXT"/>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="VULNERABILITY_ALIAS"
+                columnNames="SOURCE, VULN_ID"
+                constraintName="VULNERABILITY_ALIAS_PK"/>
+
+        <createIndex tableName="VULNERABILITY_ALIAS" indexName="VULNERABILITY_ALIAS_GROUP_IDX">
+            <column name="GROUP_ID"/>
+        </createIndex>
+
+        <!-- Migrate existing data. -->
+        <sql splitStatements="false">
+            DO $$
+            DECLARE
+                r               RECORD;
+                v_groups        UUID[];
+                v_group_id      UUID;
+                v_min_group     UUID;
+                v_pairs         TEXT[][];
+                v_idx           INT;
+            BEGIN
+                FOR r IN SELECT * FROM "VULNERABILITYALIAS" ORDER BY "ID"
+                LOOP
+                    v_pairs := ARRAY[]::TEXT[][];
+
+                    IF r."CVE_ID" IS NOT NULL THEN
+                        v_pairs := v_pairs || ARRAY[ARRAY['NVD', r."CVE_ID"]];
+                    END IF;
+                    IF r."GHSA_ID" IS NOT NULL THEN
+                        v_pairs := v_pairs || ARRAY[ARRAY['GITHUB', r."GHSA_ID"]];
+                    END IF;
+                    IF r."GSD_ID" IS NOT NULL THEN
+                        v_pairs := v_pairs || ARRAY[ARRAY['GSD', r."GSD_ID"]];
+                    END IF;
+                    IF r."INTERNAL_ID" IS NOT NULL THEN
+                        v_pairs := v_pairs || ARRAY[ARRAY['INTERNAL', r."INTERNAL_ID"]];
+                    END IF;
+                    IF r."OSV_ID" IS NOT NULL THEN
+                        v_pairs := v_pairs || ARRAY[ARRAY['OSV', r."OSV_ID"]];
+                    END IF;
+                    IF r."SONATYPE_ID" IS NOT NULL THEN
+                        v_pairs := v_pairs || ARRAY[ARRAY['OSSINDEX', r."SONATYPE_ID"]];
+                    END IF;
+                    IF r."SNYK_ID" IS NOT NULL THEN
+                        v_pairs := v_pairs || ARRAY[ARRAY['SNYK', r."SNYK_ID"]];
+                    END IF;
+                    IF r."VULNDB_ID" IS NOT NULL THEN
+                        v_pairs := v_pairs || ARRAY[ARRAY['VULNDB', r."VULNDB_ID"]];
+                    END IF;
+                    IF r."CSAF_ID" IS NOT NULL THEN
+                        v_pairs := v_pairs || ARRAY[ARRAY['CSAF', r."CSAF_ID"]];
+                    END IF;
+
+                    IF array_length(v_pairs, 1) IS NULL THEN
+                        CONTINUE;
+                    END IF;
+
+                    -- Find existing groups for any of the pairs.
+                    SELECT array_agg(DISTINCT "GROUP_ID")
+                      INTO v_groups
+                      FROM "VULNERABILITY_ALIAS"
+                     WHERE ("SOURCE", "VULN_ID") IN (
+                        SELECT v_pairs[i][1], v_pairs[i][2]
+                          FROM generate_series(1, array_length(v_pairs, 1)) AS i
+                     );
+
+                    IF v_groups IS NULL OR array_length(v_groups, 1) = 0 THEN
+                        -- No existing group: generate a new UUID and insert all pairs.
+                        v_group_id := gen_random_uuid();
+                        FOR v_idx IN 1..array_length(v_pairs, 1)
+                        LOOP
+                            INSERT INTO "VULNERABILITY_ALIAS" ("GROUP_ID", "SOURCE", "VULN_ID")
+                            VALUES (v_group_id, v_pairs[v_idx][1], v_pairs[v_idx][2])
+                            ON CONFLICT DO NOTHING;
+                        END LOOP;
+                    ELSIF array_length(v_groups, 1) = 1 THEN
+                        -- Exactly one existing group: insert all pairs into it.
+                        v_group_id := v_groups[1];
+                        FOR v_idx IN 1..array_length(v_pairs, 1)
+                        LOOP
+                            INSERT INTO "VULNERABILITY_ALIAS" ("GROUP_ID", "SOURCE", "VULN_ID")
+                            VALUES (v_group_id, v_pairs[v_idx][1], v_pairs[v_idx][2])
+                            ON CONFLICT DO NOTHING;
+                        END LOOP;
+                    ELSE
+                        -- Multiple groups: merge all into the minimum group UUID.
+                        v_min_group := (SELECT g FROM unnest(v_groups) AS g ORDER BY g LIMIT 1);
+                        UPDATE "VULNERABILITY_ALIAS"
+                           SET "GROUP_ID" = v_min_group
+                         WHERE "GROUP_ID" = ANY(v_groups)
+                           AND "GROUP_ID" != v_min_group;
+
+                        FOR v_idx IN 1..array_length(v_pairs, 1)
+                        LOOP
+                            INSERT INTO "VULNERABILITY_ALIAS" ("GROUP_ID", "SOURCE", "VULN_ID")
+                            VALUES (v_min_group, v_pairs[v_idx][1], v_pairs[v_idx][2])
+                            ON CONFLICT DO NOTHING;
+                        END LOOP;
+                    END IF;
+                END LOOP;
+            END
+            $$;
+        </sql>
+
+        <dropTable tableName="VULNERABILITYALIAS"/>
+    </changeSet>
 </databaseChangeLog>

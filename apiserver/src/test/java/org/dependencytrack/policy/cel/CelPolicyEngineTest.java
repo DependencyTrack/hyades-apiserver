@@ -46,6 +46,7 @@ import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
+import org.dependencytrack.persistence.jdbi.VulnerabilityAliasDao;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -59,6 +60,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 class CelPolicyEngineTest extends PersistenceCapableTest {
 
@@ -223,7 +225,7 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         vulnAlias.setSnykId("SNYK-001");
         vulnAlias.setSonatypeId("SONATYPE-001");
         vulnAlias.setVulnDbId("VULNDB-001");
-        qm.synchronizeVulnerabilityAlias(vulnAlias);
+        useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle).sync(vulnAlias));
 
         final var epss = new Epss();
         epss.setCve("CVE-001");

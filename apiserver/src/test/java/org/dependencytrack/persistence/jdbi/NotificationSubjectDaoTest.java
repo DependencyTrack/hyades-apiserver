@@ -40,6 +40,7 @@ import java.util.Optional;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -97,7 +98,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         final var vulnAlias = new VulnerabilityAlias();
         vulnAlias.setCveId("CVE-100");
         vulnAlias.setGhsaId("GHSA-100");
-        qm.synchronizeVulnerabilityAlias(vulnAlias);
+        useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle).sync(vulnAlias));
 
         qm.addVulnerability(vulnA, component, AnalyzerIdentity.INTERNAL_ANALYZER);
         qm.addVulnerability(vulnB, component, AnalyzerIdentity.INTERNAL_ANALYZER);
@@ -320,7 +321,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         final var vulnAlias = new VulnerabilityAlias();
         vulnAlias.setCveId("CVE-100");
         vulnAlias.setGhsaId("GHSA-100");
-        qm.synchronizeVulnerabilityAlias(vulnAlias);
+        useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle).sync(vulnAlias));
 
         qm.addVulnerability(vulnA, component, AnalyzerIdentity.INTERNAL_ANALYZER);
         qm.addVulnerability(vulnB, component, AnalyzerIdentity.INTERNAL_ANALYZER);
@@ -521,7 +522,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         final var vulnAlias = new VulnerabilityAlias();
         vulnAlias.setCveId("CVE-100");
         vulnAlias.setGhsaId("GHSA-100");
-        qm.synchronizeVulnerabilityAlias(vulnAlias);
+        useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle).sync(vulnAlias));
 
         qm.addVulnerability(vulnA, component, AnalyzerIdentity.INTERNAL_ANALYZER);
 
