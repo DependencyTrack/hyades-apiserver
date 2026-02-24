@@ -957,7 +957,7 @@
               FROM "VULNERABILITY_ALIAS" a
               JOIN "VULNERABILITY_ALIAS" b
                 ON a."GROUP_ID" = b."GROUP_ID"
-             WHERE (a."SOURCE" || a."VULN_ID") &lt; (b."SOURCE" || b."VULN_ID")
+             WHERE (a."SOURCE", a."VULN_ID") &lt; (b."SOURCE", b."VULN_ID")
         </sql>
     </changeSet>
 </databaseChangeLog>
