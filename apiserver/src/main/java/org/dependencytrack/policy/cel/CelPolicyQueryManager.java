@@ -245,7 +245,7 @@ class CelPolicyQueryManager implements AutoCloseable {
                 .collect(Collectors.joining(", "));
 
         if (protoFieldNames.contains("aliases")) {
-            sqlSelectColumns += ", \"aliasesJson\"";
+            sqlSelectColumns += ", CAST(JSONB_VULN_ALIASES(\"V\".\"SOURCE\", \"V\".\"VULNID\") AS TEXT) AS \"aliasesJson\"";
         }
         if (protoFieldNames.contains("epss_score")) {
             sqlSelectColumns += ", \"EP\".\"SCORE\" AS \"epssScore\"";
@@ -263,36 +263,11 @@ class CelPolicyQueryManager implements AutoCloseable {
                   "COMPONENTS_VULNERABILITIES" AS "CV" ON "CV"."VULNERABILITY_ID" = "V"."ID"
                 INNER JOIN
                   "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
-                LEFT JOIN LATERAL (
-                  SELECT
-                    CAST(JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(
-                      'cveId',      "VA"."CVE_ID",
-                      'ghsaId',     "VA"."GHSA_ID",
-                      'gsdId',      "VA"."GSD_ID",
-                      'internalId', "VA"."INTERNAL_ID",
-                      'osvId',      "VA"."OSV_ID",
-                      'sonatypeId', "VA"."SONATYPE_ID",
-                      'snykId',     "VA"."SNYK_ID",
-                      'vulnDbId',   "VA"."VULNDB_ID"
-                    ))) AS TEXT) AS "aliasesJson"
-                  FROM
-                    "VULNERABILITYALIAS" AS "VA"
-                  WHERE
-                    ("V"."SOURCE" = 'NVD' AND "VA"."CVE_ID" = "V"."VULNID")
-                      OR ("V"."SOURCE" = 'GITHUB' AND "VA"."GHSA_ID" = "V"."VULNID")
-                      OR ("V"."SOURCE" = 'GSD' AND "VA"."GSD_ID" = "V"."VULNID")
-                      OR ("V"."SOURCE" = 'INTERNAL' AND "VA"."INTERNAL_ID" = "V"."VULNID")
-                      OR ("V"."SOURCE" = 'OSV' AND "VA"."OSV_ID" = "V"."VULNID")
-                      OR ("V"."SOURCE" = 'SONATYPE' AND "VA"."SONATYPE_ID" = "V"."VULNID")
-                      OR ("V"."SOURCE" = 'SNYK' AND "VA"."SNYK_ID" = "V"."VULNID")
-                      OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
-                ) AS "aliases" ON :shouldFetchAliases
                 LEFT JOIN "EPSS" AS "EP" ON "V"."VULNID" = "EP"."CVE" AND :shouldFetchEpss
                 WHERE
                   "C"."PROJECT_ID" = :projectId
                 """.formatted(sqlSelectColumns));
         query.setNamedParameters(Map.of(
-                "shouldFetchAliases", protoFieldNames.contains("aliases"),
                 "projectId", projectId,
                 "shouldFetchEpss", protoFieldNames.contains("epss_score") || protoFieldNames.contains("epss_percentile")
         ));

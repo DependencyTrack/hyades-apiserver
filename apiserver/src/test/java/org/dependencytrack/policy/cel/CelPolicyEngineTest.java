@@ -43,8 +43,9 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Tools;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.VulnerabilityAlias;
+import org.dependencytrack.model.VulnerabilityKey;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
+import org.dependencytrack.persistence.jdbi.VulnerabilityAliasDao;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -54,10 +55,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 class CelPolicyEngineTest extends PersistenceCapableTest {
 
@@ -213,16 +216,17 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
 
         qm.addVulnerability(vuln, component, "internal");
 
-        final var vulnAlias = new VulnerabilityAlias();
-        vulnAlias.setCveId("CVE-001");
-        vulnAlias.setGhsaId("GHSA-001");
-        vulnAlias.setGsdId("GSD-001");
-        vulnAlias.setInternalId("INT-001");
-        vulnAlias.setOsvId("OSV-001");
-        vulnAlias.setSnykId("SNYK-001");
-        vulnAlias.setSonatypeId("SONATYPE-001");
-        vulnAlias.setVulnDbId("VULNDB-001");
-        qm.synchronizeVulnerabilityAlias(vulnAlias);
+        useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle)
+                .syncAssertions(
+                        "TEST",
+                        new VulnerabilityKey("CVE-001", Vulnerability.Source.NVD),
+                        Set.of(
+                                new VulnerabilityKey("GHSA-001", Vulnerability.Source.GITHUB),
+                                new VulnerabilityKey("INT-001", Vulnerability.Source.INTERNAL),
+                                new VulnerabilityKey("OSV-001", Vulnerability.Source.OSV),
+                                new VulnerabilityKey("SNYK-001", Vulnerability.Source.SNYK),
+                                new VulnerabilityKey("SONATYPE-001", Vulnerability.Source.OSSINDEX),
+                                new VulnerabilityKey("VULNDB-001", Vulnerability.Source.VULNDB))));
 
         final var epss = new Epss();
         epss.setCve("CVE-001");

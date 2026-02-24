@@ -71,7 +71,6 @@ import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.UserProjectRole;
 import org.dependencytrack.model.ViolationAnalysis;
-import org.dependencytrack.model.VulnIdAndSource;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityMetrics;
@@ -927,16 +926,8 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerabilityQueryManager().getVulnerabilities(project, includeSuppressed);
     }
 
-    public VulnerabilityAlias synchronizeVulnerabilityAlias(VulnerabilityAlias alias) {
-        return getVulnerabilityQueryManager().synchronizeVulnerabilityAlias(alias);
-    }
-
     public List<VulnerabilityAlias> getVulnerabilityAliases(Vulnerability vulnerability) {
         return getVulnerabilityQueryManager().getVulnerabilityAliases(vulnerability);
-    }
-
-    public Map<VulnIdAndSource, List<VulnerabilityAlias>> getVulnerabilityAliases(final Collection<VulnIdAndSource> vulnIdAndSources) {
-        return getVulnerabilityQueryManager().getVulnerabilityAliases(vulnIdAndSources);
     }
 
     List<Analysis> getAnalyses(Project project) {

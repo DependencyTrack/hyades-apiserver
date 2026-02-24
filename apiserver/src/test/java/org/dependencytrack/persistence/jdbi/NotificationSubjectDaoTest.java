@@ -26,7 +26,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.VulnerabilityAlias;
+import org.dependencytrack.model.VulnerabilityKey;
 import org.dependencytrack.notification.proto.v1.ComponentVulnAnalysisCompleteSubject;
 import org.dependencytrack.notification.proto.v1.NewVulnerabilitySubject;
 import org.dependencytrack.notification.proto.v1.NewVulnerableDependencySubject;
@@ -43,6 +43,7 @@ import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -97,10 +98,9 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vulnB.setSource(Vulnerability.Source.NVD);
         qm.persist(vulnB);
 
-        final var vulnAlias = new VulnerabilityAlias();
-        vulnAlias.setCveId("CVE-100");
-        vulnAlias.setGhsaId("GHSA-100");
-        qm.synchronizeVulnerabilityAlias(vulnAlias);
+        useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle)
+                .syncAssertions("TEST", new VulnerabilityKey("CVE-100", Vulnerability.Source.NVD),
+                        Set.of(new VulnerabilityKey("GHSA-100", Vulnerability.Source.GITHUB))));
 
         qm.addVulnerability(vulnA, component, "internal");
         qm.addVulnerability(vulnB, component, "internal");
@@ -321,10 +321,11 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vulnB.setSource(Vulnerability.Source.NVD);
         qm.persist(vulnB);
 
-        final var vulnAlias = new VulnerabilityAlias();
-        vulnAlias.setCveId("CVE-100");
-        vulnAlias.setGhsaId("GHSA-100");
-        qm.synchronizeVulnerabilityAlias(vulnAlias);
+        useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle)
+                .syncAssertions(
+                        "TEST",
+                        new VulnerabilityKey("CVE-100", Vulnerability.Source.NVD),
+                        Set.of(new VulnerabilityKey("GHSA-100", Vulnerability.Source.GITHUB))));
 
         qm.addVulnerability(vulnA, component, "internal");
         qm.addVulnerability(vulnB, component, "internal");
@@ -522,10 +523,9 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         vulnA.setCwes(List.of(666, 777));
         qm.persist(vulnA);
 
-        final var vulnAlias = new VulnerabilityAlias();
-        vulnAlias.setCveId("CVE-100");
-        vulnAlias.setGhsaId("GHSA-100");
-        qm.synchronizeVulnerabilityAlias(vulnAlias);
+        useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle)
+                .syncAssertions("TEST", new VulnerabilityKey("CVE-100", Vulnerability.Source.NVD),
+                        Set.of(new VulnerabilityKey("GHSA-100", Vulnerability.Source.GITHUB))));
 
         qm.addVulnerability(vulnA, component, "internal");
 

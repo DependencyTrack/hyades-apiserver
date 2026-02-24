@@ -29,8 +29,8 @@ import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.FindingAttributionKey;
 import org.dependencytrack.model.FindingKey;
-import org.dependencytrack.model.VulnIdAndSource;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerabilityKey;
 import org.dependencytrack.notification.JdbiNotificationEmitter;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
@@ -125,7 +125,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
             final var failedAnalyzers = new HashSet<String>();
             final var reportedFindings = new ArrayList<ReportedFinding>();
-            final var vulnDetailsByKey = new HashMap<VulnIdAndSource, ReportedVulnerability>();
+            final var vulnDetailsByKey = new HashMap<VulnerabilityKey, ReportedVulnerability>();
 
             // Sort analyzer results by name for deterministic merge order.
             // When multiple analyzers report the same vulnerability,
@@ -178,15 +178,15 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             final var vulnUpdatePolicy = new VulnerabilityUpdatePolicy(pluginManager);
 
             LOGGER.debug("Synchronizing {} vulnerabilities", convertedVulns.size());
-            final Map<VulnIdAndSource, Long> vulnDbIdByVulnIdAndSource =
+            final Map<VulnerabilityKey, Long> vulnDbIdByVulnerabilityKey =
                     syncVulns(convertedVulns, vulnUpdatePolicy::isUpdatableByAnalyzer);
-            LOGGER.debug("Synchronized {} vulnerabilities", vulnDbIdByVulnIdAndSource.size());
+            LOGGER.debug("Synchronized {} vulnerabilities", vulnDbIdByVulnerabilityKey.size());
 
             reconcileFindings(
                     arg,
                     projectUuid,
                     reportedFindings,
-                    vulnDbIdByVulnIdAndSource,
+                    vulnDbIdByVulnerabilityKey,
                     failedAnalyzers);
         }
 
@@ -200,7 +200,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
     private record ReportedFinding(
             long componentId,
-            VulnIdAndSource vulnIdAndSource,
+            VulnerabilityKey VulnerabilityKey,
             String analyzerName,
             @Nullable String referenceUrl) {
     }
@@ -209,17 +209,17 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             String analyzerName,
             Bom vdr,
             List<ReportedFinding> findings,
-            Map<VulnIdAndSource, ReportedVulnerability> reportedVulnByVulnIdAndSource) {
+            Map<VulnerabilityKey, ReportedVulnerability> reportedVulnByVulnerabilityKey) {
         for (final org.cyclonedx.proto.v1_6.Vulnerability vdrVuln : vdr.getVulnerabilitiesList()) {
             final Vulnerability.Source source =
                     BovModelConverter.extractSource(vdrVuln.getId(), vdrVuln.getSource());
-            final var vulnIdAndSource = new VulnIdAndSource(vdrVuln.getId(), source);
+            final var VulnerabilityKey = new VulnerabilityKey(vdrVuln.getId(), source);
 
             final Long internalVulnId = extractInternalVulnId(vdrVuln);
             final String referenceUrl = extractReferenceUrl(vdrVuln);
 
-            reportedVulnByVulnIdAndSource.merge(
-                    vulnIdAndSource,
+            reportedVulnByVulnerabilityKey.merge(
+                    VulnerabilityKey,
                     new ReportedVulnerability(vdrVuln, internalVulnId),
                     (existing, incoming) -> {
                         if (existing.internalVulnId() != null) {
@@ -235,12 +235,12 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             for (final VulnerabilityAffects affects : vdrVuln.getAffectsList()) {
                 try {
                     final long componentId = Long.parseLong(affects.getRef());
-                    findings.add(new ReportedFinding(componentId, vulnIdAndSource, analyzerName, referenceUrl));
+                    findings.add(new ReportedFinding(componentId, VulnerabilityKey, analyzerName, referenceUrl));
                 } catch (NumberFormatException e) {
                     LOGGER.warn(
                             "Encountered invalid BOM ref '{}' for vulnerability '{}'",
                             affects.getRef(),
-                            vulnIdAndSource,
+                            VulnerabilityKey,
                             e);
                 }
             }
@@ -273,22 +273,22 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
     }
 
     private List<Vulnerability> convertVulns(
-            Map<VulnIdAndSource, ReportedVulnerability> reportedVulnByVulnIdAndSource) {
-        if (reportedVulnByVulnIdAndSource.isEmpty()) {
+            Map<VulnerabilityKey, ReportedVulnerability> reportedVulnByVulnerabilityKey) {
+        if (reportedVulnByVulnerabilityKey.isEmpty()) {
             return List.of();
         }
 
-        final var converted = new ArrayList<Vulnerability>(reportedVulnByVulnIdAndSource.size());
+        final var converted = new ArrayList<Vulnerability>(reportedVulnByVulnerabilityKey.size());
 
-        for (final var entry : reportedVulnByVulnIdAndSource.entrySet()) {
-            final VulnIdAndSource vulnIdAndSource = entry.getKey();
+        for (final var entry : reportedVulnByVulnerabilityKey.entrySet()) {
+            final VulnerabilityKey VulnerabilityKey = entry.getKey();
             final ReportedVulnerability reportedVuln = entry.getValue();
 
             if (reportedVuln.internalVulnId() != null) {
                 final var vuln = new Vulnerability();
                 vuln.setId(reportedVuln.internalVulnId());
-                vuln.setVulnId(vulnIdAndSource.vulnId());
-                vuln.setSource(vulnIdAndSource.source());
+                vuln.setVulnId(VulnerabilityKey.vulnId());
+                vuln.setSource(VulnerabilityKey.source());
                 converted.add(vuln);
                 continue;
             }
@@ -302,21 +302,21 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                         true);
                 converted.add(vuln);
             } catch (RuntimeException e) {
-                LOGGER.warn("Failed to convert vulnerability {}: {}", vulnIdAndSource, e.getMessage());
+                LOGGER.warn("Failed to convert vulnerability {}: {}", VulnerabilityKey, e.getMessage());
             }
         }
 
         return converted;
     }
 
-    private Map<VulnIdAndSource, Long> syncVulns(
+    private Map<VulnerabilityKey, Long> syncVulns(
             List<Vulnerability> vulns,
             Predicate<String> canUpdatePredicate) {
         if (vulns.size() <= 100) {
             return syncVulnsBatch(vulns, canUpdatePredicate);
         }
 
-        final var syncedVulns = new HashMap<VulnIdAndSource, Long>(vulns.size());
+        final var syncedVulns = new HashMap<VulnerabilityKey, Long>(vulns.size());
 
         final var batch = new ArrayList<Vulnerability>(100);
         for (final Vulnerability vuln : vulns) {
@@ -333,7 +333,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         return syncedVulns;
     }
 
-    private Map<VulnIdAndSource, Long> syncVulnsBatch(
+    private Map<VulnerabilityKey, Long> syncVulnsBatch(
             Collection<Vulnerability> vulns,
             Predicate<String> canUpdatePredicate) {
         if (vulns.isEmpty()) {
@@ -350,7 +350,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             ReconcileVulnAnalysisResultsArg arg,
             UUID projectUuid,
             List<ReportedFinding> reportedFindings,
-            Map<VulnIdAndSource, Long> vulnDbIdByVulnIdAndSource,
+            Map<VulnerabilityKey, Long> vulnDbIdByVulnerabilityKey,
             Set<String> failedAnalyzers) {
         final Long projectId = withJdbiHandle(
                 handle -> handle.attach(ProjectDao.class).getProjectId(projectUuid));
@@ -378,11 +378,11 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         final var reportedAttributionKeys = new HashSet<FindingAttributionKey>();
 
         for (final ReportedFinding reportedFinding : reportedFindings) {
-            final Long vulnDbId = vulnDbIdByVulnIdAndSource.get(reportedFinding.vulnIdAndSource());
+            final Long vulnDbId = vulnDbIdByVulnerabilityKey.get(reportedFinding.VulnerabilityKey());
             if (vulnDbId == null) {
                 LOGGER.warn(
                         "Vulnerability {} not found in database; Skipping",
-                        reportedFinding.vulnIdAndSource());
+                        reportedFinding.VulnerabilityKey());
                 continue;
             }
 

@@ -18,7 +18,6 @@
   ~ Copyright (c) OWASP Foundation. All Rights Reserved.
   -->
 <persistence xmlns="http://xmlns.jcp.org/xml/ns/persistence"
-             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              version="3.0">
   <persistence-unit name="Alpine">
     <class>alpine.model.ApiKey</class>
@@ -65,7 +64,6 @@
     <class>org.dependencytrack.model.ViolationAnalysisComment</class>
     <class>org.dependencytrack.model.ViolationAnalysisState</class>
     <class>org.dependencytrack.model.Vulnerability</class>
-    <class>org.dependencytrack.model.VulnerabilityAlias</class>
     <class>org.dependencytrack.model.VulnerabilityMetrics</class>
     <class>org.dependencytrack.model.VulnerabilityPolicyBundle</class>
     <class>org.dependencytrack.model.VulnerableSoftware</class>

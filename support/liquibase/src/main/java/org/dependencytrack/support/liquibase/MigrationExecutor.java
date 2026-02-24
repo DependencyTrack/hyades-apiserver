@@ -24,6 +24,7 @@ import liquibase.UpdateSummaryOutputEnum;
 import liquibase.analytics.configuration.AnalyticsArgs;
 import liquibase.command.CommandScope;
 import liquibase.command.core.UpdateCommandStep;
+import liquibase.command.core.UpdateToTagCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
 import liquibase.command.core.helpers.ShowSummaryArgument;
 import liquibase.database.Database;
@@ -62,6 +63,14 @@ public class MigrationExecutor {
     }
 
     public void executeMigration() throws Exception {
+        executeUpdate(null);
+    }
+
+    public void executeMigrationToTag(String tag) throws Exception {
+        executeUpdate(tag);
+    }
+
+    private void executeUpdate(String tag) throws Exception {
         final var scopeAttributes = new HashMap<String, Object>();
         scopeAttributes.put(AnalyticsArgs.ENABLED.getKey(), false);
         scopeAttributes.put(Scope.Attr.logService.name(), new LiquibaseLogger.LogService());
@@ -78,11 +87,20 @@ public class MigrationExecutor {
                 }
                 final var liquibase = new Liquibase(changelogResourcePath, new ClassLoaderResourceAccessor(), database);
 
-                final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
-                updateCommand.addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, liquibase.getDatabase());
-                updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
-                updateCommand.addArgumentValue(ShowSummaryArgument.SHOW_SUMMARY_OUTPUT, UpdateSummaryOutputEnum.LOG);
-                updateCommand.execute();
+                if (tag != null) {
+                    final var updateCommand = new CommandScope(UpdateToTagCommandStep.COMMAND_NAME);
+                    updateCommand.addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, liquibase.getDatabase());
+                    updateCommand.addArgumentValue(UpdateToTagCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
+                    updateCommand.addArgumentValue(UpdateToTagCommandStep.TAG_ARG, tag);
+                    updateCommand.addArgumentValue(ShowSummaryArgument.SHOW_SUMMARY_OUTPUT, UpdateSummaryOutputEnum.LOG);
+                    updateCommand.execute();
+                } else {
+                    final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
+                    updateCommand.addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, liquibase.getDatabase());
+                    updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
+                    updateCommand.addArgumentValue(ShowSummaryArgument.SHOW_SUMMARY_OUTPUT, UpdateSummaryOutputEnum.LOG);
+                    updateCommand.execute();
+                }
             }
         });
     }
