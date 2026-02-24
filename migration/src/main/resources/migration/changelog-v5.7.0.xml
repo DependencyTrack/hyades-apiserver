@@ -824,102 +824,6 @@
             <column name="GROUP_ID"/>
         </createIndex>
 
-        <!-- Migrate existing data. -->
-        <sql splitStatements="false">
-            DO $$
-            DECLARE
-                r               RECORD;
-                v_groups        UUID[];
-                v_group_id      UUID;
-                v_min_group     UUID;
-                v_pairs         TEXT[][];
-                v_idx           INT;
-            BEGIN
-                FOR r IN SELECT * FROM "VULNERABILITYALIAS" ORDER BY "ID"
-                LOOP
-                    v_pairs := ARRAY[]::TEXT[][];
-
-                    IF r."CVE_ID" IS NOT NULL THEN
-                        v_pairs := v_pairs || ARRAY[ARRAY['NVD', r."CVE_ID"]];
-                    END IF;
-                    IF r."GHSA_ID" IS NOT NULL THEN
-                        v_pairs := v_pairs || ARRAY[ARRAY['GITHUB', r."GHSA_ID"]];
-                    END IF;
-                    IF r."GSD_ID" IS NOT NULL THEN
-                        v_pairs := v_pairs || ARRAY[ARRAY['GSD', r."GSD_ID"]];
-                    END IF;
-                    IF r."INTERNAL_ID" IS NOT NULL THEN
-                        v_pairs := v_pairs || ARRAY[ARRAY['INTERNAL', r."INTERNAL_ID"]];
-                    END IF;
-                    IF r."OSV_ID" IS NOT NULL THEN
-                        v_pairs := v_pairs || ARRAY[ARRAY['OSV', r."OSV_ID"]];
-                    END IF;
-                    IF r."SONATYPE_ID" IS NOT NULL THEN
-                        v_pairs := v_pairs || ARRAY[ARRAY['OSSINDEX', r."SONATYPE_ID"]];
-                    END IF;
-                    IF r."SNYK_ID" IS NOT NULL THEN
-                        v_pairs := v_pairs || ARRAY[ARRAY['SNYK', r."SNYK_ID"]];
-                    END IF;
-                    IF r."VULNDB_ID" IS NOT NULL THEN
-                        v_pairs := v_pairs || ARRAY[ARRAY['VULNDB', r."VULNDB_ID"]];
-                    END IF;
-                    IF r."CSAF_ID" IS NOT NULL THEN
-                        v_pairs := v_pairs || ARRAY[ARRAY['CSAF', r."CSAF_ID"]];
-                    END IF;
-
-                    IF array_length(v_pairs, 1) IS NULL THEN
-                        CONTINUE;
-                    END IF;
-
-                    -- Find existing groups for any of the pairs.
-                    SELECT array_agg(DISTINCT "GROUP_ID")
-                      INTO v_groups
-                      FROM "VULNERABILITY_ALIAS"
-                     WHERE ("SOURCE", "VULN_ID") IN (
-                        SELECT v_pairs[i][1], v_pairs[i][2]
-                          FROM generate_series(1, array_length(v_pairs, 1)) AS i
-                     );
-
-                    IF v_groups IS NULL OR array_length(v_groups, 1) = 0 THEN
-                        -- No existing group: generate a new UUID and insert all pairs.
-                        v_group_id := gen_random_uuid();
-                        FOR v_idx IN 1..array_length(v_pairs, 1)
-                        LOOP
-                            INSERT INTO "VULNERABILITY_ALIAS" ("GROUP_ID", "SOURCE", "VULN_ID")
-                            VALUES (v_group_id, v_pairs[v_idx][1], v_pairs[v_idx][2])
-                            ON CONFLICT DO NOTHING;
-                        END LOOP;
-                    ELSIF array_length(v_groups, 1) = 1 THEN
-                        -- Exactly one existing group: insert all pairs into it.
-                        v_group_id := v_groups[1];
-                        FOR v_idx IN 1..array_length(v_pairs, 1)
-                        LOOP
-                            INSERT INTO "VULNERABILITY_ALIAS" ("GROUP_ID", "SOURCE", "VULN_ID")
-                            VALUES (v_group_id, v_pairs[v_idx][1], v_pairs[v_idx][2])
-                            ON CONFLICT DO NOTHING;
-                        END LOOP;
-                    ELSE
-                        -- Multiple groups: merge all into the minimum group UUID.
-                        v_min_group := (SELECT g FROM unnest(v_groups) AS g ORDER BY g LIMIT 1);
-                        UPDATE "VULNERABILITY_ALIAS"
-                           SET "GROUP_ID" = v_min_group
-                         WHERE "GROUP_ID" = ANY(v_groups)
-                           AND "GROUP_ID" != v_min_group;
-
-                        FOR v_idx IN 1..array_length(v_pairs, 1)
-                        LOOP
-                            INSERT INTO "VULNERABILITY_ALIAS" ("GROUP_ID", "SOURCE", "VULN_ID")
-                            VALUES (v_min_group, v_pairs[v_idx][1], v_pairs[v_idx][2])
-                            ON CONFLICT DO NOTHING;
-                        END LOOP;
-                    END IF;
-                END LOOP;
-            END
-            $$;
-        </sql>
-
-        <dropTable tableName="VULNERABILITYALIAS"/>
-
         <!-- Track assertions of alias relationships. -->
         <createTable tableName="VULNERABILITY_ALIAS_ASSERTION">
             <column name="ASSERTER" type="TEXT"/>
@@ -948,8 +852,95 @@
             <column name="ALIAS_SOURCE"/>
             <column name="ALIAS_ID"/>
         </createIndex>
+    </changeSet>
 
-        <!-- Seed from existing VULNERABILITY_ALIAS data. -->
+    <changeSet id="v5.7.0-42" author="nscuro">
+        <!-- Flatten VULNERABILITYALIAS records into a temp table. -->
+        <sql splitStatements="true">
+            CREATE TEMPORARY TABLE tmp_flattened_alias ON COMMIT DROP AS
+            SELECT va."ID" AS row_id
+                 , t.source
+                 , t.vuln_id
+              FROM "VULNERABILITYALIAS" va
+             CROSS JOIN LATERAL (
+               VALUES ('NVD', va."CVE_ID")
+                    , ('GITHUB', va."GHSA_ID")
+                    , ('GSD', va."GSD_ID")
+                    , ('INTERNAL', va."INTERNAL_ID")
+                    , ('OSV', va."OSV_ID")
+                    , ('OSSINDEX', va."SONATYPE_ID")
+                    , ('SNYK', va."SNYK_ID")
+                    , ('VULNDB', va."VULNDB_ID")
+                    , ('CSAF', va."CSAF_ID")
+            ) AS t(source, vuln_id)
+             WHERE t.vuln_id IS NOT NULL;
+
+            CREATE INDEX ON tmp_flattened_alias (source, vuln_id);
+        </sql>
+
+        <!--
+            Create a lookup table that maps original VULNERABILITYALIAS rows to the connected component they belong to.
+            Starts out with an identity mapping, but will be mutated in the next step as connected components converge.
+        -->
+        <sql splitStatements="true">
+            CREATE TEMPORARY TABLE tmp_rowmap ON COMMIT DROP AS
+            SELECT DISTINCT row_id
+                 , row_id AS component_id
+              FROM tmp_flattened_alias;
+
+            CREATE INDEX ON tmp_rowmap (row_id);
+        </sql>
+
+        <!-- Iteratively merge connected components via min-propagation. -->
+        <sql splitStatements="false">
+            DO $$
+            DECLARE
+                changed INT := 1;
+            BEGIN
+                WHILE changed > 0 LOOP
+                    WITH new_min AS (
+                      SELECT rm.row_id
+                           , MIN(rm2.component_id) AS min_cid
+                        FROM tmp_rowmap rm
+                       INNER JOIN tmp_flattened_alias fa1
+                          ON rm.row_id = fa1.row_id
+                       INNER JOIN tmp_flattened_alias fa2
+                          ON fa1.source = fa2.source
+                         AND fa1.vuln_id = fa2.vuln_id
+                       INNER JOIN tmp_rowmap rm2
+                          ON fa2.row_id = rm2.row_id
+                       GROUP BY rm.row_id
+                    )
+                    UPDATE tmp_rowmap rm
+                       SET component_id = new_min.min_cid
+                      FROM new_min
+                     WHERE rm.row_id = new_min.row_id
+                       AND new_min.min_cid &lt; rm.component_id;
+                    GET DIAGNOSTICS changed = ROW_COUNT;
+                END LOOP;
+            END $$;
+        </sql>
+
+        <!-- Populate VULNERABILITY_ALIAS with deduplicated aliases. -->
+        <sql>
+            INSERT INTO "VULNERABILITY_ALIAS" ("GROUP_ID", "SOURCE", "VULN_ID")
+            SELECT DISTINCT
+                   cm.group_id,
+                   fa.source,
+                   fa.vuln_id
+              FROM tmp_flattened_alias fa
+             INNER JOIN tmp_rowmap rm
+                ON fa.row_id = rm.row_id
+             INNER JOIN (
+               SELECT component_id
+                    , gen_random_uuid() AS group_id
+                 FROM (SELECT DISTINCT component_id FROM tmp_rowmap) t
+              ) AS cm ON rm.component_id = cm.component_id
+        </sql>
+
+        <dropTable tableName="VULNERABILITYALIAS"/>
+
+        <!-- Seed assertions from migrated alias data. -->
         <sql>
             INSERT INTO "VULNERABILITY_ALIAS_ASSERTION" (
               "ASSERTER"
