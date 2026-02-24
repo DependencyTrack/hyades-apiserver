@@ -56,7 +56,9 @@ final class OssIndexModelConverter {
     private OssIndexModelConverter() {
     }
 
-    static Vulnerability.Builder convert(ComponentReportVulnerability reportedVuln) {
+    static Vulnerability.Builder convert(
+            ComponentReportVulnerability reportedVuln,
+            boolean includeAliases) {
         final var vulnBuilder = Vulnerability.newBuilder()
                 .setId(reportedVuln.id());
 
@@ -64,7 +66,7 @@ final class OssIndexModelConverter {
             vulnBuilder.setSource(SOURCE_NVD);
         } else {
             vulnBuilder.setSource(SOURCE_OSSINDEX);
-            if (reportedVuln.cve() != null) {
+            if (includeAliases && reportedVuln.cve() != null) {
                 vulnBuilder.addReferences(
                         VulnerabilityReference.newBuilder()
                                 .setId(reportedVuln.cve())

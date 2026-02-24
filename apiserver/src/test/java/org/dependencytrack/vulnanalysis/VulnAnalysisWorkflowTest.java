@@ -20,6 +20,10 @@ package org.dependencytrack.vulnanalysis;
 
 import io.github.resilience4j.core.IntervalFunction;
 import io.smallrye.config.SmallRyeConfigBuilder;
+import org.cyclonedx.proto.v1_6.Bom;
+import org.cyclonedx.proto.v1_6.Source;
+import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_6.VulnerabilityReference;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.dex.activity.DeleteFilesActivity;
@@ -42,6 +46,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerabilityKey;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
@@ -49,6 +54,10 @@ import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.dependencytrack.persistence.jdbi.FindingDao.FindingRow;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.Plugin;
 import org.dependencytrack.policy.cel.CelVulnerabilityPolicyEvaluator;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -63,7 +72,11 @@ import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResul
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
+import org.dependencytrack.vulnanalysis.api.VulnAnalyzerFactory;
+import org.dependencytrack.vulnanalysis.api.VulnAnalyzerRequirement;
 import org.dependencytrack.vulnanalysis.internal.InternalVulnAnalyzerPlugin;
+import org.dependencytrack.vulndatasource.api.VulnDataSource;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,10 +86,15 @@ import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.ZonedDateTime;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.dex.api.payload.PayloadConverters.protoConverter;
@@ -96,6 +114,8 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
 
     private FileStorage fileStorage;
     private PluginManager pluginManager;
+    private final AtomicReference<Function<Bom, Bom>> mockAnalyzerFunction =
+            new AtomicReference<>(bom -> Bom.getDefaultInstance());
 
     @BeforeEach
     void beforeEach() {
@@ -103,14 +123,18 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
 
         fileStorage = new MemoryFileStorage();
 
+        final var mockAnalyzerPlugin = new MockVulnAnalyzerPlugin(bom -> mockAnalyzerFunction.get().apply(bom));
+
         pluginManager = new PluginManager(
                 new SmallRyeConfigBuilder()
                         .withDefaultValue("dt.vuln-analyzer.internal.datasource.name", "default")
                         .build(),
                 new NoopCacheManager(),
                 secretName -> null,
-                List.of(VulnAnalyzer.class));
-        pluginManager.loadPlugins(List.of(new InternalVulnAnalyzerPlugin()));
+                List.of(VulnAnalyzer.class, VulnDataSource.class));
+        pluginManager.loadPlugins(List.of(
+                new InternalVulnAnalyzerPlugin(),
+                mockAnalyzerPlugin));
 
         final DexEngine engine = workflowTest.getEngine();
 
@@ -970,6 +994,132 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         });
     }
 
+    @Test
+    void shouldSyncVulnAndAliasAssertionsFromExternalAnalyzer() {
+        var project = new Project();
+        project.setName("acme-app");
+        project = qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("com.fasterxml.jackson.core");
+        component.setName("jackson-databind");
+        component.setVersion("2.9.8");
+        component.setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.9.8");
+        qm.persist(component);
+
+        mockAnalyzerFunction.set(bom -> Bom.newBuilder()
+                .addVulnerabilities(
+                        org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                                .setId("CVE-2024-1234")
+                                .setSource(Source.newBuilder().setName("NVD"))
+                                .addAffects(VulnerabilityAffects.newBuilder().setRef(bom.getComponents(0).getBomRef()))
+                                .addReferences(VulnerabilityReference.newBuilder()
+                                        .setId("GHSA-xxxx-xxxx-xxxx")
+                                        .setSource(Source.newBuilder().setName("GITHUB"))))
+                .build());
+
+        final UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThat(qm.getVulnerabilities(project, true))
+                .extracting(Vulnerability::getVulnId)
+                .containsExactly("CVE-2024-1234");
+
+        final long projectId = project.getId();
+        final List<FindingDao.FindingRow> findings = withJdbiHandle(
+                handle -> handle.attach(FindingDao.class)
+                        .getFindingsByProject(projectId, false, false, null));
+        assertThat(findings).hasSize(1);
+
+        assertThat(getAllAliasGroups()).satisfiesExactly(group ->
+                assertThat(group).containsExactlyInAnyOrder(
+                        new VulnerabilityKey("CVE-2024-1234", "NVD"),
+                        new VulnerabilityKey("GHSA-xxxx-xxxx-xxxx", "GITHUB")));
+    }
+
+    @Test
+    void shouldRemoveStaleAliasAssertionsWhenAnalyzerNoLongerReportsThem() {
+        var project = new Project();
+        project.setName("acme-app");
+        project = qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("com.fasterxml.jackson.core");
+        component.setName("jackson-databind");
+        component.setVersion("2.9.8");
+        component.setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.9.8");
+        qm.persist(component);
+
+        mockAnalyzerFunction.set(bom -> Bom.newBuilder()
+                .addVulnerabilities(
+                        org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                                .setId("CVE-2024-1234")
+                                .setSource(Source.newBuilder().setName("NVD"))
+                                .addAffects(VulnerabilityAffects.newBuilder().setRef(bom.getComponents(0).getBomRef()))
+                                .addReferences(VulnerabilityReference.newBuilder()
+                                        .setId("GHSA-xxxx-xxxx-xxxx")
+                                        .setSource(Source.newBuilder().setName("GITHUB"))))
+                .build());
+
+        UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThat(getAllAliasGroups()).hasSize(1);
+
+        mockAnalyzerFunction.set(bom -> Bom.newBuilder()
+                .addVulnerabilities(
+                        org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                                .setId("CVE-2024-1234")
+                                .setSource(Source.newBuilder().setName("NVD"))
+                                .addAffects(VulnerabilityAffects.newBuilder().setRef(bom.getComponents(0).getBomRef())))
+                .build());
+
+        runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThat(getAllAliasGroups()).isEmpty();
+    }
+
+    private record AliasRow(UUID groupId, String source, String vulnId) {
+    }
+
+    private List<Set<VulnerabilityKey>> getAllAliasGroups() {
+        return withJdbiHandle(handle -> handle
+                .createQuery("""
+                        SELECT "GROUP_ID"
+                             , "SOURCE"
+                             , "VULN_ID"
+                          FROM "VULNERABILITY_ALIAS"
+                        """)
+                .map((rs, ctx) -> new AliasRow(
+                        rs.getObject("group_id", UUID.class),
+                        rs.getString("source"),
+                        rs.getString("vuln_id")))
+                .list()
+                .stream()
+                .collect(Collectors.groupingBy(AliasRow::groupId))
+                .values()
+                .stream()
+                .map(rows -> rows.stream()
+                        .map(row -> new VulnerabilityKey(row.vulnId(), row.source()))
+                        .collect(Collectors.toUnmodifiableSet()))
+                .toList());
+    }
+
     private static void createPolicy(
             String name,
             String author,
@@ -983,6 +1133,72 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         policy.setAnalysis(analysis);
         policy.setRatings(ratings);
         withJdbiHandle(handle -> handle.attach(VulnerabilityPolicyDao.class).create(policy));
+    }
+
+    private static final class MockVulnAnalyzer implements VulnAnalyzer {
+
+        private final Function<Bom, Bom> analyzeFn;
+
+        MockVulnAnalyzer(Function<Bom, Bom> analyzeFn) {
+            this.analyzeFn = analyzeFn;
+        }
+
+        @Override
+        public Bom analyze(Bom bom) {
+            return analyzeFn.apply(bom);
+        }
+    }
+
+    private static final class MockVulnAnalyzerFactory implements VulnAnalyzerFactory {
+
+        private final Function<Bom, Bom> analyzeFn;
+
+        MockVulnAnalyzerFactory(Function<Bom, Bom> analyzeFn) {
+            this.analyzeFn = analyzeFn;
+        }
+
+        @Override
+        public @NonNull String extensionName() {
+            return "mock";
+        }
+
+        @Override
+        public @NonNull Class<? extends VulnAnalyzer> extensionClass() {
+            return MockVulnAnalyzer.class;
+        }
+
+        @Override
+        public void init(@NonNull ExtensionContext ctx) {
+        }
+
+        @Override
+        public VulnAnalyzer create() {
+            return new MockVulnAnalyzer(analyzeFn);
+        }
+
+        @Override
+        public boolean isEnabled() {
+            return true;
+        }
+
+        @Override
+        public @NonNull EnumSet<VulnAnalyzerRequirement> analyzerRequirements() {
+            return EnumSet.of(VulnAnalyzerRequirement.COMPONENT_PURL);
+        }
+    }
+
+    private static final class MockVulnAnalyzerPlugin implements Plugin {
+
+        private final MockVulnAnalyzerFactory factory;
+
+        MockVulnAnalyzerPlugin(Function<Bom, Bom> analyzeFn) {
+            this.factory = new MockVulnAnalyzerFactory(analyzeFn);
+        }
+
+        @Override
+        public @NonNull Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
+            return List.of(factory);
+        }
     }
 
 }

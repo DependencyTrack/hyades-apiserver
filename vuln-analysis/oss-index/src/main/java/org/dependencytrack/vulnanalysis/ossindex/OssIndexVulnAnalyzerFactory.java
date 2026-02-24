@@ -86,7 +86,8 @@ final class OssIndexVulnAnalyzerFactory implements VulnAnalyzerFactory {
                 objectMapper,
                 config.getApiUrl(),
                 config.getUsername(),
-                config.getApiToken());
+                config.getApiToken(),
+                config.isAliasSyncEnabled());
     }
 
     @Override

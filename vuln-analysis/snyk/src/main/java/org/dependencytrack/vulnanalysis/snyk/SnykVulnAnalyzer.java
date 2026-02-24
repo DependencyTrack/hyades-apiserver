@@ -71,6 +71,7 @@ final class SnykVulnAnalyzer implements VulnAnalyzer {
     private final String orgId;
     private final String apiToken;
     private final String apiVersion;
+    private final boolean aliasSyncEnabled;
 
     SnykVulnAnalyzer(
             Cache resultsCache,
@@ -79,7 +80,8 @@ final class SnykVulnAnalyzer implements VulnAnalyzer {
             URI apiBaseUrl,
             String orgId,
             String apiToken,
-            String apiVersion) {
+            String apiVersion,
+            boolean aliasSyncEnabled) {
         this.resultsCache = resultsCache;
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
@@ -87,6 +89,7 @@ final class SnykVulnAnalyzer implements VulnAnalyzer {
         this.orgId = orgId;
         this.apiToken = apiToken;
         this.apiVersion = apiVersion;
+        this.aliasSyncEnabled = aliasSyncEnabled;
     }
 
     @Override
@@ -290,7 +293,7 @@ final class SnykVulnAnalyzer implements VulnAnalyzer {
                 final Vulnerability.Builder vulnBuilder =
                         vulnBuilderByVulnId.computeIfAbsent(
                                 issue.id(),
-                                ignored -> SnykModelConverter.convert(issue));
+                                ignored -> SnykModelConverter.convert(issue, aliasSyncEnabled));
 
                 for (final String bomRef : bomRefs) {
                     vulnBuilder.addAffects(

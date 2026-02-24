@@ -12,6 +12,12 @@
       "description": "Whether the Snyk vulnerability analyzer should be enabled.",
       "existingJavaType": "boolean"
     },
+    "aliasSyncEnabled": {
+      "type": "boolean",
+      "title": "Alias Synchronization Enabled",
+      "description": "Whether to include alias information in vulnerability data.",
+      "existingJavaType": "boolean"
+    },
     "apiBaseUrl": {
       "type": "string",
       "title": "API Base URL",
