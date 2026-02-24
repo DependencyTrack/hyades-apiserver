@@ -21,6 +21,7 @@ package org.dependencytrack.vulnanalysis;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Property;
 import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_6.VulnerabilityReference;
 import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityContext;
 import org.dependencytrack.dex.api.ActivitySpec;
@@ -40,6 +41,7 @@ import org.dependencytrack.persistence.jdbi.AnalysisDao.Analysis;
 import org.dependencytrack.persistence.jdbi.AnalysisDao.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.persistence.jdbi.VulnerabilityAliasDao;
 import org.dependencytrack.persistence.jdbi.query.GetProjectAuditChangeNotificationSubjectQuery;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
@@ -126,6 +128,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             final var failedAnalyzers = new HashSet<String>();
             final var reportedFindings = new ArrayList<ReportedFinding>();
             final var vulnDetailsByKey = new HashMap<VulnerabilityKey, ReportedVulnerability>();
+            final var vulnAliasAssertionsByAnalyzer = new HashMap<String, Map<VulnerabilityKey, Set<VulnerabilityKey>>>();
 
             // Sort analyzer results by name for deterministic merge order.
             // When multiple analyzers report the same vulnerability,
@@ -158,7 +161,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                         continue;
                     }
 
-                    collectFindingsFromVdr(analyzerName, vdr, reportedFindings, vulnDetailsByKey);
+                    collectFindingsFromVdr(analyzerName, vdr, reportedFindings, vulnDetailsByKey, vulnAliasAssertionsByAnalyzer);
                 }
             }
 
@@ -177,16 +180,17 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
             final var vulnUpdatePolicy = new VulnerabilityUpdatePolicy(pluginManager);
 
-            LOGGER.debug("Synchronizing {} vulnerabilities", convertedVulns.size());
-            final Map<VulnerabilityKey, Long> vulnDbIdByVulnerabilityKey =
+            final Map<VulnerabilityKey, Long> vulnDbIdByVulnKey =
                     syncVulns(convertedVulns, vulnUpdatePolicy::isUpdatableByAnalyzer);
-            LOGGER.debug("Synchronized {} vulnerabilities", vulnDbIdByVulnerabilityKey.size());
+            LOGGER.debug("Synchronized {} vulnerabilities", vulnDbIdByVulnKey.size());
+
+            syncVulnAliasAssertions(vulnAliasAssertionsByAnalyzer);
 
             reconcileFindings(
                     arg,
                     projectUuid,
                     reportedFindings,
-                    vulnDbIdByVulnerabilityKey,
+                    vulnDbIdByVulnKey,
                     failedAnalyzers);
         }
 
@@ -200,7 +204,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
     private record ReportedFinding(
             long componentId,
-            VulnerabilityKey VulnerabilityKey,
+            VulnerabilityKey vulnKey,
             String analyzerName,
             @Nullable String referenceUrl) {
     }
@@ -209,17 +213,43 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             String analyzerName,
             Bom vdr,
             List<ReportedFinding> findings,
-            Map<VulnerabilityKey, ReportedVulnerability> reportedVulnByVulnerabilityKey) {
+            Map<VulnerabilityKey, ReportedVulnerability> reportedVulnByVulnKey,
+            Map<String, Map<VulnerabilityKey, Set<VulnerabilityKey>>> aliasAssertionsByAnalyzer) {
         for (final org.cyclonedx.proto.v1_6.Vulnerability vdrVuln : vdr.getVulnerabilitiesList()) {
             final Vulnerability.Source source =
                     BovModelConverter.extractSource(vdrVuln.getId(), vdrVuln.getSource());
-            final var VulnerabilityKey = new VulnerabilityKey(vdrVuln.getId(), source);
+            final var vulnKey = new VulnerabilityKey(vdrVuln.getId(), source);
 
             final Long internalVulnId = extractInternalVulnId(vdrVuln);
             final String referenceUrl = extractReferenceUrl(vdrVuln);
 
-            reportedVulnByVulnerabilityKey.merge(
-                    VulnerabilityKey,
+            if (internalVulnId == null) {
+                // Ensure that each vulnerability reported by an analyzer has alias assertions,
+                // even if the assertions set is empty. This is the only way we can detect whether
+                // a previously reported alias has been removed.
+                //
+                // Note that this does not apply to the internal analyzer, since it can't report
+                // aliases we don't already have in the database.
+                final Map<VulnerabilityKey, Set<VulnerabilityKey>> analyzerAssertions =
+                        aliasAssertionsByAnalyzer.computeIfAbsent(analyzerName, k -> new HashMap<>());
+                analyzerAssertions.computeIfAbsent(vulnKey, k -> new HashSet<>());
+
+                for (final VulnerabilityReference vdrVulnRef : vdrVuln.getReferencesList()) {
+                    try {
+                        final Vulnerability.Source refSource =
+                                BovModelConverter.extractSource(vdrVulnRef.getId(), vdrVulnRef.getSource());
+                        final var aliasKey = new VulnerabilityKey(vdrVulnRef.getId(), refSource);
+                        if (!aliasKey.equals(vulnKey)) {
+                            analyzerAssertions.get(vulnKey).add(aliasKey);
+                        }
+                    } catch (IllegalArgumentException e) {
+                        LOGGER.debug("Skipping alias reference with unknown source for vulnerability '{}'", vulnKey);
+                    }
+                }
+            }
+
+            reportedVulnByVulnKey.merge(
+                    vulnKey,
                     new ReportedVulnerability(vdrVuln, internalVulnId),
                     (existing, incoming) -> {
                         if (existing.internalVulnId() != null) {
@@ -235,12 +265,12 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             for (final VulnerabilityAffects affects : vdrVuln.getAffectsList()) {
                 try {
                     final long componentId = Long.parseLong(affects.getRef());
-                    findings.add(new ReportedFinding(componentId, VulnerabilityKey, analyzerName, referenceUrl));
+                    findings.add(new ReportedFinding(componentId, vulnKey, analyzerName, referenceUrl));
                 } catch (NumberFormatException e) {
                     LOGGER.warn(
                             "Encountered invalid BOM ref '{}' for vulnerability '{}'",
                             affects.getRef(),
-                            VulnerabilityKey,
+                            vulnKey,
                             e);
                 }
             }
@@ -273,22 +303,22 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
     }
 
     private List<Vulnerability> convertVulns(
-            Map<VulnerabilityKey, ReportedVulnerability> reportedVulnByVulnerabilityKey) {
-        if (reportedVulnByVulnerabilityKey.isEmpty()) {
+            Map<VulnerabilityKey, ReportedVulnerability> reportedVulnByVulnKey) {
+        if (reportedVulnByVulnKey.isEmpty()) {
             return List.of();
         }
 
-        final var converted = new ArrayList<Vulnerability>(reportedVulnByVulnerabilityKey.size());
+        final var converted = new ArrayList<Vulnerability>(reportedVulnByVulnKey.size());
 
-        for (final var entry : reportedVulnByVulnerabilityKey.entrySet()) {
-            final VulnerabilityKey VulnerabilityKey = entry.getKey();
+        for (final var entry : reportedVulnByVulnKey.entrySet()) {
+            final VulnerabilityKey vulnKey = entry.getKey();
             final ReportedVulnerability reportedVuln = entry.getValue();
 
             if (reportedVuln.internalVulnId() != null) {
                 final var vuln = new Vulnerability();
                 vuln.setId(reportedVuln.internalVulnId());
-                vuln.setVulnId(VulnerabilityKey.vulnId());
-                vuln.setSource(VulnerabilityKey.source());
+                vuln.setVulnId(vulnKey.vulnId());
+                vuln.setSource(vulnKey.source());
                 converted.add(vuln);
                 continue;
             }
@@ -299,10 +329,10 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                                 .addVulnerabilities(reportedVuln.vdrVuln())
                                 .build(),
                         reportedVuln.vdrVuln(),
-                        true);
+                        false);
                 converted.add(vuln);
             } catch (RuntimeException e) {
-                LOGGER.warn("Failed to convert vulnerability {}: {}", VulnerabilityKey, e.getMessage());
+                LOGGER.warn("Failed to convert vulnerability {}: {}", vulnKey, e.getMessage());
             }
         }
 
@@ -342,15 +372,25 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
         LOGGER.debug("Synchronizing batch of {} vulnerabilities", vulns.size());
 
-        return inJdbiTransaction(
-                handle -> new VulnerabilityDao(handle).syncAll(vulns, canUpdatePredicate));
+        return inJdbiTransaction(handle -> new VulnerabilityDao(handle).syncAll(vulns, canUpdatePredicate));
+    }
+
+    private void syncVulnAliasAssertions(Map<String, Map<VulnerabilityKey, Set<VulnerabilityKey>>> aliasAssertionsByAnalyzer) {
+        for (final var entry : aliasAssertionsByAnalyzer.entrySet()) {
+            final String analyzerName = entry.getKey();
+            final Map<VulnerabilityKey, Set<VulnerabilityKey>> aliasAssertions = entry.getValue();
+
+            LOGGER.debug("Synchronizing {} alias assertions for analyzer '{}'", aliasAssertions.size(), analyzerName);
+            useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle)
+                    .syncAssertions("vuln-analyzer:" + analyzerName, aliasAssertions));
+        }
     }
 
     private void reconcileFindings(
             ReconcileVulnAnalysisResultsArg arg,
             UUID projectUuid,
             List<ReportedFinding> reportedFindings,
-            Map<VulnerabilityKey, Long> vulnDbIdByVulnerabilityKey,
+            Map<VulnerabilityKey, Long> vulnDbIdByVulnKey,
             Set<String> failedAnalyzers) {
         final Long projectId = withJdbiHandle(
                 handle -> handle.attach(ProjectDao.class).getProjectId(projectUuid));
@@ -378,11 +418,11 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         final var reportedAttributionKeys = new HashSet<FindingAttributionKey>();
 
         for (final ReportedFinding reportedFinding : reportedFindings) {
-            final Long vulnDbId = vulnDbIdByVulnerabilityKey.get(reportedFinding.VulnerabilityKey());
+            final Long vulnDbId = vulnDbIdByVulnKey.get(reportedFinding.vulnKey());
             if (vulnDbId == null) {
                 LOGGER.warn(
                         "Vulnerability {} not found in database; Skipping",
-                        reportedFinding.VulnerabilityKey());
+                        reportedFinding.vulnKey());
                 continue;
             }
 

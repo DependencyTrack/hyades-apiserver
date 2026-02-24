@@ -12,6 +12,12 @@
       "description": "Whether the OSS Index vulnerability analyzer should be enabled.",
       "existingJavaType": "boolean"
     },
+    "aliasSyncEnabled": {
+      "type": "boolean",
+      "title": "Alias Synchronization Enabled",
+      "description": "Whether to include alias information in vulnerability data.",
+      "existingJavaType": "boolean"
+    },
     "apiUrl": {
       "type": "string",
       "title": "API URL",

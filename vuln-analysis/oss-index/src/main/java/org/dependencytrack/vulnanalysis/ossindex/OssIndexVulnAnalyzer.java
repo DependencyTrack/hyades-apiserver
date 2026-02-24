@@ -78,6 +78,7 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
     private final ObjectMapper objectMapper;
     private final URI apiUrl;
     private final String basicAuthCredentials;
+    private final boolean aliasSyncEnabled;
 
     OssIndexVulnAnalyzer(
             Cache resultsCache,
@@ -85,13 +86,15 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
             ObjectMapper objectMapper,
             URI apiUrl,
             String username,
-            String apiToken) {
+            String apiToken,
+            boolean aliasSyncEnabled) {
         this.resultsCache = resultsCache;
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
         this.apiUrl = apiUrl;
         this.basicAuthCredentials = Base64.getEncoder().encodeToString(
                 "%s:%s".formatted(username, apiToken).getBytes(StandardCharsets.UTF_8));
+        this.aliasSyncEnabled = aliasSyncEnabled;
     }
 
     @Override
@@ -273,7 +276,7 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
                 final Vulnerability.Builder vulnBuilder =
                         vulnBuilderByVulnId.computeIfAbsent(
                                 reportedVuln.id(),
-                                ignored -> OssIndexModelConverter.convert(reportedVuln));
+                                ignored -> OssIndexModelConverter.convert(reportedVuln, aliasSyncEnabled));
 
                 for (final String bomRef : bomRefs) {
                     vulnBuilder.addAffects(

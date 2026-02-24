@@ -68,7 +68,7 @@ final class SnykModelConverter {
     private SnykModelConverter() {
     }
 
-    static Vulnerability.Builder convert(SnykIssue issue) {
+    static Vulnerability.Builder convert(SnykIssue issue, boolean includeAliases) {
         final var vulnBuilder = Vulnerability.newBuilder();
 
         final String vulnId = resolveVulnId(issue);
@@ -100,9 +100,11 @@ final class SnykModelConverter {
 
         if (attrs.problems() != null) {
             for (final SnykIssue.Problem problem : attrs.problems()) {
-                final VulnerabilityReference ref = convertToReference(problem);
-                if (ref != null) {
-                    vulnBuilder.addReferences(ref);
+                if (includeAliases) {
+                    final VulnerabilityReference ref = convertToReference(problem);
+                    if (ref != null) {
+                        vulnBuilder.addReferences(ref);
+                    }
                 }
 
                 final Integer cweId = convertToCwe(problem);

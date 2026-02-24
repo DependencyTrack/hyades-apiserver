@@ -67,6 +67,7 @@ class SnykVulnAnalyzerTest {
                 analyzerFactory.runtimeConfigSpec(),
                 new SnykVulnAnalyzerConfigV1()
                         .withEnabled(true)
+                        .withAliasSyncEnabled(true)
                         .withApiBaseUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()))
                         .withOrgId("test-org-id")
                         .withApiToken("test-api-token"));

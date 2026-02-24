@@ -67,6 +67,7 @@ class OssIndexVulnAnalyzerTest {
                 analyzerFactory.runtimeConfigSpec(),
                 new OssIndexVulnAnalyzerConfigV1()
                         .withEnabled(true)
+                        .withAliasSyncEnabled(true)
                         .withApiUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()))
                         .withUsername("foo@example.com")
                         .withApiToken("710bcaff-790b-494d-872a-eb97cdc676ef"));
