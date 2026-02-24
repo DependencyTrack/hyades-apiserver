@@ -7,7 +7,7 @@ $$
 DECLARE
   "v_component"                               RECORD; -- The component to update metrics for
   "v_vulnerability"                           RECORD; -- Loop variable for iterating over vulnerabilities the component is affected by
-  "v_aliases_seen"                            TEXT[]; -- Array of aliases encountered while iterating over vulnerabilities
+  "v_aliases_seen"                            TEXT[] := '{}'; -- Array of aliases encountered while iterating over vulnerabilities
   "v_policy_violation"                        RECORD; -- Loop variable for iterating over policy violations assigned to the component
   "v_vulnerabilities"                         INT     := 0; -- Total number of vulnerabilities
   "v_critical"                                INT     := 0; -- Number of vulnerabilities with critical severity
