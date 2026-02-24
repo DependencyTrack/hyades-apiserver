@@ -7,8 +7,7 @@ $$
 DECLARE
   "v_component"                               RECORD; -- The component to update metrics for
   "v_vulnerability"                           RECORD; -- Loop variable for iterating over vulnerabilities the component is affected by
-  "v_alias"                                   RECORD; -- Loop variable for iterating over aliases of a vulnerability
-  "v_aliases_seen"                            TEXT[]; -- Array of aliases encountered while iterating over vulnerabilities
+  "v_aliases_seen"                            TEXT[] := '{}'; -- Array of aliases encountered while iterating over vulnerabilities
   "v_policy_violation"                        RECORD; -- Loop variable for iterating over policy violations assigned to the component
   "v_vulnerabilities"                         INT     := 0; -- Total number of vulnerabilities
   "v_critical"                                INT     := 0; -- Number of vulnerabilities with critical severity
@@ -55,45 +54,16 @@ BEGIN
     LOOP
       CONTINUE WHEN ("v_vulnerability"."SOURCE" || '|' || "v_vulnerability"."VULNID") = ANY ("v_aliases_seen");
 
-      FOR "v_alias" IN SELECT *
-                       FROM "VULNERABILITYALIAS" AS "VA"
-                       WHERE ("v_vulnerability"."SOURCE" = 'GITHUB' AND
-                              "VA"."GHSA_ID" = "v_vulnerability"."VULNID")
-                         OR ("v_vulnerability"."SOURCE" = 'INTERNAL' AND
-                             "VA"."INTERNAL_ID" = "v_vulnerability"."VULNID")
-                         OR ("v_vulnerability"."SOURCE" = 'NVD' AND
-                             "VA"."CVE_ID" = "v_vulnerability"."VULNID")
-                         OR ("v_vulnerability"."SOURCE" = 'OSSINDEX' AND
-                             "VA"."SONATYPE_ID" = "v_vulnerability"."VULNID")
-                         OR ("v_vulnerability"."SOURCE" = 'OSV' AND
-                             "VA"."OSV_ID" = "v_vulnerability"."VULNID")
-                         OR ("v_vulnerability"."SOURCE" = 'SNYK' AND
-                             "VA"."SNYK_ID" = "v_vulnerability"."VULNID")
-                         OR ("v_vulnerability"."SOURCE" = 'VULNDB' AND
-                             "VA"."VULNDB_ID" = "v_vulnerability"."VULNID")
-        LOOP
-          IF "v_alias"."GHSA_ID" IS NOT NULL THEN
-            "v_aliases_seen" = array_append("v_aliases_seen", 'GITHUB|' || "v_alias"."GHSA_ID");
-          END IF;
-          IF "v_alias"."INTERNAL_ID" IS NOT NULL THEN
-            "v_aliases_seen" = array_append("v_aliases_seen", 'INTERNAL|' || "v_alias"."INTERNAL_ID");
-          END IF;
-          IF "v_alias"."CVE_ID" IS NOT NULL THEN
-            "v_aliases_seen" = array_append("v_aliases_seen", 'NVD|' || "v_alias"."CVE_ID");
-          END IF;
-          IF "v_alias"."SONATYPE_ID" IS NOT NULL THEN
-            "v_aliases_seen" = array_append("v_aliases_seen", 'OSSINDEX|' || "v_alias"."SONATYPE_ID");
-          END IF;
-          IF "v_alias"."OSV_ID" IS NOT NULL THEN
-            "v_aliases_seen" = array_append("v_aliases_seen", 'OSV|' || "v_alias"."OSV_ID");
-          END IF;
-          IF "v_alias"."SNYK_ID" IS NOT NULL THEN
-            "v_aliases_seen" = array_append("v_aliases_seen", 'SNYK|' || "v_alias"."SNYK_ID");
-          END IF;
-          IF "v_alias"."VULNDB_ID" IS NOT NULL THEN
-            "v_aliases_seen" = array_append("v_aliases_seen", 'VULNDB|' || "v_alias"."VULNDB_ID");
-          END IF;
-        END LOOP;
+      "v_aliases_seen" = "v_aliases_seen" || ARRAY(
+        SELECT "SOURCE" || '|' || "VULN_ID"
+          FROM "VULNERABILITY_ALIAS"
+         WHERE "GROUP_ID" IN (
+            SELECT "GROUP_ID"
+              FROM "VULNERABILITY_ALIAS"
+             WHERE "SOURCE" = "v_vulnerability"."SOURCE"
+               AND "VULN_ID" = "v_vulnerability"."VULNID"
+         )
+      );
 
       "v_vulnerabilities" := "v_vulnerabilities" + 1;
 

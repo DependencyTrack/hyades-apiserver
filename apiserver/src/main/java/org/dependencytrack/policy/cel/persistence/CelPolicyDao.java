@@ -132,32 +132,6 @@ public interface CelPolicyDao {
               ${fetchColumns?join(", ")}
             FROM
               "VULNERABILITY" AS "V"
-            <#if fetchColumns?seq_contains("\\"aliases\\"")>
-              LEFT JOIN LATERAL (
-                SELECT
-                  CAST(JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(
-                    'cveId',      "VA"."CVE_ID",
-                    'ghsaId',     "VA"."GHSA_ID",
-                    'gsdId',      "VA"."GSD_ID",
-                    'internalId', "VA"."INTERNAL_ID",
-                    'osvId',      "VA"."OSV_ID",
-                    'sonatypeId', "VA"."SONATYPE_ID",
-                    'snykId',     "VA"."SNYK_ID",
-                    'vulnDbId',   "VA"."VULNDB_ID"
-                  ))) AS TEXT) AS "aliases"
-                FROM
-                  "VULNERABILITYALIAS" AS "VA"
-                WHERE
-                  ("V"."SOURCE" = 'NVD' AND "VA"."CVE_ID" = "V"."VULNID")
-                    OR ("V"."SOURCE" = 'GITHUB' AND "VA"."GHSA_ID" = "V"."VULNID")
-                    OR ("V"."SOURCE" = 'GSD' AND "VA"."GSD_ID" = "V"."VULNID")
-                    OR ("V"."SOURCE" = 'INTERNAL' AND "VA"."INTERNAL_ID" = "V"."VULNID")
-                    OR ("V"."SOURCE" = 'OSV' AND "VA"."OSV_ID" = "V"."VULNID")
-                    OR ("V"."SOURCE" = 'SONATYPE' AND "VA"."SONATYPE_ID" = "V"."VULNID")
-                    OR ("V"."SOURCE" = 'SNYK' AND "VA"."SNYK_ID" = "V"."VULNID")
-                    OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
-              ) AS "aliases" ON TRUE
-            </#if>
             <#if fetchColumns?seq_contains("\\"EP\\".\\"SCORE\\" AS \\"epss_score\\"") || fetchColumns?seq_contains("\\"EP\\".\\"PERCENTILE\\" AS \\"epss_percentile\\"")>
                 LEFT JOIN "EPSS" AS "EP" ON "V"."VULNID" = "EP"."CVE"
             </#if>
@@ -277,7 +251,7 @@ public interface CelPolicyDao {
                 })
                 .collect(Collectors.toList());
         if (fieldsToLoad.contains("aliases")) {
-            sqlSelectColumns.add("\"aliases\"");
+            sqlSelectColumns.add("CAST(JSONB_VULN_ALIASES(\"V\".\"SOURCE\", \"V\".\"VULNID\") AS TEXT) AS \"aliases\"");
         }
         if (fieldsToLoad.contains("epss_score")) {
             sqlSelectColumns.add("\"EP\".\"SCORE\" AS \"epss_score\"");

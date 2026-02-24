@@ -36,14 +36,17 @@ import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.VulnerabilityAlias;
+import org.dependencytrack.model.VulnerabilityKey;
+import org.dependencytrack.persistence.jdbi.VulnerabilityAliasDao;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE;
@@ -248,10 +251,11 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
         vuln.setOwaspRRVector("(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)");
         qm.persist(vuln);
 
-        final var alias = new VulnerabilityAlias();
-        alias.setCveId("CVE-001");
-        alias.setGhsaId("GHSA-001");
-        qm.synchronizeVulnerabilityAlias(alias);
+        useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle)
+                .syncAssertions(
+                        "TEST",
+                        new VulnerabilityKey("CVE-001", Vulnerability.Source.NVD),
+                        Set.of(new VulnerabilityKey("GHSA-001", Vulnerability.Source.GITHUB))));
 
         final var epss = new Epss();
         epss.setCve("CVE-001");
@@ -286,10 +290,6 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                             {
                               "id": "GHSA-001",
                               "source": "GITHUB"
-                            },
-                            {
-                              "id": "CVE-001",
-                              "source": "NVD"
                             }
                           ],
                           "cwes": [

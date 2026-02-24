@@ -27,10 +27,13 @@ import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerabilityKey;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.VulnerabilityAliasDao;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.util.VulnerabilityUtil;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 import org.slf4j.Logger;
@@ -41,12 +44,15 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.datanucleus.PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT;
 import static org.dependencytrack.common.MdcKeys.MDC_VULN_ID;
 import static org.dependencytrack.common.MdcKeys.MDC_VULN_SOURCE;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.LockProvider.isTaskLockToBeExtended;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
@@ -143,6 +149,7 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
 
         final var vulns = new ArrayList<Vulnerability>(bovs.size());
         final var vsListByVulnId = new HashMap<String, List<VulnerableSoftware>>(bovs.size());
+        final var aliasesByVuln = new LinkedHashMap<VulnerabilityKey, Set<VulnerabilityKey>>(bovs.size());
 
         for (final Bom bov : bovs) {
             if (bov.getVulnerabilitiesCount() == 0) {
@@ -166,6 +173,10 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
 
             vulns.add(vuln);
             vsListByVulnId.put(vuln.getVulnId(), vsList);
+
+            final var vulnKey = new VulnerabilityKey(vuln.getVulnId(), vuln.getSource());
+            final Set<VulnerabilityKey> aliasKeys = VulnerabilityUtil.extractAliasKeys(vuln.getAliases(), vulnKey);
+            aliasesByVuln.put(vulnKey, aliasKeys);
         }
 
         try (final var qm = new QueryManager()) {
@@ -179,6 +190,12 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
                     qm.synchronizeVulnerableSoftware(persistentVuln, vsList, this.source);
                 }
             });
+
+            if (!aliasesByVuln.isEmpty()) {
+                useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle)
+                        .syncAssertions("vuln-data-source:" + this.vulnDataSourceExtensionName, aliasesByVuln));
+            }
+
         }
 
         for (final Bom bov : bovs) {

@@ -800,4 +800,164 @@
                 ON "CACHE_ENTRY" ("CACHE_NAME", "CREATED_AT" DESC);
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-41-tag" author="nscuro">
+        <tagDatabase tag="pre-normalize-vulnerability-alias"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-41" author="nscuro">
+        <!-- Normalize the VULNERABILITYALIAS table as per ADR-014. -->
+        <createTable tableName="VULNERABILITY_ALIAS">
+            <column name="GROUP_ID" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SOURCE" type="TEXT"/>
+            <column name="VULN_ID" type="TEXT"/>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="VULNERABILITY_ALIAS"
+                columnNames="SOURCE, VULN_ID"
+                constraintName="VULNERABILITY_ALIAS_PK"/>
+
+        <createIndex tableName="VULNERABILITY_ALIAS" indexName="VULNERABILITY_ALIAS_GROUP_IDX">
+            <column name="GROUP_ID"/>
+        </createIndex>
+
+        <!-- Track assertions of alias relationships. -->
+        <createTable tableName="VULNERABILITY_ALIAS_ASSERTION">
+            <column name="ASSERTER" type="TEXT"/>
+            <column name="VULN_SOURCE" type="TEXT"/>
+            <column name="VULN_ID" type="TEXT"/>
+            <column name="ALIAS_SOURCE" type="TEXT"/>
+            <column name="ALIAS_ID" type="TEXT"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="VULNERABILITY_ALIAS_ASSERTION"
+                columnNames="ASSERTER, VULN_SOURCE, VULN_ID, ALIAS_SOURCE, ALIAS_ID"
+                constraintName="VULNERABILITY_ALIAS_ASSERTION_PK"/>
+
+        <!-- Support lookup by declaring vulnerability. -->
+        <createIndex tableName="VULNERABILITY_ALIAS_ASSERTION" indexName="VULN_ALIAS_ASSERTION_VULN_IDX">
+            <column name="VULN_SOURCE"/>
+            <column name="VULN_ID"/>
+        </createIndex>
+
+        <!-- Support reverse lookup by alias pair. -->
+        <createIndex tableName="VULNERABILITY_ALIAS_ASSERTION" indexName="VULN_ALIAS_ASSERTION_ALIAS_IDX">
+            <column name="ALIAS_SOURCE"/>
+            <column name="ALIAS_ID"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.7.0-42" author="nscuro">
+        <!-- Flatten VULNERABILITYALIAS records into a temp table. -->
+        <sql splitStatements="true">
+            CREATE TEMPORARY TABLE tmp_flattened_alias ON COMMIT DROP AS
+            SELECT va."ID" AS row_id
+                 , t.source
+                 , t.vuln_id
+              FROM "VULNERABILITYALIAS" va
+             CROSS JOIN LATERAL (
+               VALUES ('NVD', va."CVE_ID")
+                    , ('GITHUB', va."GHSA_ID")
+                    , ('GSD', va."GSD_ID")
+                    , ('INTERNAL', va."INTERNAL_ID")
+                    , ('OSV', va."OSV_ID")
+                    , ('OSSINDEX', va."SONATYPE_ID")
+                    , ('SNYK', va."SNYK_ID")
+                    , ('VULNDB', va."VULNDB_ID")
+                    , ('CSAF', va."CSAF_ID")
+            ) AS t(source, vuln_id)
+             WHERE t.vuln_id IS NOT NULL;
+
+            CREATE INDEX ON tmp_flattened_alias (source, vuln_id);
+        </sql>
+
+        <!--
+            Create a lookup table that maps original VULNERABILITYALIAS rows to the connected component they belong to.
+            Starts out with an identity mapping, but will be mutated in the next step as connected components converge.
+        -->
+        <sql splitStatements="true">
+            CREATE TEMPORARY TABLE tmp_rowmap ON COMMIT DROP AS
+            SELECT DISTINCT row_id
+                 , row_id AS component_id
+              FROM tmp_flattened_alias;
+
+            CREATE INDEX ON tmp_rowmap (row_id);
+        </sql>
+
+        <!-- Iteratively merge connected components via min-propagation. -->
+        <sql splitStatements="false">
+            DO $$
+            DECLARE
+                changed INT := 1;
+            BEGIN
+                WHILE changed > 0 LOOP
+                    WITH new_min AS (
+                      SELECT rm.row_id
+                           , MIN(rm2.component_id) AS min_cid
+                        FROM tmp_rowmap rm
+                       INNER JOIN tmp_flattened_alias fa1
+                          ON rm.row_id = fa1.row_id
+                       INNER JOIN tmp_flattened_alias fa2
+                          ON fa1.source = fa2.source
+                         AND fa1.vuln_id = fa2.vuln_id
+                       INNER JOIN tmp_rowmap rm2
+                          ON fa2.row_id = rm2.row_id
+                       GROUP BY rm.row_id
+                    )
+                    UPDATE tmp_rowmap rm
+                       SET component_id = new_min.min_cid
+                      FROM new_min
+                     WHERE rm.row_id = new_min.row_id
+                       AND new_min.min_cid &lt; rm.component_id;
+                    GET DIAGNOSTICS changed = ROW_COUNT;
+                END LOOP;
+            END $$;
+        </sql>
+
+        <!-- Populate VULNERABILITY_ALIAS with deduplicated aliases. -->
+        <sql>
+            INSERT INTO "VULNERABILITY_ALIAS" ("GROUP_ID", "SOURCE", "VULN_ID")
+            SELECT DISTINCT
+                   cm.group_id,
+                   fa.source,
+                   fa.vuln_id
+              FROM tmp_flattened_alias fa
+             INNER JOIN tmp_rowmap rm
+                ON fa.row_id = rm.row_id
+             INNER JOIN (
+               SELECT component_id
+                    , gen_random_uuid() AS group_id
+                 FROM (SELECT DISTINCT component_id FROM tmp_rowmap) t
+              ) AS cm ON rm.component_id = cm.component_id
+        </sql>
+
+        <dropTable tableName="VULNERABILITYALIAS"/>
+
+        <!-- Seed assertions from migrated alias data. -->
+        <sql>
+            INSERT INTO "VULNERABILITY_ALIAS_ASSERTION" (
+              "ASSERTER"
+            , "VULN_SOURCE"
+            , "VULN_ID"
+            , "ALIAS_SOURCE"
+            , "ALIAS_ID"
+            )
+            SELECT 'UNKNOWN'
+                 , a."SOURCE"
+                 , a."VULN_ID"
+                 , b."SOURCE"
+                 , b."VULN_ID"
+              FROM "VULNERABILITY_ALIAS" a
+              JOIN "VULNERABILITY_ALIAS" b
+                ON a."GROUP_ID" = b."GROUP_ID"
+             WHERE (a."SOURCE", a."VULN_ID") &lt; (b."SOURCE", b."VULN_ID")
+        </sql>
+    </changeSet>
 </databaseChangeLog>

@@ -8,22 +8,22 @@ CREATE OR REPLACE FUNCTION JSONB_VULN_ALIASES(
 AS
 $$
 SELECT JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(
-         'cveId', "VA"."CVE_ID"
-       , 'ghsaId', "VA"."GHSA_ID"
-       , 'gsdId', "VA"."GSD_ID"
-       , 'internalId', "VA"."INTERNAL_ID"
-       , 'osvId', "VA"."OSV_ID"
-       , 'sonatypeId', "VA"."SONATYPE_ID"
-       , 'snykId', "VA"."SNYK_ID"
-       , 'vulnDbId', "VA"."VULNDB_ID"
+         'cveId', CASE WHEN va."SOURCE" = 'NVD' THEN va."VULN_ID" END
+       , 'ghsaId', CASE WHEN va."SOURCE" = 'GITHUB' THEN va."VULN_ID" END
+       , 'gsdId', CASE WHEN va."SOURCE" = 'GSD' THEN va."VULN_ID" END
+       , 'internalId', CASE WHEN va."SOURCE" = 'INTERNAL' THEN va."VULN_ID" END
+       , 'osvId', CASE WHEN va."SOURCE" = 'OSV' THEN va."VULN_ID" END
+       , 'sonatypeId', CASE WHEN va."SOURCE" = 'OSSINDEX' THEN va."VULN_ID" END
+       , 'snykId', CASE WHEN va."SOURCE" = 'SNYK' THEN va."VULN_ID" END
+       , 'vulnDbId', CASE WHEN va."SOURCE" = 'VULNDB' THEN va."VULN_ID" END
+       , 'csafId', CASE WHEN va."SOURCE" = 'CSAF' THEN va."VULN_ID" END
        )))
-  FROM "VULNERABILITYALIAS" AS "VA"
- WHERE ("vuln_source" = 'NVD' AND "VA"."CVE_ID" = "vuln_id")
-    OR ("vuln_source" = 'GITHUB' AND "VA"."GHSA_ID" = "vuln_id")
-    OR ("vuln_source" = 'GSD' AND "VA"."GSD_ID" = "vuln_id")
-    OR ("vuln_source" = 'INTERNAL' AND "VA"."INTERNAL_ID" = "vuln_id")
-    OR ("vuln_source" = 'OSV' AND "VA"."OSV_ID" = "vuln_id")
-    OR ("vuln_source" = 'SONATYPE' AND "VA"."SONATYPE_ID" = "vuln_id")
-    OR ("vuln_source" = 'SNYK' AND "VA"."SNYK_ID" = "vuln_id")
-    OR ("vuln_source" = 'VULNDB' AND "VA"."VULNDB_ID" = "vuln_id")
+  FROM "VULNERABILITY_ALIAS" AS va
+ WHERE va."GROUP_ID" IN (
+    SELECT "GROUP_ID"
+      FROM "VULNERABILITY_ALIAS"
+     WHERE "SOURCE" = "vuln_source"
+       AND "VULN_ID" = "vuln_id"
+ )
+   AND (va."SOURCE", va."VULN_ID") != ("vuln_source" ,"vuln_id")
 $$;
