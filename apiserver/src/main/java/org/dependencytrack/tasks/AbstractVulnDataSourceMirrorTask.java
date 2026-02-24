@@ -149,7 +149,7 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
 
         final var vulns = new ArrayList<Vulnerability>(bovs.size());
         final var vsListByVulnId = new HashMap<String, List<VulnerableSoftware>>(bovs.size());
-        final var aliasesByVuln = new LinkedHashMap<VulnerabilityKey, Set<VulnerabilityKey>>(vulns.size());
+        final var aliasesByVuln = new LinkedHashMap<VulnerabilityKey, Set<VulnerabilityKey>>(bovs.size());
 
         for (final Bom bov : bovs) {
             if (bov.getVulnerabilitiesCount() == 0) {
