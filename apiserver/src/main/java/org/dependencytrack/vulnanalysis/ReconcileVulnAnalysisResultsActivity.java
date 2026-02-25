@@ -35,6 +35,7 @@ import org.dependencytrack.model.VulnerabilityKey;
 import org.dependencytrack.notification.JdbiNotificationEmitter;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
+import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger;
 import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.persistence.jdbi.AnalysisDao.Analysis;
@@ -49,6 +50,7 @@ import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyEvaluator;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyOperation;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg.AnalyzerResult;
+import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisTrigger;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
 import org.jdbi.v3.core.Handle;
 import org.jspecify.annotations.Nullable;
@@ -69,6 +71,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_VULN_ANALYZER_NAME;
@@ -76,12 +79,11 @@ import static org.dependencytrack.notification.api.NotificationFactory.createAna
 import static org.dependencytrack.notification.api.NotificationFactory.createNewVulnerabilityNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createNewVulnerableDependencyNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityAnalysisDecisionChangeNotification;
-import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.UNRECOGNIZED;
+import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityRetractedNotification;
 import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD;
 import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_MANUAL;
 import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_SCHEDULE;
 import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_UNSPECIFIED;
-import static org.dependencytrack.parser.dependencytrack.BovModelConverter.convert;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -324,7 +326,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             }
 
             try {
-                final Vulnerability vuln = convert(
+                final Vulnerability vuln = BovModelConverter.convert(
                         Bom.newBuilder()
                                 .addVulnerabilities(reportedVuln.vdrVuln())
                                 .build(),
@@ -481,6 +483,16 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                         attributionIdsToDelete,
                         findingsToCreate,
                         createAttributionCommands);
+
+        // Determine findings that became inactive. They exist in current attributions,
+        // but are not in the set of active findings (i.e. all attributions were deleted).
+        final Set<FindingKey> inactiveFindingKeys = existingAttributionsByFindingKey.keySet().stream()
+                .filter(findingKey -> {
+                    final Set<Long> activeVulnDbIds = vulnDbIdsByComponentId.get(findingKey.componentId());
+                    return activeVulnDbIds == null || !activeVulnDbIds.contains(findingKey.vulnDbId());
+                })
+                .collect(Collectors.toSet());
+
         final Map<Long, Map<Long, VulnerabilityPolicy>> policyResults =
                 evaluateVulnPolicies(projectId, vulnDbIdsByComponentId);
 
@@ -491,8 +503,15 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             final var notificationSubjectDao = handle.attach(NotificationSubjectDao.class);
             final var findingDao = new FindingDao(handle);
 
-            final List<FindingKey> createdFindings = findingDao.createFindings(findingsToCreate);
-            LOGGER.debug("Created {} new finding(s)", createdFindings.size());
+            final List<FindingKey> createdFindingKeys = findingDao.createFindings(findingsToCreate);
+            LOGGER.debug("Created {} new finding(s)", createdFindingKeys.size());
+
+            // Reactivated findings are those scheduled for creation (because they had
+            // no active attributions), but whose COMPONENTS_VULNERABILITIES row already
+            // existed. createFindings uses ON CONFLICT DO NOTHING, so these are in
+            // findingsToCreate but not in createdFindings.
+            final var reactivatedFindingKeys = new HashSet<>(findingsToCreate);
+            reactivatedFindingKeys.removeAll(new HashSet<>(createdFindingKeys));
 
             final int attributionsCreated = findingDao.createAttributions(createAttributionCommands);
             LOGGER.debug("Created {} new attribution(s)", attributionsCreated);
@@ -503,36 +522,19 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             final List<Notification> auditChangeNotifications =
                     applyVulnPolicyResults(handle, projectId, policyResults, vulnDbIdsByComponentId);
 
-            // TODO: Clean this up.
             final var notifications = new ArrayList<>(auditChangeNotifications);
-            for (final String failedAnalyzer : failedAnalyzers) {
-                notifications.add(createAnalyzerErrorNotification(
-                        "Vulnerability analyzer '%s' failed for project '%s'".formatted(
-                                failedAnalyzer, projectUuid)));
-            }
-
-            final var notifyComponentIds = new ArrayList<Long>();
-            final var notifyVulnIds = new ArrayList<Long>();
-            createdFindings.forEach(createdFinding -> {
-                notifyComponentIds.add(createdFinding.componentId());
-                notifyVulnIds.add(createdFinding.vulnDbId());
-            });
-            notificationSubjectDao
-                    .getForNewVulnerabilities(notifyComponentIds, notifyVulnIds)
-                    .stream()
-                    .map(subject -> createNewVulnerabilityNotification(
-                            subject.getProject(),
-                            subject.getComponent(),
-                            subject.getVulnerability(),
-                            switch (arg.getAnalysisTrigger()) {
-                                case VULN_ANALYSIS_TRIGGER_BOM_UPLOAD -> VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD;
-                                case VULN_ANALYSIS_TRIGGER_SCHEDULE -> VULNERABILITY_ANALYSIS_TRIGGER_SCHEDULE;
-                                case VULN_ANALYSIS_TRIGGER_MANUAL -> VULNERABILITY_ANALYSIS_TRIGGER_MANUAL;
-                                case VULN_ANALYSIS_TRIGGER_UNSPECIFIED -> VULNERABILITY_ANALYSIS_TRIGGER_UNSPECIFIED;
-                                case UNRECOGNIZED -> UNRECOGNIZED;
-                            }))
-                    .forEach(notifications::add);
-
+            notifications.addAll(createAnalyzerErrorNotifications(projectUuid, failedAnalyzers));
+            notifications.addAll(
+                    createNewVulnerabilityNotifications(
+                            notificationSubjectDao,
+                            Stream
+                                    .concat(createdFindingKeys.stream(), reactivatedFindingKeys.stream())
+                                    .collect(Collectors.toSet()),
+                            arg.getAnalysisTrigger()));
+            notifications.addAll(
+                    createVulnerabilityRetractedNotifications(
+                            notificationSubjectDao,
+                            inactiveFindingKeys));
             if (arg.hasContextFileMetadata()) {
                 final List<Long> newComponentIds = readNewComponentIds(arg.getContextFileMetadata());
                 if (!newComponentIds.isEmpty()) {
@@ -781,6 +783,81 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         }
 
         return notifications;
+    }
+
+    private List<Notification> createAnalyzerErrorNotifications(UUID projectUuid, Collection<String> analyzerNames) {
+        if (analyzerNames.isEmpty()) {
+            return List.of();
+        }
+
+        return analyzerNames.stream()
+                .map(analyzerName -> createAnalyzerErrorNotification(
+                        "Vulnerability analyzer '%s' failed for project '%s'".formatted(
+                                analyzerName, projectUuid)))
+                .toList();
+
+    }
+
+    private List<Notification> createNewVulnerabilityNotifications(
+            NotificationSubjectDao dao,
+            Collection<FindingKey> findingKeys,
+            VulnAnalysisTrigger analysisTrigger) {
+        if (findingKeys.isEmpty()) {
+            return List.of();
+        }
+
+        final var componentIds = new ArrayList<Long>(findingKeys.size());
+        final var vulnDbIds = new ArrayList<Long>(findingKeys.size());
+
+        findingKeys.forEach(findingKey -> {
+            componentIds.add(findingKey.componentId());
+            vulnDbIds.add(findingKey.vulnDbId());
+        });
+
+        return dao
+                .getForNewVulnerabilities(componentIds, vulnDbIds)
+                .stream()
+                .map(subject -> createNewVulnerabilityNotification(
+                        subject.getProject(),
+                        subject.getComponent(),
+                        subject.getVulnerability(),
+                        convertAnalysisTrigger(analysisTrigger)))
+                .toList();
+    }
+
+    private List<Notification> createVulnerabilityRetractedNotifications(
+            NotificationSubjectDao dao,
+            Collection<FindingKey> findingKeys) {
+        if (findingKeys.isEmpty()) {
+            return List.of();
+        }
+
+        final var componentIds = new ArrayList<Long>(findingKeys.size());
+        final var vulnDbIds = new ArrayList<Long>(findingKeys.size());
+
+        findingKeys.forEach(findingKey -> {
+            componentIds.add(findingKey.componentId());
+            vulnDbIds.add(findingKey.vulnDbId());
+        });
+
+        return dao
+                .getForNewVulnerabilities(componentIds, vulnDbIds)
+                .stream()
+                .map(subject -> createVulnerabilityRetractedNotification(
+                        subject.getProject(),
+                        subject.getComponent(),
+                        subject.getVulnerability()))
+                .toList();
+    }
+
+    private static VulnerabilityAnalysisTrigger convertAnalysisTrigger(VulnAnalysisTrigger trigger) {
+        return switch (trigger) {
+            case VULN_ANALYSIS_TRIGGER_BOM_UPLOAD -> VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD;
+            case VULN_ANALYSIS_TRIGGER_SCHEDULE -> VULNERABILITY_ANALYSIS_TRIGGER_SCHEDULE;
+            case VULN_ANALYSIS_TRIGGER_MANUAL -> VULNERABILITY_ANALYSIS_TRIGGER_MANUAL;
+            case VULN_ANALYSIS_TRIGGER_UNSPECIFIED -> VULNERABILITY_ANALYSIS_TRIGGER_UNSPECIFIED;
+            case UNRECOGNIZED -> VulnerabilityAnalysisTrigger.UNRECOGNIZED;
+        };
     }
 
 }

@@ -57,6 +57,10 @@ enum Group {
   GROUP_USER_DELETED = 20;
   GROUP_BOM_VALIDATION_FAILED = 21;
 
+  // A previously identified vulnerability is no longer applicable,
+  // e.g. due to upstream sources correcting their data.
+  GROUP_VULNERABILITY_RETRACTED = 22;
+
   // Indexing service has been removed as of
   // https://github.com/DependencyTrack/hyades/issues/661
   reserved 5;
@@ -273,4 +277,15 @@ enum VulnerabilityAnalysisTrigger {
 
   // The analysis was triggered manually.
   VULNERABILITY_ANALYSIS_TRIGGER_MANUAL = 3;
+}
+
+message VulnerabilityRetractedSubject {
+  // The component for which the vulnerability was previously reported.
+  Component component = 1;
+
+  // The project for which the vulnerability was previously reported.
+  Project project = 2;
+
+  // The previously reported vulnerability.
+  Vulnerability vulnerability = 3;
 }

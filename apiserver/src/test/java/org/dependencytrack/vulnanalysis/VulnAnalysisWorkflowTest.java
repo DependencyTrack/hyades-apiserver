@@ -103,6 +103,7 @@ import static org.dependencytrack.notification.NotificationTestUtil.createCatchA
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABILITY;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABLE_DEPENDENCY;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_VULNERABILITY_RETRACTED;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -331,7 +332,138 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         findings = findingsSupplier.get();
         assertThat(findings).isEmpty();
 
-        assertThat(qm.getNotificationOutbox()).isEmpty();
+        assertThat(qm.getNotificationOutbox())
+                .extracting(org.dependencytrack.notification.proto.v1.Notification::getGroup)
+                .containsExactly(GROUP_VULNERABILITY_RETRACTED);
+    }
+
+    @Test
+    void shouldEmitVulnerabilityRetractedNotificationWhenFindingBecomesInactive() throws Exception {
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INT-200");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln.setSeverity(Severity.HIGH);
+        vuln = qm.persist(vuln);
+
+        final var vs = new VulnerableSoftware();
+        vs.setPurlType("maven");
+        vs.setPurlNamespace("com.example");
+        vs.setPurlName("acme-lib");
+        vs.setVersionStartIncluding("1.0.0");
+        vs.setVersionEndExcluding("2.0.0");
+        vs.setVulnerable(true);
+        vs.addVulnerability(vuln);
+        qm.persist(vs);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project = qm.persist(project);
+
+        var component = new Component();
+        component.setProject(project);
+        component.setGroup("com.example");
+        component.setName("acme-lib");
+        component.setVersion("1.1.0");
+        component.setPurl("pkg:maven/com.example/acme-lib@1.1.0");
+        component = qm.persist(component);
+
+        // Run first analysis to create the finding.
+        UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThat(qm.getNotificationOutbox())
+                .extracting(org.dependencytrack.notification.proto.v1.Notification::getGroup)
+                .containsExactly(GROUP_NEW_VULNERABILITY);
+        qm.truncateNotificationOutbox();
+
+        // Remove vulnerable software so the internal analyzer no longer reports the finding.
+        qm.delete(vs);
+
+        runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThat(qm.getNotificationOutbox())
+                .extracting(org.dependencytrack.notification.proto.v1.Notification::getGroup)
+                .containsExactly(GROUP_VULNERABILITY_RETRACTED);
+
+        final org.dependencytrack.notification.proto.v1.Notification notification = qm.getNotificationOutbox().getFirst();
+        final var subject = notification.getSubject()
+                .unpack(org.dependencytrack.notification.proto.v1.VulnerabilityRetractedSubject.class);
+        assertThat(subject.getVulnerability().getVulnId()).isEqualTo("INT-200");
+    }
+
+    @Test
+    void shouldEmitNewVulnerabilityNotificationWhenFindingBecomesActiveAgain() throws Exception {
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INT-201");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln.setSeverity(Severity.HIGH);
+        vuln = qm.persist(vuln);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project = qm.persist(project);
+
+        var component = new Component();
+        component.setProject(project);
+        component.setGroup("com.example");
+        component.setName("acme-lib");
+        component.setVersion("1.1.0");
+        component.setPurl("pkg:maven/com.example/acme-lib@1.1.0");
+        component = qm.persist(component);
+
+        // Create finding directly without VulnerableSoftware.
+        // The internal analyzer won't match, so the next run will deactivate it.
+        qm.addVulnerability(vuln, component, "internal");
+
+        // Run 1: Internal analyzer finds nothing -> attribution soft-deleted -> finding inactive.
+        UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThat(qm.getNotificationOutbox())
+                .extracting(org.dependencytrack.notification.proto.v1.Notification::getGroup)
+                .containsExactly(GROUP_VULNERABILITY_RETRACTED);
+        qm.truncateNotificationOutbox();
+
+        // Add vulnerable software so the internal analyzer can match the component.
+        final var vs = new VulnerableSoftware();
+        vs.setPurlType("maven");
+        vs.setPurlNamespace("com.example");
+        vs.setPurlName("acme-lib");
+        vs.setVersionStartIncluding("1.0.0");
+        vs.setVersionEndExcluding("2.0.0");
+        vs.setVulnerable(true);
+        vs.addVulnerability(vuln);
+        qm.persist(vs);
+
+        // Run 2: Internal analyzer reports finding -> reactivation.
+        runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThat(qm.getNotificationOutbox())
+                .extracting(org.dependencytrack.notification.proto.v1.Notification::getGroup)
+                .containsExactly(GROUP_NEW_VULNERABILITY);
+
+        final org.dependencytrack.notification.proto.v1.Notification notification = qm.getNotificationOutbox().getFirst();
+        final var subject = notification.getSubject()
+                .unpack(org.dependencytrack.notification.proto.v1.NewVulnerabilitySubject.class);
+        assertThat(subject.getVulnerability().getVulnId()).isEqualTo("INT-201");
     }
 
     @Test
