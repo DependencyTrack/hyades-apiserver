@@ -93,7 +93,7 @@ final class SnykVulnAnalyzer implements VulnAnalyzer {
     }
 
     @Override
-    public Bom analyze(Bom bom) {
+    public Bom analyze(Bom bom) throws InterruptedException {
         final Map<String, Set<String>> bomRefsByPurl = collectAnalyzablePurls(bom);
         if (bomRefsByPurl.isEmpty()) {
             LOGGER.debug("No analyzable PURLs found; Skipping analysis");
@@ -104,6 +104,10 @@ final class SnykVulnAnalyzer implements VulnAnalyzer {
         final var purlsToAnalyze = new LinkedHashSet<>(bomRefsByPurl.keySet());
 
         for (final var purlBatch : partition(List.copyOf(bomRefsByPurl.keySet()), CACHE_BATCH_SIZE)) {
+            if (Thread.interrupted()) {
+                throw new InterruptedException("Interrupted before all cache lookups could complete");
+            }
+
             final Map<String, byte[]> cachedBytesByPurl = resultsCache.getMany(Set.copyOf(purlBatch));
             LOGGER.debug("Found cached results for {}/{} PURLs", cachedBytesByPurl.size(), purlBatch.size());
 
@@ -167,7 +171,7 @@ final class SnykVulnAnalyzer implements VulnAnalyzer {
 
     private Map<String, List<SnykIssue>> analyzePurls(
             Collection<String> purls,
-            Map<String, Set<String>> bomRefsByPurl) {
+            Map<String, Set<String>> bomRefsByPurl) throws InterruptedException {
         if (purls.isEmpty()) {
             return Map.of();
         }
@@ -175,6 +179,10 @@ final class SnykVulnAnalyzer implements VulnAnalyzer {
         final var issuesByPurl = new HashMap<String, List<SnykIssue>>(purls.size());
 
         for (final var purlBatch : partition(List.copyOf(purls), REQUEST_BATCH_SIZE)) {
+            if (Thread.interrupted()) {
+                throw new InterruptedException("Interrupted before all components could be analyzed");
+            }
+
             issuesByPurl.putAll(analyzePurlBatch(purlBatch, bomRefsByPurl));
         }
 
@@ -183,7 +191,7 @@ final class SnykVulnAnalyzer implements VulnAnalyzer {
 
     private Map<String, List<SnykIssue>> analyzePurlBatch(
             Collection<String> purlBatch,
-            Map<String, Set<String>> bomRefsByPurl) {
+            Map<String, Set<String>> bomRefsByPurl) throws InterruptedException {
         if (purlBatch.isEmpty()) {
             return Map.of();
         }
@@ -238,7 +246,7 @@ final class SnykVulnAnalyzer implements VulnAnalyzer {
         return issuesByPurl;
     }
 
-    private SnykIssuesResponse fetchIssues(Collection<String> purls) throws IOException {
+    private SnykIssuesResponse fetchIssues(Collection<String> purls) throws InterruptedException, IOException {
         if (purls.isEmpty()) {
             return new SnykIssuesResponse(List.of());
         }
@@ -255,13 +263,7 @@ final class SnykVulnAnalyzer implements VulnAnalyzer {
                 .POST(BodyPublishers.ofString(requestBody))
                 .build();
 
-        final HttpResponse<InputStream> response;
-        try {
-            response = httpClient.send(request, BodyHandlers.ofInputStream());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Request interrupted", e);
-        }
+        final HttpResponse<InputStream> response = httpClient.send(request, BodyHandlers.ofInputStream());
 
         try (final InputStream bodyInputStream = response.body()) {
             if (response.statusCode() == 200) {
