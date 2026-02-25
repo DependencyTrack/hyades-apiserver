@@ -29,14 +29,20 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.datanucleus.store.types.wrappers.Date;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 
@@ -52,6 +58,13 @@ import java.util.UUID;
 public class WorkflowResource {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowResource.class);
+
+    private final DexEngine dexEngine;
+
+    @Inject
+    WorkflowResource(DexEngine dexEngine) {
+        this.dexEngine = dexEngine;
+    }
 
     @GET
     @Path("/token/{uuid}/status")
@@ -73,11 +86,38 @@ public class WorkflowResource {
     public Response getWorkflowStates(
             @Parameter(description = "The UUID of the token to query", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
+        final var token = UUID.fromString(uuid);
+
+        // Provide a tiny layer of backward-compatibility by converting
+        // a few select dex workflow runs to legacy workflow states.
+        //
+        // This is really only necessary for workflows that can be triggered manually.
+        final WorkflowRunMetadata runMetadata = dexEngine.getRunMetadataById(token);
+        if (runMetadata != null) {
+            if ("vuln-analysis".equals(runMetadata.workflowName())) {
+                final var workflowState = new WorkflowState();
+                workflowState.setStep(WorkflowStep.VULN_ANALYSIS);
+                workflowState.setStatus(switch (runMetadata.status()) {
+                    case CREATED, RUNNING, SUSPENDED -> WorkflowStatus.PENDING;
+                    case CANCELLED -> WorkflowStatus.CANCELLED;
+                    case COMPLETED -> WorkflowStatus.COMPLETED;
+                    case FAILED -> WorkflowStatus.FAILED;
+                });
+                workflowState.setUpdatedAt(
+                        runMetadata.updatedAt() != null
+                                ? Date.from(runMetadata.updatedAt())
+                                : null);
+                workflowState.setToken(token);
+
+                return Response.ok(List.of(workflowState)).build();
+            }
+        }
+
         List<WorkflowState> workflowStates;
         try (final var qm = new QueryManager()) {
-            workflowStates = qm.getAllWorkflowStatesForAToken(UUID.fromString(uuid));
+            workflowStates = qm.getAllWorkflowStatesForAToken(token);
             if (workflowStates.isEmpty()) {
-                return Response.status(Response.Status.NOT_FOUND).entity("Provided token " + uuid + " does not exist.").build();
+                return Response.status(Response.Status.NOT_FOUND).entity("Provided token " + token + " does not exist.").build();
             }
         } catch (Exception e) {
             LOGGER.error("An error occurred while fetching workflow status", e);
