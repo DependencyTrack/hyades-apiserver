@@ -54,6 +54,7 @@ import static org.dependencytrack.notification.api.NotificationFactory.createUse
 import static org.dependencytrack.notification.api.NotificationFactory.createVexConsumedNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createVexProcessedNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityAnalysisDecisionChangeNotification;
+import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityRetractedNotification;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_ANALYZER;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_CONSUMED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_PROCESSED;
@@ -69,6 +70,7 @@ import static org.dependencytrack.notification.proto.v1.Group.GROUP_USER_CREATED
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_USER_DELETED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_VEX_CONSUMED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_VEX_PROCESSED;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_VULNERABILITY_RETRACTED;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
@@ -97,6 +99,9 @@ public final class TestNotificationFactory {
 
     private static final Map<SupplierMatrixKey, Supplier<Notification>> SUPPLIER_MATRIX =
             Map.ofEntries(
+                    Map.entry(
+                            new SupplierMatrixKey(SCOPE_PORTFOLIO, GROUP_VULNERABILITY_RETRACTED, LEVEL_INFORMATIONAL),
+                            TestNotificationFactory::createVulnerabilityRetractedTestNotification),
                     Map.entry(
                             new SupplierMatrixKey(SCOPE_PORTFOLIO, GROUP_BOM_CONSUMED, LEVEL_INFORMATIONAL),
                             TestNotificationFactory::createBomConsumedTestNotification),
@@ -161,6 +166,13 @@ public final class TestNotificationFactory {
 
     public static Notification createAnalyzerErrorTestNotification() {
         return createAnalyzerErrorNotification("failure");
+    }
+
+    public static Notification createVulnerabilityRetractedTestNotification() {
+        return createVulnerabilityRetractedNotification(
+                createProject(),
+                createComponent(),
+                createVulnerability());
     }
 
     public static Notification createBomConsumedTestNotification() {

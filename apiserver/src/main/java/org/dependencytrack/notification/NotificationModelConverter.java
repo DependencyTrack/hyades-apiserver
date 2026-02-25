@@ -58,6 +58,7 @@ public final class NotificationModelConverter {
             case BOM_VALIDATION_FAILED -> Group.GROUP_BOM_VALIDATION_FAILED;
             case CONFIGURATION -> Group.GROUP_CONFIGURATION;
             case DATASOURCE_MIRRORING -> Group.GROUP_DATASOURCE_MIRRORING;
+            case VULNERABILITY_RETRACTED -> Group.GROUP_VULNERABILITY_RETRACTED;
             case FILE_SYSTEM -> Group.GROUP_FILE_SYSTEM;
             case INTEGRATION -> Group.GROUP_INTEGRATION;
             case NEW_VULNERABILITY -> Group.GROUP_NEW_VULNERABILITY;
@@ -83,6 +84,7 @@ public final class NotificationModelConverter {
             case GROUP_BOM_VALIDATION_FAILED -> NotificationGroup.BOM_VALIDATION_FAILED;
             case GROUP_CONFIGURATION -> NotificationGroup.CONFIGURATION;
             case GROUP_DATASOURCE_MIRRORING -> NotificationGroup.DATASOURCE_MIRRORING;
+            case GROUP_VULNERABILITY_RETRACTED -> NotificationGroup.VULNERABILITY_RETRACTED;
             case GROUP_FILE_SYSTEM -> NotificationGroup.FILE_SYSTEM;
             case GROUP_INTEGRATION -> NotificationGroup.INTEGRATION;
             case GROUP_NEW_VULNERABILITY -> NotificationGroup.NEW_VULNERABILITY;

@@ -41,6 +41,7 @@ import org.dependencytrack.notification.proto.v1.ProjectVulnAnalysisCompleteSubj
 import org.dependencytrack.notification.proto.v1.UserSubject;
 import org.dependencytrack.notification.proto.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
+import org.dependencytrack.notification.proto.v1.VulnerabilityRetractedSubject;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
@@ -133,6 +134,11 @@ final class KafkaNotificationPublisher implements NotificationPublisher {
             case GROUP_BOM_VALIDATION_FAILED -> {
                 requireSubjectOfTypeAnyOf(notification, List.of(BomValidationFailedSubject.class));
                 final var subject = notification.getSubject().unpack(BomValidationFailedSubject.class);
+                yield subject.getProject().getUuid();
+            }
+            case GROUP_VULNERABILITY_RETRACTED -> {
+                requireSubjectOfTypeAnyOf(notification, List.of(VulnerabilityRetractedSubject.class));
+                final var subject = notification.getSubject().unpack(VulnerabilityRetractedSubject.class);
                 yield subject.getProject().getUuid();
             }
             case GROUP_NEW_VULNERABILITY -> {
