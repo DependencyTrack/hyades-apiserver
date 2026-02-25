@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.common.MdcKeys.MDC_VULN_POLICY_NAME;
@@ -55,9 +56,9 @@ final class AnalysisReconciler {
     private final long componentId;
     private final long vulnDbId;
     private final @Nullable Long vulnPolicyId;
-    private final @Nullable AnalysisState state;
-    private final @Nullable AnalysisJustification justification;
-    private final @Nullable AnalysisResponse response;
+    private final AnalysisState state;
+    private final AnalysisJustification justification;
+    private final AnalysisResponse response;
     private final @Nullable String details;
     private final boolean suppressed;
     private final @Nullable Severity severity;
@@ -79,9 +80,9 @@ final class AnalysisReconciler {
         this.componentId = componentId;
         this.vulnDbId = vulnDbId;
         this.vulnPolicyId = existing != null ? existing.vulnPolicyId() : null;
-        this.state = existing != null ? existing.state() : AnalysisState.NOT_SET;
-        this.justification = existing != null ? existing.justification() : AnalysisJustification.NOT_SET;
-        this.response = existing != null ? existing.response() : AnalysisResponse.NOT_SET;
+        this.state = Optional.ofNullable(existing).map(Analysis::state).orElse(AnalysisState.NOT_SET);
+        this.justification = Optional.ofNullable(existing).map(Analysis::justification).orElse(AnalysisJustification.NOT_SET);
+        this.response = Optional.ofNullable(existing).map(Analysis::response).orElse(AnalysisResponse.NOT_SET);
         this.details = existing != null ? existing.details() : null;
         this.suppressed = existing != null && existing.suppressed();
         this.severity = existing != null ? existing.severity() : null;
