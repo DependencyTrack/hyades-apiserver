@@ -59,8 +59,8 @@ public final class VulnAnalysisWorkflow implements Workflow<VulnAnalysisWorkflow
                     /* initialDelay */ Duration.ofSeconds(5),
                     /* delayMultiplier */ 2.0,
                     /* randomizationFactor */ 0.3,
-                    /* maxDelay */ Duration.ofMinutes(5),
-                    /* maxAttempts */ 12);
+                    /* maxDelay */ Duration.ofMinutes(1),
+                    /* maxAttempts */ 5);
 
     @Override
     public @Nullable Void execute(
