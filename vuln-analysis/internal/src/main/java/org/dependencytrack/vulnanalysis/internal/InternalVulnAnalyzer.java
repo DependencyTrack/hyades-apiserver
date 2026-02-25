@@ -68,15 +68,13 @@ final class InternalVulnAnalyzer implements VulnAnalyzer {
     }
 
     @Override
-    public Bom analyze(Bom bom) {
+    public Bom analyze(Bom bom) throws InterruptedException {
         final var candidates = new ArrayList<CandidateComponent>();
         collectScannableComponents(bom.getComponentsList(), candidates);
 
         if (candidates.isEmpty()) {
             return Bom.getDefaultInstance();
         }
-
-        // TODO: Check cache.
 
         final var candidatesByCoordinate = new HashMap<Coordinate, Set<CandidateComponent>>();
 
@@ -91,6 +89,10 @@ final class InternalVulnAnalyzer implements VulnAnalyzer {
 
         final List<List<Coordinate>> coordinatePartitions = partition(List.copyOf(candidatesByCoordinate.keySet()));
         for (final var coordinatePartition : coordinatePartitions) {
+            if (Thread.interrupted()) {
+                throw new InterruptedException("Interrupted before all components could be analyzed");
+            }
+
             LOGGER.debug("Querying matching criteria for {} coordinates", coordinatePartition.size());
             final Map<Coordinate, List<MatchingCriteria>> criteriaListByCoordinate =
                     queryMatchingCriteria(coordinatePartition);

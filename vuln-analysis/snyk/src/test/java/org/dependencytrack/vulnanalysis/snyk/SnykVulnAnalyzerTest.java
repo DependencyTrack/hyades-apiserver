@@ -93,7 +93,7 @@ class SnykVulnAnalyzerTest {
     }
 
     @Test
-    void shouldAnalyzeAndCacheWithNoVulns() {
+    void shouldAnalyzeAndCacheWithNoVulns() throws Exception {
         stubFor(post(urlPathEqualTo("/rest/orgs/test-org-id/packages/issues"))
                 .willReturn(aResponse()
                         .withStatus(200)
@@ -211,7 +211,7 @@ class SnykVulnAnalyzerTest {
     }
 
     @Test
-    void shouldAnalyzeWithMultipleVulns() {
+    void shouldAnalyzeWithMultipleVulns() throws Exception {
         stubFor(post(urlPathEqualTo("/rest/orgs/test-org-id/packages/issues"))
                 .willReturn(aResponse()
                         .withStatus(200)
@@ -232,7 +232,7 @@ class SnykVulnAnalyzerTest {
     }
 
     @Test
-    void shouldNotAnalyzeComponentWithoutBomRef() {
+    void shouldNotAnalyzeComponentWithoutBomRef() throws Exception {
         final var bom = Bom.newBuilder()
                 .addComponents(
                         Component.newBuilder()
@@ -248,7 +248,7 @@ class SnykVulnAnalyzerTest {
     }
 
     @Test
-    void shouldNotAnalyzeComponentWithoutPurl() {
+    void shouldNotAnalyzeComponentWithoutPurl() throws Exception {
         final var bom = Bom.newBuilder()
                 .addComponents(
                         Component.newBuilder()
@@ -264,7 +264,7 @@ class SnykVulnAnalyzerTest {
     }
 
     @Test
-    void shouldNotAnalyzeComponentsWithUnsupportedPurlType() {
+    void shouldNotAnalyzeComponentsWithUnsupportedPurlType() throws Exception {
         final var bom = Bom.newBuilder()
                 .addComponents(
                         Component.newBuilder()
@@ -281,7 +281,7 @@ class SnykVulnAnalyzerTest {
     }
 
     @Test
-    void shouldNotAnalyzeInternalComponents() {
+    void shouldNotAnalyzeInternalComponents() throws Exception {
         final var bom = Bom.newBuilder()
                 .addComponents(
                         Component.newBuilder()
@@ -303,7 +303,7 @@ class SnykVulnAnalyzerTest {
     }
 
     @Test
-    void shouldBatchRequestsWithUpTo100Purls() {
+    void shouldBatchRequestsWithUpTo100Purls() throws Exception {
         stubFor(post(urlPathEqualTo("/rest/orgs/test-org-id/packages/issues"))
                 .willReturn(aResponse()
                         .withStatus(200)
@@ -331,7 +331,7 @@ class SnykVulnAnalyzerTest {
     }
 
     @Test
-    void shouldHandleCaseInsensitivePurlCorrelation() {
+    void shouldHandleCaseInsensitivePurlCorrelation() throws Exception {
         stubFor(post(urlPathEqualTo("/rest/orgs/test-org-id/packages/issues"))
                 .willReturn(aResponse()
                         .withStatus(200)
@@ -391,7 +391,7 @@ class SnykVulnAnalyzerTest {
     }
 
     @Test
-    void shouldSendCorrectHeaders() {
+    void shouldSendCorrectHeaders() throws Exception {
         stubFor(post(urlPathEqualTo("/rest/orgs/test-org-id/packages/issues"))
                 .willReturn(aResponse()
                         .withStatus(200)

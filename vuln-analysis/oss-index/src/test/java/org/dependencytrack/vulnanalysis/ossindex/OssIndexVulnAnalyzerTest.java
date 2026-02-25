@@ -93,7 +93,7 @@ class OssIndexVulnAnalyzerTest {
     }
 
     @Test
-    void shouldAnalyzeAndCacheWithNoVulns() {
+    void shouldAnalyzeAndCacheWithNoVulns() throws Exception {
         stubFor(post(urlPathEqualTo("/api/v3/component-report"))
                 .willReturn(aResponse()
                         .withStatus(200)
@@ -203,7 +203,7 @@ class OssIndexVulnAnalyzerTest {
     }
 
     @Test
-    void shouldNotAnalyzeComponentWithoutBomRef() {
+    void shouldNotAnalyzeComponentWithoutBomRef() throws Exception {
         final var bom = Bom.newBuilder()
                 .addComponents(
                         Component.newBuilder()
@@ -219,7 +219,7 @@ class OssIndexVulnAnalyzerTest {
     }
 
     @Test
-    void shouldNotAnalyzeComponentWithoutPurl() {
+    void shouldNotAnalyzeComponentWithoutPurl() throws Exception {
         final var bom = Bom.newBuilder()
                 .addComponents(
                         Component.newBuilder()
@@ -235,7 +235,7 @@ class OssIndexVulnAnalyzerTest {
     }
 
     @Test
-    void shouldNotAnalyzeComponentsWithUnsupportedPurlType() {
+    void shouldNotAnalyzeComponentsWithUnsupportedPurlType() throws Exception {
         final var bom = Bom.newBuilder()
                 .addComponents(
                         Component.newBuilder()
@@ -252,7 +252,7 @@ class OssIndexVulnAnalyzerTest {
     }
 
     @Test
-    void shouldNotAnalyzeInternalComponents() {
+    void shouldNotAnalyzeInternalComponents() throws Exception {
         final var bom = Bom.newBuilder()
                 .addComponents(
                         Component.newBuilder()
@@ -274,7 +274,7 @@ class OssIndexVulnAnalyzerTest {
     }
 
     @Test
-    void shouldBatchRequestsWithUpTo128Purls() {
+    void shouldBatchRequestsWithUpTo128Purls() throws Exception {
         stubFor(post(urlPathEqualTo("/api/v3/component-report"))
                 .willReturn(aResponse()
                         .withStatus(200)

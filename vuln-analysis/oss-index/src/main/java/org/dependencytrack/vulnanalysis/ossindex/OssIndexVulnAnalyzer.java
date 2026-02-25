@@ -98,7 +98,7 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
     }
 
     @Override
-    public Bom analyze(Bom bom) {
+    public Bom analyze(Bom bom) throws InterruptedException {
         final Map<String, Set<String>> bomRefsByPurl = collectAnalyzablePurls(bom);
         if (bomRefsByPurl.isEmpty()) {
             LOGGER.debug("No analyzable PURLs found; Skipping analysis");
@@ -111,6 +111,10 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
         // Try to populate results from cache.
         // Do so in batches as to not overwhelm cache providers.
         for (final var purlBatch : partition(List.copyOf(bomRefsByPurl.keySet()), CACHE_BATCH_SIZE)) {
+            if (Thread.interrupted()) {
+                throw new InterruptedException("Interrupted before all cache lookups could complete");
+            }
+
             final Map<String, byte[]> cachedBytesByPurl = resultsCache.getMany(Set.copyOf(purlBatch));
             LOGGER.debug("Found cached results for {}/{} PURLs", cachedBytesByPurl.size(), purlBatch.size());
 
@@ -151,7 +155,7 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
                     .anyMatch("dependencytrack:internal:is-internal-component"::equalsIgnoreCase)) {
                 continue;
             }
-            
+
             try {
                 final var purl = new PackageURL(component.getPurl());
                 if (!SUPPORTED_PURL_TYPES.contains(purl.getType())) {
@@ -169,7 +173,8 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
         return bomRefsByPurl;
     }
 
-    private Map<String, List<ComponentReportVulnerability>> analyzePurls(Collection<String> purls) {
+    private Map<String, List<ComponentReportVulnerability>> analyzePurls(
+            Collection<String> purls) throws InterruptedException {
         if (purls.isEmpty()) {
             return Map.of();
         }
@@ -177,13 +182,18 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
         final var reportedVulnsByPurl = new HashMap<String, List<ComponentReportVulnerability>>(purls.size());
 
         for (final var purlBatch : partition(List.copyOf(purls), REQUEST_BATCH_SIZE)) {
+            if (Thread.interrupted()) {
+                throw new InterruptedException("Interrupted before all components could be analyzed");
+            }
+
             reportedVulnsByPurl.putAll(analyzePurlBatch(purlBatch));
         }
 
         return reportedVulnsByPurl;
     }
 
-    private Map<String, List<ComponentReportVulnerability>> analyzePurlBatch(Collection<String> purlBatch) {
+    private Map<String, List<ComponentReportVulnerability>> analyzePurlBatch(
+            Collection<String> purlBatch) throws InterruptedException {
         if (purlBatch.isEmpty()) {
             return Map.of();
         }
@@ -221,7 +231,7 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
         return reportedVulnsByPurl;
     }
 
-    private List<ComponentReport> getComponentReports(Collection<String> coordinates) throws IOException {
+    private List<ComponentReport> getComponentReports(Collection<String> coordinates) throws InterruptedException, IOException {
         if (coordinates.isEmpty()) {
             return List.of();
         }
@@ -238,13 +248,7 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
                 .POST(BodyPublishers.ofByteArray(requestBytes))
                 .build();
 
-        final HttpResponse<InputStream> response;
-        try {
-            response = httpClient.send(request, BodyHandlers.ofInputStream());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Request interrupted", e);
-        }
+        final HttpResponse<InputStream> response = httpClient.send(request, BodyHandlers.ofInputStream());
 
         try (final InputStream bodyInputStream = response.body()) {
             if (response.statusCode() == 200) {

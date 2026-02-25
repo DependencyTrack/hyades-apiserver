@@ -109,7 +109,7 @@ public final class InvokeVulnAnalyzerActivity implements Activity<InvokeVulnAnal
         }
     }
 
-    private Bom performAnalysis(String analyzerName, Bom bom) {
+    private Bom performAnalysis(String analyzerName, Bom bom) throws InterruptedException {
         try (final var vulnAnalyzer = pluginManager.getExtension(VulnAnalyzer.class, analyzerName)) {
             return vulnAnalyzer.analyze(bom);
         } catch (NoSuchExtensionException
