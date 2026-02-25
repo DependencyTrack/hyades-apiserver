@@ -30,8 +30,12 @@ import org.slf4j.MDC;
 import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 
@@ -41,7 +45,7 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
     private final MetadataRegistry metadataRegistry;
     private final String queueName;
     private final List<PollActivityTaskCommand> pollCommands;
-    private final Set<ActivityContextImpl> activeContexts;
+    private final ExecutorService executionExecutor;
 
     ActivityTaskWorker(
             final String name,
@@ -59,7 +63,10 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
         this.pollCommands = metadataRegistry.getAllActivityMetadata().stream()
                 .map(metadata -> new PollActivityTaskCommand(metadata.name(), metadata.lockTimeout()))
                 .toList();
-        this.activeContexts = ConcurrentHashMap.newKeySet();
+        this.executionExecutor = Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual()
+                        .name("%s-%s-ActivityExecutor".formatted(getClass().getSimpleName(), name), 0)
+                        .factory());
     }
 
     @Override
@@ -85,17 +92,33 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
             final var ctx = new ActivityContextImpl(engine, task, activityMetadata.lockTimeout());
             final var arg = activityMetadata.argumentConverter().convertFromPayload(task.argument());
 
-            activeContexts.add(ctx);
+            final Future<Object> future;
             try {
-                final Object activityResult = activityMetadata.executor().execute(ctx, arg);
-                final Payload result = activityMetadata.resultConverter().convertToPayload(activityResult);
+                future = executionExecutor.submit(
+                        () -> activityMetadata.executor().execute(ctx, arg));
+            } catch (RejectedExecutionException e) {
+                logger.debug("Execution executor is shut down; Abandoning task");
+                abandon(task);
+                return;
+            }
 
+            try {
+                final Object activityResult = future.get();
+                final Payload result = activityMetadata.resultConverter().convertToPayload(activityResult);
                 engine.onTaskEvent(new ActivityTaskCompletedEvent(task, result));
-            } catch (Exception e) {
-                logger.warn("Failed to execute activity", e);
-                engine.onTaskEvent(new ActivityTaskFailedEvent(task, e));
-            } finally {
-                activeContexts.remove(ctx);
+            } catch (ExecutionException e) {
+                if (e.getCause() instanceof InterruptedException) {
+                    logger.debug("Activity was interrupted; Abandoning task");
+                    abandon(task);
+                } else {
+                    logger.warn("Failed to execute activity", e.getCause());
+                    engine.onTaskEvent(new ActivityTaskFailedEvent(task, e.getCause()));
+                }
+            } catch (InterruptedException e) {
+                logger.debug("Interrupted while waiting for activity execution to complete; Abandoning task");
+                future.cancel(true);
+                abandon(task);
+                Thread.currentThread().interrupt();
             }
         }
     }
@@ -107,10 +130,15 @@ final class ActivityTaskWorker extends AbstractTaskWorker<ActivityTask> {
 
     @Override
     public void close() {
-        for (final ActivityContextImpl ctx : activeContexts) {
-            ctx.cancel();
+        executionExecutor.shutdownNow();
+        try {
+            if (!executionExecutor.awaitTermination(3, TimeUnit.SECONDS)) {
+                logger.warn("Activity executor did not terminate in time");
+            }
+        } catch (InterruptedException e) {
+            logger.warn("Interrupted while waiting for activity executor to terminate");
+            Thread.currentThread().interrupt();
         }
-
         super.close();
     }
 }

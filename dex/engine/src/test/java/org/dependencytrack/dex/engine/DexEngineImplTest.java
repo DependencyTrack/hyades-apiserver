@@ -1086,23 +1086,21 @@ class DexEngineImplTest {
     @Test
     void shouldCancelActivitiesDuringGracefulShutdown() throws Exception {
         final var activityStarted = new AtomicBoolean(false);
-        final var activityCanceled = new AtomicBoolean(false);
+        final var activityInterrupted = new AtomicBoolean(false);
 
         registerWorkflow("test", (ctx, arg) -> {
             ctx.callActivity("test", ACTIVITY_TASK_QUEUE, null, voidConverter(), voidConverter(), RetryPolicy.ofDefault()).await();
             return null;
         });
         registerActivity("test", (ctx, arg) -> {
-            while (true) {
-                activityStarted.set(true);
-                if (ctx.isCanceled()) {
-                    // NB: Normally activities should throw an exception
-                    // so they'll be retried. This is just for ease of testing.
-                    activityCanceled.set(true);
-                    return null;
-                }
-                Thread.sleep(5);
+            activityStarted.set(true);
+            try {
+                Thread.sleep(Duration.ofMinutes(1));
+            } catch (InterruptedException e) {
+                activityInterrupted.set(true);
+                throw e;
             }
+            return null;
         });
         registerWorkflowWorker("workflow-worker", 1);
         registerTaskWorker("activity-worker", 1);
@@ -1116,7 +1114,7 @@ class DexEngineImplTest {
 
         engine.close();
 
-        assertThat(activityCanceled).isTrue();
+        assertThat(activityInterrupted).isTrue();
     }
 
     @Test
