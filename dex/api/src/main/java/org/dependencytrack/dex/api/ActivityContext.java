@@ -19,7 +19,6 @@
 package org.dependencytrack.dex.api;
 
 import java.util.UUID;
-import java.util.concurrent.CancellationException;
 
 /**
  * Context available to {@link Activity}s.
@@ -41,26 +40,5 @@ public interface ActivityContext {
      * or {@code false} when no heartbeat was emitted.
      */
     boolean maybeHeartbeat();
-
-    /**
-     * @return Whether the activity execution was requested to be cancelled,
-     * e.g. as part of graceful shutdown. It is OK to continue execution if
-     * the activity is "almost done". If remaining execution duration is not
-     * known, or anticipated to take a long time (upwards of multiple seconds),
-     * the cancellation should be respected and immediately acted upon.
-     */
-    boolean isCanceled();
-
-    /**
-     * Check whether cancellation was requested.
-     *
-     * @throws CancellationException When cancellation was requested.
-     * @see #isCanceled()
-     */
-    default void checkCanceled() {
-        if (isCanceled()) {
-            throw new CancellationException();
-        }
-    }
 
 }
