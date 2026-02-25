@@ -228,16 +228,16 @@ public interface FindingDao {
              ${apiOffsetLimitClause!}
             """)
     @AllowApiOrdering(alwaysBy = "attribution.id", by = {
-            @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"V\".\"VULNID\""),
+            @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "v.\"VULNID\""),
             @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = "\"vulnSeverity\""),
-            @AllowApiOrdering.Column(name = "attribution.analyzerIdentity", queryName = "\"FINDINGATTRIBUTION\".\"ANALYZERIDENTITY\""),
-            @AllowApiOrdering.Column(name = "component.group", queryName = "\"COMPONENT\".\"GROUP\""),
-            @AllowApiOrdering.Column(name = "component.name", queryName = "\"COMPONENT\".\"NAME\""),
-            @AllowApiOrdering.Column(name = "component.version", queryName = "\"COMPONENT\".\"VERSION\""),
-            @AllowApiOrdering.Column(name = "analysis.state", queryName = "\"A\".\"STATE\""),
-            @AllowApiOrdering.Column(name = "analysis.isSuppressed", queryName = "\"A\".\"SUPPRESSED\""),
-            @AllowApiOrdering.Column(name = "attribution.id", queryName = "\"FINDINGATTRIBUTION\".\"ID\""),
-            @AllowApiOrdering.Column(name = "attribution.attributedOn", queryName = "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"")
+            @AllowApiOrdering.Column(name = "attribution.analyzerIdentity", queryName = "fa.\"ANALYZERIDENTITY\""),
+            @AllowApiOrdering.Column(name = "component.group", queryName = "c.\"GROUP\""),
+            @AllowApiOrdering.Column(name = "component.name", queryName = "c.\"NAME\""),
+            @AllowApiOrdering.Column(name = "component.version", queryName = "c.\"VERSION\""),
+            @AllowApiOrdering.Column(name = "analysis.state", queryName = "a.\"STATE\""),
+            @AllowApiOrdering.Column(name = "analysis.isSuppressed", queryName = "a.\"SUPPRESSED\""),
+            @AllowApiOrdering.Column(name = "attribution.id", queryName = "fa.\"ID\""),
+            @AllowApiOrdering.Column(name = "attribution.attributedOn", queryName = "fa.\"ATTRIBUTED_ON\"")
     })
     @RegisterConstructorMapper(FindingRow.class)
     List<FindingRow> getFindingsByProject(
