@@ -29,7 +29,6 @@ final class ActivityContextImpl implements ActivityContext {
     private final DexEngineImpl engine;
     private final ActivityTask task;
     private final Duration lockTimeout;
-    private volatile boolean canceled;
 
     ActivityContextImpl(
             final DexEngineImpl engine,
@@ -58,15 +57,6 @@ final class ActivityContextImpl implements ActivityContext {
 
         task.setLock(engine.heartbeatActivityTask(task.id(), task.lock(), lockTimeout).join());
         return true;
-    }
-
-    @Override
-    public boolean isCanceled() {
-        return canceled;
-    }
-
-    void cancel() {
-        canceled = true;
     }
 
 }
