@@ -171,6 +171,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.WORKFLOW, "default", 1));
         engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "default", 1));
         engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analyses", 1));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analysis-reconciliations", 1));
 
         engine.registerTaskWorker(
                 new TaskWorkerOptions(TaskType.WORKFLOW, "workflow-worker", "default", 1)
@@ -182,6 +183,10 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
                         .withPollBackoffFunction(IntervalFunction.of(25)));
         engine.registerTaskWorker(
                 new TaskWorkerOptions(TaskType.ACTIVITY, "activity-worker-vuln-analysis", "vuln-analyses", 1)
+                        .withMinPollInterval(Duration.ofMillis(25))
+                        .withPollBackoffFunction(IntervalFunction.of(25)));
+        engine.registerTaskWorker(
+                new TaskWorkerOptions(TaskType.ACTIVITY, "activity-worker-vuln-analysis-reconciliation", "vuln-analysis-reconciliations", 1)
                         .withMinPollInterval(Duration.ofMillis(25))
                         .withPollBackoffFunction(IntervalFunction.of(25)));
 

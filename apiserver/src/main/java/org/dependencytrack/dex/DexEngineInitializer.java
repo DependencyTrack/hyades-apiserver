@@ -207,7 +207,8 @@ public final class DexEngineInitializer implements ServletContextListener {
                 new CreateTaskQueueRequest(TaskType.WORKFLOW, "default", 1000),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "default", 1000),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "notifications", 25),
-                new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analyses", 25)));
+                new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analyses", 25),
+                new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analysis-reconciliations", 25)));
 
         for (final String workerName : getWorkflowWorkerNames(config)) {
             if (!isTaskWorkerEnabled(config, TaskType.WORKFLOW, workerName)) {
