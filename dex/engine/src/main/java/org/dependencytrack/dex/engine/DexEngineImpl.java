@@ -210,14 +210,18 @@ final class DexEngineImpl implements DexEngine {
                         .name("DexEngine-EventListener")
                         .factory());
 
-        LOGGER.debug("Starting leader election");
-        leaderElection = new DexEngineLeaderElection(
-                config.instanceId(),
-                jdbi,
-                config.leaderElection().leaseDuration(),
-                config.leaderElection().leaseCheckInterval(),
-                config.metrics().meterRegistry());
-        leaderElection.start();
+        if (config.leaderElection().isEnabled()) {
+            LOGGER.debug("Starting leader election");
+            leaderElection = new DexEngineLeaderElection(
+                    config.instanceId(),
+                    jdbi,
+                    config.leaderElection().leaseDuration(),
+                    config.leaderElection().leaseCheckInterval(),
+                    config.metrics().meterRegistry());
+            leaderElection.start();
+        } else {
+            LOGGER.debug("Not starting leader election because it is disabled");
+        }
 
         if (config.metrics().isCollectorEnabled()) {
             LOGGER.debug("Starting metrics collector");
@@ -231,23 +235,27 @@ final class DexEngineImpl implements DexEngine {
             LOGGER.debug("Not starting metrics collector because it is disabled");
         }
 
-        LOGGER.debug("Starting workflow task scheduler");
-        workflowTaskScheduler = new WorkflowTaskScheduler(
-                jdbi,
-                leaderElection::isLeader,
-                config.metrics().meterRegistry(),
-                config.workflowTaskScheduler().pollInterval(),
-                config.workflowTaskScheduler().pollBackoffFunction());
-        workflowTaskScheduler.start();
+        if (config.leaderElection().isEnabled()) {
+            LOGGER.debug("Starting workflow task scheduler");
+            workflowTaskScheduler = new WorkflowTaskScheduler(
+                    jdbi,
+                    leaderElection::isLeader,
+                    config.metrics().meterRegistry(),
+                    config.workflowTaskScheduler().pollInterval(),
+                    config.workflowTaskScheduler().pollBackoffFunction());
+            workflowTaskScheduler.start();
 
-        LOGGER.debug("Starting activity task scheduler");
-        activityTaskScheduler = new ActivityTaskScheduler(
-                jdbi,
-                leaderElection::isLeader,
-                config.metrics().meterRegistry(),
-                config.activityTaskScheduler().pollInterval(),
-                config.activityTaskScheduler().pollBackoffFunction());
-        activityTaskScheduler.start();
+            LOGGER.debug("Starting activity task scheduler");
+            activityTaskScheduler = new ActivityTaskScheduler(
+                    jdbi,
+                    leaderElection::isLeader,
+                    config.metrics().meterRegistry(),
+                    config.activityTaskScheduler().pollInterval(),
+                    config.activityTaskScheduler().pollBackoffFunction());
+            activityTaskScheduler.start();
+        } else {
+            LOGGER.debug("Not starting task schedulers because leader election is disabled");
+        }
 
         LOGGER.debug("Starting external event buffer");
         externalEventBuffer = new Buffer<>(
@@ -282,15 +290,19 @@ final class DexEngineImpl implements DexEngine {
                 config.metrics().meterRegistry());
         activityTaskHeartbeatBuffer.start();
 
-        LOGGER.debug("Starting maintenance worker");
-        maintenanceWorker = new MaintenanceWorker(
-                jdbi,
-                leaderElection::isLeader,
-                config.maintenance().runRetentionDuration(),
-                config.maintenance().runDeletionBatchSize(),
-                config.maintenance().workerInitialDelay(),
-                config.maintenance().workerInterval());
-        maintenanceWorker.start();
+        if (config.leaderElection().isEnabled()) {
+            LOGGER.debug("Starting maintenance worker");
+            maintenanceWorker = new MaintenanceWorker(
+                    jdbi,
+                    leaderElection::isLeader,
+                    config.maintenance().runRetentionDuration(),
+                    config.maintenance().runDeletionBatchSize(),
+                    config.maintenance().workerInitialDelay(),
+                    config.maintenance().workerInterval());
+            maintenanceWorker.start();
+        } else {
+            LOGGER.debug("Not starting maintenance worker because leader election is disabled");
+        }
 
         for (final Map.Entry<String, TaskWorker> entry : taskWorkerByName.entrySet()) {
             LOGGER.debug("Starting task worker {}", entry.getKey());

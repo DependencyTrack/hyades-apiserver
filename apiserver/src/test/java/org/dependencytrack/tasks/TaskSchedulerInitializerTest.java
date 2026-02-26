@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.tasks;
 
+import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import org.dependencytrack.dex.engine.api.DexEngine;
@@ -29,11 +30,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
-public class TaskSchedulerInitializerTest {
+class TaskSchedulerInitializerTest {
 
     @Test
-    public void shouldScheduleTasks() {
+    void shouldScheduleTasks() {
         final Config config = ConfigProvider.getConfig();
         final var scheduler = new TaskScheduler();
         final var dexEngineMock = mock(DexEngine.class);
@@ -73,6 +76,24 @@ public class TaskSchedulerInitializerTest {
         initializer.contextDestroyed(null);
 
         assertThat(scheduler.isRunning()).isFalse();
+    }
+
+    @Test
+    void shouldNotStartSchedulerWhenDisabled() {
+        final var config = new SmallRyeConfigBuilder()
+                .withDefaultValue("dt.task-scheduler.enabled", "false")
+                .build();
+        final var schedulerMock = mock(TaskScheduler.class);
+        final var dexEngineMock = mock(DexEngine.class);
+
+        final var servletContextMock = mock(ServletContext.class);
+        doReturn(dexEngineMock)
+                .when(servletContextMock).getAttribute(eq(DexEngine.class.getName()));
+
+        final var initializer = new TaskSchedulerInitializer(config, schedulerMock);
+        initializer.contextInitialized(new ServletContextEvent(servletContextMock));
+
+        verify(schedulerMock, never()).start();
     }
 
 }

@@ -96,6 +96,11 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
+        if (!config.getOptionalValue("dt.task-scheduler.enabled", boolean.class).orElse(true)) {
+            LOGGER.info("Not starting task scheduler because it is disabled");
+            return;
+        }
+
         LOGGER.info("Starting task scheduler");
         scheduler.start();
 
