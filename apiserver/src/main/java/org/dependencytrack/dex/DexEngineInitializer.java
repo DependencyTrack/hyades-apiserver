@@ -171,28 +171,32 @@ public final class DexEngineInitializer implements ServletContextListener {
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "default", 1000),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "notifications", 25)));
 
-        for (final String workerName : getWorkflowWorkerNames(config)) {
-            if (!isTaskWorkerEnabled(config, TaskType.WORKFLOW, workerName)) {
-                LOGGER.info("Not registering workflow worker '{}' because it is disabled", workerName);
-                continue;
+        if (!config.getOptionalValue("dt.dex-engine.workers.enabled", boolean.class).orElse(true)) {
+            LOGGER.info("Not registering task workers because they are disabled");
+        } else {
+            for (final String workerName : getWorkflowWorkerNames(config)) {
+                if (!isTaskWorkerEnabled(config, TaskType.WORKFLOW, workerName)) {
+                    LOGGER.info("Not registering workflow worker '{}' because it is disabled", workerName);
+                    continue;
+                }
+                LOGGER.info("Registering workflow worker '{}'", workerName);
+
+                final TaskWorkerOptions workerOptions =
+                        getTaskWorkerOptions(config, TaskType.WORKFLOW, workerName);
+                engine.registerTaskWorker(workerOptions);
             }
-            LOGGER.info("Registering workflow worker '{}'", workerName);
 
-            final TaskWorkerOptions workerOptions =
-                    getTaskWorkerOptions(config, TaskType.WORKFLOW, workerName);
-            engine.registerTaskWorker(workerOptions);
-        }
+            for (final String workerName : getActivityWorkerNames(config)) {
+                if (!isTaskWorkerEnabled(config, TaskType.ACTIVITY, workerName)) {
+                    LOGGER.info("Not registering activity worker '{}' because it is disabled", workerName);
+                    continue;
+                }
+                LOGGER.info("Registering activity worker '{}'", workerName);
 
-        for (final String workerName : getActivityWorkerNames(config)) {
-            if (!isTaskWorkerEnabled(config, TaskType.ACTIVITY, workerName)) {
-                LOGGER.info("Not registering activity worker '{}' because it is disabled", workerName);
-                continue;
+                final TaskWorkerOptions workerOptions =
+                        getTaskWorkerOptions(config, TaskType.ACTIVITY, workerName);
+                engine.registerTaskWorker(workerOptions);
             }
-            LOGGER.info("Registering activity worker '{}'", workerName);
-
-            final TaskWorkerOptions workerOptions =
-                    getTaskWorkerOptions(config, TaskType.ACTIVITY, workerName);
-            engine.registerTaskWorker(workerOptions);
         }
 
         LOGGER.info("Starting durable execution engine");
@@ -224,6 +228,8 @@ public final class DexEngineInitializer implements ServletContextListener {
         engineConfig.setPageTokenEncoder(new EncryptedPageTokenEncoder());
 
         // Leader election.
+        config.getOptionalValue("dt.dex-engine.leader-election.enabled", boolean.class)
+                .ifPresent(engineConfig.leaderElection()::setEnabled);
         config.getOptionalValue("dt.dex-engine.leader-election.lease-duration-ms", long.class)
                 .map(Duration::ofMillis)
                 .ifPresent(engineConfig.leaderElection()::setLeaseDuration);

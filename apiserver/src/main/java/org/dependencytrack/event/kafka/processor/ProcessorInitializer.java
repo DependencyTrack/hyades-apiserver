@@ -37,11 +37,25 @@ public class ProcessorInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(ProcessorInitializer.class);
 
-    private final Config config = ConfigProvider.getConfig();
+    private final Config config;
     private ProcessorManager processorManager;
+
+    ProcessorInitializer(Config config) {
+        this.config = config;
+    }
+
+    @SuppressWarnings("unused") // Used by servlet container.
+    public ProcessorInitializer() {
+        this(ConfigProvider.getConfig());
+    }
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
+        if (!config.getOptionalValue("dt.kafka.processor.enabled", boolean.class).orElse(true)) {
+            LOGGER.info("Not initializing processors because they are disabled");
+            return;
+        }
+
         LOGGER.info("Initializing processors");
 
         final ServletContext servletContext = event.getServletContext();
