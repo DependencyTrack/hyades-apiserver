@@ -113,10 +113,19 @@ public class DexEngineConfig {
 
     public static class LeaderElectionConfig {
 
+        private boolean enabled = true;
         private Duration leaseDuration = Duration.ofSeconds(30);
         private Duration leaseCheckInterval = Duration.ofSeconds(15);
 
         private LeaderElectionConfig() {
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
 
         /**
@@ -144,6 +153,7 @@ public class DexEngineConfig {
         @Override
         public String toString() {
             return new StringJoiner(", ", getClass().getSimpleName() + "[", "]")
+                    .add("enabled=" + enabled)
                     .add("leaseDuration=" + leaseDuration)
                     .add("leaseCheckInterval=" + leaseCheckInterval)
                     .toString();
