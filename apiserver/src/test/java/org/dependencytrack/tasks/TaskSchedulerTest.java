@@ -27,27 +27,28 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.awaitility.Awaitility.await;
 
-public class TaskSchedulerTest  {
+class TaskSchedulerTest  {
 
     private TaskScheduler scheduler;
 
     @BeforeEach
-    public void beforeEach() {
+    void beforeEach() {
         scheduler = new TaskScheduler();
         scheduler.start();
     }
 
     @AfterEach
-    public void afterEach() {
+    void afterEach() {
         if (scheduler != null) {
             scheduler.close();
         }
     }
 
     @Test
-    public void shouldExecuteTaskOnSchedule() throws Exception {
+    void shouldExecuteTaskOnSchedule() throws Exception {
         final var executed = new AtomicBoolean(false);
 
         scheduler.schedule("foo", Schedule.create("* * * * * *"), () -> executed.set(true));
@@ -55,6 +56,12 @@ public class TaskSchedulerTest  {
         await("Task execution")
                 .atMost(Duration.ofSeconds(3))
                 .untilAsserted(() -> assertThat(executed).isTrue());
+    }
+
+    @Test
+    void closeShouldNoopWhenAlreadyStopped() {
+        assertThatNoException().isThrownBy(scheduler::close);
+        assertThatNoException().isThrownBy(scheduler::close);
     }
 
 }

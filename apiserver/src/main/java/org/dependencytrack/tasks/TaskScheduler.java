@@ -97,7 +97,7 @@ public final class TaskScheduler implements Closeable {
     @Override
     public void close() {
         if (!running.compareAndSet(true, false)) {
-            throw new IllegalStateException("Scheduler is already stopped");
+            return;
         }
 
         for (final ScheduledTask task : scheduledTaskById.values()) {
