@@ -32,6 +32,9 @@ public record TaskWorkerOptions(
         Duration minPollInterval,
         IntervalFunction pollBackoffFunction) {
 
+    public static final IntervalFunction DEFAULT_POLL_BACKOFF_FUNCTION =
+            IntervalFunction.ofExponentialRandomBackoff(200, 2.0, 0.2, 2_000);
+
     public TaskWorkerOptions {
         requireNonNull(type, "type must not be null");
         requireNonNull(name, "name must not be null");
@@ -44,7 +47,7 @@ public record TaskWorkerOptions(
     }
 
     public TaskWorkerOptions(TaskType taskType, String name, String queueName, int maxConcurrency) {
-        this(taskType, name, queueName, maxConcurrency, Duration.ofMillis(100), IntervalFunction.of(Duration.ofMillis(500)));
+        this(taskType, name, queueName, maxConcurrency, Duration.ofMillis(100), DEFAULT_POLL_BACKOFF_FUNCTION);
     }
 
     public TaskWorkerOptions withMinPollInterval(Duration minPollInterval) {
