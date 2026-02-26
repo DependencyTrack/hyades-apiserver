@@ -34,15 +34,20 @@ services:
     image: "ghcr.io/dependencytrack/hyades-frontend:${DT_FRONTEND_VERSION:-snapshot}"
     environment:
       API_BASE_URL: "http://localhost:8080"
-    ports:
-    - "127.0.0.1:8081:8080"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.frontend.rule: "PathPrefix(`/`)"
+      traefik.http.routers.frontend.priority: "1"
+    healthcheck:
+      test: [ "NONE" ]
     restart: unless-stopped
 
   apiserver:
     image: "ghcr.io/dependencytrack/hyades-apiserver:${DT_APISERVER_VERSION:-snapshot}"
     labels:
       traefik.enable: "true"
-      traefik.http.routers.myapp.rule: "PathPrefix(`/api`)"
+      traefik.http.routers.apiserver.rule: "PathPrefix(`/api`)"
+      traefik.http.routers.apiserver.priority: "2"
     depends_on:
       kafka:
         condition: service_healthy
@@ -56,10 +61,13 @@ services:
         limits:
           memory: 1g
     environment:
+      ALPINE_BCRYPT_ROUNDS: "4"
       DT_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/dtrack"
       DT_DATASOURCE_USERNAME: "dtrack"
       DT_DATASOURCE_PASSWORD: "dtrack"
       KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+    healthcheck:
+      test: [ "NONE" ]
     volumes:
     - "apiserver-data:/data"
     restart: unless-stopped
@@ -90,7 +98,9 @@ services:
         condition: service_healthy
     entrypoint: >-
       sh -c "
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic dtrack.repo-meta-analysis.component --partitions 3 --replication-factor 1 --bootstrap-server kafka:9092 &&
         /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic dtrack.repo-meta-analysis.result --partitions 3 --replication-factor 1 --bootstrap-server kafka:9092 &&
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic dtrack.vuln-analysis.component --partitions 3 --replication-factor 1 --bootstrap-server kafka:9092 &&
         /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic dtrack.vuln-analysis.result --partitions 3 --replication-factor 1 --bootstrap-server kafka:9092 &&
         /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic dtrack.vuln-analysis.result.processed --partitions 3 --replication-factor 1 --bootstrap-server kafka:9092
       "
