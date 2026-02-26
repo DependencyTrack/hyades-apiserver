@@ -357,7 +357,7 @@ public final class DexEngineInitializer implements ServletContextListener {
                 .getOptionalValue(prefix + "min-poll-interval-ms", long.class)
                 .map(Duration::ofMillis)
                 .orElse(null);
-        final IntervalFunction pollBackoffFunction = getBackoffFunction(config, prefix).orElse(null);
+        final IntervalFunction pollBackoffFunction = getBackoffFunction(config, prefix + "poll-backoff").orElse(null);
 
         var options = new TaskWorkerOptions(type, name, queueName, maxConcurrency);
         if (minPollInterval != null) {
