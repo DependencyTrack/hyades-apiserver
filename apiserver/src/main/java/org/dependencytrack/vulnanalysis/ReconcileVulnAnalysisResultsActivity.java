@@ -139,6 +139,10 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             sortedResults.sort(Comparator.comparing(AnalyzerResult::getAnalyzerName));
 
             for (final AnalyzerResult result : sortedResults) {
+                if (Thread.interrupted()) {
+                    throw new InterruptedException("Interrupted before processing analyzer result");
+                }
+
                 final String analyzerName = result.getAnalyzerName();
                 try (var ignoredMdcAnalyzerName = MDC.putCloseable(MDC_VULN_ANALYZER_NAME, analyzerName)) {
                     LOGGER.debug("Processing analyzer results");
@@ -343,7 +347,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
     private Map<VulnerabilityKey, Long> syncVulns(
             List<Vulnerability> vulns,
-            Predicate<String> canUpdatePredicate) {
+            Predicate<String> canUpdatePredicate) throws InterruptedException {
         if (vulns.size() <= 100) {
             return syncVulnsBatch(vulns, canUpdatePredicate);
         }
@@ -352,6 +356,10 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
         final var batch = new ArrayList<Vulnerability>(100);
         for (final Vulnerability vuln : vulns) {
+            if (Thread.interrupted()) {
+                throw new InterruptedException("Interrupted before synchronizing vulnerability batch");
+            }
+
             batch.add(vuln);
             if (batch.size() >= 100) {
                 syncedVulns.putAll(syncVulnsBatch(batch, canUpdatePredicate));
@@ -377,8 +385,12 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         return inJdbiTransaction(handle -> new VulnerabilityDao(handle).syncAll(vulns, canUpdatePredicate));
     }
 
-    private void syncVulnAliasAssertions(Map<String, Map<VulnerabilityKey, Set<VulnerabilityKey>>> aliasAssertionsByAnalyzer) {
+    private void syncVulnAliasAssertions(Map<String, Map<VulnerabilityKey, Set<VulnerabilityKey>>> aliasAssertionsByAnalyzer) throws InterruptedException {
         for (final var entry : aliasAssertionsByAnalyzer.entrySet()) {
+            if (Thread.interrupted()) {
+                throw new InterruptedException("Interrupted before synchronizing alias assertions");
+            }
+
             final String analyzerName = entry.getKey();
             final Map<VulnerabilityKey, Set<VulnerabilityKey>> aliasAssertions = entry.getValue();
 
@@ -393,7 +405,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             UUID projectUuid,
             List<ReportedFinding> reportedFindings,
             Map<VulnerabilityKey, Long> vulnDbIdByVulnKey,
-            Set<String> failedAnalyzers) {
+            Set<String> failedAnalyzers) throws InterruptedException {
         final Long projectId = withJdbiHandle(
                 handle -> handle.attach(ProjectDao.class).getProjectId(projectUuid));
         if (projectId == null) {
@@ -495,6 +507,10 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
 
         final Map<Long, Map<Long, VulnerabilityPolicy>> policyResults =
                 evaluateVulnPolicies(projectId, vulnDbIdsByComponentId);
+
+        if (Thread.interrupted()) {
+            throw new InterruptedException("Interrupted before reconciling findings transaction");
+        }
 
         // Flush all computed changes to the database in a single transaction.
         // Note that this is done for both performance and idempotency reasons.
