@@ -28,7 +28,7 @@ else
 endif
 
 build:
-	@$(MVND) $(MVN_FLAGS) -Pquick clean package
+	@$(MVND) $(MVN_FLAGS) -Pquick package
 .PHONY: build
 
 build-image: build
@@ -43,7 +43,7 @@ datanucleus-enhance:
 .PHONY: datanucleus-enhance
 
 install:
-	@$(MVND) $(MVN_FLAGS) -Pquick clean install
+	@$(MVND) $(MVN_FLAGS) -Pquick install
 .PHONY: install
 
 lint-java:
