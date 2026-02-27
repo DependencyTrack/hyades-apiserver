@@ -123,7 +123,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         final var projectUuid = UUID.fromString(arg.getProjectUuid());
 
         try (var ignored = MDC.putCloseable(MDC_PROJECT_UUID, projectUuid.toString())) {
-            LOGGER.info(
+            LOGGER.debug(
                     "Reconciling results from {} vulnerability analyzers",
                     arg.getAnalyzerResultsCount());
 
