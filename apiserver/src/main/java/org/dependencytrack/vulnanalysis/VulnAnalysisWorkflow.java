@@ -46,6 +46,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_VULN_ANALYZER_NAME;
 
 /**
@@ -70,43 +71,49 @@ public final class VulnAnalysisWorkflow implements Workflow<VulnAnalysisWorkflow
             throw new TerminalApplicationFailureException("No argument provided");
         }
 
-        final PrepareVulnAnalysisRes preparationResult = prepare(ctx, arg.getProjectUuid());
-        if (preparationResult.getAnalyzersCount() == 0) {
-            ctx.logger().info("No applicable analyzers; Skipping analysis");
-            return null;
-        }
-        if (!preparationResult.hasBomFileMetadata()) {
-            ctx.logger().info("No analyzable components; Skipping analysis");
-            return null;
-        }
+        try (var ignored = MDC.putCloseable(MDC_PROJECT_UUID, arg.getProjectUuid())) {
+            ctx.logger().info("Starting vulnerability analysis");
 
-        final FileMetadata contextFileMetadata =
-                arg.hasContextFileMetadata()
-                        ? arg.getContextFileMetadata()
-                        : null;
-
-        var analyzerResults = List.<AnalyzerResult>of();
-        try {
-            final Map<String, Awaitable<InvokeVulnAnalyzerRes>> awaitableByAnalyzerName =
-                    invokeAnalyzers(
-                            ctx,
-                            arg.getProjectUuid(),
-                            preparationResult.getAnalyzersList(),
-                            preparationResult.getBomFileMetadata());
-
-            analyzerResults = awaitAnalyzerResults(ctx, awaitableByAnalyzerName);
-            if (analyzerResults.stream().noneMatch(AnalyzerResult::getSuccessful)) {
-                throw new TerminalApplicationFailureException("All analyzers failed");
+            final PrepareVulnAnalysisRes preparationResult = prepare(ctx, arg.getProjectUuid());
+            if (preparationResult.getAnalyzersCount() == 0) {
+                ctx.logger().info("No applicable analyzers; Skipping analysis");
+                return null;
+            }
+            if (!preparationResult.hasBomFileMetadata()) {
+                ctx.logger().info("No analyzable components; Skipping analysis");
+                return null;
             }
 
-            reconcileResults(ctx, arg.getProjectUuid(), arg.getTrigger(), analyzerResults, contextFileMetadata);
-        } catch (Exception e) {
-            deleteFiles(ctx, preparationResult.getBomFileMetadata(), analyzerResults, contextFileMetadata);
-            throw e;
-        }
+            final FileMetadata contextFileMetadata =
+                    arg.hasContextFileMetadata()
+                            ? arg.getContextFileMetadata()
+                            : null;
 
-        deleteFiles(ctx, preparationResult.getBomFileMetadata(), analyzerResults, contextFileMetadata);
-        return null;
+            var analyzerResults = List.<AnalyzerResult>of();
+            try {
+                final Map<String, Awaitable<InvokeVulnAnalyzerRes>> awaitableByAnalyzerName =
+                        invokeAnalyzers(
+                                ctx,
+                                arg.getProjectUuid(),
+                                preparationResult.getAnalyzersList(),
+                                preparationResult.getBomFileMetadata());
+
+                analyzerResults = awaitAnalyzerResults(ctx, awaitableByAnalyzerName);
+                if (analyzerResults.stream().noneMatch(AnalyzerResult::getSuccessful)) {
+                    throw new TerminalApplicationFailureException("All analyzers failed");
+                }
+
+                reconcileResults(ctx, arg.getProjectUuid(), arg.getTrigger(), analyzerResults, contextFileMetadata);
+            } catch (Exception e) {
+                deleteFiles(ctx, preparationResult.getBomFileMetadata(), analyzerResults, contextFileMetadata);
+                throw e;
+            }
+
+            deleteFiles(ctx, preparationResult.getBomFileMetadata(), analyzerResults, contextFileMetadata);
+
+            ctx.logger().info("Vulnerability analysis completed");
+            return null;
+        }
     }
 
     private PrepareVulnAnalysisRes prepare(WorkflowContext<?> ctx, String projectUuid) {

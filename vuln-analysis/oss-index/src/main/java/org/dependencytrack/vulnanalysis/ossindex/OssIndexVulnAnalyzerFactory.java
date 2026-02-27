@@ -21,9 +21,8 @@ package org.dependencytrack.vulnanalysis.ossindex;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.ExtensionTestResult;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
-import org.dependencytrack.plugin.api.config.RuntimeConfig;
+import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzerFactory;
@@ -112,20 +111,15 @@ final class OssIndexVulnAnalyzerFactory implements VulnAnalyzerFactory {
                         return;
                     }
                     if (config.getApiUrl() == null) {
-                        throw new IllegalStateException("No API URL provided");
+                        throw new InvalidRuntimeConfigException("No API URL provided");
                     }
                     if (config.getUsername() == null) {
-                        throw new IllegalStateException("No username provided");
+                        throw new InvalidRuntimeConfigException("No username provided");
                     }
                     if (config.getApiToken() == null) {
-                        throw new IllegalStateException("No API token provided");
+                        throw new InvalidRuntimeConfigException("No API token provided");
                     }
                 });
-    }
-
-    @Override
-    public ExtensionTestResult test(@Nullable RuntimeConfig runtimeConfig) {
-        return VulnAnalyzerFactory.super.test(runtimeConfig);
     }
 
     @Override
