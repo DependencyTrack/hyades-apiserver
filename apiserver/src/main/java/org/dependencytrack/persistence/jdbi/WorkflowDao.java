@@ -30,11 +30,9 @@ import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.time.Duration;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 public interface WorkflowDao extends SqlObject {
@@ -83,18 +81,6 @@ public interface WorkflowDao extends SqlObject {
     @GetGeneratedKeys("*")
     @RegisterBeanMapper(WorkflowState.class)
     WorkflowState startState(@Bind WorkflowStep step, @Bind("token") UUID token);
-
-    @SqlQuery("""
-            SELECT "TOKEN"
-              FROM "WORKFLOW_STATE"
-             WHERE "STEP" = :step
-               AND "STATUS" = :status
-               AND "TOKEN" = ANY(:tokens)
-            """)
-    Set<UUID> getTokensByStepAndStateAndTokenAnyOf(
-            @Bind WorkflowStep step,
-            @Bind WorkflowStatus status,
-            @Bind Collection<UUID> tokens);
 
     @SqlBatch("""
             WITH RECURSIVE
