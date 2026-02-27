@@ -23,6 +23,7 @@ import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionTestResult;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
@@ -119,13 +120,13 @@ final class SnykVulnAnalyzerFactory implements VulnAnalyzerFactory {
                         return;
                     }
                     if (config.getApiBaseUrl() == null) {
-                        throw new IllegalStateException("No API base URL provided");
+                        throw new InvalidRuntimeConfigException("No API base URL provided");
                     }
                     if (config.getOrgId() == null) {
-                        throw new IllegalStateException("No organization ID provided");
+                        throw new InvalidRuntimeConfigException("No organization ID provided");
                     }
                     if (config.getApiToken() == null) {
-                        throw new IllegalStateException("No API token provided");
+                        throw new InvalidRuntimeConfigException("No API token provided");
                     }
                 });
     }
