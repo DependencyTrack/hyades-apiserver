@@ -53,9 +53,9 @@ info:
 
     The `total` object discloses how many items exist in the collection
     *across all pages*. Because counting is expensive, some collections
-    that hold *a lot* of items may return partial or estimated counts
-    (types `AT_LEAST` or `ESTIMATE` respectively). Which type to expect
-    is usually documented in the operation's description.
+    that hold *a lot* of items may return partial counts (type `AT_LEAST`)
+    instead of exact counts (type `EXACT`). Which type to expect is usually
+    documented in the operation's description.
     
     ## Sorting
     
