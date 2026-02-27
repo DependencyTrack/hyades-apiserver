@@ -74,6 +74,7 @@ import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContex
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzerFactory;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzerRequirement;
+import org.dependencytrack.vulnanalysis.internal.InternalVulnAnalyzerConfigV1;
 import org.dependencytrack.vulnanalysis.internal.InternalVulnAnalyzerPlugin;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.jspecify.annotations.NonNull;
@@ -1129,6 +1130,34 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
             assertThat(a.getVulnerabilityPolicyId()).isNull();
             assertThat(a.getAnalysisComments()).isEmpty();
         });
+    }
+
+    @Test
+    void shouldFailWhenAllAnalyzersFailed() {
+        pluginManager
+                .getMutableConfigRegistry(VulnAnalyzer.class, "internal")
+                .setRuntimeConfig(
+                        new InternalVulnAnalyzerConfigV1()
+                                .withEnabled(false));
+
+        mockAnalyzerFunction.set(bom -> null);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project = qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setPurl("pkg:maven/com.example/acme-lib@1.0.0");
+        qm.persist(component);
+
+        final UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                        .withArgument(VulnAnalysisWorkflowArg.newBuilder()
+                                .setProjectUuid(project.getUuid().toString())
+                                .build()));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.FAILED);
     }
 
     @Test

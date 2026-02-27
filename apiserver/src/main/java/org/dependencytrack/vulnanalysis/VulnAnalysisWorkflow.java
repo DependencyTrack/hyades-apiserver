@@ -95,6 +95,10 @@ public final class VulnAnalysisWorkflow implements Workflow<VulnAnalysisWorkflow
                             preparationResult.getBomFileMetadata());
 
             analyzerResults = awaitAnalyzerResults(ctx, awaitableByAnalyzerName);
+            if (analyzerResults.stream().noneMatch(AnalyzerResult::getSuccessful)) {
+                throw new TerminalApplicationFailureException("All analyzers failed");
+            }
+
             reconcileResults(ctx, arg.getProjectUuid(), arg.getTrigger(), analyzerResults, contextFileMetadata);
         } catch (Exception e) {
             deleteFiles(ctx, preparationResult.getBomFileMetadata(), analyzerResults, contextFileMetadata);
