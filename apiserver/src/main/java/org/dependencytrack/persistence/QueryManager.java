@@ -814,12 +814,6 @@ public class QueryManager extends AlpineQueryManager {
         getVulnerabilityQueryManager().deleteAffectedVersionAttributions(vulnerability, vulnerableSoftwares, source);
     }
 
-    public void deleteAffectedVersionAttribution(final Vulnerability vulnerability,
-                                                 final VulnerableSoftware vulnerableSoftware,
-                                                 final Vulnerability.Source source) {
-        getVulnerabilityQueryManager().deleteAffectedVersionAttribution(vulnerability, vulnerableSoftware, source);
-    }
-
     public boolean hasAffectedVersionAttribution(
             final Vulnerability vulnerability,
             final VulnerableSoftware vulnerableSoftware,
@@ -1410,24 +1404,12 @@ public class QueryManager extends AlpineQueryManager {
         return getWorkflowStateQueryManager().getAllWorkflowStatesForAToken(token);
     }
 
-    public List<WorkflowState> getAllDescendantWorkflowStatesOfParent(WorkflowState parent) {
-        return getWorkflowStateQueryManager().getAllDescendantWorkflowStatesOfParent(parent);
-    }
-
-    public WorkflowState getWorkflowStateById(long id) {
-        return getWorkflowStateQueryManager().getWorkflowState(id);
-    }
-
     public int updateAllDescendantStatesOfParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus, Date updatedAt) {
         return getWorkflowStateQueryManager().updateAllDescendantStatesOfParent(parentWorkflowState, transientStatus, updatedAt);
     }
 
     public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep workflowStep) {
         return getWorkflowStateQueryManager().getWorkflowStateByTokenAndStep(token, workflowStep);
-    }
-
-    public void deleteWorkflowState(WorkflowState workflowState) {
-        getWorkflowStateQueryManager().deleteWorkflowState(workflowState);
     }
 
     public WorkflowState updateStartTimeIfWorkflowStateExists(UUID token, WorkflowStep workflowStep) {
