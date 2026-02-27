@@ -7,7 +7,8 @@ $$
 DECLARE
   "v_component"                               RECORD; -- The component to update metrics for
   "v_vulnerability"                           RECORD; -- Loop variable for iterating over vulnerabilities the component is affected by
-  "v_aliases_seen"                            TEXT[] := '{}'; -- Array of aliases encountered while iterating over vulnerabilities
+  "v_alias_groups_seen"                       UUID[] := '{}'; -- Array of alias group IDs encountered while iterating over vulnerabilities
+  "v_alias_group_id"                          UUID;           -- Alias group ID of the current vulnerability
   "v_policy_violation"                        RECORD; -- Loop variable for iterating over policy violations assigned to the component
   "v_vulnerabilities"                         INT     := 0; -- Total number of vulnerabilities
   "v_critical"                                INT     := 0; -- Number of vulnerabilities with critical severity
@@ -59,18 +60,16 @@ BEGIN
                                                    AND fa."DELETED_AT" IS NULL
                                           )
     LOOP
-      CONTINUE WHEN ("v_vulnerability"."SOURCE" || '|' || "v_vulnerability"."VULNID") = ANY ("v_aliases_seen");
+      SELECT "GROUP_ID" INTO "v_alias_group_id"
+        FROM "VULNERABILITY_ALIAS"
+       WHERE "SOURCE" = "v_vulnerability"."SOURCE"
+         AND "VULN_ID" = "v_vulnerability"."VULNID"
+       LIMIT 1;
 
-      "v_aliases_seen" = "v_aliases_seen" || ARRAY(
-        SELECT "SOURCE" || '|' || "VULN_ID"
-          FROM "VULNERABILITY_ALIAS"
-         WHERE "GROUP_ID" IN (
-            SELECT "GROUP_ID"
-              FROM "VULNERABILITY_ALIAS"
-             WHERE "SOURCE" = "v_vulnerability"."SOURCE"
-               AND "VULN_ID" = "v_vulnerability"."VULNID"
-         )
-      );
+      IF "v_alias_group_id" IS NOT NULL THEN
+        CONTINUE WHEN "v_alias_group_id" = ANY("v_alias_groups_seen");
+        "v_alias_groups_seen" := "v_alias_groups_seen" || "v_alias_group_id";
+      END IF;
 
       "v_vulnerabilities" := "v_vulnerabilities" + 1;
 
