@@ -960,4 +960,17 @@
              WHERE (a."SOURCE", a."VULN_ID") &lt; (b."SOURCE", b."VULN_ID")
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-43" author="nscuro">
+        <!-- Track last execution of scheduled tasks. -->
+        <createTable tableName="SCHEDULED_TASK_EXECUTION">
+            <column name="TASK_ID" type="TEXT">
+                <constraints primaryKey="true" primaryKeyName="SCHEDULED_TASK_EXECUTION_PK"/>
+            </column>
+            <column name="LAST_EXECUTED_AT" type="TIMESTAMPTZ"/>
+            <column name="LOCK_VERSION" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
 </databaseChangeLog>

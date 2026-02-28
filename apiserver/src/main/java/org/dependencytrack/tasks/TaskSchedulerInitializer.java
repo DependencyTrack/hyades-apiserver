@@ -145,7 +145,8 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                 .schedule(
                         "EPSS Mirror",
                         getCronScheduleForTask(EpssMirrorTask.class),
-                        () -> Event.dispatch(new EpssMirrorEvent()))
+                        () -> Event.dispatch(new EpssMirrorEvent()),
+                        /* triggerOnFirstRun */ true)
                 .schedule(
                         "Fortify SSC Upload",
                         getCronScheduleForTask(FortifySscUploadTask.class),
@@ -159,7 +160,8 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                 .schedule(
                         "GitHub Advisories Mirror",
                         getCronScheduleForTask(GitHubAdvisoryMirrorTask.class),
-                        () -> Event.dispatch(new GitHubAdvisoryMirrorEvent()))
+                        () -> Event.dispatch(new GitHubAdvisoryMirrorEvent()),
+                        /* triggerOnFirstRun */ true)
                 .schedule(
                         "Internal Component Identification",
                         getCronScheduleForTask(InternalComponentIdentificationTask.class),
@@ -177,7 +179,8 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                 .schedule(
                         "LDAP Sync",
                         getCronScheduleForTask(LdapSyncTask.class),
-                        () -> Event.dispatch(new LdapSyncEvent()))
+                        () -> Event.dispatch(new LdapSyncEvent()),
+                        /* triggerOnFirstRun */ true)
                 .schedule(
                         "Metrics Maintenance",
                         getCronScheduleForTask(MetricsMaintenanceTask.class),
@@ -185,11 +188,13 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                 .schedule(
                         "NVD Mirror",
                         getCronScheduleForTask(NistMirrorTask.class),
-                        () -> Event.dispatch(new NistMirrorEvent()))
+                        () -> Event.dispatch(new NistMirrorEvent()),
+                        /* triggerOnFirstRun */ true)
                 .schedule(
                         "OSV Mirror",
                         getCronScheduleForTask(OsvMirrorTask.class),
-                        () -> Event.dispatch(new OsvMirrorEvent()))
+                        () -> Event.dispatch(new OsvMirrorEvent()),
+                        /* triggerOnFirstRun */ true)
                 .schedule(
                         "Portfolio Metrics Update",
                         getCronScheduleForTask(PortfolioMetricsUpdateTask.class),
@@ -221,7 +226,8 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                 .schedule(
                         "Vulnerability Policy Sync",
                         getCronScheduleForTask(VulnerabilityPolicyFetchTask.class),
-                        () -> Event.dispatch(new VulnerabilityPolicyFetchEvent()))
+                        () -> Event.dispatch(new VulnerabilityPolicyFetchEvent()),
+                        /* triggerOnFirstRun */ true)
                 .schedule(
                         "Vulnerability Scan Maintenance",
                         getCronScheduleForTask(VulnerabilityScanMaintenanceTask.class),

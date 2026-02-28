@@ -21,6 +21,7 @@ package org.dependencytrack.tasks;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
+import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -33,7 +34,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-class TaskSchedulerInitializerTest {
+class TaskSchedulerInitializerTest extends PersistenceCapableTest {
 
     @Test
     void shouldScheduleTasks() {
