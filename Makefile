@@ -27,6 +27,10 @@ else
 	MVN_FLAGS :=
 endif
 
+ifdef AGENT
+	MVN_FLAGS += -B -q -Dsurefire.useFile=false
+endif
+
 build:
 	@$(MVND) $(MVN_FLAGS) -q -Pquick package
 .PHONY: build
@@ -81,7 +85,7 @@ test-single:
 .PHONY: test-single
 
 apiserver-dev:
-	@$(MVN) $(MVN_FLAGS) -Pquick,dev-services -pl apiserver -am verify
+	@$(MVN) $(MVN_FLAGS) -q -Pquick,dev-services -pl apiserver -am verify
 .PHONY: apiserver-dev
 
 clean:

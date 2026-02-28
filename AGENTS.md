@@ -3,6 +3,7 @@
 ## Commands
 
 Use the `make` commands outlined below.
+Always set the `AGENT` variable when running make, e.g. `make build AGENT=1`.
 Do not invoke Maven directly unless no equivalent `make` target exists.
 If Maven needs to be invoked directly, only do so from the repository root.
 
