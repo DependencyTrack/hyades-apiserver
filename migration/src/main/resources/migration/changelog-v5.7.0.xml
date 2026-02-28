@@ -962,6 +962,19 @@
     </changeSet>
 
     <changeSet id="v5.7.0-43" author="nscuro">
+        <!-- Track last execution of scheduled tasks. -->
+        <createTable tableName="SCHEDULED_TASK_EXECUTION">
+            <column name="TASK_ID" type="TEXT">
+                <constraints primaryKey="true" primaryKeyName="SCHEDULED_TASK_EXECUTION_PK"/>
+            </column>
+            <column name="LAST_EXECUTED_AT" type="TIMESTAMPTZ"/>
+            <column name="LOCK_VERSION" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v5.7.0-44" author="nscuro">
         <!--
             Change unique constraint on FINDINGATTRIBUTION to include ANALYZERIDENTITY.
             This allows multiple analyzers to report the same finding.
@@ -994,7 +1007,7 @@
         <dropColumn tableName="FINDINGATTRIBUTION" columnName="UUID"/>
     </changeSet>
 
-    <changeSet id="v5.7.0-44" author="nscuro">
+    <changeSet id="v5.7.0-45" author="nscuro">
         <!--
             Convert old analyzer names to vuln-analyzer extension names.
             We no longer know all possible values ahead of time.
@@ -1013,7 +1026,7 @@
         </sql>
     </changeSet>
 
-    <changeSet id="v5.7.0-45" author="nscuro">
+    <changeSet id="v5.7.0-46" author="nscuro">
         <!--
             Ensure CPE part, vendor, and product attributes are stored
             in lower case to enable case-insensitive matching.
@@ -1029,7 +1042,7 @@
         </sql>
     </changeSet>
 
-    <changeSet id="v5.7.0-46" author="nscuro">
+    <changeSet id="v5.7.0-47" author="nscuro">
         <!--
             Vulnerability scans no longer need to be tracked separately.
             They're implemented as dex workflow now.
@@ -1037,7 +1050,7 @@
         <dropTable tableName="VULNERABILITYSCAN"/>
     </changeSet>
 
-    <changeSet id="v5.7.0-47" author="nscuro">
+    <changeSet id="v5.7.0-48" author="nscuro">
         <!--
             Remove the length constraint from FINDINGATTRIBUTION's REFERENCE_URL
             column, to accommodate long URLs such as those generated from OSS Index.
