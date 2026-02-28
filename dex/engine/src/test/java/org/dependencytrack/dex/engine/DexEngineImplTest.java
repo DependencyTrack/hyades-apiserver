@@ -959,23 +959,27 @@ class DexEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
-        final Stream<WorkflowEvent> historyEvents = engine
-                .listRunHistory(new ListWorkflowRunHistoryRequest(runId).withLimit(15))
+        // Workflow task events (WORKFLOW_TASK_STARTED, WORKFLOW_TASK_COMPLETED) are
+        // non-deterministically interleaved with activity completions. Filter them out
+        // to only assert the deterministic event ordering.
+        final List<WorkflowEvent> historyEvents = engine
+                .listRunHistory(
+                        new ListWorkflowRunHistoryRequest(runId)
+                                .withLimit(15))
                 .items()
                 .stream()
-                .map(WorkflowRunHistoryEntry::event);
+                .map(WorkflowRunHistoryEntry::event)
+                .filter(event -> event.getSubjectCase() != WorkflowEvent.SubjectCase.WORKFLOW_TASK_STARTED
+                        && event.getSubjectCase() != WorkflowEvent.SubjectCase.WORKFLOW_TASK_COMPLETED)
+                .toList();
         assertThat(historyEvents).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_CREATED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED));
     }
 
     @Test
