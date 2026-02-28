@@ -18,18 +18,14 @@
  */
 package org.dependencytrack.tasks.maintenance;
 
-import alpine.test.config.ConfigPropertyExtension;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.jdo.JDOObjectNotFoundException;
 import java.time.Instant;
@@ -43,16 +39,8 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_RETENTION_HOURS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES;
 import static org.dependencytrack.notification.NotificationTestUtil.createCatchAllNotificationRule;
-import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_PROCESSING_FAILED;
-import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
-import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 
 class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
-
-    @RegisterExtension
-    static ConfigPropertyExtension configProperties =
-            new ConfigPropertyExtension()
-                    .withProperty("tmp.delay.bom.processed.notification", "true");
 
     @Test
     void testWithTransitionToTimedOut() {
@@ -142,17 +130,6 @@ class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
         project.setName("acme-app");
         qm.persist(project);
 
-        final var vulnScan = new VulnerabilityScan();
-        vulnScan.setToken(token);
-        vulnScan.setTargetType(VulnerabilityScan.TargetType.PROJECT);
-        vulnScan.setTargetIdentifier(project.getUuid());
-        vulnScan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
-        vulnScan.setExpectedResults(1);
-        vulnScan.setFailureThreshold(0.1);
-        vulnScan.setStartedAt(new Date());
-        vulnScan.setUpdatedAt(vulnScan.getStartedAt());
-        qm.persist(vulnScan);
-
         final var task = new WorkflowMaintenanceTask();
         assertThatNoException().isThrownBy(() -> task.inform(new WorkflowMaintenanceEvent()));
 
@@ -203,35 +180,12 @@ class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
         project.setName("acme-app");
         qm.persist(project);
 
-        final var vulnScan = new VulnerabilityScan();
-        vulnScan.setToken(token);
-        vulnScan.setTargetType(VulnerabilityScan.TargetType.PROJECT);
-        vulnScan.setTargetIdentifier(project.getUuid());
-        vulnScan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
-        vulnScan.setExpectedResults(1);
-        vulnScan.setFailureThreshold(0.1);
-        vulnScan.setStartedAt(new Date());
-        vulnScan.setUpdatedAt(vulnScan.getStartedAt());
-        qm.persist(vulnScan);
-
         final var task = new WorkflowMaintenanceTask();
         assertThatNoException().isThrownBy(() -> task.inform(new WorkflowMaintenanceEvent()));
 
         qm.getPersistenceManager().refreshAll(state);
         assertThat(state.getStatus()).isEqualTo(WorkflowStatus.FAILED);
         assertThat(state.getFailureReason()).isEqualTo("Timed out");
-
-        assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
-            assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-            assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
-            assertThat(notification.getLevel()).isEqualTo(LEVEL_ERROR);
-            assertThat(notification.getSubject().is(BomProcessingFailedSubject.class)).isTrue();
-
-            final var subject = notification.getSubject().unpack(BomProcessingFailedSubject.class);
-            assertThat(subject.getToken()).isEqualTo(token.toString());
-            assertThat(subject.getCause()).isEqualTo("Timed out");
-            assertThat(subject.getProject().getUuid()).isEqualTo(project.getUuid().toString());
-        });
     }
 
     @Test

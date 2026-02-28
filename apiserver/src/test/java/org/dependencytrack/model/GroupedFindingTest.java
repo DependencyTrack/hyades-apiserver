@@ -54,13 +54,13 @@ public class GroupedFindingTest extends PersistenceCapableTest {
     @Test
     public void testAttribution() {
         Map map = groupedFinding.getAttribution();
-        assertEquals(AnalyzerIdentity.INTERNAL_ANALYZER, map.get("analyzerIdentity"));
+        assertEquals("internal", map.get("analyzerIdentity"));
     }
 
     private GroupedFinding createTestFinding() {
         FindingDao.GroupedFindingRow findingRow = new FindingDao.GroupedFindingRow(Vulnerability.Source.GITHUB,
                 "vuln-vulnId", "vuln-title", Severity.HIGH, BigDecimal.valueOf(8.5), BigDecimal.valueOf(8.4), BigDecimal.valueOf(8.4),
-                Instant.now(), null, AnalyzerIdentity.INTERNAL_ANALYZER, 3, 1);
+                Instant.now(), null, "internal", 3, 1);
         return new GroupedFinding(findingRow);
     }
 }

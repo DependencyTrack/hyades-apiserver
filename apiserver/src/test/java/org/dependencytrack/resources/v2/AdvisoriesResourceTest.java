@@ -27,7 +27,6 @@ import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Advisory;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
@@ -352,7 +351,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
         vuln.setSource(Vulnerability.Source.INTERNAL);
         qm.persist(vuln);
 
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vuln, component, "internal");
 
         final var advisory = new Advisory();
         advisory.setPublisher("ACME Inc.");

@@ -263,7 +263,7 @@ public class VulnerableSoftware implements ICpe, Serializable {
     }
 
     public void setPart(String part) {
-        this.part = part;
+        this.part = part == null ? null : part.toLowerCase();
     }
 
     public String getVendor() {
@@ -271,7 +271,7 @@ public class VulnerableSoftware implements ICpe, Serializable {
     }
 
     public void setVendor(String vendor) {
-        this.vendor = vendor;
+        this.vendor = vendor == null ? null : vendor.toLowerCase();
     }
 
     public String getProduct() {
@@ -279,7 +279,7 @@ public class VulnerableSoftware implements ICpe, Serializable {
     }
 
     public void setProduct(String product) {
-        this.product = product;
+        this.product = product == null ? null : product.toLowerCase();
     }
 
     public String getVersion() {

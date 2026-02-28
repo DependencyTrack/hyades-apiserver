@@ -24,6 +24,7 @@ import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.plugin.api.Plugin;
 import org.dependencytrack.secret.management.SecretManager;
+import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -68,6 +69,7 @@ public class PluginInitializer implements ServletContextListener {
 
         final var extensionPoints = List.of(
                 NotificationPublisher.class,
+                VulnAnalyzer.class,
                 VulnDataSource.class);
 
         pluginManager = new PluginManager(

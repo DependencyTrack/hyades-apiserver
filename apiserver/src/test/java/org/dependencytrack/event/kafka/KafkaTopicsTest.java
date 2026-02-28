@@ -33,12 +33,12 @@ public class KafkaTopicsTest {
     @Test
     @WithConfigProperty("dt.kafka.topic.prefix=foo-bar.baz.")
     public void testTopicNameWithPrefix() {
-        assertThat(KafkaTopics.VULN_ANALYSIS_RESULT.name()).isEqualTo("foo-bar.baz.dtrack.vuln-analysis.result");
+        assertThat(KafkaTopics.REPO_META_ANALYSIS_RESULT.name()).isEqualTo("foo-bar.baz.dtrack.repo-meta-analysis.result");
     }
 
     @Test
     public void testTopicNameWithoutPrefix() {
-        assertThat(KafkaTopics.VULN_ANALYSIS_RESULT.name()).isEqualTo("dtrack.vuln-analysis.result");
+        assertThat(KafkaTopics.REPO_META_ANALYSIS_RESULT.name()).isEqualTo("dtrack.repo-meta-analysis.result");
     }
 
 }

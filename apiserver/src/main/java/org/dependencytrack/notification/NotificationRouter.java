@@ -35,6 +35,7 @@ import org.dependencytrack.notification.proto.v1.Project;
 import org.dependencytrack.notification.proto.v1.ProjectVulnAnalysisCompleteSubject;
 import org.dependencytrack.notification.proto.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
+import org.dependencytrack.notification.proto.v1.VulnerabilityRetractedSubject;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
@@ -321,6 +322,8 @@ final class NotificationRouter {
             return switch (notification.getGroup()) {
                 case GROUP_BOM_CONSUMED, GROUP_BOM_PROCESSED -> notification.getSubject().unpack(
                         BomConsumedOrProcessedSubject.class).getProject();
+                case GROUP_VULNERABILITY_RETRACTED -> notification.getSubject().unpack(
+                        VulnerabilityRetractedSubject.class).getProject();
                 case GROUP_BOM_PROCESSING_FAILED -> notification.getSubject().unpack(
                         BomProcessingFailedSubject.class).getProject();
                 case GROUP_BOM_VALIDATION_FAILED -> notification.getSubject().unpack(

@@ -31,7 +31,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.api.v2.ComponentsApi;
 import org.dependencytrack.api.v2.model.CreateComponentRequest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.ComponentProjection;
 import org.dependencytrack.event.kafka.componentmeta.Handler;
@@ -42,10 +41,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.VulnerabilityAnalysisLevel;
-import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.util.InternalComponentIdentifier;
@@ -54,13 +50,11 @@ import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Instant;
 import java.util.UUID;
 
 import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.calculateIntegrityResult;
 import static org.dependencytrack.model.FetchStatus.NOT_AVAILABLE;
 import static org.dependencytrack.model.FetchStatus.PROCESSED;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapOrganizationalContacts;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
@@ -91,11 +85,6 @@ public class ComponentsResource extends AbstractApiResource implements Component
                 }
                 return mapRequestToComponent(request, qm, project);
             });
-
-            final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), componentCreated, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
-            withJdbiHandle(handle -> handle.attach(VulnerabilityScanDao.class).createVulnerabilityScan(
-                    VulnerabilityScan.TargetType.COMPONENT.name(), componentCreated.getUuid(), vulnAnalysisEvent.token(), 1, Instant.now()));
-            kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
 
             LOGGER.info(SecurityMarkers.SECURITY_AUDIT, "Component created: {}", request.getName());
             return Response

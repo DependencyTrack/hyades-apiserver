@@ -95,12 +95,8 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                 .toList());
         requirements.put(TYPE_PROJECT_METADATA, "bom_generated");
 
-        final var protoProject = org.dependencytrack.proto.policy.v1.Project.newBuilder()
-                .setUuid(project.getUuid().toString())
-                .build();
-
         final org.dependencytrack.proto.policy.v1.Project enrichedProject = withJdbiHandle(handle -> handle
-                .attach(CelPolicyDao.class).loadRequiredFields(protoProject, requirements));
+                .attach(CelPolicyDao.class).loadRequiredFields(project.getId(), requirements));
 
         assertThatJson(JsonFormat.printer().print(enrichedProject))
                 .withMatcher("uuid", equalTo(project.getUuid().toString()))
@@ -192,12 +188,9 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                 .map(Descriptors.FieldDescriptor::getName)
                 .toList());
 
-        final var protoComponent = org.dependencytrack.proto.policy.v1.Component.newBuilder()
-                .setUuid(component.getUuid().toString())
-                .build();
-
         final org.dependencytrack.proto.policy.v1.Component enrichedComponent = withJdbiHandle(handle -> handle
-                .attach(CelPolicyDao.class).loadRequiredFields(protoComponent, requirements));
+                .attach(CelPolicyDao.class).loadRequiredComponentFields(List.of(component.getId()), requirements))
+                .get(component.getId());
 
         assertThatJson(JsonFormat.printer().print(enrichedComponent))
                 .withMatcher("uuid", equalTo(component.getUuid().toString()))
@@ -271,12 +264,9 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                 .map(Descriptors.FieldDescriptor::getName)
                 .toList());
 
-        final var protoVuln = org.dependencytrack.proto.policy.v1.Vulnerability.newBuilder()
-                .setUuid(vuln.getUuid().toString())
-                .build();
-
         final org.dependencytrack.proto.policy.v1.Vulnerability enrichedVuln = withJdbiHandle(handle -> handle
-                .attach(CelPolicyDao.class).loadRequiredFields(protoVuln, requirements));
+                .attach(CelPolicyDao.class).loadRequiredVulnerabilityFields(List.of(vuln.getId()), requirements))
+                .get(vuln.getId());
 
         assertThatJson(JsonFormat.printer().print(enrichedVuln))
                 .withOptions(Option.IGNORING_ARRAY_ORDER)

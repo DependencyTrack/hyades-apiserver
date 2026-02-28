@@ -38,18 +38,32 @@ import org.dependencytrack.dex.engine.api.DexEngineFactory;
 import org.dependencytrack.dex.engine.api.TaskType;
 import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
+import org.dependencytrack.dex.listener.DelayedBomProcessedNotificationEmitter;
+import org.dependencytrack.dex.listener.LegacyWorkflowStepCompleter;
+import org.dependencytrack.dex.listener.ProjectVulnAnalysisCompleteNotificationEmitter;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.notification.PublishNotificationActivity;
 import org.dependencytrack.notification.PublishNotificationWorkflow;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.policy.cel.CelVulnerabilityPolicyEvaluator;
 import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
 import org.dependencytrack.proto.internal.workflow.v1.DiscoverCsafProvidersArg;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
+import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerArg;
+import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerRes;
+import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisArg;
+import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisRes;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationActivityArg;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
+import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
+import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
 import org.dependencytrack.secret.management.SecretManager;
+import org.dependencytrack.vulnanalysis.InvokeVulnAnalyzerActivity;
+import org.dependencytrack.vulnanalysis.PrepareVulnAnalysisActivity;
+import org.dependencytrack.vulnanalysis.ReconcileVulnAnalysisResultsActivity;
+import org.dependencytrack.vulnanalysis.VulnAnalysisWorkflow;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jspecify.annotations.Nullable;
@@ -140,6 +154,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 protoConverter(PublishNotificationWorkflowArg.class),
                 voidConverter(),
                 Duration.ofMinutes(1));
+        engine.registerWorkflow(
+                new VulnAnalysisWorkflow(),
+                protoConverter(VulnAnalysisWorkflowArg.class),
+                voidConverter(),
+                Duration.ofMinutes(1));
 
         engine.registerActivity(
                 new DeleteFilesActivity(fileStorage),
@@ -157,6 +176,16 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(5));
         engine.registerActivity(
+                new InvokeVulnAnalyzerActivity(fileStorage, pluginManager),
+                protoConverter(InvokeVulnAnalyzerArg.class),
+                protoConverter(InvokeVulnAnalyzerRes.class),
+                Duration.ofMinutes(5));
+        engine.registerActivity(
+                new PrepareVulnAnalysisActivity(fileStorage, pluginManager),
+                protoConverter(PrepareVulnAnalysisArg.class),
+                protoConverter(PrepareVulnAnalysisRes.class),
+                Duration.ofMinutes(5));
+        engine.registerActivity(
                 new PublishNotificationActivity(
                         pluginManager,
                         fileStorage,
@@ -165,11 +194,21 @@ public final class DexEngineInitializer implements ServletContextListener {
                 protoConverter(PublishNotificationActivityArg.class),
                 voidConverter(),
                 Duration.ofMinutes(1));
+        engine.registerActivity(
+                new ReconcileVulnAnalysisResultsActivity(
+                        fileStorage,
+                        pluginManager,
+                        new CelVulnerabilityPolicyEvaluator()),
+                protoConverter(ReconcileVulnAnalysisResultsArg.class),
+                voidConverter(),
+                Duration.ofMinutes(5));
 
         ensureTaskQueues(engine, List.of(
                 new CreateTaskQueueRequest(TaskType.WORKFLOW, "default", 1000),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "default", 1000),
-                new CreateTaskQueueRequest(TaskType.ACTIVITY, "notifications", 25)));
+                new CreateTaskQueueRequest(TaskType.ACTIVITY, "notifications", 25),
+                new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analyses", 25),
+                new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analysis-reconciliations", 25)));
 
         if (!config.getOptionalValue("dt.dex-engine.workers.enabled", boolean.class).orElse(true)) {
             LOGGER.info("Not registering task workers because they are disabled");
@@ -197,6 +236,14 @@ public final class DexEngineInitializer implements ServletContextListener {
                         getTaskWorkerOptions(config, TaskType.ACTIVITY, workerName);
                 engine.registerTaskWorker(workerOptions);
             }
+        }
+
+        engine.addEventListener(new LegacyWorkflowStepCompleter());
+        engine.addEventListener(new ProjectVulnAnalysisCompleteNotificationEmitter());
+        if (config
+                .getOptionalValue("tmp.delay.bom.processed.notification", boolean.class)
+                .orElse(false)) {
+            engine.addEventListener(new DelayedBomProcessedNotificationEmitter());
         }
 
         LOGGER.info("Starting durable execution engine");

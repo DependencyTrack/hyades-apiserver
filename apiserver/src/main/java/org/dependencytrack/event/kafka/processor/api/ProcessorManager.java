@@ -114,22 +114,6 @@ public class ProcessorManager implements AutoCloseable {
         managedProcessors.put(name, new ManagedProcessor(parallelConsumer, processingStrategy, topic.name()));
     }
 
-    /**
-     * Register a new {@link BatchProcessor}.
-     *
-     * @param name      Name of the processor to register
-     * @param processor The processor to register
-     * @param topic     The topic to have the processor subscribe to
-     * @param <K>       Type of record keys in the topic
-     * @param <V>       Type of record values in the topic
-     */
-    public <K, V> void registerBatchProcessor(final String name, final Topic<K, V> topic, final BatchProcessor<K, V> processor) {
-        requireValidProcessorName(name);
-        final var processingStrategy = new BatchProcessingStrategy<>(processor, topic.keySerde(), topic.valueSerde());
-        final ParallelStreamProcessor<byte[], byte[]> parallelConsumer = createParallelConsumer(name, topic, true);
-        managedProcessors.put(name, new ManagedProcessor(parallelConsumer, processingStrategy, topic.name()));
-    }
-
     @SuppressWarnings("resource")
     public void startAll() {
         ensureTopicsExist();

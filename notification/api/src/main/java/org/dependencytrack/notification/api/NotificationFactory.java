@@ -48,6 +48,8 @@ import org.dependencytrack.notification.proto.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.notification.proto.v1.Vulnerability;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysis;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
+import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger;
+import org.dependencytrack.notification.proto.v1.VulnerabilityRetractedSubject;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
@@ -70,6 +72,7 @@ import static org.dependencytrack.notification.proto.v1.Group.GROUP_USER_CREATED
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_USER_DELETED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_VEX_CONSUMED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_VEX_PROCESSED;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_VULNERABILITY_RETRACTED;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_UNSPECIFIED;
@@ -230,6 +233,41 @@ public final class NotificationFactory {
                 .build();
     }
 
+    public static Notification createVulnerabilityRetractedNotification(
+            Project project,
+            Component component,
+            Vulnerability vulnerability) {
+        requireNonNull(project, "project must not be null");
+        requireNonNull(component, "component must not be null");
+        requireNonNull(vulnerability, "vulnerability must not be null");
+
+        var title = "Vulnerability No Longer Reported on Project: [" + project.getName();
+        if (project.hasVersion()) {
+            title += " : " + project.getVersion();
+        }
+        title += "]";
+
+        final String content;
+        if (vulnerability.hasDescription()) {
+            content = vulnerability.getDescription();
+        } else {
+            content = vulnerability.hasTitle()
+                    ? "%s: %s".formatted(vulnerability.getVulnId(), vulnerability.getTitle())
+                    : vulnerability.getVulnId();
+        }
+
+        return newNotificationBuilder(SCOPE_PORTFOLIO, GROUP_VULNERABILITY_RETRACTED, LEVEL_INFORMATIONAL)
+                .setTitle(title)
+                .setContent(content)
+                .setSubject(Any.pack(
+                        VulnerabilityRetractedSubject.newBuilder()
+                                .setProject(project)
+                                .setComponent(component)
+                                .setVulnerability(vulnerability)
+                                .build()))
+                .build();
+    }
+
     public static Notification createIntegrationErrorNotification(final String content) {
         requireNonNull(content, "content must not be null");
 
@@ -243,11 +281,11 @@ public final class NotificationFactory {
             Project project,
             Component component,
             Vulnerability vulnerability,
-            String vulnerabilityAnalysisLevel) {
+            VulnerabilityAnalysisTrigger analysisTrigger) {
         requireNonNull(project, "project must not be null");
         requireNonNull(component, "component must not be null");
         requireNonNull(vulnerability, "vulnerability must not be null");
-        requireNonNull(vulnerabilityAnalysisLevel, "vulnerabilityAnalysisLevel must not be null");
+        requireNonNull(analysisTrigger, "analysisTrigger must not be null");
 
         var title = "New Vulnerability Identified on Project: [" + project.getName();
         if (project.hasVersion()) {
@@ -272,7 +310,13 @@ public final class NotificationFactory {
                                 .setProject(project)
                                 .setComponent(component)
                                 .setVulnerability(vulnerability)
-                                .setVulnerabilityAnalysisLevel(vulnerabilityAnalysisLevel)
+                                .setAnalysisTrigger(analysisTrigger)
+                                .setVulnerabilityAnalysisLevel(switch (analysisTrigger) {
+                                    case VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD -> "BOM_UPLOAD_ANALYSIS";
+                                    case VULNERABILITY_ANALYSIS_TRIGGER_SCHEDULE -> "PERIODIC_ANALYSIS";
+                                    case VULNERABILITY_ANALYSIS_TRIGGER_MANUAL -> "MANUAL_ANALYSIS";
+                                    default -> "UNKNOWN";
+                                })
                                 .setAffectedProjectsReference(
                                         BackReference.newBuilder()
                                                 .setApiUri("/api/v1/vulnerability/source/%s/vuln/%s/projects".formatted(

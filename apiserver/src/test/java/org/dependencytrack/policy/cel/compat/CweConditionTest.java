@@ -19,7 +19,6 @@
 package org.dependencytrack.policy.cel.compat;
 
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -68,7 +67,7 @@ public class CweConditionTest extends PersistenceCapableTest {
         qm.persist(project);
         qm.persist(component);
         qm.persist(vulnerability);
-        qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnerability, component, "internal");
         new CelPolicyEngine().evaluateProject(project.getUuid());
         if (expectViolation) {
             assertThat(qm.getAllPolicyViolations(component)).hasSize(1);

@@ -76,11 +76,14 @@ public final class WorkflowTestExtension implements BeforeEachCallback, AfterEac
 
         final var engineConfig = new DexEngineConfig(dataSource);
 
-        // Reduce poll intervals and backoff to make tests more responsive.
-        engineConfig.activityTaskScheduler().setPollInterval(Duration.ofMillis(25));
-        engineConfig.activityTaskScheduler().setPollBackoffFunction(IntervalFunction.of(25));
-        engineConfig.workflowTaskScheduler().setPollInterval(Duration.ofMillis(25));
-        engineConfig.workflowTaskScheduler().setPollBackoffFunction(IntervalFunction.of(25));
+        // Reduce buffer flush, poll intervals, and backoffs to make tests more responsive.
+        engineConfig.activityTaskHeartbeatBuffer().setFlushInterval(Duration.ofMillis(10));
+        engineConfig.externalEventBuffer().setFlushInterval(Duration.ofMillis(10));
+        engineConfig.taskEventBuffer().setFlushInterval(Duration.ofMillis(10));
+        engineConfig.activityTaskScheduler().setPollInterval(Duration.ofMillis(10));
+        engineConfig.activityTaskScheduler().setPollBackoffFunction(IntervalFunction.of(10));
+        engineConfig.workflowTaskScheduler().setPollInterval(Duration.ofMillis(10));
+        engineConfig.workflowTaskScheduler().setPollBackoffFunction(IntervalFunction.of(10));
 
         if (configCustomizer != null) {
             configCustomizer.accept(engineConfig);

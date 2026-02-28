@@ -47,8 +47,9 @@ public final class MdcKeys {
     public static final String MDC_PROJECT_NAME = "projectName";
     public static final String MDC_PROJECT_UUID = "projectUuid";
     public static final String MDC_PROJECT_VERSION = "projectVersion";
-    public static final String MDC_SCAN_TOKEN = "scanToken";
+    public static final String MDC_VULN_ANALYZER_NAME = "vulnAnalyzerName";
     public static final String MDC_VULN_ID = "vulnId";
+    public static final String MDC_VULN_POLICY_NAME = "vulnPolicyName";
     public static final String MDC_VULN_SOURCE = "vulnSource";
     public static final String MDC_WORKFLOW_TOKEN = "workflowToken";
 

@@ -22,7 +22,6 @@ import alpine.model.IConfigProperty;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
@@ -215,7 +214,7 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         vuln.setOwaspRRVector("(SL:5/M:5/O:2/S:9/ED:4/EE:2/A:7/ID:2/LC:2/LI:2/LAV:7/LAC:9/FD:3/RD:5/NC:0/PV:7)");
         qm.persist(vuln);
 
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vuln, component, "internal");
 
         useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle)
                 .syncAssertions(
@@ -1770,13 +1769,13 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.CRITICAL);
         qm.persist(vulnerability);
-        qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnerability, component, "internal");
         vulnerability = new Vulnerability();
         vulnerability.setVulnId("2");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.CRITICAL);
         qm.persist(vulnerability);
-        qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnerability, component, "internal");
         component = new Component();
         component.setName("Log4J");
         component.setVersion("1.2.16");
@@ -1789,13 +1788,13 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.CRITICAL);
         qm.persist(vulnerability);
-        qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnerability, component, "internal");
         vulnerability = new Vulnerability();
         vulnerability.setVulnId("4");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.CRITICAL);
         qm.persist(vulnerability);
-        qm.addVulnerability(vulnerability, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vulnerability, component, "internal");
         CelPolicyEngine policyEngine = new CelPolicyEngine();
         policyEngine.evaluateProject(project.getUuid());
         final List<PolicyViolation> violations = qm.getAllPolicyViolations(project);

@@ -30,14 +30,16 @@ import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.parsers.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.datanucleus.flush.FlushMode;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
-import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.IntegrityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
 import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -47,28 +49,29 @@ import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ServiceComponent;
-import org.dependencytrack.model.VulnerabilityAnalysisLevel;
-import org.dependencytrack.model.VulnerabilityScan.TargetType;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
+import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
+import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
 import org.dependencytrack.util.InternalComponentIdentifier;
+import org.dependencytrack.vulnanalysis.VulnAnalysisWorkflow;
 import org.json.JSONArray;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -99,6 +102,8 @@ import static org.dependencytrack.common.MdcKeys.MDC_BOM_VERSION;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_NAME;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
+import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_BOM_UPLOAD_TOKEN;
+import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_PROJECT_UUID;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK;
 import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TIME_SPAN;
 import static org.dependencytrack.notification.api.NotificationFactory.createBomConsumedNotification;
@@ -116,7 +121,7 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.conv
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertToProject;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertToProjectMetadata;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisTrigger.VULN_ANALYSIS_TRIGGER_BOM_UPLOAD;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_LATEST_VERSION;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
@@ -153,14 +158,17 @@ public class BomUploadProcessingTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(BomUploadProcessingTask.class);
 
+    private final DexEngine dexEngine;
     private final FileStorage fileStorage;
     private final KafkaEventDispatcher kafkaEventDispatcher;
     private final boolean delayBomProcessedNotification;
 
     public BomUploadProcessingTask(
+            DexEngine dexEngine,
             FileStorage fileStorage,
             KafkaEventDispatcher kafkaEventDispatcher,
             boolean delayBomProcessedNotification) {
+        this.dexEngine = dexEngine;
         this.fileStorage = fileStorage;
         this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.delayBomProcessedNotification = delayBomProcessedNotification;
@@ -281,11 +289,53 @@ public class BomUploadProcessingTask implements Subscriber {
             dispatchBomProcessedNotification(ctx);
         }
 
-        final List<ComponentVulnerabilityAnalysisEvent> vulnAnalysisEvents = createVulnAnalysisEvents(ctx, processedBom.components());
-        final List<ComponentRepositoryMetaAnalysisEvent> repoMetaAnalysisEvents = createRepoMetaAnalysisEvents(processedBom.components());
+        if (!processedBom.components().isEmpty()) {
+            final var workflowArgBuilder = VulnAnalysisWorkflowArg.newBuilder()
+                    .setProjectUuid(ctx.project.getUuid().toString())
+                    .setTrigger(VULN_ANALYSIS_TRIGGER_BOM_UPLOAD);
 
-        final var dispatchedEvents = new ArrayList<CompletableFuture<?>>(vulnAnalysisEvents.size() + repoMetaAnalysisEvents.size());
-        dispatchedEvents.addAll(initiateVulnerabilityAnalysis(ctx, vulnAnalysisEvents));
+            final FileMetadata contextFileMetadata = storeVulnAnalysisContext(ctx, processedBom.components());
+            if (contextFileMetadata != null) {
+                workflowArgBuilder.setContextFileMetadata(contextFileMetadata);
+            }
+
+            dexEngine.createRun(
+                    new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
+                            .withLabels(Map.ofEntries(
+                                    Map.entry(WF_LABEL_BOM_UPLOAD_TOKEN, ctx.token.toString()),
+                                    Map.entry(WF_LABEL_PROJECT_UUID, ctx.project.getUuid().toString())))
+                            .withConcurrencyKey("vuln-analysis:" + ctx.project.getUuid())
+                            .withPriority(50)
+                            .withArgument(workflowArgBuilder.build()));
+        } else {
+            // No components to be sent for vulnerability analysis.
+            // If the BOM_PROCESSED notification was delayed, dispatch it now.
+            if (delayBomProcessedNotification) {
+                dispatchBomProcessedNotification(ctx);
+            }
+
+            try (final var qm = new QueryManager()) {
+                qm.runInTransaction(() -> {
+                    final WorkflowState vulnAnalysisWorkflowState =
+                            qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.VULN_ANALYSIS);
+                    vulnAnalysisWorkflowState.setStatus(WorkflowStatus.NOT_APPLICABLE);
+                    vulnAnalysisWorkflowState.setUpdatedAt(new Date());
+
+                    final WorkflowState policyEvalWorkflowState =
+                            qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.POLICY_EVALUATION);
+                    policyEvalWorkflowState.setStatus(WorkflowStatus.NOT_APPLICABLE);
+                    policyEvalWorkflowState.setUpdatedAt(new Date());
+                });
+            }
+
+            // Trigger project metrics update no matter if vuln analysis is applicable or not.
+            final ChainableEvent metricsUpdateEvent = new ProjectMetricsUpdateEvent(ctx.project.getUuid());
+            metricsUpdateEvent.setChainIdentifier(ctx.token);
+            Event.dispatch(metricsUpdateEvent);
+        }
+
+        final List<ComponentRepositoryMetaAnalysisEvent> repoMetaAnalysisEvents = createRepoMetaAnalysisEvents(processedBom.components());
+        final var dispatchedEvents = new ArrayList<CompletableFuture<?>>(repoMetaAnalysisEvents.size());
         dispatchedEvents.addAll(initiateRepoMetaAnalysis(repoMetaAnalysisEvents));
         CompletableFuture.allOf(dispatchedEvents.toArray(new CompletableFuture[0])).join();
     }
@@ -1029,65 +1079,6 @@ public class BomUploadProcessingTask implements Subscriber {
         });
     }
 
-    private List<CompletableFuture<?>> initiateVulnerabilityAnalysis(
-            final Context ctx,
-            final Collection<ComponentVulnerabilityAnalysisEvent> events
-    ) {
-        if (events.isEmpty()) {
-            // No components to be sent for vulnerability analysis.
-            // If the BOM_PROCESSED notification was delayed, dispatch it now.
-            if (delayBomProcessedNotification) {
-                dispatchBomProcessedNotification(ctx);
-            }
-
-            try (final var qm = new QueryManager()) {
-                qm.runInTransaction(() -> {
-                    final WorkflowState vulnAnalysisWorkflowState =
-                            qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.VULN_ANALYSIS);
-                    vulnAnalysisWorkflowState.setStatus(WorkflowStatus.NOT_APPLICABLE);
-                    vulnAnalysisWorkflowState.setUpdatedAt(new Date());
-
-                    final WorkflowState policyEvalWorkflowState =
-                            qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.POLICY_EVALUATION);
-                    policyEvalWorkflowState.setStatus(WorkflowStatus.NOT_APPLICABLE);
-                    policyEvalWorkflowState.setUpdatedAt(new Date());
-                });
-            }
-
-            // Trigger project metrics update no matter if vuln analysis is applicable or not.
-            final ChainableEvent metricsUpdateEvent = new ProjectMetricsUpdateEvent(ctx.project.getUuid());
-            metricsUpdateEvent.setChainIdentifier(ctx.token);
-            Event.dispatch(metricsUpdateEvent);
-
-            return Collections.emptyList();
-        }
-
-        try (final var qm = new QueryManager()) {
-            // TODO: Creation of the scan, and starting of the workflow step, should happen in the same transaction.
-            //   Requires a bit of refactoring in QueryManager#createVulnerabilityScan.
-
-            withJdbiHandle(handle -> handle.attach(VulnerabilityScanDao.class)
-                    .createVulnerabilityScan(TargetType.PROJECT.name(), ctx.project.getUuid(), ctx.token, events.size(), Instant.now()));
-
-            qm.runInTransaction(() -> {
-                final WorkflowState vulnAnalysisWorkflowState =
-                        qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.VULN_ANALYSIS);
-                vulnAnalysisWorkflowState.setStartedAt(new Date());
-            });
-        }
-
-        return events.stream()
-                .<CompletableFuture<?>>map(event -> kafkaEventDispatcher.dispatchEvent(event).whenComplete(
-                        (ignored, throwable) -> {
-                            if (throwable != null) {
-                                // Include context in the log message to make log correlation easier.
-                                LOGGER.error("Failed to produce %s to Kafka".formatted(event), throwable);
-                            }
-                        }
-                ))
-                .toList();
-    }
-
     private List<CompletableFuture<?>> initiateRepoMetaAnalysis(final Collection<ComponentRepositoryMetaAnalysisEvent> events) {
         return events.stream()
                 .<CompletableFuture<?>>map(event -> kafkaEventDispatcher.dispatchEvent(event).whenComplete(
@@ -1134,18 +1125,30 @@ public class BomUploadProcessingTask implements Subscriber {
                         throwable.getMessage()));
     }
 
-    private static List<ComponentVulnerabilityAnalysisEvent> createVulnAnalysisEvents(
-            final Context ctx,
-            final Collection<Component> components
-    ) {
-        return components.stream()
-                .map(component -> new ComponentVulnerabilityAnalysisEvent(
-                        ctx.token,
-                        component,
-                        VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS,
-                        component.isNew()
-                ))
+    private @Nullable FileMetadata storeVulnAnalysisContext(Context ctx, Collection<Component> components) {
+        final List<Long> newComponentIds = components.stream()
+                .filter(Component::isNew)
+                .map(Component::getId)
                 .toList();
+        if (newComponentIds.isEmpty()) {
+            return null;
+        }
+
+        final var context = VulnAnalysisWorkflowContext.newBuilder()
+                .addAllNewComponentIds(newComponentIds)
+                .build();
+
+        try {
+            return fileStorage.store(
+                    "vuln-analysis/context/%s.proto".formatted(ctx.token),
+                    "application/protobuf",
+                    new ByteArrayInputStream(context.toByteArray()));
+        } catch (Exception e) {
+            LOGGER.warn("""
+                    Failed to store vuln analysis context; \
+                    NEW_VULNERABLE_DEPENDENCY notifications will not be emitted""", e);
+            return null;
+        }
     }
 
     private static List<ComponentRepositoryMetaAnalysisEvent> createRepoMetaAnalysisEvents(final Collection<Component> components) {

@@ -42,7 +42,6 @@ import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -2833,7 +2832,7 @@ class ProjectResourceTest extends ResourceTest {
         vuln.setSource(Vulnerability.Source.INTERNAL);
         qm.persist(vuln);
 
-        qm.addVulnerability(vuln, componentA, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vuln, componentA, "internal");
 
         final long analysisId = qm.makeAnalysis(
                 new MakeAnalysisCommand(componentA, vuln)

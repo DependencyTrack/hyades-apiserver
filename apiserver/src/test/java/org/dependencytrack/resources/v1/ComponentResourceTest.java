@@ -29,7 +29,6 @@ import jakarta.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ExternalReference;
@@ -41,7 +40,6 @@ import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.util.KafkaTestUtil;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -708,18 +706,6 @@ public class ComponentResourceTest extends ResourceTest {
         Assertions.assertEquals("1.0", json.getString("version"));
         Assertions.assertEquals("SampleAuthor" ,json.getJsonArray("authors").getJsonObject(0).getString("name"));
         Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
-        assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
-                record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getPurl()).isEqualTo(json.getString("purl"));
-                },
-                record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
-                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.VULN_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getUuid()).isEqualTo(json.getString("uuid"));
-                }
-        );
     }
 
     @Test
@@ -821,18 +807,6 @@ public class ComponentResourceTest extends ResourceTest {
         Assertions.assertEquals("1.0", json.getString("version"));
         Assertions.assertEquals("Test component", json.getString("description"));
         Assertions.assertEquals(1, json.getJsonArray("externalReferences").size());
-        assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
-                record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
-                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getPurl()).isEqualTo(json.getString("purl"));
-                },
-                record -> {
-                    assertThat(record.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name());
-                    final var command = KafkaTestUtil.deserializeValue(KafkaTopics.VULN_ANALYSIS_COMMAND, record);
-                    assertThat(command.getComponent().getUuid()).isEqualTo(json.getString("uuid"));
-                }
-        );
     }
 
     @Test

@@ -36,7 +36,6 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
@@ -974,7 +973,7 @@ class AnalysisResourceTest extends ResourceTest {
         vuln.setSource(Vulnerability.Source.NVD);
         qm.persist(vuln);
 
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vuln, component, "internal");
         final long analysisId = qm.makeAnalysis(
                 new MakeAnalysisCommand(component, vuln)
                         .withState(AnalysisState.NOT_AFFECTED)

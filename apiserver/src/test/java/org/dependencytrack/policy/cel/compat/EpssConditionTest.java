@@ -19,7 +19,6 @@
 package org.dependencytrack.policy.cel.compat;
 
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.Policy;
@@ -108,7 +107,7 @@ public class EpssConditionTest extends PersistenceCapableTest {
         vuln.setSource(Vulnerability.Source.NVD);
         qm.persist(vuln);
 
-        qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
+        qm.addVulnerability(vuln, component, "internal");
 
         final var epss = new Epss();
         epss.setCve("CVE-123");

@@ -56,10 +56,10 @@
         <listener-class>org.dependencytrack.event.kafka.KafkaProducerInitializer</listener-class>
     </listener>
     <listener>
-        <listener-class>org.dependencytrack.event.EventSubsystemInitializer</listener-class>
+        <listener-class>org.dependencytrack.dex.DexEngineInitializer</listener-class>
     </listener>
     <listener>
-        <listener-class>org.dependencytrack.dex.DexEngineInitializer</listener-class>
+        <listener-class>org.dependencytrack.event.EventSubsystemInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.tasks.TaskSchedulerInitializer</listener-class>

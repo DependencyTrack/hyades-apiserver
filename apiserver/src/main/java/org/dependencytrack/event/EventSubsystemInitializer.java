@@ -24,13 +24,13 @@ import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
-import org.dependencytrack.event.maintenance.VulnerabilityScanMaintenanceEvent;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.plugin.PluginManager;
@@ -57,7 +57,6 @@ import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
-import org.dependencytrack.tasks.maintenance.VulnerabilityScanMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.WorkflowMaintenanceTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
@@ -105,6 +104,9 @@ public class EventSubsystemInitializer implements ServletContextListener {
 
         final var kafkaEventDispatcher = new KafkaEventDispatcher();
 
+        final var dexEngine = (DexEngine) event.getServletContext().getAttribute(DexEngine.class.getName());
+        requireNonNull(dexEngine, "dexEngine has not been initialized");
+
         final var fileStorage = (FileStorage) event.getServletContext().getAttribute(FileStorage.class.getName());
         requireNonNull(fileStorage, "fileStorage has not been initialized");
 
@@ -114,6 +116,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.subscribe(
                 BomUploadEvent.class,
                 new BomUploadProcessingTask(
+                        dexEngine,
                         fileStorage,
                         kafkaEventDispatcher,
                         config.getOptionalValue("tmp.delay.bom.processed.notification", boolean.class).orElse(false)));
@@ -121,8 +124,9 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.subscribe(LdapSyncEvent.class, new LdapSyncTaskWrapper());
         eventService.subscribe(GitHubAdvisoryMirrorEvent.class, new GitHubAdvisoryMirrorTask(pluginManager));
         eventService.subscribe(OsvMirrorEvent.class, new OsvMirrorTask(pluginManager));
-        eventService.subscribe(ProjectVulnerabilityAnalysisEvent.class, new VulnerabilityAnalysisTask());
-        eventService.subscribe(PortfolioVulnerabilityAnalysisEvent.class, new VulnerabilityAnalysisTask());
+        eventService.subscribe(
+                PortfolioVulnerabilityAnalysisEvent.class,
+                new VulnerabilityAnalysisTask(dexEngine));
         eventService.subscribe(ProjectRepositoryMetaAnalysisEvent.class, new RepositoryMetaAnalysisTask());
         eventService.subscribe(PortfolioRepositoryMetaAnalysisEvent.class, new RepositoryMetaAnalysisTask());
         eventService.subscribe(ProjectMetricsUpdateEvent.class, new ProjectMetricsUpdateTask());
@@ -148,7 +152,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         singleThreadedEventService.subscribe(MetricsMaintenanceEvent.class, new MetricsMaintenanceTask());
         singleThreadedEventService.subscribe(TagMaintenanceEvent.class, new TagMaintenanceTask());
         singleThreadedEventService.subscribe(VulnerabilityDatabaseMaintenanceEvent.class, new VulnerabilityDatabaseMaintenanceTask());
-        singleThreadedEventService.subscribe(VulnerabilityScanMaintenanceEvent.class, new VulnerabilityScanMaintenanceTask());
         singleThreadedEventService.subscribe(WorkflowMaintenanceEvent.class, new WorkflowMaintenanceTask());
         singleThreadedEventService.subscribe(ProjectMaintenanceEvent.class, new ProjectMaintenanceTask());
     }
@@ -193,7 +196,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         singleThreadedEventService.unsubscribe(MetricsMaintenanceTask.class);
         singleThreadedEventService.unsubscribe(TagMaintenanceTask.class);
         singleThreadedEventService.unsubscribe(VulnerabilityDatabaseMaintenanceTask.class);
-        singleThreadedEventService.unsubscribe(VulnerabilityScanMaintenanceTask.class);
         singleThreadedEventService.unsubscribe(WorkflowMaintenanceTask.class);
         singleThreadedEventService.unsubscribe(ProjectMaintenanceTask.class);
         try {

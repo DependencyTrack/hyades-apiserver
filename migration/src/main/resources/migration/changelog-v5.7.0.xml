@@ -973,4 +973,88 @@
             </column>
         </createTable>
     </changeSet>
+
+    <changeSet id="v5.7.0-44" author="nscuro">
+        <!--
+            Change unique constraint on FINDINGATTRIBUTION to include ANALYZERIDENTITY.
+            This allows multiple analyzers to report the same finding.
+        -->
+        <dropIndex tableName="FINDINGATTRIBUTION" indexName="FINDINGATTRIBUTION_COMPOUND_IDX"/>
+        <createIndex tableName="FINDINGATTRIBUTION" indexName="FINDINGATTRIBUTION_COMPOUND_IDX" unique="true">
+            <column name="COMPONENT_ID"/>
+            <column name="VULNERABILITY_ID"/>
+            <column name="ANALYZERIDENTITY"/>
+        </createIndex>
+
+        <!--
+            Add timestamp column to enable soft deletion.
+            Add index to support efficient lookup of "active" findings.
+        -->
+        <addColumn tableName="FINDINGATTRIBUTION">
+            <column name="DELETED_AT" type="TIMESTAMPTZ"/>
+        </addColumn>
+        <sql>
+            CREATE INDEX "FINDINGATTRIBUTION_COMPONENT_VULN_IDX"
+                ON "FINDINGATTRIBUTION" (
+                     "COMPONENT_ID"
+                   , "VULNERABILITY_ID"
+                   , "DELETED_AT" DESC NULLS FIRST
+                   , "ID"
+                   );
+        </sql>
+
+        <!-- Remove UUID column as it is unused. -->
+        <dropColumn tableName="FINDINGATTRIBUTION" columnName="UUID"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-45" author="nscuro">
+        <!--
+            Convert old analyzer names to vuln-analyzer extension names.
+            We no longer know all possible values ahead of time.
+        -->
+        <sql>
+            UPDATE "FINDINGATTRIBUTION"
+               SET "ANALYZERIDENTITY" = t.name_new
+              FROM (
+                VALUES ('INTERNAL_ANALYZER', 'internal')
+                     , ('NONE', 'none')
+                     , ('OSSINDEX_ANALYZER', 'oss-index')
+                     , ('SNYK_ANALYZER', 'snyk')
+                     , ('VULNDB_ANALYZER', 'vuln-db')
+              ) AS t(name_old, name_new)
+             WHERE "ANALYZERIDENTITY" = t.name_old;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-46" author="nscuro">
+        <!--
+            Ensure CPE part, vendor, and product attributes are stored
+            in lower case to enable case-insensitive matching.
+        -->
+        <sql>
+            UPDATE "VULNERABLESOFTWARE"
+               SET "PART" = LOWER("PART")
+                 , "VENDOR" = LOWER("VENDOR")
+                 , "PRODUCT" = LOWER("PRODUCT")
+             WHERE "PART" != LOWER("PART")
+                OR "VENDOR" != LOWER("VENDOR")
+                OR "PRODUCT" != LOWER("PRODUCT");
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-47" author="nscuro">
+        <!--
+            Vulnerability scans no longer need to be tracked separately.
+            They're implemented as dex workflow now.
+        -->
+        <dropTable tableName="VULNERABILITYSCAN"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-48" author="nscuro">
+        <!--
+            Remove the length constraint from FINDINGATTRIBUTION's REFERENCE_URL
+            column, to accommodate long URLs such as those generated from OSS Index.
+        -->
+        <modifyDataType tableName="FINDINGATTRIBUTION" columnName="REFERENCE_URL" newDataType="TEXT"/>
+    </changeSet>
 </databaseChangeLog>
