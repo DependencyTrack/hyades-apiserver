@@ -28,7 +28,7 @@ else
 endif
 
 build:
-	@$(MVND) $(MVN_FLAGS) -Pquick package
+	@$(MVND) $(MVN_FLAGS) -q -Pquick package
 .PHONY: build
 
 build-image: build
@@ -39,15 +39,15 @@ build-image: build
 .PHONY: build-image
 
 datanucleus-enhance:
-	@$(MVND) $(MVN_FLAGS) -Pquick -pl alpine/alpine-model,apiserver process-classes
+	@$(MVND) $(MVN_FLAGS) -q -Pquick -pl alpine/alpine-model,apiserver process-classes
 .PHONY: datanucleus-enhance
 
 install:
-	@$(MVND) $(MVN_FLAGS) -Pquick install
+	@$(MVND) $(MVN_FLAGS) -q -Pquick install
 .PHONY: install
 
 lint-java:
-	@$(MVND) $(MVN_FLAGS) -Dmaven.build.cache.enabled=false validate
+	@$(MVND) $(MVN_FLAGS) -q -Dmaven.build.cache.enabled=false validate
 .PHONY: lint-java
 
 lint-openapi:
@@ -85,7 +85,7 @@ apiserver-dev:
 .PHONY: apiserver-dev
 
 clean:
-	@$(MVND) $(MVN_FLAGS) clean
+	@$(MVND) $(MVN_FLAGS) -q clean
 .PHONY: clean
 
 clean-build-cache:
