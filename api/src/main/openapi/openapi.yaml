@@ -91,6 +91,8 @@ tags:
   description: Endpoints related to projects
 - name: Secrets
   description: Endpoints related to secrets
+- name: Task Queues
+  description: Endpoints related to task queue management
 - name: Teams
   description: Endpoints related to teams
 - name: Workflows
@@ -137,6 +139,10 @@ paths:
     $ref: "./paths/projects__uuid__clone.yaml"
   /projects/{uuid}/components:
     $ref: "./paths/projects_uuid_components.yaml"
+  /task-queues/{type}:
+    $ref: "./paths/task-queues__type_.yaml"
+  /task-queues/{type}/{name}:
+    $ref: "./paths/task-queues__type___name_.yaml"
   /secrets:
     $ref: "./paths/secrets.yaml"
   /secrets/{name}:
