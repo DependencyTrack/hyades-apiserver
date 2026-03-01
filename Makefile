@@ -89,7 +89,7 @@ apiserver-dev:
 .PHONY: apiserver-dev
 
 clean:
-	$(MVND) $(MVN_FLAGS) -q clean
+	$(MVND) $(MVN_FLAGS) -q -Dmaven.build.cache.enabled=false clean
 .PHONY: clean
 
 clean-build-cache:
