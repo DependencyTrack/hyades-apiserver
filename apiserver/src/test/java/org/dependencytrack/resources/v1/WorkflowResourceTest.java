@@ -26,9 +26,11 @@ import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.model.WorkflowState;
 import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
@@ -42,15 +44,19 @@ import org.mockito.Mockito;
 
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_BOM_UPLOAD_TOKEN;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -78,7 +84,8 @@ public class WorkflowResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getWorkflowStatusOk() {
+    public void shouldReturnLegacyWorkflowStatesForCloneToken() {
+        // Legacy fallback: token exists in WORKFLOW_STATE table (e.g. clone/policy-sync).
         UUID uuid = UUID.randomUUID();
         WorkflowState workflowState1 = new WorkflowState();
         workflowState1.setParent(null);
@@ -98,6 +105,10 @@ public class WorkflowResourceTest extends ResourceTest {
         workflowState2.setStartedAt(Date.from(Instant.now()));
         workflowState2.setUpdatedAt(Date.from(Instant.now()));
         qm.persist(workflowState2);
+
+        // No dex runs for this token.
+        doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadataById(uuid);
+        doReturn(new Page<>(List.of())).when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
 
         Response response = jersey
                 .target(V1_WORKFLOW + "/token/" + uuid + "/status")
@@ -133,17 +144,12 @@ public class WorkflowResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getWorkflowStatusNotFound() {
-        WorkflowState workflowState1 = new WorkflowState();
-        workflowState1.setParent(null);
-        workflowState1.setFailureReason(null);
-        workflowState1.setStep(BOM_CONSUMPTION);
-        workflowState1.setStatus(COMPLETED);
-        workflowState1.setToken(UUID.randomUUID());
-        workflowState1.setUpdatedAt(new Date());
-        qm.persist(workflowState1);
-
+    public void shouldReturnNotFoundForUnknownToken() {
         UUID randomUuid = UUID.randomUUID();
+
+        doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadataById(randomUuid);
+        doReturn(new Page<>(List.of())).when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
+
         Response response = jersey.target(V1_WORKFLOW + "/token/" + randomUuid + "/status").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -161,7 +167,7 @@ public class WorkflowResourceTest extends ResourceTest {
             "COMPLETED, COMPLETED",
             "FAILED, FAILED",
     })
-    void shouldReturnLegacyWorkflowStateForVulnAnalysisDexRun(
+    void shouldReturnLegacyWorkflowStateForAnalyzeProjectDexRunById(
             WorkflowRunStatus dexStatus, String expectedLegacyStatus) {
         initializeWithPermissions(Permissions.BOM_UPLOAD);
 
@@ -204,7 +210,7 @@ public class WorkflowResourceTest extends ResourceTest {
     }
 
     @Test
-    void shouldReturnLegacyWorkflowStateWithNullUpdatedAtForVulnAnalysisDexRun() {
+    void shouldReturnLegacyWorkflowStateWithNullUpdatedAtForAnalyzeProjectDexRun() {
         initializeWithPermissions(Permissions.BOM_UPLOAD);
 
         final var runMetadata = new WorkflowRunMetadata(
@@ -239,6 +245,148 @@ public class WorkflowResourceTest extends ResourceTest {
                     "token": "a3c39f8a-0c02-4a8c-8a3a-2f77e203809c",
                     "step": "VULN_ANALYSIS",
                     "status": "PENDING"
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    void shouldReturnStatesForBomUploadTokenViaLabelQuery() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
+        final var bomUploadToken = UUID.fromString("b1b2b3b4-0000-0000-0000-000000000001");
+        final var importBomRun = new WorkflowRunMetadata(
+                UUID.fromString("aaaa0000-0000-0000-0000-000000000001"),
+                "import-bom",
+                1,
+                null,
+                "default",
+                WorkflowRunStatus.COMPLETED,
+                null,
+                0,
+                null,
+                Map.of(WF_LABEL_BOM_UPLOAD_TOKEN, bomUploadToken.toString()),
+                Instant.ofEpochMilli(1000000000),
+                Instant.ofEpochMilli(1000001000),
+                Instant.ofEpochMilli(1000000100),
+                Instant.ofEpochMilli(1000001000));
+        final var analyzeProjectRun = new WorkflowRunMetadata(
+                UUID.fromString("aaaa0000-0000-0000-0000-000000000002"),
+                "analyze-project",
+                1,
+                null,
+                "default",
+                WorkflowRunStatus.RUNNING,
+                null,
+                0,
+                null,
+                Map.of(WF_LABEL_BOM_UPLOAD_TOKEN, bomUploadToken.toString()),
+                Instant.ofEpochMilli(1000001000),
+                Instant.ofEpochMilli(1000002000),
+                Instant.ofEpochMilli(1000001500),
+                null);
+
+        // Token is not a direct dex run ID.
+        doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadataById(bomUploadToken);
+        // Token is a BOM upload label.
+        doReturn(new Page<>(List.of(importBomRun, analyzeProjectRun)))
+                .when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
+
+        final Response response = jersey
+                .target(V1_WORKFLOW + "/token/" + bomUploadToken + "/status")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
+                .isEqualTo(/* language=JSON */ """
+                        [
+                          {
+                            "token": "b1b2b3b4-0000-0000-0000-000000000001",
+                            "step": "BOM_CONSUMPTION",
+                            "status": "COMPLETED",
+                            "startedAt": 1000000100,
+                            "updatedAt": 1000001000
+                          },
+                          {
+                            "token": "b1b2b3b4-0000-0000-0000-000000000001",
+                            "step": "BOM_PROCESSING",
+                            "status": "COMPLETED",
+                            "startedAt": 1000000100,
+                            "updatedAt": 1000001000
+                          },
+                          {
+                            "token": "b1b2b3b4-0000-0000-0000-000000000001",
+                            "step": "VULN_ANALYSIS",
+                            "status": "PENDING",
+                            "startedAt": 1000001500,
+                            "updatedAt": 1000002000
+                          },
+                          {
+                            "token": "b1b2b3b4-0000-0000-0000-000000000001",
+                            "step": "POLICY_EVALUATION",
+                            "status": "PENDING",
+                            "startedAt": 1000001500,
+                            "updatedAt": 1000002000
+                          },
+                          {
+                            "token": "b1b2b3b4-0000-0000-0000-000000000001",
+                            "step": "METRICS_UPDATE",
+                            "status": "PENDING",
+                            "startedAt": 1000001500,
+                            "updatedAt": 1000002000
+                          }
+                        ]
+                        """);
+    }
+
+    @Test
+    void shouldReturnFailedStatesForBomUploadTokenWhenProcessBomFails() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
+        final var bomUploadToken = UUID.fromString("b1b2b3b4-0000-0000-0000-000000000002");
+        final var importBomRun = new WorkflowRunMetadata(
+                UUID.fromString("aaaa0000-0000-0000-0000-000000000003"),
+                "import-bom",
+                1,
+                null,
+                "default",
+                WorkflowRunStatus.FAILED,
+                null,
+                0,
+                null,
+                Map.of(WF_LABEL_BOM_UPLOAD_TOKEN, bomUploadToken.toString()),
+                Instant.ofEpochMilli(2000000000),
+                Instant.ofEpochMilli(2000001000),
+                Instant.ofEpochMilli(2000000100),
+                null);
+
+        doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadataById(bomUploadToken);
+        doReturn(new Page<>(List.of(importBomRun)))
+                .when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
+
+        final Response response = jersey
+                .target(V1_WORKFLOW + "/token/" + bomUploadToken + "/status")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                [
+                  {
+                    "token": "b1b2b3b4-0000-0000-0000-000000000002",
+                    "step": "BOM_CONSUMPTION",
+                    "status": "FAILED",
+                    "startedAt": 2000000100,
+                    "updatedAt": 2000001000
+                  },
+                  {
+                    "token": "b1b2b3b4-0000-0000-0000-000000000002",
+                    "step": "BOM_PROCESSING",
+                    "status": "FAILED",
+                    "startedAt": 2000000100,
+                    "updatedAt": 2000001000
                   }
                 ]
                 """);

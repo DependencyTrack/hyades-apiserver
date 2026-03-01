@@ -144,7 +144,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final Map<String, Object> params = filterBuilder.getParams();
 
         preprocessACLs(query, queryFilter, params);
-        query.setFilter(queryFilter);
         query.setRange(0, 1);
         final Project project = singleResult(query.executeWithMap(params));
         if (project != null) {
@@ -175,7 +174,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final Map<String, Object> params = filterBuilder.getParams();
 
         preprocessACLs(query, queryFilter, params);
-        query.setFilter(queryFilter);
         query.setRange(0, 1);
 
         final Project project = singleResult(query.executeWithMap(params));

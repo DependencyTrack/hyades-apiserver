@@ -1057,4 +1057,19 @@
         -->
         <modifyDataType tableName="FINDINGATTRIBUTION" columnName="REFERENCE_URL" newDataType="TEXT"/>
     </changeSet>
+
+    <changeSet id="v5.7.0-49" author="nscuro">
+        <!-- Delete workflow states for steps that were migrated to dex. -->
+        <sql>
+            DELETE FROM "WORKFLOW_STATE"
+             WHERE "STEP" IN (
+                'BOM_CONSUMPTION',
+                'BOM_PROCESSING',
+                'VULN_ANALYSIS',
+                'POLICY_EVALUATION',
+                'METRICS_UPDATE',
+                'REPO_META_ANALYSIS'
+            )
+        </sql>
+    </changeSet>
 </databaseChangeLog>

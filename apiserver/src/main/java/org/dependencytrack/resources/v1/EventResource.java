@@ -29,18 +29,25 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
 
+import java.util.Map;
 import java.util.UUID;
 
+import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_BOM_UPLOAD_TOKEN;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
@@ -56,6 +63,13 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
         @SecurityRequirement(name = "BearerAuth")
 })
 public class EventResource extends AlpineResource {
+
+    private final DexEngine dexEngine;
+
+    @Inject
+    EventResource(DexEngine dexEngine) {
+        this.dexEngine = dexEngine;
+    }
 
     @GET
     @Path("/token/{uuid}")
@@ -90,13 +104,37 @@ public class EventResource extends AlpineResource {
         final boolean isProcessing;
         if (Event.isEventBeingProcessed(token)) {
             isProcessing = true;
+        } else if (hasNonTerminalDexRun(token)) {
+            isProcessing = true;
         } else {
-            isProcessing = withJdbiHandle(getAlpineRequest(), handle ->
-                    handle.attach(WorkflowDao.class).existsWithNonTerminalStatus(token));
+            // TODO: Remove once clone and policy sync are migrated to dex.
+            isProcessing = withJdbiHandle(
+                    getAlpineRequest(),
+                    handle -> handle
+                            .attach(WorkflowDao.class)
+                            .existsWithNonTerminalStatus(token));
         }
 
         final var response = new IsTokenBeingProcessedResponse();
         response.setProcessing(isProcessing);
         return Response.ok(response).build();
     }
+
+    private boolean hasNonTerminalDexRun(UUID token) {
+        final boolean hasNonTerminalByLabel = !dexEngine
+                .listRuns(
+                        new ListWorkflowRunsRequest()
+                                .withLabels(Map.of(WF_LABEL_BOM_UPLOAD_TOKEN, token.toString()))
+                                .withStatuses(WorkflowRunStatus.NON_TERMINAL_STATUSES)
+                                .withLimit(1))
+                .items()
+                .isEmpty();
+        if (hasNonTerminalByLabel) {
+            return true;
+        }
+
+        final WorkflowRunMetadata runMetadata = dexEngine.getRunMetadataById(token);
+        return runMetadata != null && !runMetadata.status().isTerminal();
+    }
+
 }

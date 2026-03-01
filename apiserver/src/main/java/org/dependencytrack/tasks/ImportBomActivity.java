@@ -19,9 +19,7 @@
 package org.dependencytrack.tasks;
 
 import alpine.common.logging.Logger;
-import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
-import alpine.event.framework.Subscriber;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
@@ -30,9 +28,12 @@ import org.cyclonedx.parsers.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.datanucleus.flush.FlushMode;
 import org.dependencytrack.analysis.AnalyzeProjectWorkflow;
+import org.dependencytrack.dex.api.Activity;
+import org.dependencytrack.dex.api.ActivityContext;
+import org.dependencytrack.dex.api.ActivitySpec;
+import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
-import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.IntegrityAnalysisEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
@@ -48,24 +49,22 @@ import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ServiceComponent;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.WorkflowStatus;
-import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.proto.internal.workflow.v1.AnalyzeProjectWorkflowArg;
+import org.dependencytrack.proto.internal.workflow.v1.ImportBomArg;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.json.JSONArray;
+import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -118,7 +117,6 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.conv
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertServices;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertToProject;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertToProjectMetadata;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.proto.internal.workflow.v1.AnalysisTrigger.ANALYSIS_TRIGGER_BOM_UPLOAD;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_LATEST_VERSION;
@@ -126,26 +124,24 @@ import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 
 /**
- * Subscriber task that performs processing of bill-of-material (bom)
- * when it is uploaded.
- *
- * @author Steve Springett
- * @since 3.0.0
+ * @since 5.7.0
  */
-public class BomUploadProcessingTask implements Subscriber {
+@NullMarked
+@ActivitySpec(name = "import-bom", defaultTaskQueue = "artifact-imports")
+public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
 
-    private static final class Context {
+    private static final class ProcessingContext {
 
         private final UUID token;
         private final Project project;
         private final Bom.Format bomFormat;
         private final long startTimeNs;
-        private String bomSpecVersion;
-        private String bomSerialNumber;
-        private Date bomTimestamp;
-        private Integer bomVersion;
+        private @Nullable String bomSpecVersion;
+        private @Nullable String bomSerialNumber;
+        private @Nullable Date bomTimestamp;
+        private @Nullable Integer bomVersion;
 
-        private Context(final UUID token, final Project project) {
+        private ProcessingContext(UUID token, Project project) {
             this.token = token;
             this.project = project;
             this.bomFormat = Bom.Format.CYCLONEDX;
@@ -154,17 +150,17 @@ public class BomUploadProcessingTask implements Subscriber {
 
     }
 
-    private static final Logger LOGGER = Logger.getLogger(BomUploadProcessingTask.class);
+    private static final Logger LOGGER = Logger.getLogger(ImportBomActivity.class);
 
     private final DexEngine dexEngine;
     private final FileStorage fileStorage;
     private final KafkaEventDispatcher kafkaEventDispatcher;
     private final boolean delayBomProcessedNotification;
 
-    public BomUploadProcessingTask(
-            DexEngine dexEngine,
+    public ImportBomActivity(
             FileStorage fileStorage,
             KafkaEventDispatcher kafkaEventDispatcher,
+            DexEngine dexEngine,
             boolean delayBomProcessedNotification) {
         this.dexEngine = dexEngine;
         this.fileStorage = fileStorage;
@@ -172,49 +168,37 @@ public class BomUploadProcessingTask implements Subscriber {
         this.delayBomProcessedNotification = delayBomProcessedNotification;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public void inform(final Event e) {
-        if (!(e instanceof final BomUploadEvent event)) {
-            return;
+    @Override
+    public @Nullable Void execute(ActivityContext ctx, @Nullable ImportBomArg arg) throws Exception {
+        if (arg == null) {
+            throw new TerminalApplicationFailureException("No argument provided");
         }
 
-        final var ctx = new Context(event.getChainIdentifier(), event.getProject());
-        try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, ctx.project.getUuid().toString());
-             var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
-             var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
-             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString())) {
+        final var token = UUID.fromString(arg.getBomUploadToken());
+        final var project = new Project();
+        project.setUuid(UUID.fromString(arg.getProjectUuid()));
+        project.setName(arg.getProjectName());
+        project.setVersion(arg.getProjectVersion().isEmpty() ? null : arg.getProjectVersion());
+
+        final var processCtx = new ProcessingContext(token, project);
+        try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, arg.getProjectUuid());
+             var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, arg.getProjectName());
+             var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, arg.getProjectVersion());
+             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, arg.getBomUploadToken())) {
             final byte[] cdxBomBytes;
-            try (final InputStream cdxBomStream = fileStorage.get(event.getFileMetadata())) {
+            try (final InputStream cdxBomStream = fileStorage.get(arg.getBomFileMetadata())) {
                 cdxBomBytes = cdxBomStream.readAllBytes();
-            } catch (IOException ex) {
-                LOGGER.error("Failed to retrieve BOM file %s from storage".formatted(
-                        event.getFileMetadata().getLocation()), ex);
-                return;
+            } catch (FileNotFoundException e) {
+                throw new TerminalApplicationFailureException(e);
             }
 
-            try {
-                processEvent(ctx, cdxBomBytes);
-            } finally {
-                // There are currently no retries, so the BOM file needs to be removed
-                // from storage no matter if processing failed or succeeded.
-
-                try {
-                    fileStorage.delete(event.getFileMetadata());
-                } catch (IOException ex) {
-                    LOGGER.error("Failed to delete BOM file %s from storage".formatted(
-                            event.getFileMetadata().getLocation()), ex);
-                }
-            }
+            processEvent(processCtx, cdxBomBytes);
         }
+
+        return null;
     }
 
-    private void processEvent(final Context ctx, final byte[] cdxBomBytes) {
-        useJdbiTransaction(handle -> {
-            final var workflowDao = handle.attach(WorkflowDao.class);
-            workflowDao.startState(WorkflowStep.BOM_CONSUMPTION, ctx.token);
-        });
+    private void processEvent(final ProcessingContext ctx, final byte[] cdxBomBytes) {
         final ConsumedBom consumedBom;
         try {
             // Validate if bom is in protobuf format
@@ -245,17 +229,10 @@ public class BomUploadProcessingTask implements Subscriber {
         } catch (ParseException | RuntimeException e) {
             LOGGER.error("Failed to consume BOM", e);
             try (final var qm = new QueryManager()) {
-                failWorkflowStepAndCancelDescendants(qm, ctx, WorkflowStep.BOM_CONSUMPTION, e);
                 dispatchBomProcessingFailedNotification(qm, ctx, e);
             }
-            return;
+            throw new TerminalApplicationFailureException("Failed to consume BOM", e);
         }
-
-        useJdbiTransaction(handle -> {
-            final var workflowDao = handle.attach(WorkflowDao.class);
-            workflowDao.updateState(WorkflowStep.BOM_CONSUMPTION, ctx.token, WorkflowStatus.COMPLETED, null);
-            workflowDao.startState(WorkflowStep.BOM_PROCESSING, ctx.token);
-        });
 
         dispatchBomConsumedNotification(ctx);
 
@@ -269,17 +246,11 @@ public class BomUploadProcessingTask implements Subscriber {
             } catch (Throwable e) {
                 LOGGER.error("Failed to process BOM", e);
                 try (final var qm = new QueryManager()) {
-                    failWorkflowStepAndCancelDescendants(qm, ctx, WorkflowStep.BOM_PROCESSING, e);
                     dispatchBomProcessingFailedNotification(qm, ctx, e);
                 }
-                return;
+                throw new TerminalApplicationFailureException("Failed to process BOM", e);
             }
         }
-
-        useJdbiTransaction(handle -> {
-            final var workflowDao = handle.attach(WorkflowDao.class);
-            workflowDao.updateState(WorkflowStep.BOM_PROCESSING, ctx.token, WorkflowStatus.COMPLETED, null);
-        });
 
         final var processingDurationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - ctx.startTimeNs);
         LOGGER.info("BOM processed successfully in %s".formatted(formatDurationHMS(processingDurationMs)));
@@ -296,16 +267,11 @@ public class BomUploadProcessingTask implements Subscriber {
             if (contextFileMetadata != null) {
                 workflowArgBuilder.setContextFileMetadata(contextFileMetadata);
             }
-        } else {
-            // No components to be sent for vulnerability analysis.
-            // If the BOM_PROCESSED notification was delayed, dispatch it now.
-            if (delayBomProcessedNotification) {
-                dispatchBomProcessedNotification(ctx);
-            }
         }
 
         dexEngine.createRun(
                 new CreateWorkflowRunRequest<>(AnalyzeProjectWorkflow.class)
+                        .withWorkflowInstanceId("analyze-project:bom-upload:" + ctx.token)
                         .withLabels(Map.ofEntries(
                                 Map.entry(WF_LABEL_BOM_UPLOAD_TOKEN, ctx.token.toString()),
                                 Map.entry(WF_LABEL_PROJECT_UUID, ctx.project.getUuid().toString())))
@@ -448,7 +414,7 @@ public class BomUploadProcessingTask implements Subscriber {
     ) {
     }
 
-    private ProcessedBom processBom(final Context ctx, final ConsumedBom bom) {
+    private ProcessedBom processBom(final ProcessingContext ctx, final ConsumedBom bom) {
         try (final var qm = new QueryManager()) {
             // Disable reachability checks on commit.
             // See https://www.datanucleus.org/products/accessplatform_4_1/jdo/performance_tuning.html
@@ -477,7 +443,7 @@ public class BomUploadProcessingTask implements Subscriber {
             // data, and only flushes if that's the case. DataNucleus is not as smart, and will always flush.
             // Still, QUERY may be a nice middle-ground between AUTO and MANUAL.
             //
-            // BomUploadProcessingTaskTest#informWithBloatedBomTest can be used to profile the impact on large BOMs.
+            // ImportBomActivityTest#informWithBloatedBomTest can be used to profile the impact on large BOMs.
             qm.getPersistenceManager().setProperty(PROPERTY_FLUSH_MODE, FlushMode.MANUAL.name());
 
             // Prevent object fields from being unloaded upon commit.
@@ -489,17 +455,6 @@ public class BomUploadProcessingTask implements Subscriber {
             qm.getPersistenceManager().setProperty(PROPERTY_RETAIN_VALUES, "true");
 
             return qm.callInTransaction(() -> {
-                // Prevent BOMs for the same project to be processed concurrently.
-                // Note that this is an edge case, we're not expecting any acquisition failures under normal circumstances.
-                // We're not waiting on locks here to prevent threads and connections from being blocked for too long.
-                final boolean lockAcquired = qm.tryAcquireAdvisoryLock(
-                        "%s-%s".formatted(BomUploadProcessingTask.class.getName(), ctx.project.getUuid()));
-                if (!lockAcquired) {
-                    throw new IllegalStateException("""
-                            Failed to acquire advisory lock, likely because another BOM import \
-                            for this project is already in progress""");
-                }
-
                 final Project persistentProject = processProject(ctx, qm, bom.project(), bom.projectMetadata());
 
                 LOGGER.info("Processing %d components".formatted(bom.components().size()));
@@ -525,7 +480,7 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private static Project processProject(
-            final Context ctx,
+            final ProcessingContext ctx,
             final QueryManager qm,
             final Project project,
             final ProjectMetadata projectMetadata
@@ -845,7 +800,7 @@ public class BomUploadProcessingTask implements Subscriber {
         qm.getPersistenceManager().flush();
     }
 
-    private static void recordBomImport(final Context ctx, final QueryManager qm, final Project project) {
+    private static void recordBomImport(final ProcessingContext ctx, final QueryManager qm, final Project project) {
         assertPersistent(project, "Project must be persistent");
 
         final var bomImportDate = new Date();
@@ -1042,22 +997,6 @@ public class BomUploadProcessingTask implements Subscriber {
         };
     }
 
-    private static void failWorkflowStepAndCancelDescendants(
-            final QueryManager qm,
-            final Context ctx,
-            final WorkflowStep step,
-            final Throwable failureCause
-    ) {
-        qm.runInTransaction(() -> {
-            final var now = new Date();
-            final WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(ctx.token, step);
-            workflowState.setStatus(WorkflowStatus.FAILED);
-            workflowState.setFailureReason(failureCause.getMessage());
-            workflowState.setUpdatedAt(now);
-            qm.updateAllDescendantStatesOfParent(workflowState, WorkflowStatus.CANCELLED, now);
-        });
-    }
-
     private List<CompletableFuture<?>> initiateRepoMetaAnalysis(final Collection<ComponentRepositoryMetaAnalysisEvent> events) {
         return events.stream()
                 .<CompletableFuture<?>>map(event -> kafkaEventDispatcher.dispatchEvent(event).whenComplete(
@@ -1071,7 +1010,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 .toList();
     }
 
-    private void dispatchBomConsumedNotification(final Context ctx) {
+    private void dispatchBomConsumedNotification(final ProcessingContext ctx) {
         try (final var qm = new QueryManager()) {
             new JdoNotificationEmitter(qm).emit(
                     createBomConsumedNotification(
@@ -1082,7 +1021,7 @@ public class BomUploadProcessingTask implements Subscriber {
         }
     }
 
-    private void dispatchBomProcessedNotification(final Context ctx) {
+    private void dispatchBomProcessedNotification(final ProcessingContext ctx) {
         try (final var qm = new QueryManager()) {
             new JdoNotificationEmitter(qm).emit(
                     createBomProcessedNotification(
@@ -1094,7 +1033,7 @@ public class BomUploadProcessingTask implements Subscriber {
     }
 
     private void dispatchBomProcessingFailedNotification(
-            final QueryManager qm, final Context ctx, final Throwable throwable) {
+            final QueryManager qm, final ProcessingContext ctx, final Throwable throwable) {
         new JdoNotificationEmitter(qm).emit(
                 createBomProcessingFailedNotification(
                         NotificationModelConverter.convert(ctx.project),
@@ -1104,7 +1043,7 @@ public class BomUploadProcessingTask implements Subscriber {
                         throwable.getMessage()));
     }
 
-    private @Nullable FileMetadata storeVulnAnalysisContext(Context ctx, Collection<Component> components) {
+    private @Nullable FileMetadata storeVulnAnalysisContext(ProcessingContext ctx, Collection<Component> components) {
         final List<Long> newComponentIds = components.stream()
                 .filter(Component::isNew)
                 .map(Component::getId)

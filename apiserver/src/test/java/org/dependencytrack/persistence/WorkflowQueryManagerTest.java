@@ -27,16 +27,13 @@ import java.util.Date;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.model.WorkflowStatus.CANCELLED;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
-import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
-import static org.dependencytrack.model.WorkflowStep.REPO_META_ANALYSIS;
 
 public class WorkflowQueryManagerTest extends PersistenceCapableTest {
 
     @Test
-    public void testWorkflowStateIsCreated() {
+    public void shouldReturnWorkflowStateForToken() {
         UUID uuid = UUID.randomUUID();
         WorkflowState workflowState = new WorkflowState();
         workflowState.setParent(null);
@@ -60,7 +57,7 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testShouldNotReturnWorkflowStateIfTokenDoesNotMatch() {
+    public void shouldNotReturnWorkflowStateForDifferentToken() {
         UUID uuid = UUID.randomUUID();
         WorkflowState workflowState = new WorkflowState();
         workflowState.setParent(null);
@@ -72,12 +69,11 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
         workflowState.setUpdatedAt(Date.from(Instant.now()));
         qm.persist(workflowState);
 
-        //get states by a new token
         assertThat(qm.getAllWorkflowStatesForAToken(UUID.randomUUID())).isEmpty();
     }
 
     @Test
-    public void testShouldGetWorkflowStateByTokenAndStep() {
+    public void shouldGetWorkflowStateByTokenAndStep() {
         UUID uuid = UUID.randomUUID();
         WorkflowState workflowState = new WorkflowState();
         workflowState.setFailureReason(null);
@@ -89,43 +85,6 @@ public class WorkflowQueryManagerTest extends PersistenceCapableTest {
         WorkflowState result = qm.persist(workflowState);
 
         assertThat(qm.getWorkflowStateByTokenAndStep(uuid, BOM_CONSUMPTION)).isEqualTo(result);
-    }
-
-    @Test
-    public void testUpdateWorkflowStatesOfAllDescendants() {
-
-        UUID uuid = UUID.randomUUID();
-        WorkflowState workflowState1 = new WorkflowState();
-        workflowState1.setParent(null);
-        workflowState1.setFailureReason(null);
-        workflowState1.setStep(BOM_CONSUMPTION);
-        workflowState1.setStatus(PENDING);
-        workflowState1.setToken(uuid);
-        workflowState1.setStartedAt(Date.from(Instant.now()));
-        workflowState1.setUpdatedAt(Date.from(Instant.now()));
-        WorkflowState result1 = qm.persist(workflowState1);
-
-        WorkflowState workflowState2 = new WorkflowState();
-        workflowState2.setParent(result1);
-        workflowState2.setFailureReason(null);
-        workflowState2.setStep(BOM_PROCESSING);
-        workflowState2.setStatus(PENDING);
-        workflowState2.setToken(uuid);
-        workflowState2.setStartedAt(Date.from(Instant.now()));
-        workflowState2.setUpdatedAt(Date.from(Instant.now()));
-        WorkflowState result2 = qm.persist(workflowState2);
-
-        WorkflowState workflowState3 = new WorkflowState();
-        workflowState3.setParent(result2);
-        workflowState3.setFailureReason(null);
-        workflowState3.setStep(REPO_META_ANALYSIS);
-        workflowState3.setStatus(PENDING);
-        workflowState3.setToken(uuid);
-        workflowState3.setStartedAt(Date.from(Instant.now()));
-        workflowState3.setUpdatedAt(Date.from(Instant.now()));
-        qm.persist(workflowState3);
-
-        assertThat(qm.updateAllDescendantStatesOfParent(result1, CANCELLED, Date.from(Instant.now()))).isEqualTo(2);
     }
 
 }

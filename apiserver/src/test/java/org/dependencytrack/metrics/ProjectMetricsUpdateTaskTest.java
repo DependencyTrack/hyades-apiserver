@@ -40,8 +40,6 @@ import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
-import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -190,9 +188,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
             dao.createDependencyMetrics(componentSuppressedOldMetrics);
         });
 
-        var projectMetricsUpdateEvent = new ProjectMetricsUpdateEvent(project.getUuid());
-        qm.createWorkflowSteps(projectMetricsUpdateEvent.getChainIdentifier());
-        new ProjectMetricsUpdateTask().inform(projectMetricsUpdateEvent);
+        new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
 
         final ProjectMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
         assertThat(metrics.getComponents()).isEqualTo(3);
@@ -224,19 +220,11 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         assertThat(metrics.getPolicyViolationsOperationalAudited()).isZero();
         assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
 
-        qm.getPersistenceManager().refreshAll(project, componentUnaudited, componentAudited, componentSuppressed, qm.getWorkflowStateByTokenAndStep(projectMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE));
+        qm.getPersistenceManager().refreshAll(project, componentUnaudited, componentAudited, componentSuppressed);
         assertThat(project.getLastInheritedRiskScore()).isEqualTo(10.0);
         assertThat(componentUnaudited.getLastInheritedRiskScore()).isEqualTo(5.0);
         assertThat(componentAudited.getLastInheritedRiskScore()).isEqualTo(5.0);
         assertThat(componentSuppressed.getLastInheritedRiskScore()).isZero();
-
-        assertThat(qm.getWorkflowStateByTokenAndStep(projectMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE)).satisfies(
-                state -> {
-                    assertThat(state.getStartedAt()).isNotNull();
-                    assertThat(state.getUpdatedAt()).isNotNull();
-                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
-                }
-        );
     }
 
     @Test

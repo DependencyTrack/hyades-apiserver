@@ -23,9 +23,6 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.slf4j.MDC;
 
@@ -47,14 +44,10 @@ public class ProjectMetricsUpdateTask implements Subscriber {
     @Override
     public void inform(final Event e) {
         if (e instanceof final ProjectMetricsUpdateEvent event) {
-            try (final var qm = new QueryManager();
-                 var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, event.getUuid().toString())) {
-                final WorkflowState metricsUpdateState = qm.updateStartTimeIfWorkflowStateExists(event.getChainIdentifier(), WorkflowStep.METRICS_UPDATE);
+            try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, event.getUuid().toString())) {
                 try {
                     updateMetrics(event.getUuid());
-                    qm.updateWorkflowStateToComplete(metricsUpdateState);
                 } catch (RuntimeException ex) {
-                    qm.updateWorkflowStateToFailed(metricsUpdateState, ex.getMessage());
                     LOGGER.error("An unexpected error occurred while updating metrics", ex);
                 }
             }

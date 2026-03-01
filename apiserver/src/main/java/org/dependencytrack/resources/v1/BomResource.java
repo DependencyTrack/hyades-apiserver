@@ -19,10 +19,10 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.event.framework.Event;
 import alpine.model.ConfigProperty;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.filters.ResourceAccessRequired;
+import com.fasterxml.uuid.Generators;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -57,7 +57,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.CycloneDxMediaType;
 import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.BomValidationMode;
@@ -72,29 +73,35 @@ import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
+import org.dependencytrack.proto.internal.workflow.v1.ImportBomArg;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
+import org.dependencytrack.tasks.ImportBomWorkflow;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.jspecify.annotations.Nullable;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
-import static java.util.Objects.requireNonNull;
 import static java.util.function.Predicate.not;
+import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_BOM_UPLOAD_TOKEN;
+import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_PROJECT_UUID;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
@@ -117,6 +124,9 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransactio
 public class BomResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(BomResource.class);
+
+    @Inject
+    private DexEngine dexEngine;
 
     @Inject
     private FileStorage fileStorage;
@@ -163,7 +173,7 @@ public class BomResource extends AbstractApiResource {
             @QueryParam("variant") String variant,
             @Parameter(description = "Force the resulting BOM to be downloaded as a file (defaults to 'false')")
             @QueryParam("download") boolean download) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
@@ -249,7 +259,7 @@ public class BomResource extends AbstractApiResource {
             @PathParam("uuid") @ValidUuid String uuid,
             @Parameter(description = "The format to output (defaults to JSON)")
             @QueryParam("format") String format) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
@@ -327,16 +337,23 @@ public class BomResource extends AbstractApiResource {
     @ResourceAccessRequired
     public Response uploadBom(@Parameter(required = true) BomSubmitRequest request) {
         final Validator validator = getValidator();
-        final ProcessingResult processingResult;
+        final ProjectInfo projectInfo;
         if (request.getProject() != null) { // behavior in v3.0.0
             failOnValidationError(
                     validator.validateProperty(request, "project"),
                     validator.validateProperty(request, "bom")
             );
             try (QueryManager qm = new QueryManager()) {
-                processingResult = qm.callInTransaction(() -> {
+                projectInfo = qm.callInTransaction(() -> {
                     final Project project = qm.getObjectByUuid(Project.class, request.getProject());
-                    return process(qm, project, request.getBom());
+                    if (project == null) {
+                        throw new WebApplicationException(Response
+                                .status(Response.Status.NOT_FOUND)
+                                .entity("The project could not be found.")
+                                .build());
+                    }
+                    requireAccess(qm, project);
+                    return ProjectInfo.of(project);
                 });
             }
         } else { // additional behavior added in v3.1.0
@@ -346,7 +363,7 @@ public class BomResource extends AbstractApiResource {
                     validator.validateProperty(request, "bom")
             );
             try (final var qm = new QueryManager()) {
-                processingResult = qm.callInTransaction(() -> {
+                projectInfo = qm.callInTransaction(() -> {
                     Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
                     if (project == null && request.isAutoCreate()) {
                         if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT) || hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) || hasPermission(Permissions.Constants.PROJECT_CREATION_UPLOAD)) {
@@ -365,9 +382,11 @@ public class BomResource extends AbstractApiResource {
                                     parent = qm.getProject(trimmedParentName, trimmedParentVersion);
                                 }
 
-                                if (parent == null) { // if parent project is specified but not found
-                                    final var response = Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
-                                    return new ProcessingResult(response, null);
+                                if (parent == null) {
+                                    throw new WebApplicationException(Response
+                                            .status(Response.Status.NOT_FOUND)
+                                            .entity("The parent project could not be found.")
+                                            .build());
                                 }
                                 requireAccess(qm, parent, "Access to the specified parent project is forbidden");
                             }
@@ -387,20 +406,36 @@ public class BomResource extends AbstractApiResource {
                                     createProjectCreatedNotification(
                                             NotificationModelConverter.convert(project)));
                         } else {
-                            final var response = Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
-                            return new ProcessingResult(response, null);
+                            throw new WebApplicationException(Response
+                                    .status(Response.Status.UNAUTHORIZED)
+                                    .entity("The principal does not have permission to create project.")
+                                    .build());
                         }
                     }
-                    return process(qm, project, request.getBom());
+
+                    if (project == null) {
+                        throw new WebApplicationException(Response
+                                .status(Response.Status.NOT_FOUND)
+                                .entity("The project could not be found.")
+                                .build());
+                    }
+                    requireAccess(qm, project);
+                    return ProjectInfo.of(project);
                 });
             }
         }
 
-        if (processingResult.event() != null) {
-            Event.dispatch(processingResult.event());
+        final byte[] bomBytes;
+        try (final var encodedInputStream = new ByteArrayInputStream(request.getBom().getBytes(StandardCharsets.UTF_8));
+             final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
+             final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
+            bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
+        } catch (IOException e) {
+            LOGGER.error("An unexpected error occurred while decoding BOM uploaded to project: " + projectInfo.uuid(), e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
 
-        return processingResult.response();
+        return processUpload(projectInfo, bomBytes, null);
     }
 
     @POST
@@ -461,17 +496,31 @@ public class BomResource extends AbstractApiResource {
             @DefaultValue("false") @FormDataParam("isLatest") boolean isLatest,
             @Parameter(schema = @Schema(type = "string")) @FormDataParam("bom") final List<FormDataBodyPart> artifactParts
     ) {
-        final ProcessingResult processingResult;
+        if (artifactParts == null || artifactParts.isEmpty()) {
+            throw new WebApplicationException(Response
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity("No BOM file provided.")
+                    .build());
+        }
+
+        final ProjectInfo projectInfo;
         if (projectUuid != null) { // behavior in v3.0.0
             try (QueryManager qm = new QueryManager()) {
-                processingResult = qm.callInTransaction(() -> {
+                projectInfo = qm.callInTransaction(() -> {
                     final Project project = qm.getObjectByUuid(Project.class, projectUuid);
-                    return process(qm, project, artifactParts);
+                    if (project == null) {
+                        throw new WebApplicationException(Response
+                                .status(Response.Status.NOT_FOUND)
+                                .entity("The project could not be found.")
+                                .build());
+                    }
+                    requireAccess(qm, project);
+                    return ProjectInfo.of(project);
                 });
             }
         } else { // additional behavior added in v3.1.0
             try (QueryManager qm = new QueryManager()) {
-                processingResult = qm.callInTransaction(() -> {
+                projectInfo = qm.callInTransaction(() -> {
                     final String trimmedProjectName = StringUtils.trimToNull(projectName);
                     final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
                     Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
@@ -480,7 +529,6 @@ public class BomResource extends AbstractApiResource {
                             Project parent = null;
                             if (parentUUID != null || parentName != null) {
                                 if (parentUUID != null) {
-
                                     parent = qm.getObjectByUuid(Project.class, parentUUID);
                                 } else {
                                     final String trimmedParentName = StringUtils.trimToNull(parentName);
@@ -488,9 +536,11 @@ public class BomResource extends AbstractApiResource {
                                     parent = qm.getProject(trimmedParentName, trimmedParentVersion);
                                 }
 
-                                if (parent == null) { // if parent project is specified but not found
-                                    final var response = Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
-                                    return new ProcessingResult(response, null);
+                                if (parent == null) {
+                                    throw new WebApplicationException(Response
+                                            .status(Response.Status.NOT_FOUND)
+                                            .entity("The parent project could not be found.")
+                                            .build());
                                 }
                                 requireAccess(qm, parent, "Access to the specified parent project is forbidden");
                             }
@@ -510,129 +560,121 @@ public class BomResource extends AbstractApiResource {
                                     createProjectCreatedNotification(
                                             NotificationModelConverter.convert(project)));
                         } else {
-                            final var response = Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
-                            return new ProcessingResult(response, null);
+                            throw new WebApplicationException(Response
+                                    .status(Response.Status.UNAUTHORIZED)
+                                    .entity("The principal does not have permission to create project.")
+                                    .build());
                         }
                     }
-                    return process(qm, project, artifactParts);
+
+                    if (project == null) {
+                        throw new WebApplicationException(Response
+                                .status(Response.Status.NOT_FOUND)
+                                .entity("The project could not be found.")
+                                .build());
+                    }
+                    requireAccess(qm, project);
+                    return ProjectInfo.of(project);
                 });
             }
         }
 
-        if (processingResult.event() != null) {
-            Event.dispatch(processingResult.event());
+        final FormDataBodyPart firstPart = artifactParts.getFirst();
+        final byte[] bomBytes;
+        try (final var inputStream = ((BodyPartEntity) firstPart.getEntity()).getInputStream();
+             final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
+            bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
+        } catch (IOException e) {
+            LOGGER.error("An unexpected error occurred while reading BOM from upload", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
+        final MediaType mediaType = firstPart.getMediaType();
 
-        return processingResult.response();
+        return processUpload(projectInfo, bomBytes, mediaType);
     }
 
-    private record ProcessingResult(Response response, BomUploadEvent event) {
+    private record ProjectInfo(UUID uuid, String name, String version, List<String> tagNames) {
 
-        private ProcessingResult {
-            requireNonNull(response, "response must not be null");
+        static ProjectInfo of(Project project) {
+            return new ProjectInfo(
+                    project.getUuid(),
+                    project.getName(),
+                    project.getVersion(),
+                    project.getTags() != null
+                            ? project.getTags().stream().map(org.dependencytrack.model.Tag::getName).toList()
+                            : List.of());
         }
-
     }
 
-    /**
-     * Common logic that processes a BOM given a project and encoded payload.
-     */
-    private ProcessingResult process(QueryManager qm, Project project, String encodedBomData) {
-        if (project != null) {
-            requireAccess(qm, project);
+    // todo: make option to combine all the bom data so components are reconciled in a single pass.
+    // todo: https://github.com/DependencyTrack/dependency-track/issues/130
+    private Response processUpload(ProjectInfo project, byte[] bomBytes, @Nullable MediaType mediaType) {
+        validateBom(bomBytes, project.tagNames(), mediaType, project.uuid());
 
-            final FileMetadata bomFileMetadata;
-            try (final var encodedInputStream = new ByteArrayInputStream(encodedBomData.getBytes(StandardCharsets.UTF_8));
-                 final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
-                 final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
-                bomFileMetadata = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
-            } catch (IOException e) {
-                LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
-                final var response = Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-                return new ProcessingResult(response, null);
+        final UUID bomUploadToken = Generators.timeBasedEpochRandomGenerator().generate();
+
+        final FileMetadata bomFileMetadata;
+        try {
+            // TODO: Provide mediaType to FileStorage#store. Should be any of:
+            //   * application/vnd.cyclonedx+json
+            //   * application/vnd.cyclonedx+xml
+            //   * application/x.vnd.cyclonedx+protobuf
+            //  Consider also attaching the detected version, i.e. application/vnd.cyclonedx+xml; version=1.6
+            //  See https://cyclonedx.org/specification/overview/ -> Media Types.
+            bomFileMetadata = fileStorage.store(
+                    "bom-upload/%s".formatted(bomUploadToken),
+                    new ByteArrayInputStream(bomBytes));
+        } catch (IOException e) {
+            LOGGER.error("Failed to store BOM for project: " + project.uuid(), e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+
+        final var response = Response.ok(new BomUploadResponse(bomUploadToken, project.uuid())).build();
+
+        try {
+            dexEngine.createRun(
+                    new CreateWorkflowRunRequest<>(ImportBomWorkflow.class)
+                            .withConcurrencyKey("import-bom:%s".formatted(project.uuid()))
+                            .withLabels(Map.ofEntries(
+                                    Map.entry(WF_LABEL_BOM_UPLOAD_TOKEN, bomUploadToken.toString()),
+                                    Map.entry(WF_LABEL_PROJECT_UUID, project.uuid().toString())))
+                            .withArgument(ImportBomArg.newBuilder()
+                                    .setProjectUuid(project.uuid().toString())
+                                    .setProjectName(project.name())
+                                    .setProjectVersion(project.version() != null ? project.version() : "")
+                                    .setBomUploadToken(bomUploadToken.toString())
+                                    .setBomFileMetadata(bomFileMetadata)
+                                    .build()));
+        } catch (RuntimeException e) {
+            try {
+                fileStorage.delete(bomFileMetadata);
+            } catch (IOException ex) {
+                LOGGER.warn("Failed to cleanup BOM file %s".formatted(bomFileMetadata.getLocation()), ex);
+                e.addSuppressed(ex);
             }
-
-            final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFileMetadata);
-            qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-
-            final var bomUploadResponse = new BomUploadResponse(
-                    bomUploadEvent.getChainIdentifier(), project.getUuid());
-            final var response = Response.ok(bomUploadResponse).build();
-
-            return new ProcessingResult(response, bomUploadEvent);
-        } else {
-            final var response = Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            return new ProcessingResult(response, null);
+            throw e;
         }
+
+        return response;
     }
 
-    /**
-     * Common logic that processes a BOM given a project and list of multi-party form objects containing decoded payloads.
-     */
-    private ProcessingResult process(QueryManager qm, Project project, List<FormDataBodyPart> artifactParts) {
-        for (final FormDataBodyPart artifactPart : artifactParts) {
-            final BodyPartEntity bodyPartEntity = (BodyPartEntity) artifactPart.getEntity();
-            if (project != null) {
-                requireAccess(qm, project);
-
-                final FileMetadata bomFileMetadata;
-                try (final var inputStream = bodyPartEntity.getInputStream();
-                     final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
-                    bomFileMetadata = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project, artifactPart.getMediaType());
-                } catch (IOException e) {
-                    LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
-                    final var response = Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-                    return new ProcessingResult(response, null);
-                }
-
-                // todo: make option to combine all the bom data so components are reconciled in a single pass.
-                // todo: https://github.com/DependencyTrack/dependency-track/issues/130
-                final BomUploadEvent bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), bomFileMetadata);
-
-                qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
-
-                final var bomUploadResponse = new BomUploadResponse(
-                        bomUploadEvent.getChainIdentifier(), project.getUuid());
-                final var response = Response.ok(bomUploadResponse).build();
-
-                return new ProcessingResult(response, bomUploadEvent);
-            } else {
-                final var response = Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-                return new ProcessingResult(response, null);
-            }
-        }
-        return new ProcessingResult(Response.ok().build(), null);
-    }
-
-    private FileMetadata validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException {
-        return validateAndStoreBom(bomBytes, project, null);
-    }
-
-    private FileMetadata validateAndStoreBom(final byte[] bomBytes, final Project project, MediaType mediaType) throws IOException {
-        validate(bomBytes, project, mediaType);
-
-        // TODO: Provide mediaType to FileStorage#store. Should be any of:
-        //   * application/vnd.cyclonedx+json
-        //   * application/vnd.cyclonedx+xml
-        //   * application/x.vnd.cyclonedx+protobuf
-        //  Consider also attaching the detected version, i.e. application/vnd.cyclonedx+xml; version=1.6
-        //  See https://cyclonedx.org/specification/overview/ -> Media Types.
-        return fileStorage.store(
-                "bom-upload/%s_%s".formatted(Instant.now().toEpochMilli(), project.getUuid()),
-                new ByteArrayInputStream(bomBytes));
-    }
-
-    static void validate(
-            final byte[] bomBytes,
-            final Project project) {
+    static void validate(byte[] bomBytes, Project project) {
         validate(bomBytes, project, null);
     }
 
-    static void validate(
-            final byte[] bomBytes,
-            final Project project,
-            final MediaType mediaType) {
-        if (!shouldValidate(project)) {
+    static void validate(byte[] bomBytes, Project project, @Nullable MediaType mediaType) {
+        final List<String> tagNames = project.getTags() != null
+                ? project.getTags().stream().map(org.dependencytrack.model.Tag::getName).toList()
+                : List.of();
+        validateBom(bomBytes, tagNames, mediaType, project.getUuid());
+    }
+
+    private static void validateBom(
+            byte[] bomBytes,
+            List<String> projectTagNames,
+            @Nullable MediaType mediaType,
+            UUID projectUuid) {
+        if (!shouldValidate(projectTagNames)) {
             return;
         }
 
@@ -647,23 +689,29 @@ public class BomResource extends AbstractApiResource {
                 problemDetails.setErrors(e.getValidationErrors());
             }
 
-            // NB: Usage of a separate DB connection is intended here,
-            // as the active transaction will be rolled back when the
-            // below exception is thrown.
-            useJdbiTransaction(handle -> new JdbiNotificationEmitter(handle).emit(
-                    createBomValidationFailedNotification(
-                            NotificationModelConverter.convert(project),
-                            e.getValidationErrors())));
+            useJdbiTransaction(handle -> {
+                final List<org.dependencytrack.notification.proto.v1.Project> projects =
+                        handle
+                                .attach(NotificationSubjectDao.class)
+                                .getProjects(List.of(projectUuid));
+                if (!projects.isEmpty()) {
+                    new JdbiNotificationEmitter(handle).emit(
+                            createBomValidationFailedNotification(
+                                    projects.getFirst(),
+                                    e.getValidationErrors()));
+                }
+            });
 
             throw new WebApplicationException(problemDetails.toResponse());
         } catch (RuntimeException e) {
             LOGGER.error("Failed to validate BOM", e);
-            final Response response = Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-            throw new WebApplicationException(response);
+            throw new WebApplicationException(Response
+                    .status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .build());
         }
     }
 
-    private static boolean shouldValidate(final Project project) {
+    private static boolean shouldValidate(List<String> projectTagNames) {
         try (final var qm = new QueryManager()) {
             final ConfigProperty validationModeProperty = qm.getConfigProperty(
                     BOM_VALIDATION_MODE.getGroupName(),
@@ -688,7 +736,7 @@ public class BomResource extends AbstractApiResource {
             }
 
             // Other modes depend on tags. Does the project even have tags?
-            if (project.getTags() == null || project.getTags().isEmpty()) {
+            if (projectTagNames.isEmpty()) {
                 return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
             }
 
@@ -711,8 +759,7 @@ public class BomResource extends AbstractApiResource {
                 return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
             }
 
-            final boolean doTagsMatch = project.getTags().stream()
-                    .map(org.dependencytrack.model.Tag::getName)
+            final boolean doTagsMatch = projectTagNames.stream()
                     .anyMatch(validationModeTags::contains);
             return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
                     || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);

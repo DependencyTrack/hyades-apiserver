@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,18 +35,26 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.datanucleus.store.types.wrappers.Date;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.AbstractApiResource;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+
+import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_BOM_UPLOAD_TOKEN;
 
 @Path("/v1/workflow")
 @Tag(name = "workflow")
@@ -55,9 +62,7 @@ import java.util.UUID;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class WorkflowResource {
-
-    private static final Logger LOGGER = Logger.getLogger(WorkflowResource.class);
+public class WorkflowResource extends AbstractApiResource {
 
     private final DexEngine dexEngine;
 
@@ -88,41 +93,87 @@ public class WorkflowResource {
             @PathParam("uuid") @ValidUuid String uuid) {
         final var token = UUID.fromString(uuid);
 
-        // Provide a tiny layer of backward-compatibility by converting
-        // a few select dex workflow runs to legacy workflow states.
-        //
-        // This is really only necessary for workflows that can be triggered manually.
         final WorkflowRunMetadata runMetadata = dexEngine.getRunMetadataById(token);
         if (runMetadata != null) {
             if ("analyze-project".equals(runMetadata.workflowName())) {
-                final var workflowState = new WorkflowState();
-                workflowState.setStep(WorkflowStep.VULN_ANALYSIS);
-                workflowState.setStatus(switch (runMetadata.status()) {
-                    case CREATED, RUNNING, SUSPENDED -> WorkflowStatus.PENDING;
-                    case CANCELLED -> WorkflowStatus.CANCELLED;
-                    case COMPLETED -> WorkflowStatus.COMPLETED;
-                    case FAILED -> WorkflowStatus.FAILED;
-                });
-                workflowState.setUpdatedAt(
-                        runMetadata.updatedAt() != null
-                                ? Date.from(runMetadata.updatedAt())
-                                : null);
-                workflowState.setToken(token);
-
-                return Response.ok(List.of(workflowState)).build();
+                return Response
+                        .ok(List.of(convert(runMetadata, WorkflowStep.VULN_ANALYSIS, token)))
+                        .build();
             }
         }
 
-        List<WorkflowState> workflowStates;
-        try (final var qm = new QueryManager()) {
-            workflowStates = qm.getAllWorkflowStatesForAToken(token);
+        final Page<WorkflowRunMetadata> runsPage = dexEngine.listRuns(
+                new ListWorkflowRunsRequest()
+                        .withLabels(Map.of(WF_LABEL_BOM_UPLOAD_TOKEN, token.toString()))
+                        .withLimit(10));
+
+        if (!runsPage.items().isEmpty()) {
+            final var workflowStates = new ArrayList<WorkflowState>();
+            for (final WorkflowRunMetadata run : runsPage.items()) {
+                switch (run.workflowName()) {
+                    case "import-bom" -> addImportBomStates(workflowStates, run, token);
+                    case "analyze-project" -> addAnalyzeProjectStates(workflowStates, run, token);
+                }
+            }
+
+            return Response.ok(workflowStates).build();
+        }
+
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            final List<WorkflowState> workflowStates = qm.getAllWorkflowStatesForAToken(token);
             if (workflowStates.isEmpty()) {
-                return Response.status(Response.Status.NOT_FOUND).entity("Provided token " + token + " does not exist.").build();
+                return Response
+                        .status(Response.Status.NOT_FOUND)
+                        .entity("Provided token " + token + " does not exist.").build();
             }
-        } catch (Exception e) {
-            LOGGER.error("An error occurred while fetching workflow status", e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+            return Response.ok(workflowStates).build();
         }
-        return Response.ok(workflowStates).build();
     }
+
+    private static void addImportBomStates(List<WorkflowState> states, WorkflowRunMetadata run, UUID token) {
+        final WorkflowStatus status = convert(run.status());
+
+        states.add(createLegacyState(token, WorkflowStep.BOM_CONSUMPTION, status, run));
+        states.add(createLegacyState(token, WorkflowStep.BOM_PROCESSING, status, run));
+    }
+
+    private static void addAnalyzeProjectStates(List<WorkflowState> states, WorkflowRunMetadata run, UUID token) {
+        final WorkflowStatus status = convert(run.status());
+
+        states.add(createLegacyState(token, WorkflowStep.VULN_ANALYSIS, status, run));
+        states.add(createLegacyState(token, WorkflowStep.POLICY_EVALUATION, status, run));
+        states.add(createLegacyState(token, WorkflowStep.METRICS_UPDATE, status, run));
+    }
+
+    private static WorkflowState convert(WorkflowRunMetadata run, WorkflowStep step, UUID token) {
+        return createLegacyState(token, step, convert(run.status()), run);
+    }
+
+    private static WorkflowStatus convert(WorkflowRunStatus dexStatus) {
+        return switch (dexStatus) {
+            case CREATED, RUNNING, SUSPENDED -> WorkflowStatus.PENDING;
+            case CANCELLED -> WorkflowStatus.CANCELLED;
+            case COMPLETED -> WorkflowStatus.COMPLETED;
+            case FAILED -> WorkflowStatus.FAILED;
+        };
+    }
+
+    private static WorkflowState createLegacyState(
+            UUID token,
+            WorkflowStep step,
+            WorkflowStatus status,
+            WorkflowRunMetadata run) {
+        final var state = new WorkflowState();
+        state.setToken(token);
+        state.setStep(step);
+        state.setStatus(status);
+        if (run.startedAt() != null) {
+            state.setStartedAt(Date.from(run.startedAt()));
+        }
+        if (run.updatedAt() != null) {
+            state.setUpdatedAt(Date.from(run.updatedAt()));
+        }
+        return state;
+    }
+
 }

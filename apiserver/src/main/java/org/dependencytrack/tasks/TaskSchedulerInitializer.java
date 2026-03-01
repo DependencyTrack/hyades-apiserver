@@ -47,7 +47,6 @@ import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
-import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.persistence.QueryManager;
@@ -57,7 +56,6 @@ import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
-import org.dependencytrack.tasks.maintenance.WorkflowMaintenanceTask;
 import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -225,11 +223,7 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         "Vulnerability Policy Sync",
                         getCronScheduleForTask(VulnerabilityPolicyFetchTask.class),
                         () -> Event.dispatch(new VulnerabilityPolicyFetchEvent()),
-                        /* triggerOnFirstRun */ true)
-                .schedule(
-                        "Workflow Maintenance",
-                        getCronScheduleForTask(WorkflowMaintenanceTask.class),
-                        () -> Event.dispatch(new WorkflowMaintenanceEvent()));
+                        /* triggerOnFirstRun */ true);
     }
 
     @Override
