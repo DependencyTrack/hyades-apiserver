@@ -64,14 +64,20 @@ jobs:
 
       - name: Build with Maven
         run: |-
-          mvn -B -Pquick -Dservices.bom.merge.skip=false package
+          mvn -B -Pquick,dist -Dservices.bom.merge.skip=false package
 
-      - name: Upload Artifacts
+      - name: Upload Distribution Archive
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # tag=v6.0.0
         with:
-          name: assembled-wars
+          name: assembled-dist
           path: |-
-            apiserver/target/*.jar
+            apiserver/target/dependency-track-apiserver-dist.tar.gz
+
+      - name: Upload BOM
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # tag=v6.0.0
+        with:
+          name: bom
+          path: |-
             apiserver/target/bom.json
 
       - name: Upload OpenAPI Spec
@@ -95,8 +101,11 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # tag=v7.0.0
         with:
-          name: assembled-wars
+          name: assembled-dist
           path: apiserver/target
+
+      - name: Extract Distribution Archive
+        run: tar xzf apiserver/target/dependency-track-apiserver-dist.tar.gz -C apiserver/target
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # tag=v3.7.0

@@ -22,12 +22,6 @@
     <configuration>
         <enabled>true</enabled>
         <hashAlgorithm>XX</hashAlgorithm>
-        <attachedOutputs>
-            <dirNames>
-                <!-- Required by Jetty plugin. -->
-                <dirName>classes</dirName>
-            </dirNames>
-        </attachedOutputs>
     </configuration>
     <input>
         <global>
@@ -40,13 +34,9 @@
     <executionControl>
         <runAlways>
             <executions>
-                <execution artifactId="maven-antrun-plugin">
+                <execution artifactId="maven-dependency-plugin">
                     <execIds>
-                        <!--
-                          The build cache only restores the API server WAR file,
-                          but the JAR file is required for container image builds.
-                        -->
-                        <execId>rename-war-file</execId>
+                        <execId>copy-dependencies</execId>
                     </execIds>
                 </execution>
             </executions>

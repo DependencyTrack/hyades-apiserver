@@ -11,6 +11,7 @@
           </option>
           <option name="goals">
             <list>
+              <option value="-q" />
               <option value="-pl" />
               <option value="apiserver" />
               <option value="-am" />

@@ -8,7 +8,7 @@
     </parent>
 
     <artifactId>apiserver</artifactId>
-    <packaging>war</packaging>
+    <packaging>jar</packaging>
 
     <name>API Server</name>
     <description>The Dependency-Track API Server</description>
@@ -231,12 +231,6 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>alpine-executable-war</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-test</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
@@ -305,7 +299,18 @@
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
-            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.ee11</groupId>
+            <artifactId>jetty-ee11-servlet</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
         </dependency>
         <!-- org.json
         This was previously transitively included with Unirest. However, Unirest v3.x removed reliance on org.json
@@ -538,34 +543,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!--
-          Dependencies required by executable WAR as overlays.
-          Refer to the maven-war-plugin declaration in the build section.
-         -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.owasp</groupId>
-            <artifactId>security-logging-common</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.owasp</groupId>
-            <artifactId>security-logging-logback</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.logstash.logback</groupId>
-            <artifactId>logstash-logback-encoder</artifactId>
-        </dependency>
     </dependencies>
 
     <build>
@@ -629,25 +606,6 @@
                         <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
                     </systemPropertyVariables>
                 </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>com.coderplus.maven.plugins</groupId>
-                <artifactId>copy-rename-maven-plugin</artifactId>
-                <version>1.0.1</version>
-                <executions>
-                    <execution>
-                        <id>copy-and-rename-file</id>
-                        <phase>compile</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <sourceFile>${project.basedir}/src/main/resources/logback.xml</sourceFile>
-                            <destinationFile>${project.build.directory}/${project.build.finalName}/logback.xml</destinationFile>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
 
             <plugin>
@@ -732,23 +690,9 @@
                         <phase>prepare-package</phase>
                         <configuration>
                             <target>
-                                <copy file="${project.build.directory}/bom.json" tofile="${project.build.directory}/${project.build.finalName}/.well-known/sbom" />
+                                <copy file="${project.build.directory}/bom.json" tofile="${project.build.outputDirectory}/static/.well-known/sbom" />
                             </target>
                             <skip>${cyclonedx.skip}</skip>
-                        </configuration>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                    </execution>
-
-                    <execution>
-                        <id>rename-war-file</id>
-                        <phase>package</phase>
-                        <configuration>
-                            <target>
-                                <copy file="${project.build.directory}/${project.build.finalName}.war" tofile="${project.build.directory}/${project.build.finalName}.jar" />
-                            </target>
-                            <skip>${maven.war.skip}</skip>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -759,81 +703,70 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-war-plugin</artifactId>
-                <version>3.5.1</version>
+                <artifactId>maven-jar-plugin</artifactId>
                 <configuration>
-                    <warName>dependency-track-apiserver</warName>
                     <archive>
                         <manifest>
-                            <mainClass>alpine.embedded.EmbeddedJettyServer</mainClass>
+                            <mainClass>org.dependencytrack.Application</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
                         </manifest>
                     </archive>
-                    <attachClasses>true</attachClasses>
-                    <packagingExcludes>WEB-INF/lib/executable-war-*.jar</packagingExcludes>
-                    <dependentWarExcludes>WEB-INF/lib/*log4j*.jar,WEB-INF/lib/*slf4j*.jar</dependentWarExcludes>
-                    <overlays>
-                        <overlay>
-                            <groupId>org.dependencytrack</groupId>
-                            <artifactId>alpine-executable-war</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                        <overlay>
-                            <groupId>org.owasp</groupId>
-                            <artifactId>security-logging-common</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                        <overlay>
-                            <groupId>org.owasp</groupId>
-                            <artifactId>security-logging-logback</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                        <overlay>
-                            <groupId>net.logstash.logback</groupId>
-                            <artifactId>logstash-logback-encoder</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                        <overlay>
-                            <groupId>com.fasterxml.jackson.core</groupId>
-                            <artifactId>jackson-annotations</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                        <overlay>
-                            <groupId>com.fasterxml.jackson.core</groupId>
-                            <artifactId>jackson-core</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                        <overlay>
-                            <groupId>com.fasterxml.jackson.core</groupId>
-                            <artifactId>jackson-databind</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                    </overlays>
                 </configuration>
             </plugin>
 
             <plugin>
-                <groupId>org.eclipse.jetty.ee11</groupId>
-                <artifactId>jetty-ee11-maven-plugin</artifactId>
-                <version>${lib.jetty.version}</version>
-                <configuration>
-                    <webApp>
-                        <!-- Disable classpath scanning. -->
-                        <containerIncludeJarPattern>^$</containerIncludeJarPattern>
-                        <webInfIncludeJarPattern>^$</webInfIncludeJarPattern>
-                    </webApp>
-                </configuration>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
 
     <profiles>
         <profile>
+            <id>dist</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>dist</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <descriptors>
+                                        <descriptor>src/main/assembly/dist.xml</descriptor>
+                                    </descriptors>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>dev-services</id>
             <properties>
                 <checkstyle.skip>true</checkstyle.skip>
                 <jacoco.skip>true</jacoco.skip>
                 <maven.test.skip>true</maven.test.skip>
-                <maven.war.skip>true</maven.war.skip>
                 <cyclonedx.skip>true</cyclonedx.skip>
             </properties>
             <dependencies>
@@ -858,27 +791,29 @@
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.eclipse.jetty.ee11</groupId>
-                        <artifactId>jetty-ee11-maven-plugin</artifactId>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
                         <executions>
                             <execution>
                                 <phase>verify</phase>
                                 <goals>
-                                    <goal>run</goal>
+                                    <goal>java</goal>
                                 </goals>
+                                <configuration>
+                                    <mainClass>org.dependencytrack.Application</mainClass>
+                                    <systemProperties>
+                                        <systemProperty>
+                                            <key>smallrye.config.profile</key>
+                                            <value>dev</value>
+                                        </systemProperty>
+                                        <systemProperty>
+                                            <key>dev.services.enabled</key>
+                                            <value>true</value>
+                                        </systemProperty>
+                                    </systemProperties>
+                                </configuration>
                             </execution>
                         </executions>
-                        <configuration>
-                            <systemProperties>
-                                <smallrye.config.profile>dev</smallrye.config.profile>
-                                <dev.services.enabled>true</dev.services.enabled>
-                            </systemProperties>
-                            <webApp>
-                                <!-- Disable classpath scanning. -->
-                                <containerIncludeJarPattern>^$</containerIncludeJarPattern>
-                                <webInfIncludeJarPattern>^$</webInfIncludeJarPattern>
-                            </webApp>
-                        </configuration>
                     </plugin>
                 </plugins>
             </build>

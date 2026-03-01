@@ -35,6 +35,10 @@ build:
 	$(MVND) $(MVN_FLAGS) -q -Pquick package
 .PHONY: build
 
+build-dist:
+	$(MVND) $(MVN_FLAGS) -q -Pdist,quick package
+.PHONY: build-dist
+
 build-image: build
 	docker build \
 		-t ghcr.io/dependencytrack/hyades-apiserver:local \

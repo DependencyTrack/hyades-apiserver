@@ -21,11 +21,11 @@ package alpine.server;
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.security.crypto.KeyManager;
-import org.glassfish.jersey.servlet.ServletContainer;
-import org.owasp.security.logging.util.SecurityUtil;
-
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.servlet.ServletContainer;
+import org.owasp.security.logging.util.SecurityUtil;
 
 /**
  * The AlpineServlet is the main servlet which extends
@@ -41,6 +41,13 @@ public class AlpineServlet extends ServletContainer {
 
     private static final long serialVersionUID = -133386507668410112L;
     private static final Logger LOGGER = Logger.getLogger(AlpineServlet.class);
+
+    public AlpineServlet() {
+    }
+
+    public AlpineServlet(ResourceConfig resourceConfig) {
+        super(resourceConfig);
+    }
 
     /**
      * Overrides the servlet init method and loads sets the InputStream necessary

@@ -29,6 +29,7 @@ FROM eclipse-temurin:25.0.2_10-jdk-alpine@sha256:da683f4f02f9427597d8fa162b73b82
 WORKDIR /work
 
 COPY --chmod=755 ./src/main/docker/create-jre.sh ./
+COPY ./target/lib/ ./lib/
 COPY ./target/dependency-track-apiserver.jar ./
 
 RUN ./create-jre.sh -i ./dependency-track-apiserver.jar -o ./jre
@@ -76,6 +77,7 @@ WORKDIR ${APP_DIR}
 USER ${UID}
 
 COPY --from=jre-build --chown=${UID}:0 /work/jre ${JAVA_HOME}
+COPY --chown=${UID}:0 ./target/lib/ ./lib/
 COPY --chown=${UID}:0 ./target/dependency-track-apiserver.jar ./src/main/docker/logback-json.xml ./
 
 # Launch Dependency-Track
@@ -88,7 +90,8 @@ CMD [ \
         --enable-native-access=ALL-UNNAMED \
         --sun-misc-unsafe-memory-access=allow \
         -DdependencyTrack.logging.level=${LOGGING_LEVEL} \
-        -jar dependency-track-apiserver.jar \
+        -cp 'dependency-track-apiserver.jar:lib/*' \
+        org.dependencytrack.Application \
         -context ${CONTEXT}" \
 ]
 

@@ -7,4 +7,5 @@ src/
 !src/main/docker/logback-json.xml
 target/
 !target/*.jar
+!target/**/*.jar
 /*.md
