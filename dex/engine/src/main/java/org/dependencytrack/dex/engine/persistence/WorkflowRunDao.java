@@ -89,7 +89,7 @@ public final class WorkflowRunDao extends AbstractDao {
             final String labelsJson = jsonMapper.toJson(
                     request.labels(), jdbiHandle.getConfig());
 
-            whereConditions.add("labels = cast(:labels as jsonb)");
+            whereConditions.add("labels @> cast(:labels as jsonb)");
             queryParams.put("labels", labelsJson);
         }
         if (request.createdAtFrom() != null) {
