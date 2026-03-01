@@ -167,7 +167,7 @@ public class WorkflowResourceTest extends ResourceTest {
 
         final var runMetadata = new WorkflowRunMetadata(
                 UUID.fromString("a3c39f8a-0c02-4a8c-8a3a-2f77e203809c"),
-                "vuln-analysis",
+                "analyze-project",
                 1,
                 null,
                 "taskQueue",
@@ -209,7 +209,7 @@ public class WorkflowResourceTest extends ResourceTest {
 
         final var runMetadata = new WorkflowRunMetadata(
                 UUID.fromString("a3c39f8a-0c02-4a8c-8a3a-2f77e203809c"),
-                "vuln-analysis",
+                "analyze-project",
                 1,
                 null,
                 "taskQueue",
