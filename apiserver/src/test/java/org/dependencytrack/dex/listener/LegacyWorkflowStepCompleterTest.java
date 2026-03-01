@@ -52,7 +52,7 @@ class LegacyWorkflowStepCompleterTest extends PersistenceCapableTest {
 
         completer.onEvent(new WorkflowRunsCompletedEvent(List.of(
                 createRunMetadata(
-                        "vuln-analysis",
+                        "analyze-project",
                         WorkflowRunStatus.COMPLETED,
                         Map.ofEntries(
                                 Map.entry(WF_LABEL_PROJECT_UUID, UUID.randomUUID().toString()),
@@ -75,11 +75,11 @@ class LegacyWorkflowStepCompleterTest extends PersistenceCapableTest {
                 },
                 state -> {
                     assertThat(state.getStep()).isEqualTo(WorkflowStep.POLICY_EVALUATION);
-                    assertThat(state.getStatus()).isEqualTo(WorkflowStatus.PENDING);
+                    assertThat(state.getStatus()).isEqualTo(WorkflowStatus.COMPLETED);
                 },
                 state -> {
                     assertThat(state.getStep()).isEqualTo(WorkflowStep.METRICS_UPDATE);
-                    assertThat(state.getStatus()).isEqualTo(WorkflowStatus.PENDING);
+                    assertThat(state.getStatus()).isEqualTo(WorkflowStatus.COMPLETED);
                 });
     }
 
@@ -90,7 +90,7 @@ class LegacyWorkflowStepCompleterTest extends PersistenceCapableTest {
 
         completer.onEvent(new WorkflowRunsCompletedEvent(List.of(
                 createRunMetadata(
-                        "vuln-analysis",
+                        "analyze-project",
                         WorkflowRunStatus.FAILED,
                         Map.ofEntries(
                                 Map.entry(WF_LABEL_PROJECT_UUID, UUID.randomUUID().toString()),
@@ -130,13 +130,13 @@ class LegacyWorkflowStepCompleterTest extends PersistenceCapableTest {
 
         completer.onEvent(new WorkflowRunsCompletedEvent(List.of(
                 createRunMetadata(
-                        "vuln-analysis",
+                        "analyze-project",
                         WorkflowRunStatus.COMPLETED,
                         Map.ofEntries(
                                 Map.entry(WF_LABEL_PROJECT_UUID, UUID.randomUUID().toString()),
                                 Map.entry(WF_LABEL_BOM_UPLOAD_TOKEN, tokenA.toString()))),
                 createRunMetadata(
-                        "vuln-analysis",
+                        "analyze-project",
                         WorkflowRunStatus.FAILED,
                         Map.ofEntries(
                                 Map.entry(WF_LABEL_PROJECT_UUID, UUID.randomUUID().toString()),
@@ -150,7 +150,9 @@ class LegacyWorkflowStepCompleterTest extends PersistenceCapableTest {
                     assertThat(state.getFailureReason()).isNull();
                 });
         assertThat(qm.getWorkflowStateByTokenAndStep(tokenA, WorkflowStep.POLICY_EVALUATION))
-                .satisfies(state -> assertThat(state.getStatus()).isEqualTo(WorkflowStatus.PENDING));
+                .satisfies(state -> assertThat(state.getStatus()).isEqualTo(WorkflowStatus.COMPLETED));
+        assertThat(qm.getWorkflowStateByTokenAndStep(tokenA, WorkflowStep.METRICS_UPDATE))
+                .satisfies(state -> assertThat(state.getStatus()).isEqualTo(WorkflowStatus.COMPLETED));
 
         assertThat(qm.getWorkflowStateByTokenAndStep(tokenB, WorkflowStep.VULN_ANALYSIS))
                 .satisfies(state -> {
@@ -184,7 +186,7 @@ class LegacyWorkflowStepCompleterTest extends PersistenceCapableTest {
     void shouldIgnoreRunsWithNoLabels() {
         completer.onEvent(new WorkflowRunsCompletedEvent(List.of(
                 createRunMetadata(
-                        "vuln-analysis",
+                        "analyze-project",
                         WorkflowRunStatus.COMPLETED,
                         null))));
     }
@@ -196,7 +198,7 @@ class LegacyWorkflowStepCompleterTest extends PersistenceCapableTest {
 
         completer.onEvent(new WorkflowRunsCompletedEvent(List.of(
                 createRunMetadata(
-                        "vuln-analysis",
+                        "analyze-project",
                         WorkflowRunStatus.COMPLETED,
                         Map.of(WF_LABEL_BOM_UPLOAD_TOKEN, token.toString())))));
 
@@ -208,7 +210,7 @@ class LegacyWorkflowStepCompleterTest extends PersistenceCapableTest {
     void shouldIgnoreRunsWithMissingBomUploadToken() {
         completer.onEvent(new WorkflowRunsCompletedEvent(List.of(
                 createRunMetadata(
-                        "vuln-analysis",
+                        "analyze-project",
                         WorkflowRunStatus.COMPLETED,
                         Map.of(WF_LABEL_PROJECT_UUID, UUID.randomUUID().toString())))));
     }
@@ -222,7 +224,7 @@ class LegacyWorkflowStepCompleterTest extends PersistenceCapableTest {
     void shouldHandleTokenWithNoMatchingWorkflowState() {
         completer.onEvent(new WorkflowRunsCompletedEvent(List.of(
                 createRunMetadata(
-                        "vuln-analysis",
+                        "analyze-project",
                         WorkflowRunStatus.COMPLETED,
                         Map.ofEntries(
                                 Map.entry(WF_LABEL_PROJECT_UUID, UUID.randomUUID().toString()),

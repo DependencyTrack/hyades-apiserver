@@ -18,14 +18,11 @@
  */
 package org.dependencytrack.dex.listener;
 
-import alpine.event.framework.Event;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.event.DexEngineEventListener;
 import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEvent;
 import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEventListener;
-import org.dependencytrack.event.ProjectMetricsUpdateEvent;
-import org.dependencytrack.event.ProjectPolicyEvaluationEvent;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
@@ -34,15 +31,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_BOM_UPLOAD_TOKEN;
 import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_PROJECT_UUID;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 /**
  * A {@link DexEngineEventListener} that handles completion of legacy {@link WorkflowState}s
@@ -61,7 +58,7 @@ public final class LegacyWorkflowStepCompleter implements WorkflowRunsCompletedE
         final var relevantRuns = new ArrayList<RelevantRun>();
 
         for (final WorkflowRunMetadata runMetadata : event.completedRuns()) {
-            if (!"vuln-analysis".equals(runMetadata.workflowName())) {
+            if (!"analyze-project".equals(runMetadata.workflowName())) {
                 continue;
             }
 
@@ -87,10 +84,7 @@ public final class LegacyWorkflowStepCompleter implements WorkflowRunsCompletedE
             return;
         }
 
-        final Map<UUID, UUID> projectUuidByWorkflowToken = relevantRuns.stream()
-                .collect(Collectors.toMap(RelevantRun::workflowToken, RelevantRun::projectUuid));
-
-        final List<UUID> completedWorkflowStateTokens = inJdbiTransaction(handle -> {
+        useJdbiTransaction(handle -> {
             final var workflowDao = handle.attach(WorkflowDao.class);
 
             final List<WorkflowState> updatedWorkflowStates = workflowDao.updateAllStates(
@@ -118,23 +112,23 @@ public final class LegacyWorkflowStepCompleter implements WorkflowRunsCompletedE
                 workflowDao.cancelAllChildren(WorkflowStep.VULN_ANALYSIS, failedStepTokens);
             }
 
-            return updatedWorkflowStates.stream()
-                    .filter(step -> step.getStatus() == WorkflowStatus.COMPLETED)
+            final List<UUID> completedTokens = updatedWorkflowStates.stream()
+                    .filter(s -> s.getStatus() == WorkflowStatus.COMPLETED)
                     .map(WorkflowState::getToken)
                     .toList();
+            if (!completedTokens.isEmpty()) {
+                workflowDao.updateAllStates(
+                        WorkflowStep.POLICY_EVALUATION,
+                        completedTokens,
+                        Collections.nCopies(completedTokens.size(), WorkflowStatus.COMPLETED),
+                        Collections.nCopies(completedTokens.size(), null));
+                workflowDao.updateAllStates(
+                        WorkflowStep.METRICS_UPDATE,
+                        completedTokens,
+                        Collections.nCopies(completedTokens.size(), WorkflowStatus.COMPLETED),
+                        Collections.nCopies(completedTokens.size(), null));
+            }
         });
-
-        for (final UUID workflowToken : completedWorkflowStateTokens) {
-            final UUID projectUuid = projectUuidByWorkflowToken.get(workflowToken);
-
-            final var metricsUpdateEvent = new ProjectMetricsUpdateEvent(projectUuid);
-            metricsUpdateEvent.setChainIdentifier(workflowToken);
-            final var policyEvalEvent = new ProjectPolicyEvaluationEvent(projectUuid);
-            policyEvalEvent.setChainIdentifier(workflowToken);
-            policyEvalEvent.onFailure(metricsUpdateEvent);
-            policyEvalEvent.onSuccess(metricsUpdateEvent);
-            Event.dispatch(policyEvalEvent);
-        }
     }
 
     private record RelevantRun(UUID projectUuid, UUID workflowToken, WorkflowRunStatus status) {

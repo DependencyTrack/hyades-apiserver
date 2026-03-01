@@ -46,6 +46,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.analysis.AnalyzeProjectWorkflow;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
@@ -63,13 +64,12 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.RepositoryQueryManager;
 import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.dependencytrack.persistence.jdbi.RepositoryMetaDao;
-import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
+import org.dependencytrack.proto.internal.workflow.v1.AnalyzeProjectWorkflowArg;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.util.PurlUtil;
-import org.dependencytrack.vulnanalysis.VulnAnalysisWorkflow;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -264,15 +264,15 @@ public class FindingResource extends AbstractApiResource {
         useJdbiHandle(handle -> requireProjectAccess(handle, UUID.fromString(uuid)));
 
         final UUID runId = dexEngine.createRun(
-                new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
-                        .withWorkflowInstanceId("manual-vuln-analysis:" + uuid)
-                        .withConcurrencyKey("vuln-analysis:" + uuid)
+                new CreateWorkflowRunRequest<>(AnalyzeProjectWorkflow.class)
+                        .withWorkflowInstanceId("analyze-project-manual:" + uuid)
+                        .withConcurrencyKey("analyze-project:" + uuid)
                         .withLabels(Map.ofEntries(
                                 Map.entry(WF_LABEL_PROJECT_UUID, uuid),
                                 Map.entry(WF_LABEL_TRIGGERED_BY, getPrincipal().getName())))
                         .withPriority(75)
                         .withArgument(
-                                VulnAnalysisWorkflowArg.newBuilder()
+                                AnalyzeProjectWorkflowArg.newBuilder()
                                         .setProjectUuid(uuid)
                                         .setTrigger(ANALYSIS_TRIGGER_MANUAL)
                                         .build()));

@@ -622,7 +622,7 @@ public class FindingResourceTest extends ResourceTest {
     }
 
     @Test
-    public void analyzeProjectShouldCreateVulnAnalysisWorkflowRun() {
+    public void analyzeProjectShouldCreateAnalyzeProjectWorkflowRun() {
         var project = new Project();
         project.setName("Acme Example");
         project = qm.persist(project);
@@ -648,10 +648,10 @@ public class FindingResourceTest extends ResourceTest {
         verify(DEX_ENGINE_MOCK).createRun(dexCreateRunCaptor.capture());
 
         CreateWorkflowRunRequest<?> createDexRunRequest = dexCreateRunCaptor.getValue();
-        assertThat(createDexRunRequest.workflowName()).isEqualTo("vuln-analysis");
+        assertThat(createDexRunRequest.workflowName()).isEqualTo("analyze-project");
         assertThat(createDexRunRequest.workflowVersion()).isEqualTo(1);
-        assertThat(createDexRunRequest.workflowInstanceId()).isEqualTo("manual-vuln-analysis:" + project.getUuid());
-        assertThat(createDexRunRequest.concurrencyKey()).isEqualTo("vuln-analysis:" + project.getUuid());
+        assertThat(createDexRunRequest.workflowInstanceId()).isEqualTo("analyze-project-manual:" + project.getUuid());
+        assertThat(createDexRunRequest.concurrencyKey()).isEqualTo("analyze-project:" + project.getUuid());
         assertThat(createDexRunRequest.labels()).containsEntry("project_uuid", project.getUuid().toString());
         assertThat(createDexRunRequest.labels()).hasEntrySatisfying("triggered_by", value -> assertThat(value).startsWith("odt_"));
         assertThat(createDexRunRequest.priority()).isEqualTo(75);

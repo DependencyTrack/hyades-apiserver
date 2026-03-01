@@ -94,7 +94,7 @@ public class WorkflowResource {
         // This is really only necessary for workflows that can be triggered manually.
         final WorkflowRunMetadata runMetadata = dexEngine.getRunMetadataById(token);
         if (runMetadata != null) {
-            if ("vuln-analysis".equals(runMetadata.workflowName())) {
+            if ("analyze-project".equals(runMetadata.workflowName())) {
                 final var workflowState = new WorkflowState();
                 workflowState.setStep(WorkflowStep.VULN_ANALYSIS);
                 workflowState.setStatus(switch (runMetadata.status()) {

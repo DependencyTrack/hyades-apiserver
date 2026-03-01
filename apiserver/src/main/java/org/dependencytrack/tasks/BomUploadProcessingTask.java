@@ -19,7 +19,6 @@
 package org.dependencytrack.tasks;
 
 import alpine.common.logging.Logger;
-import alpine.event.framework.ChainableEvent;
 import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
 import alpine.event.framework.Subscriber;
@@ -30,12 +29,12 @@ import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.parsers.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.datanucleus.flush.FlushMode;
+import org.dependencytrack.analysis.AnalyzeProjectWorkflow;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.IntegrityAnalysisEvent;
-import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
 import org.dependencytrack.filestorage.api.FileStorage;
@@ -56,10 +55,9 @@ import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
-import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
+import org.dependencytrack.proto.internal.workflow.v1.AnalyzeProjectWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
 import org.dependencytrack.util.InternalComponentIdentifier;
-import org.dependencytrack.vulnanalysis.VulnAnalysisWorkflow;
 import org.json.JSONArray;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
@@ -289,50 +287,31 @@ public class BomUploadProcessingTask implements Subscriber {
             dispatchBomProcessedNotification(ctx);
         }
 
-        if (!processedBom.components().isEmpty()) {
-            final var workflowArgBuilder = VulnAnalysisWorkflowArg.newBuilder()
-                    .setProjectUuid(ctx.project.getUuid().toString())
-                    .setTrigger(ANALYSIS_TRIGGER_BOM_UPLOAD);
+        final var workflowArgBuilder = AnalyzeProjectWorkflowArg.newBuilder()
+                .setProjectUuid(ctx.project.getUuid().toString())
+                .setTrigger(ANALYSIS_TRIGGER_BOM_UPLOAD);
 
+        if (!processedBom.components().isEmpty()) {
             final FileMetadata contextFileMetadata = storeVulnAnalysisContext(ctx, processedBom.components());
             if (contextFileMetadata != null) {
                 workflowArgBuilder.setContextFileMetadata(contextFileMetadata);
             }
-
-            dexEngine.createRun(
-                    new CreateWorkflowRunRequest<>(VulnAnalysisWorkflow.class)
-                            .withLabels(Map.ofEntries(
-                                    Map.entry(WF_LABEL_BOM_UPLOAD_TOKEN, ctx.token.toString()),
-                                    Map.entry(WF_LABEL_PROJECT_UUID, ctx.project.getUuid().toString())))
-                            .withConcurrencyKey("vuln-analysis:" + ctx.project.getUuid())
-                            .withPriority(50)
-                            .withArgument(workflowArgBuilder.build()));
         } else {
             // No components to be sent for vulnerability analysis.
             // If the BOM_PROCESSED notification was delayed, dispatch it now.
             if (delayBomProcessedNotification) {
                 dispatchBomProcessedNotification(ctx);
             }
-
-            try (final var qm = new QueryManager()) {
-                qm.runInTransaction(() -> {
-                    final WorkflowState vulnAnalysisWorkflowState =
-                            qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.VULN_ANALYSIS);
-                    vulnAnalysisWorkflowState.setStatus(WorkflowStatus.NOT_APPLICABLE);
-                    vulnAnalysisWorkflowState.setUpdatedAt(new Date());
-
-                    final WorkflowState policyEvalWorkflowState =
-                            qm.getWorkflowStateByTokenAndStep(ctx.token, WorkflowStep.POLICY_EVALUATION);
-                    policyEvalWorkflowState.setStatus(WorkflowStatus.NOT_APPLICABLE);
-                    policyEvalWorkflowState.setUpdatedAt(new Date());
-                });
-            }
-
-            // Trigger project metrics update no matter if vuln analysis is applicable or not.
-            final ChainableEvent metricsUpdateEvent = new ProjectMetricsUpdateEvent(ctx.project.getUuid());
-            metricsUpdateEvent.setChainIdentifier(ctx.token);
-            Event.dispatch(metricsUpdateEvent);
         }
+
+        dexEngine.createRun(
+                new CreateWorkflowRunRequest<>(AnalyzeProjectWorkflow.class)
+                        .withLabels(Map.ofEntries(
+                                Map.entry(WF_LABEL_BOM_UPLOAD_TOKEN, ctx.token.toString()),
+                                Map.entry(WF_LABEL_PROJECT_UUID, ctx.project.getUuid().toString())))
+                        .withConcurrencyKey("analyze-project:" + ctx.project.getUuid())
+                        .withPriority(50)
+                        .withArgument(workflowArgBuilder.build()));
 
         final List<ComponentRepositoryMetaAnalysisEvent> repoMetaAnalysisEvents = createRepoMetaAnalysisEvents(processedBom.components());
         final var dispatchedEvents = new ArrayList<CompletableFuture<?>>(repoMetaAnalysisEvents.size());
