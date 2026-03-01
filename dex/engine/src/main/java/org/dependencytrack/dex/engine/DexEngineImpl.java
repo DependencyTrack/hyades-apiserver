@@ -151,6 +151,8 @@ final class DexEngineImpl implements DexEngine {
     private final ReentrantLock statusLock = new ReentrantLock();
     private final MetadataRegistry metadataRegistry = new MetadataRegistry();
     private final Map<String, TaskWorker> taskWorkerByName = new HashMap<>();
+    private final Map<String, TaskWorker> workflowWorkerByQueue = new HashMap<>();
+    private final Map<String, TaskWorker> activityWorkerByQueue = new HashMap<>();
     private final List<WorkflowRunsCompletedEventListener> runsCompletedEventListeners = new ArrayList<>();
     private final MeterProvider<Counter> runsCreatedCounter;
     private final MeterProvider<Counter> runsCompletedCounter;
@@ -242,7 +244,13 @@ final class DexEngineImpl implements DexEngine {
                     leaderElection::isLeader,
                     config.metrics().meterRegistry(),
                     config.workflowTaskScheduler().pollInterval(),
-                    config.workflowTaskScheduler().pollBackoffFunction());
+                    config.workflowTaskScheduler().pollBackoffFunction(),
+                    queueName -> {
+                        final TaskWorker worker = workflowWorkerByQueue.get(queueName);
+                        if (worker != null) {
+                            worker.nudge();
+                        }
+                    });
             workflowTaskScheduler.start();
 
             LOGGER.debug("Starting activity task scheduler");
@@ -251,7 +259,13 @@ final class DexEngineImpl implements DexEngine {
                     leaderElection::isLeader,
                     config.metrics().meterRegistry(),
                     config.activityTaskScheduler().pollInterval(),
-                    config.activityTaskScheduler().pollBackoffFunction());
+                    config.activityTaskScheduler().pollBackoffFunction(),
+                    queueName -> {
+                        final TaskWorker worker = activityWorkerByQueue.get(queueName);
+                        if (worker != null) {
+                            worker.nudge();
+                        }
+                    });
             activityTaskScheduler.start();
         } else {
             LOGGER.debug("Not starting task schedulers because leader election is disabled");
@@ -346,6 +360,8 @@ final class DexEngineImpl implements DexEngine {
                 entry.getValue().close();
             }
             taskWorkerByName.clear();
+            workflowWorkerByQueue.clear();
+            activityWorkerByQueue.clear();
         }
 
         if (externalEventBuffer != null) {
@@ -507,6 +523,10 @@ final class DexEngineImpl implements DexEngine {
             throw new IllegalStateException(
                     "An task worker with name %s was already registered".formatted(options.name()));
         }
+        if (activityWorkerByQueue.putIfAbsent(options.queueName(), worker) != null) {
+            throw new IllegalStateException(
+                    "An activity task worker for queue %s was already registered".formatted(options.queueName()));
+        }
     }
 
     private void registerWorkflowTaskWorker(TaskWorkerOptions options) {
@@ -529,6 +549,10 @@ final class DexEngineImpl implements DexEngine {
         if (taskWorkerByName.putIfAbsent("workflow/" + options.name(), worker) != null) {
             throw new IllegalStateException(
                     "A task worker with name %s was already registered".formatted(options.name()));
+        }
+        if (workflowWorkerByQueue.putIfAbsent(options.queueName(), worker) != null) {
+            throw new IllegalStateException(
+                    "A workflow task worker for queue %s was already registered".formatted(options.queueName()));
         }
     }
 
@@ -630,6 +654,10 @@ final class DexEngineImpl implements DexEngine {
 
                     runsCreatedCounter.withTags(tags).increment();
                 }
+
+                if (workflowTaskScheduler != null) {
+                    workflowTaskScheduler.nudge();
+                }
             });
 
             final int createdMessages = dao.createMessages(messagesToCreate);
@@ -726,6 +754,12 @@ final class DexEngineImpl implements DexEngine {
             final int createdMessages = dao.createMessages(List.of(
                     new WorkflowMessage(runId, cancellationEvent)));
             assert createdMessages == 1;
+
+            handle.afterCommit(() -> {
+                if (workflowTaskScheduler != null) {
+                    workflowTaskScheduler.nudge();
+                }
+            });
         });
     }
 
@@ -758,6 +792,12 @@ final class DexEngineImpl implements DexEngine {
             final int createdMessages = dao.createMessages(List.of(
                     new WorkflowMessage(runId, suspensionEvent)));
             assert createdMessages == 1;
+
+            handle.afterCommit(() -> {
+                if (workflowTaskScheduler != null) {
+                    workflowTaskScheduler.nudge();
+                }
+            });
         });
     }
 
@@ -790,6 +830,12 @@ final class DexEngineImpl implements DexEngine {
             final int createdMessages = dao.createMessages(List.of(
                     new WorkflowMessage(runId, resumeEvent)));
             assert createdMessages == 1;
+
+            handle.afterCommit(() -> {
+                if (workflowTaskScheduler != null) {
+                    workflowTaskScheduler.nudge();
+                }
+            });
         });
     }
 
@@ -886,6 +932,12 @@ final class DexEngineImpl implements DexEngine {
             }
 
             dao.createMessages(messagesToCreate);
+
+            handle.afterCommit(() -> {
+                if (workflowTaskScheduler != null) {
+                    workflowTaskScheduler.nudge();
+                }
+            });
         });
     }
 
@@ -1515,6 +1567,11 @@ final class DexEngineImpl implements DexEngine {
             }
         }
 
+        final boolean hasWorkflowTaskCompletions = !completeWorkflowTaskCommands.isEmpty();
+        final boolean hasActivityTaskCompletionsOrFailures =
+                !completeActivityTaskCommands.isEmpty()
+                        || !failActivityTaskCommands.isEmpty();
+
         jdbi.useTransaction(handle -> {
             final var workflowDao = new WorkflowDao(handle);
             final var activityDao = new ActivityDao(handle);
@@ -1534,6 +1591,19 @@ final class DexEngineImpl implements DexEngine {
             if (!completeWorkflowTaskCommands.isEmpty()) {
                 completeWorkflowTasksInternal(workflowDao, activityDao, completeWorkflowTaskCommands);
             }
+
+            handle.afterCommit(() -> {
+                if (hasWorkflowTaskCompletions) {
+                    if (activityTaskScheduler != null) {
+                        activityTaskScheduler.nudge();
+                    }
+                }
+                if (hasWorkflowTaskCompletions || hasActivityTaskCompletionsOrFailures) {
+                    if (workflowTaskScheduler != null) {
+                        workflowTaskScheduler.nudge();
+                    }
+                }
+            });
         });
     }
 

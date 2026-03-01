@@ -42,6 +42,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
@@ -58,6 +59,7 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
     final Logger logger;
 
     private volatile Status status = Status.CREATED;
+    private volatile boolean nudged = false;
     private @Nullable Thread pollThread;
     private @Nullable ExecutorService taskExecutor;
     private @Nullable Timer pollLatencyTimer;
@@ -140,6 +142,7 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
         setStatus(Status.STOPPING);
 
         if (pollThread != null && pollThread.isAlive()) {
+            LockSupport.unpark(pollThread);
             logger.debug("Waiting for poll thread to stop");
             try {
                 final boolean terminated = pollThread.join(Duration.ofSeconds(10));
@@ -174,6 +177,14 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
         setStatus(Status.STOPPED);
     }
 
+    @Override
+    public void nudge() {
+        nudged = true;
+        if (pollThread != null) {
+            LockSupport.unpark(pollThread);
+        }
+    }
+
     private void pollAndDispatch() {
         long nowMillis;
         long lastPolledAtMillis = 0;
@@ -184,6 +195,11 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
 
         while (!status.isStoppingOrStopped() && !Thread.currentThread().isInterrupted()) {
             try {
+                if (nudged) {
+                    nudged = false;
+                    pollsWithoutResults = 0;
+                }
+
                 // Start backing off after 2 poll attempts that did not yield any results,
                 // OR if errors occurred previously. It doesn't make sense to keep polling
                 // at high frequency if the system sits idle or is experiencing issues.
@@ -202,11 +218,8 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
 
                 if (nextPollDueInMillis > 0) {
                     logger.debug("Waiting for next poll to be due in {}ms", nextPollDueInMillis);
-                    try {
-                        Thread.sleep(nextPollDueInMillis);
-                    } catch (InterruptedException e) {
-                        logger.info("Interrupted while waiting for next poll to be due", e);
-                        Thread.currentThread().interrupt();
+                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(nextPollDueInMillis));
+                    if (Thread.currentThread().isInterrupted() || status.isStoppingOrStopped()) {
                         break;
                     }
                 }

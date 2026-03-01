@@ -38,6 +38,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 final class ActivityTaskScheduler implements Closeable {
@@ -49,8 +52,10 @@ final class ActivityTaskScheduler implements Closeable {
     private final MeterRegistry meterRegistry;
     private final long pollIntervalMillis;
     private final IntervalFunction pollBackoffFunction;
+    private final Consumer<String> onTasksScheduledCallback;
     private final Thread pollThread;
     private volatile boolean stopped = false;
+    private volatile boolean nudged = false;
     private @Nullable Counter pollsCounter;
     private @Nullable MeterProvider<Timer> taskSchedulingLatencyTimer;
     private @Nullable MeterProvider<Counter> tasksScheduledCounter;
@@ -60,12 +65,14 @@ final class ActivityTaskScheduler implements Closeable {
             Supplier<Boolean> leadershipSupplier,
             MeterRegistry meterRegistry,
             Duration pollIntervalMillis,
-            IntervalFunction pollBackoffFunction) {
+            IntervalFunction pollBackoffFunction,
+            Consumer<String> onTasksScheduledCallback) {
         this.jdbi = jdbi;
         this.leadershipSupplier = leadershipSupplier;
         this.meterRegistry = meterRegistry;
         this.pollIntervalMillis = pollIntervalMillis.toMillis();
         this.pollBackoffFunction = pollBackoffFunction;
+        this.onTasksScheduledCallback = onTasksScheduledCallback;
         this.pollThread = Thread.ofPlatform()
                 .name(ActivityTaskScheduler.class.getSimpleName())
                 .unstarted(this::pollLoop);
@@ -85,11 +92,17 @@ final class ActivityTaskScheduler implements Closeable {
         pollThread.start();
     }
 
+    void nudge() {
+        nudged = true;
+        LockSupport.unpark(pollThread);
+    }
+
     @Override
     public void close() {
         if (pollThread.isAlive()) {
             LOGGER.debug("Waiting for poll thread to stop");
             stopped = true;
+            LockSupport.unpark(pollThread);
 
             try {
                 final boolean terminated = pollThread.join(Duration.ofSeconds(3));
@@ -114,6 +127,11 @@ final class ActivityTaskScheduler implements Closeable {
         int consecutiveErrors = 0;
 
         while (!stopped && !Thread.currentThread().isInterrupted()) {
+            if (nudged) {
+                nudged = false;
+                pollsWithoutSchedules = 0;
+            }
+
             if (pollsWithoutSchedules < 3 && consecutiveErrors == 0) {
                 nowMillis = System.currentTimeMillis();
                 nextPollAtMillis = lastPolledAtMillis + pollIntervalMillis;
@@ -135,11 +153,8 @@ final class ActivityTaskScheduler implements Closeable {
 
             if (nextPollDueInMillis > 0) {
                 LOGGER.debug("Waiting for next poll to be due in {}ms", nextPollDueInMillis);
-                try {
-                    Thread.sleep(nextPollDueInMillis);
-                } catch (InterruptedException e) {
-                    LOGGER.debug("Interrupted while waiting for next poll to be due");
-                    Thread.currentThread().interrupt();
+                LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(nextPollDueInMillis));
+                if (Thread.currentThread().isInterrupted() || stopped) {
                     break;
                 }
             }
@@ -290,15 +305,20 @@ final class ActivityTaskScheduler implements Closeable {
                 .mapTo(String.class)
                 .list();
 
+        final boolean didSchedule = !scheduledActivityNames.isEmpty();
         handle.afterCommit(() -> {
             for (final String activityName : scheduledActivityNames) {
                 tasksScheduledCounter
                         .withTag("activityName", activityName)
                         .increment();
             }
+
+            if (didSchedule) {
+                onTasksScheduledCallback.accept(queue.name());
+            }
         });
 
-        return !scheduledActivityNames.isEmpty();
+        return didSchedule;
     }
 
 }

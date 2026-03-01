@@ -49,6 +49,8 @@ interface TaskWorker extends Closeable {
 
     void start();
 
+    void nudge();
+
     Status status();
 
     @Override
