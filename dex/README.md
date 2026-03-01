@@ -23,4 +23,4 @@ The [Java module system](https://dev.java/learn/modules/intro/) is used to enfor
 ## Documentation
 
 * [Architecture / design documentation](https://dependencytrack.github.io/hyades/snapshot/architecture/design/durable-execution)
-* [Usage documentation]: https://dependencytrack.github.io/hyades/snapshot/development/durable-execution/
+* [Usage documentation](https://dependencytrack.github.io/hyades/snapshot/development/durable-execution/)
