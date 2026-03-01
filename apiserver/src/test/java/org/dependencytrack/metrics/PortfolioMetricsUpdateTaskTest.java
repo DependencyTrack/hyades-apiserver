@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.tasks.metrics;
+package org.dependencytrack.metrics;
 
 import alpine.event.framework.EventService;
 import net.jcip.annotations.NotThreadSafe;
@@ -47,9 +47,9 @@ import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.metrics.PortfolioMetricsUpdateTask.partition;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask.partition;
 
 @NotThreadSafe
 public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {

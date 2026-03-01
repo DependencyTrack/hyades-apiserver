@@ -16,16 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.tasks.metrics;
+@NullMarked
+package org.dependencytrack.policy;
 
-public class YearMonthMetric {
-    public Integer year;
-    public Integer month;
-    public Long count;
-
-    public YearMonthMetric(Integer year, Integer month, Long count) {
-        this.year = year;
-        this.month = month;
-        this.count = count;
-    }
-}
+import org.jspecify.annotations.NullMarked;

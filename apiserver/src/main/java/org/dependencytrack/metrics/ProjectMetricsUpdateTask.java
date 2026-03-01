@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.tasks.metrics;
+package org.dependencytrack.metrics;
 
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;

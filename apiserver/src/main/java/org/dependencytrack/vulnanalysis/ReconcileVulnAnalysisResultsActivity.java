@@ -35,7 +35,6 @@ import org.dependencytrack.model.VulnerabilityKey;
 import org.dependencytrack.notification.JdbiNotificationEmitter;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
-import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger;
 import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.persistence.jdbi.AnalysisDao.Analysis;
@@ -48,9 +47,9 @@ import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyEvaluator;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyOperation;
+import org.dependencytrack.proto.internal.workflow.v1.AnalysisTrigger;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg.AnalyzerResult;
-import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisTrigger;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
 import org.jdbi.v3.core.Handle;
 import org.jspecify.annotations.Nullable;
@@ -80,10 +79,6 @@ import static org.dependencytrack.notification.api.NotificationFactory.createNew
 import static org.dependencytrack.notification.api.NotificationFactory.createNewVulnerableDependencyNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityAnalysisDecisionChangeNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityRetractedNotification;
-import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD;
-import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_MANUAL;
-import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_SCHEDULE;
-import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_UNSPECIFIED;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -817,7 +812,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
     private List<Notification> createNewVulnerabilityNotifications(
             NotificationSubjectDao dao,
             Collection<FindingKey> findingKeys,
-            VulnAnalysisTrigger analysisTrigger) {
+            AnalysisTrigger analysisTrigger) {
         if (findingKeys.isEmpty()) {
             return List.of();
         }
@@ -866,13 +861,13 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                 .toList();
     }
 
-    private static VulnerabilityAnalysisTrigger convertAnalysisTrigger(VulnAnalysisTrigger trigger) {
+    private static org.dependencytrack.notification.proto.v1.AnalysisTrigger convertAnalysisTrigger(AnalysisTrigger trigger) {
         return switch (trigger) {
-            case VULN_ANALYSIS_TRIGGER_BOM_UPLOAD -> VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD;
-            case VULN_ANALYSIS_TRIGGER_SCHEDULE -> VULNERABILITY_ANALYSIS_TRIGGER_SCHEDULE;
-            case VULN_ANALYSIS_TRIGGER_MANUAL -> VULNERABILITY_ANALYSIS_TRIGGER_MANUAL;
-            case VULN_ANALYSIS_TRIGGER_UNSPECIFIED -> VULNERABILITY_ANALYSIS_TRIGGER_UNSPECIFIED;
-            case UNRECOGNIZED -> VulnerabilityAnalysisTrigger.UNRECOGNIZED;
+            case ANALYSIS_TRIGGER_BOM_UPLOAD -> org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_BOM_UPLOAD;
+            case ANALYSIS_TRIGGER_SCHEDULE -> org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_SCHEDULE;
+            case ANALYSIS_TRIGGER_MANUAL -> org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_MANUAL;
+            case ANALYSIS_TRIGGER_UNSPECIFIED -> org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_UNSPECIFIED;
+            case UNRECOGNIZED -> org.dependencytrack.notification.proto.v1.AnalysisTrigger.UNRECOGNIZED;
         };
     }
 
