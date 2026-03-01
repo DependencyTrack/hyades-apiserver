@@ -32,30 +32,30 @@ ifdef AGENT
 endif
 
 build:
-	@$(MVND) $(MVN_FLAGS) -q -Pquick package
+	$(MVND) $(MVN_FLAGS) -q -Pquick package
 .PHONY: build
 
 build-image: build
-	@docker build \
+	docker build \
 		-t ghcr.io/dependencytrack/hyades-apiserver:local \
 		-f apiserver/src/main/docker/Dockerfile \
 		apiserver
 .PHONY: build-image
 
 datanucleus-enhance:
-	@$(MVND) $(MVN_FLAGS) -q -Pquick -pl alpine/alpine-model,apiserver process-classes
+	$(MVND) $(MVN_FLAGS) -q -Pquick -pl alpine/alpine-model,apiserver process-classes
 .PHONY: datanucleus-enhance
 
 install:
-	@$(MVND) $(MVN_FLAGS) -q -Pquick install
+	$(MVND) $(MVN_FLAGS) -q -Pquick install
 .PHONY: install
 
 lint-java:
-	@$(MVND) $(MVN_FLAGS) -q -Dmaven.build.cache.enabled=false validate
+	$(MVND) $(MVN_FLAGS) -q -Dmaven.build.cache.enabled=false validate
 .PHONY: lint-java
 
 lint-openapi:
-	@docker run --rm -i -w /work \
+	docker run --rm -i -w /work \
 		--platform linux/amd64 \
 		-v "$(CURDIR)/api:/work" \
 		stoplight/spectral lint \
@@ -64,18 +64,18 @@ lint-openapi:
 .PHONY: lint-openapi
 
 lint-proto:
-	@buf lint
+	buf lint
 .PHONY: lint-proto
 
 lint: lint-java lint-openapi lint-proto
 .PHONY: lint
 
 test:
-	@$(MVND) $(MVN_FLAGS) -Dcheckstyle.skip -Dcyclonedx.skip verify
+	$(MVND) $(MVN_FLAGS) -Dcheckstyle.skip -Dcyclonedx.skip verify
 .PHONY: test
 
 test-single:
-	@$(MVND) $(MVN_FLAGS) test \
+	$(MVND) $(MVN_FLAGS) test \
 		-Dmaven.build.cache.enabled=false \
 		-Dcheckstyle.skip \
 		-Dcyclonedx.skip \
@@ -85,11 +85,11 @@ test-single:
 .PHONY: test-single
 
 apiserver-dev:
-	@$(MVN) $(MVN_FLAGS) -q -Pquick,dev-services -pl apiserver -am verify
+	$(MVN) $(MVN_FLAGS) -q -Pquick,dev-services -pl apiserver -am verify
 .PHONY: apiserver-dev
 
 clean:
-	@$(MVND) $(MVN_FLAGS) -q clean
+	$(MVND) $(MVN_FLAGS) -q clean
 .PHONY: clean
 
 clean-build-cache:
