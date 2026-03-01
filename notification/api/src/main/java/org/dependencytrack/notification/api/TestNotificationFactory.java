@@ -55,6 +55,7 @@ import static org.dependencytrack.notification.api.NotificationFactory.createVex
 import static org.dependencytrack.notification.api.NotificationFactory.createVexProcessedNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityAnalysisDecisionChangeNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createVulnerabilityRetractedNotification;
+import static org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_BOM_UPLOAD;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_ANALYZER;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_CONSUMED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_PROCESSED;
@@ -75,7 +76,6 @@ import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_SYSTEM;
-import static org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger.VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD;
 
 /**
  * Factory for test notifications.
@@ -212,7 +212,7 @@ public final class TestNotificationFactory {
                 createProject(),
                 createComponent(),
                 createVulnerability(),
-                VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD);
+                ANALYSIS_TRIGGER_BOM_UPLOAD);
     }
 
     public static Notification createNewVulnerableDependencyTestNotification() {

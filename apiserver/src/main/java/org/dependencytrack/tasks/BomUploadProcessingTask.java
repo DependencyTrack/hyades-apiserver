@@ -121,7 +121,7 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.conv
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertToProject;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertToProjectMetadata;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
-import static org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisTrigger.VULN_ANALYSIS_TRIGGER_BOM_UPLOAD;
+import static org.dependencytrack.proto.internal.workflow.v1.AnalysisTrigger.ANALYSIS_TRIGGER_BOM_UPLOAD;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_LATEST_VERSION;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
@@ -292,7 +292,7 @@ public class BomUploadProcessingTask implements Subscriber {
         if (!processedBom.components().isEmpty()) {
             final var workflowArgBuilder = VulnAnalysisWorkflowArg.newBuilder()
                     .setProjectUuid(ctx.project.getUuid().toString())
-                    .setTrigger(VULN_ANALYSIS_TRIGGER_BOM_UPLOAD);
+                    .setTrigger(ANALYSIS_TRIGGER_BOM_UPLOAD);
 
             final FileMetadata contextFileMetadata = storeVulnAnalysisContext(ctx, processedBom.components());
             if (contextFileMetadata != null) {

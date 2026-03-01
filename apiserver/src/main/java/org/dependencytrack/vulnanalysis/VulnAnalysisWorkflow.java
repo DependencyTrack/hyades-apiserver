@@ -28,6 +28,7 @@ import org.dependencytrack.dex.api.WorkflowSpec;
 import org.dependencytrack.dex.api.failure.ActivityFailureException;
 import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
+import org.dependencytrack.proto.internal.workflow.v1.AnalysisTrigger;
 import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerRes;
@@ -35,7 +36,6 @@ import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisArg;
 import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisRes;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg.AnalyzerResult;
-import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisTrigger;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
@@ -214,7 +214,7 @@ public final class VulnAnalysisWorkflow implements Workflow<VulnAnalysisWorkflow
     private void reconcileResults(
             WorkflowContext<?> ctx,
             String projectUuid,
-            VulnAnalysisTrigger analysisTrigger,
+            AnalysisTrigger analysisTrigger,
             List<AnalyzerResult> results,
             @Nullable FileMetadata contextFileMetadata) {
         final var argBuilder = ReconcileVulnAnalysisResultsArg.newBuilder()

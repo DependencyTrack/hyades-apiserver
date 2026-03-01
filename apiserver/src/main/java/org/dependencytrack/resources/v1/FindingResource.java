@@ -85,7 +85,7 @@ import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_PROJECT_UUID;
 import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_TRIGGERED_BY;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisTrigger.VULN_ANALYSIS_TRIGGER_MANUAL;
+import static org.dependencytrack.proto.internal.workflow.v1.AnalysisTrigger.ANALYSIS_TRIGGER_MANUAL;
 
 /**
  * JAX-RS resources for processing findings.
@@ -274,7 +274,7 @@ public class FindingResource extends AbstractApiResource {
                         .withArgument(
                                 VulnAnalysisWorkflowArg.newBuilder()
                                         .setProjectUuid(uuid)
-                                        .setTrigger(VULN_ANALYSIS_TRIGGER_MANUAL)
+                                        .setTrigger(ANALYSIS_TRIGGER_MANUAL)
                                         .build()));
         if (runId == null) {
             return Response.status(Response.Status.CONFLICT).build();

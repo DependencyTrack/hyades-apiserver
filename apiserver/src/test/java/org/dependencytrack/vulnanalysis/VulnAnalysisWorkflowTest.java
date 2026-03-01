@@ -54,10 +54,6 @@ import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.dependencytrack.persistence.jdbi.FindingDao.FindingRow;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.ExtensionFactory;
-import org.dependencytrack.plugin.api.ExtensionPoint;
-import org.dependencytrack.plugin.api.Plugin;
 import org.dependencytrack.policy.cel.CelVulnerabilityPolicyEvaluator;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -72,12 +68,9 @@ import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResul
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
-import org.dependencytrack.vulnanalysis.api.VulnAnalyzerFactory;
-import org.dependencytrack.vulnanalysis.api.VulnAnalyzerRequirement;
 import org.dependencytrack.vulnanalysis.internal.InternalVulnAnalyzerConfigV1;
 import org.dependencytrack.vulnanalysis.internal.InternalVulnAnalyzerPlugin;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,8 +80,6 @@ import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.util.Collection;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -1299,72 +1290,6 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         policy.setAnalysis(analysis);
         policy.setRatings(ratings);
         withJdbiHandle(handle -> handle.attach(VulnerabilityPolicyDao.class).create(policy));
-    }
-
-    private static final class MockVulnAnalyzer implements VulnAnalyzer {
-
-        private final Function<Bom, Bom> analyzeFn;
-
-        MockVulnAnalyzer(Function<Bom, Bom> analyzeFn) {
-            this.analyzeFn = analyzeFn;
-        }
-
-        @Override
-        public Bom analyze(Bom bom) {
-            return analyzeFn.apply(bom);
-        }
-    }
-
-    private static final class MockVulnAnalyzerFactory implements VulnAnalyzerFactory {
-
-        private final Function<Bom, Bom> analyzeFn;
-
-        MockVulnAnalyzerFactory(Function<Bom, Bom> analyzeFn) {
-            this.analyzeFn = analyzeFn;
-        }
-
-        @Override
-        public @NonNull String extensionName() {
-            return "mock";
-        }
-
-        @Override
-        public @NonNull Class<? extends VulnAnalyzer> extensionClass() {
-            return MockVulnAnalyzer.class;
-        }
-
-        @Override
-        public void init(@NonNull ExtensionContext ctx) {
-        }
-
-        @Override
-        public VulnAnalyzer create() {
-            return new MockVulnAnalyzer(analyzeFn);
-        }
-
-        @Override
-        public boolean isEnabled() {
-            return true;
-        }
-
-        @Override
-        public @NonNull EnumSet<VulnAnalyzerRequirement> analyzerRequirements() {
-            return EnumSet.of(VulnAnalyzerRequirement.COMPONENT_PURL);
-        }
-    }
-
-    private static final class MockVulnAnalyzerPlugin implements Plugin {
-
-        private final MockVulnAnalyzerFactory factory;
-
-        MockVulnAnalyzerPlugin(Function<Bom, Bom> analyzeFn) {
-            this.factory = new MockVulnAnalyzerFactory(analyzeFn);
-        }
-
-        @Override
-        public @NonNull Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
-            return List.of(factory);
-        }
     }
 
 }

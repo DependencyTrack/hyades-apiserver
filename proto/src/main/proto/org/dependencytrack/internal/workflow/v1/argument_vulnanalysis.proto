@@ -25,11 +25,11 @@ import "org/dependencytrack/filestorage/v1/filestorage.proto";
 option java_multiple_files = true;
 option java_package = "org.dependencytrack.proto.internal.workflow.v1";
 
-enum VulnAnalysisTrigger {
-  VULN_ANALYSIS_TRIGGER_UNSPECIFIED = 0;
-  VULN_ANALYSIS_TRIGGER_BOM_UPLOAD = 1;
-  VULN_ANALYSIS_TRIGGER_SCHEDULE = 2;
-  VULN_ANALYSIS_TRIGGER_MANUAL = 3;
+enum AnalysisTrigger {
+  ANALYSIS_TRIGGER_UNSPECIFIED = 0;
+  ANALYSIS_TRIGGER_BOM_UPLOAD = 1;
+  ANALYSIS_TRIGGER_SCHEDULE = 2;
+  ANALYSIS_TRIGGER_MANUAL = 3;
 }
 
 // Supplementary context for the vuln-analysis workflow.
@@ -44,7 +44,7 @@ message VulnAnalysisWorkflowContext {
 
 message VulnAnalysisWorkflowArg {
   string project_uuid = 1;
-  VulnAnalysisTrigger trigger = 2;
+  AnalysisTrigger trigger = 2;
   optional org.dependencytrack.filestorage.v1.FileMetadata context_file_metadata = 3;
 }
 
@@ -58,9 +58,23 @@ message InvokeVulnAnalyzerArg {
   org.dependencytrack.filestorage.v1.FileMetadata bom_file_metadata = 3;
 }
 
+message AnalyzeProjectWorkflowArg {
+  string project_uuid = 1;
+  AnalysisTrigger trigger = 2;
+  optional org.dependencytrack.filestorage.v1.FileMetadata context_file_metadata = 3;
+}
+
+message EvalProjectPoliciesArg {
+  string project_uuid = 1;
+}
+
+message UpdateProjectMetricsArg {
+  string project_uuid = 1;
+}
+
 message ReconcileVulnAnalysisResultsArg {
   string project_uuid = 1;
-  VulnAnalysisTrigger analysis_trigger = 2;
+  AnalysisTrigger analysis_trigger = 2;
   repeated AnalyzerResult analyzer_results = 3;
   optional org.dependencytrack.filestorage.v1.FileMetadata context_file_metadata = 4;
 

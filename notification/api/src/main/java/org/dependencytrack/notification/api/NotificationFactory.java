@@ -23,6 +23,7 @@ import com.fasterxml.uuid.impl.TimeBasedEpochRandomGenerator;
 import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.util.Timestamps;
+import org.dependencytrack.notification.proto.v1.AnalysisTrigger;
 import org.dependencytrack.notification.proto.v1.BackReference;
 import org.dependencytrack.notification.proto.v1.Bom;
 import org.dependencytrack.notification.proto.v1.BomConsumedOrProcessedSubject;
@@ -48,7 +49,6 @@ import org.dependencytrack.notification.proto.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.notification.proto.v1.Vulnerability;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysis;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
-import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisTrigger;
 import org.dependencytrack.notification.proto.v1.VulnerabilityRetractedSubject;
 import org.jspecify.annotations.Nullable;
 
@@ -281,7 +281,7 @@ public final class NotificationFactory {
             Project project,
             Component component,
             Vulnerability vulnerability,
-            VulnerabilityAnalysisTrigger analysisTrigger) {
+            AnalysisTrigger analysisTrigger) {
         requireNonNull(project, "project must not be null");
         requireNonNull(component, "component must not be null");
         requireNonNull(vulnerability, "vulnerability must not be null");
@@ -312,9 +312,9 @@ public final class NotificationFactory {
                                 .setVulnerability(vulnerability)
                                 .setAnalysisTrigger(analysisTrigger)
                                 .setVulnerabilityAnalysisLevel(switch (analysisTrigger) {
-                                    case VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD -> "BOM_UPLOAD_ANALYSIS";
-                                    case VULNERABILITY_ANALYSIS_TRIGGER_SCHEDULE -> "PERIODIC_ANALYSIS";
-                                    case VULNERABILITY_ANALYSIS_TRIGGER_MANUAL -> "MANUAL_ANALYSIS";
+                                    case ANALYSIS_TRIGGER_BOM_UPLOAD -> "BOM_UPLOAD_ANALYSIS";
+                                    case ANALYSIS_TRIGGER_SCHEDULE -> "PERIODIC_ANALYSIS";
+                                    case ANALYSIS_TRIGGER_MANUAL -> "MANUAL_ANALYSIS";
                                     default -> "UNKNOWN";
                                 })
                                 .setAffectedProjectsReference(

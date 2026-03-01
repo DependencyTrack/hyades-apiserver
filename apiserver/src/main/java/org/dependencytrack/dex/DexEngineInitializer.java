@@ -24,6 +24,7 @@ import io.micrometer.core.instrument.Metrics;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.analysis.AnalyzeProjectWorkflow;
 import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
@@ -42,14 +43,19 @@ import org.dependencytrack.dex.listener.DelayedBomProcessedNotificationEmitter;
 import org.dependencytrack.dex.listener.LegacyWorkflowStepCompleter;
 import org.dependencytrack.dex.listener.ProjectVulnAnalysisCompleteNotificationEmitter;
 import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.metrics.UpdateProjectMetricsActivity;
 import org.dependencytrack.notification.PublishNotificationActivity;
 import org.dependencytrack.notification.PublishNotificationWorkflow;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.policy.EvalProjectPoliciesActivity;
+import org.dependencytrack.policy.cel.CelPolicyEngine;
 import org.dependencytrack.policy.cel.CelVulnerabilityPolicyEvaluator;
+import org.dependencytrack.proto.internal.workflow.v1.AnalyzeProjectWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
 import org.dependencytrack.proto.internal.workflow.v1.DiscoverCsafProvidersArg;
+import org.dependencytrack.proto.internal.workflow.v1.EvalProjectPoliciesArg;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerRes;
@@ -58,6 +64,7 @@ import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisRes;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationActivityArg;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
+import org.dependencytrack.proto.internal.workflow.v1.UpdateProjectMetricsArg;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.vulnanalysis.InvokeVulnAnalyzerActivity;
@@ -140,6 +147,11 @@ public final class DexEngineInitializer implements ServletContextListener {
         engine = engineFactory.create(engineConfig);
 
         engine.registerWorkflow(
+                new AnalyzeProjectWorkflow(),
+                protoConverter(AnalyzeProjectWorkflowArg.class),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerWorkflow(
                 new DiscoverCsafProvidersWorkflow(),
                 protoConverter(DiscoverCsafProvidersArg.class),
                 voidConverter(),
@@ -168,6 +180,11 @@ public final class DexEngineInitializer implements ServletContextListener {
         engine.registerActivity(
                 new DiscoverCsafProvidersActivity(),
                 protoConverter(DiscoverCsafProvidersArg.class),
+                voidConverter(),
+                Duration.ofMinutes(5));
+        engine.registerActivity(
+                new EvalProjectPoliciesActivity(new CelPolicyEngine()),
+                protoConverter(EvalProjectPoliciesArg.class),
                 voidConverter(),
                 Duration.ofMinutes(5));
         engine.registerActivity(
@@ -202,11 +219,18 @@ public final class DexEngineInitializer implements ServletContextListener {
                 protoConverter(ReconcileVulnAnalysisResultsArg.class),
                 voidConverter(),
                 Duration.ofMinutes(5));
+        engine.registerActivity(
+                new UpdateProjectMetricsActivity(),
+                protoConverter(UpdateProjectMetricsArg.class),
+                voidConverter(),
+                Duration.ofMinutes(5));
 
         ensureTaskQueues(engine, List.of(
                 new CreateTaskQueueRequest(TaskType.WORKFLOW, "default", 1000),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "default", 1000),
+                new CreateTaskQueueRequest(TaskType.ACTIVITY, "metrics-updates", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "notifications", 25),
+                new CreateTaskQueueRequest(TaskType.ACTIVITY, "policy-evaluations", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analyses", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analysis-reconciliations", 25)));
 

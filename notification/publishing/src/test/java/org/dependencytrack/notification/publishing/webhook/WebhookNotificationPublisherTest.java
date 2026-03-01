@@ -265,7 +265,7 @@ class WebhookNotificationPublisherTest extends AbstractNotificationPublisherTest
                                 "frontendUri": "/vulnerabilities/INTERNAL/INT-001/affectedProjects"
                               },
                               "vulnerabilityAnalysisLevel": "BOM_UPLOAD_ANALYSIS",
-                              "analysisTrigger": "VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD",
+                              "analysisTrigger": "ANALYSIS_TRIGGER_BOM_UPLOAD",
                               "affectedProjects": [
                                 {
                                   "uuid": "c9c9539a-e381-4b36-ac52-6a7ab83b2c95",

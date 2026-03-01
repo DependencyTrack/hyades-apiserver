@@ -114,7 +114,7 @@ message NewVulnerabilitySubject {
   repeated Project affected_projects = 6 [deprecated = true];
 
   // The trigger of the analysis that identified the vulnerability.
-  VulnerabilityAnalysisTrigger analysis_trigger = 7;
+  AnalysisTrigger analysis_trigger = 7;
 }
 
 message NewVulnerableDependencySubject {
@@ -265,18 +265,18 @@ message PolicyViolationAnalysis {
   optional bool suppressed = 5;
 }
 
-enum VulnerabilityAnalysisTrigger {
+enum AnalysisTrigger {
   // No trigger specified.
-  VULNERABILITY_ANALYSIS_TRIGGER_UNSPECIFIED = 0;
+  ANALYSIS_TRIGGER_UNSPECIFIED = 0;
 
   // The analysis was triggered by a BOM upload.
-  VULNERABILITY_ANALYSIS_TRIGGER_BOM_UPLOAD = 1;
+  ANALYSIS_TRIGGER_BOM_UPLOAD = 1;
 
   // The analysis was triggered by a schedule.
-  VULNERABILITY_ANALYSIS_TRIGGER_SCHEDULE = 2;
+  ANALYSIS_TRIGGER_SCHEDULE = 2;
 
   // The analysis was triggered manually.
-  VULNERABILITY_ANALYSIS_TRIGGER_MANUAL = 3;
+  ANALYSIS_TRIGGER_MANUAL = 3;
 }
 
 message VulnerabilityRetractedSubject {
