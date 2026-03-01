@@ -955,12 +955,13 @@ final class DexEngineImpl implements DexEngine {
     private void abandonWorkflowTasksInternal(
             WorkflowDao dao,
             Collection<WorkflowTaskAbandonedEvent> events) {
-        final int unlockedWorkflowRuns = dao.unlockWorkflowTasks(
+        final int abandonedTasks = dao.abandonWorkflowTasks(
                 this.config.instanceId(),
                 events.stream()
                         .map(WorkflowTaskAbandonedEvent::task)
                         .toList());
-        assert unlockedWorkflowRuns == events.size();
+        assert abandonedTasks == events.size()
+                : "Abandoned tasks: actual=%d, expected=%d".formatted(abandonedTasks, events.size());
     }
 
     private void completeWorkflowTasksInternal(
@@ -1257,12 +1258,12 @@ final class DexEngineImpl implements DexEngine {
     private void abandonActivityTasksInternal(
             ActivityDao activityDao,
             Collection<ActivityTaskAbandonedEvent> events) {
-        final int abandonedTasks = activityDao.unlockActivityTasks(
+        final int abandonedTasks = activityDao.abandonActivityTasks(
                 events.stream()
                         .map(ActivityTaskAbandonedEvent::task)
                         .toList());
         assert abandonedTasks == events.size()
-                : "Abandoned tasks: actual=%d, expected=%d".formatted(abandonedTasks, 1);
+                : "Abandoned tasks: actual=%d, expected=%d".formatted(abandonedTasks, events.size());
     }
 
     private void completeActivityTasksInternal(

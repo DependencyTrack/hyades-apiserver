@@ -494,12 +494,11 @@ public final class WorkflowDao extends AbstractDao {
                 .collectToMap(PolledWorkflowTask::runId, Function.identity());
     }
 
-    public int unlockWorkflowTasks(String engineInstanceId, Collection<WorkflowTask> tasks) {
+    public int abandonWorkflowTasks(String engineInstanceId, Collection<WorkflowTask> tasks) {
         final Update update = jdbiHandle.createUpdate("""
                 update dex_workflow_task as task
                    set locked_by = null
-                     , locked_until = null
-                     , lock_version = null
+                     , locked_until = now() + interval '15 seconds'
                   from unnest(:queueNames, :runIds, :lockVersions)
                     as t(queue_name, run_id, lock_version)
                  where task.queue_name = t.queue_name

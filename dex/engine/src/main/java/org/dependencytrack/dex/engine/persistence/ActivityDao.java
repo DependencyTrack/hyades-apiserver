@@ -343,7 +343,7 @@ public final class ActivityDao extends AbstractDao {
                 .execute();
     }
 
-    public int unlockActivityTasks(Collection<ActivityTask> activityTasks) {
+    public int abandonActivityTasks(Collection<ActivityTask> activityTasks) {
         final var queueNames = new String[activityTasks.size()];
         final var workflowRunIds = new UUID[activityTasks.size()];
         final var createdEventIds = new int[activityTasks.size()];
@@ -366,7 +366,7 @@ public final class ActivityDao extends AbstractDao {
                 )
                 update dex_activity_task as dat
                    set locked_by = null
-                     , locked_until = null
+                     , locked_until = now() + interval '15 seconds'
                      , updated_at = now()
                   from cte_cmd
                  where cte_cmd.workflow_run_id = dat.workflow_run_id
