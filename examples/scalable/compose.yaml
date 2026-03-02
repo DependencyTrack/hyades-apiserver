@@ -1,0 +1,243 @@
+# This file is part of Dependency-Track.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) OWASP Foundation. All Rights Reserved.
+name: dependency-track-scalable
+
+x-datasource-environment: &datasource-environment
+  DT_DATASOURCE_URL: "jdbc:postgresql://pgbouncer:5432/dtrack"
+  DT_DATASOURCE_USERNAME: "dtrack"
+  DT_DATASOURCE_PASSWORD: "dtrack"
+  DT_DATASOURCE_POOL_ENABLED: "false"
+
+x-dex-datasource-environment: &dex-datasource-environment
+  DT_DATASOURCE_DEX_URL: "jdbc:postgresql://pgbouncer:5432/dtrack-dex"
+  DT_DATASOURCE_DEX_USERNAME: "dtrack-dex"
+  DT_DATASOURCE_DEX_PASSWORD: "dtrack-dex"
+  DT_DATASOURCE_DEX_POOL_ENABLED: "false"
+  DT_DEX_ENGINE_DATASOURCE_NAME: "dex"
+
+x-kafka-client-environment: &kafka-client-environment
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+
+services:
+  traefik:
+    image: traefik:v3
+    command:
+    - "--providers.docker=true"
+    - "--entrypoints.web.address=:8080"
+    ports:
+    - "127.0.0.1:8080:8080"
+    volumes:
+    # For rootless Podman, set the DOCKER_SOCK environment variable:
+    # export DOCKER_SOCK="$(podman system info --format='{{.Host.RemoteSocket.Path}}')"
+    - "${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro"
+    restart: unless-stopped
+
+  frontend:
+    image: docker.io/dependencytrack/hyades-frontend:snapshot
+    environment:
+      API_BASE_URL: "http://localhost:8080"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.frontend.rule: "PathPrefix(`/`)"
+      traefik.http.routers.frontend.priority: "1"
+    restart: unless-stopped
+
+  init:
+    image: docker.io/dependencytrack/hyades-apiserver:snapshot
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: false
+      postgres-dex:
+        condition: service_healthy
+        restart: false
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    environment:
+      JAVA_OPTIONS: "-XX:+UseSerialGC -XX:TieredStopAtLevel=1"
+      INIT_TASKS_ENABLED: "true"
+      INIT_AND_EXIT: "true"
+      <<: [ *datasource-environment, *dex-datasource-environment ]
+      # PgBouncer uses transaction pooling, which is incompatible with
+      # session-level advisory locks required by init tasks.
+      DT_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/dtrack"
+      DT_DATASOURCE_DEX_URL: "jdbc:postgresql://postgres-dex:5432/dtrack-dex"
+    volumes:
+    - "dtrack-data:/data"
+    restart: on-failure
+
+  web:
+    image: docker.io/dependencytrack/hyades-apiserver:snapshot
+    depends_on:
+      kafka:
+        condition: service_healthy
+        restart: false
+      pgbouncer:
+        condition: service_healthy
+        restart: false
+      init:
+        condition: service_completed_successfully
+        restart: false
+    deploy:
+      endpoint_mode: dnsrr
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 1g
+    environment:
+      INIT_TASKS_ENABLED: "false"
+      SMALLRYE_CONFIG_PROFILE: "web"
+      <<: [ *datasource-environment, *dex-datasource-environment, *kafka-client-environment ]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.web.rule: "PathPrefix(`/api`)"
+      traefik.http.routers.web.priority: "2"
+    volumes:
+    - "dtrack-data:/data"
+    restart: unless-stopped
+
+  worker:
+    image: docker.io/dependencytrack/hyades-apiserver:snapshot
+    depends_on:
+      kafka:
+        condition: service_healthy
+        restart: false
+      pgbouncer:
+        condition: service_healthy
+        restart: false
+      init:
+        condition: service_completed_successfully
+        restart: false
+    deploy:
+      endpoint_mode: dnsrr
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 1g
+    environment:
+      INIT_TASKS_ENABLED: "false"
+      <<: [ *datasource-environment, *dex-datasource-environment, *kafka-client-environment ]
+    volumes:
+    - "dtrack-data:/data"
+    restart: unless-stopped
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: false
+      postgres-dex:
+        condition: service_healthy
+        restart: false
+    environment:
+      DATABASE_URLS: >-
+        postgres://dtrack:dtrack@postgres:5432/dtrack,
+        postgres://dtrack-dex:dtrack-dex@postgres-dex:5432/dtrack-dex
+      DEFAULT_POOL_SIZE: "60"
+      MIN_POOL_SIZE: "10"
+      MAX_DB_CONNECTIONS: "100"
+      POOL_MODE: "transaction"
+      SERVER_RESET_QUERY: "DISCARD ALL"
+      AUTH_TYPE: "plain"
+      LOG_CONNECTIONS: "0"
+      LOG_DISCONNECTIONS: "0"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U dtrack"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: "dtrack"
+      POSTGRES_USER: "dtrack"
+      POSTGRES_PASSWORD: "dtrack"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    volumes:
+    - "postgres-data:/var/lib/postgresql/data"
+    restart: unless-stopped
+
+  postgres-dex:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: "dtrack-dex"
+      POSTGRES_USER: "dtrack-dex"
+      POSTGRES_PASSWORD: "dtrack-dex"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    volumes:
+    - "postgres-dex-data:/var/lib/postgresql/data"
+    restart: unless-stopped
+
+  # TODO: Add SeaweedFS for file storage
+  # https://github.com/seaweedfs/seaweedfs
+
+  # DEPRECATED: Kafka will be removed soon.
+  kafka:
+    image: apache/kafka:4.1.1
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    volumes:
+    - "kafka-data:/var/lib/kafka/data"
+    restart: unless-stopped
+
+  # DEPRECATED: Kafka will be removed soon.
+  kafka-init:
+    image: apache/kafka:4.1.1
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: >-
+      sh -c "
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic dtrack.repo-meta-analysis.component --partitions 3 --replication-factor 1 --bootstrap-server kafka:9092 &&
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic dtrack.repo-meta-analysis.result --partitions 3 --replication-factor 1 --bootstrap-server kafka:9092 &&
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic dtrack.vuln-analysis.component --partitions 3 --replication-factor 1 --bootstrap-server kafka:9092 &&
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic dtrack.vuln-analysis.result --partitions 3 --replication-factor 1 --bootstrap-server kafka:9092 &&
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic dtrack.vuln-analysis.result.processed --partitions 3 --replication-factor 1 --bootstrap-server kafka:9092
+      "
+    restart: on-failure
+
+volumes:
+  dtrack-data: { }
+  kafka-data: { }
+  postgres-data: { }
+  postgres-dex-data: { }
