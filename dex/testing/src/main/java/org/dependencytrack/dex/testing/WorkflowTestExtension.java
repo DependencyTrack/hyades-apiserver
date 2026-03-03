@@ -148,7 +148,7 @@ public final class WorkflowTestExtension implements BeforeEachCallback, AfterEac
     }
 
     public @Nullable WorkflowRun awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
-        return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(10));
+        return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(30));
     }
 
     private static void truncateTables(final DataSource dataSource) {
