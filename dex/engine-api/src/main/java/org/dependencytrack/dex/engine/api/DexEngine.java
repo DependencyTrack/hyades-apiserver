@@ -28,6 +28,7 @@ import org.dependencytrack.dex.engine.api.event.DexEngineEvent;
 import org.dependencytrack.dex.engine.api.event.DexEngineEventListener;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.dex.engine.api.request.ExistsWorkflowRunRequest;
 import org.dependencytrack.dex.engine.api.request.ListTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
@@ -167,6 +168,14 @@ public interface DexEngine extends Closeable {
     WorkflowRunMetadata getRunMetadataByInstanceId(String instanceId);
 
     Page<WorkflowRunMetadata> listRuns(ListWorkflowRunsRequest request);
+
+    /**
+     * Check whether at least one workflow run matching the given criteria exists.
+     *
+     * @param request Filter criteria for the lookup.
+     * @return {@code true} when a matching run exists, {@code false} otherwise.
+     */
+    boolean existsRun(ExistsWorkflowRunRequest request);
 
     /**
      * Request the cancellation of a workflow run.

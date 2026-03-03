@@ -39,7 +39,7 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
-import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.dex.engine.api.request.ExistsWorkflowRunRequest;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
@@ -121,14 +121,10 @@ public class EventResource extends AlpineResource {
     }
 
     private boolean hasNonTerminalDexRun(UUID token) {
-        final boolean hasNonTerminalByLabel = !dexEngine
-                .listRuns(
-                        new ListWorkflowRunsRequest()
-                                .withLabels(Map.of(WF_LABEL_BOM_UPLOAD_TOKEN, token.toString()))
-                                .withStatuses(WorkflowRunStatus.NON_TERMINAL_STATUSES)
-                                .withLimit(1))
-                .items()
-                .isEmpty();
+        final boolean hasNonTerminalByLabel =
+                dexEngine.existsRun(new ExistsWorkflowRunRequest(
+                        WorkflowRunStatus.NON_TERMINAL_STATUSES,
+                        Map.of(WF_LABEL_BOM_UPLOAD_TOKEN, token.toString())));
         if (hasNonTerminalByLabel) {
             return true;
         }

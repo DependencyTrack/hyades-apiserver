@@ -25,6 +25,7 @@ import org.dependencytrack.common.pagination.SortDirection;
 import org.dependencytrack.dex.engine.api.WorkflowRunHistoryEntry;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.request.ExistsWorkflowRunRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.jdbi.v3.core.Handle;
@@ -56,6 +57,47 @@ public final class WorkflowRunDao extends AbstractDao {
             ListWorkflowRunsRequest.SortBy sortBy,
             SortDirection sortDirection,
             TotalCount totalCount) implements PageToken {
+    }
+
+    public boolean existsRun(ExistsWorkflowRunRequest request) {
+        requireNonNull(request, "request must not be null");
+
+        final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
+                <#-- @ftlvariable name="statuses" type="boolean" -->
+                <#-- @ftlvariable name="labels" type="boolean" -->
+                select exists(
+                  select 1
+                    from dex_workflow_run
+                   where true
+                  <#if statuses!false>
+                     and status = ANY(:statuses)
+                  </#if>
+                  <#if labels!false>
+                     and labels @> cast(:labels as jsonb)
+                  </#if>
+                )
+                """);
+
+        if (request.statuses() != null && !request.statuses().isEmpty()) {
+            query.bind(
+                    "statuses",
+                    request.statuses().stream()
+                            .map(WorkflowRunStatus::name)
+                            .toArray(String[]::new));
+        }
+        if (request.labels() != null && !request.labels().isEmpty()) {
+            final JsonMapper.TypedJsonMapper jsonMapper = jdbiHandle
+                    .getConfig(JsonConfig.class).getJsonMapper()
+                    .forType(new GenericType<Map<String, String>>() {
+                    }.getType(), jdbiHandle.getConfig());
+            query.bind("labels", jsonMapper.toJson(
+                    request.labels(), jdbiHandle.getConfig()));
+        }
+
+        return query
+                .defineNamedBindings()
+                .mapTo(boolean.class)
+                .one();
     }
 
     public Page<WorkflowRunMetadata> listRuns(final ListWorkflowRunsRequest request) {

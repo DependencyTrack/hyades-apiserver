@@ -24,11 +24,10 @@ import jakarta.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
-import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.dex.engine.api.request.ExistsWorkflowRunRequest;
 import org.dependencytrack.model.WorkflowState;
 import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -39,8 +38,6 @@ import org.mockito.Mockito;
 
 import java.time.Instant;
 import java.util.Date;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -94,7 +91,7 @@ class EventResourceTest extends ResourceTest {
         qm.persist(workflowState2);
 
         doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadataById(any());
-        doReturn(Page.empty()).when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
+        doReturn(false).when(DEX_ENGINE_MOCK).existsRun(any(ExistsWorkflowRunRequest.class));
 
         final Response response = jersey
                 .target(V1_EVENT + "/token/" + uuid)
@@ -128,7 +125,7 @@ class EventResourceTest extends ResourceTest {
         qm.persist(workflowState2);
 
         doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadataById(any());
-        doReturn(Page.empty()).when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
+        doReturn(false).when(DEX_ENGINE_MOCK).existsRun(any(ExistsWorkflowRunRequest.class));
 
         final Response response = jersey
                 .target(V1_EVENT + "/token/" + uuid)
@@ -161,7 +158,7 @@ class EventResourceTest extends ResourceTest {
                 Instant.now(),
                 null,
                 null);
-        doReturn(Page.empty()).when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
+        doReturn(false).when(DEX_ENGINE_MOCK).existsRun(any(ExistsWorkflowRunRequest.class));
         doReturn(runMetadata).when(DEX_ENGINE_MOCK).getRunMetadataById(runId);
 
         final Response response = jersey
@@ -180,40 +177,9 @@ class EventResourceTest extends ResourceTest {
     @Test
     void isTokenBeingProcessedDexRunByLabelTest() {
         final var bomUploadToken = UUID.fromString("2ff20ad6-587c-4db6-8788-cca7a9b0dc1b");
-        final var importBomRun = new WorkflowRunMetadata(
-                UUID.randomUUID(),
-                "import-bom",
-                1,
-                null,
-                "default",
-                WorkflowRunStatus.COMPLETED,
-                null,
-                0,
-                null,
-                Map.of("bom_upload_token", bomUploadToken.toString()),
-                Instant.now(),
-                Instant.now(),
-                Instant.now(),
-                Instant.now());
-        final var analyzeProjectRun = new WorkflowRunMetadata(
-                UUID.randomUUID(),
-                "analyze-project",
-                1,
-                null,
-                "default",
-                WorkflowRunStatus.RUNNING,
-                null,
-                0,
-                null,
-                Map.of("bom_upload_token", bomUploadToken.toString()),
-                Instant.now(),
-                Instant.now(),
-                Instant.now(),
-                null);
 
         doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadataById(bomUploadToken);
-        doReturn(new Page<>(List.of(importBomRun, analyzeProjectRun)))
-                .when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
+        doReturn(true).when(DEX_ENGINE_MOCK).existsRun(any(ExistsWorkflowRunRequest.class));
 
         final Response response = jersey
                 .target(V1_EVENT + "/token/2ff20ad6-587c-4db6-8788-cca7a9b0dc1b")
@@ -231,7 +197,7 @@ class EventResourceTest extends ResourceTest {
     @Test
     void isTokenBeingProcessedNotExistsTest() {
         doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadataById(any());
-        doReturn(Page.empty()).when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
+        doReturn(false).when(DEX_ENGINE_MOCK).existsRun(any(ExistsWorkflowRunRequest.class));
 
         final Response response = jersey
                 .target(V1_EVENT + "/token/089dcdbe-31cf-489a-a8f3-0743ea7f3cc5")
