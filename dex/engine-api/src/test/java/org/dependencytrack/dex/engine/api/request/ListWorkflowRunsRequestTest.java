@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,7 +34,7 @@ class ListWorkflowRunsRequestTest {
         final var request = new ListWorkflowRunsRequest()
                 .withWorkflowName("workflowName")
                 .withWorkflowVersion(123)
-                .withStatus(WorkflowRunStatus.RUNNING)
+                .withStatuses(Set.of(WorkflowRunStatus.RUNNING, WorkflowRunStatus.CREATED))
                 .withLabels(Map.of("foo", "bar"))
                 .withCreatedAtFrom(Instant.ofEpochSecond(111))
                 .withCreatedAtTo(Instant.ofEpochSecond(222))
@@ -44,7 +45,7 @@ class ListWorkflowRunsRequestTest {
 
         assertThat(request.workflowName()).isEqualTo("workflowName");
         assertThat(request.workflowVersion()).isEqualTo(123);
-        assertThat(request.status()).isEqualTo(WorkflowRunStatus.RUNNING);
+        assertThat(request.statuses()).containsExactlyInAnyOrder(WorkflowRunStatus.RUNNING, WorkflowRunStatus.CREATED);
         assertThat(request.labels()).containsEntry("foo", "bar");
         assertThat(request.createdAtFrom()).isEqualTo(Instant.ofEpochSecond(111));
         assertThat(request.createdAtTo()).isEqualTo(Instant.ofEpochSecond(222));

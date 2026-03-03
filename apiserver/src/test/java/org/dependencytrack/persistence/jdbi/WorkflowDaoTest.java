@@ -27,16 +27,12 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
-import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
-import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 public class WorkflowDaoTest extends PersistenceCapableTest {
 
     private Handle jdbiHandle;
     private WorkflowDao workflowDao;
-    private final UUID workflowUuid = UUID.randomUUID();
 
     @BeforeEach
     public void before() throws Exception {
@@ -54,21 +50,40 @@ public class WorkflowDaoTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testUpdateWorkflowState() {
-        qm.createWorkflowSteps(workflowUuid);
-        final var updatedWorkflow = workflowDao.updateState(
-                BOM_CONSUMPTION, workflowUuid, COMPLETED, null);
-        assertThat(updatedWorkflow.get()).satisfies(workflowState -> {
-            assertThat(workflowState.getStatus()).isEqualTo(COMPLETED);
-            assertThat(workflowState.getStep()).isEqualTo(BOM_CONSUMPTION);
-            assertThat(workflowState.getUpdatedAt()).isNotNull();
-        });
+    public void shouldReturnTrueWhenPendingStateExists() {
+        final var token = UUID.randomUUID();
+        insertWorkflowState(token, "BOM_CONSUMPTION", "PENDING");
+
+        assertThat(workflowDao.existsWithNonTerminalStatus(token)).isTrue();
     }
 
     @Test
-    public void testStartState() {
-        qm.createWorkflowSteps(workflowUuid);
-        var updatedWorkflow = workflowDao.startState(BOM_PROCESSING, workflowUuid);
-        assertThat(updatedWorkflow.getStartedAt()).isNotNull();
+    public void shouldReturnTrueWhenTimedOutStateExists() {
+        final var token = UUID.randomUUID();
+        insertWorkflowState(token, "BOM_CONSUMPTION", "TIMED_OUT");
+
+        assertThat(workflowDao.existsWithNonTerminalStatus(token)).isTrue();
     }
+
+    @Test
+    public void shouldReturnFalseWhenOnlyTerminalStatesExist() {
+        final var token = UUID.randomUUID();
+        insertWorkflowState(token, "BOM_CONSUMPTION", "COMPLETED");
+        insertWorkflowState(token, "BOM_PROCESSING", "FAILED");
+
+        assertThat(workflowDao.existsWithNonTerminalStatus(token)).isFalse();
+    }
+
+    @Test
+    public void shouldReturnFalseWhenNoStatesExist() {
+        assertThat(workflowDao.existsWithNonTerminalStatus(UUID.randomUUID())).isFalse();
+    }
+
+    private void insertWorkflowState(UUID token, String step, String status) {
+        jdbiHandle.execute("""
+                INSERT INTO "WORKFLOW_STATE" ("STATUS", "STEP", "TOKEN", "UPDATED_AT")
+                VALUES (?, ?, CAST(? AS UUID), NOW())
+                """, status, step, token.toString());
+    }
+
 }

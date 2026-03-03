@@ -18,7 +18,9 @@
  */
 package org.dependencytrack.dex.engine.api;
 
+import java.util.Arrays;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELLED;
 import static org.dependencytrack.dex.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
@@ -32,9 +34,14 @@ public enum WorkflowRunStatus {
     CREATED(1, 3),       // 0
     RUNNING(2, 3, 4, 5), // 1
     SUSPENDED(1, 3),     // 2
-    CANCELLED,            // 3
+    CANCELLED,           // 3
     COMPLETED,           // 4
     FAILED;              // 5
+
+    public static final Set<WorkflowRunStatus> NON_TERMINAL_STATUSES =
+            Arrays.stream(values())
+                    .filter(status -> !status.isTerminal())
+                    .collect(Collectors.toUnmodifiableSet());
 
     private final Set<Integer> allowedTransitions;
 

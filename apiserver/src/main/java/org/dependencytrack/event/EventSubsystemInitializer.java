@@ -31,13 +31,10 @@ import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
-import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
-import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.CallbackTask;
 import org.dependencytrack.tasks.CloneProjectTask;
 import org.dependencytrack.tasks.DefectDojoUploadTask;
@@ -51,7 +48,6 @@ import org.dependencytrack.tasks.KennaSecurityUploadTask;
 import org.dependencytrack.tasks.LdapSyncTaskWrapper;
 import org.dependencytrack.tasks.NistMirrorTask;
 import org.dependencytrack.tasks.OsvMirrorTask;
-import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.RepositoryMetaAnalysisTask;
 import org.dependencytrack.tasks.VexUploadProcessingTask;
 import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
@@ -60,7 +56,6 @@ import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
-import org.dependencytrack.tasks.maintenance.WorkflowMaintenanceTask;
 import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -107,19 +102,9 @@ public class EventSubsystemInitializer implements ServletContextListener {
         final var dexEngine = (DexEngine) event.getServletContext().getAttribute(DexEngine.class.getName());
         requireNonNull(dexEngine, "dexEngine has not been initialized");
 
-        final var fileStorage = (FileStorage) event.getServletContext().getAttribute(FileStorage.class.getName());
-        requireNonNull(fileStorage, "fileStorage has not been initialized");
-
         final var pluginManager = (PluginManager) event.getServletContext().getAttribute(PluginManager.class.getName());
         requireNonNull(pluginManager, "pluginManager has not been initialized");
 
-        eventService.subscribe(
-                BomUploadEvent.class,
-                new BomUploadProcessingTask(
-                        dexEngine,
-                        fileStorage,
-                        kafkaEventDispatcher,
-                        config.getOptionalValue("tmp.delay.bom.processed.notification", boolean.class).orElse(false)));
         eventService.subscribe(VexUploadEvent.class, new VexUploadProcessingTask());
         eventService.subscribe(LdapSyncEvent.class, new LdapSyncTaskWrapper());
         eventService.subscribe(GitHubAdvisoryMirrorEvent.class, new GitHubAdvisoryMirrorTask(pluginManager));
@@ -141,8 +126,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.subscribe(NistMirrorEvent.class, new NistMirrorTask(pluginManager));
         eventService.subscribe(VulnerabilityPolicyFetchEvent.class, new VulnerabilityPolicyFetchTask());
         eventService.subscribe(EpssMirrorEvent.class, new EpssMirrorTask());
-        eventService.subscribe(ComponentPolicyEvaluationEvent.class, new PolicyEvaluationTask());
-        eventService.subscribe(ProjectPolicyEvaluationEvent.class, new PolicyEvaluationTask());
         eventService.subscribe(IntegrityMetaInitializerEvent.class, new IntegrityMetaInitializerTask());
         eventService.subscribe(IntegrityAnalysisEvent.class, new IntegrityAnalysisTask());
 
@@ -152,7 +135,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         singleThreadedEventService.subscribe(MetricsMaintenanceEvent.class, new MetricsMaintenanceTask());
         singleThreadedEventService.subscribe(TagMaintenanceEvent.class, new TagMaintenanceTask());
         singleThreadedEventService.subscribe(VulnerabilityDatabaseMaintenanceEvent.class, new VulnerabilityDatabaseMaintenanceTask());
-        singleThreadedEventService.subscribe(WorkflowMaintenanceEvent.class, new WorkflowMaintenanceTask());
         singleThreadedEventService.subscribe(ProjectMaintenanceEvent.class, new ProjectMaintenanceTask());
     }
 
@@ -164,7 +146,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
                 .getOptionalValue("alpine.worker.pool.drain.timeout.duration", Duration.class)
                 .orElse(Duration.ofSeconds(30));
 
-        eventService.unsubscribe(BomUploadProcessingTask.class);
         eventService.unsubscribe(VexUploadProcessingTask.class);
         eventService.unsubscribe(LdapSyncTaskWrapper.class);
         eventService.unsubscribe(GitHubAdvisoryMirrorTask.class);
@@ -182,7 +163,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.unsubscribe(CallbackTask.class);
         eventService.unsubscribe(NistMirrorTask.class);
         eventService.unsubscribe(EpssMirrorTask.class);
-        eventService.unsubscribe(PolicyEvaluationTask.class);
         eventService.unsubscribe(IntegrityMetaInitializerTask.class);
         eventService.unsubscribe(IntegrityAnalysisTask.class);
         eventService.unsubscribe(VulnerabilityPolicyFetchTask.class);
@@ -196,7 +176,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         singleThreadedEventService.unsubscribe(MetricsMaintenanceTask.class);
         singleThreadedEventService.unsubscribe(TagMaintenanceTask.class);
         singleThreadedEventService.unsubscribe(VulnerabilityDatabaseMaintenanceTask.class);
-        singleThreadedEventService.unsubscribe(WorkflowMaintenanceTask.class);
         singleThreadedEventService.unsubscribe(ProjectMaintenanceTask.class);
         try {
             singleThreadedEventService.shutdown(drainTimeout);

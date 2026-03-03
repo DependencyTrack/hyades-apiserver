@@ -38,8 +38,6 @@ public enum ConfigPropertyConstants {
     MAINTENANCE_PROJECTS_RETENTION_VERSIONS("maintenance", "projects.retention.versions", "2", PropertyType.INTEGER, "Number of last inactive projects to retain and delete rest", ConfigPropertyAccessMode.READ_WRITE),
     MAINTENANCE_TAGS_DELETE_UNUSED("maintenance", "tags.delete.unused", "true", PropertyType.BOOLEAN, "Whether unused tags shall be deleted", ConfigPropertyAccessMode.READ_WRITE),
     MAINTENANCE_VULNERABILITY_SCAN_RETENTION_HOURS("maintenance", "vuln.scan.retention.hours", "24", PropertyType.INTEGER, "Number of hours to retain vulnerability scan records for", ConfigPropertyAccessMode.READ_WRITE),
-    MAINTENANCE_WORKFLOW_RETENTION_HOURS("maintenance", "workflow.retention.hours", "72", PropertyType.INTEGER, "Number of hours to retain workflow records for", ConfigPropertyAccessMode.READ_WRITE),
-    MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES("maintenance", "workflow.step.timeout.minutes", "60", PropertyType.INTEGER, "Number of minutes after which workflow steps are timed out", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_INTERNAL_ENABLED("scanner", "internal.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable the internal analyzer", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_INTERNAL_FUZZY_ENABLED("scanner", "internal.fuzzy.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable non-exact fuzzy matching using the internal analyzer", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_INTERNAL_FUZZY_EXCLUDE_PURL("scanner", "internal.fuzzy.exclude.purl", "true", PropertyType.BOOLEAN, "Flag to enable/disable fuzzy matching on components that have a Package URL (PURL) defined", ConfigPropertyAccessMode.READ_WRITE),

@@ -40,6 +40,7 @@ import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.model.AnalysisResponse;
@@ -58,7 +59,6 @@ import org.dependencytrack.model.Role;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.proto.v1.BomValidationFailedSubject;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
@@ -111,6 +111,7 @@ import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_VALIDATI
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.mockito.Mockito.mock;
 
 class BomResourceTest extends ResourceTest {
 
@@ -127,6 +128,7 @@ class BomResourceTest extends ResourceTest {
                         @Override
                         protected void configure() {
                             bindFactory(() -> fileStorage).to(FileStorage.class);
+                            bindFactory(() -> mock(DexEngine.class)).to(DexEngine.class);
                         }
                     }));
 
@@ -1061,44 +1063,6 @@ class BomResourceTest extends ResourceTest {
                           "projectUuid": "${json-unit.matches:projectUuid}"
                         }
                         """);
-        UUID uuid = UUID.fromString(json.getString("token"));
-        assertThat(qm.getAllWorkflowStatesForAToken(uuid)).satisfiesExactlyInAnyOrder(
-                workflowState -> {
-                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.BOM_CONSUMPTION);
-                    assertThat(workflowState.getToken()).isEqualTo(uuid);
-                    assertThat(workflowState.getParent()).isNull();
-                    assertThat(workflowState.getStartedAt()).isNull();
-                    assertThat(workflowState.getUpdatedAt()).isNotNull();
-                },
-                workflowState -> {
-                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.BOM_PROCESSING);
-                    assertThat(workflowState.getToken()).isEqualTo(uuid);
-                    assertThat(workflowState.getParent()).isNotNull();
-                    assertThat(workflowState.getStartedAt()).isNull();
-                    assertThat(workflowState.getUpdatedAt()).isNotNull();
-                },
-                workflowState -> {
-                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.VULN_ANALYSIS);
-                    assertThat(workflowState.getToken()).isEqualTo(uuid);
-                    assertThat(workflowState.getParent()).isNotNull();
-                    assertThat(workflowState.getStartedAt()).isNull();
-                    assertThat(workflowState.getUpdatedAt()).isNotNull();
-                },
-                workflowState -> {
-                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.POLICY_EVALUATION);
-                    assertThat(workflowState.getToken()).isEqualTo(uuid);
-                    assertThat(workflowState.getParent()).isNotNull();
-                    assertThat(workflowState.getStartedAt()).isNull();
-                    assertThat(workflowState.getUpdatedAt()).isNotNull();
-                },
-                workflowState -> {
-                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.METRICS_UPDATE);
-                    assertThat(workflowState.getToken()).isEqualTo(uuid);
-                    assertThat(workflowState.getParent()).isNotNull();
-                    assertThat(workflowState.getStartedAt()).isNull();
-                    assertThat(workflowState.getUpdatedAt()).isNotNull();
-                }
-        );
     }
 
     @Test

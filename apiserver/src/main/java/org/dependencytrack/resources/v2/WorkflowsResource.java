@@ -45,6 +45,7 @@ import org.dependencytrack.dex.proto.event.v1.ChildRunCompleted;
 import org.dependencytrack.dex.proto.event.v1.ChildRunFailed;
 import org.dependencytrack.dex.proto.event.v1.TimerElapsed;
 import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
+import org.dependencytrack.proto.internal.workflow.v1.ArgumentArtifact;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentCommon;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentCsaf;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentNotification;
@@ -85,6 +86,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                 // Register message types that are used in Any fields.
                 .usingTypeRegistry(
                         JsonFormat.TypeRegistry.newBuilder()
+                                .add(ArgumentArtifact.getDescriptor().getMessageTypes())
                                 .add(ArgumentCommon.getDescriptor().getMessageTypes())
                                 .add(ArgumentCsaf.getDescriptor().getMessageTypes())
                                 .add(ArgumentNotification.getDescriptor().getMessageTypes())
@@ -130,7 +132,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                         .withWorkflowName(workflowName)
                         .withWorkflowVersion(workflowVersion)
                         .withWorkflowInstanceId(workflowInstanceId)
-                        .withStatus(convert(status))
+                        .withStatuses(status != null ? Set.of(convert(status)) : null)
                         .withCreatedAtFrom(createdAtFrom != null
                                 ? Instant.ofEpochMilli(createdAtFrom)
                                 : null)

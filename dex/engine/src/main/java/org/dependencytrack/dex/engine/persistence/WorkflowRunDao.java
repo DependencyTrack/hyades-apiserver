@@ -24,6 +24,7 @@ import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.common.pagination.SortDirection;
 import org.dependencytrack.dex.engine.api.WorkflowRunHistoryEntry;
 import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
 import org.jdbi.v3.core.Handle;
@@ -77,9 +78,13 @@ public final class WorkflowRunDao extends AbstractDao {
             whereConditions.add("workflow_instance_id = :workflowInstanceId");
             queryParams.put("workflowInstanceId", request.workflowInstanceId());
         }
-        if (request.status() != null) {
-            whereConditions.add("status = :status");
-            queryParams.put("status", request.status());
+        if (request.statuses() != null && !request.statuses().isEmpty()) {
+            whereConditions.add("status = ANY(:statuses)");
+            queryParams.put(
+                    "statuses",
+                    request.statuses().stream()
+                            .map(WorkflowRunStatus::name)
+                            .toArray(String[]::new));
         }
         if (request.labels() != null && !request.labels().isEmpty()) {
             final JsonMapper.TypedJsonMapper jsonMapper = jdbiHandle

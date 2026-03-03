@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.common.logging.Logger;
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
@@ -26,34 +25,12 @@ import org.dependencytrack.model.WorkflowStep;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import javax.jdo.datastore.JDOConnection;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
 public class WorkflowStateQueryManager extends QueryManager implements IQueryManager {
-
-    private static final Logger LOGGER = Logger.getLogger(WorkflowStateQueryManager.class);
-    private static final String UPDATE_WORKFLOW_STATES_QUERY = """
-            
-            UPDATE "WORKFLOW_STATE"
-            SET "STATUS" = ?,
-            "UPDATED_AT" = ?
-            WHERE "ID" IN
-                (WITH RECURSIVE "CTE_WORKFLOW_STATE" ("ID") AS
-                   (SELECT "ID"
-                    FROM "WORKFLOW_STATE"
-                    WHERE "PARENT_STEP_ID" = ?
-                      AND "TOKEN" = ?
-                    UNION ALL SELECT "e"."ID"
-                    FROM "WORKFLOW_STATE" AS "e"
-                    INNER JOIN "CTE_WORKFLOW_STATE" AS "o" ON "o"."ID" = "e"."PARENT_STEP_ID") SELECT "ID"
-                 FROM "CTE_WORKFLOW_STATE")
-            
-            """;
 
     WorkflowStateQueryManager(final PersistenceManager pm) {
         super(pm);
@@ -66,40 +43,19 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
     public List<WorkflowState> getAllWorkflowStatesForAToken(UUID token) {
         final Query<WorkflowState> query = pm.newQuery(WorkflowState.class, "this.token == :token");
         query.setParameters(token);
-        return query.executeList();
+        return executeAndCloseList(query);
     }
 
     public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep step) {
         final Query<WorkflowState> query = pm.newQuery(WorkflowState.class, "this.token == :token && this.step == :step");
         query.setParameters(token, step);
-        return query.executeUnique();
-    }
-
-    public int updateAllDescendantStatesOfParent(WorkflowState parentWorkflowState, WorkflowStatus transientStatus, Date updatedAt) {
-
-        if(parentWorkflowState == null || parentWorkflowState.getId() <= 0 ) {
-            throw new IllegalArgumentException("Parent workflow state cannot be null and id of parent cannot be missing to get workflow states hierarchically");
-        }
-
-        final JDOConnection jdoConnection = pm.getDataStoreConnection();
-        final var nativeConnection = (Connection) jdoConnection.getNativeConnection();
-        try (final PreparedStatement ps = nativeConnection.prepareStatement(UPDATE_WORKFLOW_STATES_QUERY)) {
-            ps.setString(1, transientStatus.name());
-            ps.setTimestamp(2, new java.sql.Timestamp(updatedAt.getTime()));
-            ps.setLong(3, parentWorkflowState.getId());
-            ps.setObject(4, parentWorkflowState.getToken());
-
-            return ps.executeUpdate();
-        } catch (Exception ex) {
-            LOGGER.error("error in executing workflow state cte query to update states", ex);
-            throw new RuntimeException(ex);
-        } finally {
-            jdoConnection.close();
-        }
+        return executeAndCloseUnique(query);
     }
 
     public WorkflowState updateStartTimeIfWorkflowStateExists(UUID token, WorkflowStep workflowStep) {
-        WorkflowState currentState = getWorkflowStateByTokenAndStep(token, workflowStep);
+        final Query<WorkflowState> query = pm.newQuery(WorkflowState.class, "this.token == :token && this.step == :step");
+        query.setParameters(token, workflowStep);
+        final WorkflowState currentState = executeAndCloseUnique(query);
         if (currentState != null) {
             currentState.setStartedAt(Date.from(Instant.now()));
             return persist(currentState);
@@ -108,7 +64,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
     }
 
     public void updateWorkflowStateToComplete(WorkflowState workflowState) {
-        if(workflowState != null) {
+        if (workflowState != null) {
             workflowState.setStatus(WorkflowStatus.COMPLETED);
             workflowState.setUpdatedAt(Date.from(Instant.now()));
             persist(workflowState);
@@ -116,55 +72,11 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
     }
 
     public void updateWorkflowStateToFailed(WorkflowState workflowState, String failureReason) {
-        if(workflowState != null) {
+        if (workflowState != null) {
             workflowState.setFailureReason(failureReason);
             workflowState.setUpdatedAt(Date.from(Instant.now()));
             workflowState.setStatus(WorkflowStatus.FAILED);
             persist(workflowState);
         }
-    }
-
-    public void createWorkflowSteps(UUID token) {
-        runInTransaction(() -> {
-            final Date now = new Date();
-            WorkflowState consumptionState = new WorkflowState();
-            consumptionState.setToken(token);
-            consumptionState.setStep(WorkflowStep.BOM_CONSUMPTION);
-            consumptionState.setStatus(WorkflowStatus.PENDING);
-            consumptionState.setUpdatedAt(now);
-            WorkflowState parent = pm.makePersistent(consumptionState);
-
-            WorkflowState processingState = new WorkflowState();
-            processingState.setParent(parent);
-            processingState.setToken(token);
-            processingState.setStep(WorkflowStep.BOM_PROCESSING);
-            processingState.setStatus(WorkflowStatus.PENDING);
-            processingState.setUpdatedAt(now);
-            WorkflowState processingParent = pm.makePersistent(processingState);
-
-            WorkflowState vulnAnalysisState = new WorkflowState();
-            vulnAnalysisState.setParent(processingParent);
-            vulnAnalysisState.setToken(token);
-            vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
-            vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
-            vulnAnalysisState.setUpdatedAt(now);
-            WorkflowState vulnAnalysisParent = pm.makePersistent(vulnAnalysisState);
-
-            WorkflowState policyEvaluationState = new WorkflowState();
-            policyEvaluationState.setParent(vulnAnalysisParent);
-            policyEvaluationState.setToken(token);
-            policyEvaluationState.setStep(WorkflowStep.POLICY_EVALUATION);
-            policyEvaluationState.setStatus(WorkflowStatus.PENDING);
-            policyEvaluationState.setUpdatedAt(now);
-            WorkflowState policyEvaluationParent = pm.makePersistent(policyEvaluationState);
-
-            WorkflowState metricsUpdateState = new WorkflowState();
-            metricsUpdateState.setParent(policyEvaluationParent);
-            metricsUpdateState.setToken(token);
-            metricsUpdateState.setStep(WorkflowStep.METRICS_UPDATE);
-            metricsUpdateState.setStatus(WorkflowStatus.PENDING);
-            metricsUpdateState.setUpdatedAt(now);
-            pm.makePersistent(metricsUpdateState);
-        });
     }
 }
