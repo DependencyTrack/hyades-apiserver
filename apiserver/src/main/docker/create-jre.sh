@@ -58,27 +58,22 @@ if [ -z "${output_dir}" ]; then
   exit 1
 fi
 
-work_dir="$(mktemp -d)"
-
 # Module dependencies that jdeps fails to detect.
 #   java.net.http: Required for Java's HttpClient.
 #   jdk.crypto.ec: Required for TLS connections that use elliptic curve cryptography.
 #   jdk.zipfs:     Required by code that reads files from JAR files at runtime.
 static_module_deps='java.net.http,jdk.crypto.ec,jdk.zipfs'
 
-echo "[+] extracting $(basename "${input_jar}") to ${work_dir}"
-unzip -qq "${input_jar}" -d "${work_dir}"
-
 echo '[+] detecting module dependencies'
 jdeps \
-  --class-path "${work_dir}:${work_dir}/WEB-INF/lib/*" \
+  --class-path "lib/*" \
   --print-module-deps \
   --ignore-missing-deps \
   --multi-release 21 \
-  "${work_dir}/WEB-INF/classes" \
-  > "${work_dir}/module-deps.txt"
+  "${input_jar}" \
+  > module-deps.txt
 
-module_deps="$(cat "${work_dir}/module-deps.txt"),${static_module_deps}"
+module_deps="$(cat module-deps.txt),${static_module_deps}"
 echo "[+] identified module dependencies: ${module_deps}"
 
 echo "[+] creating jre at ${output_dir}"
@@ -89,6 +84,3 @@ jlink \
   --no-man-pages \
   --add-modules "${module_deps}" \
   --output "${output_dir}"
-
-echo "[+] removing ${work_dir}"
-rm -rf "${work_dir}"

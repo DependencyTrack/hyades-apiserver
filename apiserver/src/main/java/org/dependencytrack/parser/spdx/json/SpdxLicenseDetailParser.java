@@ -21,15 +21,14 @@ package org.dependencytrack.parser.spdx.json;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dependencytrack.model.License;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URLDecoder;
+import java.io.UncheckedIOException;
+import java.net.URISyntaxException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * This class parses json metadata file that describe each license. It does not
@@ -45,10 +44,14 @@ public class SpdxLicenseDetailParser {
     /**
      * Reads in a json file and returns a License object.
      */
-    public License parse(final Path path) throws IOException {
-        final byte[] jdon = Files.readAllBytes(path);
-        final ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue(jdon, License.class);
+    private static License parse(final Path path) {
+        try {
+            final byte[] jdon = Files.readAllBytes(path);
+            final ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.readValue(jdon, License.class);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
@@ -57,16 +60,39 @@ public class SpdxLicenseDetailParser {
     public List<License> getLicenseDefinitions() throws IOException {
         final List<License> licenses = new ArrayList<>();
         final String[] dirs = {"/license-list-data/json/details", "/license-list-data/json/exceptions"};
-        for (final String s: dirs) {
-        	final File dir = new File(URLDecoder.decode(getClass().getProtectionDomain().getCodeSource().getLocation().getPath(), UTF_8.name()) + s);
-            final File[] files = dir.listFiles();
-            if (files != null) {
-                for (final File nextFile : files) {
-                    final License license = parse(nextFile.toPath());
-                    licenses.add(license);
+
+        final Path codeSource;
+        try {
+            codeSource = Path.of(getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+        } catch (URISyntaxException e) {
+            throw new IOException(e);
+        }
+
+        if (Files.isDirectory(codeSource)) {
+            for (final String dir : dirs) {
+                licenses.addAll(parseLicenses(codeSource.resolve(dir.substring(1))));
+            }
+        } else {
+            try (final var fs = FileSystems.newFileSystem(codeSource)) {
+                for (final String dir : dirs) {
+                    licenses.addAll(parseLicenses(fs.getPath(dir)));
                 }
             }
         }
+
         return licenses;
     }
+
+    private static List<License> parseLicenses(Path dir) throws IOException {
+        if (!Files.isDirectory(dir)) {
+            return List.of();
+        }
+
+        try (final var files = Files.list(dir)) {
+            return files
+                    .map(SpdxLicenseDetailParser::parse)
+                    .toList();
+        }
+    }
+
 }

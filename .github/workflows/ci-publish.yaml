@@ -71,21 +71,30 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # tag=v6.0.2
 
-      - name: Download Artifacts
+      - name: Download Distribution Archive
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # tag=v7.0.0
         with:
-          name: assembled-wars
+          name: assembled-dist
           path: target
 
-      - name: Create Checksums and SBOM
+      - name: Download BOM
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # tag=v7.0.0
+        with:
+          name: bom
+          path: target
+
+      - name: Create Checksums
         run: |-
           pushd target
           echo "# SHA1" >> checksums.txt
-          sha1sum dependency-track-apiserver.jar >> checksums.txt
+          sha1sum dependency-track-apiserver-dist.tar.gz >> checksums.txt
+          sha1sum bom.json >> checksums.txt
           echo "# SHA256" >> checksums.txt
-          sha256sum dependency-track-apiserver.jar >> checksums.txt
+          sha256sum dependency-track-apiserver-dist.tar.gz >> checksums.txt
+          sha256sum bom.json >> checksums.txt
           echo "# SHA512" >> checksums.txt
-          sha512sum dependency-track-apiserver.jar >> checksums.txt
+          sha512sum dependency-track-apiserver-dist.tar.gz >> checksums.txt
+          sha512sum bom.json >> checksums.txt
           popd
 
       - name: Update Release
@@ -94,6 +103,6 @@ jobs:
         run: |-
           gh release upload ${{ needs.read-version.outputs.version }} \
             --clobber \
-            target/dependency-track-apiserver.jar \
-            target/checksums.txt \
-            target/bom.json
+            target/dependency-track-apiserver-dist.tar.gz \
+            target/bom.json \
+            target/checksums.txt
