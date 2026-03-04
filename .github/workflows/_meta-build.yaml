@@ -54,6 +54,15 @@ jobs:
           java-version: '25'
           cache: 'maven'
 
+      - name: Restore Maven build cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # tag=v4.3.0
+        with:
+          path: ~/.m2/build-cache
+          key: maven-build-cache-build-${{ hashFiles('.mvn/maven-build-cache-config.xml') }}-${{ github.run_id }}
+          restore-keys: |
+            maven-build-cache-build-${{ hashFiles('.mvn/maven-build-cache-config.xml') }}-
+            maven-build-cache-build-
+
       - name: Setup CycloneDX CLI
         run: |
           mkdir -p "$HOME/.local/bin"
