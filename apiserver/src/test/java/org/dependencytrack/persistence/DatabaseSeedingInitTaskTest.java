@@ -24,6 +24,7 @@ import alpine.model.Permission;
 import alpine.model.Team;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.init.InitTaskContext;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.DefaultRepository;
@@ -34,24 +35,21 @@ import org.dependencytrack.model.Role;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.postgresql.ds.PGSimpleDataSource;
 
+import javax.sql.DataSource;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class DatabaseSeedingInitTaskTest extends PersistenceCapableTest {
 
-    private PGSimpleDataSource dataSource;
+    private DataSource dataSource;
 
     @BeforeEach
     public void before() throws Exception {
         super.before();
 
-        dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(postgresContainer.getJdbcUrl());
-        dataSource.setUser(postgresContainer.getUsername());
-        dataSource.setPassword(postgresContainer.getPassword());
+        dataSource = DataSourceRegistry.getInstance().getDefault();
     }
 
     @Test

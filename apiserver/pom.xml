@@ -737,6 +737,18 @@
 
     <profiles>
         <profile>
+            <id>github-actions-apiserver</id>
+            <activation>
+                <property>
+                    <name>env.GITHUB_ACTIONS</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <unitTestForkCount>1C</unitTestForkCount>
+            </properties>
+        </profile>
+        <profile>
             <id>dist</id>
             <build>
                 <plugins>

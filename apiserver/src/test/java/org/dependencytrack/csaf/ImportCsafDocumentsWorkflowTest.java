@@ -23,6 +23,7 @@ import io.csaf.schema.generated.Csaf;
 import io.github.resilience4j.core.IntervalFunction;
 import kotlinx.serialization.json.Json;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.TaskType;
@@ -63,7 +64,7 @@ class ImportCsafDocumentsWorkflowTest extends PersistenceCapableTest {
 
     @RegisterExtension
     private final WorkflowTestExtension workflowTest =
-            new WorkflowTestExtension(postgresContainer);
+            new WorkflowTestExtension(DataSourceRegistry.getInstance().getDefault());
 
     private CsafClient csafClientMock;
     private Handle jdbiHandle;

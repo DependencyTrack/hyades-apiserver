@@ -23,9 +23,7 @@ import org.dependencytrack.support.liquibase.MigrationExecutor;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
-import org.testcontainers.utility.TestcontainersConfiguration;
 
-import java.lang.management.ManagementFactory;
 import java.util.Map;
 
 public class PostgresTestContainer extends PostgreSQLContainer {
@@ -37,7 +35,7 @@ public class PostgresTestContainer extends PostgreSQLContainer {
         withUsername("dtrack");
         withPassword("dtrack");
         withDatabaseName("dtrack");
-        withLabel("owner", "hyades-apiserver-" + /* JVM name */ ManagementFactory.getRuntimeMXBean().getName());
+        withLabel("owner", "hyades-apiserver");
         withUrlParam("reWriteBatchedInserts", "true");
         withTmpFs(Map.of("/var/lib/postgresql/data", "rw"));
 
@@ -48,7 +46,7 @@ public class PostgresTestContainer extends PostgreSQLContainer {
         // NB: Container reuse won't be active unless either:
         //  - The environment variable TESTCONTAINERS_REUSE_ENABLE=true is set
         //  - testcontainers.reuse.enable=true is set in ~/.testcontainers.properties
-        withReuse(System.getenv("CI") != null);
+        withReuse(true);
     }
 
     @Override
@@ -69,12 +67,6 @@ public class PostgresTestContainer extends PostgreSQLContainer {
             new MigrationExecutor(dataSource, "migration/changelog-main.xml").executeMigration();
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute migrations", e);
-        }
-    }
-
-    public void stopWhenNotReusing() {
-        if (!TestcontainersConfiguration.getInstance().environmentSupportsReuse() || !isShouldBeReused()) {
-            stop();
         }
     }
 

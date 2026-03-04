@@ -20,6 +20,7 @@ package org.dependencytrack.tasks;
 
 import io.github.resilience4j.core.IntervalFunction;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.dex.activity.DeleteFilesActivity;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.TaskType;
@@ -72,7 +73,7 @@ class ImportBomWorkflowTest extends PersistenceCapableTest {
 
     @RegisterExtension
     private final WorkflowTestExtension workflowTest
-            = new WorkflowTestExtension(postgresContainer);
+            = new WorkflowTestExtension(DataSourceRegistry.getInstance().getDefault());
 
     private FileStorage fileStorage;
 

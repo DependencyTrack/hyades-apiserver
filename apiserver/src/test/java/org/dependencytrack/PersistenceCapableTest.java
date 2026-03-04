@@ -22,17 +22,13 @@ import alpine.Config;
 import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
 import alpine.server.auth.PasswordService;
-import alpine.server.persistence.PersistenceManagerFactory;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.support.config.source.memory.MemoryConfigSource;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.sql.Connection;
 import java.sql.Statement;
@@ -41,30 +37,21 @@ import java.util.concurrent.TimeoutException;
 
 public abstract class PersistenceCapableTest {
 
-    protected static PostgresTestContainer postgresContainer;
     protected MockProducer<byte[], byte[]> kafkaMockProducer;
     protected QueryManager qm;
 
     protected static final String TEST_PASSWORD_HASH = new String(
-        PasswordService.createHash("testuser".toCharArray()));
+            PasswordService.createHash("testuser".toCharArray()));
 
     @BeforeAll
     public static void init() {
         Config.enableUnitTests();
-
-        postgresContainer = new PostgresTestContainer();
-        postgresContainer.start();
-
-        MemoryConfigSource.setProperty("dt.datasource.url", postgresContainer.getJdbcUrl());
-        MemoryConfigSource.setProperty("dt.datasource.username", postgresContainer.getUsername());
-        MemoryConfigSource.setProperty("dt.datasource.password", postgresContainer.getPassword());
-
-        new PersistenceManagerFactory().contextInitialized(null);
+        TestDatabaseManager.initialize();
     }
 
     @BeforeEach
     public void before() throws Exception {
-        truncateTables(postgresContainer);
+        truncateTables();
 
         qm = new QueryManager();
 
@@ -87,7 +74,7 @@ public abstract class PersistenceCapableTest {
         // code base can leave such a broken state behind if they run into unexpected
         // errors. See: https://github.com/DependencyTrack/dependency-track/issues/2677
         if (!qm.getPersistenceManager().isClosed()
-            && qm.getPersistenceManager().currentTransaction().isActive()) {
+                && qm.getPersistenceManager().currentTransaction().isActive()) {
             qm.getPersistenceManager().currentTransaction().rollback();
         }
 
@@ -96,35 +83,22 @@ public abstract class PersistenceCapableTest {
         KafkaProducerInitializer.tearDown();
     }
 
-    @AfterAll
-    public static void tearDownClass() {
-        PersistenceManagerFactory.tearDown();
-        DataSourceRegistry.getInstance().closeAll();
-
-        if (postgresContainer != null) {
-            postgresContainer.stopWhenNotReusing();
-        }
-    }
-
-    protected static void truncateTables(final PostgreSQLContainer postgresContainer) throws Exception {
-        // Truncate all tables to ensure each test starts from a clean slate.
-        // https://stackoverflow.com/a/63227261
-        try (final Connection connection = postgresContainer.createConnection("");
+    protected static void truncateTables() throws Exception {
+        try (final Connection connection = DataSourceRegistry.getInstance().getDefault().getConnection();
              final Statement statement = connection.createStatement()) {
             statement.execute("""
                     DO $$ DECLARE
-                        r RECORD;
+                        table_list TEXT;
                     BEGIN
-                        FOR r IN (
-                          SELECT tablename
-                            FROM pg_tables
-                           WHERE schemaname = CURRENT_SCHEMA()
-                           -- Do not truncate Liquibase / Flyway changelog tables.
-                             AND tablename != 'databasechangelog'
-                             AND tablename !~ '^.+schema_history$'
-                        ) LOOP
-                            EXECUTE FORMAT('TRUNCATE TABLE %I CASCADE', r.tablename);
-                        END LOOP;
+                        SELECT STRING_AGG(QUOTE_IDENT(tablename), ', ')
+                          INTO table_list
+                          FROM pg_tables
+                         WHERE schemaname = CURRENT_SCHEMA()
+                           AND tablename != 'databasechangelog'
+                           AND tablename !~ '^.+schema_history$';
+                        IF table_list IS NOT NULL THEN
+                            EXECUTE 'TRUNCATE TABLE ' || table_list || ' CASCADE';
+                        END IF;
                     END $$;
                     """);
 
