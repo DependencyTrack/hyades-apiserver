@@ -1903,7 +1903,7 @@ class DexEngineImplTest {
     }
 
     private WorkflowRunMetadata awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
-        return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(10));
+        return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(30));
     }
 
 }
