@@ -27,6 +27,7 @@ import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.RatingSource;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.NotificationModelConverter;
@@ -125,6 +126,33 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
                 suppressionChanged = true;
             }
 
+            final boolean canUpdate = canUpdateAnalysis(analysis.getSource(), command.source());
+
+            if (canUpdate && (command.owaspVector() != null || command.owaspScore() != null || command.owaspSeverity() != null)) {
+                if (command.owaspVector() != null && !command.owaspVector().equals(analysis.getOwaspVector())) {
+                    auditTrailComments.add("OWASP RR Vector: %s → %s".formatted(
+                            analysis.getOwaspVector(), command.owaspVector()));
+                    analysis.setOwaspVector(command.owaspVector());
+                }
+                if (command.owaspScore() != null && !command.owaspScore().equals(analysis.getOwaspScore())) {
+                    auditTrailComments.add("OWASP RR Score: %s → %s".formatted(
+                            analysis.getOwaspScore(), command.owaspScore()));
+                    analysis.setOwaspScore(command.owaspScore());
+                }
+                if (command.owaspSeverity() != null && command.owaspSeverity() != analysis.getOwaspSeverity()) {
+                    auditTrailComments.add("OWASP RR Severity: %s → %s".formatted(
+                            analysis.getOwaspSeverity(), command.owaspSeverity()));
+                    analysis.setOwaspSeverity(command.owaspSeverity());
+                }
+            }
+
+            if (command.source() != null && canUpdate) {
+                if (analysis.getSource() != command.source()) {
+                    auditTrailComments.add("Source: %s → %s".formatted(analysis.getSource(), command.source()));
+                    analysis.setSource(command.source());
+                }
+            }
+
             final List<String> comments =
                     !command.options().contains(MakeAnalysisCommand.Option.OMIT_AUDIT_TRAIL)
                             ? auditTrailComments
@@ -196,6 +224,13 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
                 analysis.setAnalysisComments(analysisComments);
             }
         });
+    }
+
+    private boolean canUpdateAnalysis(final RatingSource existingSource, final RatingSource newSource) {
+        if (newSource == null || existingSource == null) {
+            return true;
+        }
+        return newSource.hasHigherOrEqualPrecedenceThan(existingSource);
     }
 
 }

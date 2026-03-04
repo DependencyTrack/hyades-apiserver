@@ -44,6 +44,7 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.RatingSource;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
@@ -174,14 +175,20 @@ public class AnalysisResource extends AbstractApiResource {
                             .build();
                 }
 
-                final long analysisId = qm.makeAnalysis(
-                        new MakeAnalysisCommand(component, vulnerability)
-                                .withState(request.getAnalysisState())
-                                .withJustification(request.getAnalysisJustification())
-                                .withResponse(request.getAnalysisResponse())
-                                .withDetails(request.getAnalysisDetails())
-                                .withSuppress(request.isSuppressed())
-                                .withComment(request.getComment()));
+                var command = new MakeAnalysisCommand(component, vulnerability)
+                        .withState(request.getAnalysisState())
+                        .withJustification(request.getAnalysisJustification())
+                        .withResponse(request.getAnalysisResponse())
+                        .withDetails(request.getAnalysisDetails())
+                        .withSuppress(request.isSuppressed())
+                        .withComment(request.getComment())
+                        .withSource(RatingSource.MANUAL);
+
+                if (request.getOwaspVector() != null || request.getOwaspScore() != null || request.getOwaspSeverity() != null) {
+                    command = command.withOwasp(request.getOwaspVector(), request.getOwaspScore(), request.getOwaspSeverity());
+                }
+
+                final long analysisId = qm.makeAnalysis(command);
 
                 return Response.ok(qm.getObjectById(Analysis.class, analysisId)).build();
             });

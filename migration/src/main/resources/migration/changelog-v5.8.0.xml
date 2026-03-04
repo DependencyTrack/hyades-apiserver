@@ -1,0 +1,68 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        objectQuotingStrategy="QUOTE_ALL_OBJECTS"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Add source column to ANALYSIS table for tracking ownership of the analysis -->
+    <!-- Sources indicate who/what owns the analysis: POLICY, VEX, MANUAL, or NVD -->
+    <!-- Precedence: POLICY (highest) > VEX > MANUAL > NVD (lowest) -->
+    <!-- Higher-precedence sources prevent lower-precedence sources from overwriting -->
+
+    <changeSet id="v5.8.0-1" author="fahedouch">
+        <comment>Add source and owaspSeverity columns to ANALYSIS table</comment>
+
+        <addColumn tableName="ANALYSIS">
+            <column name="SOURCE" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="OWASPSEVERITY" type="severity">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Create index for source column to optimize queries filtering by source -->
+    <changeSet id="v5.8.0-2" author="fahedouch">
+        <comment>Create index on source column for query performance</comment>
+
+        <createIndex indexName="ANALYSIS_SOURCE_IDX" tableName="ANALYSIS">
+            <column name="SOURCE"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Backfill existing analyses with appropriate source -->
+    <!-- Analyses linked to vulnerability policies get POLICY source -->
+    <!-- Other existing analyses with non-default values get MANUAL source -->
+    <changeSet id="v5.8.0-3" author="fahedouch">
+        <comment>Backfill source for existing analyses</comment>
+
+        <!-- Set POLICY source for analyses linked to vulnerability policies -->
+        <sql>
+            UPDATE "ANALYSIS"
+            SET "SOURCE" = 'POLICY'
+            WHERE "VULNERABILITY_POLICY_ID" IS NOT NULL
+              AND "SOURCE" IS NULL;
+        </sql>
+
+        <!-- Set MANUAL source for other analyses with meaningful data -->
+        <sql>
+            UPDATE "ANALYSIS"
+            SET "SOURCE" = 'MANUAL'
+            WHERE "SOURCE" IS NULL
+              AND (
+                  ("STATE" IS NOT NULL AND "STATE" != 'NOT_SET')
+                  OR ("JUSTIFICATION" IS NOT NULL AND "JUSTIFICATION" != 'NOT_SET')
+                  OR ("RESPONSE" IS NOT NULL AND "RESPONSE" != 'NOT_SET')
+                  OR "SEVERITY" IS NOT NULL
+                  OR "CVSSV2VECTOR" IS NOT NULL
+                  OR "CVSSV3VECTOR" IS NOT NULL
+                  OR "CVSSV4VECTOR" IS NOT NULL
+                  OR "OWASPVECTOR" IS NOT NULL
+              );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

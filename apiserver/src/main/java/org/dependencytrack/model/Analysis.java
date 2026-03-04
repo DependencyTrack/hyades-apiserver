@@ -152,6 +152,27 @@ public class Analysis implements Serializable {
     @JsonProperty(value = "owaspScore")
     private BigDecimal owaspScore;
 
+    @Persistent(defaultFetchGroup = "true")
+    @Column(name = "OWASPSEVERITY")
+    @Extensions(value = {
+            @Extension(vendorName = "datanucleus", key = "insert-function", value = "CAST(? AS severity)"),
+            @Extension(vendorName = "datanucleus", key = "update-function", value = "CAST(? AS severity)")
+    })
+    @JsonProperty(value = "owaspSeverity")
+    private Severity owaspSeverity;
+
+    /**
+     * The source that owns this analysis.
+     * Tracks whether the analysis was set by POLICY, VEX, MANUAL, or NVD.
+     * Higher-precedence sources prevent lower-precedence sources from overwriting.
+     *
+     * @since 5.8.0
+     */
+    @Persistent(defaultFetchGroup = "true")
+    @Column(name = "SOURCE", jdbcType = "VARCHAR")
+    @JsonProperty(value = "source")
+    private RatingSource source;
+
     @Persistent
     @Column(name = "VULNERABILITY_POLICY_ID", allowsNull = "true")
     @JsonIgnore
@@ -304,6 +325,22 @@ public class Analysis implements Serializable {
 
     public void setOwaspScore(BigDecimal owaspScore) {
         this.owaspScore = owaspScore;
+    }
+
+    public Severity getOwaspSeverity() {
+        return owaspSeverity;
+    }
+
+    public void setOwaspSeverity(Severity owaspSeverity) {
+        this.owaspSeverity = owaspSeverity;
+    }
+
+    public RatingSource getSource() {
+        return source;
+    }
+
+    public void setSource(RatingSource source) {
+        this.source = source;
     }
 
     public Long getVulnerabilityPolicyId() {
