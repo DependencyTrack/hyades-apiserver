@@ -47,6 +47,7 @@ import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEventListener;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.dex.engine.api.request.ExistsWorkflowRunRequest;
 import org.dependencytrack.dex.engine.api.request.ListTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
@@ -69,6 +70,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -1354,6 +1356,69 @@ class DexEngineImplTest {
                         .withLimit(5));
         assertThat(runsPage.items()).hasSize(5);
         assertThat(runsPage.nextPageToken()).isNull();
+    }
+
+    @Nested
+    class ExistsRunTest {
+
+        @Test
+        void shouldReturnTrueWhenRunExistsWithMatchingStatus() {
+            registerWorkflow("test", (ctx, arg) -> null);
+            engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+
+            assertThat(engine.existsRun(new ExistsWorkflowRunRequest(
+                    Set.of(WorkflowRunStatus.CREATED), null))).isTrue();
+        }
+
+        @Test
+        void shouldReturnFalseWhenNoRunExistsWithMatchingStatus() {
+            registerWorkflow("test", (ctx, arg) -> null);
+            engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+
+            assertThat(engine.existsRun(new ExistsWorkflowRunRequest(
+                    Set.of(WorkflowRunStatus.COMPLETED), null))).isFalse();
+        }
+
+        @Test
+        void shouldReturnTrueWhenRunExistsWithMatchingLabels() {
+            registerWorkflow("test", (ctx, arg) -> null);
+            engine.createRun(new CreateWorkflowRunRequest<>("test", 1)
+                    .withLabels(Map.of("foo", "bar")));
+
+            assertThat(engine.existsRun(new ExistsWorkflowRunRequest(
+                    null, Map.of("foo", "bar")))).isTrue();
+        }
+
+        @Test
+        void shouldReturnFalseWhenNoRunExistsWithMatchingLabels() {
+            registerWorkflow("test", (ctx, arg) -> null);
+            engine.createRun(new CreateWorkflowRunRequest<>("test", 1)
+                    .withLabels(Map.of("foo", "bar")));
+
+            assertThat(engine.existsRun(new ExistsWorkflowRunRequest(
+                    null, Map.of("foo", "baz")))).isFalse();
+        }
+
+        @Test
+        void shouldReturnTrueWhenRunExistsWithMatchingStatusAndLabels() {
+            registerWorkflow("test", (ctx, arg) -> null);
+            engine.createRun(new CreateWorkflowRunRequest<>("test", 1)
+                    .withLabels(Map.of("foo", "bar")));
+
+            assertThat(engine.existsRun(new ExistsWorkflowRunRequest(
+                    Set.of(WorkflowRunStatus.CREATED), Map.of("foo", "bar")))).isTrue();
+        }
+
+        @Test
+        void shouldReturnFalseWhenRunExistsWithMatchingStatusButNotLabels() {
+            registerWorkflow("test", (ctx, arg) -> null);
+            engine.createRun(new CreateWorkflowRunRequest<>("test", 1)
+                    .withLabels(Map.of("foo", "bar")));
+
+            assertThat(engine.existsRun(new ExistsWorkflowRunRequest(
+                    Set.of(WorkflowRunStatus.CREATED), Map.of("foo", "baz")))).isFalse();
+        }
+
     }
 
     @Nested

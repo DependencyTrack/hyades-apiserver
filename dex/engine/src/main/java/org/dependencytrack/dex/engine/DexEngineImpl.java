@@ -56,6 +56,7 @@ import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEvent;
 import org.dependencytrack.dex.engine.api.event.WorkflowRunsCompletedEventListener;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.dex.engine.api.request.ExistsWorkflowRunRequest;
 import org.dependencytrack.dex.engine.api.request.ListTaskQueuesRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.dex.engine.api.request.ListWorkflowRunsRequest;
@@ -723,6 +724,11 @@ final class DexEngineImpl implements DexEngine {
     @Override
     public Page<WorkflowRunMetadata> listRuns(ListWorkflowRunsRequest request) {
         return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRuns(request));
+    }
+
+    @Override
+    public boolean existsRun(ExistsWorkflowRunRequest request) {
+        return jdbi.withHandle(handle -> new WorkflowRunDao(handle).existsRun(request));
     }
 
     @Override
