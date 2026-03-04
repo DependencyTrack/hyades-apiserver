@@ -26,6 +26,7 @@ import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
 import org.cyclonedx.proto.v1_6.VulnerabilityReference;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.cache.api.NoopCacheManager;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.dex.activity.DeleteFilesActivity;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.TaskType;
@@ -103,7 +104,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
 
     @RegisterExtension
     private final WorkflowTestExtension workflowTest
-            = new WorkflowTestExtension(postgresContainer);
+            = new WorkflowTestExtension(DataSourceRegistry.getInstance().getDefault());
 
     private FileStorage fileStorage;
     private PluginManager pluginManager;

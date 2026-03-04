@@ -22,6 +22,7 @@ import io.github.resilience4j.core.IntervalFunction;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.cache.api.NoopCacheManager;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.dex.activity.DeleteFilesActivity;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.TaskType;
@@ -66,7 +67,7 @@ class PublishNotificationWorkflowTest extends PersistenceCapableTest {
 
     @RegisterExtension
     private final WorkflowTestExtension workflowTest =
-            new WorkflowTestExtension(postgresContainer);
+            new WorkflowTestExtension(DataSourceRegistry.getInstance().getDefault());
 
     private PluginManager pluginManager;
     private FileStorage fileStorage;

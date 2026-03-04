@@ -24,7 +24,6 @@ import alpine.event.framework.SingleThreadedEventService;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.auth.PasswordService;
-import alpine.server.persistence.PersistenceManagerFactory;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
@@ -32,12 +31,9 @@ import jakarta.json.JsonReader;
 import jakarta.ws.rs.core.Response;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.support.config.source.memory.MemoryConfigSource;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +45,7 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import static org.dependencytrack.PersistenceCapableTest.truncateTables;
+
 
 public abstract class ResourceTest {
 
@@ -103,8 +100,6 @@ public abstract class ResourceTest {
     // Hashing is expensive. Do it once and re-use across tests as much as possible.
     protected static final String TEST_USER_PASSWORD_HASH = new String(PasswordService.createHash("testuser".toCharArray()));
 
-    protected static PostgresTestContainer postgresContainer;
-
     protected QueryManager qm;
     protected MockProducer<byte[], byte[]> kafkaMockProducer;
     protected Team team;
@@ -113,20 +108,12 @@ public abstract class ResourceTest {
     @BeforeAll
     public static void init() {
         Config.enableUnitTests();
-
-        postgresContainer = new PostgresTestContainer();
-        postgresContainer.start();
-
-        MemoryConfigSource.setProperty("dt.datasource.url", postgresContainer.getJdbcUrl());
-        MemoryConfigSource.setProperty("dt.datasource.username", postgresContainer.getUsername());
-        MemoryConfigSource.setProperty("dt.datasource.password", postgresContainer.getPassword());
-
-        new PersistenceManagerFactory().contextInitialized(null);
+        TestDatabaseManager.initialize();
     }
 
     @BeforeEach
     public void before() throws Exception {
-        truncateTables(postgresContainer);
+        truncateTables();
 
         // Add a test user and team with API key. Optional if this is used, but its available to all tests.
         this.qm = new QueryManager();
@@ -157,16 +144,6 @@ public abstract class ResourceTest {
 
         qm.close();
         KafkaProducerInitializer.tearDown();
-    }
-
-    @AfterAll
-    public static void tearDownClass() {
-        PersistenceManagerFactory.tearDown();
-        DataSourceRegistry.getInstance().closeAll();
-
-        if (postgresContainer != null) {
-            postgresContainer.stopWhenNotReusing();
-        }
     }
 
     public void initializeWithPermissions(Permissions... permissions) {

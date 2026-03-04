@@ -20,6 +20,7 @@ package org.dependencytrack.csaf;
 
 import io.github.resilience4j.core.IntervalFunction;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.pagination.PageIterator;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.TaskType;
@@ -53,7 +54,7 @@ class DiscoverCsafProvidersWorkflowTest extends PersistenceCapableTest {
 
     @RegisterExtension
     private final WorkflowTestExtension workflowTest =
-            new WorkflowTestExtension(postgresContainer);
+            new WorkflowTestExtension(DataSourceRegistry.getInstance().getDefault());
 
     private CsafClient csafClientMock;
     private Handle jdbiHandle;

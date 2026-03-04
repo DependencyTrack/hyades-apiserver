@@ -18,14 +18,13 @@
  */
 package org.dependencytrack.init;
 
-import alpine.test.config.ConfigPropertyExtension;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
-import org.postgresql.ds.PGSimpleDataSource;
 
+import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,23 +33,13 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class InitTaskExecutorTest extends PersistenceCapableTest {
 
-    @RegisterExtension
-    private static final ConfigPropertyExtension configProperties = new ConfigPropertyExtension();
-
-    private PGSimpleDataSource dataSource;
+    private DataSource dataSource;
 
     @BeforeEach
     public void before() throws Exception {
         super.before();
 
-        dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(postgresContainer.getJdbcUrl());
-        dataSource.setUser(postgresContainer.getUsername());
-        dataSource.setPassword(postgresContainer.getPassword());
-
-        configProperties.setProperty("testcontainers.postgres.jdbc-url",  dataSource.getUrl());
-        configProperties.setProperty("testcontainers.postgres.username", dataSource.getUser());
-        configProperties.setProperty("testcontainers.postgres.password", dataSource.getPassword());
+        dataSource = DataSourceRegistry.getInstance().getDefault();
     }
 
     @Test
