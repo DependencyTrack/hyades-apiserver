@@ -76,21 +76,21 @@ jobs:
           mvn -B -Pquick,dist -Dservices.bom.merge.skip=false package
 
       - name: Upload Distribution Archive
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # tag=v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # tag=v7.0.0
         with:
           name: assembled-dist
           path: |-
             apiserver/target/dependency-track-apiserver-dist.tar.gz
 
       - name: Upload BOM
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # tag=v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # tag=v7.0.0
         with:
           name: bom
           path: |-
             apiserver/target/bom.json
 
       - name: Upload OpenAPI Spec
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # tag=v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # tag=v7.0.0
         with:
           name: openapi-spec
           path: |-
