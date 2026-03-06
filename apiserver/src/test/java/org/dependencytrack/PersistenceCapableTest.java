@@ -22,9 +22,7 @@ import alpine.Config;
 import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
 import alpine.server.auth.PasswordService;
-import org.apache.kafka.clients.producer.MockProducer;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
-import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,7 +35,6 @@ import java.util.concurrent.TimeoutException;
 
 public abstract class PersistenceCapableTest {
 
-    protected MockProducer<byte[], byte[]> kafkaMockProducer;
     protected QueryManager qm;
 
     protected static final String TEST_PASSWORD_HASH = new String(
@@ -54,8 +51,6 @@ public abstract class PersistenceCapableTest {
         truncateTables();
 
         qm = new QueryManager();
-
-        this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
     }
 
     @AfterEach
@@ -79,8 +74,6 @@ public abstract class PersistenceCapableTest {
         }
 
         qm.close();
-
-        KafkaProducerInitializer.tearDown();
     }
 
     protected static void truncateTables() throws Exception {

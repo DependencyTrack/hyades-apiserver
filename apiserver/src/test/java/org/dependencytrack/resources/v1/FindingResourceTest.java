@@ -41,12 +41,12 @@ import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.RepositoryMetaComponent;
-import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.AfterEach;
@@ -56,6 +56,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -63,6 +64,7 @@ import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.resources.v1.FindingResource.MEDIA_TYPE_SARIF_JSON;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -72,6 +74,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 public class FindingResourceTest extends ResourceTest {
@@ -161,14 +164,14 @@ public class FindingResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getFindingsByProjectEmptyTest() {
-        final var metaComponent = new RepositoryMetaComponent();
-        metaComponent.setRepositoryType(RepositoryType.MAVEN);
-        metaComponent.setNamespace("com.acme");
-        metaComponent.setName("acme-lib");
-        metaComponent.setLatestVersion("1.2.3");
-        metaComponent.setLastCheck(new Date());
-        qm.persist(metaComponent);
+    public void getFindingsByProjectEmptyTest() throws Exception {
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(List.of(
+                new PackageMetadata(
+                        new com.github.packageurl.PackageURL("pkg:maven/com.acme/acme-lib"),
+                        "1.2.3",
+                        Instant.now(),
+                        null,
+                        null))));
 
         final var project = new Project();
         project.setName("acme-app");
@@ -397,44 +400,40 @@ public class FindingResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getFindingsByProjectWithComponentLatestVersionTest() {
+    public void getFindingsByProjectWithComponentLatestVersionTest() throws Exception {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         c1.setPurl("pkg:/maven/org.acme/component-a@1.0.0");
-        RepositoryMetaComponent r1 = new RepositoryMetaComponent();
-        Date d1 = new Date();
-        r1.setLastCheck(d1);
-        r1.setNamespace("org.acme");
-        r1.setName("component-a");
-        r1.setLatestVersion("2.0.0");
-        r1.setRepositoryType(RepositoryType.MAVEN);
-        qm.persist(r1);
 
         Component c2 = createComponent(p1, "Component B", "1.0");
         c2.setPurl("pkg:/maven/org.acme/component-b@1.0.0");
-        RepositoryMetaComponent r2 = new RepositoryMetaComponent();
-        Date d2 = new Date();
-        r2.setLastCheck(d2);
-        r2.setNamespace("org.acme");
-        r2.setName("component-b");
-        r2.setLatestVersion("3.0.0");
-        r2.setRepositoryType(RepositoryType.MAVEN);
-        qm.persist(r2);
 
         createComponent(p1, "Component C", "1.0");
         createComponent(p2, "Component D", "1.0");
 
         Component c5 = createComponent(p2, "Component E", "1.0");
         c5.setPurl("pkg:/maven/org.acme/component-e@1.0.0");
-        RepositoryMetaComponent r3 = new RepositoryMetaComponent();
-        Date d3 = new Date();
-        r3.setLastCheck(d3);
-        r3.setNamespace("org.acme");
-        r3.setName("component-e");
-        r3.setLatestVersion("4.0.0");
-        r3.setRepositoryType(RepositoryType.MAVEN);
-        qm.persist(r3);
+
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(List.of(
+                new PackageMetadata(
+                        new com.github.packageurl.PackageURL("pkg:maven/org.acme/component-a"),
+                        "2.0.0",
+                        Instant.now(),
+                        null,
+                        null),
+                new PackageMetadata(
+                        new com.github.packageurl.PackageURL("pkg:maven/org.acme/component-b"),
+                        "3.0.0",
+                        Instant.now(),
+                        null,
+                        null),
+                new PackageMetadata(
+                        new com.github.packageurl.PackageURL("pkg:maven/org.acme/component-e"),
+                        "4.0.0",
+                        Instant.now(),
+                        null,
+                        null))));
 
         createComponent(p2, "Component F", "1.0");
         Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
@@ -645,9 +644,9 @@ public class FindingResourceTest extends ResourceTest {
         //noinspection unchecked
         ArgumentCaptor<CreateWorkflowRunRequest<?>> dexCreateRunCaptor =
                 ArgumentCaptor.forClass(CreateWorkflowRunRequest.class);
-        verify(DEX_ENGINE_MOCK).createRun(dexCreateRunCaptor.capture());
+        verify(DEX_ENGINE_MOCK, times(2)).createRun(dexCreateRunCaptor.capture());
 
-        CreateWorkflowRunRequest<?> createDexRunRequest = dexCreateRunCaptor.getValue();
+        CreateWorkflowRunRequest<?> createDexRunRequest = dexCreateRunCaptor.getAllValues().getFirst();
         assertThat(createDexRunRequest.workflowName()).isEqualTo("analyze-project");
         assertThat(createDexRunRequest.workflowVersion()).isEqualTo(1);
         assertThat(createDexRunRequest.workflowInstanceId()).isEqualTo("analyze-project-manual:" + project.getUuid());

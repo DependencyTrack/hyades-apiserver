@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import com.github.packageurl.PackageURL;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -27,20 +28,23 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Repository;
-import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 public class RepositoryResourceTest extends ResourceTest {
@@ -99,15 +103,15 @@ public class RepositoryResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getRepositoryMetaComponentTest() {
-        RepositoryMetaComponent meta = new RepositoryMetaComponent();
-        Date lastCheck = new Date();
-        meta.setLastCheck(lastCheck);
-        meta.setNamespace("org.acme");
-        meta.setName("example-component");
-        meta.setLatestVersion("2.0.0");
-        meta.setRepositoryType(RepositoryType.MAVEN);
-        qm.persist(meta);
+    public void getRepositoryMetaComponentTest() throws Exception {
+        final var resolvedAt = new Date();
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(List.of(
+                new PackageMetadata(
+                        new PackageURL("pkg:maven/org.acme/example-component"),
+                        "2.0.0",
+                        resolvedAt.toInstant(),
+                        null,
+                        null))));
         Response response = jersey.target(V1_REPOSITORY + "/latest")
                 .queryParam("purl", "pkg:/maven/org.acme/example-component@1.0.0")
                 .request()
@@ -121,19 +125,18 @@ public class RepositoryResourceTest extends ResourceTest {
         Assertions.assertEquals("org.acme", json.getString("namespace"));
         Assertions.assertEquals("example-component", json.getString("name"));
         Assertions.assertEquals("2.0.0", json.getString("latestVersion"));
-        Assertions.assertEquals(lastCheck.getTime(), json.getJsonNumber("lastCheck").longValue());
+        Assertions.assertEquals(resolvedAt.getTime(), json.getJsonNumber("lastCheck").longValue());
     }
 
     @Test
-    public void getRepositoryMetaComponentInvalidRepoTypeTest() {
-        RepositoryMetaComponent meta = new RepositoryMetaComponent();
-        Date lastCheck = new Date();
-        meta.setLastCheck(lastCheck);
-        meta.setNamespace("org.acme");
-        meta.setName("example-component");
-        meta.setLatestVersion("2.0.0");
-        meta.setRepositoryType(RepositoryType.MAVEN);
-        qm.persist(meta);
+    public void getRepositoryMetaComponentInvalidRepoTypeTest() throws Exception {
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(List.of(
+                new PackageMetadata(
+                        new PackageURL("pkg:maven/org.acme/example-component"),
+                        "2.0.0",
+                        Instant.now(),
+                        null,
+                        null))));
         Response response = jersey.target(V1_REPOSITORY + "/latest")
                 .queryParam("purl", "pkg:/generic/org.acme/example-component@1.0.0")
                 .request()
@@ -144,15 +147,14 @@ public class RepositoryResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getRepositoryMetaComponentInvalidPurlTest() {
-        RepositoryMetaComponent meta = new RepositoryMetaComponent();
-        Date lastCheck = new Date();
-        meta.setLastCheck(lastCheck);
-        meta.setNamespace("org.acme");
-        meta.setName("example-component");
-        meta.setLatestVersion("2.0.0");
-        meta.setRepositoryType(RepositoryType.MAVEN);
-        qm.persist(meta);
+    public void getRepositoryMetaComponentInvalidPurlTest() throws Exception {
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(List.of(
+                new PackageMetadata(
+                        new PackageURL("pkg:maven/org.acme/example-component"),
+                        "2.0.0",
+                        Instant.now(),
+                        null,
+                        null))));
         Response response = jersey.target(V1_REPOSITORY + "/latest")
                 .queryParam("purl", "g:/g/g/g")
                 .request()

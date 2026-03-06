@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.util.KafkaTestUtil.generateBomFromJson;
+import static org.dependencytrack.util.ProtobufTestUtil.generateBomFromJson;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;

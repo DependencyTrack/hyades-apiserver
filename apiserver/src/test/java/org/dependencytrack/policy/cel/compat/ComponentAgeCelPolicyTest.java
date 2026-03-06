@@ -18,23 +18,27 @@
  */
 package org.dependencytrack.policy.cel.compat;
 
+import com.github.packageurl.PackageURL;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.FetchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
+import org.dependencytrack.model.PackageArtifactMetadata;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.persistence.jdbi.PackageArtifactMetadataDao;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Date;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 
 public class ComponentAgeCelPolicyTest extends PersistenceCapableTest {
 
@@ -72,7 +76,7 @@ public class ComponentAgeCelPolicyTest extends PersistenceCapableTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void evaluateTest(Instant publishedDate, PolicyCondition.Operator operator, String ageValue, boolean shouldViolate) {
+    public void evaluateTest(Instant publishedDate, PolicyCondition.Operator operator, String ageValue, boolean shouldViolate) throws Exception {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         final var condition = qm.createPolicyCondition(policy, PolicyCondition.Subject.AGE, operator, ageValue);
         final var project = new Project();
@@ -83,16 +87,24 @@ public class ComponentAgeCelPolicyTest extends PersistenceCapableTest {
         component.setPurl("pkg:maven/foo/bar@1.2.3");
         component.setProject(project);
         qm.persist(component);
-        final var metaComponent = new IntegrityMetaComponent();
-        metaComponent.setRepositoryUrl("test");
-        metaComponent.setStatus(FetchStatus.PROCESSED);
-        metaComponent.setPurl("pkg:maven/foo/bar@1.2.3");
-        if (publishedDate != null) {
-            metaComponent.setPublishedAt(Date.from(publishedDate));
-        }
-        metaComponent.setLastFetch(new Date());
-        qm.createIntegrityMetaComponent(metaComponent);
 
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(List.of(
+                    new PackageMetadata(
+                            new PackageURL("pkg:maven/foo/bar"),
+                            "1.2.3",
+                            Instant.now(),
+                            null,
+                            null)));
+            new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                    new PackageArtifactMetadata(
+                            new PackageURL("pkg:maven/foo/bar@1.2.3"),
+                            new PackageURL("pkg:maven/foo/bar"),
+                            null, null, null, null,
+                            publishedDate,
+                            null, null,
+                            Instant.now())));
+        });
 
         new CelPolicyEngine().evaluateProject(project.getUuid());
 

@@ -20,7 +20,6 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
-import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -31,20 +30,25 @@ import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.OrganizationalContact;
+import org.dependencytrack.model.PackageArtifactMetadata;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.persistence.jdbi.PackageArtifactMetadataDao;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
+import org.dependencytrack.util.PurlUtil;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.StringReader;
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.hamcrest.Matchers.equalTo;
 
 public class ComponentResourcePostgresTest extends ResourceTest {
@@ -56,7 +60,7 @@ public class ComponentResourcePostgresTest extends ResourceTest {
                     .register(AuthenticationFeature.class));
 
     @Test
-    public void getAllComponentsTest() throws MalformedPackageURLException {
+    public void getAllComponentsTest() throws Exception {
         final Project project = prepareProject();
 
         final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
@@ -96,6 +100,9 @@ public class ComponentResourcePostgresTest extends ResourceTest {
                             "latestVersion": "0.0",
                             "lastCheck": "${json-unit.any-number}"
                           },
+                          "componentMetaInformation": {
+                            "integrityMatchStatus": "COMPONENT_MISSING_HASH"
+                          },
                           "expandDependencyGraph": false,
                           "isInternal": false,
                           "occurrenceCount": 0
@@ -104,7 +111,7 @@ public class ComponentResourcePostgresTest extends ResourceTest {
     }
 
     @Test
-    public void getOutdatedComponentsTest() throws MalformedPackageURLException {
+    public void getOutdatedComponentsTest() throws Exception {
         final Project project = prepareProject();
 
         final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
@@ -121,7 +128,7 @@ public class ComponentResourcePostgresTest extends ResourceTest {
     }
 
     @Test
-    public void getOutdatedDirectComponentsTest() throws MalformedPackageURLException {
+    public void getOutdatedDirectComponentsTest() throws Exception {
         final Project project = prepareProject();
 
         final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
@@ -138,7 +145,7 @@ public class ComponentResourcePostgresTest extends ResourceTest {
     }
 
     @Test
-    public void getAllDirectComponentsTest() throws MalformedPackageURLException {
+    public void getAllDirectComponentsTest() throws Exception {
         final Project project = prepareProject();
 
         final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
@@ -188,7 +195,7 @@ public class ComponentResourcePostgresTest extends ResourceTest {
     }
 
     @Test
-    public void getComponentsByNameTest() throws MalformedPackageURLException {
+    public void getComponentsByNameTest() throws Exception {
         final Project project = prepareProject();
 
         final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
@@ -204,7 +211,7 @@ public class ComponentResourcePostgresTest extends ResourceTest {
     }
 
     @Test
-    public void getComponentsByGroupTest() throws MalformedPackageURLException {
+    public void getComponentsByGroupTest() throws Exception {
         final Project project = prepareProject();
 
         final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
@@ -219,9 +226,11 @@ public class ComponentResourcePostgresTest extends ResourceTest {
         assertThat(json).hasSize(100);
     }
 
-    private Project prepareProject() throws MalformedPackageURLException {
+    private Project prepareProject() throws Exception {
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         final List<String> directDepencencies = new ArrayList<>();
+        final List<PackageMetadata> packageMetadataList = new ArrayList<>();
+        final List<PackageArtifactMetadata> artifactMetadataList = new ArrayList<>();
         // Generate 1000 dependencies
         for (int i = 0; i < 1000; i++) {
             final var author = new OrganizationalContact();
@@ -243,27 +252,34 @@ public class ComponentResourcePostgresTest extends ResourceTest {
             // Recent & Outdated
             if ((i >= 25) && (i < 225)) {
                 // 100 outdated components, 75 of these are direct dependencies, 25 transitive
-                final var metaComponent = new RepositoryMetaComponent();
-                metaComponent.setRepositoryType(RepositoryType.MAVEN);
-                metaComponent.setNamespace("component-group");
-                metaComponent.setName("component-name-" + i);
-                metaComponent.setLatestVersion(String.valueOf(i + 1) + ".0");
-                metaComponent.setLastCheck(new Date());
-                qm.persist(metaComponent);
+                packageMetadataList.add(new PackageMetadata(
+                        PurlUtil.silentPurlPackageOnly(component.getPurl()),
+                        String.valueOf(i + 1) + ".0",
+                        Instant.now(),
+                        null,
+                        null));
+                artifactMetadataList.add(new PackageArtifactMetadata(
+                        component.getPurl(),
+                        PurlUtil.silentPurlPackageOnly(component.getPurl()),
+                        null, null, null, null, null, null, null, null));
             } else if (i < 500) {
                 // 300 recent components, 25 of these are direct dependencies
-                final var metaComponent = new RepositoryMetaComponent();
-                metaComponent.setRepositoryType(RepositoryType.MAVEN);
-                metaComponent.setNamespace("component-group");
-                metaComponent.setName("component-name-" + i);
-                metaComponent.setLatestVersion(String.valueOf(i) + ".0");
-                metaComponent.setLastCheck(new Date());
-                qm.persist(metaComponent);
+                packageMetadataList.add(new PackageMetadata(
+                        PurlUtil.silentPurlPackageOnly(component.getPurl()),
+                        String.valueOf(i) + ".0",
+                        Instant.now(),
+                        null,
+                        null));
+                artifactMetadataList.add(new PackageArtifactMetadata(
+                        component.getPurl(),
+                        PurlUtil.silentPurlPackageOnly(component.getPurl()),
+                        null, null, null, null, null, null, null, null));
             } else {
-                // 500 components with no RepositoryMetaComponent containing version
-                // metadata, all transitive dependencies
+                // 500 components with no metadata, all transitive dependencies
             }
         }
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(packageMetadataList));
+        useJdbiHandle(handle -> new PackageArtifactMetadataDao(handle).upsertAll(artifactMetadataList));
         project.setDirectDependencies("[" + String.join(",", directDepencencies.toArray(new String[0])) + "]");
         return project;
     }

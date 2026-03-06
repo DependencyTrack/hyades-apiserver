@@ -26,6 +26,8 @@ import io.micrometer.core.instrument.Metrics;
 import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.mapping.PackageMetadataRowMapper;
+import org.dependencytrack.persistence.jdbi.mapping.PurlColumnMapper;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.HandleCallback;
 import org.jdbi.v3.core.HandleConsumer;
@@ -40,6 +42,7 @@ import javax.jdo.PersistenceManager;
 import javax.jdo.PersistenceManagerFactory;
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.Timestamp;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -171,7 +174,10 @@ public class JdbiFactory {
                 .installPlugin(new Jackson2Plugin())
                 .setTemplateEngine(FreemarkerEngine.instance())
                 .setSqlLogger(new QueryTimingSqlLogger(Metrics.globalRegistry))
-                .registerArrayType(Date.class, "TIMESTAMPTZ");
+                .registerArrayType(Date.class, "TIMESTAMPTZ")
+                .registerArrayType(Timestamp.class, "TIMESTAMPTZ")
+                .registerColumnMapper(new PurlColumnMapper())
+                .registerRowMapper(new PackageMetadataRowMapper());
 
         preparedJdbi
                 .getConfig(PaginationConfig.class)

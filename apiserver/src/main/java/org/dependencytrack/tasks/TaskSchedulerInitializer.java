@@ -38,21 +38,21 @@ import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
-import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
-import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
+import org.dependencytrack.event.maintenance.PackageMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
 import org.dependencytrack.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.pkgmetadata.ResolvePackageMetadataWorkflow;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
-import org.dependencytrack.tasks.maintenance.ComponentMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
+import org.dependencytrack.tasks.maintenance.PackageMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
@@ -107,9 +107,9 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
 
         scheduler
                 .schedule(
-                        "Component Metadata Maintenance",
-                        getCronScheduleForTask(ComponentMetadataMaintenanceTask.class),
-                        () -> Event.dispatch(new ComponentMetadataMaintenanceEvent()))
+                        "Package Metadata Maintenance",
+                        getCronScheduleForTask(PackageMetadataMaintenanceTask.class),
+                        () -> Event.dispatch(new PackageMetadataMaintenanceEvent()))
                 .schedule(
                         "CSAF Document Import",
                         getCronScheduleFromConfig(config, "task.csaf.document.import.cron"),
@@ -192,13 +192,17 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         () -> Event.dispatch(new OsvMirrorEvent()),
                         /* triggerOnFirstRun */ true)
                 .schedule(
+                        "Package Metadata Resolution",
+                        getCronScheduleFromConfig(config, "task.package-metadata-resolution.cron"),
+                        () -> {
+                            dexEngine.createRun(
+                                    new CreateWorkflowRunRequest<>(ResolvePackageMetadataWorkflow.class)
+                                            .withWorkflowInstanceId(ResolvePackageMetadataWorkflow.INSTANCE_ID));
+                        })
+                .schedule(
                         "Portfolio Metrics Update",
                         getCronScheduleForTask(PortfolioMetricsUpdateTask.class),
                         () -> Event.dispatch(new PortfolioMetricsUpdateEvent()))
-                .schedule(
-                        "Portfolio Repository Meta Analysis",
-                        getCronScheduleForTask(RepositoryMetaAnalysisTask.class),
-                        () -> Event.dispatch(new PortfolioRepositoryMetaAnalysisEvent()))
                 .schedule(
                         "Portfolio Vulnerability Analysis",
                         getCronScheduleForTask(VulnerabilityAnalysisTask.class),

@@ -50,20 +50,19 @@ import org.dependencytrack.analysis.AnalyzeProjectWorkflow;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
-import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.integrations.FindingPackagingFormat;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.GroupedFinding;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.RepositoryQueryManager;
 import org.dependencytrack.persistence.jdbi.FindingDao;
-import org.dependencytrack.persistence.jdbi.RepositoryMetaDao;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
+import org.dependencytrack.pkgmetadata.ResolvePackageMetadataWorkflow;
 import org.dependencytrack.proto.internal.workflow.v1.AnalyzeProjectWorkflowArg;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
@@ -228,7 +227,7 @@ public class FindingResource extends AbstractApiResource {
     @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE}) // Require admin privileges due to system impact
     public Response analyzePortfolio() {
         LOGGER.info("Portfolio analysis requested by " + super.getPrincipal().getName());
-        if (Event.isEventBeingProcessed(PortfolioRepositoryMetaAnalysisEvent.CHAIN_IDENTIFIER)) {
+        if (Event.isEventBeingProcessed(PortfolioVulnerabilityAnalysisEvent.CHAIN_IDENTIFIER)) {
             LOGGER.info("Another portfolio analysis event is already being processed; Dropping");
             return Response.status(Response.Status.NOT_MODIFIED).build();
         }
@@ -279,6 +278,10 @@ public class FindingResource extends AbstractApiResource {
         if (runId == null) {
             return Response.status(Response.Status.CONFLICT).build();
         }
+
+        dexEngine.createRun(
+                new CreateWorkflowRunRequest<>(ResolvePackageMetadataWorkflow.class)
+                        .withWorkflowInstanceId(ResolvePackageMetadataWorkflow.INSTANCE_ID));
 
         return Response.ok(Map.of("token", runId)).build();
     }
@@ -444,7 +447,7 @@ public class FindingResource extends AbstractApiResource {
     }
 
     public static List<Finding> mapComponentLatestVersion(List<Finding> findingList){
-        final Map<RepositoryQueryManager.RepositoryMetaComponentSearch, List<Finding>> findingsByMetaComponentSearch = findingList.stream()
+        final Map<String, List<Finding>> findingsByPurlPackage = findingList.stream()
                 .filter(finding -> finding.getComponent().get("purl") != null)
                 .map(finding -> {
                     final PackageURL purl = PurlUtil.silentPurl((String) finding.getComponent().get("purl"));
@@ -456,22 +459,21 @@ public class FindingResource extends AbstractApiResource {
                     if (repositoryType == RepositoryType.UNSUPPORTED) {
                         return null;
                     }
-                    final var search = new RepositoryQueryManager.RepositoryMetaComponentSearch(repositoryType, purl.getNamespace(), purl.getName());
-                    return Map.entry(search, finding);
+                    return Map.entry(PurlUtil.purlPackageOnly(purl), finding);
                 })
                 .filter(Objects::nonNull)
                 .collect(Collectors.groupingBy(
                         Map.Entry::getKey,
                         Collectors.mapping(Map.Entry::getValue, Collectors.toList())
                 ));
-        final List<RepositoryMetaComponent> repositoryMetaComponents = withJdbiHandle(handle ->
-                handle.attach(RepositoryMetaDao.class).getRepositoryMetaComponents(findingsByMetaComponentSearch.keySet()));
-        repositoryMetaComponents.forEach(metaComponent -> {
-            final var search = new RepositoryQueryManager.RepositoryMetaComponentSearch(metaComponent.getRepositoryType(), metaComponent.getNamespace(), metaComponent.getName());
-            final List<Finding> affectedFindings = findingsByMetaComponentSearch.get(search);
-            if (affectedFindings != null) {
+        final List<PackageMetadata> packageMetadataList = withJdbiHandle(handle ->
+                new PackageMetadataDao(handle).getAll(findingsByPurlPackage.keySet()));
+        packageMetadataList.forEach(packageMetadata -> {
+            final List<Finding> affectedFindings =
+                    findingsByPurlPackage.get(packageMetadata.purl().canonicalize());
+            if (affectedFindings != null && packageMetadata.latestVersion() != null) {
                 for (final Finding finding : affectedFindings) {
-                    finding.getComponent().put("latestVersion", metaComponent.getLatestVersion());
+                    finding.getComponent().put("latestVersion", packageMetadata.latestVersion());
                 }
             }
         });

@@ -18,8 +18,7 @@
   ~ Copyright (c) OWASP Foundation. All Rights Reserved.
   -->
 <persistence xmlns="http://xmlns.jcp.org/xml/ns/persistence"
-             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd" version="3.0">
+             version="3.0">
   <persistence-unit name="Alpine">
     <class>alpine.model.ApiKey</class>
     <class>alpine.model.ConfigProperty</class>
@@ -42,8 +41,7 @@
     <class>org.dependencytrack.model.ComponentProperty</class>
     <class>org.dependencytrack.model.Epss</class>
     <class>org.dependencytrack.model.FindingAttribution</class>
-    <class>org.dependencytrack.model.IntegrityAnalysis</class>
-    <class>org.dependencytrack.model.IntegrityMetaComponent</class>
+
     <class>org.dependencytrack.model.License</class>
     <class>org.dependencytrack.model.LicenseGroup</class>
     <class>org.dependencytrack.model.NotificationPublisher</class>
@@ -55,7 +53,7 @@
     <class>org.dependencytrack.model.ProjectMetadata</class>
     <class>org.dependencytrack.model.ProjectProperty</class>
     <class>org.dependencytrack.model.Repository</class>
-    <class>org.dependencytrack.model.RepositoryMetaComponent</class>
+
     <class>org.dependencytrack.model.Role</class>
     <class>org.dependencytrack.model.ServiceComponent</class>
     <class>org.dependencytrack.model.Tag</class>

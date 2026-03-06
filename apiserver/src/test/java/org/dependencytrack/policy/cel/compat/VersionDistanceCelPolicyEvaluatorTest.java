@@ -18,24 +18,29 @@
  */
 package org.dependencytrack.policy.cel.compat;
 
+import com.github.packageurl.PackageURL;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.PackageArtifactMetadata;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition.Operator;
 import org.dependencytrack.model.PolicyCondition.Subject;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.RepositoryMetaComponent;
-import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.persistence.jdbi.PackageArtifactMetadataDao;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 
 public class VersionDistanceCelPolicyEvaluatorTest extends PersistenceCapableTest {
 
@@ -107,7 +112,7 @@ public class VersionDistanceCelPolicyEvaluatorTest extends PersistenceCapableTes
     private boolean shouldViolate;
 
     public void initVersionDistanceCelPolicyEvaluatorTest(final String version, String latestVersion,
-                                                 Operator operator, String versionDistance, boolean shouldViolate) {
+                                                          Operator operator, String versionDistance, boolean shouldViolate) {
         this.version = version;
         this.latestVersion = latestVersion;
         this.operator = operator;
@@ -117,7 +122,7 @@ public class VersionDistanceCelPolicyEvaluatorTest extends PersistenceCapableTes
 
     @MethodSource("testParameters")
     @ParameterizedTest(name = "[{index}] version={0} latestVersion={1} operator={2} distance={3} shouldViolate={4}")
-    public void evaluateTest(final String version, String latestVersion, Operator operator, String versionDistance, boolean shouldViolate) {
+    public void evaluateTest(final String version, String latestVersion, Operator operator, String versionDistance, boolean shouldViolate) throws Exception {
         initVersionDistanceCelPolicyEvaluatorTest(version, latestVersion, operator, versionDistance, shouldViolate);
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         final var condition = qm.createPolicyCondition(policy, Subject.VERSION_DISTANCE, operator, versionDistance);
@@ -126,22 +131,29 @@ public class VersionDistanceCelPolicyEvaluatorTest extends PersistenceCapableTes
         project.setName("name");
         project.setInactiveSince(null);
 
-        final var metaComponent = new RepositoryMetaComponent();
-        metaComponent.setRepositoryType(RepositoryType.MAVEN);
-        metaComponent.setNamespace("foo");
-        metaComponent.setName("bar");
-        metaComponent.setLatestVersion("6.6.6");
-        if (latestVersion != null) {
-            metaComponent.setLatestVersion(latestVersion);
-        }
-        metaComponent.setLastCheck(new Date());
-        qm.persist(metaComponent);
+        final var packagePurl = new PackageURL("pkg:maven/foo/bar");
+        final var componentPurl = new PackageURL("pkg:maven/foo/bar@" + version);
+
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(List.of(
+                    new PackageMetadata(
+                            packagePurl,
+                            latestVersion != null ? latestVersion : "6.6.6",
+                            Instant.now(),
+                            null,
+                            null)));
+            new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                    new PackageArtifactMetadata(
+                            componentPurl, packagePurl,
+                            null, null, null, null, null,
+                            null, null, Instant.now())));
+        });
 
         final var component = new Component();
         component.setProject(project);
         component.setGroup("foo");
         component.setName("bar");
-        component.setPurl("pkg:maven/foo/bar@" + version);
+        component.setPurl(componentPurl);
         component.setVersion(version);
         qm.persist(component);
 
@@ -151,7 +163,7 @@ public class VersionDistanceCelPolicyEvaluatorTest extends PersistenceCapableTes
         new CelPolicyEngine().evaluateProject(project.getUuid());
         if (shouldViolate) {
             assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
-            final PolicyViolation violation = qm.getAllPolicyViolations(component).get(0);
+            final PolicyViolation violation = qm.getAllPolicyViolations(component).getFirst();
             assertThat(violation.getComponent()).isEqualTo(component);
             assertThat(violation.getPolicyCondition()).isEqualTo(condition);
         } else {

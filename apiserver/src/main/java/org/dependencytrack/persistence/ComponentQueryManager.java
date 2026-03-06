@@ -34,16 +34,16 @@ import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.DependencyMetrics;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.sqlmapping.ComponentProjection;
-import org.dependencytrack.persistence.RepositoryQueryManager.RepositoryMetaComponentSearch;
 import org.dependencytrack.persistence.jdbi.ComponentMetaDao;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
-import org.dependencytrack.persistence.jdbi.RepositoryMetaDao;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
-import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
+import org.dependencytrack.util.PurlUtil;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -171,16 +171,44 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "D0"."ISOSIAPPROVED" AS "isOsiApproved",
                         "D0"."UUID" AS "licenseUuid",
                         "D0"."NAME" AS "licenseName",
-                        "I0"."LAST_FETCH" AS "lastFetch",
+                        "I0"."RESOLVED_AT" AS "lastFetch",
                         "I0"."PUBLISHED_AT" AS "publishedAt",
-                        "IA"."INTEGRITY_CHECK_STATUS" AS "integrityCheckStatus",
-                        "I0"."REPOSITORY_URL" AS "integrityRepoUrl",
+                        CASE
+                          WHEN "I0"."PURL" IS NULL
+                          THEN NULL
+                          WHEN "A0"."SHA_256" IS NOT NULL AND "I0"."HASH_SHA256" IS NOT NULL
+                          THEN CASE
+                                 WHEN LOWER("A0"."SHA_256") = LOWER("I0"."HASH_SHA256")
+                                 THEN 'HASH_MATCH_PASSED'
+                                 ELSE 'HASH_MATCH_FAILED'
+                               END
+                          WHEN "A0"."SHA_512" IS NOT NULL AND "I0"."HASH_SHA512" IS NOT NULL
+                          THEN CASE
+                                 WHEN LOWER("A0"."SHA_512") = LOWER("I0"."HASH_SHA512")
+                                 THEN 'HASH_MATCH_PASSED'
+                                 ELSE 'HASH_MATCH_FAILED'
+                               END
+                          WHEN "A0"."SHA1" IS NOT NULL AND "I0"."HASH_SHA1" IS NOT NULL
+                          THEN CASE
+                                 WHEN LOWER("A0"."SHA1") = LOWER("I0"."HASH_SHA1")
+                                 THEN 'HASH_MATCH_PASSED'
+                                 ELSE 'HASH_MATCH_FAILED'
+                               END
+                          WHEN "A0"."MD5" IS NOT NULL AND "I0"."HASH_MD5" IS NOT NULL
+                          THEN CASE
+                                 WHEN LOWER("A0"."MD5") = LOWER("I0"."HASH_MD5")
+                                 THEN 'HASH_MATCH_PASSED'
+                                 ELSE 'HASH_MATCH_FAILED'
+                               END
+                          WHEN "A0"."SHA_256" IS NULL AND "A0"."SHA_512" IS NULL AND "A0"."SHA1" IS NULL AND "A0"."MD5" IS NULL
+                          THEN 'COMPONENT_MISSING_HASH'
+                          ELSE 'HASH_MATCH_UNKNOWN'
+                        END AS "integrityCheckStatus",
                         (SELECT COUNT(*) FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = "A0"."ID") AS "occurrenceCount",
                         COUNT(*) OVER() AS "totalCount"
                 FROM "COMPONENT" "A0"
                 INNER JOIN "PROJECT" "B0" ON "A0"."PROJECT_ID" = "B0"."ID"
-                LEFT JOIN "INTEGRITY_META_COMPONENT" "I0" ON "A0"."PURL" = "I0"."PURL"
-                LEFT JOIN "INTEGRITY_ANALYSIS" "IA" ON "A0"."ID" = "IA"."COMPONENT_ID"
+                LEFT JOIN "PACKAGE_ARTIFACT_METADATA" "I0" ON "A0"."PURL" = "I0"."PURL"
                 LEFT OUTER JOIN "LICENSE" "D0" ON "A0"."LICENSE_ID" = "D0"."ID"
                 WHERE "A0"."PROJECT_ID" = :projectId
                 """;
@@ -196,17 +224,15 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         }
 
         if (onlyOutdated) {
-            // Components are considered outdated when metadata does exists, but the version is different than latestVersion
-            // Different should always mean version < latestVersion
-            // Hack JDO using % instead of .* to get the SQL LIKE clause working:
-            queryString +=
-                    """
-                        AND NOT (NOT EXISTS (
-                        SELECT "M"."ID"
-                        FROM "REPOSITORY_META_COMPONENT" "M" WHERE "M"."NAME" = "A0"."NAME"
-                        AND ("M"."NAMESPACE" = "A0"."GROUP" OR "M"."NAMESPACE" IS NULL OR "A0"."GROUP" IS NULL)
-                        AND "M"."LATEST_VERSION" <> "A0"."VERSION"
-                        AND "A0"."PURL" LIKE (('pkg:' || LOWER("M"."REPOSITORY_TYPE")) || '/%') ESCAPE E'\\\\'))
+            queryString += /* language=SQL */ """
+                    AND EXISTS (
+                      SELECT 1
+                        FROM "PACKAGE_ARTIFACT_METADATA" "PAM"
+                       INNER JOIN "PACKAGE_METADATA" "PM"
+                          ON "PM"."PURL" = "PAM"."PACKAGE_PURL"
+                       WHERE "PAM"."PURL" = "A0"."PURL"
+                         AND "PM"."LATEST_VERSION" != "A0"."VERSION"
+                    )
                     """;
         }
         if (onlyDirect) {
@@ -326,22 +352,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         final Map<String, Object> params = Map.of("hash", hash);
         preprocessACLs(query, queryFilter, params);
         return execute(query, params);
-    }
-
-    /**
-     * Returns ComponentProjection for the purl.
-     *
-     * @param purl the purl of the component to retrieve
-     * @return associated ComponentProjection
-     */
-    public IntegrityMetaInitializerTask.ComponentProjection getComponentByPurl(String purl) {
-        if (purl == null) {
-            return null;
-        }
-        final Query<Component> query = pm.newQuery(Component.class, "purl == :purl");
-        query.setParameters(purl);
-        query.setResult("DISTINCT purlCoordinates, internal");
-        return query.executeResultUnique(IntegrityMetaInitializerTask.ComponentProjection.class);
     }
 
     /**
@@ -571,9 +581,34 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             getRootDependencies(dependencyGraph, project);
             getDirectDependenciesForPathDependencies(dependencyGraph);
         }
+
+        final var packagePurlByComponentUuid = new HashMap<String, String>();
+        for (final var entry : dependencyGraph.entrySet()) {
+            final String componentUuid = entry.getKey();
+            final Component component = entry.getValue();
+
+            if (component.getPurl() != null) {
+                packagePurlByComponentUuid.put(
+                        componentUuid,
+                        PurlUtil.purlPackageOnly(component.getPurl()));
+            }
+        }
+
+        final var latestVersionByPackagePurl = new HashMap<String, String>();
+        if (!packagePurlByComponentUuid.isEmpty()) {
+            final List<PackageMetadata> packageMetadataList = withJdbiHandle(
+                    handle -> new PackageMetadataDao(handle).getAll(
+                            new HashSet<>(packagePurlByComponentUuid.values())));
+            for (final PackageMetadata packageMetadata : packageMetadataList) {
+                if (packageMetadata.latestVersion() != null) {
+                    latestVersionByPackagePurl.put(packageMetadata.purl().canonicalize(), packageMetadata.latestVersion());
+                }
+            }
+        }
+
         // Reduce size of JSON response
-        for (Map.Entry<String, Component> entry : dependencyGraph.entrySet()) {
-            Component transientComponent = new Component();
+        for (final Map.Entry<String, Component> entry : dependencyGraph.entrySet()) {
+            final Component transientComponent = new Component();
             transientComponent.setUuid(entry.getValue().getUuid());
             transientComponent.setName(entry.getValue().getName());
             transientComponent.setVersion(entry.getValue().getVersion());
@@ -581,15 +616,13 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             transientComponent.setPurlCoordinates(entry.getValue().getPurlCoordinates());
             transientComponent.setDependencyGraph(entry.getValue().getDependencyGraph());
             transientComponent.setExpandDependencyGraph(entry.getValue().isExpandDependencyGraph());
-            if (transientComponent.getPurl() != null) {
-                final RepositoryType type = RepositoryType.resolve(transientComponent.getPurl());
-                if (RepositoryType.UNSUPPORTED != type) {
-                    final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, transientComponent.getPurl().getNamespace(), transientComponent.getPurl().getName());
-                    if (repoMetaComponent != null) {
-                        RepositoryMetaComponent transientRepoMetaComponent = new RepositoryMetaComponent();
-                        transientRepoMetaComponent.setLatestVersion(repoMetaComponent.getLatestVersion());
-                        transientComponent.setRepositoryMeta(transientRepoMetaComponent);
-                    }
+            final String packagePurl = packagePurlByComponentUuid.get(entry.getKey());
+            if (packagePurl != null) {
+                final String latestVersion = latestVersionByPackagePurl.get(packagePurl);
+                if (latestVersion != null) {
+                    final var transientRepoMetaComponent = new RepositoryMetaComponent();
+                    transientRepoMetaComponent.setLatestVersion(latestVersion);
+                    transientComponent.setRepositoryMeta(transientRepoMetaComponent);
                 }
             }
             dependencyGraph.put(entry.getKey(), transientComponent);
@@ -888,29 +921,21 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     }
 
     private void populateRepositoryMetadata(final Collection<Component> components) {
-        final Map<RepositoryMetaComponentSearch, List<Component>> componentsByRepoMetaSearch = components.stream()
+        final Map<String, List<Component>> componentsByPurlPackage = components.stream()
                 .filter(component -> component.getPurl() != null)
                 .filter(component -> RepositoryType.UNSUPPORTED != RepositoryType.resolve(component.getPurl()))
-                .collect(Collectors.groupingBy(component -> {
-                    final PackageURL purl = component.getPurl();
-                    final var repositoryType = RepositoryType.resolve(purl);
-                    return new RepositoryMetaComponentSearch(repositoryType, purl.getNamespace(), purl.getName());
-                }));
-        if (componentsByRepoMetaSearch.isEmpty()) {
+                .collect(Collectors.groupingBy(component -> PurlUtil.purlPackageOnly(component.getPurl())));
+        if (componentsByPurlPackage.isEmpty()) {
             return;
         }
 
-        final List<RepositoryMetaComponent> repoMetaComponents = withJdbiHandle(
-                handle -> handle.attach(RepositoryMetaDao.class).getRepositoryMetaComponents(
-                        componentsByRepoMetaSearch.keySet()));
-        for (final RepositoryMetaComponent repoMetaComponent : repoMetaComponents) {
-            final var search = new RepositoryMetaComponentSearch(
-                    repoMetaComponent.getRepositoryType(),
-                    repoMetaComponent.getNamespace(),
-                    repoMetaComponent.getName());
-            final List<Component> searchComponents = componentsByRepoMetaSearch.get(search);
-            if (searchComponents != null) {
-                for (final Component component : searchComponents) {
+        final List<PackageMetadata> packageMetadataList = withJdbiHandle(
+                handle -> new PackageMetadataDao(handle).getAll(componentsByPurlPackage.keySet()));
+        for (final PackageMetadata pm : packageMetadataList) {
+            final List<Component> matchingComponents = componentsByPurlPackage.get(pm.purl().canonicalize());
+            if (matchingComponents != null) {
+                final var repoMetaComponent = RepositoryMetaComponent.of(pm);
+                for (final Component component : matchingComponents) {
                     component.setRepositoryMeta(repoMetaComponent);
                 }
             }

@@ -24,6 +24,7 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.notification.publishing.DefaultNotificationPublishersPlugin;
+import org.dependencytrack.pkgmetadata.resolution.DefaultPackageMetadataResolutionPlugin;
 import org.dependencytrack.secret.TestSecretManager;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.vulnanalysis.internal.InternalVulnAnalyzerPlugin;
@@ -88,10 +89,12 @@ class PluginInitializerTest extends PersistenceCapableTest {
                 .extracting(ExtensionPointMetadata::name)
                 .containsExactlyInAnyOrder(
                         "notification-publisher",
+                        "package-metadata-resolver",
                         "vuln-analyzer",
                         "vuln-data-source");
         assertThat(pluginManager.getLoadedPlugins()).satisfiesExactlyInAnyOrder(
                 plugin -> assertThat(plugin).isInstanceOf(DefaultNotificationPublishersPlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(DefaultPackageMetadataResolutionPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(GitHubVulnDataSourcePlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(InternalVulnAnalyzerPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(NvdVulnDataSourcePlugin.class),

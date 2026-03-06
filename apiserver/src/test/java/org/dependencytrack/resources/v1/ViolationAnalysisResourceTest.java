@@ -420,8 +420,6 @@ class ViolationAnalysisResourceTest extends ResourceTest {
         assertThat(jsonObject.getString("analysisState")).isEqualTo(ViolationAnalysisState.APPROVED.name());
         assertThat(jsonObject.getBoolean("isSuppressed")).isTrue();
         assertThat(jsonObject.getJsonArray("analysisComments")).isEmpty();
-
-        assertThat(kafkaMockProducer.history()).isEmpty();
     }
 
     @Test

@@ -18,111 +18,179 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import com.github.packageurl.PackageURL;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentMetaInformation;
-import org.dependencytrack.model.FetchStatus;
-import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
+import org.dependencytrack.model.PackageArtifactMetadata;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Project;
 import org.junit.jupiter.api.Test;
 
-import java.util.Date;
+import java.time.Instant;
+import java.util.List;
 
-import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_PASSED;
-import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_UNKNOWN;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class ComponentMetaDaoTest extends PersistenceCapableTest {
 
     @Test
-    public void testGetMetaInformation() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
-        Component component = new Component();
+    public void shouldComputeHashMatchPassedWhenSha256Matches() throws Exception {
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
+        final var component = new Component();
         component.setProject(project);
         component.setName("ABC");
         component.setPurl("pkg:maven/org.acme/abc");
-        //add another component for better testing
-        Component component2 = new Component();
-        component2.setProject(project);
-        component2.setName("ABC");
-        component2.setPurl("pkg:maven/org.acme/abc");
-
-        IntegrityAnalysis integrityAnalysis = new IntegrityAnalysis();
-        integrityAnalysis.setComponent(component);
-        integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
-        Date published = new Date();
-        integrityAnalysis.setUpdatedAt(published);
-        integrityAnalysis.setId(component.getId());
-        integrityAnalysis.setMd5HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
-        integrityAnalysis.setSha1HashMatchStatus(HASH_MATCH_UNKNOWN);
-        integrityAnalysis.setSha256HashMatchStatus(HASH_MATCH_UNKNOWN);
-        integrityAnalysis.setSha512HashMatchStatus(HASH_MATCH_PASSED);
-        qm.persist(integrityAnalysis);
-        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
-        integrityMetaComponent.setPurl(component.getPurl().toString());
-        integrityMetaComponent.setPublishedAt(published);
-        integrityMetaComponent.setLastFetch(published);
-        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
-        integrityMetaComponent.setRepositoryUrl("repo.url.com");
-        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        component.setSha256("abc123def456");
         qm.persist(component);
-        ComponentMetaInformation componentMetaInformation = withJdbiHandle(
+
+        createPackageMetadata("pkg:maven/org.acme/abc");
+        useJdbiHandle(handle -> new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                new PackageArtifactMetadata(
+                        new PackageURL("pkg:maven/org.acme/abc"),
+                        new PackageURL("pkg:maven/org.acme/abc"),
+                        null, null, "ABC123DEF456", null,
+                        Instant.now(),
+                        null, null,
+                        Instant.now()))));
+
+        final ComponentMetaInformation result = withJdbiHandle(
                 handle -> handle.attach(ComponentMetaDao.class).getComponentMetaInfo(component.getUuid()));
-        assertEquals(HASH_MATCH_PASSED, componentMetaInformation.integrityMatchStatus());
-        assertEquals(integrityMetaComponent.getPublishedAt(), componentMetaInformation.publishedDate());
-        assertEquals(integrityMetaComponent.getLastFetch(), componentMetaInformation.lastFetched());
-        assertEquals(integrityMetaComponent.getRepositoryUrl(), componentMetaInformation.integrityRepoUrl());
+        assertThat(result).isNotNull();
+        assertThat(result.integrityMatchStatus()).isEqualTo(IntegrityMatchStatus.HASH_MATCH_PASSED);
+        assertThat(result.publishedDate()).isNotNull();
+        assertThat(result.lastFetched()).isNotNull();
     }
 
     @Test
-    public void testGetMetaInformationWhenPublishedAtIsMissing() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
-        Component component = new Component();
+    public void shouldComputeHashMatchFailedWhenSha256Mismatches() throws Exception {
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
+        final var component = new Component();
         component.setProject(project);
         component.setName("ABC");
         component.setPurl("pkg:maven/org.acme/abc");
-        IntegrityAnalysis integrityAnalysis = new IntegrityAnalysis();
-        integrityAnalysis.setComponent(component);
-        integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
-        integrityAnalysis.setUpdatedAt(new Date());
-        integrityAnalysis.setId(component.getId());
-        integrityAnalysis.setMd5HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
-        integrityAnalysis.setSha1HashMatchStatus(HASH_MATCH_UNKNOWN);
-        integrityAnalysis.setSha256HashMatchStatus(HASH_MATCH_UNKNOWN);
-        integrityAnalysis.setSha512HashMatchStatus(HASH_MATCH_PASSED);
-        qm.persist(integrityAnalysis);
-        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
-        integrityMetaComponent.setPurl(component.getPurl().toString());
-        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
-        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        component.setSha256("abc123def456");
         qm.persist(component);
-        ComponentMetaInformation componentMetaInformation = withJdbiHandle(
+
+        createPackageMetadata("pkg:maven/org.acme/abc");
+        useJdbiHandle(handle -> new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                new PackageArtifactMetadata(
+                        new PackageURL("pkg:maven/org.acme/abc"),
+                        new PackageURL("pkg:maven/org.acme/abc"),
+                        null, null, "000000000000", null,
+                        null,
+                        null, null,
+                        Instant.now()))));
+
+        final ComponentMetaInformation result = withJdbiHandle(
                 handle -> handle.attach(ComponentMetaDao.class).getComponentMetaInfo(component.getUuid()));
-        assertEquals(HASH_MATCH_PASSED, componentMetaInformation.integrityMatchStatus());
-        assertNull(componentMetaInformation.publishedDate());
-        assertNull(componentMetaInformation.lastFetched());
+        assertThat(result).isNotNull();
+        assertThat(result.integrityMatchStatus()).isEqualTo(IntegrityMatchStatus.HASH_MATCH_FAILED);
     }
 
     @Test
-    public void testGetMetaInformationWhenIntegrityAnalysisIsMissing() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
-        Component component = new Component();
+    public void shouldFallBackToSha1WhenSha256Unavailable() throws Exception {
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
+        final var component = new Component();
         component.setProject(project);
         component.setName("ABC");
         component.setPurl("pkg:maven/org.acme/abc");
-        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
-        integrityMetaComponent.setPurl(component.getPurl().toString());
-        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
-        qm.createIntegrityMetaComponent(integrityMetaComponent);
+        component.setSha1("aabbccdd");
         qm.persist(component);
-        ComponentMetaInformation componentMetaInformation = withJdbiHandle(
+
+        createPackageMetadata("pkg:maven/org.acme/abc");
+        useJdbiHandle(handle -> new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                new PackageArtifactMetadata(
+                        new PackageURL("pkg:maven/org.acme/abc"),
+                        new PackageURL("pkg:maven/org.acme/abc"),
+                        null, "AABBCCDD", null, null,
+                        null,
+                        null, null,
+                        Instant.now()))));
+
+        final ComponentMetaInformation result = withJdbiHandle(
                 handle -> handle.attach(ComponentMetaDao.class).getComponentMetaInfo(component.getUuid()));
-        assertNull(componentMetaInformation.publishedDate());
-        assertNull(componentMetaInformation.lastFetched());
+        assertThat(result).isNotNull();
+        assertThat(result.integrityMatchStatus()).isEqualTo(IntegrityMatchStatus.HASH_MATCH_PASSED);
+    }
+
+    @Test
+    public void shouldReturnComponentMissingHashWhenComponentHasNoHashes() throws Exception {
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/org.acme/abc");
+        qm.persist(component);
+
+        createPackageMetadata("pkg:maven/org.acme/abc");
+        useJdbiHandle(handle -> new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                new PackageArtifactMetadata(
+                        new PackageURL("pkg:maven/org.acme/abc"),
+                        new PackageURL("pkg:maven/org.acme/abc"),
+                        null, null, "abc123", null,
+                        null,
+                        null, null,
+                        Instant.now()))));
+
+        final ComponentMetaInformation result = withJdbiHandle(
+                handle -> handle.attach(ComponentMetaDao.class).getComponentMetaInfo(component.getUuid()));
+        assertThat(result).isNotNull();
+        assertThat(result.integrityMatchStatus()).isEqualTo(IntegrityMatchStatus.COMPONENT_MISSING_HASH);
+    }
+
+    @Test
+    public void shouldReturnHashMatchUnknownWhenMetadataHasNoMatchingHash() throws Exception {
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/org.acme/abc");
+        component.setSha256("abc123");
+        qm.persist(component);
+
+        createPackageMetadata("pkg:maven/org.acme/abc");
+        useJdbiHandle(handle -> new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                new PackageArtifactMetadata(
+                        new PackageURL("pkg:maven/org.acme/abc"),
+                        new PackageURL("pkg:maven/org.acme/abc"),
+                        null, null, null, null,
+                        null,
+                        null, null,
+                        Instant.now()))));
+
+        final ComponentMetaInformation result = withJdbiHandle(
+                handle -> handle.attach(ComponentMetaDao.class).getComponentMetaInfo(component.getUuid()));
+        assertThat(result).isNotNull();
+        assertThat(result.integrityMatchStatus()).isEqualTo(IntegrityMatchStatus.HASH_MATCH_UNKNOWN);
+    }
+
+    @Test
+    public void shouldReturnNullIntegrityStatusWhenNoVersionMetadata() {
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("ABC");
+        component.setPurl("pkg:maven/org.acme/abc");
+        component.setSha256("abc123");
+        qm.persist(component);
+
+        final ComponentMetaInformation result = withJdbiHandle(
+                handle -> handle.attach(ComponentMetaDao.class).getComponentMetaInfo(component.getUuid()));
+        assertThat(result).isNull();
+    }
+
+    private void createPackageMetadata(String purl) throws Exception {
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(List.of(
+                new PackageMetadata(
+                        new PackageURL(purl),
+                        "1.0.0",
+                        Instant.now(),
+                        null,
+                        null))));
     }
 
 }

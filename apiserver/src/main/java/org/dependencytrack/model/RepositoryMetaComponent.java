@@ -18,94 +18,34 @@
  */
 package org.dependencytrack.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
+import org.jspecify.annotations.Nullable;
 
-import javax.jdo.annotations.Column;
-import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.Index;
-import javax.jdo.annotations.PersistenceCapable;
-import javax.jdo.annotations.Persistent;
-import javax.jdo.annotations.PrimaryKey;
-import java.io.Serializable;
 import java.util.Date;
 
-/**
- * Tracks third-party metadata about component groups from external repositories
- *
- * @author Steve Springett
- * @since 3.1.0
- */
-@PersistenceCapable(table = "REPOSITORY_META_COMPONENT")
-@Index(name = "REPOSITORY_META_COMPONENT_COMPOUND_IDX", members = {"repositoryType", "namespace", "name"}, unique = "true")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class RepositoryMetaComponent implements Serializable {
+public class RepositoryMetaComponent {
 
-    private static final long serialVersionUID = 4415041595179460918L;
-
-    @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
-    @JsonIgnore
-    private long id;
-
-    /**
-     * This is an indirect representation of a the Package URL "type" field.
-     */
-    @Persistent(defaultFetchGroup = "true")
-    @Column(name = "REPOSITORY_TYPE", jdbcType = "VARCHAR", allowsNull = "false")
-    @NotNull
     private RepositoryType repositoryType;
-
-    /**
-     * This is a representation of the Package URL "namespace" field.
-     */
-    @Persistent
-    @Column(name = "NAMESPACE")
     private String namespace;
-
-    /**
-     * This is a representation of the Package URL "name" field.
-     */
-    @Persistent
-    @Column(name = "NAME", allowsNull = "false")
-    @NotNull
     private String name;
-
-    /**
-     * The latest version of the component.
-     */
-    @Persistent
-    @Column(name = "LATEST_VERSION", allowsNull = "false")
-    @NotNull
     private String latestVersion;
-
-    /**
-     * The optional date when the component was last published.
-     */
-    @Persistent
-    @Column(name = "PUBLISHED")
-    @Schema(type = "integer", format = "int64", requiredMode = Schema.RequiredMode.REQUIRED, description = "UNIX epoch timestamp in milliseconds")
-    private Date published;
-
-    /**
-     * The date in which the last version check of the component was made.
-     */
-    @Persistent
-    @Column(name = "LAST_CHECK", allowsNull = "false")
-    @Index(name = "REPOSITORY_META_COMPONENT_LASTCHECK_IDX")
-    @NotNull
-    @Schema(type = "integer", format = "int64", requiredMode = Schema.RequiredMode.REQUIRED, description = "UNIX epoch timestamp in milliseconds")
+    @Schema(type = "integer", format = "int64", description = "UNIX epoch timestamp in milliseconds")
     private Date lastCheck;
 
+    public static @Nullable RepositoryMetaComponent of(PackageMetadata packageMetadata) {
+        if (packageMetadata == null) {
+            return null;
+        }
 
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
+        final var metaComponent = new RepositoryMetaComponent();
+        metaComponent.repositoryType = RepositoryType.resolve(packageMetadata.purl());
+        metaComponent.namespace = packageMetadata.purl().getNamespace();
+        metaComponent.name = packageMetadata.purl().getName();
+        metaComponent.latestVersion = packageMetadata.latestVersion();
+        metaComponent.lastCheck = Date.from(packageMetadata.resolvedAt());
+        return metaComponent;
     }
 
     public RepositoryType getRepositoryType() {
@@ -138,14 +78,6 @@ public class RepositoryMetaComponent implements Serializable {
 
     public void setLatestVersion(String latestVersion) {
         this.latestVersion = latestVersion;
-    }
-
-    public Date getPublished() {
-        return published;
-    }
-
-    public void setPublished(Date published) {
-        this.published = published;
     }
 
     public Date getLastCheck() {

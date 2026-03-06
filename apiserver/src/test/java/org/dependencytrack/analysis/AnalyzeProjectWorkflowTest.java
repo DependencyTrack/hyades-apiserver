@@ -163,8 +163,7 @@ class AnalyzeProjectWorkflowTest extends PersistenceCapableTest {
                                 .setProjectUuid(UUID.randomUUID().toString())
                                 .build()));
 
-        final var run = workflowTest.awaitRunStatus(runId, WorkflowRunStatus.FAILED);
-        assertThat(run.failure()).isNotNull();
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
         verify(evalProjectPoliciesActivityMock, never()).execute(any(), any());
         verify(updateProjectMetricsActivityMock, never()).execute(any(), any());

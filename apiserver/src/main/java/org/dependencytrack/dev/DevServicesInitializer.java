@@ -21,30 +21,19 @@ package org.dependencytrack.dev;
 import alpine.common.logging.Logger;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.NewTopic;
-import org.dependencytrack.event.kafka.KafkaTopics;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
-import static org.apache.kafka.clients.admin.AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_FRONTEND;
-import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_KAFKA;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_POSTGRES;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_PORT_FRONTEND;
-import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_PORT_KAFKA;
-import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
 
 /**
  * @since 5.5.0
@@ -55,7 +44,6 @@ public class DevServicesInitializer implements ServletContextListener {
 
     private final Config config = ConfigProvider.getConfig();
     private AutoCloseable postgresContainer;
-    private AutoCloseable kafkaContainer;
     private AutoCloseable frontendContainer;
 
     @Override
@@ -80,8 +68,6 @@ public class DevServicesInitializer implements ServletContextListener {
         final String postgresUsername = config.getValue("dt.datasource.default.username", String.class);
         final String postgresPassword = config.getValue("dt.datasource.default.password", String.class);
 
-        final String kafkaBootstrapServers;
-        final Integer kafkaPort = config.getValue(DEV_SERVICES_PORT_KAFKA.getPropertyName(), Integer.class);
         final Integer frontendPort = config.getValue(DEV_SERVICES_PORT_FRONTEND.getPropertyName(), Integer.class);
         try {
             final Class<?> startablesClass = Class.forName("org.testcontainers.lifecycle.Startables");
@@ -105,17 +91,6 @@ public class DevServicesInitializer implements ServletContextListener {
             postgresContainerClass.getMethod("withUrlParam", String.class, String.class).invoke(postgresContainer, "reWriteBatchedInserts", "true");
             addFixedExposedPortMethod.invoke(postgresContainer, /* hostPort */ postgresPort, /* containerPort */  5432);
 
-            // TODO: Detect when Apache Kafka is requested vs. when Kafka is requested,
-            //   and pick the corresponding Testcontainers class accordingly.
-            final Class<?> kafkaContainerClass = Class.forName("org.testcontainers.kafka.KafkaContainer");
-            final Constructor<?> kafkaContainerConstructor = kafkaContainerClass.getDeclaredConstructor(String.class);
-            kafkaContainer = (AutoCloseable) kafkaContainerConstructor.newInstance(config.getValue(DEV_SERVICES_IMAGE_KAFKA.getPropertyName(), String.class));
-            // TODO: Remove this when Kafka >= 3.9.1 is available.
-            //   * https://github.com/testcontainers/testcontainers-java/issues/9506#issuecomment-2463504967
-            //   * https://issues.apache.org/jira/browse/KAFKA-18281
-            kafkaContainerClass.getMethod("withEnv", String.class, String.class).invoke(kafkaContainer, "KAFKA_LISTENERS", "PLAINTEXT://:9092,BROKER://:9093,CONTROLLER://:9094");
-            addFixedExposedPortMethod.invoke(kafkaContainer, /* hostPort */ kafkaPort, /* containerPort */  9092);
-
             final Constructor<?> genericContainerConstructor = genericContainerClass.getDeclaredConstructor(String.class);
             frontendContainer = (AutoCloseable) genericContainerConstructor.newInstance(config.getValue(DEV_SERVICES_IMAGE_FRONTEND.getPropertyName(), String.class));
             genericContainerClass.getMethod("withEnv", String.class, String.class).invoke(frontendContainer, "API_BASE_URL", "http://localhost:8080");
@@ -125,11 +100,9 @@ public class DevServicesInitializer implements ServletContextListener {
                 genericContainerClass.getMethod("withImagePullPolicy", imagePullPolicyClass).invoke(frontendContainer, alwaysPullPolicy);
             }
 
-            LOGGER.info("Starting PostgreSQL, Kafka, and frontend containers");
-            final var deepStartFuture = (CompletableFuture<?>) deepStartMethod.invoke(null, List.of(postgresContainer, kafkaContainer, frontendContainer));
+            LOGGER.info("Starting PostgreSQL and frontend containers");
+            final var deepStartFuture = (CompletableFuture<?>) deepStartMethod.invoke(null, List.of(postgresContainer, frontendContainer));
             deepStartFuture.join();
-
-            kafkaBootstrapServers = (String) kafkaContainerClass.getDeclaredMethod("getBootstrapServers").invoke(kafkaContainer);
         } catch (Exception e) {
             throw new RuntimeException("Failed to launch containers", e);
         }
@@ -141,31 +114,7 @@ public class DevServicesInitializer implements ServletContextListener {
                 Auto-discovery is worked on in https://github.com/DependencyTrack/hyades/issues/1188.\
                 """);
 
-        final var configOverrides = new Properties();
-        configOverrides.put(KAFKA_BOOTSTRAP_SERVERS.getPropertyName(), kafkaBootstrapServers);
-
-        try {
-            LOGGER.info("Applying config overrides: %s".formatted(configOverrides));
-            final Class<?> memoryConfigSourceClass = Class.forName("org.dependencytrack.support.config.source.memory.MemoryConfigSource");
-            final Method setPropertiesMethod = memoryConfigSourceClass.getDeclaredMethod("setProperties", Map.class);
-            setPropertiesMethod.invoke(null, configOverrides);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to update configuration", e);
-        }
-
-        final var topicsToCreate = new ArrayList<>(List.of(
-                new NewTopic(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name(), 1, (short) 1),
-                new NewTopic(KafkaTopics.REPO_META_ANALYSIS_RESULT.name(), 1, (short) 1)));
-
-        try (final var adminClient = AdminClient.create(Map.of(BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServers))) {
-            LOGGER.info("Creating topics: %s".formatted(topicsToCreate));
-            adminClient.createTopics(topicsToCreate).all().get();
-        } catch (ExecutionException | InterruptedException e) {
-            throw new RuntimeException("Failed to create topics", e);
-        }
-
         LOGGER.info("PostgreSQL is listening at localhost:%d".formatted(postgresPort));
-        LOGGER.info("Kafka is listening at localhost:%d".formatted(kafkaPort));
         LOGGER.info("Frontend is listening at http://localhost:%d".formatted(frontendPort));
     }
 
@@ -177,14 +126,6 @@ public class DevServicesInitializer implements ServletContextListener {
                 postgresContainer.close();
             } catch (Exception e) {
                 LOGGER.error("Failed to stop PostgreSQL container", e);
-            }
-        }
-        if (kafkaContainer != null) {
-            LOGGER.info("Stopping Kafka container");
-            try {
-                kafkaContainer.close();
-            } catch (Exception e) {
-                LOGGER.error("Failed to stop Kafka container", e);
             }
         }
         if (frontendContainer != null) {

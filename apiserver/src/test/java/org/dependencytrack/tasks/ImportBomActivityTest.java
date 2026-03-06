@@ -24,7 +24,6 @@ import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.cyclonedx.proto.v1_6.Classification;
 import org.cyclonedx.proto.v1_6.Dependency;
 import org.cyclonedx.proto.v1_6.ExternalReference;
@@ -37,8 +36,6 @@ import org.cyclonedx.proto.v1_6.Tool;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.dex.engine.api.DexEngine;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
@@ -47,14 +44,16 @@ import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
-import org.dependencytrack.model.FetchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
+import org.dependencytrack.model.PackageArtifactMetadata;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
+import org.dependencytrack.persistence.jdbi.PackageArtifactMetadataDao;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.proto.internal.workflow.v1.ImportBomArg;
@@ -72,7 +71,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -106,7 +104,7 @@ class ImportBomActivityTest extends PersistenceCapableTest {
         dexEngineMock = mock(DexEngine.class);
         fileStorage = new MemoryFileStorage();
 
-        activity = new ImportBomActivity(fileStorage, new KafkaEventDispatcher(), dexEngineMock, false);
+        activity = new ImportBomActivity(fileStorage, dexEngineMock, false);
 
         // Enable processing of CycloneDX BOMs
         qm.createConfigProperty(
@@ -144,8 +142,6 @@ class ImportBomActivityTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()));
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getCpe()).isEqualTo("cpe:2.3:a:acme:example:1.0.0:*:*:*:*:*:*:*");
@@ -249,19 +245,28 @@ class ImportBomActivityTest extends PersistenceCapableTest {
 
         final var bomFileMetadata = storeBomFile("bom-1.xml");
         final var bomUploadToken = UUID.randomUUID();
-        PackageURL packageUrl = new PackageURL("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
-        var integrityMeta = new IntegrityMetaComponent();
-        integrityMeta.setPurl("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
-        integrityMeta.setStatus(FetchStatus.IN_PROGRESS);
-        integrityMeta.setLastFetch(Date.from(Instant.now().minus(2, ChronoUnit.HOURS)));
-        qm.createIntegrityMetaComponent(integrityMeta);
+        useJdbiTransaction(handle -> {
+            new PackageMetadataDao(handle).upsertAll(List.of(
+                    new PackageMetadata(
+                            new PackageURL("pkg:maven/com.example/xmlutil"),
+                            "1.0.0",
+                            Instant.now(),
+                            null,
+                            null)));
+            new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                    new PackageArtifactMetadata(
+                            new PackageURL("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz"),
+                            new PackageURL("pkg:maven/com.example/xmlutil"),
+                            null, null, null, null, null,
+                            null, null,
+                            Instant.now().minus(2, ChronoUnit.HOURS))));
+
+        });
         activity.execute(null, buildArg(project, bomFileMetadata, bomUploadToken));
         assertBomProcessedNotification();
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()));
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getLastBomImport()).isNotNull();
@@ -410,12 +415,6 @@ class ImportBomActivityTest extends PersistenceCapableTest {
                 .count();
         assertThat(componentsWithoutDirectDependencies).isEqualTo(6378);
 
-        // Verify that all repository meta analysis commands have been sent.
-        final long repoMetaAnalysisCommandsSent = kafkaMockProducer.history().stream()
-                .map(ProducerRecord::topic)
-                .filter(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()::equals)
-                .count();
-        assertThat(repoMetaAnalysisCommandsSent).isEqualTo(9056);
     }
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/2519
@@ -429,7 +428,6 @@ class ImportBomActivityTest extends PersistenceCapableTest {
             final var bomUploadToken = UUID.randomUUID();
             activity.execute(null, buildArg(project, bomFileMetadata, bomUploadToken));
             assertBomProcessedNotification();
-            kafkaMockProducer.clear();
 
             // Ensure the expected amount of components is present.
             assertThat(qm.getAllComponents(project)).hasSize(1756);
@@ -545,7 +543,6 @@ class ImportBomActivityTest extends PersistenceCapableTest {
         assertBomProcessedNotification();
         assertProjectAuthors.run();
 
-        kafkaMockProducer.clear();
 
         bomFileMetadata = storeBomFile("bom-issue3309.json");
         bomUploadToken = UUID.randomUUID();
@@ -597,12 +594,10 @@ class ImportBomActivityTest extends PersistenceCapableTest {
         final var bomUploadToken = UUID.randomUUID();
 
         final var arg = buildArg(project, bomFileMetadata, bomUploadToken);
-        new ImportBomActivity(fileStorage, new KafkaEventDispatcher(), dexEngineMock, /* delayBomProcessedNotification */ true).execute(null, arg);
+        new ImportBomActivity(fileStorage, dexEngineMock, /* delayBomProcessedNotification */ true).execute(null, arg);
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 // BOM_PROCESSED notification should not have been sent.
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()));
     }
 
     @Test
@@ -613,7 +608,7 @@ class ImportBomActivityTest extends PersistenceCapableTest {
         final var bomUploadToken = UUID.randomUUID();
 
         final var arg = buildArg(project, bomFileMetadata, bomUploadToken);
-        new ImportBomActivity(fileStorage, new KafkaEventDispatcher(), dexEngineMock, /* delayBomProcessedNotification */ true).execute(null, arg);
+        new ImportBomActivity(fileStorage, dexEngineMock, /* delayBomProcessedNotification */ true).execute(null, arg);
         // BOM_PROCESSED notification should not have been sent eagerly.
         // It will be dispatched by DelayedBomProcessedNotificationEmitter
         // when the AnalyzeProjectWorkflow completes.
@@ -634,7 +629,7 @@ class ImportBomActivityTest extends PersistenceCapableTest {
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
         // No REPO_META_ANALYSIS_COMMAND event because the component doesn't have a PURL.
-        assertThat(kafkaMockProducer.history()).isEmpty();
+
 
         assertThat(qm.getAllComponents(project))
                 .satisfiesExactly(component -> assertThat(component.getName()).isEqualTo("acme-lib"));
@@ -656,7 +651,7 @@ class ImportBomActivityTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).isEmpty();
+
 
         assertThat(qm.getAllComponents(project)).satisfiesExactly(
                 component -> {
@@ -690,7 +685,7 @@ class ImportBomActivityTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).isEmpty();
+
 
         assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
             assertThat(component.getLicense()).isNull();
@@ -716,7 +711,7 @@ class ImportBomActivityTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).isEmpty();
+
 
         assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
             assertThat(component.getResolvedLicense()).isNotNull();
@@ -738,7 +733,7 @@ class ImportBomActivityTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).isEmpty();
+
 
         assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
             assertThat(component.getLicense()).isNull();
@@ -973,7 +968,7 @@ class ImportBomActivityTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).isEmpty();
+
 
         assertThat(qm.getAllComponents(project)).isNotEmpty();
         assertThat(qm.getAllServiceComponents(project)).isNotEmpty();
@@ -1452,8 +1447,6 @@ class ImportBomActivityTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
                 notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()));
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
         assertThat(project.getPurl()).asString().isEqualTo("pkg:npm/packageurl-js@1.0.0");
