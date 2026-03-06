@@ -131,7 +131,7 @@
         <lib.junit-jupiter.version>6.0.3</lib.junit-jupiter.version>
         <lib.kafka-clients.version>4.2.0</lib.kafka-clients.version>
         <lib.kotlin.version>2.3.10</lib.kotlin.version>
-        <lib.liquibase.version>4.33.0</lib.liquibase.version>
+        <lib.liquibase.version>5.0.2</lib.liquibase.version>
         <lib.logback.version>1.5.32</lib.logback.version>
         <lib.micrometer.version>1.16.3</lib.micrometer.version>
         <lib.microprofile-config.version>3.1</lib.microprofile-config.version>
