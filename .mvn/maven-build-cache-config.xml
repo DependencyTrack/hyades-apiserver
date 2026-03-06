@@ -22,6 +22,11 @@
     <configuration>
         <enabled>true</enabled>
         <hashAlgorithm>XX</hashAlgorithm>
+        <attachedOutputs>
+            <dirNames>
+                <dirName glob="jacoco.exec"></dirName>
+            </dirNames>
+        </attachedOutputs>
     </configuration>
     <input>
         <global>
@@ -48,5 +53,16 @@
                 </goalsList>
             </goalsLists>
         </runAlways>
+        <reconcile>
+            <plugins>
+                <plugin artifactId="maven-surefire-plugin" goal="test">
+                    <reconciles>
+                        <reconcile propertyName="skip" skipValue="true"/>
+                        <reconcile propertyName="skipExec" skipValue="true"/>
+                        <reconcile propertyName="skipTests" skipValue="true"/>
+                    </reconciles>
+                </plugin>
+            </plugins>
+        </reconcile>
     </executionControl>
 </cache>
