@@ -22,6 +22,14 @@
     <configuration>
         <enabled>true</enabled>
         <hashAlgorithm>XX</hashAlgorithm>
+        <local>
+            <maxBuildsCached>3</maxBuildsCached>
+        </local>
+        <attachedOutputs>
+            <dirNames>
+                <dirName glob="jacoco.exec"></dirName>
+            </dirNames>
+        </attachedOutputs>
     </configuration>
     <input>
         <global>
@@ -39,6 +47,11 @@
                         <execId>copy-dependencies</execId>
                     </execIds>
                 </execution>
+                <execution artifactId="jacoco-maven-plugin">
+                    <execIds>
+                        <execId>report-aggregate</execId>
+                    </execIds>
+                </execution>
             </executions>
             <goalsLists>
                 <goalsList artifactId="maven-install-plugin">
@@ -48,5 +61,16 @@
                 </goalsList>
             </goalsLists>
         </runAlways>
+        <reconcile>
+            <plugins>
+                <plugin artifactId="maven-surefire-plugin" goal="test">
+                    <reconciles>
+                        <reconcile propertyName="skip" skipValue="true"/>
+                        <reconcile propertyName="skipExec" skipValue="true"/>
+                        <reconcile propertyName="skipTests" skipValue="true"/>
+                    </reconciles>
+                </plugin>
+            </plugins>
+        </reconcile>
     </executionControl>
 </cache>
