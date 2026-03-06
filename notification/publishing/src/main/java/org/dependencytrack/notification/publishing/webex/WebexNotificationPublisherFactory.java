@@ -51,9 +51,7 @@ public final class WebexNotificationPublisherFactory implements NotificationPubl
 
     @Override
     public void init(ExtensionContext ctx) {
-        this.httpClient = HttpClient.newBuilder()
-                .proxy(ctx.proxySelector())
-                .build();
+        this.httpClient = ctx.http().client();
     }
 
     @Override
@@ -72,13 +70,6 @@ public final class WebexNotificationPublisherFactory implements NotificationPubl
     @Override
     public NotificationTemplate defaultTemplate() {
         return new NotificationTemplate(loadDefaultTemplate(extensionClass()), "application/json");
-    }
-
-    @Override
-    public void close() {
-        if (httpClient != null) {
-            httpClient.close();
-        }
     }
 
 }

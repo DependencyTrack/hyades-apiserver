@@ -24,6 +24,7 @@ import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.HttpClient;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
@@ -118,14 +119,14 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.subscribe(PortfolioMetricsUpdateEvent.class, new PortfolioMetricsUpdateTask());
         eventService.subscribe(VulnerabilityMetricsUpdateEvent.class, new VulnerabilityMetricsUpdateTask());
         eventService.subscribe(CloneProjectEvent.class, new CloneProjectTask());
-        eventService.subscribe(FortifySscUploadEventAbstract.class, new FortifySscUploadTask());
-        eventService.subscribe(DefectDojoUploadEventAbstract.class, new DefectDojoUploadTask());
-        eventService.subscribe(KennaSecurityUploadEventAbstract.class, new KennaSecurityUploadTask());
+        eventService.subscribe(FortifySscUploadEventAbstract.class, new FortifySscUploadTask(HttpClient.INSTANCE));
+        eventService.subscribe(DefectDojoUploadEventAbstract.class, new DefectDojoUploadTask(HttpClient.INSTANCE));
+        eventService.subscribe(KennaSecurityUploadEventAbstract.class, new KennaSecurityUploadTask(HttpClient.INSTANCE));
         eventService.subscribe(InternalComponentIdentificationEvent.class, new InternalComponentIdentificationTask());
         eventService.subscribe(CallbackEvent.class, new CallbackTask());
         eventService.subscribe(NistMirrorEvent.class, new NistMirrorTask(pluginManager));
         eventService.subscribe(VulnerabilityPolicyFetchEvent.class, new VulnerabilityPolicyFetchTask());
-        eventService.subscribe(EpssMirrorEvent.class, new EpssMirrorTask());
+        eventService.subscribe(EpssMirrorEvent.class, new EpssMirrorTask(HttpClient.INSTANCE));
         eventService.subscribe(IntegrityMetaInitializerEvent.class, new IntegrityMetaInitializerTask());
         eventService.subscribe(IntegrityAnalysisEvent.class, new IntegrityAnalysisTask());
 

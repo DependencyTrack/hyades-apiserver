@@ -23,9 +23,17 @@ import alpine.event.framework.Event;
 import org.dependencytrack.event.DefectDojoUploadEventAbstract;
 import org.dependencytrack.integrations.defectdojo.DefectDojoUploader;
 
+import java.net.http.HttpClient;
+
 public class DefectDojoUploadTask extends VulnerabilityManagementUploadTask {
 
     private static final Logger LOGGER = Logger.getLogger(DefectDojoUploadTask.class);
+
+    private final HttpClient httpClient;
+
+    public DefectDojoUploadTask(HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
 
     /**
      * {@inheritDoc}
@@ -34,7 +42,7 @@ public class DefectDojoUploadTask extends VulnerabilityManagementUploadTask {
         if (e instanceof DefectDojoUploadEventAbstract) {
             final DefectDojoUploadEventAbstract event = (DefectDojoUploadEventAbstract) e;
             LOGGER.debug("Starting DefectDojo upload task");
-            super.inform(event, new DefectDojoUploader());
+            super.inform(event, new DefectDojoUploader(httpClient));
             LOGGER.debug("DefectDojo upload complete");
         }
     }

@@ -62,9 +62,7 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
     public void init(ExtensionContext ctx) {
         this.configRegistry = ctx.configRegistry();
         this.kvStore = ctx.kvStore();
-        this.httpClient = HttpClient.newBuilder()
-                .proxy(ctx.proxySelector())
-                .build();
+        this.httpClient = ctx.http().client();
         this.objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule());
     }
@@ -114,13 +112,6 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
                 config.getEcosystems(),
                 httpClient,
                 config.getAliasSyncEnabled());
-    }
-
-    @Override
-    public void close() {
-        if (httpClient != null) {
-            httpClient.close();
-        }
     }
 
 }

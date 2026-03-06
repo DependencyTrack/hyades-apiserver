@@ -29,12 +29,15 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.jdbi.FindingDao;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.InputStream;
+import java.net.http.HttpClient;
 import java.util.List;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aMultipart;
@@ -54,22 +57,36 @@ import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_REIMP
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_URL;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
-public class DefectDojoUploaderTest extends PersistenceCapableTest {
+class DefectDojoUploaderTest extends PersistenceCapableTest {
 
     @RegisterExtension
     private static final WireMockExtension wireMock =
             WireMockExtension.newInstance().options(options().dynamicPort())
                     .build();
 
+    private static HttpClient httpClient;
+
+    @BeforeAll
+    static void beforeEach() {
+        httpClient = HttpClient.newHttpClient();
+    }
+
+    @AfterAll
+    static void afterEach() {
+        if (httpClient != null) {
+            httpClient.close();
+        }
+    }
+
     @Test
-    public void testIntegrationMetadata() {
-        DefectDojoUploader extension = new DefectDojoUploader();
+    void testIntegrationMetadata() {
+        DefectDojoUploader extension = new DefectDojoUploader(httpClient);
         Assertions.assertEquals("DefectDojo", extension.name());
         Assertions.assertEquals("Pushes Dependency-Track findings to DefectDojo", extension.description());
     }
 
     @Test
-    public void testIntegrationEnabledCases() {
+    void testIntegrationEnabledCases() {
         qm.createConfigProperty(
                 DEFECTDOJO_ENABLED.getGroupName(),
                 DEFECTDOJO_ENABLED.getPropertyName(),
@@ -86,23 +103,23 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                 IConfigProperty.PropertyType.STRING,
                 null
         );
-        DefectDojoUploader extension = new DefectDojoUploader();
+        DefectDojoUploader extension = new DefectDojoUploader(httpClient);
         extension.setQueryManager(qm);
         Assertions.assertTrue(extension.isEnabled());
         Assertions.assertTrue(extension.isProjectConfigured(project));
     }
 
     @Test
-    public void testIntegrationDisabledCases() {
+    void testIntegrationDisabledCases() {
         Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, null, false);
-        DefectDojoUploader extension = new DefectDojoUploader();
+        DefectDojoUploader extension = new DefectDojoUploader(httpClient);
         extension.setQueryManager(qm);
         Assertions.assertFalse(extension.isEnabled());
         Assertions.assertFalse(extension.isProjectConfigured(project));
     }
 
     @Test
-    public void testUpload() {
+    void testUpload() {
         qm.createConfigProperty(
                 DEFECTDOJO_ENABLED.getGroupName(),
                 DEFECTDOJO_ENABLED.getPropertyName(),
@@ -158,7 +175,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         qm.createProjectProperty(project, "integrations", "defectdojo.engagementId",
                 "666", IConfigProperty.PropertyType.STRING, null);
 
-        final var uploader = new DefectDojoUploader();
+        final var uploader = new DefectDojoUploader(httpClient);
         uploader.setQueryManager(qm);
 
         final List<Finding> findings = withJdbiHandle(handle ->
@@ -238,7 +255,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testUploadWithGlobalReimport() {
+    void testUploadWithGlobalReimport() {
         qm.createConfigProperty(
                 DEFECTDOJO_ENABLED.getGroupName(),
                 DEFECTDOJO_ENABLED.getPropertyName(),
@@ -410,7 +427,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         qm.createProjectProperty(project, "integrations", "defectdojo.engagementId",
                 "666", IConfigProperty.PropertyType.STRING, null);
 
-        final var uploader = new DefectDojoUploader();
+        final var uploader = new DefectDojoUploader(httpClient);
         uploader.setQueryManager(qm);
 
         final List<Finding> findings = withJdbiHandle(handle ->
@@ -495,7 +512,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testUploadWithProjectLevelReimport() {
+    void testUploadWithProjectLevelReimport() {
         qm.createConfigProperty(
                 DEFECTDOJO_ENABLED.getGroupName(),
                 DEFECTDOJO_ENABLED.getPropertyName(),
@@ -590,7 +607,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         qm.createProjectProperty(project, "integrations", "defectdojo.reimport",
                 "true", IConfigProperty.PropertyType.BOOLEAN, null);
 
-        final var uploader = new DefectDojoUploader();
+        final var uploader = new DefectDojoUploader(httpClient);
         uploader.setQueryManager(qm);
 
         final List<Finding> findings = withJdbiHandle(handle ->
@@ -623,7 +640,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testUploadWithReimportAndNoExistingTest() {
+    void testUploadWithReimportAndNoExistingTest() {
         qm.createConfigProperty(
                 DEFECTDOJO_ENABLED.getGroupName(),
                 DEFECTDOJO_ENABLED.getPropertyName(),
@@ -688,7 +705,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         qm.createProjectProperty(project, "integrations", "defectdojo.engagementId",
                 "666", IConfigProperty.PropertyType.STRING, null);
 
-        final var uploader = new DefectDojoUploader();
+        final var uploader = new DefectDojoUploader(httpClient);
         uploader.setQueryManager(qm);
 
         final List<Finding> findings = withJdbiHandle(handle ->
@@ -728,7 +745,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
      */
     @Test
     @Disabled
-    public void testUploadIntegration() {
+    void testUploadIntegration() {
         final var baseUrl = "http://localhost:8080";
         final var apiKey = "";
         final var engagementId = "";
@@ -781,7 +798,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         qm.createProjectProperty(project, "integrations", "defectdojo.reimport",
                 Boolean.toString(projectReimport), IConfigProperty.PropertyType.BOOLEAN, null);
 
-        final var uploader = new DefectDojoUploader();
+        final var uploader = new DefectDojoUploader(httpClient);
         uploader.setQueryManager(qm);
 
         final List<Finding> findings = withJdbiHandle(handle ->

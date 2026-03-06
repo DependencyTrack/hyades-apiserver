@@ -23,9 +23,17 @@ import alpine.event.framework.Event;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
 import org.dependencytrack.integrations.fortifyssc.FortifySscUploader;
 
+import java.net.http.HttpClient;
+
 public class FortifySscUploadTask extends VulnerabilityManagementUploadTask {
 
     private static final Logger LOGGER = Logger.getLogger(FortifySscUploadTask.class);
+
+    private final HttpClient httpClient;
+
+    public FortifySscUploadTask(HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
 
     /**
      * {@inheritDoc}
@@ -34,7 +42,7 @@ public class FortifySscUploadTask extends VulnerabilityManagementUploadTask {
         if (e instanceof FortifySscUploadEventAbstract) {
             final FortifySscUploadEventAbstract event = (FortifySscUploadEventAbstract) e;
             LOGGER.debug("Starting Fortify Software Security Center upload task");
-            super.inform(event, new FortifySscUploader());
+            super.inform(event, new FortifySscUploader(httpClient));
             LOGGER.debug("Fortify Software Security Center upload complete");
         }
     }
