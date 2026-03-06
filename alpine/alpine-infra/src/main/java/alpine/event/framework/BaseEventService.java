@@ -28,9 +28,8 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -43,7 +42,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static alpine.common.util.ExecutorUtil.getExecutorStats;
 
 /**
  * A publish/subscribe (pub/sub) event service that provides the ability to publish events and
@@ -334,21 +332,24 @@ public abstract class BaseEventService implements IEventService {
         setStatus(Status.STOPPING);
         executor.shutdown();
 
-        final Instant waitTimeout = Instant.now().plus(timeout);
-        Instant statsLastLoggedAt = null;
-        while (!executor.isTerminated()) {
-            if (waitTimeout.isBefore(Instant.now())) {
-                throw new TimeoutException("Timeout exceeded while waiting for executors to finish: %s".formatted(getExecutorStats(executor)));
-            }
+        try {
+            if (!executor.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                final List<Runnable> pendingTasks = executor.shutdownNow();
+                if (!pendingTasks.isEmpty()) {
+                    logger.warn(
+                            "Forcefully shutting down; {} pending tasks will not be executed",
+                            pendingTasks.size());
+                }
+                if (!executor.awaitTermination(3, TimeUnit.SECONDS)) {
+                    logger.warn("Executor did not terminate within grace period after interruption");
+                }
 
-            final Instant now = Instant.now();
-            if (statsLastLoggedAt == null || now.minus(5, ChronoUnit.SECONDS).isAfter(statsLastLoggedAt)) {
-                logger.info("Waiting for executors to terminate: %s".formatted(getExecutorStats(executor)));
-                statsLastLoggedAt = now;
+                throw new TimeoutException("Timeout exceeded while waiting for executor to terminate");
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
 
-        logger.info("Executor terminated successfully");
         setStatus(Status.STOPPED);
     }
 
@@ -360,7 +361,7 @@ public abstract class BaseEventService implements IEventService {
             }
 
             if (this.status.canTransitionTo(newStatus)) {
-                logger.info("Transitioning from status %s to %s".formatted(this.status, newStatus));
+                logger.info("Transitioning from status {} to {}", this.status, newStatus);
                 this.status = newStatus;
                 return;
             }
