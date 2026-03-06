@@ -22,6 +22,9 @@
     <configuration>
         <enabled>true</enabled>
         <hashAlgorithm>XX</hashAlgorithm>
+        <local>
+            <maxBuildsCached>3</maxBuildsCached>
+        </local>
         <attachedOutputs>
             <dirNames>
                 <dirName glob="jacoco.exec"></dirName>
