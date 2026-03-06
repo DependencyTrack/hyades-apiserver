@@ -77,7 +77,6 @@ final class JiraNotificationPublisher implements NotificationPublisher {
                 .uri(URI.create("%s/rest/api/2/issue".formatted(globalConfig.getApiUrl())))
                 .header("Authorization", authHeader)
                 .header("Content-Type", "application/json")
-                .header("User-Agent", "Dependency-Track")
                 .POST(BodyPublishers.ofString(renderedTemplate.content()))
                 .timeout(Duration.ofSeconds(10))
                 .build();

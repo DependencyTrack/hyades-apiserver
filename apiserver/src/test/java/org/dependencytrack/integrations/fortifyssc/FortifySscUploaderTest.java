@@ -21,25 +21,42 @@ package org.dependencytrack.integrations.fortifyssc;
 import alpine.model.IConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Project;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
+import java.net.http.HttpClient;
 import java.util.ArrayList;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_ENABLED;
 
-public class FortifySscUploaderTest extends PersistenceCapableTest {
+class FortifySscUploaderTest extends PersistenceCapableTest {
+
+    private static HttpClient httpClient;
+
+    @BeforeAll
+    static void beforeAll() {
+        httpClient = HttpClient.newHttpClient();
+    }
+
+    @AfterAll
+    static void afterAll() {
+        if (httpClient != null) {
+            httpClient.close();
+        }
+    }
 
     @Test
-    public void testIntegrationMetadata() {
-        FortifySscUploader extension = new FortifySscUploader();
+    void testIntegrationMetadata() {
+        FortifySscUploader extension = new FortifySscUploader(httpClient);
         Assertions.assertEquals("Fortify SSC", extension.name());
         Assertions.assertEquals("Pushes Dependency-Track findings to Software Security Center", extension.description());
     }
 
     @Test
-    public void testIntegrationEnabledCases() {
+    void testIntegrationEnabledCases() {
         qm.createConfigProperty(
                 FORTIFY_SSC_ENABLED.getGroupName(),
                 FORTIFY_SSC_ENABLED.getPropertyName(),
@@ -56,25 +73,25 @@ public class FortifySscUploaderTest extends PersistenceCapableTest {
                 IConfigProperty.PropertyType.STRING,
                 null
         );
-        FortifySscUploader extension = new FortifySscUploader();
+        FortifySscUploader extension = new FortifySscUploader(httpClient);
         extension.setQueryManager(qm);
         Assertions.assertTrue(extension.isEnabled());
         Assertions.assertTrue(extension.isProjectConfigured(project));
     }
 
     @Test
-    public void testIntegrationDisabledCases() {
+    void testIntegrationDisabledCases() {
         Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, null, false);
-        FortifySscUploader extension = new FortifySscUploader();
+        FortifySscUploader extension = new FortifySscUploader(httpClient);
         extension.setQueryManager(qm);
         Assertions.assertFalse(extension.isEnabled());
         Assertions.assertFalse(extension.isProjectConfigured(project));
     }
 
     @Test
-    public void testIntegrationFindings() throws Exception {
+    void testIntegrationFindings() throws Exception {
         Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, null, false);
-        FortifySscUploader extension = new FortifySscUploader();
+        FortifySscUploader extension = new FortifySscUploader(httpClient);
         extension.setQueryManager(qm);
         InputStream in = extension.process(project, new ArrayList<>());
         Assertions.assertTrue(in != null && in.available() > 0);

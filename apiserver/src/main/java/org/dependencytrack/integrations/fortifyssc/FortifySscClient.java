@@ -19,82 +19,94 @@
 package org.dependencytrack.integrations.fortifyssc;
 
 import alpine.common.logging.Logger;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.entity.mime.HttpMultipartMode;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.util.EntityUtils;
-import org.dependencytrack.common.HttpClientPool;
+import org.dependencytrack.common.MultipartBodyPublisher;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 public class FortifySscClient {
 
     private static final Logger LOGGER = Logger.getLogger(FortifySscClient.class);
+
+    private final HttpClient httpClient;
     private final FortifySscUploader uploader;
     private final URL baseURL;
 
-    public FortifySscClient(final FortifySscUploader uploader, final URL baseURL) {
+    FortifySscClient(
+            HttpClient httpClient,
+            FortifySscUploader uploader,
+            URL baseURL) {
+        this.httpClient = httpClient;
         this.uploader = uploader;
         this.baseURL = baseURL;
     }
 
     public String generateOneTimeUploadToken(final String citoken) {
         LOGGER.debug("Generating one-time upload token");
-        var request = new HttpPost(baseURL + "/api/v1/fileTokens");
-        request.addHeader("Content-Type", "application/json");
-        request.addHeader("Authorization", "FortifyToken " + Base64.getEncoder().encodeToString(citoken.getBytes(StandardCharsets.UTF_8)));
         final JSONObject payload = new JSONObject().put("fileTokenType", "UPLOAD");
+
+        final var request = HttpRequest.newBuilder()
+                .uri(URI.create(baseURL + "/api/v1/fileTokens"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "FortifyToken " + Base64.getEncoder().encodeToString(citoken.getBytes(StandardCharsets.UTF_8)))
+                .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                .build();
+
         try {
-            request.setEntity(new StringEntity(payload.toString()));
-            try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
-                if (response.getStatusLine().getStatusCode() == HttpStatus.SC_CREATED) {
-                    if (response.getEntity() != null) {
-                        String responseString = EntityUtils.toString(response.getEntity());
-                        final JSONObject root = new JSONObject(responseString);
-                        LOGGER.debug("One-time upload token retrieved");
-                        return root.getJSONObject("data").getString("token");
-                    }
-                } else {
-                    uploader.handleUnexpectedHttpResponse(LOGGER, request.getURI().toString(), response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase());
-                }
+            final HttpResponse<String> response = httpClient
+                    .send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 201 && response.body() != null) {
+                final JSONObject root = new JSONObject(response.body());
+                LOGGER.debug("One-time upload token retrieved");
+                return root.getJSONObject("data").getString("token");
+            } else {
+                uploader.handleUnexpectedHttpResponse(LOGGER, request.uri().toString(), response.statusCode(), response.body());
             }
         } catch (IOException ex) {
+            uploader.handleException(LOGGER, ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
             uploader.handleException(LOGGER, ex);
         }
         return null;
     }
 
     public void uploadDependencyTrackFindings(final String token, final String applicationVersion, final InputStream findingsJson) {
+        LOGGER.debug("Uploading Dependency-Track findings to Fortify SSC");
+
+        final String uri = "%s/upload/resultFileUpload.html?engineType=DEPENDENCY_TRACK&mat=%s&entityId=%s"
+                .formatted(baseURL, token, applicationVersion);
+
+        final var multipart = new MultipartBodyPublisher()
+                .addFilePart("files[]", "findings.json", findingsJson, "application/octet-stream");
+
+        final var request = HttpRequest.newBuilder()
+                .uri(URI.create(uri))
+                .header("Accept", "application/xml")
+                .header("Content-Type", multipart.contentType())
+                .POST(multipart.build())
+                .build();
+
         try {
-            LOGGER.debug("Uploading Dependency-Track findings to Fortify SSC");
-            var builder = new URIBuilder(baseURL + "/upload/resultFileUpload.html");
-            builder.setParameter("engineType", "DEPENDENCY_TRACK").setParameter("mat", token).setParameter("entityId", applicationVersion);
-            HttpPost request = new HttpPost(builder.build());
-            request.addHeader("accept", "application/xml");
-            HttpEntity data = MultipartEntityBuilder.create().setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
-                    .addBinaryBody("files[]", findingsJson, ContentType.APPLICATION_OCTET_STREAM, "findings.json")
-                    .build();
-            request.setEntity(data);
-            try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
-                if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                    LOGGER.debug("Successfully uploaded findings to Fortify SSC");
-                } else {
-                    uploader.handleUnexpectedHttpResponse(LOGGER, request.getURI().toString(), response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase());
-                }
+            final HttpResponse<String> response = httpClient
+                    .send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                LOGGER.debug("Successfully uploaded findings to Fortify SSC");
+            } else {
+                uploader.handleUnexpectedHttpResponse(LOGGER, request.uri().toString(), response.statusCode(), response.body());
             }
-        } catch (URISyntaxException | IOException ex) {
+        } catch (IOException ex) {
+            uploader.handleException(LOGGER, ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
             uploader.handleException(LOGGER, ex);
         }
     }

@@ -20,26 +20,17 @@ package org.dependencytrack.integrations.defectdojo;
 
 import alpine.common.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.HttpMultipartMode;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.InputStreamBody;
-import org.apache.http.entity.mime.content.StringBody;
-import org.apache.http.util.EntityUtils;
-import org.dependencytrack.common.HttpClientPool;
+import org.dependencytrack.common.MultipartBodyPublisher;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -48,95 +39,108 @@ public class DefectDojoClient {
 
     private static final Logger LOGGER = Logger.getLogger(DefectDojoClient.class);
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+    private final HttpClient httpClient;
     private final DefectDojoUploader uploader;
     private final URL baseURL;
 
-    public DefectDojoClient(final DefectDojoUploader uploader, final URL baseURL) {
+    public DefectDojoClient(
+            HttpClient httpClient,
+            DefectDojoUploader uploader,
+            URL baseURL) {
+        this.httpClient = httpClient;
         this.uploader = uploader;
         this.baseURL = baseURL;
     }
 
     public void uploadDependencyTrackFindings(final String token, final String engagementId, final InputStream findingsJson, final Boolean verifyFindings) {
         LOGGER.debug("Uploading Dependency-Track findings to DefectDojo");
-        HttpPost request = new HttpPost(baseURL + "/api/v2/import-scan/");
-        InputStreamBody inputStreamBody = new InputStreamBody(findingsJson, ContentType.APPLICATION_OCTET_STREAM, "findings.json");
-        request.addHeader("accept", "application/json");
-        request.addHeader("Authorization", "Token " + token);
-        HttpEntity data = MultipartEntityBuilder.create().setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
-                .addPart("file", inputStreamBody)
-                .addPart("engagement", new StringBody(engagementId, ContentType.MULTIPART_FORM_DATA))
-                .addPart("scan_type", new StringBody("Dependency Track Finding Packaging Format (FPF) Export", ContentType.MULTIPART_FORM_DATA))
-                .addPart("verified", new StringBody(Boolean.toString(verifyFindings), ContentType.MULTIPART_FORM_DATA))
-                .addPart("active", new StringBody("true", ContentType.MULTIPART_FORM_DATA))
-                .addPart("minimum_severity", new StringBody("Info", ContentType.MULTIPART_FORM_DATA))
-                .addPart("close_old_findings", new StringBody("true", ContentType.MULTIPART_FORM_DATA))
-                .addPart("push_to_jira", new StringBody("false", ContentType.MULTIPART_FORM_DATA))
-                .addPart("scan_date", new StringBody(DATE_FORMAT.format(new Date()), ContentType.MULTIPART_FORM_DATA))
+
+        final var multipart = new MultipartBodyPublisher()
+                .addFilePart("file", "findings.json", findingsJson, "application/octet-stream")
+                .addFormField("engagement", engagementId)
+                .addFormField("scan_type", "Dependency Track Finding Packaging Format (FPF) Export")
+                .addFormField("verified", Boolean.toString(verifyFindings))
+                .addFormField("active", "true")
+                .addFormField("minimum_severity", "Info")
+                .addFormField("close_old_findings", "true")
+                .addFormField("push_to_jira", "false")
+                .addFormField("scan_date", DATE_FORMAT.format(new Date()));
+
+        final var request = HttpRequest.newBuilder()
+                .uri(URI.create(baseURL + "/api/v2/import-scan/"))
+                .header("Accept", "application/json")
+                .header("Authorization", "Token " + token)
+                .header("Content-Type", multipart.contentType())
+                .POST(multipart.build())
                 .build();
-        request.setEntity(data);
 
-
-        try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
-            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_CREATED) {
+        try {
+            final HttpResponse<String> response = httpClient
+                    .send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 201) {
                 LOGGER.debug("Successfully uploaded findings to DefectDojo");
             } else {
-                uploader.handleUnexpectedHttpResponse(LOGGER, request.getURI().toString(), response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase());
+                uploader.handleUnexpectedHttpResponse(LOGGER, request.uri().toString(), response.statusCode(), response.body());
             }
         } catch (IOException ex) {
+            uploader.handleException(LOGGER, ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
             uploader.handleException(LOGGER, ex);
         }
     }
 
-    // Pulling DefectDojo 'tests' API endpoint with engagementID filter on, and retrieve a list of existing tests
     public ArrayList<String> getDojoTestIds(final String token, final String eid) {
         LOGGER.debug("Pulling DefectDojo Tests API ...");
-        String testsUri = "/api/v2/tests/";
         LOGGER.debug("Make the first pagination call");
         try {
-            URIBuilder uriBuilder = new URIBuilder(baseURL + testsUri);
-            uriBuilder.addParameter("limit", "100");
-            uriBuilder.addParameter("engagement", eid);
-            HttpGet request = new HttpGet(uriBuilder.build().toString());
-            request.addHeader("accept", "application/json");
-            request.addHeader("Authorization", "Token " + token);
-            try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
-                if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                    if (response.getEntity() != null) {
-                        String stringResponse = EntityUtils.toString(response.getEntity());
-                        JSONObject dojoObj = new JSONObject(stringResponse);
-                        JSONArray dojoArray = dojoObj.getJSONArray("results");
-                        ArrayList<String> dojoTests = jsonToList(dojoArray);
-                        while (StringUtils.isNotBlank(dojoObj.optString("next"))) {
-                            final String nextUrl = dojoObj.getString("next");
-                            LOGGER.debug("Making the subsequent pagination call on " + nextUrl);
-                            uriBuilder = new URIBuilder(nextUrl);
-                            request = new HttpGet(uriBuilder.build().toString());
-                            request.addHeader("accept", "application/json");
-                            request.addHeader("Authorization", "Token " + token);
-                            try (CloseableHttpResponse response1 = HttpClientPool.getClient().execute(request)) {
-                                stringResponse = EntityUtils.toString(response1.getEntity());
-                            }
-                            dojoObj = new JSONObject(stringResponse);
-                            dojoArray = dojoObj.optJSONArray("results");
-                            if (dojoArray != null) {
-                                dojoTests.addAll(jsonToList(dojoArray));
-                            }
-                        }
-                        LOGGER.debug("Successfully retrieved the test list ");
-                        return dojoTests;
+            final String url = baseURL + "/api/v2/tests/?limit=100&engagement=" + eid;
+            var request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Accept", "application/json")
+                    .header("Authorization", "Token " + token)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient
+                    .send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200 && response.body() != null) {
+                JSONObject dojoObj = new JSONObject(response.body());
+                JSONArray dojoArray = dojoObj.getJSONArray("results");
+                ArrayList<String> dojoTests = jsonToList(dojoArray);
+
+                while (StringUtils.isNotBlank(dojoObj.optString("next"))) {
+                    final String nextUrl = dojoObj.getString("next");
+                    LOGGER.debug("Making the subsequent pagination call on " + nextUrl);
+                    request = HttpRequest.newBuilder()
+                            .uri(URI.create(nextUrl))
+                            .header("Accept", "application/json")
+                            .header("Authorization", "Token " + token)
+                            .GET()
+                            .build();
+                    response = httpClient
+                            .send(request, HttpResponse.BodyHandlers.ofString());
+                    dojoObj = new JSONObject(response.body());
+                    dojoArray = dojoObj.optJSONArray("results");
+                    if (dojoArray != null) {
+                        dojoTests.addAll(jsonToList(dojoArray));
                     }
-                } else {
-                    LOGGER.warn("DefectDojo Client did not receive expected response while attempting to retrieve tests list "
-                            + response.getStatusLine().getStatusCode() + " - " + response.getStatusLine().getReasonPhrase());
                 }
+                LOGGER.debug("Successfully retrieved the test list ");
+                return dojoTests;
+            } else {
+                LOGGER.warn("DefectDojo Client did not receive expected response while attempting to retrieve tests list "
+                        + response.statusCode());
             }
-        } catch (IOException | URISyntaxException ex) {
+        } catch (IOException ex) {
+            uploader.handleException(LOGGER, ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
             uploader.handleException(LOGGER, ex);
         }
         return new ArrayList<>();
     }
 
-    // Given the engagement id and scan type, search for existing test id
     public String getDojoTestId(final String engagementID, final ArrayList<String> dojoTests) {
         for (final String dojoTestJson : dojoTests) {
             JSONObject dojoTest = new JSONObject(dojoTestJson);
@@ -148,7 +152,6 @@ public class DefectDojoClient {
         return "";
     }
 
-    // JSONArray to ArrayList simple converter
     public ArrayList<String> jsonToList(final JSONArray jsonArray) {
         ArrayList<String> list = new ArrayList<>();
         if (jsonArray != null) {
@@ -159,37 +162,42 @@ public class DefectDojoClient {
         return list;
     }
 
-    /*
-     * A Reimport will reuse (overwrite) the existing test, instead of create a new test.
-     * The Successfully reimport will also  increase the reimport counter by 1.
-     */
     public void reimportDependencyTrackFindings(final String token, final String engagementId, final InputStream findingsJson, final String testId, final Boolean doNotReactivate, final Boolean verifyFindings) {
         LOGGER.debug("Re-reimport Dependency-Track findings to DefectDojo per Engagement");
-        HttpPost request = new HttpPost(baseURL + "/api/v2/reimport-scan/");
-        request.addHeader("accept", "application/json");
-        request.addHeader("Authorization", "Token " + token);
-        InputStreamBody inputStreamBody = new InputStreamBody(findingsJson, ContentType.APPLICATION_OCTET_STREAM, "findings.json");
-        HttpEntity fileData = MultipartEntityBuilder.create().setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
-                .addPart("file", inputStreamBody)
-                .addPart("engagement", new StringBody(engagementId, ContentType.MULTIPART_FORM_DATA))
-                .addPart("scan_type", new StringBody("Dependency Track Finding Packaging Format (FPF) Export", ContentType.MULTIPART_FORM_DATA))
-                .addPart("verified", new StringBody(Boolean.toString(verifyFindings), ContentType.MULTIPART_FORM_DATA))
-                .addPart("active", new StringBody("true", ContentType.MULTIPART_FORM_DATA))
-                .addPart("minimum_severity", new StringBody("Info", ContentType.MULTIPART_FORM_DATA))
-                .addPart("close_old_findings", new StringBody("true", ContentType.MULTIPART_FORM_DATA))
-                .addPart("push_to_jira", new StringBody("false", ContentType.MULTIPART_FORM_DATA))
-                .addPart("do_not_reactivate", new StringBody(doNotReactivate.toString(), ContentType.MULTIPART_FORM_DATA))
-                .addPart("test", new StringBody(testId, ContentType.MULTIPART_FORM_DATA))
-                .addPart("scan_date", new StringBody(DATE_FORMAT.format(new Date()), ContentType.MULTIPART_FORM_DATA))
+
+        final var multipart = new MultipartBodyPublisher()
+                .addFilePart("file", "findings.json", findingsJson, "application/octet-stream")
+                .addFormField("engagement", engagementId)
+                .addFormField("scan_type", "Dependency Track Finding Packaging Format (FPF) Export")
+                .addFormField("verified", Boolean.toString(verifyFindings))
+                .addFormField("active", "true")
+                .addFormField("minimum_severity", "Info")
+                .addFormField("close_old_findings", "true")
+                .addFormField("push_to_jira", "false")
+                .addFormField("do_not_reactivate", doNotReactivate.toString())
+                .addFormField("test", testId)
+                .addFormField("scan_date", DATE_FORMAT.format(new Date()));
+
+        final var request = HttpRequest.newBuilder()
+                .uri(URI.create(baseURL + "/api/v2/reimport-scan/"))
+                .header("Accept", "application/json")
+                .header("Authorization", "Token " + token)
+                .header("Content-Type", multipart.contentType())
+                .POST(multipart.build())
                 .build();
-        request.setEntity(fileData);
-        try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
-            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_CREATED) {
+
+        try {
+            final HttpResponse<String> response = httpClient
+                    .send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 201) {
                 LOGGER.debug("Successfully reimport findings to DefectDojo");
             } else {
-                uploader.handleUnexpectedHttpResponse(LOGGER, request.getURI().toString(), response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase());
+                uploader.handleUnexpectedHttpResponse(LOGGER, request.uri().toString(), response.statusCode(), response.body());
             }
         } catch (IOException ex) {
+            uploader.handleException(LOGGER, ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
             uploader.handleException(LOGGER, ex);
         }
     }

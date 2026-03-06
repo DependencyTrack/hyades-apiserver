@@ -21,9 +21,6 @@ package org.dependencytrack.tasks;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.dependencytrack.common.HttpClientPool;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
@@ -36,9 +33,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +55,12 @@ public class EpssMirrorTask implements Subscriber {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EpssMirrorTask.class);
     private static final int BATCH_SIZE = 100;
+
+    private final HttpClient httpClient;
+
+    public EpssMirrorTask(HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
 
     public void inform(final Event e) {
         if (!(e instanceof EpssMirrorEvent)) {
@@ -86,13 +92,19 @@ public class EpssMirrorTask implements Subscriber {
     private Path downloadFeedFile(final String baseUrl) throws IOException {
         final Path tempFile = Files.createTempFile(null, null);
 
-        final var request = new HttpGet("%s/epss_scores-current.csv.gz".formatted(baseUrl));
-        try (final CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
-            if (response.getStatusLine().getStatusCode() != 200) {
-                throw new IllegalStateException("Unexpected response code: " + response.getStatusLine().getStatusCode());
+        final var request = HttpRequest.newBuilder()
+                .uri(URI.create("%s/epss_scores-current.csv.gz".formatted(baseUrl)))
+                .GET()
+                .build();
+        try {
+            final HttpResponse<Path> response = httpClient
+                    .send(request, HttpResponse.BodyHandlers.ofFile(tempFile));
+            if (response.statusCode() != 200) {
+                throw new IllegalStateException("Unexpected response code: " + response.statusCode());
             }
-
-            Files.copy(response.getEntity().getContent(), tempFile, StandardCopyOption.REPLACE_EXISTING);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Download interrupted", e);
         }
 
         return tempFile;

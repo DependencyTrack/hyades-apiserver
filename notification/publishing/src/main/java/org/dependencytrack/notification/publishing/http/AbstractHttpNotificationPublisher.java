@@ -65,7 +65,6 @@ public abstract class AbstractHttpNotificationPublisher implements NotificationP
         final var request = HttpRequest
                 .newBuilder(ruleConfig.getDestinationUrl())
                 .header("Content-Type", renderedTemplate.mimeType())
-                .header("User-Agent", "Dependency-Track")
                 .POST(BodyPublishers.ofString(renderedTemplate.content()))
                 .timeout(Duration.ofSeconds(10))
                 .build();

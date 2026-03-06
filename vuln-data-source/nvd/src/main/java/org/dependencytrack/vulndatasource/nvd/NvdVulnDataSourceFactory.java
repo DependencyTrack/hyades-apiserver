@@ -80,9 +80,7 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
     public void init(final ExtensionContext ctx) {
         this.configRegistry = ctx.configRegistry();
         this.kvStore = ctx.kvStore();
-        this.httpClient = HttpClient.newBuilder()
-                .proxy(ctx.proxySelector())
-                .build();
+        this.httpClient = ctx.http().client();
         this.objectMapper = new ObjectMapper()
                 .configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, true)
                 .configure(JsonReadFeature.ALLOW_TRAILING_COMMA.mappedFeature(), true)
@@ -195,13 +193,6 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
         }
 
         return testResult;
-    }
-
-    @Override
-    public void close() {
-        if (httpClient != null) {
-            httpClient.close();
-        }
     }
 
 }

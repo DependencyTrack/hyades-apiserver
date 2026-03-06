@@ -53,9 +53,7 @@ public final class JiraNotificationPublisherFactory implements NotificationPubli
     @Override
     public void init(ExtensionContext ctx) {
         configRegistry = ctx.configRegistry();
-        httpClient = HttpClient.newBuilder()
-                .proxy(ctx.proxySelector())
-                .build();
+        httpClient = ctx.http().client();
     }
 
     @Override
@@ -108,13 +106,6 @@ public final class JiraNotificationPublisherFactory implements NotificationPubli
     @Override
     public NotificationTemplate defaultTemplate() {
         return new NotificationTemplate(loadDefaultTemplate(extensionClass()), "application/json");
-    }
-
-    @Override
-    public void close() {
-        if (httpClient != null) {
-            httpClient.close();
-        }
     }
 
 }

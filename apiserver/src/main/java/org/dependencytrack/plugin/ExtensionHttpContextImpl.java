@@ -16,26 +16,34 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.common;
+package org.dependencytrack.plugin;
 
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.dependencytrack.plugin.api.ExtensionHttpContext;
 
-public class ManagedHttpClient {
+import java.net.ProxySelector;
+import java.net.http.HttpClient;
 
-    private CloseableHttpClient httpClient;
-    private PoolingHttpClientConnectionManager connectionManager;
+final class ExtensionHttpContextImpl implements ExtensionHttpContext {
 
-    public ManagedHttpClient(CloseableHttpClient httpClient, PoolingHttpClientConnectionManager connectionManager) {
+    private final org.dependencytrack.common.HttpClient httpClient;
+
+    ExtensionHttpContextImpl(org.dependencytrack.common.HttpClient httpClient) {
         this.httpClient = httpClient;
-        this.connectionManager = connectionManager;
     }
 
-    public CloseableHttpClient getHttpClient() {
+    @Override
+    public HttpClient client() {
         return httpClient;
     }
 
-    public PoolingHttpClientConnectionManager getConnectionManager() {
-        return connectionManager;
+    @Override
+    public String userAgent() {
+        return httpClient.userAgent();
     }
+
+    @Override
+    public ProxySelector proxySelector() {
+        return httpClient.proxy().orElse(ProxySelector.getDefault());
+    }
+
 }

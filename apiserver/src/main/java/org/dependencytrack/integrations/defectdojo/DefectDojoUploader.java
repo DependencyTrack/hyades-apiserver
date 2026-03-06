@@ -31,6 +31,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
+import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,6 +47,12 @@ public class DefectDojoUploader extends AbstractIntegrationPoint implements Proj
     private static final String REIMPORT_PROPERTY = "defectdojo.reimport";
     private static final String DO_NOT_REACTIVATE_PROPERTY = "defectdojo.doNotReactivate";
     private static final String VERIFIED_PROPERTY = "defectdojo.verified";
+
+    private final HttpClient httpClient;
+
+    public DefectDojoUploader(HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
 
     public boolean isReimportConfigured(final Project project) {
         final ProjectProperty reimport = qm.getProjectProperty(project, DEFECTDOJO_ENABLED.getGroupName(), REIMPORT_PROPERTY);
@@ -111,7 +118,7 @@ public class DefectDojoUploader extends AbstractIntegrationPoint implements Proj
         final ProjectProperty engagementId = qm.getProjectProperty(project, DEFECTDOJO_ENABLED.getGroupName(), ENGAGEMENTID_PROPERTY);
         final boolean verifyFindings = isVerifiedConfigured(project);
         try {
-            final DefectDojoClient client = new DefectDojoClient(this, new URL(defectDojoUrl.getPropertyValue()));
+            final DefectDojoClient client = new DefectDojoClient(httpClient, this, new URL(defectDojoUrl.getPropertyValue()));
             if (isReimportConfigured(project) || globalReimportEnabled) {
                 final ArrayList<String> testsIds = client.getDojoTestIds(apiKey.getPropertyValue(), engagementId.getPropertyValue());
                 final String testId = client.getDojoTestId(engagementId.getPropertyValue(), testsIds);
