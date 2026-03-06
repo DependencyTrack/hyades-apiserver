@@ -44,6 +44,11 @@
                         <execId>copy-dependencies</execId>
                     </execIds>
                 </execution>
+                <execution artifactId="jacoco-maven-plugin">
+                    <execIds>
+                        <execId>report-aggregate</execId>
+                    </execIds>
+                </execution>
             </executions>
             <goalsLists>
                 <goalsList artifactId="maven-install-plugin">
