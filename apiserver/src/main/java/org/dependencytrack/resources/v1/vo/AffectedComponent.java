@@ -22,9 +22,10 @@ import alpine.common.logging.Logger;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.VulnerableSoftware;
 import us.springett.parsers.cpe.Cpe;
@@ -40,6 +41,9 @@ import java.util.UUID;
 public class AffectedComponent {
 
     private static final Logger LOGGER = Logger.getLogger(AffectedComponent.class);
+    private static final ObjectReader QUALIFIER_READER = Mappers.jsonMapper()
+            .readerFor(new TypeReference<TreeMap<String, String>>() {
+            });
 
     enum IdentityType {
         CPE,
@@ -80,8 +84,7 @@ public class AffectedComponent {
             TreeMap<String, String> qualifiers = null;
             if (vs.getPurlQualifiers() != null) {
                 try {
-                    qualifiers = new ObjectMapper().readValue(vs.getPurlQualifiers(), new TypeReference<>() {
-                    });
+                    qualifiers = QUALIFIER_READER.readValue(vs.getPurlQualifiers());
                 } catch (JsonProcessingException e) {
                     LOGGER.warn("Error deserializing PURL qualifiers: " + vs.getPurlQualifiers() + " (skipping)");
                 }
@@ -227,7 +230,7 @@ public class AffectedComponent {
                 vs.setPurlVersion(purl.getVersion());
                 vs.setVersion(purl.getVersion());
                 if (purl.getQualifiers() != null) {
-                    vs.setPurlQualifiers(new ObjectMapper().writeValueAsString(purl.getQualifiers()));
+                    vs.setPurlQualifiers(Mappers.jsonMapper().writeValueAsString(purl.getQualifiers()));
                 }
                 vs.setPurlSubpath(purl.getSubpath());
             } catch (MalformedPackageURLException e) {

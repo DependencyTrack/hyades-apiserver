@@ -18,7 +18,10 @@
  */
 package org.dependencytrack.integrations.kenna;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.collections4.CollectionUtils;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
@@ -28,10 +31,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.dependencytrack.util.DateUtil;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -48,8 +48,8 @@ public class KennaDataTransformer {
     private static final String SCANNER_TYPE = "Dependency-Track";
     private final QueryManager qm;
     private final Map<String, Vulnerability> portfolioVulnerabilities = new HashMap<>();
-    private final JSONArray assets = new JSONArray();
-    private final JSONArray vulnDefs = new JSONArray();
+    private final ArrayNode assets = Mappers.jsonMapper().createArrayNode();
+    private final ArrayNode vulnDefs = Mappers.jsonMapper().createArrayNode();
 
     KennaDataTransformer(final QueryManager qm) {
         this.qm = qm;
@@ -58,23 +58,23 @@ public class KennaDataTransformer {
     /**
      * Create the root-level JSON object. Requires projects to have been processed first.
      */
-    public JSONObject generate() {
+    public ObjectNode generate() {
         // Creates the reference array of vulnerability definitions based on the vulnerabilities identified.
         // Using a Map to prevent duplicates based on the key.
         for (final Map.Entry<String, Vulnerability> entry : portfolioVulnerabilities.entrySet()) {
-            vulnDefs.put(generateKdiVulnDef(entry.getValue()));
+            vulnDefs.add(generateKdiVulnDef(entry.getValue()));
         }
         // Create the root-level JSON object
-        final JSONObject root = new JSONObject();
+        final ObjectNode root = Mappers.jsonMapper().createObjectNode();
         root.put("skip_autoclose", false);
-        root.put("assets", assets);
-        root.put("vuln_defs", vulnDefs);
+        root.set("assets", assets);
+        root.set("vuln_defs", vulnDefs);
         return root;
     }
 
     public void process(final Project project, final String externalId) {
-        final JSONObject kdiAsset = generateKdiAsset(project, externalId);
-        final JSONArray vulns = new JSONArray();
+        final ObjectNode kdiAsset = generateKdiAsset(project, externalId);
+        final ArrayNode vulns = Mappers.jsonMapper().createArrayNode();
         final List<Finding> findings = withJdbiHandle(handle ->
                 handle.attach(FindingDao.class).getFindings(project.getId(), false));
         for (final Finding finding: findings) {
@@ -90,12 +90,12 @@ public class KennaDataTransformer {
             //final Component component = qm.getObjectByUuid(Component.class, (String)finding.getComponent().get("uuid"));
             final String stateString = (String)finding.getAnalysis().get("state");
             final AnalysisState analysisState = (stateString != null) ? AnalysisState.valueOf(stateString) : AnalysisState.NOT_SET;
-            final JSONObject kdiVuln = generateKdiVuln(vulnerability, analysisState);
-            vulns.put(kdiVuln);
+            final ObjectNode kdiVuln = generateKdiVuln(vulnerability, analysisState);
+            vulns.add(kdiVuln);
             portfolioVulnerabilities.put(generateScannerIdentifier(vulnerability), vulnerability);
         }
-        kdiAsset.put("vulns", vulns);
-        assets.put(kdiAsset);
+        kdiAsset.set("vulns", vulns);
+        assets.add(kdiAsset);
     }
 
     /**
@@ -110,19 +110,18 @@ public class KennaDataTransformer {
     /**
      * Generates a KDI asset object.
      */
-    private JSONObject generateKdiAsset(final Project project, final String externalId) {
-        final JSONObject asset = new JSONObject();
+    private ObjectNode generateKdiAsset(final Project project, final String externalId) {
+        final ObjectNode asset = Mappers.jsonMapper().createObjectNode();
         final String application = (project.getVersion() == null) ? project.getName() : project.getName() + " " + project.getVersion();
         asset.put("application", application);
         asset.put("external_id", externalId);
         // If the project has tags, add them to the KDI
         final Set<Tag> tags = project.getTags();
         if (CollectionUtils.isNotEmpty(tags)) {
-            final ArrayList<String> tagArray = new ArrayList<>();
+            final ArrayNode tagsNode = asset.putArray("tags");
             for (final Tag tag: tags) {
-                tagArray.add(tag.getName());
+                tagsNode.add(tag.getName());
             }
-            asset.put("tags", tagArray);
         }
         return asset;
     }
@@ -131,8 +130,8 @@ public class KennaDataTransformer {
      * Generates a KDI vulnerability object which will be assigned to an asset and which will reference a KDI
      * vulnerability definition.
      */
-    private JSONObject generateKdiVuln(final Vulnerability vulnerability, final AnalysisState analysisState) {
-        final JSONObject vuln = new JSONObject();
+    private ObjectNode generateKdiVuln(final Vulnerability vulnerability, final AnalysisState analysisState) {
+        final ObjectNode vuln = Mappers.jsonMapper().createObjectNode();
         vuln.put("scanner_type", SCANNER_TYPE);
         vuln.put("scanner_identifier", generateScannerIdentifier(vulnerability));
         vuln.put("last_seen_at", DateUtil.toISO8601(new Date()));
@@ -174,8 +173,8 @@ public class KennaDataTransformer {
     /**
      * Generates a vulnerability definition that provides detail about the vulnerability assigned to the asset.
      */
-    private JSONObject generateKdiVulnDef(final Vulnerability vulnerability) {
-        final JSONObject vulnDef = new JSONObject();
+    private ObjectNode generateKdiVulnDef(final Vulnerability vulnerability) {
+        final ObjectNode vulnDef = Mappers.jsonMapper().createObjectNode();
         vulnDef.put("scanner_type", SCANNER_TYPE);
         vulnDef.put("scanner_identifier", generateScannerIdentifier(vulnerability));
         if (vulnerability.getVulnId().startsWith("CVE-")) {

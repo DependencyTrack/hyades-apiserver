@@ -1896,7 +1896,7 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
 
         final Policy policyA = qm.createPolicy("Policy A", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policyA, PolicyCondition.Subject.COORDINATES, PolicyCondition.Operator.MATCHES, """
-                {"group": "*", name: "*", version: "*"}
+                {"group": "*", "name": "*", "version": "*"}
                 """);
 
         // Create another policy which already has a violation files for the component.

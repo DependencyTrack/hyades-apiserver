@@ -25,6 +25,7 @@ import alpine.model.ConfigProperty;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -32,6 +33,7 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.model.Analysis;
@@ -47,8 +49,6 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -996,7 +996,7 @@ public class FindingResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getSARIFFindingsByProjectTest() {
+    public void getSARIFFindingsByProjectTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c1 = createComponent(project, "Component 1", "1.1.4");
         Component c2 = createComponent(project, "Component 2", "2.78.123");
@@ -1023,7 +1023,7 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals(200, response.getStatus(), 0);
         assertEquals(MEDIA_TYPE_SARIF_JSON, response.getHeaderString(HttpHeaders.CONTENT_TYPE));
         final String jsonResponse = getPlainTextBody(response);
-        JSONArray resultArray = new JSONObject(jsonResponse).getJSONArray("runs").getJSONObject(0).getJSONArray("results");
+        JsonNode resultArray = Mappers.jsonMapper().readTree(jsonResponse).get("runs").get(0).get("results");
 
         assertThatJson(jsonResponse)
                 .withMatcher("version", equalTo(new About().getVersion()))

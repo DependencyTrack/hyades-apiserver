@@ -19,11 +19,7 @@
 package org.dependencytrack.observability;
 
 import alpine.common.logging.Logger;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -31,6 +27,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.common.health.HealthCheckRegistry;
 import org.dependencytrack.common.health.HealthCheckType;
 import org.eclipse.microprofile.health.HealthCheck;
@@ -60,7 +57,6 @@ public final class HealthServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(HealthServlet.class);
 
     private @Nullable HealthCheckRegistry checkRegistry;
-    private @Nullable ObjectMapper objectMapper;
 
     @Override
     public void init(ServletConfig servletConfig) throws ServletException {
@@ -72,12 +68,6 @@ public final class HealthServlet extends HttpServlet {
         } else {
             throw new IllegalStateException("Health check registry is not initialized");
         }
-
-        objectMapper = new ObjectMapper()
-                // HealthCheckResponse#data is of type Optional.
-                // We need this module to correctly serialize Optional values.
-                .registerModule(new Jdk8Module())
-                .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
     }
 
     @Override
@@ -105,7 +95,7 @@ public final class HealthServlet extends HttpServlet {
                 .findFirst()
                 .orElse(HealthCheckResponse.Status.UP);
 
-        final JsonNode responseJson = JsonNodeFactory.instance.objectNode()
+        final JsonNode responseJson = Mappers.jsonMapper().createObjectNode()
                 .put("status", overallStatus.name())
                 .putPOJO("checks", checkResponses);
 
@@ -117,7 +107,7 @@ public final class HealthServlet extends HttpServlet {
 
         try {
             resp.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-            objectMapper.writeValue(resp.getWriter(), responseJson);
+            Mappers.jsonMapper().writeValue(resp.getWriter(), responseJson);
         } catch (IOException e) {
             LOGGER.error("Failed to write health response", e);
             resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
