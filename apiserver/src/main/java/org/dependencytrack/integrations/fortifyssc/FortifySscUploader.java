@@ -27,12 +27,12 @@ import org.dependencytrack.integrations.ProjectFindingUploader;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
-import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_ENABLED;
@@ -74,8 +74,8 @@ public class FortifySscUploader extends AbstractIntegrationPoint implements Proj
 
     @Override
     public InputStream process(final Project project, final List<Finding> findings) {
-        final JSONObject fpf = new FindingPackagingFormat(project.getUuid(), findings).getDocument();
-        return new ByteArrayInputStream(fpf.toString(2).getBytes());
+        final String fpf = new FindingPackagingFormat(project.getUuid(), findings).getDocument();
+        return new ByteArrayInputStream(fpf.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override

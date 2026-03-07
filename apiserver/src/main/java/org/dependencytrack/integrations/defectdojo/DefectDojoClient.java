@@ -19,13 +19,14 @@
 package org.dependencytrack.integrations.defectdojo;
 
 import alpine.common.logging.Logger;
-import org.apache.commons.lang3.StringUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.common.MultipartBodyPublisher;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URL;
 import java.net.http.HttpClient;
@@ -105,12 +106,12 @@ public class DefectDojoClient {
             HttpResponse<String> response = httpClient
                     .send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200 && response.body() != null) {
-                JSONObject dojoObj = new JSONObject(response.body());
-                JSONArray dojoArray = dojoObj.getJSONArray("results");
+                JsonNode dojoObj = Mappers.jsonMapper().readTree(response.body());
+                JsonNode dojoArray = dojoObj.get("results");
                 ArrayList<String> dojoTests = jsonToList(dojoArray);
 
-                while (StringUtils.isNotBlank(dojoObj.optString("next"))) {
-                    final String nextUrl = dojoObj.getString("next");
+                while (dojoObj.hasNonNull("next") && !dojoObj.get("next").asText().isBlank()) {
+                    final String nextUrl = dojoObj.get("next").asText();
                     LOGGER.debug("Making the subsequent pagination call on " + nextUrl);
                     request = HttpRequest.newBuilder()
                             .uri(URI.create(nextUrl))
@@ -120,8 +121,8 @@ public class DefectDojoClient {
                             .build();
                     response = httpClient
                             .send(request, HttpResponse.BodyHandlers.ofString());
-                    dojoObj = new JSONObject(response.body());
-                    dojoArray = dojoObj.optJSONArray("results");
+                    dojoObj = Mappers.jsonMapper().readTree(response.body());
+                    dojoArray = dojoObj.get("results");
                     if (dojoArray != null) {
                         dojoTests.addAll(jsonToList(dojoArray));
                     }
@@ -143,19 +144,23 @@ public class DefectDojoClient {
 
     public String getDojoTestId(final String engagementID, final ArrayList<String> dojoTests) {
         for (final String dojoTestJson : dojoTests) {
-            JSONObject dojoTest = new JSONObject(dojoTestJson);
-            if (dojoTest.optString("engagement").equals(engagementID) &&
-                    dojoTest.optString("scan_type").equals("Dependency Track Finding Packaging Format (FPF) Export")) {
-                return dojoTest.optString("id");
+            try {
+                JsonNode dojoTest = Mappers.jsonMapper().readTree(dojoTestJson);
+                if (dojoTest.path("engagement").asText().equals(engagementID) &&
+                        dojoTest.path("scan_type").asText().equals("Dependency Track Finding Packaging Format (FPF) Export")) {
+                    return dojoTest.path("id").asText();
+                }
+            } catch (JsonProcessingException e) {
+                throw new UncheckedIOException(e);
             }
         }
         return "";
     }
 
-    public ArrayList<String> jsonToList(final JSONArray jsonArray) {
+    public ArrayList<String> jsonToList(final JsonNode jsonArray) {
         ArrayList<String> list = new ArrayList<>();
         if (jsonArray != null) {
-            for (int i = 0; i < jsonArray.length(); i++) {
+            for (int i = 0; i < jsonArray.size(); i++) {
                 list.add(jsonArray.get(i).toString());
             }
         }

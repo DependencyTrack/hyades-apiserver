@@ -39,12 +39,14 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import jakarta.json.JsonArray;
 import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.Project;
@@ -52,7 +54,6 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.ServiceComponent;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.json.JSONArray;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -103,13 +104,13 @@ public class DependencyGraphResourceTest extends ResourceTest {
         rootComponent.setName("Root Component Name");
         rootComponent.setVersion("1.0.0");
 
-        final JSONArray jsonArray = new JSONArray();
+        final ArrayNode jsonArray = Mappers.jsonMapper().createArrayNode();
         for (Component component : components) {
-            jsonArray.put(new ComponentIdentity(component).toJSON());
+            jsonArray.add(new ComponentIdentity(component).toJSON());
         }
 
         for(ServiceComponent serviceComponent : serviceComponents) {
-            jsonArray.put(new ComponentIdentity(serviceComponent).toJSON());
+            jsonArray.add(new ComponentIdentity(serviceComponent).toJSON());
         }
 
         rootComponent.setDirectDependencies(jsonArray.toString());
@@ -185,13 +186,13 @@ public class DependencyGraphResourceTest extends ResourceTest {
         rootComponent.setName("Root Component Name");
         rootComponent.setVersion("1.0.0");
 
-        final JSONArray jsonArray = new JSONArray();
+        final ArrayNode jsonArray = Mappers.jsonMapper().createArrayNode();
         for (Component component : components) {
-            jsonArray.put(new ComponentIdentity(component).toJSON());
+            jsonArray.add(new ComponentIdentity(component).toJSON());
         }
 
         for(ServiceComponent serviceComponent : serviceComponents) {
-            jsonArray.put(new ComponentIdentity(serviceComponent).toJSON());
+            jsonArray.add(new ComponentIdentity(serviceComponent).toJSON());
         }
 
         rootComponent.setDirectDependencies(jsonArray.toString());
@@ -268,13 +269,13 @@ public class DependencyGraphResourceTest extends ResourceTest {
             serviceComponents.add(qm.createServiceComponent(service, false));
         }
 
-        final JSONArray jsonArray = new JSONArray();
+        final ArrayNode jsonArray = Mappers.jsonMapper().createArrayNode();
         for (Component component : components) {
-            jsonArray.put(new ComponentIdentity(component).toJSON());
+            jsonArray.add(new ComponentIdentity(component).toJSON());
         }
 
         for(ServiceComponent serviceComponent : serviceComponents) {
-            jsonArray.put(new ComponentIdentity(serviceComponent).toJSON());
+            jsonArray.add(new ComponentIdentity(serviceComponent).toJSON());
         }
 
         project.setDirectDependencies(jsonArray.toString());
@@ -344,13 +345,13 @@ public class DependencyGraphResourceTest extends ResourceTest {
             serviceComponents.add(qm.createServiceComponent(service, false));
         }
 
-        final JSONArray jsonArray = new JSONArray();
+        final ArrayNode jsonArray = Mappers.jsonMapper().createArrayNode();
         for (Component component : components) {
-            jsonArray.put(new ComponentIdentity(component).toJSON());
+            jsonArray.add(new ComponentIdentity(component).toJSON());
         }
 
         for(ServiceComponent serviceComponent : serviceComponents) {
-            jsonArray.put(new ComponentIdentity(serviceComponent).toJSON());
+            jsonArray.add(new ComponentIdentity(serviceComponent).toJSON());
         }
 
         project.setDirectDependencies(jsonArray.toString());

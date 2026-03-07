@@ -19,7 +19,6 @@
 package org.dependencytrack.common;
 
 import alpine.security.crypto.DataEncryption;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dependencytrack.common.pagination.InvalidPageTokenException;
 import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.common.pagination.PageTokenEncoder;
@@ -33,11 +32,9 @@ import java.util.Base64;
  */
 public final class EncryptedPageTokenEncoder implements PageTokenEncoder {
 
-    private final ObjectMapper objectMapper;
     private final DataEncryption dataEncryption;
 
     EncryptedPageTokenEncoder(DataEncryption dataEncryption) {
-        this.objectMapper = new ObjectMapper();
         this.dataEncryption = dataEncryption;
     }
 
@@ -52,7 +49,7 @@ public final class EncryptedPageTokenEncoder implements PageTokenEncoder {
         }
 
         try {
-            final String tokenJson = objectMapper.writeValueAsString(pageToken);
+            final String tokenJson = Mappers.jsonMapper().writeValueAsString(pageToken);
             final byte[] encryptedTokenBytes = dataEncryption.encryptAsBytes(tokenJson);
             return Base64.getUrlEncoder().encodeToString(encryptedTokenBytes);
         } catch (Exception e) {
@@ -69,7 +66,7 @@ public final class EncryptedPageTokenEncoder implements PageTokenEncoder {
         try {
             final byte[] encryptedTokenBytes = Base64.getUrlDecoder().decode(encoded);
             final byte[] decryptedToken = dataEncryption.decryptAsBytes(encryptedTokenBytes);
-            return objectMapper.readValue(decryptedToken, pageTokenClass);
+            return Mappers.jsonMapper().readValue(decryptedToken, pageTokenClass);
         } catch (Exception e) {
             throw new InvalidPageTokenException(e);
         }

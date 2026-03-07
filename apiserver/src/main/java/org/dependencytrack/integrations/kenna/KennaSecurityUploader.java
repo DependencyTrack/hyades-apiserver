@@ -21,12 +21,13 @@ package org.dependencytrack.integrations.kenna;
 import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
 import alpine.security.crypto.DataEncryption;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.common.MultipartBodyPublisher;
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
 import org.dependencytrack.integrations.PortfolioFindingUploader;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
-import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -110,8 +111,8 @@ public class KennaSecurityUploader extends AbstractIntegrationPoint implements P
             final HttpResponse<String> response = httpClient
                     .send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200 && response.body() != null) {
-                final JSONObject root = new JSONObject(response.body());
-                if (root.getString("success").equals("true")) {
+                final JsonNode root = Mappers.jsonMapper().readTree(response.body());
+                if ("true".equals(root.path("success").asText())) {
                     LOGGER.debug("Successfully uploaded KDI");
                     return;
                 }

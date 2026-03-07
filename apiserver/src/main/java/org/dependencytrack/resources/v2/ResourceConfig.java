@@ -28,6 +28,7 @@ import alpine.server.filters.RequestMdcEnrichmentFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.ext.ContextResolver;
 import org.dependencytrack.cache.CacheManagerBinder;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.dex.DexEngineBinder;
 import org.dependencytrack.filestorage.FileStorageBinder;
 import org.dependencytrack.filters.JerseyMetricsApplicationEventListener;
@@ -54,12 +55,11 @@ public final class ResourceConfig extends org.glassfish.jersey.server.ResourceCo
         property(PROVIDER_SCANNING_RECURSIVE, true);
         property(WADL_FEATURE_DISABLE, true);
 
-        final var objectMapper = new ObjectMapper();
-        register((ContextResolver<ObjectMapper>) type -> objectMapper);
+        register((ContextResolver<ObjectMapper>) type -> Mappers.jsonMapper());
         register(new AbstractBinder() {
             @Override
             protected void configure() {
-                bind(objectMapper).to(ObjectMapper.class);
+                bind(Mappers.jsonMapper()).to(ObjectMapper.class);
             }
         });
 

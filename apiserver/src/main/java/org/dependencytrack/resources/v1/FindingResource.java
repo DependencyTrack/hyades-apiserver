@@ -205,7 +205,7 @@ public class FindingResource extends AbstractApiResource {
                 final List<Finding> findings = withJdbiHandle(getAlpineRequest(), handle ->
                         handle.attach(FindingDao.class).getFindings(project.getId(), false));
                 final FindingPackagingFormat fpf = new FindingPackagingFormat(UUID.fromString(uuid), findings);
-                final Response.ResponseBuilder rb = Response.ok(fpf.getDocument().toString(), "application/json");
+                final Response.ResponseBuilder rb = Response.ok(fpf.getDocument(), "application/json");
                 rb.header("Content-Disposition", "inline; filename=findings-" + uuid + ".fpf");
                 return rb.build();
             } else {

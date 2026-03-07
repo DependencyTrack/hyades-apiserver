@@ -28,6 +28,7 @@ import org.cyclonedx.parsers.BomParserFactory;
 import org.cyclonedx.parsers.Parser;
 import org.datanucleus.flush.FlushMode;
 import org.dependencytrack.analysis.AnalyzeProjectWorkflow;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityContext;
 import org.dependencytrack.dex.api.ActivitySpec;
@@ -56,7 +57,6 @@ import org.dependencytrack.proto.internal.workflow.v1.AnalyzeProjectWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.ImportBomArg;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
 import org.dependencytrack.util.InternalComponentIdentifier;
-import org.json.JSONArray;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
@@ -828,7 +828,7 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
             return null;
         }
 
-        final var jsonDependencies = new JSONArray();
+        final var jsonDependencies = Mappers.jsonMapper().createArrayNode();
         final var directDependencyIdentitiesSeen = new HashSet<ComponentIdentity>();
         for (final String directDependencyBomRef : directDependencyBomRefs) {
             final ComponentIdentity directDependencyIdentity = identitiesByBomRef.get(directDependencyBomRef);
@@ -841,7 +841,7 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
                             .formatted(directDependencyBomRef, dependencyBomRef));
                     continue;
                 }
-                jsonDependencies.put(directDependencyIdentity.toJSON());
+                jsonDependencies.add(directDependencyIdentity.toJSON());
             } else {
                 LOGGER.warn("""
                         Unable to resolve BOM ref %s to a component identity while processing direct \

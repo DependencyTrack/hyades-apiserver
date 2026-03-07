@@ -21,6 +21,7 @@ package org.dependencytrack.policy.cel.persistence;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.google.protobuf.util.JsonFormat;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.mapping.PolicyProtoMapper;
 import org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil;
 import org.dependencytrack.proto.policy.v1.Project;
@@ -37,7 +38,6 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.OBJECT_MAPPER;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.hasColumn;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
@@ -87,7 +87,7 @@ public class CelPolicyProjectRowMapper implements RowMapper<Project> {
 
         final org.dependencytrack.model.Tools modelTools;
         try {
-            modelTools = OBJECT_MAPPER.readValue(jsonString, org.dependencytrack.model.Tools.class);
+            modelTools = Mappers.jsonMapper().readValue(jsonString, org.dependencytrack.model.Tools.class);
         } catch (IOException e) {
             throw new UnableToProduceResultException(e);
         }
@@ -116,7 +116,7 @@ public class CelPolicyProjectRowMapper implements RowMapper<Project> {
         // We can't use Jackson's ObjectMapper to deserialize directly to Protobuf objects.
         // Instead, use Jackson's streaming API to iterate over the array, and deserialize individual objects.
         final var properties = new ArrayList<Project.Property>();
-        try (final JsonParser jsonParser = OBJECT_MAPPER.createParser(jsonString)) {
+        try (final JsonParser jsonParser = Mappers.jsonMapper().createParser(jsonString)) {
             JsonToken currentToken = jsonParser.nextToken(); // Position cursor at first token.
             if (currentToken != JsonToken.START_ARRAY) {
                 return Collections.emptyList();

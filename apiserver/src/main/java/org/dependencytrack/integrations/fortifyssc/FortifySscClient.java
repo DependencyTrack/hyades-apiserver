@@ -19,8 +19,9 @@
 package org.dependencytrack.integrations.fortifyssc;
 
 import alpine.common.logging.Logger;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.common.MultipartBodyPublisher;
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,22 +52,22 @@ public class FortifySscClient {
 
     public String generateOneTimeUploadToken(final String citoken) {
         LOGGER.debug("Generating one-time upload token");
-        final JSONObject payload = new JSONObject().put("fileTokenType", "UPLOAD");
+        final String payload = Mappers.jsonMapper().createObjectNode().put("fileTokenType", "UPLOAD").toString();
 
         final var request = HttpRequest.newBuilder()
                 .uri(URI.create(baseURL + "/api/v1/fileTokens"))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "FortifyToken " + Base64.getEncoder().encodeToString(citoken.getBytes(StandardCharsets.UTF_8)))
-                .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                .POST(HttpRequest.BodyPublishers.ofString(payload))
                 .build();
 
         try {
             final HttpResponse<String> response = httpClient
                     .send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 201 && response.body() != null) {
-                final JSONObject root = new JSONObject(response.body());
+                final JsonNode root = Mappers.jsonMapper().readTree(response.body());
                 LOGGER.debug("One-time upload token retrieved");
-                return root.getJSONObject("data").getString("token");
+                return root.get("data").get("token").asText();
             } else {
                 uploader.handleUnexpectedHttpResponse(LOGGER, request.uri().toString(), response.statusCode(), response.body());
             }

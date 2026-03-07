@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.parser.spdx.json;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.License;
 
 import java.io.IOException;
@@ -47,8 +47,7 @@ public class SpdxLicenseDetailParser {
     private static License parse(final Path path) {
         try {
             final byte[] jdon = Files.readAllBytes(path);
-            final ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readValue(jdon, License.class);
+            return Mappers.jsonMapper().readValue(jdon, License.class);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
