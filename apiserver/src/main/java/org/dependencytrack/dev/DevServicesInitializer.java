@@ -57,6 +57,7 @@ public class DevServicesInitializer implements ServletContextListener {
     private AutoCloseable postgresContainer;
     private AutoCloseable kafkaContainer;
     private AutoCloseable frontendContainer;
+    private boolean isContainerReuseEnabled;
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
@@ -71,6 +72,8 @@ public class DevServicesInitializer implements ServletContextListener {
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException("Dev services are not available for production builds");
         }
+
+        isContainerReuseEnabled = config.getValue("dev.services.container-reuse-enabled", boolean.class);
 
         // Infer database port and name from the JDBC URL of the primary data source.
         final URI defaultDataSourceUri = URI.create(
@@ -103,6 +106,8 @@ public class DevServicesInitializer implements ServletContextListener {
             postgresContainerClass.getMethod("withPassword", String.class).invoke(postgresContainer, postgresPassword);
             postgresContainerClass.getMethod("withDatabaseName", String.class).invoke(postgresContainer, postgresDatabase);
             postgresContainerClass.getMethod("withUrlParam", String.class, String.class).invoke(postgresContainer, "reWriteBatchedInserts", "true");
+            postgresContainerClass.getMethod("withLabel", String.class, String.class).invoke(postgresContainer, "owner", "hyades-apiserver-dev");
+            postgresContainerClass.getMethod("withReuse",  boolean.class).invoke(postgresContainer, isContainerReuseEnabled);
             addFixedExposedPortMethod.invoke(postgresContainer, /* hostPort */ postgresPort, /* containerPort */  5432);
 
             // TODO: Detect when Apache Kafka is requested vs. when Kafka is requested,
@@ -114,12 +119,16 @@ public class DevServicesInitializer implements ServletContextListener {
             //   * https://github.com/testcontainers/testcontainers-java/issues/9506#issuecomment-2463504967
             //   * https://issues.apache.org/jira/browse/KAFKA-18281
             kafkaContainerClass.getMethod("withEnv", String.class, String.class).invoke(kafkaContainer, "KAFKA_LISTENERS", "PLAINTEXT://:9092,BROKER://:9093,CONTROLLER://:9094");
+            kafkaContainerClass.getMethod("withLabel", String.class, String.class).invoke(kafkaContainer, "owner", "hyades-apiserver-dev");
+            kafkaContainerClass.getMethod("withReuse",  boolean.class).invoke(kafkaContainer, isContainerReuseEnabled);
             addFixedExposedPortMethod.invoke(kafkaContainer, /* hostPort */ kafkaPort, /* containerPort */  9092);
 
             final Constructor<?> genericContainerConstructor = genericContainerClass.getDeclaredConstructor(String.class);
             frontendContainer = (AutoCloseable) genericContainerConstructor.newInstance(config.getValue(DEV_SERVICES_IMAGE_FRONTEND.getPropertyName(), String.class));
             genericContainerClass.getMethod("withEnv", String.class, String.class).invoke(frontendContainer, "API_BASE_URL", "http://localhost:8080");
             genericContainerClass.getMethod("withExposedPorts", Integer[].class).invoke(frontendContainer, (Object) new Integer[]{8080});
+            genericContainerClass.getMethod("withLabel", String.class, String.class).invoke(frontendContainer, "owner", "hyades-apiserver-dev");
+            genericContainerClass.getMethod("withReuse",  boolean.class).invoke(frontendContainer, isContainerReuseEnabled);
             addFixedExposedPortMethod.invoke(frontendContainer, /* hostPort */ frontendPort, /* containerPort */ 8080);
             if (config.getValue(DEV_SERVICES_IMAGE_FRONTEND.getPropertyName(), String.class).endsWith(":snapshot")) {
                 genericContainerClass.getMethod("withImagePullPolicy", imagePullPolicyClass).invoke(frontendContainer, alwaysPullPolicy);
@@ -161,7 +170,10 @@ public class DevServicesInitializer implements ServletContextListener {
             LOGGER.info("Creating topics: %s".formatted(topicsToCreate));
             adminClient.createTopics(topicsToCreate).all().get();
         } catch (ExecutionException | InterruptedException e) {
-            throw new RuntimeException("Failed to create topics", e);
+            if (e.getCause() == null
+                    || !"TopicExistsException".equals(e.getCause().getClass().getSimpleName())) {
+                throw new RuntimeException("Failed to create topics", e);
+            }
         }
 
         LOGGER.info("PostgreSQL is listening at localhost:%d".formatted(postgresPort));
@@ -171,7 +183,7 @@ public class DevServicesInitializer implements ServletContextListener {
 
     @Override
     public void contextDestroyed(final ServletContextEvent event) {
-        if (postgresContainer != null) {
+        if (postgresContainer != null && !isContainerReuseEnabled) {
             LOGGER.info("Stopping postgres container");
             try {
                 postgresContainer.close();
@@ -179,7 +191,7 @@ public class DevServicesInitializer implements ServletContextListener {
                 LOGGER.error("Failed to stop PostgreSQL container", e);
             }
         }
-        if (kafkaContainer != null) {
+        if (kafkaContainer != null && !isContainerReuseEnabled) {
             LOGGER.info("Stopping Kafka container");
             try {
                 kafkaContainer.close();
@@ -187,7 +199,7 @@ public class DevServicesInitializer implements ServletContextListener {
                 LOGGER.error("Failed to stop Kafka container", e);
             }
         }
-        if (frontendContainer != null) {
+        if (frontendContainer != null && !isContainerReuseEnabled) {
             LOGGER.info("Stopping frontend container");
             try {
                 frontendContainer.close();
