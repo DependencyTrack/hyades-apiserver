@@ -43,6 +43,7 @@ public class DevServices implements AutoCloseable {
     private final Config config = ConfigProvider.getConfig();
     private AutoCloseable postgresContainer;
     private AutoCloseable frontendContainer;
+    private boolean isContainerReuseEnabled;
 
     public void start() {
         if (!config.getValue("dt.dev.services.enabled", boolean.class)) {
@@ -56,6 +57,8 @@ public class DevServices implements AutoCloseable {
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException("Dev services are not available for production builds");
         }
+
+        isContainerReuseEnabled = config.getValue("dev.services.container-reuse-enabled", boolean.class);
 
         // Infer database port and name from the JDBC URL of the primary data source.
         final URI defaultDataSourceUri = URI.create(
@@ -86,12 +89,16 @@ public class DevServices implements AutoCloseable {
             postgresContainerClass.getMethod("withPassword", String.class).invoke(postgresContainer, postgresPassword);
             postgresContainerClass.getMethod("withDatabaseName", String.class).invoke(postgresContainer, postgresDatabase);
             postgresContainerClass.getMethod("withUrlParam", String.class, String.class).invoke(postgresContainer, "reWriteBatchedInserts", "true");
+            postgresContainerClass.getMethod("withLabel", String.class, String.class).invoke(postgresContainer, "owner", "hyades-apiserver-dev");
+            postgresContainerClass.getMethod("withReuse",  boolean.class).invoke(postgresContainer, isContainerReuseEnabled);
             addFixedExposedPortMethod.invoke(postgresContainer, /* hostPort */ postgresPort, /* containerPort */  5432);
 
             final Constructor<?> genericContainerConstructor = genericContainerClass.getDeclaredConstructor(String.class);
             frontendContainer = (AutoCloseable) genericContainerConstructor.newInstance(config.getValue(DEV_SERVICES_IMAGE_FRONTEND.getPropertyName(), String.class));
             genericContainerClass.getMethod("withEnv", String.class, String.class).invoke(frontendContainer, "API_BASE_URL", "http://localhost:8080");
             genericContainerClass.getMethod("withExposedPorts", Integer[].class).invoke(frontendContainer, (Object) new Integer[]{8080});
+            genericContainerClass.getMethod("withLabel", String.class, String.class).invoke(frontendContainer, "owner", "hyades-apiserver-dev");
+            genericContainerClass.getMethod("withReuse",  boolean.class).invoke(frontendContainer, isContainerReuseEnabled);
             addFixedExposedPortMethod.invoke(frontendContainer, /* hostPort */ frontendPort, /* containerPort */ 8080);
             if (config.getValue(DEV_SERVICES_IMAGE_FRONTEND.getPropertyName(), String.class).endsWith(":snapshot")) {
                 genericContainerClass.getMethod("withImagePullPolicy", imagePullPolicyClass).invoke(frontendContainer, alwaysPullPolicy);
@@ -110,7 +117,7 @@ public class DevServices implements AutoCloseable {
 
     @Override
     public void close() {
-        if (postgresContainer != null) {
+        if (postgresContainer != null && !isContainerReuseEnabled) {
             LOGGER.info("Stopping postgres container");
             try {
                 postgresContainer.close();
@@ -118,7 +125,7 @@ public class DevServices implements AutoCloseable {
                 LOGGER.error("Failed to stop PostgreSQL container", e);
             }
         }
-        if (frontendContainer != null) {
+        if (frontendContainer != null && !isContainerReuseEnabled) {
             LOGGER.info("Stopping frontend container");
             try {
                 frontendContainer.close();
