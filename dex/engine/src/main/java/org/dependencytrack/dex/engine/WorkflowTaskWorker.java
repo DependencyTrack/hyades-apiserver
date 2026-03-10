@@ -144,13 +144,17 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
 
             workflowRunState.setCustomStatus(executionResult.customStatus());
             workflowRunState.processCommands(executionResult.commands());
-            workflowRunState.applyEvent(
-                    WorkflowEvent.newBuilder()
-                            .setId(-1)
-                            .setTimestamp(Timestamps.now())
-                            .setWorkflowTaskCompleted(WorkflowTaskCompleted.getDefaultInstance())
-                            .build());
-
+            if (!workflowRunState.continuedAsNew()) {
+                // When continued as new, any pending events have already been deleted,
+                // and existing history will be truncated. Adding a WorkflowTaskCompleted
+                // event would add no value then.
+                workflowRunState.applyEvent(
+                        WorkflowEvent.newBuilder()
+                                .setId(-1)
+                                .setTimestamp(Timestamps.now())
+                                .setWorkflowTaskCompleted(WorkflowTaskCompleted.getDefaultInstance())
+                                .build());
+            }
 
             engine.onTaskEvent(new WorkflowTaskCompletedEvent(task, workflowRunState));
         }

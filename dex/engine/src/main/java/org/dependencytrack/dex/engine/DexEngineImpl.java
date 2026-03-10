@@ -168,7 +168,7 @@ final class DexEngineImpl implements DexEngine {
     private @Nullable Buffer<TaskEvent> taskEventBuffer;
     private @Nullable Buffer<ActivityTaskHeartbeat> activityTaskHeartbeatBuffer;
     private @Nullable MaintenanceWorker maintenanceWorker;
-    private @Nullable Cache<UUID, CachedWorkflowRunHistory> runHistoryCache;
+    private @Nullable Cache<WorkflowRunHistoryCacheKey, CachedWorkflowRunHistory> runHistoryCache;
 
     DexEngineImpl(DexEngineConfig config) {
         this.config = requireNonNull(config);
@@ -179,7 +179,6 @@ final class DexEngineImpl implements DexEngine {
         this.runsCompletedCounter = Counter
                 .builder("dt.dex.engine.runs.completed")
                 .withRegistry(config.metrics().meterRegistry());
-
     }
 
     @Override
@@ -964,13 +963,14 @@ final class DexEngineImpl implements DexEngine {
             final var cachedHistoryByRunId = new HashMap<UUID, List<WorkflowEvent>>(polledTaskByRunId.size());
 
             // Try to populate event histories from cache first.
-            for (final UUID runId : polledTaskByRunId.keySet()) {
-                final CachedWorkflowRunHistory cachedHistory = runHistoryCache.getIfPresent(runId);
+            for (final var entry : polledTaskByRunId.entrySet()) {
+                final UUID runId = entry.getKey();
+                final PolledWorkflowTask polledTask = entry.getValue();
+                final CachedWorkflowRunHistory cachedHistory = runHistoryCache.getIfPresent(
+                        new WorkflowRunHistoryCacheKey(runId, polledTask.continuedAsNewGeneration()));
                 if (cachedHistory == null) {
-                    // Cache miss; Load the entire history.
                     historyRequests.add(new GetWorkflowRunHistoryRequest(runId, -1));
                 } else {
-                    // Cache hit; Only load new history events.
                     cachedHistoryByRunId.put(runId, cachedHistory.events());
                     historyRequests.add(new GetWorkflowRunHistoryRequest(runId, cachedHistory.maxSequenceNumber()));
                 }
@@ -995,7 +995,9 @@ final class DexEngineImpl implements DexEngine {
                         history.addAll(polledEvents.history());
 
                         runHistoryCache.put(
-                                polledTask.runId(),
+                                new WorkflowRunHistoryCacheKey(
+                                        polledTask.runId(),
+                                        polledTask.continuedAsNewGeneration()),
                                 new CachedWorkflowRunHistory(
                                         history,
                                         polledEvents.maxHistorySequenceNumber()));
@@ -1038,6 +1040,7 @@ final class DexEngineImpl implements DexEngine {
                                 event.workflowRunState().taskQueueName(),
                                 event.workflowRunState().status(),
                                 event.workflowRunState().customStatus(),
+                                event.workflowRunState().continuedAsNew(),
                                 event.workflowRunState().createdAt(),
                                 event.workflowRunState().updatedAt(),
                                 event.workflowRunState().startedAt(),
@@ -1066,6 +1069,12 @@ final class DexEngineImpl implements DexEngine {
         final var messagesToCreate = new ArrayList<WorkflowMessage>(events.size() * 2);
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>();
         final var continuedAsNewRunIds = new ArrayList<UUID>();
+        final var runHistoryCacheKeysToInvalidate = new ArrayList<WorkflowRunHistoryCacheKey>();
+        final Map<UUID, Integer> continuedAsNewGenerationByRunId = events.stream()
+                .collect(Collectors.toMap(
+                        event -> event.workflowRunState().id(),
+                        event -> event.task().continuedAsNewGeneration(),
+                        (a, b) -> a));
         final var createActivityTaskCommands = new ArrayList<CreateActivityTaskCommand>();
         final var activityTasksToDelete = new ArrayList<ActivityTaskId>();
         final var completedRuns = new ArrayList<WorkflowRunMetadata>();
@@ -1181,11 +1190,17 @@ final class DexEngineImpl implements DexEngine {
 
             if (run.continuedAsNew()) {
                 continuedAsNewRunIds.add(run.id());
+                runHistoryCacheKeysToInvalidate.add(
+                        new WorkflowRunHistoryCacheKey(
+                                run.id(),
+                                continuedAsNewGenerationByRunId.get(run.id())));
             }
         }
 
         if (!continuedAsNewRunIds.isEmpty()) {
             workflowDao.truncateRunHistories(continuedAsNewRunIds);
+            workflowDao.getJdbiHandle().afterCommit(
+                    () -> runHistoryCache.invalidateAll(runHistoryCacheKeysToInvalidate));
         }
 
         if (!createHistoryEntryCommands.isEmpty()) {
@@ -1644,10 +1659,11 @@ final class DexEngineImpl implements DexEngine {
             return;
         }
 
-        runHistoryCache.invalidateAll(
-                event.completedRuns().stream()
-                        .map(WorkflowRunMetadata::id)
-                        .collect(Collectors.toSet()));
+        final Set<UUID> completedRunIds = event.completedRuns().stream()
+                .map(WorkflowRunMetadata::id)
+                .collect(Collectors.toSet());
+        runHistoryCache.asMap().keySet().removeIf(
+                key -> completedRunIds.contains(key.runId()));
     }
 
     private void recordCompletedRunsMetrics(WorkflowRunsCompletedEvent event) {

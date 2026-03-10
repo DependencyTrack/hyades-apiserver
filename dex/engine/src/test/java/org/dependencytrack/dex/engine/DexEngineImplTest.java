@@ -1254,7 +1254,7 @@ class DexEngineImplTest {
     void shouldContinueAsNew() {
         registerWorkflow("foo", stringConverter(), stringConverter(), (ctx, arg) -> {
             final int iteration = Integer.parseInt(arg);
-            ctx.executeSideEffect("abc-" + iteration, stringConverter(), () -> "def-" + iteration).await();
+            ctx.callActivity("abc", ACTIVITY_TASK_QUEUE, null, voidConverter(), voidConverter(), RetryPolicy.ofDefault()).await();
             if (iteration < 3) {
                 ctx.continueAsNew(
                         new ContinueAsNewOptions<String>()
@@ -1262,7 +1262,9 @@ class DexEngineImplTest {
             }
             return String.valueOf(iteration);
         });
+        registerActivity("abc", (ctx, arg) -> null);
         registerWorkflowWorker("workflow-worker", 1);
+        registerTaskWorker("activity-worker", 1);
         engine.start();
 
         final UUID runId = engine.createRun(
@@ -1277,14 +1279,16 @@ class DexEngineImplTest {
                 .stream()
                 .map(WorkflowRunHistoryEntry::event);
         assertThat(historyEvents).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_COMPLETED), // TODO: Get rid of this.
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_STARTED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_CREATED);
                     assertThat(stringConverter().convertFromPayload(entry.getRunCreated().getArgument())).isEqualTo("3");
                 },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SIDE_EFFECT_EXECUTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_CREATED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.WORKFLOW_TASK_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_COMPLETED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED);
                     assertThat(stringConverter().convertFromPayload(entry.getRunCompleted().getResult())).isEqualTo("3");
