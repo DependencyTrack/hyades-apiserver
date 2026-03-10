@@ -65,3 +65,8 @@ properties:
   uuid:
     type: string
     format: uuid
+  project_name:
+    type: string
+    maxLength: 255
+  metrics:
+    $ref: "./project-metrics-response-item.yaml"
