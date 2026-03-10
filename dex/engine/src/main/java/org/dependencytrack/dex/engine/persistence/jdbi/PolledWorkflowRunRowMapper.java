@@ -65,6 +65,7 @@ final class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowTask> 
                 rs.getString("concurrency_key"),
                 rs.getInt("priority"),
                 getLabels(rs, ctx),
+                rs.getInt("continued_as_new_generation"),
                 instantColumnMapper.map(rs, "locked_until", ctx),
                 rs.getInt("lock_version"));
     }

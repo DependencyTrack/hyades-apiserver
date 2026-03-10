@@ -314,8 +314,8 @@ public final class WorkflowDao extends AbstractDao {
                 with
                 cte_cmd as (
                   select *
-                    from unnest (:ids, :queueNames, :statuses, :customStatuses, :stickyTos, :updatedAts, :startedAts, :completedAts, :lockVersions)
-                      as t(id, queue_name, status, custom_status, sticky_to, updated_at, started_at, completed_at, lock_version)
+                    from unnest (:ids, :queueNames, :statuses, :customStatuses, :continuedAsNews, :stickyTos, :updatedAts, :startedAts, :completedAts, :lockVersions)
+                      as t(id, queue_name, status, custom_status, continued_as_new, sticky_to, updated_at, started_at, completed_at, lock_version)
                 ),
                 cte_deleted_task as (
                   delete
@@ -331,6 +331,12 @@ public final class WorkflowDao extends AbstractDao {
                 update dex_workflow_run as run
                    set status = coalesce(cte_cmd.status, run.status)
                      , custom_status = coalesce(cte_cmd.custom_status, run.custom_status)
+                     , continued_as_new_generation =
+                         case
+                           when cte_cmd.continued_as_new
+                           then run.continued_as_new_generation + 1
+                           else run.continued_as_new_generation
+                         end
                      , sticky_to = cte_cmd.sticky_to
                      , sticky_until = case when cte_cmd.sticky_to is not null then now() + interval '30 seconds' end
                      , updated_at = coalesce(cte_cmd.updated_at, run.updated_at)
@@ -347,6 +353,7 @@ public final class WorkflowDao extends AbstractDao {
         final var queueNames = new String[commands.size()];
         final var statuses = new WorkflowRunStatus[commands.size()];
         final var customStatuses = new @Nullable String[commands.size()];
+        final var continuedAsNews = new boolean[commands.size()];
         final var stickyTos = new @Nullable String[commands.size()];
         final var updatedAts = new @Nullable Instant[commands.size()];
         final var startedAts = new @Nullable Instant[commands.size()];
@@ -359,6 +366,7 @@ public final class WorkflowDao extends AbstractDao {
             queueNames[i] = command.queueName();
             statuses[i] = command.status();
             customStatuses[i] = command.customStatus();
+            continuedAsNews[i] = command.continuedAsNew();
             stickyTos[i] = (command.status() != null && !command.status().isTerminal())
                     ? engineInstanceId
                     : null;
@@ -375,6 +383,7 @@ public final class WorkflowDao extends AbstractDao {
                 .bind("queueNames", queueNames)
                 .bind("statuses", statuses)
                 .bind("customStatuses", customStatuses)
+                .bind("continuedAsNews", continuedAsNews)
                 .bind("stickyTos", stickyTos)
                 .bind("updatedAts", updatedAts)
                 .bind("startedAts", startedAts)
@@ -466,6 +475,7 @@ public final class WorkflowDao extends AbstractDao {
                      , run.concurrency_key
                      , run.priority
                      , run.labels
+                     , run.continued_as_new_generation
                      , cte_locked.locked_until
                      , cte_locked.lock_version
                   from dex_workflow_run as run

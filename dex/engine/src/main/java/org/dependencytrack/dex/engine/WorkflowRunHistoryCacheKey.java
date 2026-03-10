@@ -16,24 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.persistence.model;
+package org.dependencytrack.dex.engine;
 
-import org.jspecify.annotations.Nullable;
-
-import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 
-public record PolledWorkflowTask(
-        UUID runId,
-        String workflowName,
-        int workflowVersion,
-        String workflowInstanceId,
-        String queueName,
-        @Nullable String concurrencyKey,
-        int priority,
-        @Nullable Map<String, String> labels,
-        int continuedAsNewGeneration,
-        Instant lockedUntil,
-        int lockVersion) {
+record WorkflowRunHistoryCacheKey(UUID runId, int continuedAsNewGeneration) {
 }
