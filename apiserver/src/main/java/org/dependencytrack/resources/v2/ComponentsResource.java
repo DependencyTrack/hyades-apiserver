@@ -66,6 +66,7 @@ import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapDependency
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapHashes;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapLicense;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapOrganizationalContacts;
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapProject;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
 @Path("/")
@@ -156,7 +157,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
                                             .swidTagId(componentRow.getSwidTagId())
                                             .uuid(componentRow.getUuid())
                                             .version(componentRow.getVersion())
-                                            .projectName(componentRow.getProject().getName())
+                                            .project(mapProject(componentRow.getProject()))
                                             .metrics(mapDependencyMetrics(componentRow.getMetrics()))
                                             .build())
                             .toList())

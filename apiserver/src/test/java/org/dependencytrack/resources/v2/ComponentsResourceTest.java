@@ -166,7 +166,11 @@ public class ComponentsResourceTest extends ResourceTest {
                         "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
                         "internal": false,
                         "uuid": "${json-unit.any-string}",
-                        "project_name": "projectB"
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
                       }
                   ]
                 }
@@ -194,7 +198,11 @@ public class ComponentsResourceTest extends ResourceTest {
                         "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
                         "internal": false,
                         "uuid": "${json-unit.any-string}",
-                        "project_name": "projectB"
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
                       }
                   ]
                 }
@@ -222,7 +230,11 @@ public class ComponentsResourceTest extends ResourceTest {
                         "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
                         "internal": false,
                         "uuid": "${json-unit.any-string}",
-                        "project_name": "projectB"
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
                       }
                   ]
                 }
@@ -250,7 +262,11 @@ public class ComponentsResourceTest extends ResourceTest {
                         "purl":"pkg:maven/groupA/nameA@versionA?foo=bar",
                         "internal": false,
                         "uuid": "${json-unit.any-string}",
-                        "project_name": "projectA"
+                        "project": {
+                            "name": "projectA",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
                       }
                   ]
                 }
@@ -293,7 +309,11 @@ public class ComponentsResourceTest extends ResourceTest {
                         "purl":"pkg:maven/groupA/nameA@versionA?foo=bar",
                         "internal": false,
                         "uuid": "${json-unit.any-string}",
-                        "project_name": "projectA"
+                        "project": {
+                            "name": "projectA",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
                       }
                   ]
                 }

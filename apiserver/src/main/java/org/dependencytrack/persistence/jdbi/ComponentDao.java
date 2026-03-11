@@ -275,9 +275,18 @@ public interface ComponentDao extends SqlObject {
                         "C"."SWIDTAGID",
                         "C"."UUID",
                         "C"."VERSION",
-                        "PROJECT"."NAME" AS "projectName"
+                        "L"."ISCUSTOMLICENSE",
+                        "L"."FSFLIBRE" AS "isFsfLibre",
+                        "L"."LICENSEID",
+                        "L"."ISOSIAPPROVED",
+                        "L"."UUID" AS "licenseUuid",
+                        "L"."NAME" AS "licenseName",
+                        "PROJECT"."NAME" AS "projectName",
+                        "PROJECT"."UUID" AS "projectUuid",
+                        "PROJECT"."VERSION" AS "projectVersion"
                 FROM "COMPONENT" "C"
                 INNER JOIN "PROJECT" ON "C"."PROJECT_ID" = "PROJECT"."ID"
+                LEFT OUTER JOIN "LICENSE" "L" ON "C"."LICENSE_ID" = "L"."ID"
                 WHERE ${apiProjectAclCondition}
                 <#if projectId>
                     AND "C"."PROJECT_ID" = :projectId
@@ -332,9 +341,11 @@ public interface ComponentDao extends SqlObject {
         @Override
         public Component map(final ResultSet rs, final StatementContext ctx) throws SQLException {
             final Component component = componentRowMapper.map(rs, ctx);
-            if (hasColumn(rs, "projectName") && rs.getString("projectName") != null) {
+            if (hasColumn(rs, "projectUuid") && rs.getString("projectUuid") != null) {
                 final var project = new Project();
-                project.setName(rs.getString("projectName"));
+                project.setUuid(UUID.fromString(rs.getString("projectUuid")));
+                maybeSet(rs, "projectName", ResultSet::getString, project::setName);
+                maybeSet(rs, "projectVersion", ResultSet::getString, project::setVersion);
                 component.setProject(project);
             }
             maybeSet(rs, "componentPurl", ResultSet::getString, component::setPurl);

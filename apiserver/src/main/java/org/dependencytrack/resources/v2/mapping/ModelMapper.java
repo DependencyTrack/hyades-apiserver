@@ -22,6 +22,7 @@ import org.dependencytrack.api.v2.model.DependencyMetrics;
 import org.dependencytrack.api.v2.model.Hashes;
 import org.dependencytrack.api.v2.model.License;
 import org.dependencytrack.api.v2.model.OrganizationalContact;
+import org.dependencytrack.api.v2.model.Project;
 import org.dependencytrack.model.Component;
 
 import java.util.List;
@@ -50,6 +51,17 @@ public class ModelMapper {
                 .licenseId(license.getLicenseId())
                 .osiApproved(license.isOsiApproved())
                 .uuid(license.getUuid())
+                .build();
+    }
+
+    public static Project mapProject(org.dependencytrack.model.Project project) {
+        if (project == null) {
+            return null;
+        }
+        return Project.builder()
+                .name(project.getName())
+                .version(project.getVersion())
+                .uuid(project.getUuid())
                 .build();
     }
 
