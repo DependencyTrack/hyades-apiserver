@@ -42,7 +42,6 @@ import org.dependencytrack.event.kafka.componentmeta.HandlerFactory;
 import org.dependencytrack.exception.ProjectAccessDeniedException;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
@@ -120,7 +119,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
                 if (projectId == null) {
                     throw new NotFoundException();
                 }
-                requireProjectAccess(handle, UUID.fromString(String.valueOf(projectId)));
+                requireProjectAccess(handle, projectUuid);
             }
             PackageURL packageURL = null;
             if (purl != null) {
@@ -130,12 +129,11 @@ public class ComponentsResource extends AbstractApiResource implements Component
                     // throw it away
                 }
             }
-            final ComponentIdentity identity = new ComponentIdentity(packageURL, StringUtils.trimToNull(cpe),
-                    StringUtils.trimToNull(swidTagId), StringUtils.trimToNull(group), StringUtils.trimToNull(name),
-                    StringUtils.trimToNull(version));
 
             final Page<Component> componentsPage = handle.attach(ComponentDao.class)
-                    .listComponents(projectId, true, identity, limit, pageToken);
+                    .listComponents(projectId, true, packageURL != null ? packageURL.canonicalize().toLowerCase() : null, StringUtils.trimToNull(cpe),
+                            StringUtils.trimToNull(swidTagId), StringUtils.trimToNull(group), StringUtils.trimToNull(name),
+                            StringUtils.trimToNull(version), limit, pageToken);
 
             final var response = ListComponentsResponse.builder()
                     .items(componentsPage.items().stream()
@@ -154,7 +152,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
                                             .licenseUrl(componentRow.getLicenseUrl())
                                             .resolvedLicense(mapLicense(componentRow.getResolvedLicense()))
                                             .occurrenceCount(componentRow.getOccurrenceCount())
-                                            .purl(componentRow.getPurl().toString())
+                                            .purl(componentRow.getPurl() != null ? componentRow.getPurl().toString() : null)
                                             .swidTagId(componentRow.getSwidTagId())
                                             .uuid(componentRow.getUuid())
                                             .version(componentRow.getVersion())

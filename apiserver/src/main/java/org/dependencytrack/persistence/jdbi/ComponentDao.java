@@ -22,7 +22,6 @@ import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.License;
@@ -202,42 +201,21 @@ public interface ComponentDao extends SqlObject {
     );
 
     default Page<Component> listComponents(
-            final long projectId,
+            final Long projectId,
             final Boolean includeMetrics,
-            final ComponentIdentity identity,
+            final String componentPurl,
+            final String componentCpe,
+            final String componentSwidTagId,
+            final String componentGroup,
+            final String componentName,
+            final String componentVersion,
             final int limit,
             final String pageToken) {
         final PageTokenEncoder pageTokenEncoder =
                 getHandle().getConfig(PaginationConfig.class).getPageTokenEncoder();
         final var decodedPageToken = pageTokenEncoder.decode(pageToken, ListComponentPageToken.class);
 
-        final List<Component> rows;
-        String componentGroup = null;
-        String componentName = null;
-        String componentVersion = null;
-        String componentPurl = null;
-        String componentCpe = null;
-        String componentSwidTagId = null;
-
-        if (identity.getGroup() != null || identity.getName() != null || identity.getVersion() != null) {
-            if (identity.getGroup() != null) {
-                componentGroup = identity.getGroup().toLowerCase();
-            }
-            if (identity.getName() != null) {
-                componentName = identity.getName().toLowerCase();
-            }
-            if (identity.getVersion() != null) {
-                componentVersion = identity.getVersion().toLowerCase();
-            }
-        } else if (identity.getPurl() != null) {
-            componentPurl = identity.getPurl().canonicalize().toLowerCase();
-        } else if (identity.getCpe() != null) {
-            componentCpe = identity.getCpe().toLowerCase();
-        } else if (identity.getSwidTagId() != null) {
-            componentSwidTagId = identity.getSwidTagId().toLowerCase();
-        }
-
-        rows = listComponents(projectId, limit + 1,
+        final List<Component> rows = listComponents(projectId, limit + 1,
                 componentGroup, componentName, componentVersion, componentPurl, componentCpe, componentSwidTagId,
                 decodedPageToken != null ? decodedPageToken.lastName() : null,
                 decodedPageToken != null ? decodedPageToken.lastVersion() : null,
@@ -301,7 +279,27 @@ public interface ComponentDao extends SqlObject {
                 FROM "COMPONENT" "C"
                 INNER JOIN "PROJECT" ON "C"."PROJECT_ID" = "PROJECT"."ID"
                 WHERE ${apiProjectAclCondition}
-                AND "C"."PROJECT_ID" = :projectId
+                <#if projectId>
+                    AND "C"."PROJECT_ID" = :projectId
+                </#if>
+                <#if componentGroup>
+                    AND LOWER("C"."GROUP") LIKE ('%' || LOWER(:componentGroup) || '%')
+                </#if>
+                <#if componentName>
+                    AND LOWER("C"."NAME") LIKE ('%' || LOWER(:componentName) || '%')
+                </#if>
+                <#if componentVersion>
+                    AND LOWER("C"."VERSION") LIKE ('%' || LOWER(:componentVersion) || '%')
+                </#if>
+                <#if componentPurl>
+                    AND LOWER("C"."PURL") LIKE LOWER(:componentPurl) || '%'
+                </#if>
+                <#if componentCpe>
+                    AND LOWER("C"."CPE") LIKE ('%' || LOWER(:componentCpe) || '%')
+                </#if>
+                <#if componentSwidTagId>
+                    AND LOWER("C"."SWIDTAGID") LIKE ('%' || LOWER(:componentSwidTagId) || '%')
+                </#if>
                 <#if lastName && lastVersion && lastId>
                     AND ("C"."NAME" > :lastName
                             OR ("C"."NAME" = :lastName AND "C"."VERSION" < :lastVersion)
@@ -311,10 +309,10 @@ public interface ComponentDao extends SqlObject {
                 LIMIT :limit
             """)
     @DefineNamedBindings
-    @DefineApiProjectAclCondition(projectIdColumn = "\"PROJECT_ID\"")
     @RegisterRowMapper(ComponentListRowMapper.class)
+    @DefineApiProjectAclCondition(projectIdColumn = "\"C\".\"PROJECT_ID\"")
     List<Component> listComponents(
-            @Bind long projectId,
+            @Bind Long projectId,
             @Bind int limit,
             @Bind String componentGroup,
             @Bind String componentName,
