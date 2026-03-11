@@ -16,39 +16,24 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.cache.api;
+package org.dependencytrack.pkgmetadata.resolution.cargo;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
+import java.util.List;
 
-/**
- * @since 5.7.0
- */
-public interface Cache {
+record CargoCrateDocument(
+        @JsonProperty("crate") Crate crate,
+        List<Version> versions) {
 
-    byte @Nullable [] get(String key, Function<String, byte @Nullable []> loader);
-
-    default byte @Nullable [] get(String key) {
-        try {
-            return get(key, ignored -> {
-                throw CacheMissException.INSTANCE;
-            });
-        } catch (CacheMissException e) {
-            return null;
-        }
+    record Crate(@JsonProperty("newest_version") @Nullable String newestVersion) {
     }
 
-    Map<String, byte @Nullable []> getMany(Set<String> keys);
-
-    void put(String key, byte @Nullable [] value);
-
-    void putMany(Map<String, byte @Nullable []> entries);
-
-    void invalidateMany(Set<String> keys);
-
-    void invalidateAll();
+    record Version(
+            @Nullable String num,
+            @JsonProperty("created_at") @Nullable String createdAt,
+            @Nullable String checksum) {
+    }
 
 }
