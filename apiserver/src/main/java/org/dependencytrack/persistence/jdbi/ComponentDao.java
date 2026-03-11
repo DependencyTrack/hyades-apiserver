@@ -24,6 +24,7 @@ import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentOccurrence;
+import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.jdbi.v3.core.mapper.RowMapper;
@@ -33,7 +34,6 @@ import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
@@ -41,8 +41,12 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
 public interface ComponentDao extends SqlObject {
@@ -232,7 +236,7 @@ public interface ComponentDao extends SqlObject {
             componentSwidTagId = identity.getSwidTagId().toLowerCase();
         }
 
-        rows = listComponents(projectId, limit + 1, includeMetrics,
+        rows = listComponents(projectId, limit + 1,
                 componentGroup, componentName, componentVersion, componentPurl, componentCpe, componentSwidTagId,
                 decodedPageToken != null ? decodedPageToken.lastName() : null,
                 decodedPageToken != null ? decodedPageToken.lastVersion() : null,
@@ -246,11 +250,23 @@ public interface ComponentDao extends SqlObject {
                 ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion(), resultRows.getLast().getId())
                 : null;
 
+        if (includeMetrics) {
+            final Map<Long, Component> componentById = resultRows.stream()
+                    .collect(Collectors.toMap(Component::getId, Function.identity()));
+            final List<DependencyMetrics> metricsList = withJdbiHandle(
+                    handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(componentById.keySet()));
+            for (final DependencyMetrics metrics : metricsList) {
+                final var component = componentById.get(metrics.getComponentId());
+                if (component != null) {
+                    component.setMetrics(metrics);
+                }
+            }
+        }
+
         return new Page<>(resultRows, pageTokenEncoder.encode(nextPageToken));
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
-            <#-- @ftlvariable name="includeMetrics" type="Boolean" -->
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
             SELECT "C"."ID",
                         "C"."NAME",
@@ -280,32 +296,7 @@ public interface ComponentDao extends SqlObject {
                         "C"."SWIDTAGID",
                         "C"."UUID",
                         "C"."VERSION",
-                        "PROJECT"."NAME" AS "projectName",
-                        <#if includeMetrics>
-                             (SELECT TO_JSONB(m)
-                                  FROM (
-                                    SELECT "COMPONENTS"
-                                         , "CRITICAL"
-                                         , "HIGH"
-                                         , "LOW"
-                                         , "MEDIUM"
-                                         , "POLICYVIOLATIONS_FAIL"
-                                         , "POLICYVIOLATIONS_INFO"
-                                         , "POLICYVIOLATIONS_LICENSE_TOTAL"
-                                         , "POLICYVIOLATIONS_OPERATIONAL_TOTAL"
-                                         , "POLICYVIOLATIONS_SECURITY_TOTAL"
-                                         , "POLICYVIOLATIONS_TOTAL"
-                                         , "POLICYVIOLATIONS_WARN"
-                                         , "RISKSCORE"
-                                         , "UNASSIGNED_SEVERITY"
-                                         , "VULNERABILITIES"
-                                      FROM "PROJECTMETRICS"
-                                     WHERE "PROJECTMETRICS"."PROJECT_ID" = "PROJECT"."ID"
-                                     ORDER BY "PROJECTMETRICS"."LAST_OCCURRENCE" DESC
-                                     LIMIT 1
-                                  ) AS m
-                               ) AS "metrics",
-                        </#if>
+                        "PROJECT"."NAME" AS "projectName"
                 FROM "COMPONENT" "C"
                 INNER JOIN "PROJECT" ON "C"."PROJECT_ID" = "PROJECT"."ID"
                 WHERE ${apiProjectAclCondition}
@@ -324,7 +315,6 @@ public interface ComponentDao extends SqlObject {
     List<Component> listComponents(
             @Bind long projectId,
             @Bind int limit,
-            @Define boolean includeMetrics,
             @Bind String componentGroup,
             @Bind String componentName,
             @Bind String componentVersion,
@@ -343,7 +333,7 @@ public interface ComponentDao extends SqlObject {
         @Override
         public Component map(final ResultSet rs, final StatementContext ctx) throws SQLException {
             final Component component = componentRowMapper.map(rs, ctx);
-            if (rs.getString("licenseUuid") != null) {
+            if (rs.getString("projectName") != null) {
                 final var project = new Project();
                 project.setName(rs.getString("projectName"));
                 component.setProject(project);

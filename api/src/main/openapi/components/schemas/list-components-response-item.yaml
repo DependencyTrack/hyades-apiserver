@@ -69,4 +69,4 @@ properties:
     type: string
     maxLength: 255
   metrics:
-    $ref: "./project-metrics-response-item.yaml"
+    $ref: "./dependency-metrics.yaml"

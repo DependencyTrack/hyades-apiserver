@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
 import com.github.packageurl.MalformedPackageURLException;
+import com.github.packageurl.PackageURL;
 import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.NotFoundException;
@@ -30,7 +31,10 @@ import jakarta.ws.rs.core.UriInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.api.v2.ComponentsApi;
 import org.dependencytrack.api.v2.model.CreateComponentRequest;
+import org.dependencytrack.api.v2.model.ListComponentsResponse;
+import org.dependencytrack.api.v2.model.ListComponentsResponseItem;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.ComponentProjection;
 import org.dependencytrack.event.kafka.componentmeta.Handler;
@@ -38,10 +42,13 @@ import org.dependencytrack.event.kafka.componentmeta.HandlerFactory;
 import org.dependencytrack.exception.ProjectAccessDeniedException;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ComponentDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.util.InternalComponentIdentifier;
@@ -55,6 +62,10 @@ import java.util.UUID;
 import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.calculateIntegrityResult;
 import static org.dependencytrack.model.FetchStatus.NOT_AVAILABLE;
 import static org.dependencytrack.model.FetchStatus.PROCESSED;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapDependencyMetrics;
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapHashes;
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapLicense;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapOrganizationalContacts;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
@@ -98,6 +109,64 @@ public class ComponentsResource extends AbstractApiResource implements Component
             }
             throw e;
         }
+    }
+
+    @Override
+    public Response getComponents(UUID projectUuid, String group, String name, String version, String purl, String cpe, String swidTagId, Integer limit, String pageToken) {
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
+            Long projectId = null;
+            if (projectUuid != null) {
+                projectId = handle.attach(ProjectDao.class).getProjectId(projectUuid);
+                if (projectId == null) {
+                    throw new NotFoundException();
+                }
+                requireProjectAccess(handle, UUID.fromString(String.valueOf(projectId)));
+            }
+            PackageURL packageURL = null;
+            if (purl != null) {
+                try {
+                    packageURL = new PackageURL(purl);
+                } catch (MalformedPackageURLException e) {
+                    // throw it away
+                }
+            }
+            final ComponentIdentity identity = new ComponentIdentity(packageURL, StringUtils.trimToNull(cpe),
+                    StringUtils.trimToNull(swidTagId), StringUtils.trimToNull(group), StringUtils.trimToNull(name),
+                    StringUtils.trimToNull(version));
+
+            final Page<Component> componentsPage = handle.attach(ComponentDao.class)
+                    .listComponents(projectId, true, identity, limit, pageToken);
+
+            final var response = ListComponentsResponse.builder()
+                    .items(componentsPage.items().stream()
+                            .<ListComponentsResponseItem>map(
+                                    componentRow -> ListComponentsResponseItem.builder()
+                                            .name(componentRow.getName())
+                                            .hashes(mapHashes(componentRow))
+                                            .classifier(componentRow.getClassifier() != null ? componentRow.getClassifier().name() : null)
+                                            .copyright(componentRow.getCopyright())
+                                            .cpe(componentRow.getCpe())
+                                            .group(componentRow.getGroup())
+                                            .internal(componentRow.isInternal())
+                                            .lastInheritedRiskScore(componentRow.getLastInheritedRiskScore())
+                                            .license(componentRow.getLicense())
+                                            .licenseExpression(componentRow.getLicenseExpression())
+                                            .licenseUrl(componentRow.getLicenseUrl())
+                                            .resolvedLicense(mapLicense(componentRow.getResolvedLicense()))
+                                            .occurrenceCount(componentRow.getOccurrenceCount())
+                                            .purl(componentRow.getPurl().toString())
+                                            .swidTagId(componentRow.getSwidTagId())
+                                            .uuid(componentRow.getUuid())
+                                            .version(componentRow.getVersion())
+                                            .projectName(componentRow.getProject().getName())
+                                            .metrics(mapDependencyMetrics(componentRow.getMetrics()))
+                                            .build())
+                            .toList())
+                    .nextPageToken(componentsPage.nextPageToken())
+                    .total(convertTotalCount(componentsPage.totalCount()))
+                    .build();
+            return Response.ok(response).build();
+        });
     }
 
     private Component mapRequestToComponent(CreateComponentRequest request, QueryManager qm, Project project) {

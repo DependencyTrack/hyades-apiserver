@@ -22,7 +22,7 @@ get:
     - Components
   parameters:
     - name: project_uuid
-      in: path
+      in: query
       description: The UUID of the project to retrieve components for
       schema:
         type: string

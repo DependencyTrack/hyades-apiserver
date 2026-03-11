@@ -16,6 +16,12 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
+  projectId:
+    type: integer
+    format: int64
+  componentId:
+    type: integer
+    format: int64
   critical:
     type: integer
     format: int32
@@ -34,12 +40,21 @@ properties:
   vulnerabilities:
     type: integer
     format: int32
-  components:
+  suppressed:
     type: integer
     format: int32
   inherited_risk_score:
     type: number
     format: double
+  findings_total:
+    type: integer
+    format: int32
+  findings_audited:
+    type: integer
+    format: int32
+  findings_unaudited:
+    type: integer
+    format: int32
   policy_violations_fail:
     type: integer
     format: int32
@@ -52,12 +67,36 @@ properties:
   policy_violations_total:
     type: integer
     format: int32
+  policy_violations_audited:
+    type: integer
+    format: int32
+  policy_violations_unaudited:
+    type: integer
+    format: int32
   policy_violations_security_total:
+    type: integer
+    format: int32
+  policy_violations_security_audited:
+    type: integer
+    format: int32
+  policy_violations_security_unaudited:
     type: integer
     format: int32
   policy_violations_license_total:
     type: integer
     format: int32
+  policy_violations_license_audited:
+    type: integer
+    format: int32
+  policy_violations_license_unaudited:
+    type: integer
+    format: int32
   policy_violations_operational_total:
+    type: integer
+    format: int32
+  policy_violations_operational_audited:
+    type: integer
+    format: int32
+  policy_violations_operational_unaudited:
     type: integer
     format: int32
