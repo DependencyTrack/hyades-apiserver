@@ -52,7 +52,7 @@ get:
       description: The CPE of the component
       schema:
         type: string
-    - name: swidTagId
+    - name: swid_tag_id
       in: query
       description: The SWID Tag ID of the component
       schema:

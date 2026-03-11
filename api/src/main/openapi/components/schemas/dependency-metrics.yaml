@@ -16,10 +16,10 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  projectId:
+  project_id:
     type: integer
     format: int64
-  componentId:
+  component_id:
     type: integer
     format: int64
   critical:

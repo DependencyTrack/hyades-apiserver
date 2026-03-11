@@ -47,6 +47,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.hasColumn;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
 public interface ComponentDao extends SqlObject {
@@ -333,13 +334,13 @@ public interface ComponentDao extends SqlObject {
         @Override
         public Component map(final ResultSet rs, final StatementContext ctx) throws SQLException {
             final Component component = componentRowMapper.map(rs, ctx);
-            if (rs.getString("projectName") != null) {
+            if (hasColumn(rs, "projectName") && rs.getString("projectName") != null) {
                 final var project = new Project();
                 project.setName(rs.getString("projectName"));
                 component.setProject(project);
             }
             maybeSet(rs, "componentPurl", ResultSet::getString, component::setPurl);
-            if (rs.getString("licenseUuid") != null) {
+            if (hasColumn(rs, "licenseUuid") && rs.getString("licenseUuid") != null) {
                 final var license = new License();
                 license.setUuid(UUID.fromString(rs.getString("licenseUuid")));
                 maybeSet(rs, "licenseId", ResultSet::getString, license::setLicenseId);
@@ -348,6 +349,9 @@ public interface ComponentDao extends SqlObject {
                 maybeSet(rs, "isFsfLibre", ResultSet::getBoolean, license::setFsfLibre);
                 maybeSet(rs, "isOsiApproved", ResultSet::getBoolean, license::setOsiApproved);
                 component.setResolvedLicense(license);
+            }
+            if (hasColumn(rs, "occurrenceCount")) {
+                maybeSet(rs, "occurrenceCount", ResultSet::getLong, component::setOccurrenceCount);
             }
             return component;
         }
