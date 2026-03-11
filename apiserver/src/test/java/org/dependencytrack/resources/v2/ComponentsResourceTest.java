@@ -143,6 +143,81 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     @Test
+    public void listComponentsByIdentityPaginationTest() {
+        prepareComponents();
+        Response response = jersey.target("/components/identity")
+                .queryParam("limit", 2)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "items" : [ {
+                        "name": "nameA",
+                        "version": "versionA",
+                        "group": "groupA",
+                        "cpe": "cpe:2.3:a:groupA:nameA:versionA:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupA/nameA@versionA?foo=bar",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectA",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
+                      },
+                      {
+                        "name": "nameB",
+                        "version": "versionB",
+                        "group": "groupB",
+                        "cpe": "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
+                      }
+                  ],
+                  "next_page_token": "${json-unit.any-string}"
+                }
+                """);
+
+        final String nextPageToken = responseJson.getString("next_page_token");
+        response = jersey.target("/components/identity")
+                .queryParam("limit", 1)
+                .queryParam("page_token", nextPageToken)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "items" : [ {
+                        "name": "nameC",
+                        "version": "versionC",
+                        "group": "groupC",
+                        "cpe": "cpe:2.3:a:groupC:nameC:versionC:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupC/nameC@versionC?baz=qux",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
+                      }
+                  ]
+                }
+                """);
+    }
+
+    @Test
     public void listComponentsByIdentityWithCoordinatesTest() {
         prepareComponents();
         Response response = jersey.target("/components/identity")
@@ -341,5 +416,14 @@ public class ComponentsResourceTest extends ResourceTest {
         componentB.setCpe("cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*");
         componentB.setPurl("pkg:maven/groupB/nameB@versionB?baz=qux");
         qm.createComponent(componentB, false);
+
+        var componentC = new Component();
+        componentC.setProject(projectB);
+        componentC.setGroup("groupC");
+        componentC.setName("nameC");
+        componentC.setVersion("versionC");
+        componentC.setCpe("cpe:2.3:a:groupC:nameC:versionC:*:*:*:*:*:*:*");
+        componentC.setPurl("pkg:maven/groupC/nameC@versionC?baz=qux");
+        qm.createComponent(componentC, false);
     }
 }
