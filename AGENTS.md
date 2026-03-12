@@ -19,9 +19,9 @@ If Maven needs to be invoked directly, only do so from the repository root.
 * Lint (Protobuf): `make lint-proto`
 
 > [!NOTE]
-> Maven is configured to run in quiet mode. Successful test runs produce no output.
-> A zero exit code is sufficient to confirm success. Do not re-run tests or investigate
-> further when output is empty but the command succeeds.
+> When running Maven via `make … AGENT=1`, Maven is invoked in quiet mode (`-q`), so successful test runs may produce little or no output.
+> In this mode, a zero exit code is sufficient to confirm success; do not re-run tests or investigate
+> further solely because the output is empty. When invoking Maven directly or running `make` without `AGENT=1`, normal Maven output will be shown.
 
 ## GitHub Issues and PRs
 
