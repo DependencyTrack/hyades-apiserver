@@ -146,6 +146,7 @@
         <lib.postgresql.version>42.7.10</lib.postgresql.version>
         <lib.protobuf-java.version>4.34.0</lib.protobuf-java.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
+        <lib.s3mock.version>4.11.0</lib.s3mock.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
         <lib.smallrye-config.version>3.16.0</lib.smallrye-config.version>
         <lib.swagger.version>2.2.44</lib.swagger.version>
@@ -486,6 +487,12 @@
                 <version>${lib.resilience4j.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>com.adobe.testing</groupId>
+                <artifactId>s3mock-testcontainers</artifactId>
+                <version>${lib.s3mock.version}</version>
             </dependency>
 
             <dependency>
