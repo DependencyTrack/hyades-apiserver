@@ -25,11 +25,6 @@
         <local>
             <maxBuildsCached>3</maxBuildsCached>
         </local>
-        <attachedOutputs>
-            <dirNames>
-                <dirName glob="jacoco.exec"></dirName>
-            </dirNames>
-        </attachedOutputs>
     </configuration>
     <input>
         <global>
@@ -45,6 +40,11 @@
                 <execution artifactId="maven-dependency-plugin">
                     <execIds>
                         <execId>copy-dependencies</execId>
+                    </execIds>
+                </execution>
+                <execution artifactId="maven-surefire-plugin">
+                    <execIds>
+                        <execId>default-test</execId>
                     </execIds>
                 </execution>
                 <execution artifactId="jacoco-maven-plugin">
