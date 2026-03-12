@@ -18,6 +18,11 @@ If Maven needs to be invoked directly, only do so from the repository root.
 * Lint (OpenAPI): `make lint-openapi`
 * Lint (Protobuf): `make lint-proto`
 
+> [!NOTE]
+> Maven is configured to run in quiet mode. Successful test runs produce no output.
+> A zero exit code is sufficient to confirm success. Do not re-run tests or investigate
+> further when output is empty but the command succeeds.
+
 ## GitHub Issues and PRs
 
 * Never create an issue.
