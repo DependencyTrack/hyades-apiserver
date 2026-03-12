@@ -198,6 +198,19 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>package-metadata-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>package-metadata-resolution</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>vuln-analysis-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>

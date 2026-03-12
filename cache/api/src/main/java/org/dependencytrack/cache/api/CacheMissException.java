@@ -18,37 +18,23 @@
  */
 package org.dependencytrack.cache.api;
 
-import org.jspecify.annotations.Nullable;
-
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-
 /**
+ * Internal exception thrown by {@link Cache#get(String)} to prevent
+ * {@code null} values from being cached on cache miss.
+ * <p>
+ * This exception doesn't populate the stack trace,
+ * making it cheaper to throw than any normal exception.
+ * <p>
+ * It is not intended to be exposed to callers.
+ *
  * @since 5.7.0
  */
-public interface Cache {
+final class CacheMissException extends RuntimeException {
 
-    byte @Nullable [] get(String key, Function<String, byte @Nullable []> loader);
+    static final CacheMissException INSTANCE = new CacheMissException();
 
-    default byte @Nullable [] get(String key) {
-        try {
-            return get(key, ignored -> {
-                throw CacheMissException.INSTANCE;
-            });
-        } catch (CacheMissException e) {
-            return null;
-        }
+    private CacheMissException() {
+        super(null, null, /* enableSuppression */ false, /* writableStackTrace */ false);
     }
-
-    Map<String, byte @Nullable []> getMany(Set<String> keys);
-
-    void put(String key, byte @Nullable [] value);
-
-    void putMany(Map<String, byte @Nullable []> entries);
-
-    void invalidateMany(Set<String> keys);
-
-    void invalidateAll();
 
 }

@@ -39,6 +39,7 @@
         <module>cache</module>
         <module>file-storage</module>
         <module>migration</module>
+        <module>package-metadata</module>
         <module>secret-management</module>
         <module>vuln-analysis</module>
         <module>vuln-data-source</module>

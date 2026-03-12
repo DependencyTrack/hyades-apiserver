@@ -16,39 +16,24 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.cache.api;
+package org.dependencytrack.pkgmetadata.resolution.pypi;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
 
-/**
- * @since 5.7.0
- */
-public interface Cache {
+record PypiPackageDocument(
+        @Nullable Info info,
+        @Nullable Map<String, List<ReleaseFile>> releases) {
 
-    byte @Nullable [] get(String key, Function<String, byte @Nullable []> loader);
-
-    default byte @Nullable [] get(String key) {
-        try {
-            return get(key, ignored -> {
-                throw CacheMissException.INSTANCE;
-            });
-        } catch (CacheMissException e) {
-            return null;
-        }
+    record Info(@Nullable String version) {
     }
 
-    Map<String, byte @Nullable []> getMany(Set<String> keys);
+    record ReleaseFile(@Nullable String filename, @Nullable Digests digests) {
+    }
 
-    void put(String key, byte @Nullable [] value);
-
-    void putMany(Map<String, byte @Nullable []> entries);
-
-    void invalidateMany(Set<String> keys);
-
-    void invalidateAll();
+    record Digests(@Nullable String md5, @Nullable String sha256) {
+    }
 
 }

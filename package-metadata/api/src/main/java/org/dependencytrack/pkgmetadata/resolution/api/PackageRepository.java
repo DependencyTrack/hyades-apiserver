@@ -16,39 +16,24 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.cache.api;
+package org.dependencytrack.pkgmetadata.resolution.api;
 
 import org.jspecify.annotations.Nullable;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
  */
-public interface Cache {
+public record PackageRepository(
+        String name,
+        String url,
+        @Nullable String username,
+        @Nullable String password) {
 
-    byte @Nullable [] get(String key, Function<String, byte @Nullable []> loader);
-
-    default byte @Nullable [] get(String key) {
-        try {
-            return get(key, ignored -> {
-                throw CacheMissException.INSTANCE;
-            });
-        } catch (CacheMissException e) {
-            return null;
-        }
+    public PackageRepository {
+        requireNonNull(name, "name must not be null");
+        requireNonNull(url, "url must not be null");
     }
-
-    Map<String, byte @Nullable []> getMany(Set<String> keys);
-
-    void put(String key, byte @Nullable [] value);
-
-    void putMany(Map<String, byte @Nullable []> entries);
-
-    void invalidateMany(Set<String> keys);
-
-    void invalidateAll();
 
 }
