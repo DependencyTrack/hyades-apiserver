@@ -18,29 +18,25 @@
  */
 package org.dependencytrack.pkgmetadata.resolution.pypi;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.packageurl.PackageURLBuilder;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import org.dependencytrack.cache.api.Cache;
+import io.smallrye.config.SmallRyeConfigBuilder;
+import org.dependencytrack.cache.api.CacheManager;
+import org.dependencytrack.cache.memory.MemoryCacheProvider;
 import org.dependencytrack.pkgmetadata.resolution.api.HashAlgorithm;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
+import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
 import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.net.http.HttpClient;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -84,20 +80,31 @@ class PypiPackageMetadataResolverTest {
             }
             """;
 
+    private CacheManager cacheManager;
     private PypiPackageMetadataResolverFactory factory;
-    private PypiPackageMetadataResolver resolver;
+    private PackageMetadataResolver resolver;
 
     @BeforeEach
     void beforeEach() {
+        final var cacheProvider = new MemoryCacheProvider(new SmallRyeConfigBuilder().build());
+        cacheManager = cacheProvider.create();
+
         factory = new PypiPackageMetadataResolverFactory();
-        factory.init(new ExtensionContext(new MockConfigRegistry(Map.of(), null, null, null)));
-        resolver = (PypiPackageMetadataResolver) factory.create();
+        factory.init(new ExtensionContext(
+                new MockConfigRegistry(Map.of(), null, null, null),
+                cacheManager,
+                new InMemoryExtensionKVStore(),
+                null));
+        resolver = factory.create();
     }
 
     @AfterEach
-    void afterEach() {
+    void afterEach() throws Exception {
         if (factory != null) {
             factory.close();
+        }
+        if (cacheManager != null) {
+            cacheManager.close();
         }
     }
 
@@ -188,8 +195,6 @@ class PypiPackageMetadataResolverTest {
 
     @Test
     void shouldNegativeCacheUnmatchedFileName(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
-        final var cachingResolver = createResolverWithCache();
-
         stubFor(get(urlPathEqualTo("/pypi/mypackage/json"))
                 .willReturn(aResponse().withStatus(200).withBody(PYPI_RESPONSE)));
 
@@ -201,62 +206,14 @@ class PypiPackageMetadataResolverTest {
                 .build();
 
         final var repo = new PackageRepository("test", wmRuntimeInfo.getHttpBaseUrl(), null, null);
-        cachingResolver.resolve(purl, repo);
+        resolver.resolve(purl, repo);
 
-        final PackageMetadata secondResult = cachingResolver.resolve(purl, repo);
+        final PackageMetadata secondResult = resolver.resolve(purl, repo);
         assertThat(secondResult).isNotNull();
         assertThat(secondResult.latestVersion()).isEqualTo("2.0.0");
         assertThat(secondResult.artifactMetadata()).isNull();
 
         verify(1, getRequestedFor(urlPathEqualTo("/pypi/mypackage/json")));
-    }
-
-    private static PypiPackageMetadataResolver createResolverWithCache() {
-        final var objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule())
-                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        final var store = new ConcurrentHashMap<String, byte[]>();
-        final var cache = new Cache() {
-            @Override
-            public byte[] get(String key, Function<String, byte[]> loader) {
-                return store.computeIfAbsent(key, loader);
-            }
-
-            @Override
-            public Map<String, byte[]> getMany(Set<String> keys) {
-                final var result = new HashMap<String, byte[]>();
-                for (final String key : keys) {
-                    final byte[] value = store.get(key);
-                    if (value != null) {
-                        result.put(key, value);
-                    }
-                }
-                return result;
-            }
-
-            @Override
-            public void put(String key, byte[] value) {
-                if (value != null) {
-                    store.put(key, value);
-                }
-            }
-
-            @Override
-            public void putMany(Map<String, byte[]> entries) {
-                entries.forEach((k, v) -> { if (v != null) store.put(k, v); });
-            }
-
-            @Override
-            public void invalidateMany(Set<String> keys) {
-                keys.forEach(store::remove);
-            }
-
-            @Override
-            public void invalidateAll() {
-                store.clear();
-            }
-        };
-        return new PypiPackageMetadataResolver(HttpClient.newHttpClient(), objectMapper, cache);
     }
 
     @Test

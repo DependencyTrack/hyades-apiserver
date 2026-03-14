@@ -40,13 +40,13 @@ record NpmPackageDocument(
 
     @JsonFormat(shape = JsonFormat.Shape.ARRAY)
     record PackageInfo(
-            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT) Instant resolvedAt,
+            Instant resolvedAt,
             String version) {
     }
 
     @JsonFormat(shape = JsonFormat.Shape.ARRAY)
     record VersionInfo(
-            @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT) @Nullable Instant publishedAt,
+            @Nullable Instant publishedAt,
             @Nullable String shasum,
             @Nullable String integrity) {
     }

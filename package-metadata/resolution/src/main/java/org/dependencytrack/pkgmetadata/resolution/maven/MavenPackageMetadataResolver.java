@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.pkgmetadata.resolution.maven;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.pkgmetadata.resolution.api.HashAlgorithm;
@@ -60,10 +61,12 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
     private static final Pattern VERSION_PATTERN = Pattern.compile("<version>([^<]+)</version>");
 
     private final HttpClient httpClient;
+    private final ObjectMapper objectMapper;
     private final Cache cache;
 
-    MavenPackageMetadataResolver(HttpClient httpClient, Cache cache) {
+    MavenPackageMetadataResolver(HttpClient httpClient, ObjectMapper objectMapper, Cache cache) {
         this.httpClient = httpClient;
+        this.objectMapper = objectMapper;
         this.cache = cache;
     }
 
@@ -78,8 +81,8 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
                 purl.getNamespace().replace('.', '/'),
                 purl.getName());
 
-        final String latestVersion = resolveLatestVersion(baseUrl, purl, repository);
-        if (latestVersion == null) {
+        final MavenPackageInfo packageInfo = resolvePackageInfo(baseUrl, purl, repository);
+        if (packageInfo == null) {
             return null;
         }
         if (Thread.interrupted()) {
@@ -100,35 +103,44 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
             hashes.put(HashAlgorithm.SHA1, sha1);
         }
 
-        final var resolvedAt = Instant.now();
+        final var resolvedAt = packageInfo.resolvedAt();
         return new PackageMetadata(
-                latestVersion,
+                packageInfo.latestVersion(),
                 resolvedAt,
                 !hashes.isEmpty() || publishedAt != null
                         ? new PackageArtifactMetadata(resolvedAt, publishedAt, hashes)
                         : null);
     }
 
-    private @Nullable String resolveLatestVersion(
+    private @Nullable MavenPackageInfo resolvePackageInfo(
             String baseUrl,
             PackageURL purl,
             PackageRepository repository)
             throws InterruptedException {
         final String metadataCacheKey = CacheKeys.build(repository, purl.getNamespace(), purl.getName());
 
-        byte[] cachedMetadataBytes = cache.get(metadataCacheKey);
-        if (cachedMetadataBytes == null) {
-            cachedMetadataBytes = fetchMetadata(baseUrl, repository);
-            if (cachedMetadataBytes == null) {
-                return null;
-            }
-
-            cache.put(metadataCacheKey, cachedMetadataBytes);
+        final byte[] cachedBytes = cache.get(metadataCacheKey);
+        if (cachedBytes != null) {
+            return deserialize(cachedBytes, MavenPackageInfo.class);
         }
 
-        final String content = new String(cachedMetadataBytes, StandardCharsets.UTF_8);
+        final byte[] xmlBytes = fetchMetadata(baseUrl, repository);
+        if (xmlBytes == null) {
+            return null;
+        }
 
-        final Matcher latestMatcher = LATEST_PATTERN.matcher(content);
+        final String latestVersion = parseLatestVersion(new String(xmlBytes, StandardCharsets.UTF_8));
+        if (latestVersion == null) {
+            return null;
+        }
+
+        final var packageInfo = new MavenPackageInfo(Instant.now(), latestVersion);
+        cache.put(metadataCacheKey, serialize(packageInfo));
+        return packageInfo;
+    }
+
+    private static @Nullable String parseLatestVersion(String xml) {
+        final Matcher latestMatcher = LATEST_PATTERN.matcher(xml);
         if (latestMatcher.find()) {
             return latestMatcher.group(1);
         }
@@ -136,12 +148,28 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
         // Fall back to last <version> in <versions> list.
         // Sometimes the latest version is not explicitly recorded.
         String lastVersion = null;
-        final Matcher versionMatcher = VERSION_PATTERN.matcher(content);
+        final Matcher versionMatcher = VERSION_PATTERN.matcher(xml);
         while (versionMatcher.find()) {
             lastVersion = versionMatcher.group(1);
         }
 
         return lastVersion;
+    }
+
+    private byte[] serialize(Object value) {
+        try {
+            return objectMapper.writeValueAsBytes(value);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private <T> T deserialize(byte[] bytes, Class<T> type) {
+        try {
+            return objectMapper.readValue(bytes, type);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private byte @Nullable [] fetchMetadata(

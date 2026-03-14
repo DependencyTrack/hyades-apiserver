@@ -27,7 +27,7 @@ import java.time.format.DateTimeParseException;
 
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
 record CargoCrateVersionMetadata(
-        @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT) @Nullable Instant publishedAt,
+        @Nullable Instant publishedAt,
         @Nullable String sha256) {
 
     static @Nullable CargoCrateVersionMetadata of(CargoCrateDocument.Version crateVersion) {
