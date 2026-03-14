@@ -18,6 +18,9 @@
  */
 package org.dependencytrack.pkgmetadata.resolution.maven;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import com.github.packageurl.PackageURLBuilder;
@@ -33,6 +36,7 @@ import java.util.Map;
 public final class MavenPackageMetadataResolverFactory implements PackageMetadataResolverFactory {
 
     private @Nullable HttpClient httpClient;
+    private @Nullable ObjectMapper objectMapper;
     private @Nullable Cache cache;
 
     @Override
@@ -85,12 +89,15 @@ public final class MavenPackageMetadataResolverFactory implements PackageMetadat
     @Override
     public void init(ExtensionContext ctx) {
         httpClient = ctx.http().client();
+        objectMapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         cache = ctx.cacheManager().getCache("responses");
     }
 
     @Override
     public PackageMetadataResolver create() {
-        return new MavenPackageMetadataResolver(httpClient, cache);
+        return new MavenPackageMetadataResolver(httpClient, objectMapper, cache);
     }
 
 }
