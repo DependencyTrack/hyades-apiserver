@@ -21,45 +21,64 @@ package org.dependencytrack.pkgmetadata.resolution.maven;
 import com.github.packageurl.PackageURLBuilder;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import io.smallrye.config.SmallRyeConfigBuilder;
+import org.dependencytrack.cache.api.CacheManager;
+import org.dependencytrack.cache.memory.MemoryCacheProvider;
 import org.dependencytrack.pkgmetadata.resolution.api.HashAlgorithm;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
 import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.head;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.within;
 
 @WireMockTest
 class MavenPackageMetadataResolverTest {
 
+    private CacheManager cacheManager;
     private MavenPackageMetadataResolverFactory factory;
     private PackageMetadataResolver resolver;
 
     @BeforeEach
     void beforeEach() {
+        final var cacheProvider = new MemoryCacheProvider(new SmallRyeConfigBuilder().build());
+        cacheManager = cacheProvider.create();
+
         factory = new MavenPackageMetadataResolverFactory();
-        factory.init(new ExtensionContext(new MockConfigRegistry(Map.of(), null, null, null)));
+        factory.init(new ExtensionContext(
+                new MockConfigRegistry(Map.of(), null, null, null),
+                cacheManager,
+                new InMemoryExtensionKVStore(),
+                null));
         resolver = factory.create();
     }
 
     @AfterEach
-    void afterEach() {
+    void afterEach() throws Exception {
         if (factory != null) {
             factory.close();
+        }
+        if (cacheManager != null) {
+            cacheManager.close();
         }
     }
 
@@ -389,6 +408,48 @@ class MavenPackageMetadataResolverTest {
         final var repo = new PackageRepository("test", wmRuntimeInfo.getHttpBaseUrl(), null, null);
         assertThatExceptionOfType(RetryableResolutionException.class)
                 .isThrownBy(() -> resolver.resolve(purl, repo));
+    }
+
+    @Test
+    void shouldUseCachedMetadataOnSecondResolve(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        stubFor(get(urlPathEqualTo("/com/example/mylib/maven-metadata.xml"))
+                .willReturn(aResponse().withStatus(200).withBody(/* language=XML */ """
+                        <?xml version="1.0" encoding="UTF-8"?>
+                        <metadata>
+                          <groupId>com.example</groupId>
+                          <artifactId>mylib</artifactId>
+                          <versioning>
+                            <latest>2.0.0</latest>
+                          </versioning>
+                        </metadata>
+                        """)));
+        stubFor(head(urlPathEqualTo("/com/example/mylib/2.0.0/mylib-2.0.0.jar"))
+                .willReturn(aResponse().withStatus(200)
+                        .withHeader("Last-Modified", "Sat, 04 Nov 2023 12:00:00 GMT")));
+        stubFor(get(urlPathEqualTo("/com/example/mylib/2.0.0/mylib-2.0.0.jar.sha1"))
+                .willReturn(aResponse().withStatus(200)
+                        .withBody("da39a3ee5e6b4b0d3255bfef95601890afd80709")));
+
+        final var purl = PackageURLBuilder.aPackageURL()
+                .withType("maven")
+                .withNamespace("com.example")
+                .withName("mylib")
+                .withVersion("2.0.0")
+                .build();
+
+        final var repo = new PackageRepository("test", wmRuntimeInfo.getHttpBaseUrl(), null, null);
+        final PackageMetadata firstResult = resolver.resolve(purl, repo);
+        final PackageMetadata secondResult = resolver.resolve(purl, repo);
+
+        assertThat(firstResult).isNotNull();
+        assertThat(firstResult.latestVersion()).isEqualTo("2.0.0");
+        assertThat(secondResult).isNotNull();
+        assertThat(secondResult.latestVersion()).isEqualTo("2.0.0");
+
+        verify(1, getRequestedFor(urlPathEqualTo("/com/example/mylib/maven-metadata.xml")));
+
+        assertThat(secondResult.resolvedAt())
+                .isCloseTo(firstResult.resolvedAt(), within(1, ChronoUnit.MILLIS));
     }
 
     @Test

@@ -25,5 +25,5 @@ import java.time.Instant;
 
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
 record NugetVersionMetadata(
-        @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT) @Nullable Instant publishedAt) {
+        @Nullable Instant publishedAt) {
 }

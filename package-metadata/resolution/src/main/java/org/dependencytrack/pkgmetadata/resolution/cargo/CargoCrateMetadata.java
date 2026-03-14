@@ -24,6 +24,6 @@ import java.time.Instant;
 
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
 record CargoCrateMetadata(
-        @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT) Instant resolvedAt,
+        Instant resolvedAt,
         String latestVersion) {
 }
