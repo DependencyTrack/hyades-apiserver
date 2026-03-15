@@ -25,8 +25,6 @@ import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
-import org.dependencytrack.model.IntegrityAnalysis;
-import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.OrganizationalContact;
@@ -150,17 +148,6 @@ public class ProjectDaoTest extends PersistenceCapableTest {
                         .withCommenter("someCommenter")
                         .withComment("someComment"));
 
-        // Assign am integrity analysis to componentChild
-        final var integrityAnalysis = new IntegrityAnalysis();
-        integrityAnalysis.setComponent(componentChild);
-        integrityAnalysis.setMd5HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
-        integrityAnalysis.setSha1HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
-        integrityAnalysis.setSha256HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
-        integrityAnalysis.setSha512HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
-        integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
-        integrityAnalysis.setUpdatedAt(new Date());
-        qm.persist(integrityAnalysis);
-
         // Create metrics for project and component.
         useJdbiHandle(handle ->  {
             var dao = handle.attach(MetricsTestDao.class);
@@ -226,7 +213,6 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(Component.class, componentChild.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(Component.class, projectChildComponent.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(ProjectMetadata.class, projectMetadata.getId()));
-        assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(IntegrityAnalysis.class, integrityAnalysis.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(Bom.class, bom.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(Vex.class, vex.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(ServiceComponent.class, serviceComponent.getId()));

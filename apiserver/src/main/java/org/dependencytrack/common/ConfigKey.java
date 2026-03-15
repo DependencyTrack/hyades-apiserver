@@ -24,20 +24,6 @@ public enum ConfigKey implements Config.Key {
 
     ALPINE_WORKER_POOL_DRAIN_TIMEOUT_DURATION("alpine.worker.pool.drain.timeout.duration", "PT30S"),
 
-    KAFKA_AUTO_OFFSET_RESET("kafka.auto.offset.reset", "earliest"),
-    KAFKA_BOOTSTRAP_SERVERS("kafka.bootstrap.servers", null),
-    KAFKA_KEY_STORE_PASSWORD("kafka.keystore.password", ""),
-    KAFKA_KEY_STORE_PATH("kafka.keystore.path", ""),
-    KAFKA_MTLS_ENABLED("kafka.mtls.enabled", false),
-    KAFKA_PRODUCER_DRAIN_TIMEOUT_DURATION("kafka.producer.drain.timeout.duration", "PT30S"),
-    KAFKA_TLS_ENABLED("kafka.tls.enabled", false),
-    KAFKA_TLS_PROTOCOL("kafka.security.protocol", ""),
-    DT_KAFKA_TOPIC_PREFIX("dt.kafka.topic.prefix", ""),
-    KAFKA_TRUST_STORE_PASSWORD("kafka.truststore.password", ""),
-    KAFKA_TRUST_STORE_PATH("kafka.truststore.path", ""),
-
-    INTEGRITY_INITIALIZER_ENABLED("integrity.initializer.enabled", "false"),
-    INTEGRITY_CHECK_ENABLED("integrity.check.enabled", "false"),
     VULNERABILITY_POLICY_ANALYSIS_ENABLED("vulnerability.policy.analysis.enabled", false),
     VULNERABILITY_POLICY_BUNDLE_URL("vulnerability.policy.bundle.url", null),
     VULNERABILITY_POLICY_BUNDLE_SOURCE_TYPE("vulnerability.policy.bundle.source.type", "NGINX"),
@@ -48,10 +34,8 @@ public enum ConfigKey implements Config.Key {
     VULNERABILITY_POLICY_S3_REGION("vulnerability.policy.s3.region", null),
 
     DEV_SERVICES_IMAGE_FRONTEND("dev.services.image.frontend", "ghcr.io/dependencytrack/hyades-frontend:snapshot"),
-    DEV_SERVICES_IMAGE_KAFKA("dev.services.image.kafka", "apache/kafka-native:3.9.1"),
     DEV_SERVICES_IMAGE_POSTGRES("dev.services.image.postgres", "postgres:14-alpine"),
-    DEV_SERVICES_PORT_FRONTEND("dev.services.port.frontend", 8081),
-    DEV_SERVICES_PORT_KAFKA("dev.services.port.kafka", 9092);
+    DEV_SERVICES_PORT_FRONTEND("dev.services.port.frontend", 8081);
 
     private final String propertyName;
     private final Object defaultValue;

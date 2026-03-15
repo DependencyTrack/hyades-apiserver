@@ -40,6 +40,7 @@ package org.dependencytrack.resources.v1;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.github.packageurl.PackageURL;
 import jakarta.json.JsonArray;
 import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
@@ -49,22 +50,23 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.RepositoryMetaComponent;
-import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.ServiceComponent;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 public class DependencyGraphResourceTest extends ResourceTest {
@@ -130,7 +132,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getComponentsAndServicesByComponentUuidWithRepositoryMetaTests() {
+    public void getComponentsAndServicesByComponentUuidWithRepositoryMetaTests() throws Exception {
         final int nbIteration = 100;
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
@@ -143,35 +145,28 @@ public class DependencyGraphResourceTest extends ResourceTest {
         final List<Component> components = new ArrayList<>(nbIteration);
         final List<ServiceComponent> serviceComponents = new ArrayList<>(nbIteration);
 
-        String purl;
-        String name;
-        String namespace;
-        RepositoryMetaComponent repositoryMetaComponent;
+        final var packageMetadataList = new ArrayList<PackageMetadata>(nbIteration);
         for (int i = 0; i < nbIteration; i++) {
             Component component = new Component();
             component.setProject(project);
             component.setName("Component Name");
             component.setVersion(String.valueOf(i));
-            try {
-                name = String.format(nameTemplate, i);
-                namespace = String.format(namespaceTemplate, i);
-                purl = String.format(purlTemplate, namespace, name, latestVersion);
 
-                repositoryMetaComponent = new RepositoryMetaComponent();
-                repositoryMetaComponent.setRepositoryType(RepositoryType.MAVEN);
-                repositoryMetaComponent.setName(name);
-                repositoryMetaComponent.setNamespace(namespace);
-                repositoryMetaComponent.setPublished(new Date());
-                repositoryMetaComponent.setLastCheck(new Date());
-                repositoryMetaComponent.setLatestVersion(latestVersion);
-                qm.synchronizeRepositoryMetaComponent(repositoryMetaComponent);
-            } catch (Exception e) {
-                purl = null;
-                repositoryMetaComponent = null;
-            }
+            final String name = String.format(nameTemplate, i);
+            final String namespace = String.format(namespaceTemplate, i);
+            final String purl = String.format(purlTemplate, namespace, name, latestVersion);
+
+            packageMetadataList.add(new PackageMetadata(
+                    new PackageURL(String.format("pkg:maven/%s/%s", namespace, name)),
+                    latestVersion,
+                    Instant.now(),
+                    null,
+                    null));
+
             component.setPurl(purl);
             components.add(qm.createComponent(component, false));
         }
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(packageMetadataList));
 
         for (int i = 0; i < nbIteration; i++) {
             ServiceComponent service = new ServiceComponent();
@@ -294,7 +289,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getComponentsAndServicesByProjectUuidWithRepositoryMetaTests() {
+    public void getComponentsAndServicesByProjectUuidWithRepositoryMetaTests() throws Exception {
         final int nbIteration = 100;
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
@@ -307,35 +302,28 @@ public class DependencyGraphResourceTest extends ResourceTest {
         final List<Component> components = new ArrayList<>(nbIteration);
         final List<ServiceComponent> serviceComponents = new ArrayList<>(nbIteration);
 
-        String purl;
-        String name;
-        String namespace;
-        RepositoryMetaComponent repositoryMetaComponent;
+        final var packageMetadataList = new ArrayList<PackageMetadata>(nbIteration);
         for (int i = 0; i < nbIteration; i++) {
             Component component = new Component();
             component.setProject(project);
             component.setName("Component Name");
             component.setVersion(String.valueOf(i));
-            try {
-                name = String.format(nameTemplate, i);
-                namespace = String.format(namespaceTemplate, i);
-                purl = String.format(purlTemplate, namespace, name, latestVersion);
 
-                repositoryMetaComponent = new RepositoryMetaComponent();
-                repositoryMetaComponent.setRepositoryType(RepositoryType.MAVEN);
-                repositoryMetaComponent.setName(name);
-                repositoryMetaComponent.setNamespace(namespace);
-                repositoryMetaComponent.setPublished(new Date());
-                repositoryMetaComponent.setLastCheck(new Date());
-                repositoryMetaComponent.setLatestVersion(latestVersion);
-                qm.synchronizeRepositoryMetaComponent(repositoryMetaComponent);
-            } catch (Exception e) {
-                purl = null;
-                repositoryMetaComponent = null;
-            }
+            final String name = String.format(nameTemplate, i);
+            final String namespace = String.format(namespaceTemplate, i);
+            final String purl = String.format(purlTemplate, namespace, name, latestVersion);
+
+            packageMetadataList.add(new PackageMetadata(
+                    new PackageURL(String.format("pkg:maven/%s/%s", namespace, name)),
+                    latestVersion,
+                    Instant.now(),
+                    null,
+                    null));
+
             component.setPurl(purl);
             components.add(qm.createComponent(component, false));
         }
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(packageMetadataList));
 
         for (int i = 0; i < nbIteration; i++) {
             ServiceComponent service = new ServiceComponent();
@@ -370,7 +358,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getComponentsAndServicesByProjectUuidWithComponentsWithoutPurlTest() {
+    public void getComponentsAndServicesByProjectUuidWithComponentsWithoutPurlTest() throws Exception {
         final var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");
@@ -389,13 +377,13 @@ public class DependencyGraphResourceTest extends ResourceTest {
         componentWithoutPurl.setVersion("3.0.0");
         qm.persist(componentWithoutPurl);
 
-        final var componentWithPurlRepoMeta = new RepositoryMetaComponent();
-        componentWithPurlRepoMeta.setRepositoryType(RepositoryType.PYPI);
-        componentWithPurlRepoMeta.setName("acme-lib-a");
-        componentWithPurlRepoMeta.setLatestVersion("2.0.2");
-        componentWithPurlRepoMeta.setPublished(new Date());
-        componentWithPurlRepoMeta.setLastCheck(new Date());
-        qm.persist(componentWithPurlRepoMeta);
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(List.of(
+                new PackageMetadata(
+                        new PackageURL("pkg:pypi/acme-lib-a"),
+                        "2.0.2",
+                        Instant.now(),
+                        null,
+                        null))));
 
         project.setDirectDependencies("""
                 [

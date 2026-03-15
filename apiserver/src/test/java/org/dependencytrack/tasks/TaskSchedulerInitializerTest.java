@@ -51,7 +51,6 @@ class TaskSchedulerInitializerTest extends PersistenceCapableTest {
 
         assertThat(scheduler.scheduledTaskIds()).containsExactlyInAnyOrder(
                 "CSAF Document Import",
-                "Component Metadata Maintenance",
                 "Defect Dojo Upload",
                 "EPSS Mirror",
                 "Fortify SSC Upload",
@@ -62,8 +61,9 @@ class TaskSchedulerInitializerTest extends PersistenceCapableTest {
                 "Metrics Maintenance",
                 "NVD Mirror",
                 "OSV Mirror",
+                "Package Metadata Maintenance",
+                "Package Metadata Resolution",
                 "Portfolio Metrics Update",
-                "Portfolio Repository Meta Analysis",
                 "Portfolio Vulnerability Analysis",
                 "Project Maintenance",
                 "Tag Maintenance",

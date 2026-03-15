@@ -49,13 +49,16 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.resources.v1.AbstractConfigPropertyResource.ENCRYPTED_PLACEHOLDER;
 
 /**
@@ -145,20 +148,16 @@ public class RepositoryResource extends AlpineResource {
             @QueryParam("purl") String purl) {
         try {
             final PackageURL packageURL = new PackageURL(purl);
-            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-                final RepositoryType type = RepositoryType.resolve(packageURL);
-                if (RepositoryType.UNSUPPORTED == type) {
-                    return Response.noContent().build();
-                }
-                final RepositoryMetaComponent result = qm.getRepositoryMetaComponent(
-                        RepositoryType.resolve(packageURL), packageURL.getNamespace(), packageURL.getName());
-                if (result == null) {
-                    return Response.status(Response.Status.NOT_FOUND).entity("The repository metadata for the specified component cannot be found.").build();
-                } else {
-                    //todo: future enhancement: provide pass-thru capability for component metadata not already present and being tracked
-                    return Response.ok(result).build();
-                }
+            final RepositoryType type = RepositoryType.resolve(packageURL);
+            if (RepositoryType.UNSUPPORTED == type) {
+                return Response.noContent().build();
             }
+            final PackageMetadata pm = withJdbiHandle(
+                    handle -> new PackageMetadataDao(handle).get(packageURL));
+            if (pm == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The repository metadata for the specified component cannot be found.").build();
+            }
+            return Response.ok(RepositoryMetaComponent.of(pm)).build();
         } catch (MalformedPackageURLException e) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }

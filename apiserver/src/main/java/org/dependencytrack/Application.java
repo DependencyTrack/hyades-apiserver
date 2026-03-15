@@ -28,9 +28,6 @@ import org.dependencytrack.dev.DevServicesInitializer;
 import org.dependencytrack.dex.DexEngineBinder;
 import org.dependencytrack.dex.DexEngineInitializer;
 import org.dependencytrack.event.EventSubsystemInitializer;
-import org.dependencytrack.event.PurlMigrator;
-import org.dependencytrack.event.kafka.KafkaProducerInitializer;
-import org.dependencytrack.event.kafka.processor.ProcessorInitializer;
 import org.dependencytrack.filestorage.FileStorageBinder;
 import org.dependencytrack.filestorage.FileStorageInitializer;
 import org.dependencytrack.init.InitTaskServletContextListener;
@@ -134,13 +131,10 @@ public final class Application {
         context.addEventListener(new PersistenceManagerFactory());
         context.addEventListener(new PluginInitializer());
         context.addEventListener(new DefaultNotificationPublisherInitializer());
-        context.addEventListener(new KafkaProducerInitializer());
         context.addEventListener(new DexEngineInitializer());
         context.addEventListener(new EventSubsystemInitializer());
         context.addEventListener(new TaskSchedulerInitializer());
         context.addEventListener(new NotificationSubsystemInitializer());
-        context.addEventListener(new ProcessorInitializer());
-        context.addEventListener(new PurlMigrator());
 
         final var whitelistFilter = new FilterHolder(WhitelistUrlFilter.class);
         whitelistFilter.setInitParameter("allowUrls", "/index.html,/api,/health,/metrics,/.well-known");

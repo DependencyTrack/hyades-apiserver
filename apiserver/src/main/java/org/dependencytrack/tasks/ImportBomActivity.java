@@ -19,7 +19,6 @@
 package org.dependencytrack.tasks;
 
 import alpine.common.logging.Logger;
-import alpine.event.framework.EventService;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
@@ -35,17 +34,11 @@ import org.dependencytrack.dex.api.ActivitySpec;
 import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
-import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
-import org.dependencytrack.event.IntegrityAnalysisEvent;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
-import org.dependencytrack.model.FetchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
@@ -53,6 +46,7 @@ import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.pkgmetadata.ResolvePackageMetadataWorkflow;
 import org.dependencytrack.proto.internal.workflow.v1.AnalyzeProjectWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.ImportBomArg;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContext;
@@ -77,7 +71,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -101,8 +94,6 @@ import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
 import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_BOM_UPLOAD_TOKEN;
 import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_PROJECT_UUID;
-import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK;
-import static org.dependencytrack.event.kafka.componentmeta.RepoMetaConstants.TIME_SPAN;
 import static org.dependencytrack.notification.api.NotificationFactory.createBomConsumedNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createBomProcessedNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createBomProcessingFailedNotification;
@@ -118,8 +109,6 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.conv
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertToProject;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertToProjectMetadata;
 import static org.dependencytrack.proto.internal.workflow.v1.AnalysisTrigger.ANALYSIS_TRIGGER_BOM_UPLOAD;
-import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION;
-import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_LATEST_VERSION;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 
@@ -154,17 +143,14 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
 
     private final DexEngine dexEngine;
     private final FileStorage fileStorage;
-    private final KafkaEventDispatcher kafkaEventDispatcher;
     private final boolean delayBomProcessedNotification;
 
     public ImportBomActivity(
             FileStorage fileStorage,
-            KafkaEventDispatcher kafkaEventDispatcher,
             DexEngine dexEngine,
             boolean delayBomProcessedNotification) {
         this.dexEngine = dexEngine;
         this.fileStorage = fileStorage;
-        this.kafkaEventDispatcher = kafkaEventDispatcher;
         this.delayBomProcessedNotification = delayBomProcessedNotification;
     }
 
@@ -279,10 +265,12 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
                         .withPriority(50)
                         .withArgument(workflowArgBuilder.build()));
 
-        final List<ComponentRepositoryMetaAnalysisEvent> repoMetaAnalysisEvents = createRepoMetaAnalysisEvents(processedBom.components());
-        final var dispatchedEvents = new ArrayList<CompletableFuture<?>>(repoMetaAnalysisEvents.size());
-        dispatchedEvents.addAll(initiateRepoMetaAnalysis(repoMetaAnalysisEvents));
-        CompletableFuture.allOf(dispatchedEvents.toArray(new CompletableFuture[0])).join();
+        if (!processedBom.components().isEmpty()) {
+            dexEngine.createRun(
+                    new CreateWorkflowRunRequest<>(ResolvePackageMetadataWorkflow.class)
+                            .withWorkflowInstanceId(ResolvePackageMetadataWorkflow.INSTANCE_ID));
+        }
+
     }
 
     private org.cyclonedx.proto.v1_6.Bom parseBomProtobuf(byte[] cdxBomBytes) {
@@ -997,19 +985,6 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
         };
     }
 
-    private List<CompletableFuture<?>> initiateRepoMetaAnalysis(final Collection<ComponentRepositoryMetaAnalysisEvent> events) {
-        return events.stream()
-                .<CompletableFuture<?>>map(event -> kafkaEventDispatcher.dispatchEvent(event).whenComplete(
-                        (ignored, throwable) -> {
-                            if (throwable != null) {
-                                // Include context in the log message to make log correlation easier.
-                                LOGGER.error("Failed to produce %s to Kafka".formatted(event), throwable);
-                            }
-                        }
-                ))
-                .toList();
-    }
-
     private void dispatchBomConsumedNotification(final ProcessingContext ctx) {
         try (final var qm = new QueryManager()) {
             new JdoNotificationEmitter(qm).emit(
@@ -1067,73 +1042,6 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
                     NEW_VULNERABLE_DEPENDENCY notifications will not be emitted""", e);
             return null;
         }
-    }
-
-    private static List<ComponentRepositoryMetaAnalysisEvent> createRepoMetaAnalysisEvents(final Collection<Component> components) {
-        final var events = new ArrayList<ComponentRepositoryMetaAnalysisEvent>(components.size());
-        // TODO: This should be more efficient (https://github.com/DependencyTrack/hyades/issues/1306)
-
-        try (final var qm = new QueryManager()) {
-            qm.getPersistenceManager().setProperty(PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT, "false");
-            qm.getPersistenceManager().setProperty(PROPERTY_RETAIN_VALUES, "true");
-
-            for (final Component component : components) {
-                if (component.getPurl() == null) {
-                    continue;
-                }
-
-                if (!SUPPORTED_PACKAGE_URLS_FOR_INTEGRITY_CHECK.contains(component.getPurl().getType())) {
-                    events.add(new ComponentRepositoryMetaAnalysisEvent(
-                            /* componentUuid */ null,
-                            component.getPurlCoordinates().toString(),
-                            component.isInternal(),
-                            FETCH_META_LATEST_VERSION
-                    ));
-                    continue;
-                }
-
-                final boolean shouldFetchIntegrityData = qm.callInTransaction(() -> prepareIntegrityMetaComponent(qm, component));
-                if (shouldFetchIntegrityData) {
-                    events.add(new ComponentRepositoryMetaAnalysisEvent(
-                            component.getUuid(),
-                            component.getPurl().toString(),
-                            component.isInternal(),
-                            FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION
-                    ));
-                } else {
-                    // If integrity metadata was fetched recently, we don't want to fetch it again
-                    // as it's unlikely to change frequently. Fall back to fetching only the latest
-                    // version information.
-                    events.add(new ComponentRepositoryMetaAnalysisEvent(
-                            /* componentUuid */ null,
-                            component.getPurlCoordinates().toString(),
-                            component.isInternal(),
-                            FETCH_META_LATEST_VERSION
-                    ));
-                }
-            }
-        }
-
-        return events;
-    }
-
-    private static boolean prepareIntegrityMetaComponent(final QueryManager qm, final Component component) {
-        final IntegrityMetaComponent integrityMetaComponent = qm.getIntegrityMetaComponent(component.getPurl().toString());
-        if (integrityMetaComponent == null) {
-            qm.createIntegrityMetaHandlingConflict(AbstractMetaHandler.createIntegrityMetaComponent(component.getPurl().toString()));
-            return true;
-        } else if (integrityMetaComponent.getStatus() == null
-                || (integrityMetaComponent.getStatus() == FetchStatus.IN_PROGRESS
-                && (Date.from(Instant.now()).getTime() - integrityMetaComponent.getLastFetch().getTime()) > TIME_SPAN)) {
-            integrityMetaComponent.setLastFetch(Date.from(Instant.now()));
-            return true;
-        } else if (integrityMetaComponent.getStatus() == FetchStatus.PROCESSED || integrityMetaComponent.getStatus() == FetchStatus.NOT_AVAILABLE) {
-            qm.getPersistenceManager().makeTransient(integrityMetaComponent);
-            EventService.getInstance().publish(new IntegrityAnalysisEvent(component.getUuid(), integrityMetaComponent));
-            return false;
-        }
-        //don't send event because integrity metadata would be sent recently and don't want to send again
-        return false;
     }
 
 }

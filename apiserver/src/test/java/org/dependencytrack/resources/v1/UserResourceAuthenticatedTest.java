@@ -46,13 +46,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.notification.NotificationTestUtil.createCatchAllNotificationRule;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_USER_CREATED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_USER_DELETED;
@@ -253,9 +251,6 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         Assertions.assertEquals(400, response.getStatus(), 0);
         String body = getPlainTextBody(response);
         Assertions.assertEquals("Username cannot be null or blank.", body);
-        await()
-                .atMost(Duration.ofSeconds(5))
-                        .untilAsserted(() -> assertThat(kafkaMockProducer.history()).hasSize(0));
     }
 
     @Test

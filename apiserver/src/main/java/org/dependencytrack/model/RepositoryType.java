@@ -49,35 +49,26 @@ public enum RepositoryType {
      * @return a RepositoryType
      */
     public static RepositoryType resolve(PackageURL packageURL) {
-        final String type = packageURL.getType();
-        if (PackageURL.StandardTypes.MAVEN.equals(type)) {
-            return MAVEN;
-        } else if (PackageURL.StandardTypes.NPM.equals(type)) {
-            return NPM;
-        } else if (PackageURL.StandardTypes.GEM.equals(type)) {
-            return GEM;
-        } else if (PackageURL.StandardTypes.PYPI.equals(type)) {
-            return PYPI;
-        } else if (PackageURL.StandardTypes.NUGET.equals(type)) {
-            return NUGET;
-        } else if (PackageURL.StandardTypes.HEX.equals(type)) {
-            return HEX;
-        } else if (PackageURL.StandardTypes.COMPOSER.equals(type)) {
-            return COMPOSER;
-        } else if (PackageURL.StandardTypes.CARGO.equals(type)) {
-            return CARGO;
-        } else if (PackageURL.StandardTypes.GOLANG.equals(type)) {
-            return GO_MODULES;
-        } else if ("cpan".equals(type)) { // Not defined in StandardTypes
-            return CPAN;
-        } else if (PackageURL.StandardTypes.GITHUB.equals(type)) {
-            return GITHUB;
-        } else if ("hackage".equals(type)) { // Not defined in StandardTypes
-            return HACKAGE;
-        } else if ("nixpkgs".equals(type)) { // Not defined in StandardTypes
-            return NIXPKGS;
-        }
-        return UNSUPPORTED;
+        return ofPurlType(packageURL.getType());
+    }
+
+    public static RepositoryType ofPurlType(String purlType) {
+        return switch (purlType) {
+            case "cpan" -> CPAN;
+            case "hackage" -> HACKAGE;
+            case "nixpkgs" -> NIXPKGS;
+            case PackageURL.StandardTypes.CARGO -> CARGO;
+            case PackageURL.StandardTypes.COMPOSER -> COMPOSER;
+            case PackageURL.StandardTypes.GEM -> GEM;
+            case PackageURL.StandardTypes.GITHUB -> GITHUB;
+            case PackageURL.StandardTypes.GOLANG -> GO_MODULES;
+            case PackageURL.StandardTypes.HEX -> HEX;
+            case PackageURL.StandardTypes.MAVEN -> MAVEN;
+            case PackageURL.StandardTypes.NPM -> NPM;
+            case PackageURL.StandardTypes.NUGET -> NUGET;
+            case PackageURL.StandardTypes.PYPI -> PYPI;
+            case null, default -> UNSUPPORTED;
+        };
     }
 
 }

@@ -25,6 +25,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.analysis.AnalyzeProjectWorkflow;
+import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
@@ -41,13 +42,15 @@ import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.listener.DelayedBomProcessedNotificationEmitter;
 import org.dependencytrack.dex.listener.ProjectVulnAnalysisCompleteNotificationEmitter;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.metrics.UpdateProjectMetricsActivity;
 import org.dependencytrack.notification.PublishNotificationActivity;
 import org.dependencytrack.notification.PublishNotificationWorkflow;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
+import org.dependencytrack.pkgmetadata.FetchPackageMetadataResolutionCandidatesActivity;
+import org.dependencytrack.pkgmetadata.ResolvePackageMetadataActivity;
+import org.dependencytrack.pkgmetadata.ResolvePackageMetadataWorkflow;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.policy.EvalProjectPoliciesActivity;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
@@ -56,6 +59,7 @@ import org.dependencytrack.proto.internal.workflow.v1.AnalyzeProjectWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
 import org.dependencytrack.proto.internal.workflow.v1.DiscoverCsafProvidersArg;
 import org.dependencytrack.proto.internal.workflow.v1.EvalProjectPoliciesArg;
+import org.dependencytrack.proto.internal.workflow.v1.FetchPackageMetadataResolutionCandidatesRes;
 import org.dependencytrack.proto.internal.workflow.v1.ImportBomArg;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerArg;
@@ -65,6 +69,7 @@ import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisRes;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationActivityArg;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
+import org.dependencytrack.proto.internal.workflow.v1.ResolvePackageMetadataActivityArg;
 import org.dependencytrack.proto.internal.workflow.v1.UpdateProjectMetricsArg;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
 import org.dependencytrack.secret.management.SecretManager;
@@ -136,6 +141,9 @@ public final class DexEngineInitializer implements ServletContextListener {
         final var pluginManager = (PluginManager) servletContext.getAttribute(PluginManager.class.getName());
         requireNonNull(pluginManager, "pluginManager has not been initialized");
 
+        final var cacheManager = (CacheManager) servletContext.getAttribute(CacheManager.class.getName());
+        requireNonNull(cacheManager, "cacheManager has not been initialized");
+
         final var secretManager = (SecretManager) servletContext.getAttribute(SecretManager.class.getName());
         requireNonNull(secretManager, "secretManager has not been initialized");
 
@@ -175,6 +183,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
+                new ResolvePackageMetadataWorkflow(),
+                voidConverter(),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerWorkflow(
                 new VulnAnalysisWorkflow(),
                 protoConverter(VulnAnalysisWorkflowArg.class),
                 voidConverter(),
@@ -183,7 +196,6 @@ public final class DexEngineInitializer implements ServletContextListener {
         engine.registerActivity(
                 new ImportBomActivity(
                         fileStorage,
-                        new KafkaEventDispatcher(),
                         engine,
                         config.getOptionalValue("tmp.delay.bom.processed.notification", boolean.class).orElse(false)),
                 protoConverter(ImportBomArg.class),
@@ -204,6 +216,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 protoConverter(EvalProjectPoliciesArg.class),
                 voidConverter(),
                 Duration.ofMinutes(5));
+        engine.registerActivity(
+                new FetchPackageMetadataResolutionCandidatesActivity(pluginManager),
+                voidConverter(),
+                protoConverter(FetchPackageMetadataResolutionCandidatesRes.class),
+                Duration.ofMinutes(1));
         engine.registerActivity(
                 new ImportCsafDocumentsActivity(),
                 protoConverter(ImportCsafDocumentsArg.class),
@@ -237,6 +254,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(5));
         engine.registerActivity(
+                new ResolvePackageMetadataActivity(pluginManager),
+                protoConverter(ResolvePackageMetadataActivityArg.class),
+                voidConverter(),
+                Duration.ofMinutes(10));
+        engine.registerActivity(
                 new UpdateProjectMetricsActivity(),
                 protoConverter(UpdateProjectMetricsArg.class),
                 voidConverter(),
@@ -248,6 +270,7 @@ public final class DexEngineInitializer implements ServletContextListener {
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "artifact-imports", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "metrics-updates", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "notifications", 25),
+                new CreateTaskQueueRequest(TaskType.ACTIVITY, "package-metadata-resolutions", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "policy-evaluations", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analyses", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analysis-reconciliations", 25)));

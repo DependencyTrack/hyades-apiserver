@@ -21,6 +21,7 @@ package org.dependencytrack.plugin;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.cache.api.CacheManager;
+import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.plugin.api.Plugin;
 import org.dependencytrack.secret.management.SecretManager;
@@ -69,6 +70,7 @@ public class PluginInitializer implements ServletContextListener {
 
         final var extensionPoints = List.of(
                 NotificationPublisher.class,
+                PackageMetadataResolver.class,
                 VulnAnalyzer.class,
                 VulnDataSource.class);
 

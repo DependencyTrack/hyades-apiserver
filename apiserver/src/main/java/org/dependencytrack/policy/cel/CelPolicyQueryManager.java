@@ -96,20 +96,26 @@ class CelPolicyQueryManager implements AutoCloseable {
         if (protoFieldNames.contains("latest_version")) {
             sqlSelectColumns += ", \"latestVersion\"";
         }
-        final Query<?> query = pm.newQuery(Query.SQL, """
-                SELECT %s, "latestVersion", "publishedAt"
-                from
-                "COMPONENT" "C"
-                LEFT JOIN LATERAL (SELECT "IMC"."PUBLISHED_AT" AS "publishedAt" FROM "INTEGRITY_META_COMPONENT" "IMC" WHERE
-                "C"."PURL" = "IMC"."PURL") AS "publishedAt" ON :shouldJoinIntegrityMeta
-                LEFT JOIN LATERAL (SELECT "RMC"."LATEST_VERSION" AS "latestVersion" FROM "REPOSITORY_META_COMPONENT" "RMC" WHERE
-                "C"."NAME" = "RMC"."NAME") AS "latestVersion" ON :shouldJoinRepoMeta
-                WHERE
-                "PROJECT_ID" = :projectId
-                """.formatted(sqlSelectColumns, protoFieldNames));
+        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                SELECT %s
+                  FROM "COMPONENT" AS "C"
+                  LEFT JOIN LATERAL (
+                    SELECT "PAM"."PUBLISHED_AT" AS "publishedAt"
+                      FROM "PACKAGE_ARTIFACT_METADATA" "PAM"
+                     WHERE "C"."PURL" = "PAM"."PURL"
+                  ) AS "publishedAt" ON :shouldJoinPackageArtifactMetadata
+                  LEFT JOIN LATERAL (
+                    SELECT "PM"."LATEST_VERSION" AS "latestVersion"
+                      FROM "PACKAGE_ARTIFACT_METADATA" "PAM"
+                     INNER JOIN "PACKAGE_METADATA" "PM"
+                        ON "PM"."PURL" = "PAM"."PACKAGE_PURL"
+                     WHERE "PAM"."PURL" = "C"."PURL"
+                  ) AS "latestVersion" ON :shouldJoinPackageMetadata
+                 WHERE "PROJECT_ID" = :projectId
+                """.formatted(sqlSelectColumns));
         query.setNamedParameters(Map.of(
-                "shouldJoinIntegrityMeta", protoFieldNames.contains("publishedAt") || protoFieldNames.contains("published_at"),
-                "shouldJoinRepoMeta", protoFieldNames.contains("latestVersion") || protoFieldNames.contains("latest_version"),
+                "shouldJoinPackageArtifactMetadata", protoFieldNames.contains("published_at"),
+                "shouldJoinPackageMetadata", protoFieldNames.contains("latest_version"),
                 "projectId", projectId));
         try {
             return List.copyOf(query.executeResultList(ComponentProjection.class));

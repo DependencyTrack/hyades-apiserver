@@ -96,16 +96,17 @@ public interface CelPolicyDao {
               FROM "COMPONENT" AS c
             <#if fetchColumns?seq_contains("\\"published_at\\"")>
               LEFT JOIN LATERAL (
-                SELECT imc."PUBLISHED_AT" AS "published_at"
-                  FROM "INTEGRITY_META_COMPONENT" AS imc
-                 WHERE imc."PURL" = c."PURL"
+                SELECT pam."PUBLISHED_AT" AS "published_at"
+                  FROM "PACKAGE_ARTIFACT_METADATA" AS pam
+                 WHERE pam."PURL" = c."PURL"
               ) AS "integrityMeta" ON TRUE
             </#if>
             <#if fetchColumns?seq_contains("\\"latest_version\\"")>
               LEFT JOIN LATERAL (
-                SELECT rmc."LATEST_VERSION" AS "latest_version"
-                  FROM "REPOSITORY_META_COMPONENT" AS rmc
-                 WHERE rmc."NAME" = c."NAME"
+                SELECT pm."LATEST_VERSION" AS "latest_version"
+                  FROM "PACKAGE_ARTIFACT_METADATA" AS pam
+                  JOIN "PACKAGE_METADATA" AS pm ON pm."PURL" = pam."PACKAGE_PURL"
+                 WHERE pam."PURL" = c."PURL"
               ) AS "repoMeta" ON TRUE
             </#if>
              WHERE c."ID" = ANY(:ids)
