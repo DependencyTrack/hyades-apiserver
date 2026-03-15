@@ -14,6 +14,7 @@ If Maven needs to be invoked directly, only do so from the repository root.
 * Run multiple tests: `make test-single MODULE=apiserver TEST="FooTest,BarTest"`
 * Clean: `make clean`
 * Clean build cache: `make clean-build-cache`
+* Run e2e tests: `make test-e2e`
 * Lint (Java): `make lint-java`
 * Lint (OpenAPI): `make lint-openapi`
 * Lint (Protobuf): `make lint-proto`

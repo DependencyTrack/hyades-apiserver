@@ -93,6 +93,12 @@ Run a single test method:
 make test-single MODULE=apiserver TEST="FooTest#testFoo"
 ```
 
+Run e2e tests:
+
+```shell
+make test-e2e
+```
+
 ## Dev Mode
 
 Dev mode launches the API server with auto-provisioned containers for PostgreSQL, Kafka,
