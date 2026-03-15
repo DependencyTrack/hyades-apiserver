@@ -34,18 +34,14 @@ import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEve
 import org.dependencytrack.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
-import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.tasks.CallbackTask;
 import org.dependencytrack.tasks.CloneProjectTask;
 import org.dependencytrack.tasks.DefectDojoUploadTask;
 import org.dependencytrack.tasks.EpssMirrorTask;
 import org.dependencytrack.tasks.FortifySscUploadTask;
-import org.dependencytrack.tasks.GitHubAdvisoryMirrorTask;
 import org.dependencytrack.tasks.InternalComponentIdentificationTask;
 import org.dependencytrack.tasks.KennaSecurityUploadTask;
 import org.dependencytrack.tasks.LdapSyncTaskWrapper;
-import org.dependencytrack.tasks.NistMirrorTask;
-import org.dependencytrack.tasks.OsvMirrorTask;
 import org.dependencytrack.tasks.VexUploadProcessingTask;
 import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
 import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
@@ -97,13 +93,8 @@ public class EventSubsystemInitializer implements ServletContextListener {
         final var dexEngine = (DexEngine) event.getServletContext().getAttribute(DexEngine.class.getName());
         requireNonNull(dexEngine, "dexEngine has not been initialized");
 
-        final var pluginManager = (PluginManager) event.getServletContext().getAttribute(PluginManager.class.getName());
-        requireNonNull(pluginManager, "pluginManager has not been initialized");
-
         eventService.subscribe(VexUploadEvent.class, new VexUploadProcessingTask());
         eventService.subscribe(LdapSyncEvent.class, new LdapSyncTaskWrapper());
-        eventService.subscribe(GitHubAdvisoryMirrorEvent.class, new GitHubAdvisoryMirrorTask(pluginManager));
-        eventService.subscribe(OsvMirrorEvent.class, new OsvMirrorTask(pluginManager));
         eventService.subscribe(
                 PortfolioVulnerabilityAnalysisEvent.class,
                 new VulnerabilityAnalysisTask(dexEngine));
@@ -116,7 +107,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.subscribe(KennaSecurityUploadEventAbstract.class, new KennaSecurityUploadTask(HttpClient.INSTANCE));
         eventService.subscribe(InternalComponentIdentificationEvent.class, new InternalComponentIdentificationTask());
         eventService.subscribe(CallbackEvent.class, new CallbackTask());
-        eventService.subscribe(NistMirrorEvent.class, new NistMirrorTask(pluginManager));
         eventService.subscribe(VulnerabilityPolicyFetchEvent.class, new VulnerabilityPolicyFetchTask());
         eventService.subscribe(EpssMirrorEvent.class, new EpssMirrorTask(HttpClient.INSTANCE));
         // Execute maintenance tasks on the single-threaded event service.
@@ -138,8 +128,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
 
         eventService.unsubscribe(VexUploadProcessingTask.class);
         eventService.unsubscribe(LdapSyncTaskWrapper.class);
-        eventService.unsubscribe(GitHubAdvisoryMirrorTask.class);
-        eventService.unsubscribe(OsvMirrorTask.class);
         eventService.unsubscribe(VulnerabilityAnalysisTask.class);
         eventService.unsubscribe(ProjectMetricsUpdateTask.class);
         eventService.unsubscribe(PortfolioMetricsUpdateTask.class);
@@ -150,7 +138,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.unsubscribe(KennaSecurityUploadTask.class);
         eventService.unsubscribe(InternalComponentIdentificationTask.class);
         eventService.unsubscribe(CallbackTask.class);
-        eventService.unsubscribe(NistMirrorTask.class);
         eventService.unsubscribe(EpssMirrorTask.class);
         eventService.unsubscribe(VulnerabilityPolicyFetchTask.class);
         try {

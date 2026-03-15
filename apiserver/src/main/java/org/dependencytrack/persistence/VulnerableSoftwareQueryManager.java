@@ -207,8 +207,7 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
         runInTransaction(() -> {
             // Get all VulnerableSoftware records that are currently associated with the vulnerability.
             // Note: For SOME ODD REASON, duplicate (as in, same database ID and all) VulnerableSoftware
-            // records are returned, when operating on data that was originally created by the feed-based
-            // NistMirrorTask. We thus have to deduplicate here.
+            // records are returned. We thus have to deduplicate here.
             final List<VulnerableSoftware> vsOldList = persistentVuln.getVulnerableSoftware().stream().distinct().toList();
             LOGGER.trace("%s: Existing VS: %d".formatted(persistentVuln.getVulnId(), vsOldList.size()));
 

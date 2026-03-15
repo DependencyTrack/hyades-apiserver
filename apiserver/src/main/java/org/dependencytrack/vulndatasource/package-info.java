@@ -16,16 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.tasks;
+@NullMarked
+package org.dependencytrack.vulndatasource;
 
-import org.dependencytrack.event.OsvMirrorEvent;
-import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.plugin.PluginManager;
-
-public class OsvMirrorTask extends AbstractVulnDataSourceMirrorTask {
-
-    public OsvMirrorTask(PluginManager pluginManager) {
-        super(pluginManager, OsvMirrorEvent.class, "osv", Vulnerability.Source.OSV);
-    }
-
-}
+import org.jspecify.annotations.NullMarked;
