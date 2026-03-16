@@ -18,49 +18,97 @@
  */
 package org.dependencytrack.init;
 
-import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.common.datasource.DataSourceRegistry;
-import org.eclipse.microprofile.config.ConfigProvider;
-import org.junit.jupiter.api.BeforeEach;
+import io.smallrye.config.SmallRyeConfigBuilder;
+import org.eclipse.microprofile.config.Config;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.postgresql.ds.PGSimpleDataSource;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
-public class InitTaskExecutorTest extends PersistenceCapableTest {
+@Testcontainers
+class InitTaskExecutorTest {
 
-    private DataSource dataSource;
+    @Container
+    private static final PostgreSQLContainer postgresContainer =
+            new PostgreSQLContainer(DockerImageName.parse("postgres:14-alpine"));
 
-    @BeforeEach
-    public void before() throws Exception {
-        super.before();
+    private static DataSource dataSource;
+    private static Config config;
 
-        dataSource = DataSourceRegistry.getInstance().getDefault();
+    @BeforeAll
+    static void beforeAll() {
+        final var pgDataSource = new PGSimpleDataSource();
+        pgDataSource.setUrl(postgresContainer.getJdbcUrl());
+        pgDataSource.setUser(postgresContainer.getUsername());
+        pgDataSource.setPassword(postgresContainer.getPassword());
+        dataSource = pgDataSource;
+
+        config = new SmallRyeConfigBuilder()
+                .withDefaultValues(Map.of())
+                .build();
     }
 
     @Test
-    public void shouldExecuteTasksInPriorityOrder() {
+    void shouldExecuteTasksInPriorityOrder() {
         final var executedTaskNames = new ArrayList<String>(3);
 
-        final var executor = new InitTaskExecutor(ConfigProvider.getConfig(), dataSource, List.of(
+        final var executor = new InitTaskExecutor(config, dataSource, List.of(
                 new TestInitTask(1, "a", () -> executedTaskNames.add("a")),
                 new TestInitTask(5, "b", () -> executedTaskNames.add("b")),
-                new TestInitTask(3, "c", () -> executedTaskNames.add("c"))));
+                new TestInitTask(3, "c", () -> executedTaskNames.add("c"))), null);
         executor.execute();
 
         assertThat(executedTaskNames).containsExactly("b", "c", "a");
     }
 
     @Test
-    public void shouldThrowWhenTaskExecutionFails() {
-        final var executor = new InitTaskExecutor(ConfigProvider.getConfig(), dataSource, List.of(
+    void shouldNotifyListenerOnTaskCompletion() {
+        final var listener = mock(InitTaskListener.class);
+
+        final var executor = new InitTaskExecutor(config, dataSource, List.of(
+                new TestInitTask(2, "first"),
+                new TestInitTask(1, "second")), listener);
+        executor.execute();
+
+        verify(listener).onTaskCompleted("first");
+        verify(listener).onTaskCompleted("second");
+    }
+
+    @Test
+    void shouldNotifyListenerOnTaskFailure() {
+        final var listener = mock(InitTaskListener.class);
+        final var cause = new IllegalStateException("boom");
+
+        final var executor = new InitTaskExecutor(config, dataSource, List.of(
+                new TestInitTask(1, "test", () -> {
+                    throw cause;
+                })), listener);
+
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(executor::execute);
+
+        verify(listener).onTaskFailed("test");
+    }
+
+    @Test
+    void shouldThrowWhenTaskExecutionFails() {
+        final var executor = new InitTaskExecutor(config, dataSource, List.of(
                 new TestInitTask(1, "test", () -> {
                     throw new IllegalStateException("boom");
-                })));
+                })), null);
 
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(executor::execute)
@@ -69,10 +117,10 @@ public class InitTaskExecutorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void shouldThrowOnDuplicateTaskName() {
-        final var executor = new InitTaskExecutor(ConfigProvider.getConfig(), dataSource, List.of(
+    void shouldThrowOnDuplicateTaskName() {
+        final var executor = new InitTaskExecutor(config, dataSource, List.of(
                 new TestInitTask(1, "test"),
-                new TestInitTask(2, "test")));
+                new TestInitTask(2, "test")), null);
 
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(executor::execute)
@@ -84,9 +132,9 @@ public class InitTaskExecutorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void shouldThrowOnInvalidTaskPriority() {
-        final var executor = new InitTaskExecutor(ConfigProvider.getConfig(), dataSource, List.of(
-                new TestInitTask(-1, "test")));
+    void shouldThrowOnInvalidTaskPriority() {
+        final var executor = new InitTaskExecutor(config, dataSource, List.of(
+                new TestInitTask(-1, "test")), null);
 
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(executor::execute)

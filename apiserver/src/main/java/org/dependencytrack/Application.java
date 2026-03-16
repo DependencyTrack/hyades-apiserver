@@ -21,22 +21,38 @@ package org.dependencytrack;
 import alpine.server.AlpineServlet;
 import alpine.server.filters.WhitelistUrlFilter;
 import alpine.server.persistence.PersistenceManagerFactory;
+import io.github.mweirauch.micrometer.jvm.extras.ProcessMemoryMetrics;
+import io.github.mweirauch.micrometer.jvm.extras.ProcessThreadMetrics;
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmInfoMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
+import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
+import io.micrometer.core.instrument.binder.system.UptimeMetrics;
+import io.micrometer.core.instrument.config.MeterFilter;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
+import io.micrometer.prometheusmetrics.PrometheusConfig;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import jakarta.servlet.DispatcherType;
 import org.dependencytrack.cache.CacheManagerBinder;
 import org.dependencytrack.cache.CacheManagerInitializer;
-import org.dependencytrack.dev.DevServicesInitializer;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.dependencytrack.common.health.HealthCheckRegistry;
+import org.dependencytrack.dev.DevServices;
 import org.dependencytrack.dex.DexEngineBinder;
 import org.dependencytrack.dex.DexEngineInitializer;
 import org.dependencytrack.event.EventSubsystemInitializer;
 import org.dependencytrack.filestorage.FileStorageBinder;
 import org.dependencytrack.filestorage.FileStorageInitializer;
-import org.dependencytrack.init.InitTaskServletContextListener;
+import org.dependencytrack.init.InitTaskExecutor;
+import org.dependencytrack.init.InitTasksHealthCheck;
 import org.dependencytrack.notification.DefaultNotificationPublisherInitializer;
 import org.dependencytrack.notification.NotificationSubsystemInitializer;
-import org.dependencytrack.observability.HealthInitializer;
-import org.dependencytrack.observability.HealthServlet;
-import org.dependencytrack.observability.MetricsInitializer;
-import org.dependencytrack.observability.MetricsServlet;
+import org.dependencytrack.observability.ManagementServer;
 import org.dependencytrack.plugin.PluginInitializer;
 import org.dependencytrack.plugin.PluginManagerBinder;
 import org.dependencytrack.secret.SecretManagerInitializer;
@@ -56,6 +72,8 @@ import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.resource.ResourceFactory;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
@@ -65,6 +83,7 @@ import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import java.net.URL;
 import java.util.EnumSet;
+import java.util.Set;
 
 import static org.glassfish.jersey.server.ServerProperties.BV_SEND_ERROR_IN_RESPONSE;
 import static org.glassfish.jersey.server.ServerProperties.WADL_FEATURE_DISABLE;
@@ -88,6 +107,63 @@ public final class Application {
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
 
+        final Config config = ConfigProvider.getConfig();
+
+        // Start dev services (if enabled) before anything else.
+        final var devServices = new DevServices();
+        devServices.start();
+
+        // Set up health check registry and init tasks health check.
+        final var healthCheckRegistry = new HealthCheckRegistry();
+        healthCheckRegistry.discoverChecks();
+        final var initTasksHealthCheck = new InitTasksHealthCheck();
+        healthCheckRegistry.addCheck(initTasksHealthCheck);
+
+        // Set up metrics.
+        final var prometheusMeterRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        Metrics.addRegistry(prometheusMeterRegistry);
+        configureMeterRegistry(config, Metrics.globalRegistry);
+
+        // Start management server so health and metrics are available during init.
+        final String managementHost = config
+                .getOptionalValue("dt.management.host", String.class)
+                .orElse("0.0.0.0");
+        final int managementPort = config
+                .getOptionalValue("dt.management.port", int.class)
+                .orElse(9000);
+        final var managementServer = new ManagementServer(
+                managementHost,
+                managementPort,
+                healthCheckRegistry,
+                prometheusMeterRegistry,
+                config);
+        try {
+            managementServer.start();
+        } catch (Exception e) {
+            LOGGER.error("Failed to start management server", e);
+            System.exit(-1);
+        }
+
+        // Execute init tasks.
+        final var dataSourceRegistry = DataSourceRegistry.getInstance();
+        if (config.getValue("dt.init.tasks.enabled", boolean.class)) {
+            final String dataSourceName = config.getValue("dt.init.tasks.datasource.name", String.class);
+            final var initTaskExecutor = new InitTaskExecutor(
+                    config, dataSourceRegistry.get(dataSourceName),
+                    initTasksHealthCheck);
+            initTaskExecutor.execute();
+
+            if (config.getValue("dt.init.tasks.datasource.close-after-use", boolean.class)) {
+                dataSourceRegistry.close(dataSourceName);
+            }
+            if (config.getValue("dt.init.and.exit", boolean.class)) {
+                LOGGER.info("Exiting because dt.init.and.exit is enabled");
+                System.exit(0);
+            }
+        }
+        initTasksHealthCheck.markInitialized();
+
+        // Set up and start the main server.
         final var server = new Server();
         server.setStopAtShutdown(true);
 
@@ -123,25 +199,26 @@ public final class Application {
             }
         }
 
-        context.addEventListener(new DevServicesInitializer());
-        context.addEventListener(new HealthInitializer());
-        context.addEventListener(new MetricsInitializer());
-        context.addEventListener(new InitTaskServletContextListener());
         context.addEventListener(new CacheManagerInitializer());
         context.addEventListener(new FileStorageInitializer());
         context.addEventListener(new SecretManagerInitializer());
         context.addEventListener(new PersistenceManagerFactory());
         context.addEventListener(new PluginInitializer());
         context.addEventListener(new DefaultNotificationPublisherInitializer());
-        context.addEventListener(new DexEngineInitializer());
+        context.addEventListener(
+                new DexEngineInitializer(
+                        config,
+                        dataSourceRegistry,
+                        Metrics.globalRegistry,
+                        healthCheckRegistry));
         context.addEventListener(new EventSubsystemInitializer());
         context.addEventListener(new TaskSchedulerInitializer());
         context.addEventListener(new NotificationSubsystemInitializer());
 
         final var whitelistFilter = new FilterHolder(WhitelistUrlFilter.class);
-        whitelistFilter.setInitParameter("allowUrls", "/index.html,/api,/health,/metrics,/.well-known");
+        whitelistFilter.setInitParameter("allowUrls", "/index.html,/api,/.well-known");
         whitelistFilter.setInitParameter("forwardTo", "/index.html");
-        whitelistFilter.setInitParameter("forwardExcludes", "/api,/health,/metrics");
+        whitelistFilter.setInitParameter("forwardExcludes", "/api");
         context.addFilter(whitelistFilter, "/*", EnumSet.of(DispatcherType.REQUEST));
 
         final var apiV1Config = new ResourceConfig();
@@ -165,15 +242,6 @@ public final class Application {
         final var apiV2Servlet = new ServletHolder("REST-API-v2", new ServletContainer(
                 new org.dependencytrack.resources.v2.ResourceConfig()));
         context.addServlet(apiV2Servlet, "/api/v2/*");
-
-        final var healthServlet = new ServletHolder("Health", HealthServlet.class);
-        healthServlet.setInitOrder(1);
-        context.addServlet(healthServlet, "/health/*");
-
-        final var metricsServlet = new ServletHolder("Metrics", MetricsServlet.class);
-        metricsServlet.setInitOrder(1);
-        context.addServlet(metricsServlet, "/metrics");
-
         context.addServlet(new ServletHolder("default", DefaultServlet.class), "/");
 
         final var gzipCompression = new GzipCompression();
@@ -198,7 +266,65 @@ public final class Application {
             server.join();
         } catch (InterruptedException e) {
             LOGGER.warn("Interrupted while waiting for server to stop");
+        } finally {
+            try {
+                LOGGER.debug("Stopping management server");
+                managementServer.close();
+            } catch (Exception e) {
+                LOGGER.warn("Failed to stop management server", e);
+            }
+            try {
+                LOGGER.debug("Stopping dev services");
+                devServices.close();
+            } catch (Exception e) {
+                LOGGER.warn("Failed to stop dev services", e);
+            }
         }
+    }
+
+    private static final Set<String> HISTOGRAM_METER_NAMES = Set.of(
+            "alpine_event_processing",
+            "dt.notification.router.rule.query.latency",
+            "dt.notification.router.rule.filter.latency",
+            "dt.notifications.emit.latency",
+            "dt.outbox.relay.cycle.latency",
+            "dt.outbox.relay.poll.latency",
+            "dt.outbox.relay.send.latency",
+            "pc.user.function.processing.time",
+            "http.server.requests");
+
+    private static void configureMeterRegistry(Config config, MeterRegistry meterRegistry) {
+        final boolean metricsEnabled = config
+                .getOptionalValue("dt.metrics.enabled", boolean.class)
+                .orElse(false);
+        if (!metricsEnabled) {
+            return;
+        }
+
+        meterRegistry.config().meterFilter(new MeterFilter() {
+            @Override
+            public DistributionStatisticConfig configure(Meter.Id id, DistributionStatisticConfig config) {
+                if (HISTOGRAM_METER_NAMES.contains(id.getName())) {
+                    return DistributionStatisticConfig.builder()
+                            .percentiles(/* none */) // Disable client-side calculation of percentiles.
+                            .percentilesHistogram(true) // Publish histogram instead.
+                            .build()
+                            .merge(config);
+                }
+
+                return config;
+            }
+        });
+
+        new ClassLoaderMetrics().bindTo(meterRegistry);
+        new JvmGcMetrics().bindTo(meterRegistry);
+        new JvmInfoMetrics().bindTo(meterRegistry);
+        new JvmMemoryMetrics().bindTo(meterRegistry);
+        new JvmThreadMetrics().bindTo(meterRegistry);
+        new ProcessorMetrics().bindTo(meterRegistry);
+        new ProcessMemoryMetrics().bindTo(meterRegistry);
+        new ProcessThreadMetrics().bindTo(meterRegistry);
+        new UptimeMetrics().bindTo(meterRegistry);
     }
 
 }

@@ -16,25 +16,17 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.observability;
-
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
-import org.dependencytrack.common.health.HealthCheckRegistry;
+package org.dependencytrack.init;
 
 /**
  * @since 5.7.0
  */
-public final class HealthInitializer implements ServletContextListener {
+public interface InitTaskListener {
 
-    @Override
-    public void contextInitialized(ServletContextEvent event) {
-        final var healthCheckRegistry = new HealthCheckRegistry();
-        healthCheckRegistry.discoverChecks();
+    void onTaskStarted(String taskName);
 
-        event.getServletContext().setAttribute(
-                HealthCheckRegistry.class.getName(),
-                healthCheckRegistry);
-    }
+    void onTaskCompleted(String taskName);
+
+    void onTaskFailed(String taskName);
 
 }

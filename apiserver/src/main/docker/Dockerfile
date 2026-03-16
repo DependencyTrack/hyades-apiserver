@@ -95,13 +95,14 @@ CMD [ \
         -context ${CONTEXT}" \
 ]
 
-# Specify which port Dependency-Track listens on
+# Specify which ports Dependency-Track listens on
 EXPOSE 8080
+EXPOSE 9000
 
-# Add a healthcheck using the Dependency-Track version API
+# Health check against the management port
 HEALTHCHECK --interval=30s --start-period=60s --timeout=3s CMD [ \
     "/bin/sh", "-c", \
-    "curl -f -s --max-time 3 --noproxy '*' -o /dev/null http://127.0.0.1:8080${CONTEXT}health" \
+    "curl -f -s --max-time 3 --noproxy '*' -o /dev/null http://127.0.0.1:9000/health" \
 ]
 
 # metadata labels

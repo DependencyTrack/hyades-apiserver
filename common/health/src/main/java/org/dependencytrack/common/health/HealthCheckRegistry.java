@@ -20,10 +20,10 @@ package org.dependencytrack.common.health;
 
 import org.eclipse.microprofile.health.HealthCheck;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static java.util.Objects.requireNonNull;
 
@@ -35,7 +35,7 @@ public final class HealthCheckRegistry {
     private final List<HealthCheck> checks;
 
     public HealthCheckRegistry(List<HealthCheck> checks) {
-        this.checks = new ArrayList<>(checks);
+        this.checks = new CopyOnWriteArrayList<>(checks);
     }
 
     public HealthCheckRegistry() {

@@ -108,9 +108,6 @@ final class Crypto {
             // This must execute in a locked context to avoid race conditions
             // when multiple instances start at the same time,
             // and the create-if-missing option is enabled.
-            //
-            // TODO: Ideally this would be an init task. That requires decoupling
-            //  the init task API from the apiserver module first, though.
 
             final KeysetHandle keysetHandle;
             if (Files.exists(config.getKekKeysetPath())) {

@@ -20,7 +20,6 @@ package org.dependencytrack.dex;
 
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
@@ -83,7 +82,6 @@ import org.dependencytrack.vulnanalysis.VulnAnalysisWorkflow;
 import org.dependencytrack.vulndatasource.MirrorVulnDataSourceActivity;
 import org.dependencytrack.vulndatasource.MirrorVulnDataSourceWorkflow;
 import org.eclipse.microprofile.config.Config;
-import org.eclipse.microprofile.config.ConfigProvider;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,17 +113,14 @@ public final class DexEngineInitializer implements ServletContextListener {
     private final Config config;
     private final DataSourceRegistry dataSourceRegistry;
     private final MeterRegistry meterRegistry;
+    private final HealthCheckRegistry healthCheckRegistry;
     private @Nullable DexEngine engine;
 
-    DexEngineInitializer(Config config, DataSourceRegistry dataSourceRegistry, MeterRegistry meterRegistry) {
+    public DexEngineInitializer(Config config, DataSourceRegistry dataSourceRegistry, MeterRegistry meterRegistry, HealthCheckRegistry healthCheckRegistry) {
         this.config = config;
         this.dataSourceRegistry = dataSourceRegistry;
         this.meterRegistry = meterRegistry;
-    }
-
-    @SuppressWarnings("unused") // Used by servlet container.
-    public DexEngineInitializer() {
-        this(ConfigProvider.getConfig(), DataSourceRegistry.getInstance(), Metrics.globalRegistry);
+        this.healthCheckRegistry = healthCheckRegistry;
     }
 
     @Override
@@ -134,9 +129,6 @@ public final class DexEngineInitializer implements ServletContextListener {
         LOGGER.debug("Effective configuration: {}", engineConfig);
 
         final ServletContext servletContext = event.getServletContext();
-
-        final var healthCheckRegistry = (HealthCheckRegistry) servletContext.getAttribute(HealthCheckRegistry.class.getName());
-        requireNonNull(healthCheckRegistry, "healthCheckRegistry has not been initialized");
 
         final var fileStorage = (FileStorage) servletContext.getAttribute(FileStorage.class.getName());
         requireNonNull(fileStorage, "fileStorage has not been initialized");

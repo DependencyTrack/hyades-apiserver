@@ -19,8 +19,6 @@
 package org.dependencytrack.dev;
 
 import alpine.common.logging.Logger;
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 
@@ -38,16 +36,15 @@ import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_PORT_FRONTEND;
 /**
  * @since 5.5.0
  */
-public class DevServicesInitializer implements ServletContextListener {
+public class DevServices implements AutoCloseable {
 
-    private static final Logger LOGGER = Logger.getLogger(DevServicesInitializer.class);
+    private static final Logger LOGGER = Logger.getLogger(DevServices.class);
 
     private final Config config = ConfigProvider.getConfig();
     private AutoCloseable postgresContainer;
     private AutoCloseable frontendContainer;
 
-    @Override
-    public void contextInitialized(final ServletContextEvent event) {
+    public void start() {
         if (!config.getValue("dt.dev.services.enabled", boolean.class)) {
             return;
         }
@@ -119,7 +116,7 @@ public class DevServicesInitializer implements ServletContextListener {
     }
 
     @Override
-    public void contextDestroyed(final ServletContextEvent event) {
+    public void close() {
         if (postgresContainer != null) {
             LOGGER.info("Stopping postgres container");
             try {
