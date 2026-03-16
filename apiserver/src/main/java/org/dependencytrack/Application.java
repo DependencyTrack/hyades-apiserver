@@ -41,6 +41,8 @@ import org.dependencytrack.plugin.PluginInitializer;
 import org.dependencytrack.plugin.PluginManagerBinder;
 import org.dependencytrack.secret.SecretManagerInitializer;
 import org.dependencytrack.tasks.TaskSchedulerInitializer;
+import org.eclipse.jetty.compression.gzip.GzipCompression;
+import org.eclipse.jetty.compression.server.CompressionHandler;
 import org.eclipse.jetty.ee11.servlet.DefaultServlet;
 import org.eclipse.jetty.ee11.servlet.FilterHolder;
 import org.eclipse.jetty.ee11.servlet.ServletContextHandler;
@@ -174,7 +176,12 @@ public final class Application {
 
         context.addServlet(new ServletHolder("default", DefaultServlet.class), "/");
 
-        server.setHandler(context);
+        final var gzipCompression = new GzipCompression();
+        gzipCompression.setMinCompressSize(1024);
+        final var compressionHandler = new CompressionHandler();
+        compressionHandler.putCompression(gzipCompression);
+        compressionHandler.setHandler(context);
+        server.setHandler(compressionHandler);
 
         try {
             server.start();

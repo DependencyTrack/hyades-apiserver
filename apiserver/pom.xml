@@ -319,6 +319,14 @@
             <artifactId>jetty-server</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.jetty.compression</groupId>
+            <artifactId>jetty-compression-gzip</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.compression</groupId>
+            <artifactId>jetty-compression-server</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.eclipse.jetty.ee11</groupId>
             <artifactId>jetty-ee11-servlet</artifactId>
         </dependency>
