@@ -47,7 +47,7 @@ public class ConfigTest {
 
     @Test
     @RestoreEnvironmentVariables
-    @SetEnvironmentVariable(key = "SMALLRYE_CONFIG_PROFILE", value = "dev")
+    @SetEnvironmentVariable(key = "DT_CONFIG_PROFILE", value = "dev")
     @SetEnvironmentVariable(key = "ALPINE_DATABASE_URL", value = "defaultUrl")
     @SetEnvironmentVariable(key = "_DEV_ALPINE_DATABASE_URL", value = "devUrl")
     @SetEnvironmentVariable(key = "ALPINE_DATABASE_USERNAME", value = "defaultUser")
