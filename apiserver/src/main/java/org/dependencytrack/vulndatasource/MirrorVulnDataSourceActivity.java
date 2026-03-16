@@ -16,31 +16,31 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.tasks;
+package org.dependencytrack.vulndatasource;
 
-import alpine.event.framework.Event;
-import alpine.event.framework.Subscriber;
 import com.google.protobuf.util.Timestamps;
-import net.javacrumbs.shedlock.core.LockConfiguration;
-import net.javacrumbs.shedlock.core.LockExtender;
-import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.common.MdcScope;
+import org.dependencytrack.dex.api.Activity;
+import org.dependencytrack.dex.api.ActivityContext;
+import org.dependencytrack.dex.api.ActivitySpec;
+import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityKey;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.VulnerabilityAliasDao;
+import org.dependencytrack.plugin.NoSuchExtensionException;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
 import org.dependencytrack.util.VulnerabilityUtil;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -53,83 +53,67 @@ import static org.datanucleus.PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY
 import static org.dependencytrack.common.MdcKeys.MDC_VULN_ID;
 import static org.dependencytrack.common.MdcKeys.MDC_VULN_SOURCE;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
-import static org.dependencytrack.util.LockProvider.executeWithLock;
-import static org.dependencytrack.util.LockProvider.isTaskLockToBeExtended;
-import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
 /**
  * @since 5.7.0
  */
-abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
+@ActivitySpec(name = "mirror-vuln-data-source")
+public final class MirrorVulnDataSourceActivity implements Activity<MirrorVulnDataSourceArg, Void> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MirrorVulnDataSourceActivity.class);
 
     private final PluginManager pluginManager;
-    private final Class<? extends Event> eventClass;
-    private final String vulnDataSourceExtensionName;
-    protected final Vulnerability.Source source;
-    protected final Logger logger;
-    private LockConfiguration lockConfig;
-    private Instant lockAcquiredAt;
 
-    AbstractVulnDataSourceMirrorTask(
-            final PluginManager pluginManager,
-            final Class<? extends Event> eventClass,
-            final String vulnDataSourceExtensionName,
-            final Vulnerability.Source source) {
+    public MirrorVulnDataSourceActivity(PluginManager pluginManager) {
         this.pluginManager = pluginManager;
-        this.eventClass = eventClass;
-        this.vulnDataSourceExtensionName = vulnDataSourceExtensionName;
-        this.source = source;
-        this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
     @Override
-    public void inform(final Event e) {
-        if (!eventClass.isAssignableFrom(e.getClass())) {
-            return;
+    public @Nullable Void execute(
+            ActivityContext ctx,
+            @Nullable MirrorVulnDataSourceArg arg) throws Exception {
+        if (arg == null || arg.getDataSourceName().isEmpty()) {
+            throw new TerminalApplicationFailureException("No argument or data source name provided");
         }
 
-        lockConfig = getLockConfigForTask(getClass());
-
+        final Vulnerability.Source source;
         try {
-            executeWithLock(
-                    this.lockConfig,
-                    (LockingTaskExecutor.Task) this::informLocked);
-        } catch (Throwable ex) {
-            logger.error("Failed to acquire lock or execute task", ex);
+            source = Vulnerability.Source.valueOf(arg.getSourceName());
+        } catch (IllegalArgumentException e) {
+            throw new TerminalApplicationFailureException(
+                    "Invalid source name: %s".formatted(arg.getSourceName()));
         }
-    }
 
-    private void informLocked() {
-        lockAcquiredAt = Instant.now();
+        final VulnDataSourceFactory dataSourceFactory;
+        try {
+            dataSourceFactory = pluginManager.getFactory(VulnDataSource.class, arg.getDataSourceName());
+        } catch (NoSuchExtensionException e) {
+            throw new TerminalApplicationFailureException(
+                    "No extension found for data source: %s".formatted(arg.getDataSourceName()), e);
+        }
 
-        final VulnDataSourceFactory dataSourceFactory =
-                pluginManager.getFactory(VulnDataSource.class, vulnDataSourceExtensionName);
         if (!dataSourceFactory.isDataSourceEnabled()) {
-            return;
+            throw new TerminalApplicationFailureException(
+                    "Data source %s is not enabled".formatted(arg.getDataSourceName()));
         }
 
         try (final VulnDataSource dataSource = dataSourceFactory.create()) {
             final var bovBatch = new ArrayList<Bom>(25);
             while (dataSource.hasNext()) {
-                if (Thread.currentThread().isInterrupted()) {
-                    logger.warn("Interrupted before all BOVs could be consumed");
-                    break;
+                if (Thread.interrupted()) {
+                    throw new InterruptedException("Interrupted before all BOVs could be consumed");
                 }
-
-                maybeExtendLock();
+                ctx.maybeHeartbeat();
 
                 final Bom bov = dataSource.next();
                 if (!bov.getVulnerabilities(0).hasRejected()) {
                     bovBatch.add(bov);
                     if (bovBatch.size() == 25) {
-                        processBatch(dataSource, bovBatch);
+                        processBatch(dataSource, bovBatch, source, arg.getDataSourceName());
                         bovBatch.clear();
                     }
                 } else {
-                    // TODO: Store rejection / withdrawal timestamp instead,
-                    //  and let analyzers / users decide how to deal with them.
-                    //  Ignoring withdrawn vulnerabilities is legacy behavior.
-                    logger.warn(
+                    LOGGER.warn(
                             "Skipping vulnerability {} rejected at {}",
                             bov.getVulnerabilities(0).getId(),
                             Timestamps.toString(bov.getVulnerabilities(0).getRejected()));
@@ -137,15 +121,21 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
             }
 
             if (!bovBatch.isEmpty()) {
-                maybeExtendLock();
-                processBatch(dataSource, bovBatch);
+                ctx.maybeHeartbeat();
+                processBatch(dataSource, bovBatch, source, arg.getDataSourceName());
                 bovBatch.clear();
             }
         }
+
+        return null;
     }
 
-    protected void processBatch(final VulnDataSource dataSource, final Collection<Bom> bovs) {
-        logger.debug("Processing batch of {} BOVs", bovs.size());
+    private static void processBatch(
+            VulnDataSource dataSource,
+            Collection<Bom> bovs,
+            Vulnerability.Source source,
+            String dataSourceName) {
+        LOGGER.debug("Processing batch of {} BOVs", bovs.size());
 
         final var vulns = new ArrayList<Vulnerability>(bovs.size());
         final var vsListByVulnId = new HashMap<String, List<VulnerableSoftware>>(bovs.size());
@@ -153,12 +143,12 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
 
         for (final Bom bov : bovs) {
             if (bov.getVulnerabilitiesCount() == 0) {
-                logger.warn("BOV contains no vulnerabilities; Skipping");
+                LOGGER.warn("BOV contains no vulnerabilities; Skipping");
                 continue;
             }
 
             if (bov.getVulnerabilitiesCount() > 1) {
-                logger.warn("BOV contains more than one vulnerability; Skipping");
+                LOGGER.warn("BOV contains more than one vulnerability; Skipping");
                 continue;
             }
 
@@ -184,31 +174,21 @@ abstract class AbstractVulnDataSourceMirrorTask implements Subscriber {
 
             qm.runInTransaction(() -> {
                 for (final Vulnerability vuln : vulns) {
-                    logger.debug("Synchronizing vulnerability {}", vuln.getVulnId());
+                    LOGGER.debug("Synchronizing vulnerability {}", vuln.getVulnId());
                     final Vulnerability persistentVuln = qm.synchronizeVulnerability(vuln, false);
                     final List<VulnerableSoftware> vsList = vsListByVulnId.get(persistentVuln.getVulnId());
-                    qm.synchronizeVulnerableSoftware(persistentVuln, vsList, this.source);
+                    qm.synchronizeVulnerableSoftware(persistentVuln, vsList, source);
                 }
             });
 
             if (!aliasesByVuln.isEmpty()) {
                 useJdbiTransaction(handle -> new VulnerabilityAliasDao(handle)
-                        .syncAssertions("vuln-data-source:" + this.vulnDataSourceExtensionName, aliasesByVuln));
+                        .syncAssertions("vuln-data-source:" + dataSourceName, aliasesByVuln));
             }
-
         }
 
         for (final Bom bov : bovs) {
             dataSource.markProcessed(bov);
-        }
-    }
-
-    private void maybeExtendLock() {
-        final var lockAge = Duration.between(lockAcquiredAt, Instant.now());
-        if (isTaskLockToBeExtended(lockAge.toMillis(), getClass())) {
-            logger.warn("Extending lock by {}", lockConfig.getLockAtMostFor());
-            LockExtender.extendActiveLock(lockConfig.getLockAtMostFor(), this.lockConfig.getLockAtLeastFor());
-            lockAcquiredAt = Instant.now();
         }
     }
 

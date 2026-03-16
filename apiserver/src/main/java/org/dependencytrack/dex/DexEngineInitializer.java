@@ -64,6 +64,7 @@ import org.dependencytrack.proto.internal.workflow.v1.ImportBomArg;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerRes;
+import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
 import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisArg;
 import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisRes;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationActivityArg;
@@ -79,6 +80,8 @@ import org.dependencytrack.vulnanalysis.InvokeVulnAnalyzerActivity;
 import org.dependencytrack.vulnanalysis.PrepareVulnAnalysisActivity;
 import org.dependencytrack.vulnanalysis.ReconcileVulnAnalysisResultsActivity;
 import org.dependencytrack.vulnanalysis.VulnAnalysisWorkflow;
+import org.dependencytrack.vulndatasource.MirrorVulnDataSourceActivity;
+import org.dependencytrack.vulndatasource.MirrorVulnDataSourceWorkflow;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jspecify.annotations.Nullable;
@@ -173,13 +176,18 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
-                new PublishNotificationWorkflow(),
-                protoConverter(PublishNotificationWorkflowArg.class),
+                new ImportBomWorkflow(),
+                protoConverter(ImportBomArg.class),
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
-                new ImportBomWorkflow(),
-                protoConverter(ImportBomArg.class),
+                new MirrorVulnDataSourceWorkflow(),
+                protoConverter(MirrorVulnDataSourceArg.class),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerWorkflow(
+                new PublishNotificationWorkflow(),
+                protoConverter(PublishNotificationWorkflowArg.class),
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
@@ -230,6 +238,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 new InvokeVulnAnalyzerActivity(fileStorage, pluginManager),
                 protoConverter(InvokeVulnAnalyzerArg.class),
                 protoConverter(InvokeVulnAnalyzerRes.class),
+                Duration.ofMinutes(5));
+        engine.registerActivity(
+                new MirrorVulnDataSourceActivity(pluginManager),
+                protoConverter(MirrorVulnDataSourceArg.class),
+                voidConverter(),
                 Duration.ofMinutes(5));
         engine.registerActivity(
                 new PrepareVulnAnalysisActivity(fileStorage, pluginManager),

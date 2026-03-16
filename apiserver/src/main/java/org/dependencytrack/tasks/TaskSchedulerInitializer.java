@@ -32,11 +32,8 @@ import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.event.DefectDojoUploadEventAbstract;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
-import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
-import org.dependencytrack.event.NistMirrorEvent;
-import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
@@ -50,13 +47,19 @@ import org.dependencytrack.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.pkgmetadata.ResolvePackageMetadataWorkflow;
+import org.dependencytrack.plugin.NoSuchExtensionException;
+import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
+import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
 import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.PackageMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
 import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
+import org.dependencytrack.vulndatasource.MirrorVulnDataSourceWorkflow;
+import org.dependencytrack.vulndatasource.api.VulnDataSource;
+import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
@@ -104,6 +107,9 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
 
         final var dexEngine = (DexEngine) event.getServletContext().getAttribute(DexEngine.class.getName());
         requireNonNull(dexEngine, "dexEngine has not been initialized");
+
+        final var pluginManager = (PluginManager) event.getServletContext().getAttribute(PluginManager.class.getName());
+        requireNonNull(pluginManager, "pluginManager has not been initialized");
 
         scheduler
                 .schedule(
@@ -155,8 +161,8 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         })
                 .schedule(
                         "GitHub Advisories Mirror",
-                        getCronScheduleForTask(GitHubAdvisoryMirrorTask.class),
-                        () -> Event.dispatch(new GitHubAdvisoryMirrorEvent()),
+                        getCronScheduleFromConfig(config, "task.git.hub.advisory.mirror.cron"),
+                        () -> maybeCreateVulnDataSourceMirrorWorkflowRun(pluginManager, dexEngine, "github", "GITHUB"),
                         /* triggerOnFirstRun */ true)
                 .schedule(
                         "Internal Component Identification",
@@ -183,13 +189,13 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         () -> Event.dispatch(new MetricsMaintenanceEvent()))
                 .schedule(
                         "NVD Mirror",
-                        getCronScheduleForTask(NistMirrorTask.class),
-                        () -> Event.dispatch(new NistMirrorEvent()),
+                        getCronScheduleFromConfig(config, "task.nist.mirror.cron"),
+                        () -> maybeCreateVulnDataSourceMirrorWorkflowRun(pluginManager, dexEngine, "nvd", "NVD"),
                         /* triggerOnFirstRun */ true)
                 .schedule(
                         "OSV Mirror",
-                        getCronScheduleForTask(OsvMirrorTask.class),
-                        () -> Event.dispatch(new OsvMirrorEvent()),
+                        getCronScheduleFromConfig(config, "task.osv.mirror.cron"),
+                        () -> maybeCreateVulnDataSourceMirrorWorkflowRun(pluginManager, dexEngine, "osv", "OSV"),
                         /* triggerOnFirstRun */ true)
                 .schedule(
                         "Package Metadata Resolution",
@@ -234,6 +240,31 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
     public void contextDestroyed(ServletContextEvent sce) {
         LOGGER.info("Stopping task scheduler");
         scheduler.close();
+    }
+
+    private static void maybeCreateVulnDataSourceMirrorWorkflowRun(
+            PluginManager pluginManager,
+            DexEngine dexEngine,
+            String dataSourceName,
+            String sourceName) {
+        final VulnDataSourceFactory factory;
+        try {
+            factory = pluginManager.getFactory(VulnDataSource.class, dataSourceName);
+        } catch (NoSuchExtensionException e) {
+            return;
+        }
+
+        if (!factory.isDataSourceEnabled()) {
+            return;
+        }
+
+        dexEngine.createRun(
+                new CreateWorkflowRunRequest<>(MirrorVulnDataSourceWorkflow.class)
+                        .withWorkflowInstanceId("mirror-vuln-data-source:" + dataSourceName)
+                        .withArgument(MirrorVulnDataSourceArg.newBuilder()
+                                .setDataSourceName(dataSourceName)
+                                .setSourceName(sourceName)
+                                .build()));
     }
 
 }
