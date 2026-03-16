@@ -205,7 +205,7 @@ public final class DexEngineInitializer implements ServletContextListener {
                 new ImportBomActivity(
                         fileStorage,
                         engine,
-                        config.getOptionalValue("tmp.delay.bom.processed.notification", boolean.class).orElse(false)),
+                        config.getOptionalValue("dt.tmp.delay.bom.processed.notification", boolean.class).orElse(false)),
                 protoConverter(ImportBomArg.class),
                 voidConverter(),
                 Duration.ofMinutes(5));
@@ -318,7 +318,7 @@ public final class DexEngineInitializer implements ServletContextListener {
 
         engine.addEventListener(new ProjectVulnAnalysisCompleteNotificationEmitter());
         if (config
-                .getOptionalValue("tmp.delay.bom.processed.notification", boolean.class)
+                .getOptionalValue("dt.tmp.delay.bom.processed.notification", boolean.class)
                 .orElse(false)) {
             engine.addEventListener(new DelayedBomProcessedNotificationEmitter());
         }

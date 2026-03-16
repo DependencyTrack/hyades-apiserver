@@ -57,7 +57,7 @@ class HttpClientTest {
         final var config = new SmallRyeConfigBuilder()
                 .withDefaultValue("alpine.build-info.application.name", "TestApp")
                 .withDefaultValue("alpine.build-info.application.version", "1.2.3")
-                .withDefaultValue("alpine.http.timeout.connection", "10")
+                .withDefaultValue("dt.http.timeout.connection", "10")
                 .build();
 
         final var client = HttpClient.create(

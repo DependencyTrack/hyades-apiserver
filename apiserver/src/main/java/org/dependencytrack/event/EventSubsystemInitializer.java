@@ -123,7 +123,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         LOGGER.info("Shutting down asynchronous event subsystem");
 
         final var drainTimeout = config
-                .getOptionalValue("alpine.worker.pool.drain.timeout.duration", Duration.class)
+                .getOptionalValue("dt.worker.pool.drain.timeout.duration", Duration.class)
                 .orElse(Duration.ofSeconds(30));
 
         eventService.unsubscribe(VexUploadProcessingTask.class);

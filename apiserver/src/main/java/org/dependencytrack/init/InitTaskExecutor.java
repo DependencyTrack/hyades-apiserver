@@ -190,7 +190,7 @@ final class InitTaskExecutor implements ServletContextListener {
 
     private Predicate<InitTask> isTaskEnabled() {
         return task -> config.getOptionalValue(
-                "init.task.%s.enabled".formatted(task.name()), Boolean.class).orElse(true);
+                "dt.init.task.%s.enabled".formatted(task.name()), Boolean.class).orElse(true);
     }
 
 }

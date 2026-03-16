@@ -118,7 +118,7 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         () -> Event.dispatch(new PackageMetadataMaintenanceEvent()))
                 .schedule(
                         "CSAF Document Import",
-                        getCronScheduleFromConfig(config, "task.csaf.document.import.cron"),
+                        getCronScheduleFromConfig(config, "dt.task.csaf.document.import.cron"),
                         () -> {
                             final List<? extends CreateWorkflowRunRequest<?>> requests =
                                     withJdbiHandle(handle -> PageIterator.stream(
@@ -161,7 +161,7 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         })
                 .schedule(
                         "GitHub Advisories Mirror",
-                        getCronScheduleFromConfig(config, "task.git.hub.advisory.mirror.cron"),
+                        getCronScheduleFromConfig(config, "dt.task.git.hub.advisory.mirror.cron"),
                         () -> maybeCreateVulnDataSourceMirrorWorkflowRun(pluginManager, dexEngine, "github", "GITHUB"),
                         /* triggerOnFirstRun */ true)
                 .schedule(
@@ -189,17 +189,17 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         () -> Event.dispatch(new MetricsMaintenanceEvent()))
                 .schedule(
                         "NVD Mirror",
-                        getCronScheduleFromConfig(config, "task.nist.mirror.cron"),
+                        getCronScheduleFromConfig(config, "dt.task.nist.mirror.cron"),
                         () -> maybeCreateVulnDataSourceMirrorWorkflowRun(pluginManager, dexEngine, "nvd", "NVD"),
                         /* triggerOnFirstRun */ true)
                 .schedule(
                         "OSV Mirror",
-                        getCronScheduleFromConfig(config, "task.osv.mirror.cron"),
+                        getCronScheduleFromConfig(config, "dt.task.osv.mirror.cron"),
                         () -> maybeCreateVulnDataSourceMirrorWorkflowRun(pluginManager, dexEngine, "osv", "OSV"),
                         /* triggerOnFirstRun */ true)
                 .schedule(
                         "Package Metadata Resolution",
-                        getCronScheduleFromConfig(config, "task.package-metadata-resolution.cron"),
+                        getCronScheduleFromConfig(config, "dt.task.package-metadata-resolution.cron"),
                         () -> {
                             dexEngine.createRun(
                                     new CreateWorkflowRunRequest<>(ResolvePackageMetadataWorkflow.class)

@@ -34,7 +34,7 @@ class ThreadUtilTest {
 
     @Test
     void determineNumberOfWorkerThreadsStaticTest() {
-        MemoryConfigSource.setProperty("alpine.worker.threads", "10");
+        MemoryConfigSource.setProperty("dt.worker.threads", "10");
 
         Assertions.assertEquals(10, ThreadUtil.determineNumberOfWorkerThreads());
     }
@@ -43,7 +43,7 @@ class ThreadUtilTest {
     @RestoreEnvironmentVariables
     @SetEnvironmentVariable(key = "ALPINE_WORKER_THREADS", value = "0")
     void determineNumberOfWorkerThreadsDynamicTest() {
-        MemoryConfigSource.setProperty("alpine.worker.threads", "0");
+        MemoryConfigSource.setProperty("dt.worker.threads", "0");
 
         Assertions.assertTrue(ThreadUtil.determineNumberOfWorkerThreads() > 0);
     }

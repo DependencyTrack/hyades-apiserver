@@ -18,7 +18,6 @@
  */
 package alpine.persistence;
 
-import alpine.Config;
 import org.datanucleus.PropertyNames;
 
 import java.util.Properties;
@@ -50,7 +49,8 @@ public final class JdoProperties {
         properties.put(PropertyNames.PROPERTY_RETAIN_VALUES, "true");
         properties.put(PropertyNames.PROPERTY_METADATA_ALLOW_XML, "false");
         properties.put(PropertyNames.PROPERTY_METADATA_SUPPORT_ORM, "false");
-        properties.putAll(Config.getInstance().getPassThroughProperties("datanucleus"));
+        properties.put(PropertyNames.PROPERTY_EXECUTION_CONTEXT_MAX_IDLE, "0");
+        properties.put(PropertyNames.PROPERTY_DELETION_POLICY, "DataNucleus");
         return properties;
     }
 }

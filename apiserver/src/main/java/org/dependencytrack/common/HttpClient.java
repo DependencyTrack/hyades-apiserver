@@ -86,7 +86,7 @@ public final class HttpClient extends java.net.http.HttpClient {
                         SystemUtil.getOsVersion());
 
         final int connectTimeoutSeconds = config
-                .getOptionalValue("alpine.http.timeout.connection", int.class)
+                .getOptionalValue("dt.http.timeout.connection", int.class)
                 .orElse(30);
         final var clientBuilder = java.net.http.HttpClient.newBuilder()
                 .proxy(new ProxySelector(proxyConfig))
