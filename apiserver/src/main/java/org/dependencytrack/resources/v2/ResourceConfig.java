@@ -21,7 +21,6 @@ package org.dependencytrack.resources.v2;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
-import alpine.server.filters.GZipInterceptor;
 import alpine.server.filters.HeaderFilter;
 import alpine.server.filters.RequestIdFilter;
 import alpine.server.filters.RequestMdcEnrichmentFilter;
@@ -66,7 +65,6 @@ public final class ResourceConfig extends org.glassfish.jersey.server.ResourceCo
         register(ApiFilter.class);
         register(AuthenticationFeature.class);
         register(AuthorizationFeature.class);
-        register(GZipInterceptor.class);
         register(HeaderFilter.class);
         register(JacksonFeature.withoutExceptionMappers());
         register(JerseyMetricsApplicationEventListener.class);
