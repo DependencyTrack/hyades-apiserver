@@ -21,6 +21,7 @@ package org.dependencytrack;
 import alpine.server.AlpineServlet;
 import alpine.server.filters.WhitelistUrlFilter;
 import alpine.server.persistence.PersistenceManagerFactory;
+import ch.qos.logback.classic.LoggerContext;
 import io.github.mweirauch.micrometer.jvm.extras.ProcessMemoryMetrics;
 import io.github.mweirauch.micrometer.jvm.extras.ProcessThreadMetrics;
 import io.micrometer.core.instrument.Meter;
@@ -52,6 +53,7 @@ import org.dependencytrack.init.InitTaskExecutor;
 import org.dependencytrack.init.InitTasksHealthCheck;
 import org.dependencytrack.notification.DefaultNotificationPublisherInitializer;
 import org.dependencytrack.notification.NotificationSubsystemInitializer;
+import org.dependencytrack.observability.LoggingConfiguration;
 import org.dependencytrack.observability.ManagementServer;
 import org.dependencytrack.plugin.PluginInitializer;
 import org.dependencytrack.plugin.PluginManagerBinder;
@@ -108,6 +110,7 @@ public final class Application {
         SLF4JBridgeHandler.install();
 
         final Config config = ConfigProvider.getConfig();
+        new LoggingConfiguration(config).apply((LoggerContext) LoggerFactory.getILoggerFactory());
 
         // Start dev services (if enabled) before anything else.
         final var devServices = new DevServices();

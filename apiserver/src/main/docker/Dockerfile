@@ -44,8 +44,6 @@ ARG UID
 ARG GID
 
 ENV TZ=Etc/UTC \
-    # Dependency-Track's default logging level
-    LOGGING_LEVEL=INFO \
     # JVM Options that are passed at runtime by default
     JAVA_OPTIONS="-XX:+UseG1GC -XX:+UseStringDeduplication -XX:+UseCompactObjectHeaders -XX:MaxGCPauseMillis=250 -XX:MaxRAMPercentage=80.0" \
     # JVM Options that can be passed at runtime, while maintaining also those set in JAVA_OPTIONS.
@@ -89,7 +87,6 @@ CMD [ \
         --add-opens java.base/java.util.concurrent=ALL-UNNAMED \
         --enable-native-access=ALL-UNNAMED \
         --sun-misc-unsafe-memory-access=allow \
-        -DdependencyTrack.logging.level=${LOGGING_LEVEL} \
         -cp 'dependency-track-apiserver.jar:lib/*' \
         org.dependencytrack.Application \
         -context ${CONTEXT}" \

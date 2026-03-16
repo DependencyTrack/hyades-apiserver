@@ -8,15 +8,15 @@
         </encoder>
     </appender>
 
-    <logger name="alpine" level="${dependencyTrack.logging.level:-INFO}" additivity="false">
+    <logger name="alpine" level="INFO" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>
 
-    <logger name="org.dependencytrack" level="${dependencyTrack.logging.level:-INFO}" additivity="false">
+    <logger name="org.dependencytrack" level="INFO" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>
 
-    <logger name="org.eclipse.jetty" level="${dependencyTrack.logging.level:-INFO}" additivity="false">
+    <logger name="org.eclipse.jetty" level="INFO" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>
 
