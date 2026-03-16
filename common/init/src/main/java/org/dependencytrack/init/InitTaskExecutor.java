@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.init;
 
-import jakarta.servlet.ServletContextListener;
 import org.eclipse.microprofile.config.Config;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +42,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * @since 5.6.0
  */
-final class InitTaskExecutor implements ServletContextListener {
+public final class InitTaskExecutor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InitTaskExecutor.class);
     private static final long ADVISORY_LOCK_KEY = "dependency-track-init-tasks".hashCode();
@@ -50,15 +50,17 @@ final class InitTaskExecutor implements ServletContextListener {
     private final Config config;
     private final DataSource dataSource;
     private final List<InitTask> tasks;
+    private final @Nullable InitTaskListener listener;
 
-    InitTaskExecutor(final Config config, final DataSource dataSource) {
-        this(config, dataSource, loadInitTasks());
+    public InitTaskExecutor(Config config, DataSource dataSource, @Nullable InitTaskListener listener) {
+        this(config, dataSource, loadInitTasks(), listener);
     }
 
-    InitTaskExecutor(final Config config, final DataSource dataSource, final List<InitTask> tasks) {
+    InitTaskExecutor(Config config, DataSource dataSource, List<InitTask> tasks, @Nullable InitTaskListener listener) {
         this.config = requireNonNull(config, "config must not be null");
         this.dataSource = requireNonNull(dataSource, "dataSource must not be null");
         this.tasks = requireNonNull(tasks, "tasks must not be null");
+        this.listener = listener;
     }
 
     public void execute() {
@@ -126,13 +128,22 @@ final class InitTaskExecutor implements ServletContextListener {
                 for (final InitTask task : orderedTasks) {
                     taskStartTimeNanos = System.nanoTime();
                     LOGGER.info("Executing init task {}", task.name());
+                    if (listener != null) {
+                        listener.onTaskStarted(task.name());
+                    }
                     try {
                         task.execute(taskContext);
                         LOGGER.info(
                                 "Completed init task {} in {}ms",
                                 task.name(),
                                 TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - taskStartTimeNanos));
+                        if (listener != null) {
+                            listener.onTaskCompleted(task.name());
+                        }
                     } catch (Exception e) {
+                        if (listener != null) {
+                            listener.onTaskFailed(task.name());
+                        }
                         throw new IllegalStateException("Failed to execute init task " + task.name(), e);
                     }
                 }

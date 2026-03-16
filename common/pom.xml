@@ -34,6 +34,7 @@
         <module>config</module>
         <module>datasource</module>
         <module>health</module>
+        <module>init</module>
         <module>pagination</module>
     </modules>
 

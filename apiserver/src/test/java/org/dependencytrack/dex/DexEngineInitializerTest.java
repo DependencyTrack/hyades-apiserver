@@ -98,8 +98,6 @@ class DexEngineInitializerTest {
         final var servletContextMock = mock(ServletContext.class);
         doReturn(cacheManager)
                 .when(servletContextMock).getAttribute(eq(CacheManager.class.getName()));
-        doReturn(healthCheckRegistry)
-                .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
         doReturn(new MemoryFileStorage())
                 .when(servletContextMock).getAttribute(eq(FileStorage.class.getName()));
         doReturn(new PluginManager(config, cacheManager, secretManager::getSecretValue, Collections.emptyList()))
@@ -107,7 +105,7 @@ class DexEngineInitializerTest {
         doReturn(secretManager)
                 .when(servletContextMock).getAttribute(eq(SecretManager.class.getName()));
 
-        initializer = new DexEngineInitializer(config, dataSourceRegistry, new SimpleMeterRegistry());
+        initializer = new DexEngineInitializer(config, dataSourceRegistry, new SimpleMeterRegistry(), healthCheckRegistry);
         initializer.contextInitialized(new ServletContextEvent(servletContextMock));
 
         final var engineCaptor = ArgumentCaptor.forClass(DexEngine.class);
