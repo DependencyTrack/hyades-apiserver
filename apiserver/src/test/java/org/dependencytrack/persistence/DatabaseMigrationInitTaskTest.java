@@ -73,9 +73,9 @@ public class DatabaseMigrationInitTaskTest {
 
     @Test
     @WithConfigProperty(value = {
-            "alpine.database.url=${testcontainers.postgresql.jdbc-url}",
-            "alpine.database.username=${testcontainers.postgresql.username}",
-            "alpine.database.password=${testcontainers.postgresql.password}"
+            "dt.database.url=${testcontainers.postgresql.jdbc-url}",
+            "dt.database.username=${testcontainers.postgresql.username}",
+            "dt.database.password=${testcontainers.postgresql.password}"
     })
     public void test() throws Exception {
         new DatabaseMigrationInitTask().execute(new InitTaskContext(ConfigProvider.getConfig(), dataSource));
@@ -85,11 +85,11 @@ public class DatabaseMigrationInitTaskTest {
 
     @Test
     @WithConfigProperty(value = {
-            "alpine.database.url=${testcontainers.postgresql.jdbc-url}",
-            "alpine.database.username=username",
-            "alpine.database.password=password",
-            "init.tasks.database.username=${testcontainers.postgresql.username}",
-            "init.tasks.database.password=${testcontainers.postgresql.password}"
+            "dt.database.url=${testcontainers.postgresql.jdbc-url}",
+            "dt.database.username=username",
+            "dt.database.password=password",
+            "dt.init.tasks.database.username=${testcontainers.postgresql.username}",
+            "dt.init.tasks.database.password=${testcontainers.postgresql.password}"
     })
     public void testWithMigrationCredentials() throws Exception {
         new DatabaseMigrationInitTask().execute(new InitTaskContext(ConfigProvider.getConfig(), dataSource));

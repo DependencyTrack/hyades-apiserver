@@ -48,7 +48,7 @@ public class DevServicesInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (!config.getValue("dev.services.enabled", boolean.class)) {
+        if (!config.getValue("dt.dev.services.enabled", boolean.class)) {
             return;
         }
 

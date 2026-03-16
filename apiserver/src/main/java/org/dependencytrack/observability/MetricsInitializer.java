@@ -74,10 +74,9 @@ public final class MetricsInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent ignored) {
-        final boolean metricsEnabled =
-                config.getOptionalValue("dt.metrics.enabled", boolean.class)
-                        .or(() -> config.getOptionalValue("alpine.metrics.enabled", boolean.class))
-                        .orElse(false);
+        final boolean metricsEnabled = config
+                .getOptionalValue("dt.metrics.enabled", boolean.class)
+                .orElse(false);
         if (!metricsEnabled) {
             return;
         }

@@ -55,9 +55,6 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
 
         final var dnProps = new Properties();
 
-        // Apply pass-through properties.
-        dnProps.putAll(Config.getInstance().getPassThroughProperties("datanucleus"));
-
         // Apply settings that are required by Alpine and shouldn't be customized.
         dnProps.put(PropertyNames.PROPERTY_CACHE_L2_TYPE, "none");
         dnProps.put(PropertyNames.PROPERTY_QUERY_JDOQL_ALLOWALL, "true");
@@ -65,6 +62,8 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
         dnProps.put(PropertyNames.PROPERTY_METADATA_ALLOW_XML, "false");
         dnProps.put(PropertyNames.PROPERTY_METADATA_SUPPORT_ORM, "false");
         dnProps.put(PropertyNames.PROPERTY_ENABLE_STATISTICS, "true");
+        dnProps.put(PropertyNames.PROPERTY_EXECUTION_CONTEXT_MAX_IDLE, "0");
+        dnProps.put(PropertyNames.PROPERTY_DELETION_POLICY, "DataNucleus");
 
         final DataSource dataSource = DataSourceRegistry.getInstance().getDefault();
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY, dataSource);

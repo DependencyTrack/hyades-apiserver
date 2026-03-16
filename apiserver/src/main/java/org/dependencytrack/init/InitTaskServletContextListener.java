@@ -52,23 +52,23 @@ public final class InitTaskServletContextListener implements ServletContextListe
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (!config.getValue("init.tasks.enabled", boolean.class)) {
-            LOGGER.debug("Not executing init tasks because init.tasks.enabled is disabled");
+        if (!config.getValue("dt.init.tasks.enabled", boolean.class)) {
+            LOGGER.debug("Not executing init tasks because dt.init.tasks.enabled is disabled");
             return;
         }
 
-        final String dataSourceName = config.getValue("init.tasks.datasource.name", String.class);
+        final String dataSourceName = config.getValue("dt.init.tasks.datasource.name", String.class);
         final DataSource dataSource = dataSourceRegistry.get(dataSourceName);
 
         final var taskExecutor = new InitTaskExecutor(config, dataSource);
         taskExecutor.execute();
 
-        if (config.getValue("init.tasks.datasource.close-after-use", boolean.class)) {
+        if (config.getValue("dt.init.tasks.datasource.close-after-use", boolean.class)) {
             dataSourceRegistry.close(dataSourceName);
         }
 
-        if (config.getValue("init.and.exit", boolean.class)) {
-            LOGGER.info("Exiting because init.and.exit is enabled");
+        if (config.getValue("dt.init.and.exit", boolean.class)) {
+            LOGGER.info("Exiting because dt.init.and.exit is enabled");
             System.exit(0);
         }
     }

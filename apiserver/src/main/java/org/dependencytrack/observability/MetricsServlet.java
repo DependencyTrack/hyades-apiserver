@@ -63,14 +63,14 @@ public final class MetricsServlet extends HttpServlet {
 
     @Override
     public void init() throws ServletException {
-        metricsEnabled = config.getOptionalValue("dt.metrics.enabled", boolean.class)
-                .or(() -> config.getOptionalValue("alpine.metrics.enabled", boolean.class))
+        metricsEnabled = config
+                .getOptionalValue("dt.metrics.enabled", boolean.class)
                 .orElse(false);
-        basicAuthUsername = config.getOptionalValue("dt.metrics.auth.username", String.class)
-                .or(() -> config.getOptionalValue("alpine.metrics.auth.username", String.class))
+        basicAuthUsername = config
+                .getOptionalValue("dt.metrics.auth.username", String.class)
                 .orElse(null);
-        basicAuthPassword = config.getOptionalValue("dt.metrics.auth.password", String.class)
-                .or(() -> config.getOptionalValue("alpine.metrics.auth.password", String.class))
+        basicAuthPassword = config
+                .getOptionalValue("dt.metrics.auth.password", String.class)
                 .orElse(null);
 
         if (metricsEnabled && meterRegistry == null) {

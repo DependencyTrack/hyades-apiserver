@@ -60,7 +60,7 @@ class MetricsServletTest {
     @Test
     void shouldRespondWithMetricsWhenEnabled() throws Exception {
         final var config = new SmallRyeConfigBuilder()
-                .withDefaultValue("alpine.metrics.enabled", "true")
+                .withDefaultValue("dt.metrics.enabled", "true")
                 .build();
 
         when(responseMock.getOutputStream()).thenReturn(responseOutputStreamMock);
@@ -96,9 +96,9 @@ class MetricsServletTest {
     @Test
     void shouldRespondWithMetricsWhenEnabledAndAuthenticated() throws Exception {
         final var config = new SmallRyeConfigBuilder()
-                .withDefaultValue("alpine.metrics.enabled", "true")
-                .withDefaultValue("alpine.metrics.auth.username", "metrics-user")
-                .withDefaultValue("alpine.metrics.auth.password", "metrics-password")
+                .withDefaultValue("dt.metrics.enabled", "true")
+                .withDefaultValue("dt.metrics.auth.username", "metrics-user")
+                .withDefaultValue("dt.metrics.auth.password", "metrics-password")
                 .build();
 
         when(requestMock.getHeader(eq(HttpHeaders.AUTHORIZATION))).thenReturn("Basic bWV0cmljcy11c2VyOm1ldHJpY3MtcGFzc3dvcmQ");
@@ -124,9 +124,9 @@ class MetricsServletTest {
     @Test
     void shouldRespondWithUnauthorizedWhenEnabledAndAuthenticationFailed() throws Exception {
         final var config = new SmallRyeConfigBuilder()
-                .withDefaultValue("alpine.metrics.enabled", "true")
-                .withDefaultValue("alpine.metrics.auth.username", "metrics-user")
-                .withDefaultValue("alpine.metrics.auth.password", "metrics-password")
+                .withDefaultValue("dt.metrics.enabled", "true")
+                .withDefaultValue("dt.metrics.auth.username", "metrics-user")
+                .withDefaultValue("dt.metrics.auth.password", "metrics-password")
                 .build();
 
         when(requestMock.getHeader(eq(HttpHeaders.AUTHORIZATION))).thenReturn("Basic Zm9vOmJhcg");
