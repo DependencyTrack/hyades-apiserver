@@ -794,7 +794,7 @@
                                     <mainClass>org.dependencytrack.Application</mainClass>
                                     <systemProperties>
                                         <systemProperty>
-                                            <key>smallrye.config.profile</key>
+                                            <key>dt.config.profile</key>
                                             <value>dev</value>
                                         </systemProperty>
                                         <systemProperty>
