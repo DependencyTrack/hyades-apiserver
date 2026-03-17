@@ -16,19 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.vulnanalysis.api;
+@NullMarked
+package org.dependencytrack.vulnanalysis.trivy;
 
-/**
- * @since 5.7.0
- */
-public enum VulnAnalyzerRequirement {
-
-    COMPONENT_CPE,
-
-    COMPONENT_PURL,
-
-    COMPONENT_TYPE,
-
-    COMPONENT_PROPERTIES
-
-}
+import org.jspecify.annotations.NullMarked;

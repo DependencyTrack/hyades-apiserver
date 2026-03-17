@@ -30,6 +30,7 @@ import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.vulnanalysis.internal.InternalVulnAnalyzerPlugin;
 import org.dependencytrack.vulnanalysis.ossindex.OssIndexVulnAnalyzerPlugin;
 import org.dependencytrack.vulnanalysis.snyk.SnykVulnAnalyzerPlugin;
+import org.dependencytrack.vulnanalysis.trivy.TrivyVulnAnalyzerPlugin;
 import org.dependencytrack.vulnanalysis.vulndb.VulnDbVulnAnalyzerPlugin;
 import org.dependencytrack.vulndatasource.github.GitHubVulnDataSourcePlugin;
 import org.dependencytrack.vulndatasource.nvd.NvdVulnDataSourcePlugin;
@@ -101,6 +102,7 @@ class PluginInitializerTest extends PersistenceCapableTest {
                 plugin -> assertThat(plugin).isInstanceOf(OssIndexVulnAnalyzerPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(OsvVulnDataSourcePlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(SnykVulnAnalyzerPlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(TrivyVulnAnalyzerPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(VulnDbVulnAnalyzerPlugin.class));
 
         initializer.contextDestroyed(new ServletContextEvent(servletContextMock));

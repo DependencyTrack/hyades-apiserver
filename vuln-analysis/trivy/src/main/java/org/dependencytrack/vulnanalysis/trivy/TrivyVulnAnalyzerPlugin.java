@@ -16,19 +16,20 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.vulnanalysis.api;
+package org.dependencytrack.vulnanalysis.trivy;
 
-/**
- * @since 5.7.0
- */
-public enum VulnAnalyzerRequirement {
+import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.Plugin;
 
-    COMPONENT_CPE,
+import java.util.Collection;
+import java.util.List;
 
-    COMPONENT_PURL,
+public final class TrivyVulnAnalyzerPlugin implements Plugin {
 
-    COMPONENT_TYPE,
-
-    COMPONENT_PROPERTIES
+    @Override
+    public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
+        return List.of(new TrivyVulnAnalyzerFactory());
+    }
 
 }

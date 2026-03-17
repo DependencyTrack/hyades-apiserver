@@ -38,7 +38,11 @@ public final class MockVulnAnalyzerPlugin implements Plugin {
     private final MockVulnAnalyzerFactory factory;
 
     public MockVulnAnalyzerPlugin(Function<Bom, Bom> analyzeFn) {
-        this.factory = new MockVulnAnalyzerFactory(analyzeFn);
+        this.factory = new MockVulnAnalyzerFactory(analyzeFn, EnumSet.of(VulnAnalyzerRequirement.COMPONENT_PURL));
+    }
+
+    public MockVulnAnalyzerPlugin(Function<Bom, Bom> analyzeFn, EnumSet<VulnAnalyzerRequirement> requirements) {
+        this.factory = new MockVulnAnalyzerFactory(analyzeFn, requirements);
     }
 
     @Override
@@ -63,9 +67,11 @@ public final class MockVulnAnalyzerPlugin implements Plugin {
     private static final class MockVulnAnalyzerFactory implements VulnAnalyzerFactory {
 
         private final Function<Bom, Bom> analyzeFn;
+        private final EnumSet<VulnAnalyzerRequirement> requirements;
 
-        MockVulnAnalyzerFactory(Function<Bom, Bom> analyzeFn) {
+        MockVulnAnalyzerFactory(Function<Bom, Bom> analyzeFn, EnumSet<VulnAnalyzerRequirement> requirements) {
             this.analyzeFn = analyzeFn;
+            this.requirements = requirements;
         }
 
         @Override
@@ -94,7 +100,7 @@ public final class MockVulnAnalyzerPlugin implements Plugin {
 
         @Override
         public @NonNull EnumSet<VulnAnalyzerRequirement> analyzerRequirements() {
-            return EnumSet.of(VulnAnalyzerRequirement.COMPONENT_PURL);
+            return requirements;
         }
     }
 
