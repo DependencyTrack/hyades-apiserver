@@ -38,9 +38,13 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.security.GeneralSecurityException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Set;
-import java.util.concurrent.Callable;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * @since 5.7.0
@@ -104,7 +108,7 @@ final class Crypto {
         // external KMSes would be relatively easy to add if requested.
         // https://developers.google.com/tink/key-management-overview
 
-        return doLocked(() -> {
+        return doLocked(connection -> {
             // This must execute in a locked context to avoid race conditions
             // when multiple instances start at the same time,
             // and the create-if-missing option is enabled.
@@ -154,24 +158,136 @@ final class Crypto {
                         """.formatted(config.getKekKeysetPath()));
             }
 
+            verifyOrStoreKekKeyIds(connection, keysetHandle);
+
             return keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead.class);
         });
     }
 
-    private <T> T doLocked(final Callable<T> callable) {
-        try (final Connection connection = dataSource.getConnection();
-             final PreparedStatement ps = connection.prepareStatement("""
-                     SELECT pg_advisory_xact_lock(?)
-                     """)) {
-            ps.setLong(1, ADVISORY_LOCK_ID);
-            ps.execute();
+    static Set<Integer> extractKeyIds(final KeysetHandle keysetHandle) {
+        return IntStream.range(0, keysetHandle.size())
+                .mapToObj(i -> keysetHandle.getAt(i).getId())
+                .collect(Collectors.toCollection(TreeSet::new));
+    }
 
-            return callable.call();
-        } catch (SQLException e) {
-            throw new IllegalStateException("Failed to acquire advisory lock", e);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
+    private static String serializeKeyIds(Set<Integer> keyIds) {
+        return keyIds.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining(","));
+    }
+
+    private static Set<Integer> deserializeKeyIds(String value) {
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Integer::parseInt)
+                .collect(Collectors.toCollection(TreeSet::new));
+    }
+
+    private static void verifyOrStoreKekKeyIds(Connection connection, KeysetHandle keysetHandle) throws SQLException {
+        // Prevent the scenario where multiple nodes generate different KEK keysets,
+        // which could lead to secret decryption failures at runtime.
+
+        final Set<Integer> loadedKeyIds = extractKeyIds(keysetHandle);
+
+        final String existingValue;
+        try (final PreparedStatement ps = connection.prepareStatement("""
+                SELECT "PROPERTYVALUE"
+                  FROM "CONFIGPROPERTY"
+                 WHERE "GROUPNAME" = 'secret-management'
+                   AND "PROPERTYNAME" = 'kek-keyset-key-ids'
+                """)) {
+            final ResultSet rs = ps.executeQuery();
+            existingValue = rs.next()
+                    ? rs.getString(1)
+                    : null;
         }
+
+        if (existingValue == null) {
+            upsertKeyIds(connection, serializeKeyIds(loadedKeyIds));
+            return;
+        }
+
+        final Set<Integer> storedKeyIds = deserializeKeyIds(existingValue);
+        if (loadedKeyIds.equals(storedKeyIds)) {
+            return;
+        }
+
+        // Rotation: the loaded keyset contains all previously known keys AND new ones.
+        if (loadedKeyIds.containsAll(storedKeyIds)) {
+            LoggerFactory
+                    .getLogger(DatabaseSecretManager.class)
+                    .info("KEK keyset has been rotated; Updating stored key IDs");
+            upsertKeyIds(connection, serializeKeyIds(loadedKeyIds));
+            return;
+        }
+
+        throw new IllegalStateException("""
+                KEK keyset mismatch. The loaded keyset does not contain all keys previously \
+                registered in the database (expected at least %s, got %s). This typically indicates \
+                that multiple nodes are using different KEK keysets, which leads to silent data \
+                corruption. Ensure all nodes share the same KEK keyset file (e.g. via a Kubernetes \
+                secret mount, or shared volume).""".formatted(serializeKeyIds(storedKeyIds), serializeKeyIds(loadedKeyIds)));
+    }
+
+    private static void upsertKeyIds(Connection connection, String keyIdsValue) throws SQLException {
+        try (final PreparedStatement ps = connection.prepareStatement("""
+                INSERT INTO "CONFIGPROPERTY" ("GROUPNAME", "PROPERTYNAME", "PROPERTYTYPE", "PROPERTYVALUE")
+                VALUES ('secret-management', 'kek-keyset-key-ids', 'STRING', ?)
+                ON CONFLICT ("GROUPNAME", "PROPERTYNAME")
+                DO UPDATE SET "PROPERTYVALUE" = ?
+                """)) {
+            ps.setString(1, keyIdsValue);
+            ps.setString(2, keyIdsValue);
+            ps.executeUpdate();
+        }
+    }
+
+    private <T> T doLocked(CheckedFunction<Connection, T> function) {
+        try (final Connection connection = dataSource.getConnection()) {
+            final boolean originalAutoCommit = connection.getAutoCommit();
+            try {
+                connection.setAutoCommit(false);
+
+                try (final PreparedStatement ps = connection.prepareStatement("""
+                        
+                           SELECT pg_advisory_xact_lock(?)
+                        """)) {
+                    ps.setLong(1, ADVISORY_LOCK_ID);
+                    ps.execute();
+                } catch (SQLException e) {
+                    throw new IllegalStateException("Failed to acquire advisory lock", e);
+                }
+
+                final T result = function.apply(connection);
+                connection.commit();
+                return result;
+            } catch (Exception e) {
+                try {
+                    connection.rollback();
+                } catch (SQLException rollbackEx) {
+                    e.addSuppressed(rollbackEx);
+                }
+
+                if (e instanceof final RuntimeException re) {
+                    throw re;
+                }
+
+                throw new IllegalStateException(e);
+            } finally {
+                try {
+                    connection.setAutoCommit(originalAutoCommit);
+                } catch (SQLException ignored) {
+                }
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to execute locked operation", e);
+        }
+    }
+
+    @FunctionalInterface
+    private interface CheckedFunction<T, R> {
+        R apply(T t) throws Exception;
     }
 
 }
