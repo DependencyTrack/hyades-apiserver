@@ -23,7 +23,8 @@ import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
 import alpine.model.Team;
 import alpine.model.User;
-import alpine.server.auth.JsonWebToken;
+import alpine.model.UserSession;
+import alpine.server.auth.SessionTokenService;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import jakarta.json.Json;
@@ -34,6 +35,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
@@ -47,6 +49,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -66,12 +69,12 @@ class UserResourceAuthenticatedTest extends ResourceTest {
                     .register(AuthenticationFeature.class));
 
     private ManagedUser testUser;
-    private String jwt;
+    private String sessionToken;
 
     @BeforeEach
     void beforeEach() {
         testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
-        this.jwt = new JsonWebToken().createToken(testUser);
+        this.sessionToken = new SessionTokenService().createSession(testUser.getId());
         qm.addUserToTeam(testUser, team);
     }
 
@@ -110,7 +113,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
     @Test
     void getSelfTest() {
         Response response = jersey.target(V1_USER + "/self").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .get(Response.class);
         Assertions.assertEquals(200, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -134,7 +137,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setFullname("Captain BlackBeard");
         user.setEmail("blackbeard@example.com");
         Response response = jersey.target(V1_USER + "/self").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(200, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -151,7 +154,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setFullname("");
         user.setEmail("blackbeard@example.com");
         Response response = jersey.target(V1_USER + "/self").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(400, response.getStatus(), 0);
         String body = getPlainTextBody(response);
@@ -165,7 +168,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setFullname("Captain BlackBeard");
         user.setEmail("");
         Response response = jersey.target(V1_USER + "/self").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(400, response.getStatus(), 0);
         String body = getPlainTextBody(response);
@@ -191,7 +194,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNewPassword("newPassword");
         user.setConfirmPassword("newPassword");
         Response response = jersey.target(V1_USER + "/self").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(200, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -210,7 +213,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNewPassword("newPassword");
         user.setConfirmPassword("blah");
         Response response = jersey.target(V1_USER + "/self").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(400, response.getStatus(), 0);
         String body = getPlainTextBody(response);
@@ -224,7 +227,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         LdapUser user = new LdapUser();
         user.setUsername("blackbeard");
         Response response = jersey.target(V1_USER + "/ldap").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(201, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -246,7 +249,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         LdapUser user = new LdapUser();
         user.setUsername("");
         Response response = jersey.target(V1_USER + "/ldap").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(400, response.getStatus(), 0);
         String body = getPlainTextBody(response);
@@ -259,7 +262,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         LdapUser user = new LdapUser();
         user.setUsername("blackbeard");
         Response response = jersey.target(V1_USER + "/ldap").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(409, response.getStatus(), 0);
         String body = getPlainTextBody(response);
@@ -300,7 +303,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNewPassword("password");
         user.setConfirmPassword("password");
         Response response = jersey.target(V1_USER + "/managed").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(201, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -328,7 +331,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNewPassword("password");
         user.setConfirmPassword("password");
         Response response = jersey.target(V1_USER + "/managed").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(400, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -345,7 +348,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNewPassword("password");
         user.setConfirmPassword("password");
         Response response = jersey.target(V1_USER + "/managed").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(400, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -362,7 +365,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNewPassword("password");
         user.setConfirmPassword("password");
         Response response = jersey.target(V1_USER + "/managed").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(400, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -379,7 +382,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNewPassword("");
         user.setConfirmPassword("password");
         Response response = jersey.target(V1_USER + "/managed").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(400, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -396,7 +399,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNewPassword("password");
         user.setConfirmPassword("blah");
         Response response = jersey.target(V1_USER + "/managed").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(400, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -414,7 +417,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNewPassword("password");
         user.setConfirmPassword("password");
         Response response = jersey.target(V1_USER + "/managed").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(409, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -433,7 +436,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNonExpiryPassword(true);
         user.setSuspended(true);
         Response response = jersey.target(V1_USER + "/managed").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(200, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -457,7 +460,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNonExpiryPassword(true);
         user.setSuspended(true);
         Response response = jersey.target(V1_USER + "/managed").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(400, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -476,7 +479,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNonExpiryPassword(true);
         user.setSuspended(true);
         Response response = jersey.target(V1_USER + "/managed").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(400, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -495,7 +498,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         user.setNonExpiryPassword(true);
         user.setSuspended(true);
         Response response = jersey.target(V1_USER + "/managed").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .post(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(404, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -533,7 +536,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         final OidcUser user = new OidcUser();
         user.setUsername("blackbeard");
         Response response = jersey.target(V1_USER + "/oidc").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(201, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -556,7 +559,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         final OidcUser user = new OidcUser();
         user.setUsername("blackbeard");
         Response response = jersey.target(V1_USER + "/oidc").request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(user, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(409, response.getStatus(), 0);
         String body = getPlainTextBody(response);
@@ -850,4 +853,159 @@ class UserResourceAuthenticatedTest extends ResourceTest {
 
         Assertions.assertEquals(304, response.getStatus());
     }
+
+    @Test
+    void shouldReturnEffectivePermissions() {
+        final var viewPortfolio = qm.createPermission(Permissions.VIEW_PORTFOLIO.name(), null);
+        final var bomUpload = qm.createPermission(Permissions.BOM_UPLOAD.name(), null);
+        team.setPermissions(List.of(viewPortfolio, bomUpload));
+        qm.persist(team);
+
+        final Response response = jersey
+                .target(V1_USER + "/self/permissions")
+                .request()
+                .header("Authorization", "Bearer " + sessionToken)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonArray json = parseJsonArray(response);
+        assertThat(json).isNotNull();
+        assertThat(json.getValuesAs(jakarta.json.JsonString::getString))
+                .containsExactlyInAnyOrder("VIEW_PORTFOLIO", "BOM_UPLOAD");
+    }
+
+    @Test
+    void shouldReturnEmptyPermissionsWhenNoneAssigned() {
+        final Response response = jersey
+                .target(V1_USER + "/self/permissions")
+                .request()
+                .header("Authorization", "Bearer " + sessionToken)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonArray json = parseJsonArray(response);
+        assertThat(json).isEmpty();
+    }
+
+    @Test
+    void shouldRejectGetSelfPermissionsWithApiKey() {
+        final Response response = jersey
+                .target(V1_USER + "/self/permissions")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(401);
+    }
+
+    @Test
+    void shouldLogoutAndInvalidateSession() {
+        // Verify the session is valid before logout.
+        final Response beforeResponse = jersey
+                .target(V1_USER + "/self")
+                .request()
+                .header("Authorization", "Bearer " + sessionToken)
+                .get(Response.class);
+        assertThat(beforeResponse.getStatus()).isEqualTo(200);
+
+        // Logout.
+        final Response logoutResponse = jersey
+                .target(V1_USER + "/logout")
+                .request()
+                .header("Authorization", "Bearer " + sessionToken)
+                .post(Entity.json(""));
+        assertThat(logoutResponse.getStatus()).isEqualTo(204);
+
+        // Verify the session is no longer valid.
+        final Response afterResponse = jersey
+                .target(V1_USER + "/self")
+                .request()
+                .header("Authorization", "Bearer " + sessionToken)
+                .get(Response.class);
+        assertThat(afterResponse.getStatus()).isEqualTo(401);
+    }
+
+    @Test
+    void shouldReturnNoContentWhenLoggingOutWithApiKey() {
+        final Response response = jersey
+                .target(V1_USER + "/logout")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(""));
+        assertThat(response.getStatus()).isEqualTo(204);
+    }
+
+    @Test
+    void shouldRejectExpiredSession() {
+        final List<UserSession> sessions = qm.getPersistenceManager()
+                .newQuery(UserSession.class, "user == :user")
+                .setParameters(testUser)
+                .executeList();
+        assertThat(sessions).hasSize(1);
+        sessions.getFirst().setExpiresAt(new Date(System.currentTimeMillis() - 3_600_000));
+
+        final Response response = jersey
+                .target(V1_USER + "/self")
+                .request()
+                .header("Authorization", "Bearer " + sessionToken)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(401);
+    }
+
+    @Test
+    void shouldRejectSuspendedUserWithValidSession() {
+        testUser.setSuspended(true);
+        qm.persist(testUser);
+
+        final Response response = jersey
+                .target(V1_USER + "/self")
+                .request()
+                .header("Authorization", "Bearer " + sessionToken)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(401);
+    }
+
+    @Test
+    void shouldDeleteExpiredSessions() {
+        new SessionTokenService().createSession(testUser.getId());
+
+        final List<UserSession> sessions = qm.getPersistenceManager()
+                .newQuery(UserSession.class)
+                .executeList();
+        for (final UserSession session : sessions) {
+            session.setExpiresAt(new Date(System.currentTimeMillis() - 3_600_000));
+        }
+        qm.getPersistenceManager().makePersistentAll(sessions);
+
+        final int deleted = new SessionTokenService().deleteExpiredSessions();
+        assertThat(deleted).isEqualTo(2);
+
+        final List<UserSession> remaining = qm.getPersistenceManager()
+                .newQuery(UserSession.class, "user == :user")
+                .setParameters(testUser)
+                .executeList();
+        assertThat(remaining).isEmpty();
+    }
+
+    @Test
+    void shouldNotRevokeSessionOfDifferentUser() {
+        final ManagedUser otherUser = qm.createManagedUser("otheruser", TEST_USER_PASSWORD_HASH);
+        qm.addUserToTeam(otherUser, team);
+        final String otherToken = new SessionTokenService().createSession(otherUser.getId());
+
+        final Response beforeResponse = jersey
+                .target(V1_USER + "/self")
+                .request()
+                .header("Authorization", "Bearer " + otherToken)
+                .get(Response.class);
+        assertThat(beforeResponse.getStatus()).isEqualTo(200);
+
+        final boolean deleted = new SessionTokenService().deleteSession(otherToken, testUser.getId());
+        assertThat(deleted).isFalse();
+
+        final Response afterResponse = jersey
+                .target(V1_USER + "/self")
+                .request()
+                .header("Authorization", "Bearer " + otherToken)
+                .get(Response.class);
+        assertThat(afterResponse.getStatus()).isEqualTo(200);
+    }
+
 }

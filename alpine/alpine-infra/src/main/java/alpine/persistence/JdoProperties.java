@@ -34,7 +34,7 @@ public final class JdoProperties {
     public static Properties unit() {
         final Properties properties = new Properties();
         properties.put("javax.jdo.option.PersistenceUnitName", "Alpine");
-        properties.put("javax.jdo.option.ConnectionURL", "jdbc:h2:mem:alpine");
+        properties.put("javax.jdo.option.ConnectionURL", "jdbc:h2:mem:alpine;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH");
         properties.put("javax.jdo.option.ConnectionDriverName", "org.h2.Driver");
         properties.put("javax.jdo.option.ConnectionUserName", "sa");
         properties.put("javax.jdo.option.ConnectionPassword", "");

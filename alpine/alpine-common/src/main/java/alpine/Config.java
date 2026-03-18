@@ -144,8 +144,7 @@ public class Config {
         CORS_EXPOSE_HEADERS                    ("dt.cors.expose.headers",        "Origin,Content-Type,Authorization,X-Requested-With,Content-Length,Accept,Origin,X-Api-Key,X-Total-Count"),
         CORS_ALLOW_CREDENTIALS                 ("dt.cors.allow.credentials",     true),
         CORS_MAX_AGE                           ("dt.cors.max.age",               3600),
-        API_KEY_PREFIX                         ("dt.api.key.prefix",             "alpine_"),
-        AUTH_JWT_TTL_SECONDS                   ("dt.auth.jwt.ttl.seconds",       7 * 24 * 60 * 60);
+        API_KEY_PREFIX                         ("dt.api.key.prefix",             "alpine_");
         // @formatter:on
 
         private String propertyName;

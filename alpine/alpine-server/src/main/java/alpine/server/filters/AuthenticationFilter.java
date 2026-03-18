@@ -22,11 +22,7 @@ import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.server.auth.AllowApiKeyInQueryParameter;
 import alpine.server.auth.ApiKeyAuthenticationService;
-import alpine.server.auth.JwtAuthenticationService;
-import org.glassfish.jersey.server.ContainerRequest;
-import org.owasp.security.logging.SecurityMarkers;
-import org.slf4j.MDC;
-
+import alpine.server.auth.SessionTokenAuthenticationService;
 import jakarta.annotation.Priority;
 import jakarta.ws.rs.HttpMethod;
 import jakarta.ws.rs.NotAuthorizedException;
@@ -38,6 +34,10 @@ import jakarta.ws.rs.container.ContainerResponseFilter;
 import jakarta.ws.rs.container.ResourceInfo;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
+import org.glassfish.jersey.server.ContainerRequest;
+import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.MDC;
+
 import javax.naming.AuthenticationException;
 import java.io.IOException;
 import java.security.Principal;
@@ -46,8 +46,8 @@ import java.security.Principal;
  * A filter that ensures that all calls going through this filter are
  * authenticated.
  *
- * @see AuthenticationFeature
  * @author Steve Springett
+ * @see AuthenticationFeature
  * @since 1.0.0
  */
 @Priority(Priorities.AUTHENTICATION)
@@ -84,12 +84,15 @@ public class AuthenticationFilter implements ContainerRequestFilter, ContainerRe
                 }
             }
 
-            final JwtAuthenticationService jwtAuthService = new JwtAuthenticationService(request);
-            if (jwtAuthService.isSpecified()) {
+            final var sessionAuthService = new SessionTokenAuthenticationService(request);
+            if (sessionAuthService.isSpecified()) {
                 try {
-                    principal = jwtAuthService.authenticate();
+                    principal = sessionAuthService.authenticate();
+                    if (principal != null && sessionAuthService.getTokenHash() != null) {
+                        SessionUsageTracker.onSessionUsed(sessionAuthService.getTokenHash());
+                    }
                 } catch (AuthenticationException e) {
-                    LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Invalid JWT asserted");
+                    LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Invalid session token asserted");
                     throw new NotAuthorizedException(Response.status(Response.Status.UNAUTHORIZED).build());
                 }
             }

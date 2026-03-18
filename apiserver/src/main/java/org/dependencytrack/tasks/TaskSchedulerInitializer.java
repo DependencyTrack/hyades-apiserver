@@ -20,6 +20,7 @@ package org.dependencytrack.tasks;
 
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.Event;
+import alpine.server.auth.SessionTokenService;
 import alpine.server.tasks.LdapSyncTask;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
@@ -233,7 +234,11 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         "Vulnerability Policy Sync",
                         getCronScheduleForTask(VulnerabilityPolicyFetchTask.class),
                         () -> Event.dispatch(new VulnerabilityPolicyFetchEvent()),
-                        /* triggerOnFirstRun */ true);
+                        /* triggerOnFirstRun */ true)
+                .schedule(
+                        "Expired Session Cleanup",
+                        getCronScheduleFromConfig(config, "dt.task.expired-session-cleanup.cron"),
+                        () -> new SessionTokenService().deleteExpiredSessions());
     }
 
     @Override

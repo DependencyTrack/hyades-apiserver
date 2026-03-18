@@ -22,17 +22,15 @@ import alpine.common.logging.Logger;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
-import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
-import alpine.security.crypto.KeyManager;
 import alpine.server.auth.AlpineAuthenticationException;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.Authenticator;
-import alpine.server.auth.JsonWebToken;
 import alpine.server.auth.OidcAuthenticationService;
 import alpine.server.auth.PasswordService;
 import alpine.server.auth.PermissionRequired;
+import alpine.server.auth.SessionTokenService;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -50,6 +48,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.FormParam;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
@@ -77,7 +76,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -100,13 +98,15 @@ public class UserResource extends AlpineResource {
 
     private static final Logger LOGGER = Logger.getLogger(UserResource.class);
 
+    private final SessionTokenService sessionTokenService = new SessionTokenService();
+
     @POST
     @Path("login")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_PLAIN)
     @Operation(
             summary = "Assert login credentials",
-            description = "Upon a successful login, a JSON Web Token will be returned in the response body. This functionality requires authentication to be enabled.")
+            description = "Upon a successful login, a bearer token will be returned in the response body.")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -124,11 +124,7 @@ public class UserResource extends AlpineResource {
                 try {
                     final Principal principal = auth.authenticate();
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_SUCCESS, "Successful user login / username: " + username);
-                    final Set<String> permissionNames = qm.getEffectivePermissions(principal);
-                    final List<Permission> permissions = qm.getPermissionsByName(permissionNames);
-                    final KeyManager km = KeyManager.getInstance();
-                    final JsonWebToken jwt = new JsonWebToken(km.getSecretKey());
-                    final String token = jwt.createToken(principal, permissions);
+                    final String token = sessionTokenService.createSession(((User) principal).getId());
                     return Response.ok(token).build();
                 } catch (AlpineAuthenticationException e) {
                     if (AlpineAuthenticationException.CauseType.SUSPENDED == e.getCauseType() || AlpineAuthenticationException.CauseType.UNMAPPED_ACCOUNT == e.getCauseType()) {
@@ -152,7 +148,7 @@ public class UserResource extends AlpineResource {
     @Produces(MediaType.TEXT_PLAIN)
     @Operation(
             summary = "Login with OpenID Connect",
-            description = "Upon a successful login, a JSON Web Token will be returned in the response body. This functionality requires authentication to be enabled.")
+            description = "Upon a successful login, a bearer token will be returned in the response body.")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -179,11 +175,7 @@ public class UserResource extends AlpineResource {
                 try {
                     final Principal principal = authService.authenticate();
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_SUCCESS, "Successful OpenID Connect login / username: " + principal.getName());
-                    final Set<String> permissionNames = qm.getEffectivePermissions(principal);
-                    final List<Permission> permissions = qm.getPermissionsByName(permissionNames);
-                    final KeyManager km = KeyManager.getInstance();
-                    final JsonWebToken jwt = new JsonWebToken(km.getSecretKey());
-                    final String token = jwt.createToken(principal, permissions);
+                    final String token = sessionTokenService.createSession(((User) principal).getId());
                     return Response.ok(token).build();
                 } catch (AlpineAuthenticationException e) {
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized OpenID Connect login attempt");
@@ -203,7 +195,7 @@ public class UserResource extends AlpineResource {
     @Produces(MediaType.TEXT_PLAIN)
     @Operation(
             summary = "Asserts login credentials and upon successful authentication, verifies passwords match and changes users password",
-            description = "Upon a successful login, a JSON Web Token will be returned in the response body. This functionality requires authentication to be enabled."
+            description = "Upon a successful login, a bearer token will be returned in the response body."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Password changed successfully"),
@@ -354,16 +346,12 @@ public class UserResource extends AlpineResource {
     })
     public Response getSelf() {
         try (QueryManager qm = new QueryManager()) {
-            if (super.isLdapUser()) {
-                final LdapUser user = qm.getLdapUser(getPrincipal().getName());
-                return Response.ok(user).build();
-            } else if (super.isManagedUser()) {
-                final ManagedUser user = qm.getManagedUser(getPrincipal().getName());
-                return Response.ok(user).build();
-            } else if (super.isOidcUser()) {
-                final OidcUser user = qm.getOidcUser(getPrincipal().getName());
-                return Response.ok(user).build();
+            if (getPrincipal() instanceof final User user) {
+                return Response
+                        .ok(qm.getUser(user.getUsername()))
+                        .build();
             }
+
             return Response.status(401).build();
         }
     }
@@ -414,6 +402,33 @@ public class UserResource extends AlpineResource {
             }
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
+    }
+
+    @GET
+    @Path("self/permissions")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns the effective permissions of the authenticated user",
+            description = "Returns all permissions the authenticated user has, including those inherited from teams."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of effective permission names",
+                    content = @Content(array = @ArraySchema(schema = @Schema(type = "string")))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public Response getSelfPermissions() {
+        try (final var qm = new QueryManager()) {
+            if (getPrincipal() instanceof final User user) {
+                return Response
+                        .ok(qm.getEffectivePermissions(user))
+                        .build();
+            }
+        }
+
+        return Response.status(401).build();
     }
 
     @PUT
@@ -947,4 +962,32 @@ public class UserResource extends AlpineResource {
             });
         }
     }
+
+    @POST
+    @Path("logout")
+    @Operation(
+            summary = "Invalidates the current session",
+            description = "Invalidates the current session. No-op when authenticated via API key."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Session invalidated"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public Response logout(@HeaderParam("Authorization") String authHeader) {
+        if (getPrincipal() instanceof final User user
+                && authHeader != null
+                && authHeader.startsWith("Bearer ")) {
+            final String rawToken = authHeader.substring("Bearer ".length());
+
+            final boolean deleted = sessionTokenService.deleteSession(rawToken, user.getId());
+            if (deleted) {
+                LOGGER.info(SecurityMarkers.SECURITY_AUDIT, "Logged out successfully");
+            } else {
+                LOGGER.warn(SecurityMarkers.SECURITY_AUDIT, "Logout requested but no corresponding session exists");
+            }
+        }
+
+        return Response.noContent().build();
+    }
+
 }

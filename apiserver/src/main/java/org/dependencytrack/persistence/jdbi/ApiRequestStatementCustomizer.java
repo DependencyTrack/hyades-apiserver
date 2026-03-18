@@ -34,15 +34,12 @@ import java.security.Principal;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Map;
-import java.util.Set;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED;
 import static org.dependencytrack.persistence.jdbi.JdbiAttributes.ATTRIBUTE_API_FILTER_PARAMETER;
 import static org.dependencytrack.persistence.jdbi.JdbiAttributes.ATTRIBUTE_API_OFFSET_LIMIT_CLAUSE;
 import static org.dependencytrack.persistence.jdbi.JdbiAttributes.ATTRIBUTE_API_ORDER_BY_CLAUSE;
 import static org.dependencytrack.persistence.jdbi.JdbiAttributes.ATTRIBUTE_API_PROJECT_ACL_CONDITION;
-import static org.dependencytrack.util.PrincipalUtil.getPrincipalTeamIds;
-import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
 
 /**
  * A {@link StatementCustomizer} that enriches the {@link StatementContext}
@@ -65,15 +62,17 @@ import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
  */
 class ApiRequestStatementCustomizer implements StatementCustomizer {
 
-    static final String PARAMETER_PROJECT_ACL_TEAM_IDS = "projectAclTeamIds";
+    static final String PARAMETER_PROJECT_ACL_API_KEY_ID = "projectAclApiKeyId";
     static final String PARAMETER_PROJECT_ACL_USER_ID = "projectAclUserId";
-    static final String TEMPLATE_PROJECT_ACL_CONDITION = /* language=SQL */ """
+    static final String TEMPLATE_API_KEY_PROJECT_ACL_CONDITION = /* language=SQL */ """
             EXISTS(
               SELECT 1
-                FROM "PROJECT_ACCESS_TEAMS" AS pat
+                FROM "APIKEYS_TEAMS" AS akt
+               INNER JOIN "PROJECT_ACCESS_TEAMS" AS pat
+                  ON pat."TEAM_ID" = akt."TEAM_ID"
                INNER JOIN "PROJECT_HIERARCHY" AS ph
                   ON ph."PARENT_PROJECT_ID" = pat."PROJECT_ID"
-               WHERE pat."TEAM_ID" = ANY(:projectAclTeamIds)
+               WHERE akt."APIKEY_ID" = :projectAclApiKeyId
                  AND ph."CHILD_PROJECT_ID" = %s
             )
             """;
@@ -203,7 +202,6 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
         }
 
         final Principal principal = apiRequest.getPrincipal();
-        final Set<Long> principalTeamIds = getPrincipalTeamIds(principal);
         final ApiRequestConfig config = ctx.getConfig(ApiRequestConfig.class);
 
         switch (principal) {
@@ -212,11 +210,10 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
                         TEMPLATE_USER_PROJECT_ACL_CONDITION.formatted(config.projectAclProjectIdColumn()));
                 ctx.getBinding().addNamed(PARAMETER_PROJECT_ACL_USER_ID, user.getId(), QualifiedType.of(Long.class));
             }
-            case ApiKey apiKey when !principalTeamIds.isEmpty() -> {
+            case ApiKey apiKey -> {
                 ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION,
-                        TEMPLATE_PROJECT_ACL_CONDITION.formatted(config.projectAclProjectIdColumn()));
-                ctx.getBinding().addNamed(PARAMETER_PROJECT_ACL_TEAM_IDS, principalTeamIds,
-                        QualifiedType.of(parameterizeClass(Set.class, Long.class)));
+                        TEMPLATE_API_KEY_PROJECT_ACL_CONDITION.formatted(config.projectAclProjectIdColumn()));
+                ctx.getBinding().addNamed(PARAMETER_PROJECT_ACL_API_KEY_ID, apiKey.getId(), QualifiedType.of(Long.class));
             }
             default -> {
                 ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION, "FALSE");

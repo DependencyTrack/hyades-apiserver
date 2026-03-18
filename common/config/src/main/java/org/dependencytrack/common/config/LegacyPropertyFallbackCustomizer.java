@@ -43,7 +43,6 @@ public final class LegacyPropertyFallbackCustomizer implements SmallRyeConfigBui
     // Suffixes of properties that historically used the "alpine." prefix.
     static final Set<String> ALPINE_SUFFIXES = Set.of(
             "api.key.prefix",
-            "auth.jwt.ttl.seconds",
             "bcrypt.rounds",
             "cors.allow.credentials",
             "cors.allow.headers",

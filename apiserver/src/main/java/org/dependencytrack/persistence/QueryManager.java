@@ -1432,7 +1432,6 @@ public class QueryManager extends AlpineQueryManager {
                 || hasAccessManagementPermission(principal))
             return Map.entry("TRUE", Collections.emptyMap());
 
-        final Set<Long> teamIds = getTeamIds(principal);
         final Map<String, Object> params = new HashMap<>();
         final String conditionTemplate;
 
@@ -1451,15 +1450,17 @@ public class QueryManager extends AlpineQueryManager {
                         )
                         """;
             }
-            case ApiKey apiKey when !teamIds.isEmpty() -> {
-                params.put("projectAclTeamIds", teamIds.toArray(Long[]::new));
+            case ApiKey apiKey -> {
+                params.put("projectAclApiKeyId", apiKey.getId());
                 conditionTemplate = /* language=SQL */ """
                         EXISTS(
                           SELECT 1
-                            FROM "PROJECT_ACCESS_TEAMS" AS pat
+                            FROM "APIKEYS_TEAMS" AS akt
+                           INNER JOIN "PROJECT_ACCESS_TEAMS" AS pat
+                              ON pat."TEAM_ID" = akt."TEAM_ID"
                            INNER JOIN "PROJECT_HIERARCHY" AS ph
                               ON ph."PARENT_PROJECT_ID" = pat."PROJECT_ID"
-                           WHERE pat."TEAM_ID" = ANY(:projectAclTeamIds)
+                           WHERE akt."APIKEY_ID" = :projectAclApiKeyId
                              AND ph."CHILD_PROJECT_ID" = "%s"."ID"
                         )
                         """;

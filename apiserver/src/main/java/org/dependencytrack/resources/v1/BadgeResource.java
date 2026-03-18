@@ -27,7 +27,7 @@ import alpine.model.OidcUser;
 import alpine.model.User;
 import alpine.server.auth.ApiKeyAuthenticationService;
 import alpine.server.auth.AuthenticationNotRequired;
-import alpine.server.auth.JwtAuthenticationService;
+import alpine.server.auth.SessionTokenAuthenticationService;
 import alpine.server.filters.AuthenticationFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -38,6 +38,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
@@ -50,12 +56,6 @@ import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.glassfish.jersey.server.ContainerRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HttpMethod;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.Response;
 import javax.naming.AuthenticationException;
 import java.security.Principal;
 
@@ -105,12 +105,12 @@ public class BadgeResource extends AbstractApiResource {
             }
         }
 
-        final JwtAuthenticationService jwtAuthService = new JwtAuthenticationService(request);
-        if (jwtAuthService.isSpecified()) {
+        final var sessionAuthService = new SessionTokenAuthenticationService(request);
+        if (sessionAuthService.isSpecified()) {
             try {
-                principal = jwtAuthService.authenticate();
+                principal = sessionAuthService.authenticate();
             } catch (AuthenticationException e) {
-                LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Invalid JWT asserted");
+                LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Invalid session token asserted");
                 return false;
             }
         }

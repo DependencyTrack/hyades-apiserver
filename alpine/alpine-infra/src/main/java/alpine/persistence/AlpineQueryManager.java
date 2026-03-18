@@ -32,6 +32,7 @@ import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
+import alpine.model.UserSession;
 import alpine.resources.AlpineRequest;
 import alpine.security.ApiKeyGenerator;
 import org.datanucleus.store.rdbms.query.JDOQLQuery;
@@ -539,6 +540,13 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
                 .setNamedParameters(Map.of("username", username))
                 .extension(JDOQLQuery.EXTENSION_CANDIDATE_DONT_RESTRICT_DISCRIMINATOR, true);
 
+        return executeAndCloseUnique(query);
+    }
+
+    public UserSession getUserSessionByTokenHash(String tokenHash) {
+        final Query<UserSession> query = pm.newQuery(UserSession.class);
+        query.setFilter("tokenHash == :tokenHash && expiresAt > :now");
+        query.setParameters(tokenHash, new Date());
         return executeAndCloseUnique(query);
     }
 

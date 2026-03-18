@@ -429,8 +429,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 || getEffectivePermissions(principal).contains(Permissions.Constants.PORTFOLIO_ACCESS_CONTROL_BYPASS))
             return true;
 
-        final Set<Long> teamIds = getTeamIds(principal);
-
         final Query<?> query;
         switch (principal) {
             case User user -> {
@@ -447,18 +445,20 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                                 """)
                         .setParameters(project.getId(), user.getId());
             }
-            case ApiKey apiKey when !teamIds.isEmpty() -> {
+            case ApiKey apiKey -> {
                 query = pm.newQuery(Query.SQL, /* language=SQL */ """
                                 SELECT EXISTS(
                                   SELECT 1
-                                    FROM "PROJECT_ACCESS_TEAMS" AS pat
+                                    FROM "APIKEYS_TEAMS" AS akt
+                                   INNER JOIN "PROJECT_ACCESS_TEAMS" AS pat
+                                      ON pat."TEAM_ID" = akt."TEAM_ID"
                                    INNER JOIN "PROJECT_HIERARCHY" AS ph
                                       ON ph."PARENT_PROJECT_ID" = pat."PROJECT_ID"
-                                   WHERE pat."TEAM_ID" = ANY(?)
+                                   WHERE akt."APIKEY_ID" = ?
                                      AND ph."CHILD_PROJECT_ID" = ?
                                 )
                                 """)
-                        .setParameters(teamIds.toArray(Long[]::new), project.getId());
+                        .setParameters(apiKey.getId(), project.getId());
             }
             default -> {
                 return false;
