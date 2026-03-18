@@ -18,33 +18,20 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
-import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
-import alpine.model.User;
-import alpine.server.auth.ApiKeyAuthenticationService;
 import alpine.server.auth.AuthenticationNotRequired;
-import alpine.server.auth.SessionTokenAuthenticationService;
-import alpine.server.filters.AuthenticationFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HttpMethod;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.validation.ValidUuid;
@@ -52,12 +39,6 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.misc.Badger;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-import org.glassfish.jersey.server.ContainerRequest;
-import org.owasp.security.logging.SecurityMarkers;
-
-import javax.naming.AuthenticationException;
-import java.security.Principal;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BADGE_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BASE_URL;
@@ -71,106 +52,15 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
  */
 @Path("/v1/badge")
 @Tag(name = "badge")
-@SecurityRequirements({
-        @SecurityRequirement(name = "ApiKeyAuth"),
-        @SecurityRequirement(name = "BearerAuth"),
-        @SecurityRequirement(name = "ApiKeyQueryAuth")
-})
 public class BadgeResource extends AbstractApiResource {
 
     private static final String SVG_MEDIA_TYPE = "image/svg+xml";
-
-    private final Logger LOGGER = Logger.getLogger(AuthenticationFilter.class);
-
-    // Stand-in methods for alpine.server.filters.AuthenticationFilter and
-    // alpine.server.filters.AuthorizationFilter to allow enabling and disabling of
-    // unauthenticated access to the badges API during runtime, used solely to offer
-    // a deprecation period for unauthenticated access to badges.
-    private boolean passesAuthentication() {
-        ContainerRequest request = (ContainerRequest) super.getRequestContext().getRequest();
-
-        if (HttpMethod.OPTIONS.equals(request.getMethod())) {
-            return true;
-        }
-
-        Principal principal = null;
-
-        final ApiKeyAuthenticationService apiKeyAuthService = new ApiKeyAuthenticationService(request, true);
-        if (apiKeyAuthService.isSpecified()) {
-            try {
-                principal = apiKeyAuthService.authenticate();
-            } catch (AuthenticationException e) {
-                LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Invalid API key asserted");
-                return false;
-            }
-        }
-
-        final var sessionAuthService = new SessionTokenAuthenticationService(request);
-        if (sessionAuthService.isSpecified()) {
-            try {
-                principal = sessionAuthService.authenticate();
-            } catch (AuthenticationException e) {
-                LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Invalid session token asserted");
-                return false;
-            }
-        }
-
-        if (principal == null) {
-            return false;
-        } else {
-            super.getRequestContext().setProperty("Principal", principal);
-            return true;
-        }
-    }
-
-    private boolean passesAuthorization(final QueryManager qm) {
-        final Principal principal = (Principal) super.getRequestContext().getProperty("Principal");
-        if (principal == null) {
-            LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "A request was made without the assertion of a valid user principal");
-            return false;
-        }
-
-        final String[] permissions = { Permissions.Constants.VIEW_BADGES };
-
-        if (principal instanceof ApiKey) {
-            final ApiKey apiKey = (ApiKey)principal;
-            for (final String permission: permissions) {
-                if (qm.hasPermission(apiKey, permission)) {
-                    return true;
-                }
-            }
-            LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Unauthorized access attempt made by API Key "
-                    + apiKey.getMaskedKey() + " to " + ((ContainerRequest) super.getRequestContext()).getRequestUri().toString());
-        } else {
-            User user = null;
-            if (principal instanceof ManagedUser) {
-                user = qm.getManagedUser(((ManagedUser) principal).getUsername());
-            } else if (principal instanceof LdapUser) {
-                user = qm.getLdapUser(((LdapUser) principal).getUsername());
-            } else if (principal instanceof OidcUser) {
-                user = qm.getOidcUser(((OidcUser) principal).getUsername());
-            }
-            if (user == null) {
-                LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "A request was made but the system in unable to find the user principal");
-                return false;
-            }
-            for (final String permission : permissions) {
-                if (qm.hasPermission(user, permission, true)) {
-                    return true;
-                }
-            }
-            LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Unauthorized access attempt made by "
-                    + user.getUsername() + " to " + ((ContainerRequest) super.getRequestContext()).getRequestUri().toString());
-        }
-        return false;
-    }
 
     @GET
     @Path("/vulns/project/{uuid}")
     @Produces(SVG_MEDIA_TYPE)
     @Operation(
-            summary = "Returns current metrics for a specific project",
-            description = "<p>Requires permission <strong>VIEW_BADGES</strong></p>"
+            summary = "Returns current metrics for a specific project"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -178,11 +68,7 @@ public class BadgeResource extends AbstractApiResource {
                     description = "A badge displaying current vulnerability metrics for a project in SVG format",
                     content = @Content(schema = @Schema(type = "string"))
             ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Access to the requested project is forbidden",
-                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
+            @ApiResponse(responseCode = "403", description = "Badges are disabled"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @AuthenticationNotRequired
@@ -190,21 +76,14 @@ public class BadgeResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the project to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
-            if (!shouldBypassAuth && !passesAuthentication()) {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
-            if (!shouldBypassAuth && !passesAuthorization(qm)) {
+            if (!qm.isEnabled(GENERAL_BADGE_ENABLED)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (!shouldBypassAuth) {
-                    requireAccess(qm, project);
-                }
                 final ProjectMetrics metrics = withJdbiHandle(handle ->
                         handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
-                final Badger badger = new Badger();
+                final var badger = new Badger();
 
                 String linkToProjectVuln = null;
                 final ConfigProperty baseUrl = qm.getConfigProperty(GENERAL_BASE_URL.getGroupName(), GENERAL_BASE_URL.getPropertyName());
@@ -222,8 +101,7 @@ public class BadgeResource extends AbstractApiResource {
     @Path("/vulns/project/{name}/{version}")
     @Produces(SVG_MEDIA_TYPE)
     @Operation(
-            summary = "Returns current metrics for a specific project",
-            description = "<p>Requires permission <strong>VIEW_BADGES</strong></p>"
+            summary = "Returns current metrics for a specific project"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -231,11 +109,7 @@ public class BadgeResource extends AbstractApiResource {
                     description = "A badge displaying current vulnerability metrics for a project in SVG format",
                     content = @Content(schema = @Schema(type = "string"))
             ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Access to the requested project is forbidden",
-                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
+            @ApiResponse(responseCode = "403", description = "Badges are disabled"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @AuthenticationNotRequired
@@ -245,21 +119,14 @@ public class BadgeResource extends AbstractApiResource {
             @Parameter(description = "The version of the project to query on", required = true)
             @PathParam("version") String version) {
         try (QueryManager qm = new QueryManager()) {
-            final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
-            if (!shouldBypassAuth && !passesAuthentication()) {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
-            if (!shouldBypassAuth && !passesAuthorization(qm)) {
+            if (!qm.isEnabled(GENERAL_BADGE_ENABLED)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
             final Project project = qm.getProject(name, version);
             if (project != null) {
-                if (!shouldBypassAuth) {
-                    requireAccess(qm, project);
-                }
                 final ProjectMetrics metrics = withJdbiHandle(handle ->
                         handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
-                final Badger badger = new Badger();
+                final var badger = new Badger();
 
                 String linkToProjectVuln = null;
                 final ConfigProperty baseUrl = qm.getConfigProperty(GENERAL_BASE_URL.getGroupName(), GENERAL_BASE_URL.getPropertyName());
@@ -277,8 +144,7 @@ public class BadgeResource extends AbstractApiResource {
     @Path("/violations/project/{uuid}")
     @Produces(SVG_MEDIA_TYPE)
     @Operation(
-            summary = "Returns a policy violations badge for a specific project",
-            description = "<p>Requires permission <strong>VIEW_BADGES</strong></p>"
+            summary = "Returns a policy violations badge for a specific project"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -286,11 +152,7 @@ public class BadgeResource extends AbstractApiResource {
                     description = "A badge displaying current policy violation metrics of a project in SVG format",
                     content = @Content(schema = @Schema(type = "string"))
             ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Access to the requested project is forbidden",
-                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
+            @ApiResponse(responseCode = "403", description = "Badges are disabled"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @AuthenticationNotRequired
@@ -298,21 +160,14 @@ public class BadgeResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the project to retrieve a badge for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
-            if (!shouldBypassAuth && !passesAuthentication()) {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
-            if (!shouldBypassAuth && !passesAuthorization(qm)) {
+            if (!qm.isEnabled(GENERAL_BADGE_ENABLED)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (!shouldBypassAuth) {
-                    requireAccess(qm, project);
-                }
                 final ProjectMetrics metrics = withJdbiHandle(handle ->
                         handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
-                final Badger badger = new Badger();
+                final var badger = new Badger();
 
                 String linkToProjectViolations = null;
                 final ConfigProperty baseUrl = qm.getConfigProperty(GENERAL_BASE_URL.getGroupName(), GENERAL_BASE_URL.getPropertyName());
@@ -330,8 +185,7 @@ public class BadgeResource extends AbstractApiResource {
     @Path("/violations/project/{name}/{version}")
     @Produces(SVG_MEDIA_TYPE)
     @Operation(
-            summary = "Returns a policy violations badge for a specific project",
-            description = "<p>Requires permission <strong>VIEW_BADGES</strong></p>"
+            summary = "Returns a policy violations badge for a specific project"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -339,11 +193,7 @@ public class BadgeResource extends AbstractApiResource {
                     description = "A badge displaying current policy violation metrics of a project in SVG format",
                     content = @Content(schema = @Schema(type = "string"))
             ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Access to the requested project is forbidden",
-                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
+            @ApiResponse(responseCode = "403", description = "Badges are disabled"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @AuthenticationNotRequired
@@ -353,21 +203,14 @@ public class BadgeResource extends AbstractApiResource {
             @Parameter(description = "The version of the project to query on", required = true)
             @PathParam("version") String version) {
         try (QueryManager qm = new QueryManager()) {
-            final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
-            if (!shouldBypassAuth && !passesAuthentication()) {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
-            if (!shouldBypassAuth && !passesAuthorization(qm)) {
+            if (!qm.isEnabled(GENERAL_BADGE_ENABLED)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
             final Project project = qm.getProject(name, version);
             if (project != null) {
-                if (!shouldBypassAuth) {
-                    requireAccess(qm, project);
-                }
                 final ProjectMetrics metrics = withJdbiHandle(handle ->
                         handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
-                final Badger badger = new Badger();
+                final var badger = new Badger();
 
                 String linkToProjectViolations = null;
                 final ConfigProperty baseUrl = qm.getConfigProperty(GENERAL_BASE_URL.getGroupName(), GENERAL_BASE_URL.getPropertyName());
