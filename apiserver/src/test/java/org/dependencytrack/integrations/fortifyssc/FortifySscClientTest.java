@@ -24,6 +24,7 @@ import com.github.tomakehurst.wiremock.matching.EqualToPattern;
 import org.apache.http.HttpHeaders;
 import org.apache.http.entity.ContentType;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.secret.TestSecretManager;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -68,7 +69,7 @@ class FortifySscClientTest extends PersistenceCapableTest {
                 .withRequestBody(WireMock.equalToJson("{\"fileTokenType\":\"UPLOAD\"}"))
                 .willReturn(WireMock.aResponse().withHeader(HttpHeaders.CONTENT_TYPE, "application/json")
                         .withBody("{ \"data\": { \"token\": \"db975c97-98b1-4988-8d6a-9c3e044dfff3\" }}").withStatus(201)));
-        FortifySscUploader uploader = new FortifySscUploader(httpClient);
+        FortifySscUploader uploader = new FortifySscUploader(httpClient, new TestSecretManager());
         uploader.setQueryManager(qm);
         FortifySscClient client = new FortifySscClient(httpClient, uploader, new URL(wireMock.baseUrl() + "/ssc"));
         String token = client.generateOneTimeUploadToken("2d5e4a06-945e-405f-a3c2-112bb3053453");
@@ -81,7 +82,7 @@ class FortifySscClientTest extends PersistenceCapableTest {
                 .withHeader(HttpHeaders.AUTHORIZATION, new EqualToPattern("FortifyToken " + Base64.getEncoder().encodeToString("wrong".getBytes(StandardCharsets.UTF_8))))
                 .withRequestBody(WireMock.equalToJson("{\"fileTokenType\":\"UPLOAD\"}"))
                 .willReturn(WireMock.aResponse().withHeader(HttpHeaders.CONTENT_TYPE, "application/json").withStatus(401)));
-        FortifySscUploader uploader = new FortifySscUploader(httpClient);
+        FortifySscUploader uploader = new FortifySscUploader(httpClient, new TestSecretManager());
         uploader.setQueryManager(qm);
         FortifySscClient client = new FortifySscClient(httpClient, uploader, new URL(wireMock.baseUrl() + "/ssc"));
         String token = client.generateOneTimeUploadToken("wrong");
@@ -98,7 +99,7 @@ class FortifySscClientTest extends PersistenceCapableTest {
                 .withQueryParam("mat", new EqualToPattern(token))
                 .withQueryParam("entityId", new EqualToPattern(applicationVersion))
                 .willReturn(WireMock.aResponse().withHeader(HttpHeaders.CONTENT_TYPE, "application/xml").withStatus(200)));
-        FortifySscUploader uploader = new FortifySscUploader(httpClient);
+        FortifySscUploader uploader = new FortifySscUploader(httpClient, new TestSecretManager());
         uploader.setQueryManager(qm);
         FortifySscClient client = new FortifySscClient(httpClient, uploader, new URL(wireMock.baseUrl() + "/ssc"));
         InputStream stream = new ByteArrayInputStream("test input".getBytes());
@@ -122,7 +123,7 @@ class FortifySscClientTest extends PersistenceCapableTest {
                 .withQueryParam("mat", new EqualToPattern(token))
                 .withQueryParam("entityId", new EqualToPattern(applicationVersion))
                 .willReturn(WireMock.aResponse().withHeader(HttpHeaders.CONTENT_TYPE, "application/xml").withStatus(400)));
-        FortifySscUploader uploader = new FortifySscUploader(httpClient);
+        FortifySscUploader uploader = new FortifySscUploader(httpClient, new TestSecretManager());
         uploader.setQueryManager(qm);
         FortifySscClient client = new FortifySscClient(httpClient, uploader, new URL(wireMock.baseUrl() + "/ssc"));
         InputStream stream = new ByteArrayInputStream("test input".getBytes());

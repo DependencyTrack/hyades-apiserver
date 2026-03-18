@@ -41,6 +41,7 @@ import org.dependencytrack.plugin.NoSuchExtensionException;
 import org.dependencytrack.plugin.NoSuchExtensionPointException;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.ResolvePackageMetadataActivityArg;
+import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
 import org.jspecify.annotations.Nullable;
@@ -55,6 +56,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -75,9 +77,11 @@ public final class ResolvePackageMetadataActivity implements Activity<ResolvePac
     private static final int FLUSH_BATCH_SIZE = 25;
 
     private final PluginManager pluginManager;
+    private final SecretManager secretManager;
 
-    public ResolvePackageMetadataActivity(PluginManager pluginManager) {
+    public ResolvePackageMetadataActivity(PluginManager pluginManager, SecretManager secretManager) {
         this.pluginManager = pluginManager;
+        this.secretManager = secretManager;
     }
 
     @Override
@@ -113,6 +117,7 @@ public final class ResolvePackageMetadataActivity implements Activity<ResolvePac
             final Set<String> recentlyResolvedPurls = getRecentlyResolvedPurls(purlStrings);
 
             final var repoByPurlType = new HashMap<String, List<Repository>>();
+            final var passwordByRepoTypeAndName = new HashMap<String, Optional<String>>();
 
             final var internalIdentifier = new InternalComponentIdentifier();
             final Function<PackageURL, Boolean> isInternalFunc = purl -> isInternal(purl, internalIdentifier);
@@ -139,6 +144,7 @@ public final class ResolvePackageMetadataActivity implements Activity<ResolvePac
                                 resolverFactory,
                                 resolver,
                                 repoByPurlType,
+                                passwordByRepoTypeAndName,
                                 isInternalFunc,
                                 resultBuffer);
                     } catch (InterruptedException e) {
@@ -169,6 +175,7 @@ public final class ResolvePackageMetadataActivity implements Activity<ResolvePac
             PackageMetadataResolverFactory resolverFactory,
             PackageMetadataResolver resolver,
             Map<String, List<Repository>> repoByPurlType,
+            Map<String, Optional<String>> passwordByRepoTypeAndName,
             Function<PackageURL, Boolean> isInternalFunc,
             ResultBuffer buffer) throws Exception {
         final PackageURL purl;
@@ -193,6 +200,7 @@ public final class ResolvePackageMetadataActivity implements Activity<ResolvePac
                 resolverFactory,
                 resolver,
                 repoByPurlType,
+                passwordByRepoTypeAndName,
                 isInternalFunc);
         if (result != null) {
             buffer.addResult(purl, result);
@@ -212,6 +220,7 @@ public final class ResolvePackageMetadataActivity implements Activity<ResolvePac
             PackageMetadataResolverFactory resolverFactory,
             PackageMetadataResolver resolver,
             Map<String, List<Repository>> repoByPurlType,
+            Map<String, Optional<String>> passwordByRepoTypeAndName,
             Function<PackageURL, Boolean> isInternalFunc) throws Exception {
         if (resolverFactory.requiresRepository()) {
             final List<Repository> repos = repoByPurlType.computeIfAbsent(
@@ -229,13 +238,39 @@ public final class ResolvePackageMetadataActivity implements Activity<ResolvePac
                     continue;
                 }
 
-                final var packageRepository = new PackageRepository(
-                        repo.getIdentifier(),
-                        repo.getUrl(),
-                        repo.isAuthenticationRequired() ? repo.getUsername() : null,
-                        repo.isAuthenticationRequired() ? repo.getPassword() : null);
-
                 try (var ignoredMdcRepo = MDC.putCloseable(MDC_PKG_REPOSITORY_IDENTIFIER, repo.getIdentifier())) {
+                    String password = null;
+                    if (repo.isAuthenticationRequired() && repo.getPassword() != null) {
+                        password = passwordByRepoTypeAndName
+                                .computeIfAbsent(
+                                        "%s:%s".formatted(repo.getType(), repo.getIdentifier()),
+                                        ignored -> {
+                                            final String secret = secretManager.getSecretValue(repo.getPassword());
+                                            if (secret == null) {
+                                                LOGGER.warn("""
+                                                        Repository requires authentication, but the configured password \
+                                                        cannot be resolved to a secret. Configure a valid secret, or disable \
+                                                        the repository to get rid of this warning.""");
+                                                return Optional.empty();
+                                            }
+
+                                            return Optional.of(secret);
+                                        })
+                                .orElse(null);
+                        if (password == null) {
+                            continue;
+                        }
+                    }
+
+                    final var packageRepository = new PackageRepository(
+                            repo.getIdentifier(),
+                            repo.getUrl(),
+                            repo.isAuthenticationRequired()
+                                    ? repo.getUsername()
+                                    : null,
+                            password);
+
+
                     LOGGER.debug("Resolving metadata from repository");
                     final PackageMetadata result = resolver.resolve(normalizedPurl, packageRepository);
                     if (result != null) {
@@ -271,12 +306,7 @@ public final class ResolvePackageMetadataActivity implements Activity<ResolvePac
 
         return withJdbiHandle(handle -> handle
                 .createQuery(/* language=SQL */ """
-                        SELECT "IDENTIFIER"
-                             , "URL"
-                             , "INTERNAL"
-                             , "AUTHENTICATIONREQUIRED"
-                             , "USERNAME"
-                             , "PASSWORD"
+                        SELECT *
                           FROM "REPOSITORY"
                          WHERE "TYPE" = :type
                            AND "ENABLED"

@@ -30,6 +30,9 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.secret.management.SecretManager;
+import org.dependencytrack.secret.management.SecretMetadata;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -45,42 +48,46 @@ import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCOR
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM;
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class ConfigPropertyResourceTest extends ResourceTest {
+
+    private static final SecretManager secretManager = mock(SecretManager.class);
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(ConfigPropertyResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bind(secretManager).to(SecretManager.class);
+                        }
+                    }));
 
     @Test
     public void getConfigPropertiesTest() {
         qm.createConfigProperty("my.group", "my.string", "ABC", IConfigProperty.PropertyType.STRING, "A string");
         qm.createConfigProperty("my.group", "my.integer", "1", IConfigProperty.PropertyType.INTEGER, "A integer");
-        qm.createConfigProperty("my.group", "my.password", "password", IConfigProperty.PropertyType.ENCRYPTEDSTRING, "A password");
         Response response = jersey.target(V1_CONFIG_PROPERTY).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertEquals(200, response.getStatus(), 0);
         JsonArray json = parseJsonArray(response);
         Assertions.assertNotNull(json);
-        assertEquals(3, json.size());
+        assertEquals(2, json.size());
         assertEquals("my.group", json.getJsonObject(0).getString("groupName"));
         assertEquals("my.integer", json.getJsonObject(0).getString("propertyName"));
         assertEquals("1", json.getJsonObject(0).getString("propertyValue"));
         assertEquals("INTEGER", json.getJsonObject(0).getString("propertyType"));
         assertEquals("A integer", json.getJsonObject(0).getString("description"));
-        assertEquals("my.group", json.getJsonObject(2).getString("groupName"));
-        assertEquals("my.string", json.getJsonObject(2).getString("propertyName"));
-        assertEquals("ABC", json.getJsonObject(2).getString("propertyValue"));
-        assertEquals("STRING", json.getJsonObject(2).getString("propertyType"));
-        assertEquals("A string", json.getJsonObject(2).getString("description"));
         assertEquals("my.group", json.getJsonObject(1).getString("groupName"));
-        assertEquals("my.password", json.getJsonObject(1).getString("propertyName"));
-        assertEquals("HiddenDecryptedPropertyPlaceholder", json.getJsonObject(1).getString("propertyValue"));
-        assertEquals("ENCRYPTEDSTRING", json.getJsonObject(1).getString("propertyType"));
-        assertEquals("A password", json.getJsonObject(1).getString("description"));
+        assertEquals("my.string", json.getJsonObject(1).getString("propertyName"));
+        assertEquals("ABC", json.getJsonObject(1).getString("propertyValue"));
+        assertEquals("STRING", json.getJsonObject(1).getString("propertyType"));
+        assertEquals("A string", json.getJsonObject(1).getString("description"));
     }
 
     @Test
@@ -171,24 +178,6 @@ public class ConfigPropertyResourceTest extends ResourceTest {
         assertEquals("fe03c401-b5a1-4b86-bc3b-1b7a68f0f78d", json.getString("propertyValue"));
         assertEquals("UUID", json.getString("propertyType"));
         assertEquals("A uuid", json.getString("description"));
-    }
-
-    @Test
-    public void updateConfigPropertyEncryptedStringTest() {
-        ConfigProperty property = qm.createConfigProperty("my.group", "my.encryptedString", "aaaaa", IConfigProperty.PropertyType.ENCRYPTEDSTRING, "A encrypted string");
-        ConfigProperty request = qm.detach(ConfigProperty.class, property.getId());
-        request.setPropertyValue("bbbbb");
-        Response response = jersey.target(V1_CONFIG_PROPERTY).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity(request, MediaType.APPLICATION_JSON));
-        assertEquals(200, response.getStatus(), 0);
-        JsonObject json = parseJsonObject(response);
-        Assertions.assertNotNull(json);
-        assertEquals("my.group", json.getString("groupName"));
-        assertEquals("my.encryptedString", json.getString("propertyName"));
-        assertEquals("HiddenDecryptedPropertyPlaceholder", json.getString("propertyValue"));
-        assertEquals("ENCRYPTEDSTRING", json.getString("propertyType"));
-        assertEquals("A encrypted string", json.getString("description"));
     }
 
     @Test
@@ -475,6 +464,57 @@ public class ConfigPropertyResourceTest extends ResourceTest {
                         """, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(400);
         assertThat(getPlainTextBody(response)).isEqualTo("Value must be a valid JSON array of strings");
+    }
+
+    @Test
+    public void updateConfigPropertySecretNameNotFoundTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.FORTIFY_SSC_TOKEN.getGroupName(),
+                ConfigPropertyConstants.FORTIFY_SSC_TOKEN.getPropertyName(),
+                ConfigPropertyConstants.FORTIFY_SSC_TOKEN.getDefaultPropertyValue(),
+                ConfigPropertyConstants.FORTIFY_SSC_TOKEN.getPropertyType(),
+                ConfigPropertyConstants.FORTIFY_SSC_TOKEN.getDescription()
+        );
+
+        when(secretManager.getSecretMetadata("nonexistent-secret")).thenReturn(null);
+
+        final Response response = jersey.target(V1_CONFIG_PROPERTY).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity("""
+                        {
+                          "groupName": "integrations",
+                          "propertyName": "fortify.ssc.token",
+                          "propertyValue": "nonexistent-secret"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("The secret with name \"nonexistent-secret\" could not be found.");
+    }
+
+    @Test
+    public void updateConfigPropertySecretNameFoundTest() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.KENNA_TOKEN.getGroupName(),
+                ConfigPropertyConstants.KENNA_TOKEN.getPropertyName(),
+                ConfigPropertyConstants.KENNA_TOKEN.getDefaultPropertyValue(),
+                ConfigPropertyConstants.KENNA_TOKEN.getPropertyType(),
+                ConfigPropertyConstants.KENNA_TOKEN.getDescription()
+        );
+
+        when(secretManager.getSecretMetadata("my-secret")).thenReturn(new SecretMetadata("my-secret", null, null, null));
+
+        final Response response = jersey.target(V1_CONFIG_PROPERTY).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity("""
+                        {
+                          "groupName": "integrations",
+                          "propertyName": "kenna.token",
+                          "propertyValue": "my-secret"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThat(response.getStatus()).isEqualTo(200);
     }
 
     @Test

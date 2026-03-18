@@ -20,13 +20,14 @@ package org.dependencytrack.integrations.fortifyssc;
 
 import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
-import alpine.security.crypto.DataEncryption;
+import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
 import org.dependencytrack.integrations.FindingPackagingFormat;
 import org.dependencytrack.integrations.ProjectFindingUploader;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.secret.management.SecretManager;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -35,6 +36,7 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_TOKEN;
 import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_URL;
@@ -45,9 +47,11 @@ public class FortifySscUploader extends AbstractIntegrationPoint implements Proj
     private static final String APPID_PROPERTY = "fortify.ssc.applicationId";
 
     private final HttpClient httpClient;
+    private final SecretManager secretManager;
 
-    public FortifySscUploader(HttpClient httpClient) {
-        this.httpClient = httpClient;
+    public FortifySscUploader(HttpClient httpClient, SecretManager secretManager) {
+        this.httpClient = requireNonNull(httpClient, "httpClient must not be null");
+        this.secretManager = requireNonNull(secretManager, "secretManager must not be null");
     }
 
     @Override
@@ -83,13 +87,23 @@ public class FortifySscUploader extends AbstractIntegrationPoint implements Proj
         final ConfigProperty sscUrl = qm.getConfigProperty(FORTIFY_SSC_URL.getGroupName(), FORTIFY_SSC_URL.getPropertyName());
         final ConfigProperty citoken = qm.getConfigProperty(FORTIFY_SSC_TOKEN.getGroupName(), FORTIFY_SSC_TOKEN.getPropertyName());
         final ProjectProperty applicationId = qm.getProjectProperty(project, FORTIFY_SSC_ENABLED.getGroupName(), APPID_PROPERTY);
-        if (citoken == null || citoken.getPropertyValue() == null) {
+        if (citoken == null) {
+            LOGGER.warn("Fortify SSC token not specified. Aborting");
+            return;
+        }
+        final String tokenSecretName = StringUtils.trimToNull(citoken.getPropertyValue());
+        if (tokenSecretName == null) {
             LOGGER.warn("Fortify SSC token not specified. Aborting");
             return;
         }
         try {
             final FortifySscClient client = new FortifySscClient(httpClient, this, new URL(sscUrl.getPropertyValue()));
-            final String token = client.generateOneTimeUploadToken(new DataEncryption().decryptAsString(citoken.getPropertyValue()));
+            final String tokenValue = secretManager.getSecretValue(tokenSecretName);
+            if (tokenValue == null) {
+                LOGGER.warn("Fortify SSC secret '%s' could not be resolved. Aborting".formatted(tokenSecretName));
+                return;
+            }
+            final String token = client.generateOneTimeUploadToken(tokenValue);
             if (token != null) {
                 client.uploadDependencyTrackFindings(token, applicationId.getPropertyValue(), payload);
             }

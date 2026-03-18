@@ -30,6 +30,8 @@ import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.secret.management.SecretManager;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Assertions;
@@ -41,20 +43,29 @@ import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 public class ProjectPropertyResourceTest extends ResourceTest {
+
+    private static final SecretManager secretManager = mock(SecretManager.class);
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(ProjectPropertyResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bind(secretManager).to(SecretManager.class);
+                        }
+                    }));
 
     @Test
     public void getPropertiesTest() {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         qm.createProjectProperty(project, "mygroup", "prop1", "value1", PropertyType.STRING, "Test Property 1");
-        qm.createProjectProperty(project, "mygroup", "prop2", "value2", PropertyType.ENCRYPTEDSTRING, "Test Property 2");
+        qm.createProjectProperty(project, "mygroup", "prop2", "value2", PropertyType.STRING, "Test Property 2");
         Response response = jersey.target(V1_PROJECT + "/" + project.getUuid().toString() + "/property").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -70,8 +81,8 @@ public class ProjectPropertyResourceTest extends ResourceTest {
         Assertions.assertEquals("Test Property 1", json.getJsonObject(0).getString("description"));
         Assertions.assertEquals("mygroup", json.getJsonObject(1).getString("groupName"));
         Assertions.assertEquals("prop2", json.getJsonObject(1).getString("propertyName"));
-        Assertions.assertEquals("HiddenDecryptedPropertyPlaceholder", json.getJsonObject(1).getString("propertyValue"));
-        Assertions.assertEquals("ENCRYPTEDSTRING", json.getJsonObject(1).getString("propertyType"));
+        Assertions.assertEquals("value2", json.getJsonObject(1).getString("propertyValue"));
+        Assertions.assertEquals("STRING", json.getJsonObject(1).getString("propertyType"));
         Assertions.assertEquals("Test Property 2", json.getJsonObject(1).getString("description"));
     }
 
@@ -136,29 +147,6 @@ public class ProjectPropertyResourceTest extends ResourceTest {
         Assertions.assertEquals("prop1", json.getString("propertyName"));
         Assertions.assertEquals("value1", json.getString("propertyValue"));
         Assertions.assertEquals("STRING", json.getString("propertyType"));
-        Assertions.assertEquals("Test Property 1", json.getString("description"));
-    }
-
-    @Test
-    public void createPropertyEncryptedTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
-        ProjectProperty property = new ProjectProperty();
-        property.setProject(project);
-        property.setGroupName("mygroup");
-        property.setPropertyName("prop1");
-        property.setPropertyValue("value1");
-        property.setPropertyType(PropertyType.ENCRYPTEDSTRING);
-        property.setDescription("Test Property 1");
-        Response response = jersey.target(V1_PROJECT + "/" + project.getUuid().toString() + "/property").request()
-                .header(X_API_KEY, apiKey)
-                .put(Entity.entity(property, MediaType.APPLICATION_JSON));
-        Assertions.assertEquals(201, response.getStatus(), 0);
-        JsonObject json = parseJsonObject(response);
-        Assertions.assertNotNull(json);
-        Assertions.assertEquals("mygroup", json.getString("groupName"));
-        Assertions.assertEquals("prop1", json.getString("propertyName"));
-        Assertions.assertEquals("HiddenDecryptedPropertyPlaceholder", json.getString("propertyValue"));
-        Assertions.assertEquals("ENCRYPTEDSTRING", json.getString("propertyType"));
         Assertions.assertEquals("Test Property 1", json.getString("description"));
     }
 

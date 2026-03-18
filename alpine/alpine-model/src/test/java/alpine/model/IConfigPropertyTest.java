@@ -29,7 +29,6 @@ public class IConfigPropertyTest {
         Assertions.assertEquals("INTEGER", IConfigProperty.PropertyType.INTEGER.name());
         Assertions.assertEquals("NUMBER", IConfigProperty.PropertyType.NUMBER.name());
         Assertions.assertEquals("STRING", IConfigProperty.PropertyType.STRING.name());
-        Assertions.assertEquals("ENCRYPTEDSTRING", IConfigProperty.PropertyType.ENCRYPTEDSTRING.name());
         Assertions.assertEquals("TIMESTAMP", IConfigProperty.PropertyType.TIMESTAMP.name());
         Assertions.assertEquals("URL", IConfigProperty.PropertyType.URL.name());
         Assertions.assertEquals("UUID", IConfigProperty.PropertyType.UUID.name());

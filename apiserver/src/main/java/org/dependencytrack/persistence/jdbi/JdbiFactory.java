@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.micrometer.core.instrument.Metrics;
-import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.mapping.PackageMetadataRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.PurlColumnMapper;
@@ -181,7 +181,7 @@ public class JdbiFactory {
 
         preparedJdbi
                 .getConfig(PaginationConfig.class)
-                .setPageTokenEncoder(new EncryptedPageTokenEncoder());
+                .setPageTokenEncoder(new SimplePageTokenEncoder());
         preparedJdbi.getConfig(Jackson2Config.class).setMapper(createJsonMapper());
         return preparedJdbi;
     }

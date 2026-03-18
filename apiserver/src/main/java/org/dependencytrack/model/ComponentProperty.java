@@ -24,8 +24,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.base.MoreObjects;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.model.validation.EnumValue;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.IdGeneratorStrategy;
@@ -33,10 +36,6 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -92,13 +91,6 @@ public class ComponentProperty implements IConfigProperty, Serializable {
     @Persistent
     @Column(name = "PROPERTYTYPE", allowsNull = "false")
     @NotNull
-    // NB: Encrypted values are disallowed because it complicates identity management.
-    // Because duplicate groupName/propertyName combinations are allowed, the value
-    // is critical to determine property uniqueness. We'd need to decrypt encrypted
-    // values prior to uniqueness checks. We'd also open the door for attackers to
-    // guess the encrypted value. As of now, there is no known use-case for encrypted
-    // properties on the component level.
-    @EnumValue(disallowed = "ENCRYPTEDSTRING", message = "Encrypted component property values are not supported")
     private PropertyType propertyType;
 
     @Persistent

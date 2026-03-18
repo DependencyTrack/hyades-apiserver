@@ -31,6 +31,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.inject.Inject;
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -43,6 +44,7 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.secret.management.SecretManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +62,11 @@ import java.util.List;
         @SecurityRequirement(name = "BearerAuth")
 })
 public class ConfigPropertyResource extends AbstractConfigPropertyResource {
+
+    @Inject
+    ConfigPropertyResource(SecretManager secretManager) {
+        super(secretManager);
+    }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -79,16 +86,6 @@ public class ConfigPropertyResource extends AbstractConfigPropertyResource {
     public Response getConfigProperties() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final List<ConfigProperty> configProperties = qm.getConfigProperties();
-            // Detaches the objects and closes the persistence manager so that if/when encrypted string
-            // values are replaced by the placeholder, they are not erroneously persisted to the database.
-            qm.getPersistenceManager().detachCopyAll(configProperties);
-            qm.close();
-            for (final ConfigProperty configProperty : configProperties) {
-                // Replace the value of encrypted strings with the pre-defined placeholder
-                if (ConfigProperty.PropertyType.ENCRYPTEDSTRING == configProperty.getPropertyType()) {
-                    configProperty.setPropertyValue(ENCRYPTED_PLACEHOLDER);
-                }
-            }
             return Response.ok(configProperties).build();
         }
     }

@@ -40,6 +40,7 @@ import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.FetchPackageMetadataResolutionCandidatesRes;
 import org.dependencytrack.proto.internal.workflow.v1.ResolvePackageMetadataActivityArg;
+import org.dependencytrack.secret.TestSecretManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -92,7 +93,7 @@ class ResolvePackageMetadataWorkflowTest extends PersistenceCapableTest {
                 protoConverter(FetchPackageMetadataResolutionCandidatesRes.class),
                 Duration.ofSeconds(5));
         engine.registerActivity(
-                new ResolvePackageMetadataActivity(pluginManager),
+                new ResolvePackageMetadataActivity(pluginManager, new TestSecretManager()),
                 protoConverter(ResolvePackageMetadataActivityArg.class),
                 voidConverter(),
                 Duration.ofSeconds(10));

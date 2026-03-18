@@ -20,7 +20,6 @@ package alpine.server;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
-import alpine.security.crypto.KeyManager;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -59,9 +58,6 @@ public class AlpineServlet extends ServletContainer {
     public void init(ServletConfig config) throws ServletException {
         LOGGER.info("Starting " + Config.getInstance().getApplicationName());
         super.init(config);
-
-        // Initializes the KeyManager
-        KeyManager.getInstance();
 
         // Log all Java System Properties
         SecurityUtil.logJavaSystemProperties();

@@ -20,6 +20,7 @@ package org.dependencytrack.integrations.kenna;
 
 import alpine.model.IConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.secret.TestSecretManager;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -49,7 +50,7 @@ class KennaSecurityUploaderTest extends PersistenceCapableTest {
 
     @Test
     public void testIntegrationMetadata() {
-        KennaSecurityUploader extension = new KennaSecurityUploader(httpClient);
+        KennaSecurityUploader extension = new KennaSecurityUploader(httpClient, new TestSecretManager());
         Assertions.assertEquals("Kenna Security", extension.name());
         Assertions.assertEquals("Pushes Dependency-Track findings to Kenna Security", extension.description());
     }
@@ -70,21 +71,21 @@ class KennaSecurityUploaderTest extends PersistenceCapableTest {
                 IConfigProperty.PropertyType.STRING,
                 null
         );
-        KennaSecurityUploader extension = new KennaSecurityUploader(httpClient);
+        KennaSecurityUploader extension = new KennaSecurityUploader(httpClient, new TestSecretManager());
         extension.setQueryManager(qm);
         Assertions.assertTrue(extension.isEnabled());
     }
 
     @Test
     public void testIntegrationDisabledCases() {
-        KennaSecurityUploader extension = new KennaSecurityUploader(httpClient);
+        KennaSecurityUploader extension = new KennaSecurityUploader(httpClient, new TestSecretManager());
         extension.setQueryManager(qm);
         Assertions.assertFalse(extension.isEnabled());
     }
 
     @Test
     public void testIntegrationFindings() throws Exception {
-        KennaSecurityUploader extension = new KennaSecurityUploader(httpClient);
+        KennaSecurityUploader extension = new KennaSecurityUploader(httpClient, new TestSecretManager());
         extension.setQueryManager(qm);
         InputStream in = extension.process();
         Assertions.assertTrue(in != null && in.available() > 0);

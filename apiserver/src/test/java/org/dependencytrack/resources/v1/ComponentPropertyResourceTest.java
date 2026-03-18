@@ -29,6 +29,8 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.secret.management.SecretManager;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -39,14 +41,23 @@ import java.util.function.Supplier;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.mockito.Mockito.mock;
 
 public class ComponentPropertyResourceTest extends ResourceTest {
+
+    private static final SecretManager secretManager = mock(SecretManager.class);
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(ComponentPropertyResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bind(secretManager).to(SecretManager.class);
+                        }
+                    }));
 
     @Test
     public void getPropertiesTest() {
@@ -260,43 +271,6 @@ public class ComponentPropertyResourceTest extends ResourceTest {
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
         assertThat(getPlainTextBody(response)).isEqualTo("""
                 A property with the specified component/group/name/value combination already exists.""");
-    }
-
-    @Test
-    public void createPropertyDisallowedPropertyTypeTest() {
-        final var project = new Project();
-        project.setName("acme-app");
-        qm.persist(project);
-
-        final var component = new Component();
-        component.setProject(project);
-        component.setName("acme-lib");
-        qm.persist(component);
-
-        final Response response = jersey.target("%s/%s/property".formatted(V1_COMPONENT, component.getUuid())).request()
-                .header(X_API_KEY, apiKey)
-                .put(Entity.entity("""
-                        {
-                          "groupName": "foo",
-                          "propertyName": "bar",
-                          "propertyValue": "baz",
-                          "propertyType": "ENCRYPTEDSTRING",
-                          "description": "qux"
-                        }
-                        """, MediaType.APPLICATION_JSON));
-
-        assertThat(response.getStatus()).isEqualTo(400);
-        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
-                [
-                  {
-                    "message": "Encrypted component property values are not supported",
-                    "messageTemplate": "Encrypted component property values are not supported",
-                    "path": "propertyType",
-                    "invalidValue":"ENCRYPTEDSTRING"
-                  }
-                ]
-                """);
     }
 
     @Test

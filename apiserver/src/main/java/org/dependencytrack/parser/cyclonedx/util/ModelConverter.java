@@ -22,6 +22,10 @@ import alpine.common.logging.Logger;
 import alpine.model.IConfigProperty;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.StringUtils;
@@ -62,10 +66,6 @@ import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.VulnerabilityUtil;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonValue;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -781,12 +781,6 @@ public class ModelConverter {
 
         final List<org.cyclonedx.model.Property> cdxProperties = new ArrayList<>();
         for (final T dtProperty : dtProperties) {
-            if (dtProperty.getPropertyType() == IConfigProperty.PropertyType.ENCRYPTEDSTRING) {
-                // We treat encrypted properties as internal.
-                // They shall not be leaked when exporting.
-                continue;
-            }
-
             final var cdxProperty = new org.cyclonedx.model.Property();
             if (dtProperty.getGroupName() == null) {
                 cdxProperty.setName(dtProperty.getPropertyName());

@@ -30,14 +30,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentProperty;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-
+import jakarta.inject.Inject;
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -48,6 +41,15 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentProperty;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.secret.management.SecretManager;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -61,6 +63,11 @@ import java.util.UUID;
         @SecurityRequirement(name = "BearerAuth")
 })
 public class ComponentPropertyResource extends AbstractConfigPropertyResource {
+
+    @Inject
+    ComponentPropertyResource(SecretManager secretManager) {
+        super(secretManager);
+    }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -91,16 +98,6 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
             if (component != null) {
                 requireAccess(qm, component.getProject());
                 final List<ComponentProperty> properties = qm.getComponentProperties(component);
-                // Detaches the objects and closes the persistence manager so that if/when encrypted string
-                // values are replaced by the placeholder, they are not erroneously persisted to the database.
-                qm.getPersistenceManager().detachCopyAll(properties);
-                qm.close();
-                for (final ComponentProperty property : properties) {
-                    // Replace the value of encrypted strings with the pre-defined placeholder
-                    if (ComponentProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {
-                        property.setPropertyValue(ENCRYPTED_PLACEHOLDER);
-                    }
-                }
                 return Response.ok(properties).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();

@@ -21,6 +21,7 @@ package org.dependencytrack.integrations.fortifyssc;
 import alpine.model.IConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.secret.TestSecretManager;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -50,7 +51,7 @@ class FortifySscUploaderTest extends PersistenceCapableTest {
 
     @Test
     void testIntegrationMetadata() {
-        FortifySscUploader extension = new FortifySscUploader(httpClient);
+        FortifySscUploader extension = new FortifySscUploader(httpClient, new TestSecretManager());
         Assertions.assertEquals("Fortify SSC", extension.name());
         Assertions.assertEquals("Pushes Dependency-Track findings to Software Security Center", extension.description());
     }
@@ -73,7 +74,7 @@ class FortifySscUploaderTest extends PersistenceCapableTest {
                 IConfigProperty.PropertyType.STRING,
                 null
         );
-        FortifySscUploader extension = new FortifySscUploader(httpClient);
+        FortifySscUploader extension = new FortifySscUploader(httpClient, new TestSecretManager());
         extension.setQueryManager(qm);
         Assertions.assertTrue(extension.isEnabled());
         Assertions.assertTrue(extension.isProjectConfigured(project));
@@ -82,7 +83,7 @@ class FortifySscUploaderTest extends PersistenceCapableTest {
     @Test
     void testIntegrationDisabledCases() {
         Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, null, false);
-        FortifySscUploader extension = new FortifySscUploader(httpClient);
+        FortifySscUploader extension = new FortifySscUploader(httpClient, new TestSecretManager());
         extension.setQueryManager(qm);
         Assertions.assertFalse(extension.isEnabled());
         Assertions.assertFalse(extension.isProjectConfigured(project));
@@ -91,7 +92,7 @@ class FortifySscUploaderTest extends PersistenceCapableTest {
     @Test
     void testIntegrationFindings() throws Exception {
         Project project = qm.createProject("ACME Example", null, "1.0", null, null, null, null, false);
-        FortifySscUploader extension = new FortifySscUploader(httpClient);
+        FortifySscUploader extension = new FortifySscUploader(httpClient, new TestSecretManager());
         extension.setQueryManager(qm);
         InputStream in = extension.process(project, new ArrayList<>());
         Assertions.assertTrue(in != null && in.available() > 0);

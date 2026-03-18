@@ -29,14 +29,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectProperty;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-
+import jakarta.inject.Inject;
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -48,6 +41,15 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.secret.management.SecretManager;
+
 import java.util.List;
 
 /**
@@ -63,6 +65,11 @@ import java.util.List;
         @SecurityRequirement(name = "BearerAuth")
 })
 public class ProjectPropertyResource extends AbstractConfigPropertyResource {
+
+    @Inject
+    ProjectPropertyResource(SecretManager secretManager) {
+        super(secretManager);
+    }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -92,16 +99,6 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
             if (project != null) {
                 requireAccess(qm, project);
                 final List<ProjectProperty> properties = qm.getProjectProperties(project);
-                // Detaches the objects and closes the persistence manager so that if/when encrypted string
-                // values are replaced by the placeholder, they are not erroneously persisted to the database.
-                qm.getPersistenceManager().detachCopyAll(properties);
-                qm.close();
-                for (final ProjectProperty property : properties) {
-                    // Replace the value of encrypted strings with the pre-defined placeholder
-                    if (ProjectProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {
-                        property.setPropertyValue(ENCRYPTED_PLACEHOLDER);
-                    }
-                }
                 return Response.ok(properties).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
@@ -158,9 +155,6 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
                                 StringUtils.trimToNull(json.getDescription()));
                         updatePropertyValue(qm, json, property);
                         qm.getPersistenceManager().detachCopy(project);
-                        if (ProjectProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {
-                            property.setPropertyValue(ENCRYPTED_PLACEHOLDER);
-                        }
                         return Response.status(Response.Status.CREATED).entity(property).build();
                     } else {
                         return Response.status(Response.Status.CONFLICT).entity("A property with the specified project/group/name combination already exists.").build();
