@@ -23,11 +23,8 @@ import alpine.server.filters.ApiFilter;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -37,9 +34,9 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Set;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BADGE_ENABLED;
 
 public class BadgeResourceTest extends ResourceTest {
@@ -53,579 +50,152 @@ public class BadgeResourceTest extends ResourceTest {
     @Override
     public void before() throws Exception {
         super.before();
-        qm.createConfigProperty(GENERAL_BADGE_ENABLED.getGroupName(), GENERAL_BADGE_ENABLED.getPropertyName(), "false", IConfigProperty.PropertyType.BOOLEAN, "Unauthenticated access to badge enabled");
+        qm.createConfigProperty(GENERAL_BADGE_ENABLED.getGroupName(), GENERAL_BADGE_ENABLED.getPropertyName(), "true", IConfigProperty.PropertyType.BOOLEAN, "Public access to badge enabled");
     }
 
     @Test
-    public void projectVulnerabilitiesByUuidTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid())
-                .queryParam(API_KEY, apiKey)
+    public void shouldReturnVulnBadgeByUuid() {
+        final Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
+        final Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid())
                 .request()
                 .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("image/svg+xml");
+        assertThat(isLikelySvg(getPlainTextBody(response))).isTrue();
     }
 
     @Test
-    public void projectVulnerabilitiesByUuidWithHeaderAuthenticationTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid()).request()
-                .header(X_API_KEY, apiKey)
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectVulnerabilitiesByUuidMissingAuthenticationWithUnauthenticatedAccessEnabledTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        enableUnauthenticatedBadgeAccess();
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid()).request()
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectVulnerabilitiesByUuidProjectNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/" + UUID.randomUUID())
-                .queryParam(API_KEY, apiKey)
+    public void shouldReturn404ForVulnBadgeByUuidWhenProjectNotFound() {
+        final Response response = jersey.target(V1_BADGE + "/vulns/project/" + UUID.randomUUID())
                 .request()
                 .get(Response.class);
-        Assertions.assertEquals(404, response.getStatus(), 0);
+        assertThat(response.getStatus()).isEqualTo(404);
     }
 
     @Test
-    public void projectVulnerabilitiesByUuidMissingAuthenticationTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid()).request()
-                .get(Response.class);
-        Assertions.assertEquals(401, response.getStatus(), 0);
-    }
-
-    @Test
-    public void projectVulnerabilitiesByUuidMissingPermissionTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid())
-                .queryParam(API_KEY, apiKey)
+    public void shouldReturn403ForVulnBadgeByUuidWhenDisabled() {
+        qm.getConfigProperty(GENERAL_BADGE_ENABLED.getGroupName(), GENERAL_BADGE_ENABLED.getPropertyName()).setPropertyValue("false");
+        final Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
+        final Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid())
                 .request()
                 .get(Response.class);
-        Assertions.assertEquals(403, response.getStatus(), 0);
+        assertThat(response.getStatus()).isEqualTo(403);
     }
 
     @Test
-    public void projectVulnerabilitiesByUuidWithAclAccessTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                null
-        );
-        Project project = new Project();
-        project.setName("Acme Example");
-        project.setVersion("1.0.0");
-        project.setAccessTeams(Set.of(team));
-        qm.persist(project);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid())
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectVulnerabilitiesByUuidWithAclAccessWithHeaderAuthenticationTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                null
-        );
-        Project project = new Project();
-        project.setName("Acme Example");
-        project.setVersion("1.0.0");
-        project.setAccessTeams(Set.of(team));
-        qm.persist(project);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid()).request()
-                .header(X_API_KEY, apiKey)
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectVulnerabilitiesByUuidWithAclNoAccessTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                null
-        );
-        Project project = new Project();
-        project.setName("Acme Example");
-        project.setVersion("1.0.0");
-        qm.persist(project);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid())
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(403, response.getStatus(), 0);
-    }
-
-    @Test
-    public void projectVulnerabilitiesByNameAndVersionTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
+    public void shouldReturnVulnBadgeByNameAndVersion() {
         qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0")
-                .queryParam(API_KEY, apiKey)
+        final Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0")
                 .request()
                 .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("image/svg+xml");
+        assertThat(isLikelySvg(getPlainTextBody(response))).isTrue();
     }
 
     @Test
-    public void projectVulnerabilitiesByNameAndVersionWithHeaderAuthenticationTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        enableUnauthenticatedBadgeAccess();
+    public void shouldReturn404ForVulnBadgeByNameAndVersionWhenProjectNotFound() {
+        final Response response = jersey.target(V1_BADGE + "/vulns/project/DoesNotExist/1.0.0")
+                .request()
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(404);
+    }
+
+    @Test
+    public void shouldReturn404ForVulnBadgeByNameAndVersionWhenVersionNotFound() {
         qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0").request()
+        final Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/9.9.9")
+                .request()
                 .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        assertThat(response.getStatus()).isEqualTo(404);
     }
 
-    public void projectVulnerabilitiesByNameAndVersionMissingAuthenticationWithUnauthenticatedAccessEnabledTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
+    @Test
+    public void shouldReturn403ForVulnBadgeByNameAndVersionWhenDisabled() {
+        qm.getConfigProperty(GENERAL_BADGE_ENABLED.getGroupName(), GENERAL_BADGE_ENABLED.getPropertyName()).setPropertyValue("false");
         qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0")
-                .queryParam(API_KEY, apiKey)
+        final Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0")
                 .request()
                 .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
+        assertThat(response.getStatus()).isEqualTo(403);
     }
 
     @Test
-    public void projectVulnerabilitiesByNameAndVersionProjectNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/ProjectNameDoesNotExist/1.0.0")
-                .queryParam(API_KEY, apiKey)
+    public void shouldReturnViolationsBadgeByUuid() {
+        final Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
+        final Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid())
                 .request()
                 .get(Response.class);
-        Assertions.assertEquals(404, response.getStatus(), 0);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("image/svg+xml");
+        assertThat(isLikelySvg(getPlainTextBody(response))).isTrue();
     }
 
     @Test
-    public void projectVulnerabilitiesByNameAndVersionVersionNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
+    public void shouldReturn404ForViolationsBadgeByUuidWhenProjectNotFound() {
+        final Response response = jersey.target(V1_BADGE + "/violations/project/" + UUID.randomUUID())
+                .request()
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(404);
+    }
+
+    @Test
+    public void shouldReturn403ForViolationsBadgeByUuidWhenDisabled() {
+        qm.getConfigProperty(GENERAL_BADGE_ENABLED.getGroupName(), GENERAL_BADGE_ENABLED.getPropertyName()).setPropertyValue("false");
+        final Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
+        final Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid())
+                .request()
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(403);
+    }
+
+    @Test
+    public void shouldReturnViolationsBadgeByNameAndVersion() {
         qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.2.0")
-                .queryParam(API_KEY, apiKey)
+        final Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
                 .request()
                 .get(Response.class);
-        Assertions.assertEquals(404, response.getStatus(), 0);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("image/svg+xml");
+        assertThat(isLikelySvg(getPlainTextBody(response))).isTrue();
     }
 
     @Test
-    public void projectVulnerabilitiesByNameAndVersionMissingAuthenticationTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
+    public void shouldReturn404ForViolationsBadgeByNameAndVersionWhenProjectNotFound() {
+        final Response response = jersey.target(V1_BADGE + "/violations/project/DoesNotExist/1.0.0")
+                .request()
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(404);
+    }
+
+    @Test
+    public void shouldReturn404ForViolationsBadgeByNameAndVersionWhenVersionNotFound() {
         qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0").request()
+        final Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/9.9.9")
+                .request()
                 .get(Response.class);
-        Assertions.assertEquals(401, response.getStatus(), 0);
+        assertThat(response.getStatus()).isEqualTo(404);
     }
 
     @Test
-    public void projectVulnerabilitiesByNameAndVersionMissingPermissionTest() {
+    public void shouldReturn403ForViolationsBadgeByNameAndVersionWhenDisabled() {
+        qm.getConfigProperty(GENERAL_BADGE_ENABLED.getGroupName(), GENERAL_BADGE_ENABLED.getPropertyName()).setPropertyValue("false");
         qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0")
-                .queryParam(API_KEY, apiKey)
+        final Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
                 .request()
                 .get(Response.class);
-        Assertions.assertEquals(403, response.getStatus(), 0);
-    }
-
-    @Test
-    public void projectVulnerabilitiesByNameAndVersionWithAclAccessTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                null
-        );
-        Project project = new Project();
-        project.setName("Acme Example");
-        project.setVersion("1.0.0");
-        project.setAccessTeams(Set.of(team));
-        qm.persist(project);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0")
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectVulnerabilitiesByNameAndVersionWithAclAccessWithHeaderAuthenticationTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                null
-        );
-        Project project = new Project();
-        project.setName("Acme Example");
-        project.setVersion("1.0.0");
-        project.setAccessTeams(Set.of(team));
-        qm.persist(project);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0").request()
-                .header(X_API_KEY, apiKey)
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectVulnerabilitiesByNameAndVersionWithAclNoAccessTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                null
-        );
-        Project project = new Project();
-        project.setName("Acme Example");
-        project.setVersion("1.0.0");
-        qm.persist(project);
-        Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0")
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(403, response.getStatus(), 0);
-    }
-
-    @Test
-    public void projectPolicyViolationsByUuidTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid())
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectPolicyViolationsByUuidWithHeaderAuthenticationTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid()).request()
-                .header(X_API_KEY, apiKey)
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectPolicyViolationsByUuidMissingAuthenticationWithUnauthenticatedAccessEnabledTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        enableUnauthenticatedBadgeAccess();
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid())
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectPolicyViolationsByUuidProjectNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        Response response = jersey.target(V1_BADGE + "/violations/project/" + UUID.randomUUID())
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(404, response.getStatus(), 0);
-    }
-
-    @Test
-    public void projectPolicyViolationsByUuidMissingAuthenticationTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid()).request()
-                .get(Response.class);
-        Assertions.assertEquals(401, response.getStatus(), 0);
-    }
-
-    @Test
-    public void projectPolicyViolationsByUuidMissingPermissionTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid())
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(403, response.getStatus(), 0);
-    }
-
-    @Test
-    public void projectPolicyViolationsByUuidWithAclAccessTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                null
-        );
-        Project project = new Project();
-        project.setName("Acme Example");
-        project.setVersion("1.0.0");
-        project.setAccessTeams(Set.of(team));
-        qm.persist(project);
-        Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid())
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectPolicyViolationsByUuidWithAclAccessWithHeaderAuthenticationTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                null
-        );
-        Project project = new Project();
-        project.setName("Acme Example");
-        project.setVersion("1.0.0");
-        project.setAccessTeams(Set.of(team));
-        qm.persist(project);
-        Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid()).request()
-                .header(X_API_KEY, apiKey)
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectPolicyViolationsByUuidWithAclNoAccessTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                null
-        );
-        Project project = new Project();
-        project.setName("Acme Example");
-        project.setVersion("1.0.0");
-        qm.persist(project);
-        Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid())
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(403, response.getStatus(), 0);
-    }
-
-    @Test
-    public void projectPolicyViolationsByNameAndVersionTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectPolicyViolationsByNameAndVersionWithHeaderAuthenticationTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0").request()
-                .header(X_API_KEY, apiKey)
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectPolicyViolationsByNameAndVersionMissingAuthenticationWithUnauthenticatedAccessEnabledTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        enableUnauthenticatedBadgeAccess();
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectPolicyViolationsByNameAndVersionProjectNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        Response response = jersey.target(V1_BADGE + "/violations/project/ProjectNameDoesNotExist/1.0.0")
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(404, response.getStatus(), 0);
-    }
-
-    @Test
-    public void projectPolicyViolationsByNameAndVersionVersionNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.2.0")
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(404, response.getStatus(), 0);
-    }
-
-    @Test
-    public void projectPolicyViolationsByNameAndVersionMissingAuthenticationTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0").request()
-                .get(Response.class);
-        Assertions.assertEquals(401, response.getStatus(), 0);
-    }
-
-    @Test
-    public void projectPolicyViolationsByNameAndVersionMissingPermissionTest() {
-        qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(403, response.getStatus(), 0);
-    }
-
-    @Test
-    public void projectPolicyViolationsByNameAndVersionWithAclAccessTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                null
-        );
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        project.setAccessTeams(Set.of(team));
-        qm.persist(project);
-        Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectPolicyViolationsByNameAndVersionWithAclAccessWithHeaderAuthenticationTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                null
-        );
-        Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        project.setAccessTeams(Set.of(team));
-        qm.persist(project);
-        Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0").request()
-                .header(X_API_KEY, apiKey)
-                .get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals("image/svg+xml", response.getHeaderString("Content-Type"));
-        Assertions.assertTrue(isLikelySvg(getPlainTextBody(response)));
-    }
-
-    @Test
-    public void projectPolicyViolationsByNameAndVersionWithAclNoAccessTest() {
-        initializeWithPermissions(Permissions.VIEW_BADGES);
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                null
-        );
-        Project project = new Project();
-        project.setName("Acme Example");
-        project.setVersion("1.0.0");
-        qm.persist(project);
-        Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
-                .queryParam(API_KEY, apiKey)
-                .request()
-                .get(Response.class);
-        Assertions.assertEquals(403, response.getStatus(), 0);
+        assertThat(response.getStatus()).isEqualTo(403);
     }
 
     private boolean isLikelySvg(String body) {
         try {
-            InputStream is = new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8));
-            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-            DocumentBuilder db = dbf.newDocumentBuilder();
+            final InputStream is = new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8));
+            final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            final DocumentBuilder db = dbf.newDocumentBuilder();
             db.parse(is);
             return body.startsWith("<svg");
         } catch (Exception e) {
             return false;
         }
-    }
-
-    private void enableUnauthenticatedBadgeAccess() {
-        qm.getConfigProperty(GENERAL_BADGE_ENABLED.getGroupName(), GENERAL_BADGE_ENABLED.getPropertyName())
-                .setPropertyValue("true");
     }
 }

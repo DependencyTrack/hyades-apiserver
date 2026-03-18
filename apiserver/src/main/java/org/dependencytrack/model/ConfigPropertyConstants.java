@@ -29,7 +29,7 @@ public enum ConfigPropertyConstants {
     INTERNAL_CLUSTER_ID("internal", "cluster.id", UUID.randomUUID().toString(), PropertyType.STRING, "Unique identifier of the cluster", ConfigPropertyAccessMode.READ_ONLY),
     INTERNAL_DEFAULT_OBJECTS_VERSION("internal", "default.objects.version", null, PropertyType.STRING, "Version of the default objects in the database", ConfigPropertyAccessMode.READ_ONLY),
     GENERAL_BASE_URL("general", "base.url", null, PropertyType.URL, "URL used to construct links back to Dependency-Track from external systems", ConfigPropertyAccessMode.READ_WRITE),
-    GENERAL_BADGE_ENABLED("general", "badge.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable unauthenticated access to SVG badge from metrics", ConfigPropertyAccessMode.READ_WRITE),
+    GENERAL_BADGE_ENABLED("general", "badge.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable public access to SVG badges", ConfigPropertyAccessMode.READ_WRITE),
     INTERNAL_COMPONENTS_GROUPS_REGEX("internal-components", "groups.regex", null, PropertyType.STRING, "Regex that matches groups of internal components", ConfigPropertyAccessMode.READ_WRITE),
     INTERNAL_COMPONENTS_NAMES_REGEX("internal-components", "names.regex", null, PropertyType.STRING, "Regex that matches names of internal components", ConfigPropertyAccessMode.READ_WRITE),
     MAINTENANCE_METRICS_RETENTION_DAYS("maintenance", "metrics.retention.days", "90", PropertyType.INTEGER, "Number of days to retain metrics data for", ConfigPropertyAccessMode.READ_WRITE),
