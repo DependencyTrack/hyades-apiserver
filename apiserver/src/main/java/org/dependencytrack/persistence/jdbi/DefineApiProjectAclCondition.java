@@ -32,9 +32,9 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.sql.PreparedStatement;
 
-import static org.dependencytrack.persistence.jdbi.ApiRequestStatementCustomizer.PARAMETER_PROJECT_ACL_TEAM_IDS;
+import static org.dependencytrack.persistence.jdbi.ApiRequestStatementCustomizer.PARAMETER_PROJECT_ACL_API_KEY_ID;
 import static org.dependencytrack.persistence.jdbi.ApiRequestStatementCustomizer.PARAMETER_PROJECT_ACL_USER_ID;
-import static org.dependencytrack.persistence.jdbi.ApiRequestStatementCustomizer.TEMPLATE_PROJECT_ACL_CONDITION;
+import static org.dependencytrack.persistence.jdbi.ApiRequestStatementCustomizer.TEMPLATE_API_KEY_PROJECT_ACL_CONDITION;
 import static org.dependencytrack.persistence.jdbi.ApiRequestStatementCustomizer.TEMPLATE_USER_PROJECT_ACL_CONDITION;
 import static org.dependencytrack.persistence.jdbi.JdbiAttributes.ATTRIBUTE_API_PROJECT_ACL_CONDITION;
 
@@ -111,11 +111,11 @@ public @interface DefineApiProjectAclCondition {
                 throw new IllegalArgumentException("project id column must be different from default column name");
             }
 
-            if (ctx.getBinding().findForName(PARAMETER_PROJECT_ACL_TEAM_IDS, ctx).isPresent()) {
-                // The existing condition has defined team IDs for the ACL check already,
-                // so it's not a trivial TRUE or FALSE. Re-use those bindings by defining
+            if (ctx.getBinding().findForName(PARAMETER_PROJECT_ACL_API_KEY_ID, ctx).isPresent()) {
+                // The existing condition has defined an API key ID for the ACL check already,
+                // so it's not a trivial TRUE or FALSE. Re-use that binding by defining
                 // a new condition, using the chosen project table alias.
-                ctx.define(attributeName, TEMPLATE_PROJECT_ACL_CONDITION.formatted(projectIdColumn));
+                ctx.define(attributeName, TEMPLATE_API_KEY_PROJECT_ACL_CONDITION.formatted(projectIdColumn));
             } else if (ctx.getBinding().findForName(PARAMETER_PROJECT_ACL_USER_ID, ctx).isPresent()) {
                 // The existing condition has defined a user ID for the ACL check already,
                 // so it's not a trivial TRUE or FALSE. Re-use that binding by defining

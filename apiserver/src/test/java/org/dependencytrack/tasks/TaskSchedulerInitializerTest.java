@@ -57,6 +57,7 @@ class TaskSchedulerInitializerTest extends PersistenceCapableTest {
                 "CSAF Document Import",
                 "Defect Dojo Upload",
                 "EPSS Mirror",
+                "Expired Session Cleanup",
                 "Fortify SSC Upload",
                 "GitHub Advisories Mirror",
                 "Internal Component Identification",

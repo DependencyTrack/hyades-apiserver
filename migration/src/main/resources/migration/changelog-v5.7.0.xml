@@ -1215,4 +1215,21 @@
             DROP INDEX "COMPONENT_NAME_GROUP_IDX";
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-56" author="nscuro">
+        <sql splitStatements="true">
+            CREATE TABLE "USER_SESSION" (
+              "TOKEN_HASH" VARCHAR(64)
+            , "USER_ID" BIGINT NOT NULL
+            , "CREATED_AT" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            , "EXPIRES_AT" TIMESTAMPTZ NOT NULL
+            , "LAST_USED_AT" TIMESTAMPTZ
+            , CONSTRAINT "USER_SESSION_PK" PRIMARY KEY ("TOKEN_HASH")
+            , CONSTRAINT "USER_SESSION_USER_FK" FOREIGN KEY ("USER_ID") REFERENCES "USER" ("ID") ON DELETE CASCADE
+            );
+
+            CREATE INDEX "USER_SESSION_EXPIRES_AT_IDX" ON "USER_SESSION" ("EXPIRES_AT");
+            CREATE INDEX "USER_SESSION_USER_ID_IDX" ON "USER_SESSION" ("USER_ID");
+        </sql>
+    </changeSet>
 </databaseChangeLog>

@@ -25,16 +25,8 @@ import alpine.model.ApiKey;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
-import alpine.model.User;
-import alpine.persistence.AlpineQueryManager;
 import alpine.resources.AlpineRequest;
 import alpine.server.filters.AuthorizationFilter;
-import io.jsonwebtoken.lang.Collections;
-import org.apache.commons.lang3.StringUtils;
-import org.glassfish.jersey.server.validation.ValidationError;
-import org.owasp.security.logging.SecurityMarkers;
-import org.slf4j.Marker;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -45,6 +37,11 @@ import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
+import org.apache.commons.lang3.StringUtils;
+import org.glassfish.jersey.server.validation.ValidationError;
+import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Marker;
+
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
@@ -212,7 +209,7 @@ public abstract class AlpineResource {
     @SafeVarargs
     protected final void failOnValidationError(final Set<ConstraintViolation<Object>>... violationsArray) {
         final List<ValidationError> errors = contOnValidationError(violationsArray);
-        if (! Collections.isEmpty(errors)) {
+        if (!errors.isEmpty()) {
             throw new BadRequestException(Response.status(Response.Status.BAD_REQUEST).entity(errors).build());
         }
     }
@@ -268,7 +265,7 @@ public abstract class AlpineResource {
      */
     protected final void failOnValidationError(final ValidationTask... validationTasks) {
         final List<ValidationException> errors = contOnValidationError(validationTasks);
-        if (! Collections.isEmpty(errors)) {
+        if (!errors.isEmpty()) {
             throw new BadRequestException(Response.status(Response.Status.BAD_REQUEST).entity(errors).build());
         }
     }
@@ -325,18 +322,8 @@ public abstract class AlpineResource {
      * @since 1.2.0
      */
     protected boolean hasPermission(final String permission) {
-        if (getPrincipal() == null) {
-            return false;
-        }
-        try (AlpineQueryManager qm = new AlpineQueryManager()) {
-            boolean hasPermission = false;
-            if (getPrincipal() instanceof ApiKey) {
-                hasPermission = qm.hasPermission((ApiKey)getPrincipal(), permission);
-            } else if (getPrincipal() instanceof User) {
-                hasPermission = qm.hasPermission((User)getPrincipal(), permission, true);
-            }
-            return hasPermission;
-        }
+        final Set<String> effectivePermissions = getEffectivePermissions();
+        return effectivePermissions != null && effectivePermissions.contains(permission);
     }
 
     /**
