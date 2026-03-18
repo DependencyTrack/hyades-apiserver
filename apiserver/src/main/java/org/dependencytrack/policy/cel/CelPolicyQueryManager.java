@@ -132,16 +132,20 @@ class CelPolicyQueryManager implements AutoCloseable {
      * @return A {@link List} of {@link ComponentsVulnerabilitiesProjection}
      */
     List<ComponentsVulnerabilitiesProjection> fetchAllComponentsVulnerabilities(final long projectId) {
-        final Query<?> query = pm.newQuery(Query.SQL, """
-                SELECT
-                  "CV"."COMPONENT_ID" AS "componentId",
-                  "CV"."VULNERABILITY_ID" AS "vulnerabilityId"
-                FROM
-                  "COMPONENTS_VULNERABILITIES" AS "CV"
-                INNER JOIN
-                  "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
-                WHERE
-                  "C"."PROJECT_ID" = ?
+        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                SELECT "CV"."COMPONENT_ID" AS "componentId"
+                     , "CV"."VULNERABILITY_ID" AS "vulnerabilityId"
+                  FROM "COMPONENTS_VULNERABILITIES" AS "CV"
+                 INNER JOIN "COMPONENT" AS "C"
+                    ON "C"."ID" = "CV"."COMPONENT_ID"
+                 WHERE "C"."PROJECT_ID" = ?
+                   AND EXISTS (
+                     SELECT 1
+                       FROM "FINDINGATTRIBUTION" AS fa
+                      WHERE fa."COMPONENT_ID" = "C"."ID"
+                        AND fa."VULNERABILITY_ID" = "CV"."VULNERABILITY_ID"
+                        AND fa."DELETED_AT" IS NULL
+                   )
                 """);
         query.setParameters(projectId);
         try {
@@ -260,18 +264,24 @@ class CelPolicyQueryManager implements AutoCloseable {
             sqlSelectColumns += ", \"EP\".\"PERCENTILE\" AS \"epssPercentile\"";
         }
 
-        final Query<?> query = pm.newQuery(Query.SQL, """
-                SELECT DISTINCT
-                  %s
-                FROM
-                  "VULNERABILITY" AS "V"
-                INNER JOIN
-                  "COMPONENTS_VULNERABILITIES" AS "CV" ON "CV"."VULNERABILITY_ID" = "V"."ID"
-                INNER JOIN
-                  "COMPONENT" AS "C" ON "C"."ID" = "CV"."COMPONENT_ID"
-                LEFT JOIN "EPSS" AS "EP" ON "V"."VULNID" = "EP"."CVE" AND :shouldFetchEpss
-                WHERE
-                  "C"."PROJECT_ID" = :projectId
+        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                SELECT DISTINCT %s
+                  FROM "VULNERABILITY" AS "V"
+                 INNER JOIN "COMPONENTS_VULNERABILITIES" AS "CV"
+                    ON "CV"."VULNERABILITY_ID" = "V"."ID"
+                 INNER JOIN "COMPONENT" AS "C"
+                    ON "C"."ID" = "CV"."COMPONENT_ID"
+                  LEFT JOIN "EPSS" AS "EP"
+                    ON "V"."VULNID" = "EP"."CVE"
+                   AND :shouldFetchEpss
+                 WHERE "C"."PROJECT_ID" = :projectId
+                   AND EXISTS (
+                     SELECT 1
+                       FROM "FINDINGATTRIBUTION" AS fa
+                      WHERE fa."COMPONENT_ID" = "C"."ID"
+                        AND fa."VULNERABILITY_ID" = "V"."ID"
+                        AND fa."DELETED_AT" IS NULL
+                   )
                 """.formatted(sqlSelectColumns));
         query.setNamedParameters(Map.of(
                 "projectId", projectId,
