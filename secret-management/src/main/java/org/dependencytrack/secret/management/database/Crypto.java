@@ -25,12 +25,16 @@ import com.google.crypto.tink.RegistryConfiguration;
 import com.google.crypto.tink.TinkJsonProtoKeysetFormat;
 import com.google.crypto.tink.TinkProtoKeysetFormat;
 import com.google.crypto.tink.aead.AeadConfig;
+import com.google.crypto.tink.aead.AesGcmKey;
 import com.google.crypto.tink.aead.PredefinedAeadParameters;
+import com.google.crypto.tink.util.SecretBytes;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
@@ -101,12 +105,51 @@ final class Crypto {
         return new EncryptionResult(cipherText, serializedDek);
     }
 
-    private Aead loadKek(final DatabaseSecretManagerConfig config) {
+    private Aead loadKek(DatabaseSecretManagerConfig config) {
         // The KEK is usually meant to be fetched from an external KMS.
         // We can't make KMSes a mandatory requirement, hence we support
-        // loading the KEK keyset from file instead. However, support for
-        // external KMSes would be relatively easy to add if requested.
+        // fixed keys from config, or loading the KEK keyset from file instead.
+        // However, support for external KMSes would be relatively easy to add if requested.
         // https://developers.google.com/tink/key-management-overview
+
+        final Logger logger = LoggerFactory.getLogger(DatabaseSecretManager.class);
+
+        final byte[] kekBytes = config.getKek();
+        if (kekBytes != null) {
+            logger.info("Loading KEK from config");
+
+            // Derive a stable key ID from the key bytes.
+            // Note that Tink by convention uses positive key IDs,
+            // while hashCode can yield negative values.
+            // Clear the sign bit to ensure we're always following the Tink convention.
+            final int keyId = Arrays.hashCode(kekBytes) & 0x7FFFFFFF | 1;
+
+            try {
+                final var key = AesGcmKey.builder()
+                        .setIdRequirement(keyId)
+                        .setParameters(PredefinedAeadParameters.AES256_GCM)
+                        .setKeyBytes(SecretBytes.copyFrom(kekBytes, InsecureSecretKeyAccess.get()))
+                        .build();
+
+                final var keysetHandle = KeysetHandle.newBuilder()
+                        .addEntry(KeysetHandle
+                                .importKey(key)
+                                .withFixedId(keyId)
+                                .makePrimary())
+                        .build();
+
+                return doLocked(connection -> {
+                    verifyOrStoreKekKeyIds(connection, keysetHandle);
+                    return keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead.class);
+                });
+            } catch (GeneralSecurityException e) {
+                throw new IllegalStateException("Failed to load KEK from config", e);
+            }
+        }
+
+        // NB: Throws when not configured.
+        // Calling it here so we don't even open a DB connection if missing.
+        final Path kekKeysetPath = config.getKekKeysetPath();
 
         return doLocked(connection -> {
             // This must execute in a locked context to avoid race conditions
@@ -114,19 +157,17 @@ final class Crypto {
             // and the create-if-missing option is enabled.
 
             final KeysetHandle keysetHandle;
-            if (Files.exists(config.getKekKeysetPath())) {
-                LoggerFactory.getLogger(DatabaseSecretManager.class).info(
-                        "Loading existing KEK keyset from {}", config.getKekKeysetPath());
+            if (Files.exists(kekKeysetPath)) {
+                logger.info("Loading existing KEK keyset from {}", kekKeysetPath);
                 keysetHandle =
                         TinkJsonProtoKeysetFormat.parseKeyset(
-                                Files.readString(config.getKekKeysetPath()), InsecureSecretKeyAccess.get());
+                                Files.readString(kekKeysetPath), InsecureSecretKeyAccess.get());
             } else if (config.isCreateKekKeysetIfMissing()) {
-                LoggerFactory.getLogger(DatabaseSecretManager.class).info(
-                        "KEK keyset at {} does not exist yet; Creating it", config.getKekKeysetPath());
-                keysetHandle = KeysetHandle.generateNew(PredefinedAeadParameters.AES128_GCM);
+                logger.info("KEK keyset at {} does not exist yet; Creating it", kekKeysetPath);
+                keysetHandle = KeysetHandle.generateNew(PredefinedAeadParameters.AES256_GCM);
 
                 // Ensure all directories leading up to the keyset exist.
-                Files.createDirectories(config.getKekKeysetPath().getParent());
+                Files.createDirectories(kekKeysetPath.getParent());
 
                 // Create the file with as restrictive permissions as possible.
                 // Note that GROUP_READ is necessary for OpenShift deployments,
@@ -138,16 +179,16 @@ final class Crypto {
                                 PosixFilePermission.GROUP_READ));
 
                 if (!System.getProperty("os.name").toLowerCase().startsWith("win")) {
-                    Files.createFile(config.getKekKeysetPath(), posixPermissionsAttribute);
+                    Files.createFile(kekKeysetPath, posixPermissionsAttribute);
                 } else {
                     // POSIX permissions don't work on Windows.
                     // Note that this fallback is mainly for developers working on Windows
                     // machines, since our official distribution is a Linux-based container image.
-                    Files.createFile(config.getKekKeysetPath());
+                    Files.createFile(kekKeysetPath);
                 }
 
                 Files.writeString(
-                        config.getKekKeysetPath(),
+                        kekKeysetPath,
                         TinkJsonProtoKeysetFormat.serializeKeyset(keysetHandle, InsecureSecretKeyAccess.get()),
                         StandardOpenOption.WRITE);
             } else {
@@ -155,7 +196,7 @@ final class Crypto {
                         KEK keyset at %s does not exist and \
                         dt.secret-management.database.kek-keyset.create-if-missing \
                         is false. Can not continue without a valid KEK keyset.\
-                        """.formatted(config.getKekKeysetPath()));
+                        """.formatted(kekKeysetPath));
             }
 
             verifyOrStoreKekKeyIds(connection, keysetHandle);
