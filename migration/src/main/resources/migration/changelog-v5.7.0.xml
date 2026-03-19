@@ -1293,4 +1293,37 @@
             );
         </sql>
     </changeSet>
+    
+    <changeSet id="v5.7.0-60" author="nscuro">
+        <!--
+            Delete any duplicate policy violations.
+            Note that this doesn't do any fancy reconciliation, it just keeps the latest.
+            Users upgrading from v4 should already not have duplicates anymore, as of v4.12.1.
+            https://github.com/DependencyTrack/dependency-track/pull/4234
+        -->
+        <sql>
+            WITH duplicate AS (
+              SELECT "ID"
+                   , ROW_NUMBER() OVER(
+                       PARTITION BY "COMPONENT_ID", "PROJECT_ID", "POLICYCONDITION_ID"
+                       ORDER BY "TIMESTAMP" DESC
+                     ) AS rn
+                FROM "POLICYVIOLATION"
+            )
+            DELETE FROM "POLICYVIOLATION"
+             USING duplicate
+             WHERE "POLICYVIOLATION"."ID" = duplicate."ID"
+               AND duplicate.rn > 1
+        </sql>
+
+        <!-- Create unique index to prevent new dupes from being created. -->
+        <createIndex tableName="POLICYVIOLATION" indexName="POLICYVIOLATION_IDENTITY_IDX" unique="true">
+            <column name="COMPONENT_ID"/>
+            <column name="PROJECT_ID"/>
+            <column name="POLICYCONDITION_ID"/>
+        </createIndex>
+
+        <!-- Drop redundant index that is covered by the new unique index. -->
+        <dropIndex tableName="POLICYVIOLATION" indexName="POLICYVIOLATION_COMPONENT_IDX"/>
+    </changeSet>
 </databaseChangeLog>
