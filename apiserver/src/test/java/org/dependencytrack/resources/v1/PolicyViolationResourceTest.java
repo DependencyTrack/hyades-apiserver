@@ -121,33 +121,49 @@ public class PolicyViolationResourceTest extends ResourceTest {
         component0.setVersion("1.0");
         component0 = qm.createComponent(component0, false);
 
-        var component1 = new Component();
-        component1.setProject(project);
-        component1.setName("Acme Component 1");
-        component1.setVersion("1.0");
-        component1 = qm.createComponent(component1, false);
-
         final Policy policy0 = qm.createPolicy("Blacklisted Version 0", Policy.Operator.ALL, Policy.ViolationState.FAIL);
         final PolicyCondition condition0 = qm.createPolicyCondition(policy0, PolicyCondition.Subject.VERSION, PolicyCondition.Operator.NUMERIC_EQUAL, "1.0");
 
         final Policy policy1 = qm.createPolicy("Blacklisted Version 1", Policy.Operator.ALL, Policy.ViolationState.FAIL);
         final PolicyCondition condition1 = qm.createPolicyCondition(policy1, PolicyCondition.Subject.VERSION, PolicyCondition.Operator.NUMERIC_EQUAL, "1.0");
 
-        ArrayList<PolicyViolation> filteredPolicyViolations = new ArrayList<>();
-        for (int i=0; i<10; i++) {
-            final boolean componentFilter = (i == 3);
-            final boolean conditionFilter = (i == 7);
+        final var filteredPolicyViolations = new ArrayList<PolicyViolation>();
+
+        var violationFiltered0 = new PolicyViolation();
+        violationFiltered0.setType(PolicyViolation.Type.OPERATIONAL);
+        violationFiltered0.setComponent(component0);
+        violationFiltered0.setPolicyCondition(condition1);
+        violationFiltered0.setTimestamp(new Date());
+        violationFiltered0 = qm.persist(violationFiltered0);
+        filteredPolicyViolations.add(violationFiltered0);
+
+        var componentForCondition0 = new Component();
+        componentForCondition0.setProject(project);
+        componentForCondition0.setName("Acme Component 1");
+        componentForCondition0.setVersion("1.0");
+        componentForCondition0 = qm.createComponent(componentForCondition0, false);
+
+        var violationFiltered1 = new PolicyViolation();
+        violationFiltered1.setType(PolicyViolation.Type.OPERATIONAL);
+        violationFiltered1.setComponent(componentForCondition0);
+        violationFiltered1.setPolicyCondition(condition0);
+        violationFiltered1.setTimestamp(new Date());
+        violationFiltered1 = qm.persist(violationFiltered1);
+        filteredPolicyViolations.add(violationFiltered1);
+
+        for (int i = 2; i < 6; i++) {
+            var component = new Component();
+            component.setProject(project);
+            component.setName("Acme Component " + i);
+            component.setVersion("1.0");
+            component = qm.createComponent(component, false);
 
             var violation = new PolicyViolation();
             violation.setType(PolicyViolation.Type.OPERATIONAL);
-            violation.setComponent(componentFilter ? component0 : component1);
-            violation.setPolicyCondition(conditionFilter ? condition0 : condition1);
+            violation.setComponent(component);
+            violation.setPolicyCondition(condition1);
             violation.setTimestamp(new Date());
-            violation = qm.persist(violation);
-
-            if (conditionFilter || componentFilter) {
-                filteredPolicyViolations.add(violation);
-            }
+            qm.persist(violation);
         }
 
         final Response response = jersey.target(V1_POLICY_VIOLATION)
@@ -409,9 +425,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
         var componentD = new Component();
         componentD.setProject(projectA);
-        componentD.setName("Acme Component");
+        componentD.setName("Acme Component D");
         componentD.setVersion("1.0");
-        componentD = qm.createComponent(componentA, false);
+        componentD = qm.createComponent(componentD, false);
 
         final Policy policy = qm.createPolicy("Blacklisted Version", Policy.Operator.ALL, Policy.ViolationState.FAIL);
         final PolicyCondition condition = qm.createPolicyCondition(policy, PolicyCondition.Subject.VERSION, PolicyCondition.Operator.NUMERIC_EQUAL, "1.0");
