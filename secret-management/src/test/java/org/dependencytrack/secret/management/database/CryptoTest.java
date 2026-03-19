@@ -38,10 +38,13 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.Statement;
+import java.util.Base64;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
@@ -152,6 +155,53 @@ class CryptoTest {
 
         final DatabaseSecretManagerConfig configB = createConfig(kekPathB, false);
         assertThatNoException().isThrownBy(() -> new Crypto(dataSource, configB));
+    }
+
+    @Test
+    void shouldEncryptAndDecryptWithConfigKek() throws Exception {
+        final byte[] kekBytes = new byte[32];
+        new SecureRandom().nextBytes(kekBytes);
+
+        final DatabaseSecretManagerConfig config = createConfigWithKek(kekBytes);
+        final var crypto = new Crypto(dataSource, config);
+
+        final Crypto.EncryptionResult result = crypto.encrypt("secret-value");
+        assertThat(crypto.decrypt(result.cipherText(), result.serializedDek())).isEqualTo("secret-value");
+    }
+
+    @Test
+    void shouldRejectDifferentConfigKek() {
+        final byte[] kekBytesA = new byte[32];
+        new SecureRandom().nextBytes(kekBytesA);
+        new Crypto(dataSource, createConfigWithKek(kekBytesA));
+
+        final byte[] kekBytesB = new byte[32];
+        new SecureRandom().nextBytes(kekBytesB);
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> new Crypto(dataSource, createConfigWithKek(kekBytesB)))
+                .withMessageContaining("KEK keyset mismatch");
+    }
+
+    @Test
+    void shouldAcceptSameConfigKek() {
+        final byte[] kekBytes = new byte[32];
+        new SecureRandom().nextBytes(kekBytes);
+
+        new Crypto(dataSource, createConfigWithKek(kekBytes));
+        assertThatNoException().isThrownBy(() -> new Crypto(dataSource, createConfigWithKek(kekBytes)));
+    }
+
+    private DatabaseSecretManagerConfig createConfigWithKek(byte[] kekBytes) {
+        final String encodedKek = Base64.getEncoder().encodeToString(kekBytes);
+        return new DatabaseSecretManagerConfig(
+                new SmallRyeConfigBuilder()
+                        .withDefaultValues(Map.ofEntries(
+                                Map.entry("dt.datasource.secrets.url", postgresContainer.getJdbcUrl()),
+                                Map.entry("dt.datasource.secrets.username", postgresContainer.getUsername()),
+                                Map.entry("dt.datasource.secrets.password", postgresContainer.getPassword()),
+                                Map.entry("dt.secret-management.database.datasource.name", "secrets"),
+                                Map.entry("dt.secret-management.database.kek", encodedKek)))
+                        .build());
     }
 
     private DatabaseSecretManagerConfig createConfig(Path kekPath, boolean createIfMissing) {
