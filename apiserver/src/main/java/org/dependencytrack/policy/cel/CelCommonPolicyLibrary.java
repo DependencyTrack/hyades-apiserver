@@ -25,7 +25,7 @@ import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import jakarta.annotation.Nullable;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.policy.cel.persistence.CelPolicyDao;
 import org.dependencytrack.proto.policy.v1.Component;
 import org.dependencytrack.proto.policy.v1.License;
 import org.dependencytrack.proto.policy.v1.Project;
@@ -65,6 +65,7 @@ import java.util.stream.Collectors;
 import static org.apache.commons.lang3.StringUtils.substringAfter;
 import static org.dependencytrack.persistence.jdbi.JdbiAttributes.ATTRIBUTE_QUERY_NAME;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VERSION_DISTANCE;
@@ -248,11 +249,8 @@ public class CelCommonPolicyLibrary implements Library {
                     """.formatted(FUNC_COMPARE_VERSION_DISTANCE, component, component.getUuid(), component.getVersion(), component.getLatestVersion()), e);
             return false;
         }
-        final boolean isDirectDependency;
-        try (final var qm = new QueryManager();
-             final var celQm = new CelPolicyQueryManager(qm)) {
-            isDirectDependency = celQm.isDirectDependency(component);
-        }
+        final boolean isDirectDependency = withJdbiHandle(handle ->
+                new CelPolicyDao(handle).isDirectDependency(component));
         return isDirectDependency && org.dependencytrack.model.VersionDistance.evaluate(value, comparatorComputed, versionDistance);
     }
 
@@ -686,7 +684,7 @@ public class CelCommonPolicyLibrary implements Library {
             // If the component is a direct dependency of the project,
             // it can no longer be a dependency exclusively introduced
             // through another component.
-            if (isDirectDependency(jdbiHandle, leafComponent)) {
+            if (new CelPolicyDao(jdbiHandle).isDirectDependency(leafComponent)) {
                 return false;
             }
 
@@ -1085,27 +1083,6 @@ public class CelCommonPolicyLibrary implements Library {
         }
 
         return Objects.equals(lhs, rhs);
-    }
-
-    private static boolean isDirectDependency(final Handle jdbiHandle, final Component component) {
-        final Query query = jdbiHandle.createQuery("""
-                SELECT
-                  1
-                FROM
-                  "COMPONENT" AS "C"
-                INNER JOIN
-                  "PROJECT" AS "P" ON "P"."ID" = "C"."PROJECT_ID"
-                WHERE
-                  "C"."UUID" = :leafComponentUuid
-                  AND "P"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
-                """);
-
-        return query
-                .define(ATTRIBUTE_QUERY_NAME, "%s#isDirectDependency".formatted(CelCommonPolicyLibrary.class.getSimpleName()))
-                .bind("leafComponentUuid", UUID.fromString(component.getUuid()))
-                .mapTo(Boolean.class)
-                .findOne()
-                .orElse(false);
     }
 
 }

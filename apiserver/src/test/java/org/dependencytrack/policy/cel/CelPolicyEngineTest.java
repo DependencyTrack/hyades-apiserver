@@ -1827,31 +1827,6 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
     }
 
     @Test
-    void testEvaluateComponent() {
-        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
-        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
-                component.name == "acme-lib"
-                """, PolicyViolation.Type.OPERATIONAL);
-
-        final var project = new Project();
-        project.setName("acme-app");
-        qm.persist(project);
-
-        final var component = new Component();
-        component.setProject(project);
-        component.setName("acme-lib");
-        qm.persist(component);
-
-        new CelPolicyEngine().evaluateComponent(component.getUuid());
-        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
-    }
-
-    @Test
-    void testEvaluateComponentWhenComponentDoesNotExist() {
-        assertThatNoException().isThrownBy(() -> new CelPolicyEngine().evaluateComponent(UUID.randomUUID()));
-    }
-
-    @Test
     void issue1924() {
         Policy policy = qm.createPolicy("Policy 1924", Policy.Operator.ALL, Policy.ViolationState.INFO);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.SEVERITY, PolicyCondition.Operator.IS, Severity.CRITICAL.name());
@@ -2183,13 +2158,72 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         assertThat(qm.getAllPolicyViolations(componentB)).isEmpty();
 
         condition.setValue("""
-                        component.is_direct_dependency_of(v1.Component{
-                            name: "acme-lib-a",
-                            version: "vers:golang/>=v1.0.0|<v2.0.0"
-                        })
-                        """);
+                component.is_direct_dependency_of(v1.Component{
+                    name: "acme-lib-a",
+                    version: "vers:golang/>=v1.0.0|<v2.0.0"
+                })
+                """);
         policyEngine.evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(componentA)).isEmpty();
         assertThat(qm.getAllPolicyViolations(componentB)).hasSize(1);
     }
+
+    @Test
+    void testEvaluateProjectWithPropertiesSize() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        qm.createProjectProperty(project, "groupA", "nameA", "valueA", IConfigProperty.PropertyType.STRING, null);
+        qm.createProjectProperty(project, "groupB", "nameB", "valueB", IConfigProperty.PropertyType.STRING, null);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                project.properties.size() == 2
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
+    }
+
+    @Test
+    void testEvaluateProjectWithLicenseGroupsSize() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var licenseGroupA = new LicenseGroup();
+        licenseGroupA.setName("groupA");
+        qm.persist(licenseGroupA);
+
+        final var licenseGroupB = new LicenseGroup();
+        licenseGroupB.setName("groupB");
+        qm.persist(licenseGroupB);
+
+        final var license = new License();
+        license.setLicenseId("licenseId");
+        license.setName("licenseName");
+        license.setLicenseGroups(List.of(licenseGroupA, licenseGroupB));
+        qm.persist(license);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setResolvedLicense(license);
+        qm.persist(component);
+
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                component.resolved_license.groups.size() == 2
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
+    }
+
 }

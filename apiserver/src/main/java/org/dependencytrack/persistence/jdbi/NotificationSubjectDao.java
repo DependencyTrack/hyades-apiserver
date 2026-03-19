@@ -22,6 +22,10 @@ import org.dependencytrack.notification.proto.v1.Component;
 import org.dependencytrack.notification.proto.v1.ComponentVulnAnalysisCompleteSubject;
 import org.dependencytrack.notification.proto.v1.NewVulnerabilitySubject;
 import org.dependencytrack.notification.proto.v1.NewVulnerableDependencySubject;
+import org.dependencytrack.notification.proto.v1.Policy;
+import org.dependencytrack.notification.proto.v1.PolicyCondition;
+import org.dependencytrack.notification.proto.v1.PolicyViolation;
+import org.dependencytrack.notification.proto.v1.PolicyViolationSubject;
 import org.dependencytrack.notification.proto.v1.Project;
 import org.dependencytrack.notification.proto.v1.Vulnerability;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
@@ -31,6 +35,7 @@ import org.dependencytrack.persistence.jdbi.mapping.NotificationProjectRowMapper
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectNewVulnerabilityRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectProjectAuditChangeRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationVulnerabilityRowMapper;
+import org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil;
 import org.dependencytrack.persistence.jdbi.query.GetProjectAuditChangeNotificationSubjectQuery;
 import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
@@ -552,5 +557,100 @@ public interface NotificationSubjectDao extends SqlObject {
              WHERE p."UUID" = ANY(:projectUuids)
             """)
     List<Project> getProjects(@Bind Collection<UUID> projectUuids);
+
+    default List<PolicyViolationSubject> getForNewPolicyViolations(Collection<Long> violationIds) {
+        if (violationIds.isEmpty()) {
+            return List.of();
+        }
+
+        final var componentRowMapper = new NotificationComponentRowMapper();
+        final var projectRowMapper = new NotificationProjectRowMapper();
+
+        return getHandle()
+                .createQuery("""
+                        SELECT pv."UUID" AS "violationUuid"
+                             , pv."TYPE" AS "violationType"
+                             , pv."TIMESTAMP" AS "violationTimestamp"
+                             , pc."UUID" AS "conditionUuid"
+                             , pc."SUBJECT" AS "conditionSubject"
+                             , pc."OPERATOR" AS "conditionOperator"
+                             , pc."VALUE" AS "conditionValue"
+                             , po."UUID" AS "policyUuid"
+                             , po."NAME" AS "policyName"
+                             , po."VIOLATIONSTATE" AS "policyViolationState"
+                             , va."SUPPRESSED" AS "analysisSuppressed"
+                             , va."STATE" AS "analysisState"
+                             , c."UUID" AS "componentUuid"
+                             , c."GROUP" AS "componentGroup"
+                             , c."NAME" AS "componentName"
+                             , c."VERSION" AS "componentVersion"
+                             , c."PURL" AS "componentPurl"
+                             , c."MD5" AS "componentMd5"
+                             , c."SHA1" AS "componentSha1"
+                             , c."SHA_256" AS "componentSha256"
+                             , c."SHA_512" AS "componentSha512"
+                             , p."UUID" AS "projectUuid"
+                             , p."NAME" AS "projectName"
+                             , p."VERSION" AS "projectVersion"
+                             , p."DESCRIPTION" AS "projectDescription"
+                             , p."PURL" AS "projectPurl"
+                             , (p."INACTIVE_SINCE" IS NULL) AS "isActive"
+                             , (
+                                 SELECT ARRAY_AGG(DISTINCT t."NAME")
+                                   FROM "TAG" AS t
+                                  INNER JOIN "PROJECTS_TAGS" AS pt
+                                     ON pt."TAG_ID" = t."ID"
+                                  WHERE pt."PROJECT_ID" = p."ID"
+                               ) AS "projectTags"
+                          FROM UNNEST(:violationIds) AS req(violation_id)
+                         INNER JOIN "POLICYVIOLATION" AS pv
+                            ON pv."ID" = req.violation_id
+                         INNER JOIN "POLICYCONDITION" AS pc
+                            ON pc."ID" = pv."POLICYCONDITION_ID"
+                         INNER JOIN "POLICY" AS po
+                            ON po."ID" = pc."POLICY_ID"
+                         INNER JOIN "COMPONENT" AS c
+                            ON c."ID" = pv."COMPONENT_ID"
+                         INNER JOIN "PROJECT" AS p
+                            ON p."ID" = pv."PROJECT_ID"
+                          LEFT JOIN "VIOLATIONANALYSIS" AS va
+                            ON va."POLICYVIOLATION_ID" = pv."ID"
+                         WHERE va."SUPPRESSED" IS DISTINCT FROM TRUE
+                           AND va."STATE" IS DISTINCT FROM 'APPROVED'
+                        """)
+                .bindArray("violationIds", Long.class, violationIds)
+                .map((rs, ctx) -> {
+                    final Component component = componentRowMapper.map(rs, ctx);
+                    final Project project = projectRowMapper.map(rs, ctx);
+
+                    final Policy policy = Policy.newBuilder()
+                            .setUuid(rs.getString("policyUuid"))
+                            .setName(rs.getString("policyName"))
+                            .setViolationState(rs.getString("policyViolationState"))
+                            .build();
+
+                    final PolicyCondition condition = PolicyCondition.newBuilder()
+                            .setUuid(rs.getString("conditionUuid"))
+                            .setSubject(rs.getString("conditionSubject"))
+                            .setOperator(rs.getString("conditionOperator"))
+                            .setValue(rs.getString("conditionValue"))
+                            .setPolicy(policy)
+                            .build();
+
+                    final PolicyViolation violation = PolicyViolation.newBuilder()
+                            .setUuid(rs.getString("violationUuid"))
+                            .setType(rs.getString("violationType"))
+                            .setTimestamp(RowMapperUtil.nullableTimestamp(rs, "violationTimestamp"))
+                            .setCondition(condition)
+                            .build();
+
+                    return PolicyViolationSubject.newBuilder()
+                            .setProject(project)
+                            .setComponent(component)
+                            .setPolicyViolation(violation)
+                            .build();
+                })
+                .list();
+    }
 
 }

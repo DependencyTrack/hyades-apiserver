@@ -25,8 +25,11 @@ import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
 import org.dependencytrack.proto.internal.workflow.v1.EvalProjectPoliciesArg;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.MDC;
 
 import java.util.UUID;
+
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 
 /**
  * @since 5.7.0
@@ -46,7 +49,10 @@ public final class EvalProjectPoliciesActivity implements Activity<EvalProjectPo
             throw new TerminalApplicationFailureException("No argument provided");
         }
 
-        policyEngine.evaluateProject(UUID.fromString(argument.getProjectUuid()));
+        try (var ignored = MDC.putCloseable(MDC_PROJECT_UUID, argument.getProjectUuid())) {
+            policyEngine.evaluateProject(UUID.fromString(argument.getProjectUuid()));
+        }
+
         return null;
     }
 
