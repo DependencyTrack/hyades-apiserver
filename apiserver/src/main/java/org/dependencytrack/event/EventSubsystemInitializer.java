@@ -34,6 +34,7 @@ import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEve
 import org.dependencytrack.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
+import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.tasks.CallbackTask;
 import org.dependencytrack.tasks.CloneProjectTask;
 import org.dependencytrack.tasks.DefectDojoUploadTask;
@@ -93,6 +94,9 @@ public class EventSubsystemInitializer implements ServletContextListener {
         final var dexEngine = (DexEngine) event.getServletContext().getAttribute(DexEngine.class.getName());
         requireNonNull(dexEngine, "dexEngine has not been initialized");
 
+        final var secretManager = (SecretManager) event.getServletContext().getAttribute(SecretManager.class.getName());
+        requireNonNull(secretManager, "secretManager has not been initialized");
+
         eventService.subscribe(VexUploadEvent.class, new VexUploadProcessingTask());
         eventService.subscribe(LdapSyncEvent.class, new LdapSyncTaskWrapper());
         eventService.subscribe(
@@ -102,9 +106,9 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.subscribe(PortfolioMetricsUpdateEvent.class, new PortfolioMetricsUpdateTask());
         eventService.subscribe(VulnerabilityMetricsUpdateEvent.class, new VulnerabilityMetricsUpdateTask());
         eventService.subscribe(CloneProjectEvent.class, new CloneProjectTask());
-        eventService.subscribe(FortifySscUploadEventAbstract.class, new FortifySscUploadTask(HttpClient.INSTANCE));
-        eventService.subscribe(DefectDojoUploadEventAbstract.class, new DefectDojoUploadTask(HttpClient.INSTANCE));
-        eventService.subscribe(KennaSecurityUploadEventAbstract.class, new KennaSecurityUploadTask(HttpClient.INSTANCE));
+        eventService.subscribe(FortifySscUploadEventAbstract.class, new FortifySscUploadTask(HttpClient.INSTANCE, secretManager));
+        eventService.subscribe(DefectDojoUploadEventAbstract.class, new DefectDojoUploadTask(HttpClient.INSTANCE, secretManager));
+        eventService.subscribe(KennaSecurityUploadEventAbstract.class, new KennaSecurityUploadTask(HttpClient.INSTANCE, secretManager));
         eventService.subscribe(InternalComponentIdentificationEvent.class, new InternalComponentIdentificationTask());
         eventService.subscribe(CallbackEvent.class, new CallbackTask());
         eventService.subscribe(VulnerabilityPolicyFetchEvent.class, new VulnerabilityPolicyFetchTask());

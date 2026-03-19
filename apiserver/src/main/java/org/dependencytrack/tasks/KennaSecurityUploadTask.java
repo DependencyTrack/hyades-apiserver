@@ -22,6 +22,7 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
 import org.dependencytrack.integrations.kenna.KennaSecurityUploader;
+import org.dependencytrack.secret.management.SecretManager;
 
 import java.net.http.HttpClient;
 
@@ -30,9 +31,11 @@ public class KennaSecurityUploadTask extends VulnerabilityManagementUploadTask {
     private static final Logger LOGGER = Logger.getLogger(KennaSecurityUploadTask.class);
 
     private final HttpClient httpClient;
+    private final SecretManager secretManager;
 
-    public KennaSecurityUploadTask(HttpClient httpClient) {
+    public KennaSecurityUploadTask(HttpClient httpClient, SecretManager secretManager) {
         this.httpClient = httpClient;
+        this.secretManager = secretManager;
     }
 
     /**
@@ -42,7 +45,7 @@ public class KennaSecurityUploadTask extends VulnerabilityManagementUploadTask {
         if (e instanceof KennaSecurityUploadEventAbstract) {
             final KennaSecurityUploadEventAbstract event = (KennaSecurityUploadEventAbstract) e;
             LOGGER.debug("Starting Kenna Security upload task");
-            super.inform(event, new KennaSecurityUploader(httpClient));
+            super.inform(event, new KennaSecurityUploader(httpClient, secretManager));
             LOGGER.debug("Kenna Security upload complete");
         }
     }

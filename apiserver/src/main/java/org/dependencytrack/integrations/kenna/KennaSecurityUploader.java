@@ -20,14 +20,15 @@ package org.dependencytrack.integrations.kenna;
 
 import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
-import alpine.security.crypto.DataEncryption;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.common.Mappers;
 import org.dependencytrack.common.MultipartBodyPublisher;
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
 import org.dependencytrack.integrations.PortfolioFindingUploader;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.secret.management.SecretManager;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -36,6 +37,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_CONNECTOR_ID;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_TOKEN;
@@ -48,10 +50,12 @@ public class KennaSecurityUploader extends AbstractIntegrationPoint implements P
     private static final String CONNECTOR_UPLOAD_URL = API_ROOT + "/connectors/%s/data_file";
 
     private final HttpClient httpClient;
+    private final SecretManager secretManager;
     private String connectorId;
 
-    public KennaSecurityUploader(HttpClient httpClient) {
-        this.httpClient = httpClient;
+    public KennaSecurityUploader(HttpClient httpClient, SecretManager secretManager) {
+        this.httpClient = requireNonNull(httpClient, "httpClient must not be null");
+        this.secretManager = requireNonNull(secretManager, "secretManager must not be null");
     }
 
     @Override
@@ -93,8 +97,21 @@ public class KennaSecurityUploader extends AbstractIntegrationPoint implements P
     public void upload(final InputStream payload) {
         LOGGER.debug("Uploading payload to KennaSecurity");
         final ConfigProperty tokenProperty = qm.getConfigProperty(KENNA_TOKEN.getGroupName(), KENNA_TOKEN.getPropertyName());
+        if (tokenProperty == null) {
+            LOGGER.warn("Kenna Security token not specified. Aborting");
+            return;
+        }
+        final String tokenSecretName = StringUtils.trimToNull(tokenProperty.getPropertyValue());
+        if (tokenSecretName == null) {
+            LOGGER.warn("Kenna Security token not specified. Aborting");
+            return;
+        }
         try {
-            final String token = new DataEncryption().decryptAsString(tokenProperty.getPropertyValue());
+            final String tokenValue = secretManager.getSecretValue(tokenSecretName);
+            if (tokenValue == null) {
+                LOGGER.warn("Kenna Security secret '%s' could not be resolved. Aborting".formatted(tokenSecretName));
+                return;
+            }
 
             final var multipart = new MultipartBodyPublisher()
                     .addFormField("run", "true")
@@ -102,7 +119,7 @@ public class KennaSecurityUploader extends AbstractIntegrationPoint implements P
 
             final var request = HttpRequest.newBuilder()
                     .uri(URI.create(String.format(CONNECTOR_UPLOAD_URL, connectorId)))
-                    .header("X-Risk-Token", token)
+                    .header("X-Risk-Token", tokenValue)
                     .header("Accept", "application/json")
                     .header("Content-Type", multipart.contentType())
                     .POST(multipart.build())

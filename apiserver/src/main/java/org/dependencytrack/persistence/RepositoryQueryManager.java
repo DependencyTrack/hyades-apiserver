@@ -21,7 +21,6 @@ package org.dependencytrack.persistence;
 import alpine.common.logging.Logger;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
-import alpine.security.crypto.DataEncryption;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryType;
@@ -163,13 +162,7 @@ public class RepositoryQueryManager extends QueryManager implements IQueryManage
         repo.setAuthenticationRequired(isAuthenticationRequired);
         if (Boolean.TRUE.equals(isAuthenticationRequired) && (username != null || password != null)) {
             repo.setUsername(StringUtils.trimToNull(username));
-            try {
-                if (password != null) {
-                    repo.setPassword(new DataEncryption().encryptAsString(password));
-                }
-            } catch (Exception e) {
-                LOGGER.error("An error occurred while saving password in encrypted state", e);
-            }
+            repo.setPassword(StringUtils.trimToNull(password));
         }
         return persist(repo);
     }

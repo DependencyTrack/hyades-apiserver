@@ -1232,4 +1232,65 @@
             CREATE INDEX "USER_SESSION_USER_ID_IDX" ON "USER_SESSION" ("USER_ID");
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-57" author="nscuro">
+        <!--
+            Remove support for ENCRYPTEDSTRING properties.
+            Secrets are handled exclusively by SecretManager going forward.
+            We can't migrate them to secret storage in DB migrations.
+        -->
+        <sql splitStatements="true">
+            UPDATE "CONFIGPROPERTY"
+               SET "PROPERTYVALUE" = NULL
+                 , "PROPERTYTYPE" = 'STRING'
+             WHERE "PROPERTYTYPE" = 'ENCRYPTEDSTRING';
+
+            UPDATE "PROJECT_PROPERTY"
+               SET "PROPERTYVALUE" = NULL
+                 , "PROPERTYTYPE" = 'STRING'
+             WHERE "PROPERTYTYPE" = 'ENCRYPTEDSTRING';
+
+            UPDATE "COMPONENT_PROPERTY"
+               SET "PROPERTYVALUE" = NULL
+                 , "PROPERTYTYPE" = 'STRING'
+             WHERE "PROPERTYTYPE" = 'ENCRYPTEDSTRING';
+        </sql>
+
+        <!--
+            The Defect Dojo API key was erroneously not stored
+            as ENCRYPTEDSTRING before, but is now also being moved
+            to SecretManager and must thus be cleared.
+        -->
+        <sql>
+            UPDATE "CONFIGPROPERTY"
+               SET "PROPERTYVALUE" = NULL
+             WHERE "GROUPNAME" = 'integrations'
+               AND "PROPERTYNAME" = 'defectdojo.apiKey';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-58" author="nscuro">
+        <!--
+            Remove existing repository passwords. They too are being handled
+            by SecretManager going forward. Disable all affected repos to
+            prevent authentication failures. Users can re-enable them when
+            new secrets have been configured.
+        -->
+        <sql splitStatements="true">
+            UPDATE "REPOSITORY"
+               SET "PASSWORD" = NULL
+                 , "ENABLED" = FALSE
+             WHERE "PASSWORD" IS NOT NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-59" author="nscuro">
+        <sql>
+            ALTER TABLE "COMPONENT_PROPERTY" DROP CONSTRAINT "COMPONENT_PROPERTY_TYPE_check";
+            ALTER TABLE "COMPONENT_PROPERTY" ADD CONSTRAINT "COMPONENT_PROPERTY_TYPE_check" CHECK (
+              "PROPERTYTYPE" IS NULL
+              OR "PROPERTYTYPE"::TEXT = ANY(ARRAY['BOOLEAN', 'INTEGER', 'NUMBER', 'STRING', 'TIMESTAMP', 'URL', 'UUID'])
+            );
+        </sql>
+    </changeSet>
 </databaseChangeLog>

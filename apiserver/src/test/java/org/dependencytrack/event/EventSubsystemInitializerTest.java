@@ -28,6 +28,8 @@ import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.secret.TestSecretManager;
+import org.dependencytrack.secret.management.SecretManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Test;
@@ -66,6 +68,8 @@ class EventSubsystemInitializerTest {
                 .when(servletContextMock).getAttribute(eq(FileStorage.class.getName()));
         doReturn(pluginManager)
                 .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
+        doReturn(new TestSecretManager())
+                .when(servletContextMock).getAttribute(eq(SecretManager.class.getName()));
 
         final var initializer = new EventSubsystemInitializer(
                 config,

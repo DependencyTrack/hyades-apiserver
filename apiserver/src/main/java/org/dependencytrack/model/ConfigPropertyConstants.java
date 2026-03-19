@@ -38,22 +38,7 @@ public enum ConfigPropertyConstants {
     MAINTENANCE_PROJECTS_RETENTION_VERSIONS("maintenance", "projects.retention.versions", "2", PropertyType.INTEGER, "Number of last inactive projects to retain and delete rest", ConfigPropertyAccessMode.READ_WRITE),
     MAINTENANCE_TAGS_DELETE_UNUSED("maintenance", "tags.delete.unused", "true", PropertyType.BOOLEAN, "Whether unused tags shall be deleted", ConfigPropertyAccessMode.READ_WRITE),
     MAINTENANCE_VULNERABILITY_SCAN_RETENTION_HOURS("maintenance", "vuln.scan.retention.hours", "24", PropertyType.INTEGER, "Number of hours to retain vulnerability scan records for", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_INTERNAL_ENABLED("scanner", "internal.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable the internal analyzer", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_INTERNAL_FUZZY_ENABLED("scanner", "internal.fuzzy.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable non-exact fuzzy matching using the internal analyzer", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_INTERNAL_FUZZY_EXCLUDE_PURL("scanner", "internal.fuzzy.exclude.purl", "true", PropertyType.BOOLEAN, "Flag to enable/disable fuzzy matching on components that have a Package URL (PURL) defined", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_INTERNAL_FUZZY_EXCLUDE_INTERNAL("scanner", "internal.fuzzy.exclude.internal", "true", PropertyType.BOOLEAN, "Flag to enable/disable fuzzy matching on components that are marked internal.", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_OSSINDEX_ENABLED("scanner", "ossindex.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable Sonatype OSS Index", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_OSSINDEX_API_USERNAME("scanner", "ossindex.api.username", null, PropertyType.STRING, "The API username used for OSS Index authentication", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_OSSINDEX_API_TOKEN("scanner", "ossindex.api.token", null, PropertyType.ENCRYPTEDSTRING, "The API token used for OSS Index authentication", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_SNYK_ENABLED("scanner", "snyk.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable Snyk Vulnerability Analysis", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_SNYK_API_TOKEN("scanner", "snyk.api.token", null, PropertyType.ENCRYPTEDSTRING, "The API token used for Snyk API authentication", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_SNYK_ORG_ID("scanner", "snyk.org.id", null, PropertyType.STRING, "The Organization ID used for Snyk API access", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_SNYK_API_VERSION("scanner", "snyk.api.version", "2022-11-14", PropertyType.STRING, "Snyk API version", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_SNYK_CVSS_SOURCE("scanner", "snyk.cvss.source", "NVD", PropertyType.STRING, "Type of source to be prioritized for cvss calculation", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_SNYK_BASE_URL("scanner", "snyk.base.url", "https://api.snyk.io", PropertyType.URL, "Base Url pointing to the hostname and path for Snyk analysis", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_CSAF_ENABLED("scanner", "csaf.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable CSAF Vulnerability Analysis", ConfigPropertyAccessMode.READ_WRITE),
-    SCANNER_CSAF_THRESHOLD("scanner", "csaf.threshold", "75", PropertyType.INTEGER, "Matching threshold for CSAF Vulnerability Analysis", ConfigPropertyAccessMode.READ_WRITE),
-    VULNERABILITY_POLICY_FILE_LAST_MODIFIED_HASH("vulnerability-policy", "vulnerability.policy.file.last.modified.hash", null,  PropertyType.STRING, "Hash value or etag of the last fetched bundle if any", ConfigPropertyAccessMode.READ_ONLY),
+    VULNERABILITY_POLICY_FILE_LAST_MODIFIED_HASH("vulnerability-policy", "vulnerability.policy.file.last.modified.hash", null, PropertyType.STRING, "Hash value or etag of the last fetched bundle if any", ConfigPropertyAccessMode.READ_ONLY),
     VULNERABILITY_SOURCE_EPSS_ENABLED("vuln-source", "epss.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable Exploit Prediction Scoring System", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_SOURCE_EPSS_FEEDS_URL("vuln-source", "epss.feeds.url", "https://epss.cyentia.com", PropertyType.URL, "A base URL pointing to the hostname and path of the EPSS feeds", ConfigPropertyAccessMode.READ_WRITE),
     ACCEPT_ARTIFACT_CYCLONEDX("artifact", "cyclonedx.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable the systems ability to accept CycloneDX uploads", ConfigPropertyAccessMode.READ_WRITE),
@@ -62,13 +47,13 @@ public enum ConfigPropertyConstants {
     BOM_VALIDATION_TAGS_EXCLUSIVE("artifact", "bom.validation.tags.exclusive", "[]", PropertyType.STRING, "JSON array of tags for which BOM validation shall NOT be performed", ConfigPropertyAccessMode.READ_WRITE),
     FORTIFY_SSC_ENABLED("integrations", "fortify.ssc.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable Fortify SSC integration", ConfigPropertyAccessMode.READ_WRITE),
     FORTIFY_SSC_URL("integrations", "fortify.ssc.url", null, PropertyType.URL, "Base URL to Fortify SSC", ConfigPropertyAccessMode.READ_WRITE),
-    FORTIFY_SSC_TOKEN("integrations", "fortify.ssc.token", null, PropertyType.ENCRYPTEDSTRING, "The token to use to authenticate to Fortify SSC", ConfigPropertyAccessMode.READ_WRITE),
+    FORTIFY_SSC_TOKEN("integrations", "fortify.ssc.token", null, PropertyType.STRING, "Name of the secret containing the Fortify SSC authentication token", ConfigPropertyAccessMode.READ_WRITE, false, true),
     DEFECTDOJO_ENABLED("integrations", "defectdojo.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable DefectDojo integration", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_REIMPORT_ENABLED("integrations", "defectdojo.reimport.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable DefectDojo reimport-scan API endpoint", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_URL("integrations", "defectdojo.url", null, PropertyType.URL, "Base URL to DefectDojo", ConfigPropertyAccessMode.READ_WRITE),
-    DEFECTDOJO_API_KEY("integrations", "defectdojo.apiKey", null, PropertyType.STRING, "API Key for DefectDojo", ConfigPropertyAccessMode.READ_WRITE),
+    DEFECTDOJO_API_KEY("integrations", "defectdojo.apiKey", null, PropertyType.STRING, "Name of the secret containing the DefectDojo API key", ConfigPropertyAccessMode.READ_WRITE, false, true),
     KENNA_ENABLED("integrations", "kenna.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable Kenna Security integration", ConfigPropertyAccessMode.READ_WRITE),
-    KENNA_TOKEN("integrations", "kenna.token", null, PropertyType.ENCRYPTEDSTRING, "The token to use when authenticating to Kenna Security", ConfigPropertyAccessMode.READ_WRITE),
+    KENNA_TOKEN("integrations", "kenna.token", null, PropertyType.STRING, "Name of the secret containing the Kenna Security authentication token", ConfigPropertyAccessMode.READ_WRITE, false, true),
     KENNA_CONNECTOR_ID("integrations", "kenna.connector.id", null, PropertyType.STRING, "The Kenna Security connector identifier to upload to", ConfigPropertyAccessMode.READ_WRITE),
     ACCESS_MANAGEMENT_ACL_ENABLED("access-management", "acl.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable access control to projects in the portfolio", ConfigPropertyAccessMode.READ_WRITE, true),
     CUSTOM_RISK_SCORE_HISTORY_ENABLED("risk-score", "weight.history.enabled", "true", PropertyType.BOOLEAN, "Flag to re-calculate risk score history", ConfigPropertyAccessMode.READ_WRITE),
@@ -88,29 +73,38 @@ public enum ConfigPropertyConstants {
     private final String description;
     private final ConfigPropertyAccessMode accessMode;
     private final Boolean isPublic;
+    private final boolean isSecretName;
 
-    ConfigPropertyConstants(final String groupName,
-                            final String propertyName,
-                            final String defaultPropertyValue,
-                            final PropertyType propertyType,
-                            final String description,
-                            final ConfigPropertyAccessMode accessMode) {
-        this.groupName = groupName;
-        this.propertyName = propertyName;
-        this.defaultPropertyValue = defaultPropertyValue;
-        this.propertyType = propertyType;
-        this.description = description;
-        this.accessMode = accessMode;
-        this.isPublic = false;
+    ConfigPropertyConstants(
+            String groupName,
+            String propertyName,
+            String defaultPropertyValue,
+            PropertyType propertyType,
+            String description,
+            ConfigPropertyAccessMode accessMode) {
+        this(groupName, propertyName, defaultPropertyValue, propertyType, description, accessMode, false, false);
     }
 
-    ConfigPropertyConstants(final String groupName,
-                            final String propertyName,
-                            final String defaultPropertyValue,
-                            final PropertyType propertyType,
-                            final String description,
-                            final ConfigPropertyAccessMode accessMode,
-                            final Boolean isPublic) {
+    ConfigPropertyConstants(
+            String groupName,
+            String propertyName,
+            String defaultPropertyValue,
+            PropertyType propertyType,
+            String description,
+            ConfigPropertyAccessMode accessMode,
+            Boolean isPublic) {
+        this(groupName, propertyName, defaultPropertyValue, propertyType, description, accessMode, isPublic, false);
+    }
+
+    ConfigPropertyConstants(
+            String groupName,
+            String propertyName,
+            String defaultPropertyValue,
+            PropertyType propertyType,
+            String description,
+            ConfigPropertyAccessMode accessMode,
+            Boolean isPublic,
+            boolean isSecretName) {
         this.groupName = groupName;
         this.propertyName = propertyName;
         this.defaultPropertyValue = defaultPropertyValue;
@@ -118,6 +112,7 @@ public enum ConfigPropertyConstants {
         this.description = description;
         this.accessMode = accessMode;
         this.isPublic = isPublic;
+        this.isSecretName = isSecretName;
     }
 
     public static ConfigPropertyConstants ofProperty(final IConfigProperty property) {
@@ -155,4 +150,9 @@ public enum ConfigPropertyConstants {
     public Boolean getIsPublic() {
         return isPublic;
     }
+
+    public boolean isSecretName() {
+        return isSecretName;
+    }
+
 }

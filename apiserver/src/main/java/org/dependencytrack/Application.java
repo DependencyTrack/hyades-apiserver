@@ -57,6 +57,7 @@ import org.dependencytrack.observability.LoggingConfiguration;
 import org.dependencytrack.observability.ManagementServer;
 import org.dependencytrack.plugin.PluginInitializer;
 import org.dependencytrack.plugin.PluginManagerBinder;
+import org.dependencytrack.secret.SecretManagerBinder;
 import org.dependencytrack.secret.SecretManagerInitializer;
 import org.dependencytrack.tasks.TaskSchedulerInitializer;
 import org.eclipse.jetty.compression.gzip.GzipCompression;
@@ -234,6 +235,7 @@ public final class Application {
         apiV1Config.register(DexEngineBinder.class);
         apiV1Config.register(FileStorageBinder.class);
         apiV1Config.register(PluginManagerBinder.class);
+        apiV1Config.register(SecretManagerBinder.class);
         apiV1Config.register(MultiPartFeature.class);
         apiV1Config.property(BV_SEND_ERROR_IN_RESPONSE, true);
         apiV1Config.property(WADL_FEATURE_DISABLE, true);

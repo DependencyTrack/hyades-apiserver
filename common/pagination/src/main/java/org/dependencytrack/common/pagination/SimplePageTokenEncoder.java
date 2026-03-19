@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
@@ -39,7 +40,7 @@ public final class SimplePageTokenEncoder implements PageTokenEncoder {
 
         try {
             final String pageTokenJson = objectMapper.writeValueAsString(pageToken);
-            return Base64.getUrlEncoder().encodeToString(pageTokenJson.getBytes());
+            return Base64.getUrlEncoder().encodeToString(pageTokenJson.getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -54,7 +55,7 @@ public final class SimplePageTokenEncoder implements PageTokenEncoder {
         try {
             final byte[] pageTokenJson = Base64.getUrlDecoder().decode(encoded);
             return objectMapper.readValue(pageTokenJson, pageTokenClass);
-        } catch (IOException e) {
+        } catch (IOException | IllegalArgumentException e) {
             throw new InvalidPageTokenException(e);
         }
     }

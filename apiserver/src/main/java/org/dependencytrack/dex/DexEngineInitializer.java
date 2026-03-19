@@ -25,9 +25,9 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.analysis.AnalyzeProjectWorkflow;
 import org.dependencytrack.cache.api.CacheManager;
-import org.dependencytrack.common.EncryptedPageTokenEncoder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
+import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
 import org.dependencytrack.csaf.DiscoverCsafProvidersActivity;
 import org.dependencytrack.csaf.DiscoverCsafProvidersWorkflow;
 import org.dependencytrack.csaf.ImportCsafDocumentsActivity;
@@ -259,7 +259,7 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(5));
         engine.registerActivity(
-                new ResolvePackageMetadataActivity(pluginManager),
+                new ResolvePackageMetadataActivity(pluginManager, secretManager),
                 protoConverter(ResolvePackageMetadataActivityArg.class),
                 voidConverter(),
                 Duration.ofMinutes(10));
@@ -341,7 +341,7 @@ public final class DexEngineInitializer implements ServletContextListener {
         final DataSource dataSource = dataSourceRegistry.get(dataSourceName);
 
         final var engineConfig = new DexEngineConfig(dataSource);
-        engineConfig.setPageTokenEncoder(new EncryptedPageTokenEncoder());
+        engineConfig.setPageTokenEncoder(new SimplePageTokenEncoder());
 
         // Leader election.
         config.getOptionalValue("dt.dex-engine.leader-election.enabled", boolean.class)

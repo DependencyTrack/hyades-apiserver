@@ -98,7 +98,6 @@ public class Config {
         WORKER_THREADS                         ("dt.worker.threads",             0),
         WORKER_THREAD_MULTIPLIER               ("dt.worker.thread.multiplier",   4),
         DATA_DIRECTORY                         ("dt.data.directory",             "~/.alpine"),
-        SECRET_KEY_PATH                        ("dt.secret.key.path",            null),
         DATABASE_URL                           ("dt.database.url",               "jdbc:h2:mem:alpine"),
         DATABASE_USERNAME                      ("dt.database.username",          "sa"),
         DATABASE_PASSWORD                      ("dt.database.password",          ""),

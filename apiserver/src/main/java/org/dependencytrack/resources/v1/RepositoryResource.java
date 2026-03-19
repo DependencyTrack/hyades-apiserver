@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.persistence.PaginatedResult;
-import alpine.security.crypto.DataEncryption;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import com.github.packageurl.MalformedPackageURLException;
@@ -35,6 +34,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.inject.Inject;
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -57,9 +57,9 @@ import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.secret.management.SecretManager;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.resources.v1.AbstractConfigPropertyResource.ENCRYPTED_PLACEHOLDER;
 
 /**
  * JAX-RS resources for processing repositories.
@@ -74,6 +74,13 @@ import static org.dependencytrack.resources.v1.AbstractConfigPropertyResource.EN
         @SecurityRequirement(name = "BearerAuth")
 })
 public class RepositoryResource extends AlpineResource {
+
+    private final SecretManager secretManager;
+
+    @Inject
+    RepositoryResource(SecretManager secretManager) {
+        this.secretManager = secretManager;
+    }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -186,14 +193,28 @@ public class RepositoryResource extends AlpineResource {
                 validator.validateProperty(jsonRepository, "identifier"),
                 validator.validateProperty(jsonRepository, "url")
         );
-        //TODO: When the UI changes are updated then this should be a validation check as part of line 160
         if (jsonRepository.isAuthenticationRequired() == null) {
             jsonRepository.setAuthenticationRequired(false);
+        }
+        final String passwordSecretName = StringUtils.trimToNull(jsonRepository.getPassword());
+        if (Boolean.TRUE.equals(jsonRepository.isAuthenticationRequired())
+                && passwordSecretName == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("A password secret name is required when authentication is enabled.")
+                    .build();
         }
         try (QueryManager qm = new QueryManager()) {
             return qm.callInTransaction(() -> {
                 final boolean exists = qm.repositoryExist(jsonRepository.getType(), StringUtils.trimToNull(jsonRepository.getIdentifier()));
                 if (!exists) {
+                    if (passwordSecretName != null
+                            && secretManager.getSecretMetadata(passwordSecretName) == null) {
+                        return Response
+                                .status(Response.Status.BAD_REQUEST)
+                                .entity("The secret with name \"%s\" could not be found.".formatted(passwordSecretName))
+                                .build();
+                    }
+
                     final Repository repository = qm.createRepository(
                             jsonRepository.getType(),
                             StringUtils.trimToNull(jsonRepository.getIdentifier()),
@@ -201,7 +222,8 @@ public class RepositoryResource extends AlpineResource {
                             jsonRepository.isEnabled(),
                             jsonRepository.isInternal(),
                             jsonRepository.isAuthenticationRequired(),
-                            jsonRepository.getUsername(), jsonRepository.getPassword());
+                            jsonRepository.getUsername(),
+                            passwordSecretName);
 
                     return Response.status(Response.Status.CREATED).entity(repository).build();
                 } else {
@@ -233,27 +255,36 @@ public class RepositoryResource extends AlpineResource {
         failOnValidationError(validator.validateProperty(jsonRepository, "identifier"),
                 validator.validateProperty(jsonRepository, "url")
         );
-        //TODO: When the UI changes are updated then this should be a validation check as part of line 201
         if (jsonRepository.isAuthenticationRequired() == null) {
             jsonRepository.setAuthenticationRequired(false);
+        }
+        final String passwordSecretName = StringUtils.trimToNull(jsonRepository.getPassword());
+        if (Boolean.TRUE.equals(jsonRepository.isAuthenticationRequired())
+                && passwordSecretName == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("A password secret name is required when authentication is enabled.")
+                    .build();
         }
         try (QueryManager qm = new QueryManager()) {
             return qm.callInTransaction(() -> {
                 Repository repository = qm.getObjectByUuid(Repository.class, jsonRepository.getUuid());
                 if (repository != null) {
-                    final String url = StringUtils.trimToNull(jsonRepository.getUrl());
-                    try {
-                        // The password is not passed to the front-end, so it should only be overwritten if it is not null.
-                        final String updatedPassword = jsonRepository.getPassword() != null && !jsonRepository.getPassword().equals(ENCRYPTED_PLACEHOLDER)
-                                ? new DataEncryption().encryptAsString(jsonRepository.getPassword())
-                                : repository.getPassword();
-
-                        repository = qm.updateRepository(jsonRepository.getUuid(), repository.getIdentifier(), url,
-                                jsonRepository.isInternal(), jsonRepository.isAuthenticationRequired(), jsonRepository.getUsername(), updatedPassword, jsonRepository.isEnabled());
-                        return Response.ok(repository).build();
-                    } catch (Exception e) {
-                        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("The specified repository password could not be encrypted.").build();
+                    if (passwordSecretName != null && secretManager.getSecretMetadata(passwordSecretName) == null) {
+                        return Response.status(Response.Status.BAD_REQUEST)
+                                .entity("The secret with name \"%s\" could not be found.".formatted(passwordSecretName))
+                                .build();
                     }
+
+                    repository = qm.updateRepository(
+                            jsonRepository.getUuid(),
+                            repository.getIdentifier(),
+                            StringUtils.trimToNull(jsonRepository.getUrl()),
+                            jsonRepository.isInternal(),
+                            jsonRepository.isAuthenticationRequired(),
+                            jsonRepository.getUsername(),
+                            passwordSecretName,
+                            jsonRepository.isEnabled());
+                    return Response.ok(repository).build();
                 } else {
                     return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the repository could not be found.").build();
                 }

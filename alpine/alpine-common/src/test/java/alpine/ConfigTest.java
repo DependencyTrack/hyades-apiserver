@@ -42,7 +42,7 @@ public class ConfigTest {
         assertThat(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_URL)).isEqualTo("jdbc:h2:mem:alpine");
 
         // Property without default value.
-        assertThat(Config.getInstance().getProperty(Config.AlpineKey.SECRET_KEY_PATH)).isNull();
+        assertThat(Config.getInstance().getProperty(Config.AlpineKey.NO_PROXY)).isNull();
     }
 
     @Test
