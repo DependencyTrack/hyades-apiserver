@@ -604,7 +604,7 @@
                         -Xshare:off
                     </argLine>
                     <systemPropertyVariables>
-                        <dependencyTrack.logging.level>${unitTestLogLevel}</dependencyTrack.logging.level>
+                        <unitTestLogLevel>${unitTestLogLevel}</unitTestLogLevel>
                         <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
                     </systemPropertyVariables>
                 </configuration>
