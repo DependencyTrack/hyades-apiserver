@@ -49,7 +49,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # tag=v6.0.2
     - name: Detect Breaking Changes
-      uses: oasdiff/oasdiff-action/breaking@748daafaf3aac877a36307f842a48d55db938ac8 # tag=v0.0.31
+      uses: oasdiff/oasdiff-action/breaking@2a37bc82462349c03a533b8b608bebbaf57b3e60 # tag=v0.0.33
       with:
         base: https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/main/api/src/main/openapi/openapi.yaml
         revision: api/src/main/openapi/openapi.yaml
