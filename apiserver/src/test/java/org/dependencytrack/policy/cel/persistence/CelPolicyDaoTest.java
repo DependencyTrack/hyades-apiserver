@@ -100,8 +100,8 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                 .toList());
         requirements.put(TYPE_PROJECT_METADATA, "bom_generated");
 
-        final org.dependencytrack.proto.policy.v1.Project enrichedProject = withJdbiHandle(handle -> handle
-                .attach(CelPolicyDao.class).loadRequiredFields(project.getId(), requirements));
+        final org.dependencytrack.proto.policy.v1.Project enrichedProject = withJdbiHandle(handle ->
+                new CelPolicyDao(handle).loadRequiredFields(project.getId(), requirements));
 
         assertThatJson(JsonFormat.printer().print(enrichedProject))
                 .withMatcher("uuid", equalTo(project.getUuid().toString()))
@@ -116,6 +116,14 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                           "tags": [
                             "projecttaga",
                             "projecttagb"
+                          ],
+                          "properties": [
+                            {
+                              "group": "propertyGroup",
+                              "name": "propertyName",
+                              "value": "propertyValue",
+                              "type": "STRING"
+                            }
                           ],
                           "cpe": "projectCpe",
                           "purl": "projectPurl",
@@ -208,8 +216,8 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                 .map(Descriptors.FieldDescriptor::getName)
                 .toList());
 
-        final org.dependencytrack.proto.policy.v1.Component enrichedComponent = withJdbiHandle(handle -> handle
-                .attach(CelPolicyDao.class).loadRequiredComponentFields(List.of(component.getId()), requirements))
+        final org.dependencytrack.proto.policy.v1.Component enrichedComponent = withJdbiHandle(handle ->
+                new CelPolicyDao(handle).loadRequiredComponentFields(List.of(component.getId()), requirements))
                 .get(component.getId());
 
         assertThatJson(JsonFormat.printer().print(enrichedComponent))
@@ -233,6 +241,10 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                           "sha3256": "componentsha3_256",
                           "sha3384": "componentsha3_384",
                           "sha3512": "componentsha3_512",
+                          "blake2b256": "componentBlake2b_256",
+                          "blake2b384": "componentBlake2b_384",
+                          "blake2b512": "componentBlake2b_512",
+                          "blake3": "componentBlake3",
                           "licenseName": "componentLicenseName",
                           "licenseExpression": "componentLicenseExpression",
                           "latestVersion": "1.0.0",
@@ -285,8 +297,8 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                 .map(Descriptors.FieldDescriptor::getName)
                 .toList());
 
-        final org.dependencytrack.proto.policy.v1.Vulnerability enrichedVuln = withJdbiHandle(handle -> handle
-                .attach(CelPolicyDao.class).loadRequiredVulnerabilityFields(List.of(vuln.getId()), requirements))
+        final org.dependencytrack.proto.policy.v1.Vulnerability enrichedVuln = withJdbiHandle(handle ->
+                new CelPolicyDao(handle).loadRequiredVulnerabilityFields(List.of(vuln.getId()), requirements))
                 .get(vuln.getId());
 
         assertThatJson(JsonFormat.printer().print(enrichedVuln))
