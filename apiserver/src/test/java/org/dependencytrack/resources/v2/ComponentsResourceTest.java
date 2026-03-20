@@ -145,7 +145,7 @@ public class ComponentsResourceTest extends ResourceTest {
     @Test
     public void listComponentsByIdentityPaginationTest() {
         prepareComponents();
-        Response response = jersey.target("/components/identity")
+        Response response = jersey.target("/components")
                 .queryParam("limit", 2)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -188,7 +188,7 @@ public class ComponentsResourceTest extends ResourceTest {
                 """);
 
         final String nextPageToken = responseJson.getString("next_page_token");
-        response = jersey.target("/components/identity")
+        response = jersey.target("/components")
                 .queryParam("limit", 1)
                 .queryParam("page_token", nextPageToken)
                 .request()
@@ -220,7 +220,7 @@ public class ComponentsResourceTest extends ResourceTest {
     @Test
     public void listComponentsByIdentityWithCoordinatesTest() {
         prepareComponents();
-        Response response = jersey.target("/components/identity")
+        Response response = jersey.target("/components")
                 .queryParam("group", "B")
                 .queryParam("name", "B")
                 .queryParam("version", "versionB")
@@ -255,7 +255,7 @@ public class ComponentsResourceTest extends ResourceTest {
     @Test
     public void listComponentsByIdentityWithPurlTest() {
         prepareComponents();
-        Response response = jersey.target("/components/identity")
+        Response response = jersey.target("/components")
                 .queryParam("purl", "pkg:maven/groupB/nameB@versionB?baz=qux")
                 .queryParam("limit", 2)
                 .request()
@@ -287,7 +287,7 @@ public class ComponentsResourceTest extends ResourceTest {
     @Test
     public void listComponentsByIdentityWithCpeTest() {
         prepareComponents();
-        Response response = jersey.target("/components/identity")
+        Response response = jersey.target("/components")
                 .queryParam("cpe", "nameB")
                 .queryParam("limit", 2)
                 .request()
@@ -319,7 +319,7 @@ public class ComponentsResourceTest extends ResourceTest {
     @Test
     public void listComponentsByIdentityWithProjectTest() {
         prepareComponents();
-        Response response = jersey.target("/components/identity")
+        Response response = jersey.target("/components")
                 .queryParam("project_uuid", qm.getProject("projectA", "1.0").getUuid())
                 .queryParam("limit", 2)
                 .request()
@@ -350,7 +350,7 @@ public class ComponentsResourceTest extends ResourceTest {
 
     @Test
     public void listComponentsByIdentityWithProjectWhenProjectDoesNotExistTest() {
-        Response response = jersey.target("/components/identity")
+        Response response = jersey.target("/components")
                 .queryParam("project_uuid", UUID.randomUUID())
                 .queryParam("limit", 2)
                 .request()
@@ -366,7 +366,7 @@ public class ComponentsResourceTest extends ResourceTest {
         enablePortfolioAccessControl();
         initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         prepareComponents();
-        Response response = jersey.target("/components/identity")
+        Response response = jersey.target("/components")
                 .queryParam("name", "name")
                 .queryParam("limit", 2)
                 .request()

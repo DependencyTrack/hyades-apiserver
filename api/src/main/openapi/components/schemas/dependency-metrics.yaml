@@ -16,12 +16,6 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  project_id:
-    type: integer
-    format: int64
-  component_id:
-    type: integer
-    format: int64
   critical:
     type: integer
     format: int32

@@ -45,3 +45,64 @@ post:
       $ref: "../components/responses/generic-conflict-error.yaml"
     default:
       $ref: "../components/responses/generic-error.yaml"
+
+get:
+  operationId: listComponents
+  summary: Retrieves a list of all components that have the specified component identity. This resource accepts coordinates (group, name, version) or purl, cpe, or swidTagId.
+  description: Requires permission <strong>VIEW_PORTFOLIO</strong>
+  tags:
+    - Components
+  parameters:
+    - name: project_uuid
+      in: query
+      description: The UUID of the project to retrieve components for
+      schema:
+        type: string
+        format: uuid
+    - name: group
+      in: query
+      description: The group of the component
+      schema:
+        type: string
+    - name: name
+      in: query
+      description: The name of the component
+      schema:
+        type: string
+    - name: version
+      in: query
+      description: The version of the component
+      schema:
+        type: string
+    - name: purl
+      in: query
+      description: The PURL of the component
+      schema:
+        type: string
+    - name: cpe
+      in: query
+      description: The CPE of the component
+      schema:
+        type: string
+    - name: swid_tag_id
+      in: query
+      description: The SWID Tag ID of the component
+      schema:
+        type: string
+    - $ref: "../components/parameters/pagination-limit.yaml"
+    - $ref: "../components/parameters/page-token.yaml"
+  responses:
+    "200":
+      description: A list of all components for a given identity
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/list-components-response.yaml"
+    "401":
+      $ref: "../components/responses/generic-unauthorized-error.yaml"
+    "403":
+      $ref: "../components/responses/generic-forbidden-error.yaml"
+    "404":
+      $ref: "../components/responses/generic-not-found-error.yaml"
+    default:
+      $ref: "../components/responses/generic-error.yaml"

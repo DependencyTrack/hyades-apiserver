@@ -18,11 +18,11 @@
  */
 package org.dependencytrack.resources.v2.mapping;
 
+import org.dependencytrack.api.v2.model.ComponentProject;
 import org.dependencytrack.api.v2.model.DependencyMetrics;
 import org.dependencytrack.api.v2.model.Hashes;
 import org.dependencytrack.api.v2.model.License;
 import org.dependencytrack.api.v2.model.OrganizationalContact;
-import org.dependencytrack.api.v2.model.Project;
 import org.dependencytrack.model.Component;
 
 import java.util.List;
@@ -54,11 +54,11 @@ public class ModelMapper {
                 .build();
     }
 
-    public static Project mapProject(org.dependencytrack.model.Project project) {
+    public static ComponentProject mapProject(org.dependencytrack.model.Project project) {
         if (project == null) {
             return null;
         }
-        return Project.builder()
+        return ComponentProject.builder()
                 .name(project.getName())
                 .version(project.getVersion())
                 .uuid(project.getUuid())
@@ -70,8 +70,6 @@ public class ModelMapper {
             return null;
         }
         return DependencyMetrics.builder()
-                .projectId(metrics.getProjectId())
-                .componentId(metrics.getComponentId())
                 .critical(metrics.getCritical())
                 .high(metrics.getHigh())
                 .medium(metrics.getMedium())

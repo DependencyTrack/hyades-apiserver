@@ -107,8 +107,6 @@ paths:
     $ref: "./paths/advisories__id__mark-seen.yaml"
   /components:
     $ref: "./paths/components.yaml"
-  /components/identity:
-    $ref: "./paths/components__identity.yaml"
   /csaf-aggregators:
     $ref: "./paths/csaf/aggregators.yaml"
   /csaf-aggregators/{id}:

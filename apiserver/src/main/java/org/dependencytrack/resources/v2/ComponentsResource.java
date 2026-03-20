@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v2;
 import alpine.server.auth.PermissionRequired;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.NotFoundException;
@@ -55,6 +56,8 @@ import org.dependencytrack.util.PurlUtil;
 import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import us.springett.parsers.cpe.CpeParser;
+import us.springett.parsers.cpe.exceptions.CpeParsingException;
 
 import java.util.UUID;
 
@@ -112,7 +115,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
     }
 
     @Override
-    public Response getComponents(UUID projectUuid, String group, String name, String version, String purl, String cpe, String swidTagId, Integer limit, String pageToken) {
+    public Response listComponents(UUID projectUuid, String group, String name, String version, String purl, String cpe, String swidTagId, Integer limit, String pageToken) {
         return inJdbiTransaction(getAlpineRequest(), handle -> {
             Long projectId = null;
             if (projectUuid != null) {
@@ -127,10 +130,16 @@ public class ComponentsResource extends AbstractApiResource implements Component
                 try {
                     packageURL = new PackageURL(purl);
                 } catch (MalformedPackageURLException e) {
-                    // throw it away
+                    throw new BadRequestException("Invalid package URL: %s".formatted(purl));
                 }
             }
-
+            if (cpe != null) {
+                try {
+                    CpeParser.parse(cpe);
+                } catch (CpeParsingException e) {
+                    throw new BadRequestException("Invalid CPE: %s".formatted(cpe));
+                }
+            }
             final Page<Component> componentsPage = handle.attach(ComponentDao.class)
                     .listComponents(projectId, true, packageURL != null ? packageURL.canonicalize().toLowerCase() : null, StringUtils.trimToNull(cpe),
                             StringUtils.trimToNull(swidTagId), StringUtils.trimToNull(group), StringUtils.trimToNull(name),
@@ -152,7 +161,6 @@ public class ComponentsResource extends AbstractApiResource implements Component
                                             .licenseExpression(componentRow.getLicenseExpression())
                                             .licenseUrl(componentRow.getLicenseUrl())
                                             .resolvedLicense(mapLicense(componentRow.getResolvedLicense()))
-                                            .occurrenceCount(componentRow.getOccurrenceCount())
                                             .purl(componentRow.getPurl() != null ? componentRow.getPurl().toString() : null)
                                             .swidTagId(componentRow.getSwidTagId())
                                             .uuid(componentRow.getUuid())
