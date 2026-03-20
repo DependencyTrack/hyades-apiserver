@@ -21,8 +21,8 @@ package org.dependencytrack.plugin;
 import alpine.common.logging.Logger;
 import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.cache.api.NamespacedCacheManager;
+import org.dependencytrack.common.HttpClient;
 import org.dependencytrack.common.MdcScope;
-import org.dependencytrack.common.ProxySelector;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
@@ -432,7 +432,7 @@ public class PluginManager implements Closeable {
                             configRegistry,
                             extensionCacheManager,
                             keyValueStore,
-                            new ProxySelector()));
+                            new ExtensionHttpContextImpl(HttpClient.INSTANCE)));
         } catch (RuntimeException e) {
             throw new IllegalStateException(
                     "Failed to initialize extension %s from plugin %s".formatted(

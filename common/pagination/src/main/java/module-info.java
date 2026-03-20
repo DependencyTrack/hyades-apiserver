@@ -23,8 +23,7 @@ import org.jspecify.annotations.NullMarked;
 module org.dependencytrack.common.pagination {
     exports org.dependencytrack.common.pagination;
 
-    // Only needed when using SimplePageTokenEncoder.
-    requires static com.fasterxml.jackson.databind;
-    
+    requires com.fasterxml.jackson.databind;
+
     requires transitive org.jspecify;
 }

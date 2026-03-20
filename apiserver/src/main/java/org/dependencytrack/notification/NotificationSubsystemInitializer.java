@@ -44,7 +44,7 @@ public final class NotificationSubsystemInitializer implements ServletContextLis
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
-        if (!config.getValue("notification.outbox-relay.enabled", boolean.class)) {
+        if (!config.getValue("dt.notification.outbox-relay.enabled", boolean.class)) {
             LOGGER.info("Not starting outbox relay because it is disabled");
             return;
         }
@@ -63,9 +63,9 @@ public final class NotificationSubsystemInitializer implements ServletContextLis
                 fileStorage,
                 handle -> new NotificationRouter(handle, Metrics.globalRegistry),
                 Metrics.globalRegistry,
-                config.getValue("notification.outbox-relay.poll-interval-ms", long.class),
-                config.getValue("notification.outbox-relay.batch-size", int.class),
-                config.getValue("notification.outbox-relay.large-notification-threshold-bytes", int.class));
+                config.getValue("dt.notification.outbox-relay.poll-interval-ms", long.class),
+                config.getValue("dt.notification.outbox-relay.batch-size", int.class),
+                config.getValue("dt.notification.outbox-relay.large-notification-threshold-bytes", int.class));
         relay.start();
     }
 

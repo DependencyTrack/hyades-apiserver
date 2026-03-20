@@ -33,6 +33,7 @@ public record PolledWorkflowTask(
         @Nullable String concurrencyKey,
         int priority,
         @Nullable Map<String, String> labels,
+        int continuedAsNewGeneration,
         Instant lockedUntil,
         int lockVersion) {
 }

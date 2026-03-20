@@ -22,11 +22,14 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.model.Epss;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.net.http.HttpClient;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
@@ -38,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_EPSS_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_EPSS_FEEDS_URL;
 
-public class EpssMirrorTaskTest extends PersistenceCapableTest {
+class EpssMirrorTaskTest extends PersistenceCapableTest {
 
     @RegisterExtension
     private static final WireMockExtension wireMock =
@@ -46,8 +49,22 @@ public class EpssMirrorTaskTest extends PersistenceCapableTest {
                     .options(options().dynamicPort())
                     .build();
 
+    private static HttpClient httpClient;
+
+    @BeforeAll
+    static void beforeAll() {
+        httpClient = HttpClient.newHttpClient();
+    }
+
+    @AfterAll
+    static void afterAll() {
+        if (httpClient != null) {
+            httpClient.close();
+        }
+    }
+
     @Test
-    public void shouldMirrorEpssRecords() throws Exception {
+    void shouldMirrorEpssRecords() throws Exception {
         qm.createConfigProperty(
                 VULNERABILITY_SOURCE_EPSS_ENABLED.getGroupName(),
                 VULNERABILITY_SOURCE_EPSS_ENABLED.getPropertyName(),
@@ -81,7 +98,7 @@ public class EpssMirrorTaskTest extends PersistenceCapableTest {
         // It must be updated as part of the mirroring operation.
         qm.persist(new Epss("CVE-1999-0001", BigDecimal.ONE, BigDecimal.ZERO));
 
-        new EpssMirrorTask().inform(new EpssMirrorEvent());
+        new EpssMirrorTask(httpClient).inform(new EpssMirrorEvent());
 
         qm.getPersistenceManager().evictAll();
         final List<Epss> epssRecords = qm.getPersistenceManager().newQuery(Epss.class).executeList();
@@ -105,7 +122,7 @@ public class EpssMirrorTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void shouldFailOnMalformedFeed() throws Exception {
+    void shouldFailOnMalformedFeed() throws Exception {
         qm.createConfigProperty(
                 VULNERABILITY_SOURCE_EPSS_ENABLED.getGroupName(),
                 VULNERABILITY_SOURCE_EPSS_ENABLED.getPropertyName(),
@@ -133,14 +150,14 @@ public class EpssMirrorTaskTest extends PersistenceCapableTest {
                         .withStatus(200)
                         .withBody(compressedFeedOutputStream.toByteArray())));
 
-        new EpssMirrorTask().inform(new EpssMirrorEvent());
+        new EpssMirrorTask(httpClient).inform(new EpssMirrorEvent());
 
         final List<Epss> epssRecords = qm.getPersistenceManager().newQuery(Epss.class).executeList();
         assertThat(epssRecords).isEmpty();
     }
 
     @Test
-    public void shouldNotExecuteWhenDisabled() {
+    void shouldNotExecuteWhenDisabled() {
         qm.createConfigProperty(
                 VULNERABILITY_SOURCE_EPSS_ENABLED.getGroupName(),
                 VULNERABILITY_SOURCE_EPSS_ENABLED.getPropertyName(),
@@ -154,7 +171,7 @@ public class EpssMirrorTaskTest extends PersistenceCapableTest {
                 VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getPropertyType(),
                 VULNERABILITY_SOURCE_EPSS_FEEDS_URL.getDescription());
 
-        new EpssMirrorTask().inform(new EpssMirrorEvent());
+        new EpssMirrorTask(httpClient).inform(new EpssMirrorEvent());
 
         final List<Epss> epssRecords = qm.getPersistenceManager().newQuery(Epss.class).executeList();
         assertThat(epssRecords).isEmpty();

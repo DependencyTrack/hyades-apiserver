@@ -18,61 +18,27 @@
  */
 package org.dependencytrack.model;
 
-import org.junit.jupiter.api.Assertions;
+import com.github.packageurl.PackageURL;
 import org.junit.jupiter.api.Test;
 
-import java.util.Date;
+import java.time.Instant;
 
-public class RepositoryMetaComponentTest {
+import static org.assertj.core.api.Assertions.assertThat;
+
+class RepositoryMetaComponentTest {
 
     @Test
-    public void testId() {
-        RepositoryMetaComponent rmc = new RepositoryMetaComponent();
-        rmc.setId(111L);
-        Assertions.assertEquals(111L, rmc.getId());
+    void shouldConvertFromPackageMetadata() throws Exception {
+        final var purl = new PackageURL("pkg:maven/com.acme/acme-lib");
+        final var resolvedAt = Instant.now();
+        final var packageMetadata = new PackageMetadata(purl, "2.0.0", resolvedAt, null, null);
+
+        final var repoMetaComponent = RepositoryMetaComponent.of(packageMetadata);
+        assertThat(repoMetaComponent.getRepositoryType()).isEqualTo(RepositoryType.MAVEN);
+        assertThat(repoMetaComponent.getNamespace()).isEqualTo("com.acme");
+        assertThat(repoMetaComponent.getName()).isEqualTo("acme-lib");
+        assertThat(repoMetaComponent.getLatestVersion()).isEqualTo("2.0.0");
+        assertThat(repoMetaComponent.getLastCheck()).isNotNull();
     }
 
-    @Test
-    public void testRepositoryType() {
-        RepositoryMetaComponent rmc = new RepositoryMetaComponent();
-        rmc.setRepositoryType(RepositoryType.MAVEN);
-        Assertions.assertEquals(RepositoryType.MAVEN, rmc.getRepositoryType());
-    }
-
-    @Test
-    public void testNamespace() {
-        RepositoryMetaComponent rmc = new RepositoryMetaComponent();
-        rmc.setNamespace("My Namespace");
-        Assertions.assertEquals("My Namespace", rmc.getNamespace());
-    } 
-
-    @Test
-    public void testName() {
-        RepositoryMetaComponent rmc = new RepositoryMetaComponent();
-        rmc.setName("My Name");
-        Assertions.assertEquals("My Name", rmc.getName());
-    } 
-    
-    @Test
-    public void testLatestVersion() {
-        RepositoryMetaComponent rmc = new RepositoryMetaComponent();
-        rmc.setLatestVersion("2.0.0");
-        Assertions.assertEquals("2.0.0", rmc.getLatestVersion());
-    } 
-
-    @Test
-    public void testPublished() {
-        Date date = new Date();
-        RepositoryMetaComponent rmc = new RepositoryMetaComponent();
-        rmc.setPublished(date);
-        Assertions.assertEquals(date, rmc.getPublished());
-    }
-
-    @Test
-    public void testLastCheck() {
-        Date date = new Date();
-        RepositoryMetaComponent rmc = new RepositoryMetaComponent();
-        rmc.setLastCheck(date);
-        Assertions.assertEquals(date, rmc.getLastCheck());
-    }
-} 
+}

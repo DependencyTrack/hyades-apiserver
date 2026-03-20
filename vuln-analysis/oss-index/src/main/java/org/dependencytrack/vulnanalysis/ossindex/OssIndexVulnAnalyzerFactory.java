@@ -60,9 +60,7 @@ final class OssIndexVulnAnalyzerFactory implements VulnAnalyzerFactory {
     public void init(ExtensionContext ctx) {
         configRegistry = ctx.configRegistry();
         cacheManager = ctx.cacheManager();
-        httpClient = HttpClient.newBuilder()
-                .proxy(ctx.proxySelector())
-                .build();
+        httpClient = ctx.http().client();
         objectMapper = new ObjectMapper()
                 .disable(FAIL_ON_UNKNOWN_PROPERTIES);
     }
@@ -120,13 +118,6 @@ final class OssIndexVulnAnalyzerFactory implements VulnAnalyzerFactory {
                         throw new InvalidRuntimeConfigException("No API token provided");
                     }
                 });
-    }
-
-    @Override
-    public void close() {
-        if (httpClient != null) {
-            httpClient.close();
-        }
     }
 
 }

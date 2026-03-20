@@ -20,9 +20,9 @@ package org.dependencytrack.persistence.jdbi.mapping;
 
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
+import org.dependencytrack.common.Mappers;
 import org.jdbi.v3.core.result.UnableToProduceResultException;
 import org.postgresql.util.PSQLException;
 import org.postgresql.util.PSQLState;
@@ -40,8 +40,6 @@ import java.util.function.Consumer;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
 public class RowMapperUtil {
-
-    public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private RowMapperUtil() {
     }
@@ -137,7 +135,7 @@ public class RowMapperUtil {
         }
 
         try {
-            return OBJECT_MAPPER.readValue(jsonString, typeReference);
+            return Mappers.jsonMapper().readValue(jsonString, typeReference);
         } catch (JacksonException e) {
             throw new UnableToProduceResultException(e);
         }

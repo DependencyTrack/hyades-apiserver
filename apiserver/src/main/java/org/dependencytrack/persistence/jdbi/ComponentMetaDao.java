@@ -24,7 +24,6 @@ import org.dependencytrack.model.IntegrityMatchStatus;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.sqlobject.SqlObject;
-import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -51,15 +50,41 @@ public interface ComponentMetaDao extends SqlObject {
         final Query query = getHandle().createQuery("""
                 SELECT c."UUID" AS component_uuid
                      , c."PURL"
-                     , imc."LAST_FETCH"
-                     , imc."PUBLISHED_AT"
-                     , ia."INTEGRITY_CHECK_STATUS"
-                     , imc."REPOSITORY_URL"
+                     , pam."RESOLVED_AT" AS last_fetch
+                     , pam."PUBLISHED_AT"
+                     , CASE
+                         WHEN c."SHA_256" IS NOT NULL AND pam."HASH_SHA256" IS NOT NULL
+                         THEN CASE
+                                WHEN LOWER(c."SHA_256") = LOWER(pam."HASH_SHA256")
+                                THEN 'HASH_MATCH_PASSED'
+                                ELSE 'HASH_MATCH_FAILED'
+                              END
+                         WHEN c."SHA_512" IS NOT NULL AND pam."HASH_SHA512" IS NOT NULL
+                         THEN CASE
+                                WHEN LOWER(c."SHA_512") = LOWER(pam."HASH_SHA512")
+                                THEN 'HASH_MATCH_PASSED'
+                                ELSE 'HASH_MATCH_FAILED'
+                              END
+                         WHEN c."SHA1" IS NOT NULL AND pam."HASH_SHA1" IS NOT NULL
+                         THEN CASE
+                                WHEN LOWER(c."SHA1") = LOWER(pam."HASH_SHA1")
+                                THEN 'HASH_MATCH_PASSED'
+                                ELSE 'HASH_MATCH_FAILED'
+                              END
+                         WHEN c."MD5" IS NOT NULL AND pam."HASH_MD5" IS NOT NULL
+                         THEN CASE
+                                WHEN LOWER(c."MD5") = LOWER(pam."HASH_MD5")
+                                THEN 'HASH_MATCH_PASSED'
+                                ELSE 'HASH_MATCH_FAILED'
+                              END
+                         WHEN c."SHA_256" IS NULL AND c."SHA_512" IS NULL AND c."SHA1" IS NULL AND c."MD5" IS NULL
+                         THEN 'COMPONENT_MISSING_HASH'
+                         ELSE 'HASH_MATCH_UNKNOWN'
+                       END AS "INTEGRITY_CHECK_STATUS"
+                     , pam."RESOLVED_FROM" AS repository_url
                   FROM "COMPONENT" AS c
-                 INNER JOIN "INTEGRITY_META_COMPONENT" AS imc
-                    ON c."PURL" = imc."PURL"
-                  LEFT JOIN "INTEGRITY_ANALYSIS" AS ia
-                    ON ia."COMPONENT_ID" = c."ID"
+                 INNER JOIN "PACKAGE_ARTIFACT_METADATA" AS pam
+                    ON c."PURL" = pam."PURL"
                  WHERE c."UUID" = ANY(:uuids)
                 """);
 
@@ -80,24 +105,5 @@ public interface ComponentMetaDao extends SqlObject {
         final Map<UUID, ComponentMetaInformation> metaByUuid = getComponentMetaInfo(List.of(uuid));
         return metaByUuid.get(uuid);
     }
-
-    @SqlUpdate("""
-            DELETE
-              FROM "INTEGRITY_META_COMPONENT"
-             WHERE NOT EXISTS(
-               SELECT 1
-                 FROM "COMPONENT"
-                WHERE "COMPONENT"."PURL" = "INTEGRITY_META_COMPONENT"."PURL")
-            """)
-    int deleteOrphanIntegrityMetaComponents();
-
-    // TODO: Do a NOT EXISTS query against the COMPONENT table instead.
-    //  Requires https://github.com/DependencyTrack/hyades/issues/1465.
-    @SqlUpdate("""
-            DELETE
-              FROM "REPOSITORY_META_COMPONENT"
-             WHERE NOW() - "LAST_CHECK" > INTERVAL '30' DAY
-            """)
-    int deleteOrphanRepositoryMetaComponents();
 
 }

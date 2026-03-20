@@ -26,7 +26,6 @@ import alpine.model.User;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.filters.ResourceAccessRequired;
-import io.jsonwebtoken.lang.Collections;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -78,6 +77,7 @@ import org.jdbi.v3.core.Handle;
 import javax.jdo.FetchGroup;
 import java.security.Principal;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -88,6 +88,7 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
 import static org.dependencytrack.notification.api.NotificationFactory.createProjectCreatedNotification;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
@@ -515,7 +516,7 @@ public class ProjectResource extends AbstractApiResource {
                     } else if (principal instanceof final ApiKey apiKey) {
                         userTeams = apiKey.getTeams();
                     } else {
-                        userTeams = Collections.emptyList();
+                        userTeams = List.of();
                     }
 
                     boolean isAdmin = qm.hasAccessManagementPermission(principal);
@@ -831,7 +832,7 @@ public class ProjectResource extends AbstractApiResource {
      * returns `true` if the given [updated] collection should be considered an update of the [original] collection.
      */
     private static <T> boolean isCollectionModified(Collection<T> updated, Collection<T> original) {
-        return updated != null && (!Collections.isEmpty(updated) || !Collections.isEmpty(original));
+        return updated != null && (!updated.isEmpty() || !requireNonNullElse(original, Collections.emptyList()).isEmpty());
     }
 
     /**

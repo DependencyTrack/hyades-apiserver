@@ -18,10 +18,14 @@
  */
 package org.dependencytrack.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import org.dependencytrack.common.Mappers;
+import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
 import org.dependencytrack.util.PurlUtil;
-import org.json.JSONObject;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -31,6 +35,7 @@ import java.util.UUID;
  *
  * @since 4.0.0
  */
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class ComponentIdentity {
 
     public enum ObjectType {
@@ -38,14 +43,14 @@ public class ComponentIdentity {
         SERVICE
     }
 
-    private ObjectType objectType;
+    private final ObjectType objectType;
     private PackageURL purl;
     private PackageURL purlCoordinates;
     private String cpe;
     private String swidTagId;
-    private String group;
-    private String name;
-    private String version;
+    private final String group;
+    private final String name;
+    private final String version;
     private UUID uuid;
 
     public ComponentIdentity(final PackageURL purl, final String cpe, final String swidTagId,
@@ -120,10 +125,12 @@ public class ComponentIdentity {
         return objectType;
     }
 
+    @JsonSerialize(using = CustomPackageURLSerializer.class)
     public PackageURL getPurl() {
         return purl;
     }
 
+    @JsonSerialize(using = CustomPackageURLSerializer.class)
     public PackageURL getPurlCoordinates() {
         return purlCoordinates;
     }
@@ -165,17 +172,8 @@ public class ComponentIdentity {
         return Objects.hash(objectType, purl, purlCoordinates, cpe, swidTagId, group, name, version, uuid);
     }
 
-    public JSONObject toJSON() {
-        final JSONObject jsonObject = new JSONObject();
-        jsonObject.put("uuid", this.getUuid());
-        jsonObject.put("group", this.getGroup());
-        jsonObject.put("name", this.getName());
-        jsonObject.put("version", this.getVersion());
-        jsonObject.put("purl", this.getPurl());
-        jsonObject.put("purlCoordinates", this.getPurlCoordinates());
-        jsonObject.put("cpe", this.getCpe());
-        jsonObject.put("swidTagId", this.getSwidTagId());
-        jsonObject.put("objectType", this.getObjectType());
-        return jsonObject;
+    public ObjectNode toJSON() {
+        return Mappers.jsonMapper().valueToTree(this);
     }
+
 }

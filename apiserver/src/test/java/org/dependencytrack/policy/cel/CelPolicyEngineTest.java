@@ -19,7 +19,6 @@
 package org.dependencytrack.policy.cel;
 
 import alpine.model.IConfigProperty;
-import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Bom;
@@ -27,17 +26,15 @@ import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.Epss;
-import org.dependencytrack.model.FetchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
+import org.dependencytrack.model.PackageArtifactMetadata;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
-import org.dependencytrack.model.RepositoryMetaComponent;
-import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Tools;
@@ -45,6 +42,8 @@ import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityKey;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
+import org.dependencytrack.persistence.jdbi.PackageArtifactMetadataDao;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityAliasDao;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -60,6 +59,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 class CelPolicyEngineTest extends PersistenceCapableTest {
@@ -76,7 +76,7 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
      * </ul>
      */
     @Test
-    void testEvaluateProjectWithAllFields() {
+    void testEvaluateProjectWithAllFields() throws Exception {
         final var project = new Project();
         project.setUuid(UUID.fromString("d7173786-60aa-4a4f-a950-c92fe6422307"));
         project.setGroup("projectGroup");
@@ -164,7 +164,7 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         component.setVersion("componentVersion");
         component.setClassifier(Classifier.LIBRARY);
         component.setCpe("componentCpe");
-        component.setPurl("componentPurl");
+        component.setPurl("pkg:maven/componentGroup/componentName@componentVersion");
         component.setSwidTagId("componentSwidTagId");
         component.setInternal(true);
         component.setMd5("componentMd5");
@@ -184,12 +184,28 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         component.setResolvedLicense(license);
         qm.persist(component);
 
-        final var metaComponent = new IntegrityMetaComponent();
-        metaComponent.setPurl("componentPurl");
-        metaComponent.setPublishedAt(new java.util.Date(222));
-        metaComponent.setStatus(FetchStatus.PROCESSED);
-        metaComponent.setLastFetch(new Date());
-        qm.persist(metaComponent);
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(List.of(
+                    new PackageMetadata(
+                            new PackageURL("pkg:maven/componentGroup/componentName"),
+                            "1.0.0",
+                            Instant.now(),
+                            null,
+                            null)));
+
+            new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                    new PackageArtifactMetadata(
+                            new PackageURL("pkg:maven/componentGroup/componentName@componentVersion"),
+                            new PackageURL("pkg:maven/componentGroup/componentName"),
+                            null,
+                            null,
+                            null,
+                            null,
+                            new java.util.Date(222).toInstant(),
+                            null,
+                            null,
+                            Instant.now())));
+        });
 
         final var vuln = new Vulnerability();
         vuln.setUuid(UUID.fromString("ffe9743f-b916-431e-8a68-9b3ac56db72c"));
@@ -242,7 +258,7 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
                   && component.version == "componentVersion"
                   && component.classifier == "LIBRARY"
                   && component.cpe == "componentCpe"
-                  && component.purl == "componentPurl"
+                  && component.purl == "pkg:maven/componentGroup/componentName@componentVersion"
                   && component.swid_tag_id == "componentSwidTagId"
                   && component.is_internal
                   && component.md5 == "componentmd5"
@@ -385,7 +401,7 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
     }
 
     @Test
-    void testEvaluateProjectWithPolicyOperatorForComponentAgeLessThan() throws MalformedPackageURLException {
+    void testEvaluateProjectWithPolicyOperatorForComponentAgeLessThan() throws Exception {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 component.compare_age("NUMERIC_LESS_THAN", "P666D")
@@ -400,13 +416,27 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         component.setName("acme-lib");
         component.setPurl(new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"));
         qm.persist(component);
-        Date publishedDate = Date.from(Instant.now());
-        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
-        integrityMetaComponent.setPurl(component.getPurl().toString());
-        integrityMetaComponent.setPublishedAt(publishedDate);
-        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
-        integrityMetaComponent.setLastFetch(new Date());
-        qm.createIntegrityMetaComponent(integrityMetaComponent);
+
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(List.of(
+                    new PackageMetadata(
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            "1.0.0",
+                            Instant.now(),
+                            null,
+                            null)));
+
+            final Instant publishedDate = Instant.now();
+            new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                    new PackageArtifactMetadata(
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            null, null, null, null,
+                            publishedDate,
+                            null, null,
+                            Instant.now())));
+        });
+
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
         assertThat(qm.getAllPolicyViolations(component).get(0).getPolicyCondition().getValue()).isEqualTo("""
@@ -415,7 +445,7 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
     }
 
     @Test
-    void testEvaluateProjectWithPolicyOperatorForVersionDistance() {
+    void testEvaluateProjectWithPolicyOperatorForVersionDistance() throws Exception {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 component.version_distance(">=", v1.VersionDistance{ major: \"0\", minor: \"1\", patch: \"?\" })
@@ -425,13 +455,24 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         project.setName("name");
         project.setInactiveSince(null);
 
-        final var metaComponent = new RepositoryMetaComponent();
-        metaComponent.setRepositoryType(RepositoryType.MAVEN);
-        metaComponent.setNamespace("foo");
-        metaComponent.setName("bar");
-        metaComponent.setLatestVersion("1.3.1");
-        metaComponent.setLastCheck(new Date());
-        qm.persist(metaComponent);
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(List.of(
+                    new PackageMetadata(
+                            new PackageURL("pkg:maven/foo/bar"),
+                            "1.3.1",
+                            Instant.now(),
+                            null,
+                            null)));
+
+            new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                    new PackageArtifactMetadata(
+                            new PackageURL("pkg:maven/foo/bar@1.0.0"),
+                            new PackageURL("pkg:maven/foo/bar"),
+                            null, null, null, null,
+                            null,
+                            null, null,
+                            Instant.now())));
+        });
 
         final var component = new Component();
         component.setProject(project);
@@ -452,7 +493,7 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
     }
 
     @Test
-    void testEvaluateProjectWithPolicyOperatorForComponentAgeGreaterThan() throws MalformedPackageURLException {
+    void testEvaluateProjectWithPolicyOperatorForComponentAgeGreaterThan() throws Exception {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 component.compare_age("<", "P666D")
@@ -467,13 +508,26 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         component.setName("acme-lib");
         component.setPurl(new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"));
         qm.persist(component);
-        Date publishedDate = Date.from(Instant.now());
-        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
-        integrityMetaComponent.setPurl(component.getPurl().toString());
-        integrityMetaComponent.setPublishedAt(publishedDate);
-        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
-        integrityMetaComponent.setLastFetch(new Date());
-        qm.createIntegrityMetaComponent(integrityMetaComponent);
+
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(List.of(
+                    new PackageMetadata(
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            "1.0.0",
+                            Instant.now(),
+                            null,
+                            null)));
+
+            final Instant publishedDate = Instant.now();
+            new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                    new PackageArtifactMetadata(
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            null, null, null, null,
+                            publishedDate,
+                            null, null,
+                            Instant.now())));
+        });
 
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
@@ -499,12 +553,24 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         component.setPurl(new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"));
         qm.persist(component);
 
-        final var integrityMetaComponent = new IntegrityMetaComponent();
-        integrityMetaComponent.setPurl(component.getPurl().toString());
-        integrityMetaComponent.setPublishedAt(Date.from(Instant.EPOCH));
-        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
-        integrityMetaComponent.setLastFetch(new Date());
-        qm.persist(integrityMetaComponent);
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(List.of(
+                    new PackageMetadata(
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            "1.0.0",
+                            Instant.now(),
+                            null,
+                            null)));
+
+            new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                    new PackageArtifactMetadata(
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            null, null, null, null,
+                            Instant.EPOCH,
+                            null, null,
+                            Instant.now())));
+        });
 
         final var policyEngine = new CelPolicyEngine();
         policyEngine.evaluateProject(project.getUuid());
@@ -528,12 +594,24 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         component.setPurl(new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"));
         qm.persist(component);
 
-        final var integrityMetaComponent = new IntegrityMetaComponent();
-        integrityMetaComponent.setPurl(component.getPurl().toString());
-        integrityMetaComponent.setPublishedAt(Date.from(Instant.EPOCH));
-        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
-        integrityMetaComponent.setLastFetch(new Date());
-        qm.persist(integrityMetaComponent);
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(List.of(
+                    new PackageMetadata(
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            "1.0.0",
+                            Instant.now(),
+                            null,
+                            null)));
+
+            new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                    new PackageArtifactMetadata(
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            null, null, null, null,
+                            Instant.EPOCH,
+                            null, null,
+                            Instant.now())));
+        });
 
         final var policyEngine = new CelPolicyEngine();
         policyEngine.evaluateProject(project.getUuid());
@@ -557,13 +635,25 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         component.setPurl(new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"));
         qm.persist(component);
 
-        final var integrityMetaComponent = new IntegrityMetaComponent();
-        integrityMetaComponent.setPurl(component.getPurl().toString());
-        // Omitted; Publish date is unknown.
-        // integrityMetaComponent.setPublishedAt(Date.from(Instant.EPOCH));
-        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
-        integrityMetaComponent.setLastFetch(new Date());
-        qm.persist(integrityMetaComponent);
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(List.of(
+                    new PackageMetadata(
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            "1.0.0",
+                            Instant.now(),
+                            null,
+                            null)));
+
+            // Omitted; Publish date is unknown.
+            new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                    new PackageArtifactMetadata(
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            null, null, null, null,
+                            null,
+                            null, null,
+                            Instant.now())));
+        });
 
         final var policyEngine = new CelPolicyEngine();
         policyEngine.evaluateProject(project.getUuid());
@@ -589,13 +679,25 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         component.setPurl(new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"));
         qm.persist(component);
 
-        final var integrityMetaComponent = new IntegrityMetaComponent();
-        integrityMetaComponent.setPurl(component.getPurl().toString());
-        // Omitted; Publish date is unknown.
-        // integrityMetaComponent.setPublishedAt(Date.from(Instant.EPOCH));
-        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
-        integrityMetaComponent.setLastFetch(new Date());
-        qm.persist(integrityMetaComponent);
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(List.of(
+                    new PackageMetadata(
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            "1.0.0",
+                            Instant.now(),
+                            null,
+                            null)));
+
+            // Omitted; Publish date is unknown.
+            new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                    new PackageArtifactMetadata(
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            new PackageURL("pkg:maven/org.http4s/blaze-core_2.12"),
+                            null, null, null, null,
+                            null,
+                            null, null,
+                            Instant.now())));
+        });
 
         final var policyEngine = new CelPolicyEngine();
         policyEngine.evaluateProject(project.getUuid());
@@ -1896,7 +1998,7 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
 
         final Policy policyA = qm.createPolicy("Policy A", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policyA, PolicyCondition.Subject.COORDINATES, PolicyCondition.Operator.MATCHES, """
-                {"group": "*", name: "*", version: "*"}
+                {"group": "*", "name": "*", "version": "*"}
                 """);
 
         // Create another policy which already has a violation files for the component.

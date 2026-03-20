@@ -19,8 +19,10 @@
 package org.dependencytrack.secret.management.database;
 
 import org.eclipse.microprofile.config.Config;
+import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
+import java.util.Base64;
 
 /**
  * @since 5.7.0
@@ -37,6 +39,34 @@ final class DatabaseSecretManagerConfig {
 
     String getDataSourceName() {
         return config.getValue(PREFIX + "datasource.name", String.class);
+    }
+
+    byte @Nullable [] getKek() {
+        final String propertyName = PREFIX + "kek";
+
+        final String encodedKek = config
+                .getOptionalValue(propertyName, String.class)
+                .orElse(null);
+        if (encodedKek == null) {
+            return null;
+        }
+
+        final byte[] kekBytes;
+        try {
+            kekBytes = Base64.getDecoder().decode(encodedKek);
+        } catch (IllegalArgumentException e) {
+            // NB: Original exception is intentionally not logged to avoid leaking the key.
+            throw new IllegalStateException(
+                    "The provided %s value is not base64 encoded".formatted(propertyName));
+        }
+
+        if (kekBytes.length != 32) {
+            throw new IllegalStateException(
+                    "KEK provided via %s must be 32 bytes, but is %d".formatted(
+                            propertyName, kekBytes.length));
+        }
+
+        return kekBytes;
     }
 
     Path getKekKeysetPath() {

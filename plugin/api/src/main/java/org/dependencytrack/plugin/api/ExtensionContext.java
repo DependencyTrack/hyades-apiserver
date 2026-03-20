@@ -25,8 +25,6 @@ import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
 import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
 import org.jspecify.annotations.Nullable;
 
-import java.net.ProxySelector;
-
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -37,17 +35,19 @@ public final class ExtensionContext {
     private final ConfigRegistry configRegistry;
     private final CacheManager cacheManager;
     private final ExtensionKVStore keyValueStore;
-    private final ProxySelector proxySelector;
+    private final ExtensionHttpContext httpContext;
 
     public ExtensionContext(
             ConfigRegistry configRegistry,
             CacheManager cacheManager,
             ExtensionKVStore kvStore,
-            @Nullable ProxySelector proxySelector) {
+            @Nullable ExtensionHttpContext httpContext) {
         this.configRegistry = requireNonNull(configRegistry, "configRegistry must not be null");
-        this.cacheManager = requireNonNull(cacheManager, "cacheProvider must not be null");
+        this.cacheManager = requireNonNull(cacheManager, "cacheManager must not be null");
         this.keyValueStore = requireNonNull(kvStore, "kvStore must not be null");
-        this.proxySelector = proxySelector != null ? proxySelector : ProxySelector.getDefault();
+        this.httpContext = httpContext == null
+                ? ExtensionHttpContext.ofDefault()
+                : httpContext;
     }
 
     public ExtensionContext(ConfigRegistry configRegistry) {
@@ -66,8 +66,8 @@ public final class ExtensionContext {
         return keyValueStore;
     }
 
-    public ProxySelector proxySelector() {
-        return proxySelector;
+    public ExtensionHttpContext http() {
+        return httpContext;
     }
 
 }

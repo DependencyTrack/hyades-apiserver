@@ -24,7 +24,7 @@ import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.model.Team;
-import alpine.server.auth.JsonWebToken;
+import alpine.server.auth.SessionTokenService;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import jakarta.json.JsonArray;
@@ -55,7 +55,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 
 public class TeamResourceTest extends ResourceTest {
 
-    private String jwt;
+    private String sessionToken;
     private Team userNotPartof;
 
     @RegisterExtension
@@ -66,7 +66,7 @@ public class TeamResourceTest extends ResourceTest {
 
     public void setUpUser(boolean isAdmin) {
         ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
-        jwt = new JsonWebToken().createToken(testUser);
+        sessionToken = new SessionTokenService().createSession(testUser.getId());
         qm.addUserToTeam(testUser, team);
         userNotPartof = qm.createTeam("UserNotPartof");
         if (isAdmin) {
@@ -211,8 +211,8 @@ public class TeamResourceTest extends ResourceTest {
 
         // not an api-key
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
-        final String jwt = new JsonWebToken().createToken(testUser);
-        response = jersey.target(V1_TEAM + "/self").request().header("Authorization", "Bearer " + jwt).get(Response.class);
+        final String sessionToken = new SessionTokenService().createSession(testUser.getId());
+        response = jersey.target(V1_TEAM + "/self").request().header("Authorization", "Bearer " + sessionToken).get(Response.class);
         org.junit.jupiter.api.Assertions.assertEquals(400, response.getStatus());
     }
 
@@ -542,7 +542,7 @@ public class TeamResourceTest extends ResourceTest {
         setUpUser(true);
         Response response = jersey.target(V1_TEAM + "/visible")
                 .request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .get();
         org.junit.jupiter.api.Assertions.assertEquals(200, response.getStatus(), 0);
         JsonArray teams = parseJsonArray(response);
@@ -556,7 +556,7 @@ public class TeamResourceTest extends ResourceTest {
         setUpUser(false);
         Response response = jersey.target(V1_TEAM + "/visible")
                 .request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .get();
         org.junit.jupiter.api.Assertions.assertEquals(200, response.getStatus(), 0);
         JsonArray teams = parseJsonArray(response);

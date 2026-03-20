@@ -25,7 +25,8 @@ import static com.github.packageurl.PackageURLBuilder.aPackageURL;
 
 public class PurlUtil {
 
-    private PurlUtil() { }
+    private PurlUtil() {
+    }
 
     public static PackageURL purlCoordinatesOnly(final PackageURL original) throws MalformedPackageURLException {
         return aPackageURL()
@@ -49,6 +50,22 @@ public class PurlUtil {
                     .build();
         } catch (MalformedPackageURLException e) {
             return null;
+        }
+    }
+
+    public static String purlPackageOnly(PackageURL purl) {
+        return silentPurlPackageOnly(purl).canonicalize();
+    }
+
+    public static PackageURL silentPurlPackageOnly(PackageURL purl) {
+        try {
+            return aPackageURL()
+                    .withType(purl.getType())
+                    .withNamespace(purl.getNamespace())
+                    .withName(purl.getName())
+                    .build();
+        } catch (MalformedPackageURLException e) {
+            throw new IllegalArgumentException("Failed to derive package PURL from: " + purl, e);
         }
     }
 

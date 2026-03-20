@@ -34,7 +34,6 @@ import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.PackageURL;
-import com.google.common.collect.Lists;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import org.apache.commons.lang3.ClassUtils;
@@ -52,8 +51,6 @@ import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.FindingAttribution;
-import org.dependencytrack.model.IntegrityAnalysis;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.NotificationPublisher;
@@ -64,7 +61,6 @@ import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.Repository;
-import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.model.ServiceComponent;
@@ -86,7 +82,6 @@ import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.EffectivePermissionDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
-import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 import org.jspecify.annotations.NonNull;
 
 import javax.jdo.FetchPlan;
@@ -95,7 +90,6 @@ import javax.jdo.Query;
 import javax.jdo.metadata.MemberMetadata;
 import javax.jdo.metadata.TypeMetadata;
 import java.security.Principal;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -139,8 +133,6 @@ public class QueryManager extends AlpineQueryManager {
     private VulnerabilityQueryManager vulnerabilityQueryManager;
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
     private WorkflowStateQueryManager workflowStateQueryManager;
-    private IntegrityMetaQueryManager integrityMetaQueryManager;
-    private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
     private AdvisoryQueryManager advisoryQueryManager;
@@ -434,20 +426,6 @@ public class QueryManager extends AlpineQueryManager {
         return workflowStateQueryManager;
     }
 
-    private IntegrityMetaQueryManager getIntegrityMetaQueryManager() {
-        if (integrityMetaQueryManager == null) {
-            integrityMetaQueryManager = (request == null) ? new IntegrityMetaQueryManager(getPersistenceManager()) : new IntegrityMetaQueryManager(getPersistenceManager(), request);
-        }
-        return integrityMetaQueryManager;
-    }
-
-    private IntegrityAnalysisQueryManager getIntegrityAnalysisQueryManager() {
-        if (integrityAnalysisQueryManager == null) {
-            integrityAnalysisQueryManager = (request == null) ? new IntegrityAnalysisQueryManager(getPersistenceManager()) : new IntegrityAnalysisQueryManager(getPersistenceManager(), request);
-        }
-        return integrityAnalysisQueryManager;
-    }
-
     /**
      * Get the IDs of the {@link Team}s a given {@link Principal} is a member of.
      *
@@ -576,10 +554,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public PaginatedResult getComponentByHash(String hash) {
         return getComponentQueryManager().getComponentByHash(hash);
-    }
-
-    public IntegrityMetaInitializerTask.ComponentProjection getComponentByPurl(String purl) {
-        return getComponentQueryManager().getComponentByPurl(purl);
     }
 
     public PaginatedResult getComponents(ComponentIdentity identity, Project project, boolean includeMetrics) {
@@ -975,14 +949,6 @@ public class QueryManager extends AlpineQueryManager {
         return getRepositoryQueryManager().updateRepository(uuid, identifier, url, internal, authenticationRequired, username, password, enabled);
     }
 
-    public RepositoryMetaComponent getRepositoryMetaComponent(RepositoryType repositoryType, String namespace, String name) {
-        return getRepositoryQueryManager().getRepositoryMetaComponent(repositoryType, namespace, name);
-    }
-
-    public synchronized RepositoryMetaComponent synchronizeRepositoryMetaComponent(final RepositoryMetaComponent transientRepositoryMetaComponent) {
-        return getRepositoryQueryManager().synchronizeRepositoryMetaComponent(transientRepositoryMetaComponent);
-    }
-
     public boolean addRoleToUser(User user, Role role, Project project){
         return getRoleQueryManager().addRoleToUser(user, role, project);
     }
@@ -1339,40 +1305,6 @@ public class QueryManager extends AlpineQueryManager {
         return this.getServiceComponentQueryManager().getDependencyGraphByUUID(uuids);
     }
 
-    /**
-     * Returns a list of all {@link RepositoryMetaComponent} objects by {@link RepositoryQueryManager.RepositoryMetaComponentSearch} with batchSize 10.
-     *
-     * @param list a list of {@link RepositoryQueryManager.RepositoryMetaComponentSearch}
-     * @return a list of {@link RepositoryMetaComponent} objects
-     * @since 4.9.0
-     */
-    public List<RepositoryMetaComponent> getRepositoryMetaComponentsBatch(final List<RepositoryQueryManager.RepositoryMetaComponentSearch> list) {
-        return getRepositoryMetaComponentsBatch(list, 10);
-    }
-
-    /**
-     * Returns a list of all {@link RepositoryMetaComponent} objects by {@link RepositoryQueryManager.RepositoryMetaComponentSearch} UUID.
-     *
-     * @param list      a list of {@link RepositoryQueryManager.RepositoryMetaComponentSearch}
-     * @param batchSize the batch size
-     * @return a list of {@link RepositoryMetaComponent} objects
-     * @since 4.9.0
-     */
-    public List<RepositoryMetaComponent> getRepositoryMetaComponentsBatch(final List<RepositoryQueryManager.RepositoryMetaComponentSearch> list, final int batchSize) {
-        final List<RepositoryMetaComponent> results = new ArrayList<>(list.size());
-
-        // Split the list into batches
-        for (List<RepositoryQueryManager.RepositoryMetaComponentSearch> batch : Lists.partition(list, batchSize)) {
-            results.addAll(this.getRepositoryQueryManager().getRepositoryMetaComponents(batch));
-        }
-
-        return results;
-    }
-
-    public List<RepositoryMetaComponent> getRepositoryMetaComponents(final List<RepositoryQueryManager.RepositoryMetaComponentSearch> list) {
-        return getRepositoryQueryManager().getRepositoryMetaComponents(list);
-    }
-
     public void synchronizeVulnerableSoftware(
             final Vulnerability persistentVuln,
             final List<VulnerableSoftware> vsList,
@@ -1413,42 +1345,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public void updateWorkflowStateToFailed(WorkflowState workflowState, String failureReason) {
         getWorkflowStateQueryManager().updateWorkflowStateToFailed(workflowState, failureReason);
-    }
-
-    public IntegrityMetaComponent getIntegrityMetaComponent(String purl) {
-        return getIntegrityMetaQueryManager().getIntegrityMetaComponent(purl);
-    }
-
-    public IntegrityMetaComponent updateIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
-        return getIntegrityMetaQueryManager().updateIntegrityMetaComponent(integrityMetaComponent);
-    }
-
-    public void synchronizeIntegrityMetaComponent() {
-        getIntegrityMetaQueryManager().synchronizeIntegrityMetaComponent();
-    }
-
-    public long getIntegrityMetaComponentCount() {
-        return getIntegrityMetaQueryManager().getIntegrityMetaComponentCount();
-    }
-
-    public List<IntegrityMetaComponent> fetchNextPurlsPage(long offset) {
-        return getIntegrityMetaQueryManager().fetchNextPurlsPage(offset);
-    }
-
-    public void batchUpdateIntegrityMetaComponent(List<IntegrityMetaComponent> purls) {
-        getIntegrityMetaQueryManager().batchUpdateIntegrityMetaComponent(purls);
-    }
-
-    public IntegrityMetaComponent createIntegrityMetaComponent(IntegrityMetaComponent integrityMetaComponent) {
-        return getIntegrityMetaQueryManager().createIntegrityMetaComponent(integrityMetaComponent);
-    }
-
-    public void createIntegrityMetaHandlingConflict(IntegrityMetaComponent integrityMetaComponent) {
-        getIntegrityMetaQueryManager().createIntegrityMetaHandlingConflict(integrityMetaComponent);
-    }
-
-    public IntegrityAnalysis getIntegrityAnalysisByComponentUuid(UUID uuid) {
-        return getIntegrityAnalysisQueryManager().getIntegrityAnalysisByComponentUuid(uuid);
     }
 
     public List<Component> getComponentsByPurl(String purl) {
@@ -1536,7 +1432,6 @@ public class QueryManager extends AlpineQueryManager {
                 || hasAccessManagementPermission(principal))
             return Map.entry("TRUE", Collections.emptyMap());
 
-        final Set<Long> teamIds = getTeamIds(principal);
         final Map<String, Object> params = new HashMap<>();
         final String conditionTemplate;
 
@@ -1555,15 +1450,17 @@ public class QueryManager extends AlpineQueryManager {
                         )
                         """;
             }
-            case ApiKey apiKey when !teamIds.isEmpty() -> {
-                params.put("projectAclTeamIds", teamIds.toArray(Long[]::new));
+            case ApiKey apiKey -> {
+                params.put("projectAclApiKeyId", apiKey.getId());
                 conditionTemplate = /* language=SQL */ """
                         EXISTS(
                           SELECT 1
-                            FROM "PROJECT_ACCESS_TEAMS" AS pat
+                            FROM "APIKEYS_TEAMS" AS akt
+                           INNER JOIN "PROJECT_ACCESS_TEAMS" AS pat
+                              ON pat."TEAM_ID" = akt."TEAM_ID"
                            INNER JOIN "PROJECT_HIERARCHY" AS ph
                               ON ph."PARENT_PROJECT_ID" = pat."PROJECT_ID"
-                           WHERE pat."TEAM_ID" = ANY(:projectAclTeamIds)
+                           WHERE akt."APIKEY_ID" = :projectAclApiKeyId
                              AND ph."CHILD_PROJECT_ID" = "%s"."ID"
                         )
                         """;

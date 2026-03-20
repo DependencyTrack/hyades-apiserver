@@ -19,16 +19,19 @@
 package org.dependencytrack.policy.cel.compat;
 
 import alpine.common.logging.Logger;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.cyclonedx.model.Hash;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.PolicyCondition;
-import org.json.JSONObject;
+
+import java.io.UncheckedIOException;
 
 import static org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder.escapeQuotes;
 
 public class ComponentHashCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
 
     private static final Logger LOGGER = Logger.getLogger(ComponentHashCelPolicyScriptSourceBuilder.class);
-
     @Override
     public String apply(final PolicyCondition policyCondition) {
         final Hash hash = extractHashValues(policyCondition);
@@ -52,11 +55,16 @@ public class ComponentHashCelPolicyScriptSourceBuilder implements CelPolicyScrip
     }
 
     private static Hash extractHashValues(PolicyCondition condition) {
-        //Policy condition received here will never be null
-        final JSONObject def = new JSONObject(condition.getValue());
+        final JsonNode valueNode;
+        try {
+            valueNode = Mappers.jsonMapper().readTree(condition.getValue());
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
         return new Hash(
-                def.optString("algorithm", null),
-                def.optString("value", null)
+                valueNode.path("algorithm").asText(null),
+                valueNode.path("value").asText(null)
         );
     }
 

@@ -19,8 +19,6 @@
 package org.dependencytrack.persistence.jdbi;
 
 import alpine.model.ConfigProperty;
-import alpine.model.IConfigProperty.PropertyType;
-import alpine.security.crypto.DataEncryption;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
@@ -61,17 +59,7 @@ public interface ConfigPropertyDao extends SqlObject {
     }
 
     default Optional<String> getOptionalValue(final ConfigPropertyConstants property) {
-        final Optional<String> optionalRawValue = getOptionalRawValue(property);
-        if (optionalRawValue.isEmpty() || property.getPropertyType() != PropertyType.ENCRYPTEDSTRING) {
-            return optionalRawValue;
-        }
-
-        try {
-            final String decryptedValue = new DataEncryption().decryptAsString(optionalRawValue.get());
-            return Optional.of(decryptedValue);
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to decrypt value", e);
-        }
+        return getOptionalRawValue(property);
     }
 
     default <T> Optional<T> getOptionalValue(final ConfigPropertyConstants property, final Class<T> clazz) {

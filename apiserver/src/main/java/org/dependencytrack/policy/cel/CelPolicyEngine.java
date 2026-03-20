@@ -22,7 +22,6 @@ import alpine.common.logging.Logger;
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.api.expr.v1alpha1.Type;
 import com.google.protobuf.Timestamp;
@@ -32,6 +31,7 @@ import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyCondition.Subject;
@@ -102,7 +102,6 @@ import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULN
 public class CelPolicyEngine {
 
     private static final Logger LOGGER = Logger.getLogger(CelPolicyEngine.class);
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Map<Subject, CelPolicyScriptSourceBuilder> SCRIPT_BUILDERS;
 
     static {
@@ -452,7 +451,7 @@ public class CelPolicyEngine {
 
         if (projection.licenseGroupsJson != null) {
             try {
-                final ArrayNode groupsArray = OBJECT_MAPPER.readValue(projection.licenseGroupsJson, ArrayNode.class);
+                final ArrayNode groupsArray = Mappers.jsonMapper().readValue(projection.licenseGroupsJson, ArrayNode.class);
                 for (final JsonNode groupNode : groupsArray) {
                     licenseBuilder.addGroups(org.dependencytrack.proto.policy.v1.License.Group.newBuilder()
                             .setUuid(Optional.ofNullable(groupNode.get("uuid")).map(JsonNode::asText).orElse(""))
@@ -514,7 +513,7 @@ public class CelPolicyEngine {
 
         if (projection.aliasesJson != null) {
             try {
-                OBJECT_MAPPER.readValue(projection.aliasesJson, VULNERABILITY_ALIASES_TYPE_REF).stream()
+                Mappers.jsonMapper().readValue(projection.aliasesJson, VULNERABILITY_ALIASES_TYPE_REF).stream()
                         .flatMap(CelPolicyEngine::mapToProto)
                         .distinct()
                         .forEach(builder::addAliases);

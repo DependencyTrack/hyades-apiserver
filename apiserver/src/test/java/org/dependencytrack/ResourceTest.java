@@ -29,9 +29,7 @@ import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
 import jakarta.ws.rs.core.Response;
-import org.apache.kafka.clients.producer.MockProducer;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 import org.junit.jupiter.api.AfterEach;
@@ -101,7 +99,6 @@ public abstract class ResourceTest {
     protected static final String TEST_USER_PASSWORD_HASH = new String(PasswordService.createHash("testuser".toCharArray()));
 
     protected QueryManager qm;
-    protected MockProducer<byte[], byte[]> kafkaMockProducer;
     protected Team team;
     protected String apiKey;
 
@@ -117,7 +114,6 @@ public abstract class ResourceTest {
 
         // Add a test user and team with API key. Optional if this is used, but its available to all tests.
         this.qm = new QueryManager();
-        this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
         team = qm.createTeam("Test Users");
         this.apiKey = qm.createApiKey(team).getKey();
     }
@@ -143,7 +139,6 @@ public abstract class ResourceTest {
         }
 
         qm.close();
-        KafkaProducerInitializer.tearDown();
     }
 
     public void initializeWithPermissions(Permissions... permissions) {

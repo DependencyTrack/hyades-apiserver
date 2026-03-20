@@ -49,9 +49,7 @@ import java.util.UUID;
 @PersistenceCapable
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-// TODO: Add @Unique composite constraint on the fields component, policyCondition, and type.
-//   The legacy PolicyEngine erroneously allows for duplicates on those fields, but CelPolicyEngine
-//   will never produce such duplicates. Until we remove the legacy engine, we can't add this constraint.
+@Index(members = {"component", "project", "policyCondition"}, unique = "true")
 public class PolicyViolation implements Serializable {
 
     public enum Type {
@@ -78,12 +76,12 @@ public class PolicyViolation implements Serializable {
     @Persistent(defaultFetchGroup = "true")
     @ForeignKey(name = "POLICYVIOLATION_COMPONENT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "COMPONENT_ID", allowsNull = "false")
-    @Index(name = "POLICYVIOLATION_COMPONENT_IDX")
     private Component component;
 
     @Persistent(defaultFetchGroup = "true")
     @ForeignKey(name = "POLICYVIOLATION_POLICYCONDITION_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "POLICYCONDITION_ID", allowsNull = "false")
+    @Index(name = "POLICYVIOLATION_POLICYCONDITION_ID_IDX")
     private PolicyCondition policyCondition;
 
     @Persistent

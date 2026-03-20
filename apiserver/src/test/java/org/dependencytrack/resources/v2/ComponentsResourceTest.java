@@ -38,7 +38,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ComponentsResourceTest extends ResourceTest {
 
     @RegisterExtension
-    static JerseyTestExtension jersey = new JerseyTestExtension(new ResourceConfig());
+    static JerseyTestExtension jersey = new JerseyTestExtension(
+            new ResourceConfig());
 
     @Test
     public void createComponentTest() {
@@ -92,9 +93,6 @@ public class ComponentsResourceTest extends ResourceTest {
                       "active" : true
                     },
                     "uuid" : "${json-unit.any-string}",
-                    "componentMetaInformation" : {
-                      "lastFetched" : "${json-unit.any-number}"
-                    },
                     "expandDependencyGraph" : false,
                     "occurrenceCount" : 0,
                     "isInternal" : false

@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import com.github.packageurl.PackageURL;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -27,34 +28,57 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Repository;
-import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
+import org.dependencytrack.secret.management.SecretManager;
+import org.dependencytrack.secret.management.SecretMetadata;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.when;
 
 public class RepositoryResourceTest extends ResourceTest {
+
+    private static final SecretManager secretManager = mock(SecretManager.class);
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(RepositoryResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bind(secretManager).to(SecretManager.class);
+                        }
+                    }));
 
     @BeforeEach
     @Override
     public void before() throws Exception {
         super.before();
+
+        when(secretManager.getSecretMetadata(anyString()))
+                .thenAnswer(invocation -> new SecretMetadata(invocation.getArgument(0), null, null, null));
 
         useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultRepositories);
     }
@@ -99,15 +123,15 @@ public class RepositoryResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getRepositoryMetaComponentTest() {
-        RepositoryMetaComponent meta = new RepositoryMetaComponent();
-        Date lastCheck = new Date();
-        meta.setLastCheck(lastCheck);
-        meta.setNamespace("org.acme");
-        meta.setName("example-component");
-        meta.setLatestVersion("2.0.0");
-        meta.setRepositoryType(RepositoryType.MAVEN);
-        qm.persist(meta);
+    public void getRepositoryMetaComponentTest() throws Exception {
+        final var resolvedAt = new Date();
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(List.of(
+                new PackageMetadata(
+                        new PackageURL("pkg:maven/org.acme/example-component"),
+                        "2.0.0",
+                        resolvedAt.toInstant(),
+                        null,
+                        null))));
         Response response = jersey.target(V1_REPOSITORY + "/latest")
                 .queryParam("purl", "pkg:/maven/org.acme/example-component@1.0.0")
                 .request()
@@ -121,19 +145,18 @@ public class RepositoryResourceTest extends ResourceTest {
         Assertions.assertEquals("org.acme", json.getString("namespace"));
         Assertions.assertEquals("example-component", json.getString("name"));
         Assertions.assertEquals("2.0.0", json.getString("latestVersion"));
-        Assertions.assertEquals(lastCheck.getTime(), json.getJsonNumber("lastCheck").longValue());
+        Assertions.assertEquals(resolvedAt.getTime(), json.getJsonNumber("lastCheck").longValue());
     }
 
     @Test
-    public void getRepositoryMetaComponentInvalidRepoTypeTest() {
-        RepositoryMetaComponent meta = new RepositoryMetaComponent();
-        Date lastCheck = new Date();
-        meta.setLastCheck(lastCheck);
-        meta.setNamespace("org.acme");
-        meta.setName("example-component");
-        meta.setLatestVersion("2.0.0");
-        meta.setRepositoryType(RepositoryType.MAVEN);
-        qm.persist(meta);
+    public void getRepositoryMetaComponentInvalidRepoTypeTest() throws Exception {
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(List.of(
+                new PackageMetadata(
+                        new PackageURL("pkg:maven/org.acme/example-component"),
+                        "2.0.0",
+                        Instant.now(),
+                        null,
+                        null))));
         Response response = jersey.target(V1_REPOSITORY + "/latest")
                 .queryParam("purl", "pkg:/generic/org.acme/example-component@1.0.0")
                 .request()
@@ -144,15 +167,14 @@ public class RepositoryResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getRepositoryMetaComponentInvalidPurlTest() {
-        RepositoryMetaComponent meta = new RepositoryMetaComponent();
-        Date lastCheck = new Date();
-        meta.setLastCheck(lastCheck);
-        meta.setNamespace("org.acme");
-        meta.setName("example-component");
-        meta.setLatestVersion("2.0.0");
-        meta.setRepositoryType(RepositoryType.MAVEN);
-        qm.persist(meta);
+    public void getRepositoryMetaComponentInvalidPurlTest() throws Exception {
+        useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(List.of(
+                new PackageMetadata(
+                        new PackageURL("pkg:maven/org.acme/example-component"),
+                        "2.0.0",
+                        Instant.now(),
+                        null,
+                        null))));
         Response response = jersey.target(V1_REPOSITORY + "/latest")
                 .queryParam("purl", "g:/g/g/g")
                 .request()
@@ -176,33 +198,64 @@ public class RepositoryResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createRepositoryTest() throws Exception {
-        Repository repository = new Repository();
-        repository.setAuthenticationRequired(true);
-        repository.setEnabled(true);
-        repository.setUsername("testuser");
-        repository.setPassword("testPassword");
-        repository.setInternal(true);
-        repository.setIdentifier("test");
-        repository.setUrl("www.foobar.com");
-        repository.setType(RepositoryType.MAVEN);
-        Response response = jersey.target(V1_REPOSITORY).request().header(X_API_KEY, apiKey)
-                .put(Entity.entity(repository, MediaType.APPLICATION_JSON));
-        Assertions.assertEquals(201, response.getStatus());
+    public void createRepositoryTest() {
+        Response response = jersey
+                .target(V1_REPOSITORY)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "type": "MAVEN",
+                          "identifier": "test",
+                          "url": "www.foobar.com",
+                          "enabled": true,
+                          "internal": true,
+                          "authenticationRequired": true,
+                          "username": "testuser",
+                          "password": "testPassword"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type": "MAVEN",
+                  "identifier": "test",
+                  "url": "www.foobar.com",
+                  "resolutionOrder": "${json-unit.any-number}",
+                  "enabled": true,
+                  "internal": true,
+                  "authenticationRequired": true,
+                  "username": "testuser",
+                  "password": "testPassword",
+                  "uuid": "${json-unit.any-string}"
+                }
+                """);
+    }
 
-        response = jersey.target(V1_REPOSITORY).request().header(X_API_KEY, apiKey).get(Response.class);
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertEquals(String.valueOf(18), response.getHeaderString(TOTAL_COUNT_HEADER));
-        JsonArray json = parseJsonArray(response);
-        Assertions.assertNotNull(json);
-        Assertions.assertEquals(18, json.size());
-        Assertions.assertEquals("MAVEN", json.getJsonObject(13).getString("type"));
-        Assertions.assertEquals("test", json.getJsonObject(13).getString("identifier"));
-        Assertions.assertEquals("www.foobar.com", json.getJsonObject(13).getString("url"));
-        Assertions.assertTrue(json.getJsonObject(13).getInt("resolutionOrder") > 0);
-        Assertions.assertTrue(json.getJsonObject(13).getBoolean("authenticationRequired"));
-        Assertions.assertEquals("testuser", json.getJsonObject(13).getString("username"));
-        Assertions.assertTrue(json.getJsonObject(13).getBoolean("enabled"));
+    @Test
+    public void createRepositoryWithNonExistentSecretTest() {
+        reset(secretManager);
+        when(secretManager.getSecretMetadata("nonExistentSecret")).thenReturn(null);
+
+        Response response = jersey
+                .target(V1_REPOSITORY)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "type": "MAVEN",
+                          "identifier": "test",
+                          "url": "www.foobar.com",
+                          "enabled": true,
+                          "internal": true,
+                          "authenticationRequired": true,
+                          "username": "testuser",
+                          "password": "nonExistentSecret"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo(
+                "The secret with name \"nonExistentSecret\" could not be found.");
     }
 
     @Test
@@ -234,39 +287,208 @@ public class RepositoryResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateRepositoryTest() throws Exception {
-        Repository repository = new Repository();
-        repository.setAuthenticationRequired(true);
-        repository.setEnabled(true);
-        repository.setUsername("testuser");
-        repository.setPassword("testPassword");
-        repository.setInternal(true);
-        repository.setIdentifier("test");
-        repository.setUrl("www.foobar.com");
-        repository.setType(RepositoryType.MAVEN);
-        Response response = jersey.target(V1_REPOSITORY).request().header(X_API_KEY, apiKey)
-                .put(Entity.entity(repository, MediaType.APPLICATION_JSON));
-        Assertions.assertEquals(201, response.getStatus());
-        try (QueryManager qm = new QueryManager()) {
-            List<Repository> repositoryList = qm.getRepositories(RepositoryType.MAVEN).getList(Repository.class);
-            for (Repository repository1 : repositoryList) {
-                if (repository1.getIdentifier().equals("test")) {
-                    repository1.setAuthenticationRequired(false);
-                    response = jersey.target(V1_REPOSITORY).request().header(X_API_KEY, apiKey)
-                            .post(Entity.entity(repository1, MediaType.APPLICATION_JSON));
-                    Assertions.assertEquals(200, response.getStatus());
-                    break;
-                }
-            }
-            repositoryList = qm.getRepositories(RepositoryType.MAVEN).getList(Repository.class);
-            for (Repository repository1 : repositoryList) {
-                if (repository1.getIdentifier().equals("test")) {
-                    Assertions.assertFalse(repository1.isAuthenticationRequired());
-                    break;
-                }
-            }
-        }
+    public void updateRepositoryTest() {
+        Response response = jersey
+                .target(V1_REPOSITORY)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "type": "MAVEN",
+                          "identifier": "test",
+                          "url": "www.foobar.com",
+                          "enabled": true,
+                          "internal": true,
+                          "authenticationRequired": true,
+                          "username": "testuser",
+                          "password": "testPassword"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+        final String uuid = parseJsonObject(response).getString("uuid");
 
+        response = jersey
+                .target(V1_REPOSITORY)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "type": "MAVEN",
+                          "identifier": "test",
+                          "url": "www.foobar.com",
+                          "enabled": true,
+                          "internal": true,
+                          "authenticationRequired": true,
+                          "username": "testuser",
+                          "password": "updatedSecret",
+                          "uuid": "%s"
+                        }
+                        """.formatted(uuid)));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type": "MAVEN",
+                  "identifier": "test",
+                  "url": "www.foobar.com",
+                  "resolutionOrder": "${json-unit.any-number}",
+                  "enabled": true,
+                  "internal": true,
+                  "authenticationRequired": true,
+                  "username": "testuser",
+                  "password": "updatedSecret",
+                  "uuid": "${json-unit.any-string}"
+                }
+                """);
+    }
+
+    @Test
+    public void updateRepositoryWithNonExistentSecretTest() {
+        Response response = jersey
+                .target(V1_REPOSITORY)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "type": "MAVEN",
+                          "identifier": "test",
+                          "url": "www.foobar.com",
+                          "enabled": true,
+                          "internal": true,
+                          "authenticationRequired": true,
+                          "username": "testuser",
+                          "password": "testPassword"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+        final String uuid = parseJsonObject(response).getString("uuid");
+
+        reset(secretManager);
+        when(secretManager.getSecretMetadata("nonExistentSecret")).thenReturn(null);
+
+        response = jersey
+                .target(V1_REPOSITORY)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "type": "MAVEN",
+                          "identifier": "test",
+                          "url": "www.foobar.com",
+                          "enabled": true,
+                          "internal": true,
+                          "authenticationRequired": true,
+                          "username": "testuser",
+                          "password": "nonExistentSecret",
+                          "uuid": "%s"
+                        }
+                        """.formatted(uuid)));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo(
+                "The secret with name \"nonExistentSecret\" could not be found.");
+    }
+
+    @Test
+    public void createRepositoryAuthRequiredWithoutPasswordTest() {
+        Response response = jersey
+                .target(V1_REPOSITORY)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "type": "MAVEN",
+                          "identifier": "test",
+                          "url": "www.foobar.com",
+                          "enabled": true,
+                          "internal": true,
+                          "authenticationRequired": true,
+                          "username": "testuser"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo(
+                "A password secret name is required when authentication is enabled.");
+    }
+
+    @Test
+    public void updateRepositoryAuthRequiredWithoutPasswordTest() {
+        Response response = jersey
+                .target(V1_REPOSITORY)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "type": "MAVEN",
+                          "identifier": "test",
+                          "url": "www.foobar.com",
+                          "enabled": true,
+                          "internal": true,
+                          "authenticationRequired": true,
+                          "username": "testuser",
+                          "password": "testPassword"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+        final String uuid = parseJsonObject(response).getString("uuid");
+
+        response = jersey
+                .target(V1_REPOSITORY)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "type": "MAVEN",
+                          "identifier": "test",
+                          "url": "www.foobar.com",
+                          "enabled": true,
+                          "internal": true,
+                          "authenticationRequired": true,
+                          "username": "testuser",
+                          "uuid": "%s"
+                        }
+                        """.formatted(uuid)));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo(
+                "A password secret name is required when authentication is enabled.");
+    }
+
+    @Test
+    public void updateRepositoryEnableAuthWithoutPasswordTest() {
+        Response response = jersey
+                .target(V1_REPOSITORY)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "type": "MAVEN",
+                          "identifier": "test",
+                          "url": "www.foobar.com",
+                          "enabled": true,
+                          "internal": true,
+                          "authenticationRequired": false
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+        final String uuid = parseJsonObject(response).getString("uuid");
+
+        response = jersey
+                .target(V1_REPOSITORY)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "type": "MAVEN",
+                          "identifier": "test",
+                          "url": "www.foobar.com",
+                          "enabled": true,
+                          "internal": true,
+                          "authenticationRequired": true,
+                          "username": "testuser",
+                          "uuid": "%s"
+                        }
+                        """.formatted(uuid)));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo(
+                "A password secret name is required when authentication is enabled.");
     }
 
     @Test

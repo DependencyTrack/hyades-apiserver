@@ -36,20 +36,14 @@ import org.dependencytrack.api.v2.model.ListComponentsResponse;
 import org.dependencytrack.api.v2.model.ListComponentsResponseItem;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.pagination.Page;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.componentmeta.ComponentProjection;
-import org.dependencytrack.event.kafka.componentmeta.Handler;
-import org.dependencytrack.event.kafka.componentmeta.HandlerFactory;
 import org.dependencytrack.exception.ProjectAccessDeniedException;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
-import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
@@ -61,9 +55,6 @@ import us.springett.parsers.cpe.exceptions.CpeParsingException;
 
 import java.util.UUID;
 
-import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.calculateIntegrityResult;
-import static org.dependencytrack.model.FetchStatus.NOT_AVAILABLE;
-import static org.dependencytrack.model.FetchStatus.PROCESSED;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapDependencyMetrics;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapHashes;
@@ -76,7 +67,6 @@ import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolati
 public class ComponentsResource extends AbstractApiResource implements ComponentsApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComponentsResource.class);
-    private final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
 
     @Context
     private UriInfo uriInfo;
@@ -228,20 +218,6 @@ public class ComponentsResource extends AbstractApiResource implements Component
 
         qm.createComponent(component, true);
 
-        if (component.getPurl() != null) {
-            ComponentProjection componentProjection =
-                    new ComponentProjection(component.getUuid(), component.getPurlCoordinates().toString(),
-                            component.isInternal(), component.getPurl());
-            try {
-                Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
-                IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
-                if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
-                    calculateIntegrityResult(integrityMetaComponent, component, qm);
-                }
-            } catch (MalformedPackageURLException ex) {
-                LOGGER.warn("Unable to process package url %s".formatted(componentProjection.purl()));
-            }
-        }
         return component;
     }
 }

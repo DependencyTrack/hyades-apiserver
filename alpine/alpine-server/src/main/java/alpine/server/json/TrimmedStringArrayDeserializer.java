@@ -22,7 +22,6 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
-import io.jsonwebtoken.lang.Collections;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
@@ -58,7 +57,7 @@ public class TrimmedStringArrayDeserializer extends JsonDeserializer<String[]> {
                 }
             }
         }
-        if (Collections.isEmpty(list)) {
+        if (list.isEmpty()) {
             return null;
         } else {
             return list.toArray(new String[list.size()]);

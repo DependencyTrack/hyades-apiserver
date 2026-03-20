@@ -67,7 +67,8 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
         this.kvStore = ctx.kvStore();
         this.httpClientSupplier = () -> HttpAsyncClients.custom()
                 .setRetryStrategy(new GitHubHttpRequestRetryStrategy())
-                .setProxySelector(ctx.proxySelector())
+                .setProxySelector(ctx.http().proxySelector())
+                .setUserAgent(ctx.http().userAgent())
                 .build();
     }
 

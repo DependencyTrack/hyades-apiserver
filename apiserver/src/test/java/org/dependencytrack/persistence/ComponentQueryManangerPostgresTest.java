@@ -24,27 +24,29 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ExternalReference;
-import org.dependencytrack.model.IntegrityAnalysis;
-import org.dependencytrack.model.IntegrityMatchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.OrganizationalContact;
+import org.dependencytrack.model.PackageArtifactMetadata;
+import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.persistence.jdbi.PackageArtifactMetadataDao;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
+import org.dependencytrack.util.PurlUtil;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 
 public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
 
     @Test
-    public void testGetAllComponents() throws MalformedPackageURLException {
+    public void testGetAllComponents() throws Exception {
 
         final Project project = prepareProject();
         var components = qm.getComponents(project, false, false, false);
@@ -52,7 +54,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testGetOutdatedComponents() throws MalformedPackageURLException {
+    public void testGetOutdatedComponents() throws Exception {
 
         final Project project = prepareProject();
         var components = qm.getComponents(project, false, true, false);
@@ -60,7 +62,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testGetDirectComponents() throws MalformedPackageURLException {
+    public void testGetDirectComponents() throws Exception {
 
         final Project project = prepareProject();
         var components = qm.getComponents(project, false, false, true);
@@ -68,7 +70,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void getUngroupedOutdatedComponentsTest() throws MalformedPackageURLException {
+    public void getUngroupedOutdatedComponentsTest() throws Exception {
 
         final Project project = prepareProjectUngroupedComponents();
         var components = qm.getComponents(project, false, true, false);
@@ -76,7 +78,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testGetOutdatedDirectComponents() throws MalformedPackageURLException {
+    public void testGetOutdatedDirectComponents() throws Exception {
 
         final Project project = prepareProject();
         var components = qm.getComponents(project, true, true, true);
@@ -84,15 +86,17 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void getUngroupedOutdatedDirectComponentsTest() throws MalformedPackageURLException {
+    public void getUngroupedOutdatedDirectComponentsTest() throws Exception {
         final Project project = prepareProjectUngroupedComponents();
         var components = qm.getComponents(project, true, true, true);
         assertThat(components.getTotal()).isEqualTo(4);
     }
 
-    private Project prepareProject() throws MalformedPackageURLException {
+    private Project prepareProject() throws Exception {
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         final List<String> directDepencencies = new ArrayList<>();
+        final List<PackageMetadata> metadataList = new ArrayList<>();
+        final List<PackageArtifactMetadata> artifactMetadataList = new ArrayList<>();
         // Generate 1000 dependencies
         for (int i = 0; i < 1000; i++) {
             Component component = new Component();
@@ -115,27 +119,36 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
             // Recent & Outdated
             if ((i >= 25) && (i < 225)) {
                 // 100 outdated components, 75 of these are direct dependencies, 25 transitive
-                final var metaComponent = new RepositoryMetaComponent();
-                metaComponent.setRepositoryType(RepositoryType.MAVEN);
-                metaComponent.setNamespace("component-group");
-                metaComponent.setName("component-name-" + i);
-                metaComponent.setLatestVersion(String.valueOf(i + 1) + ".0");
-                metaComponent.setLastCheck(new Date());
-                qm.persist(metaComponent);
+                metadataList.add(new PackageMetadata(
+                        PurlUtil.silentPurlPackageOnly(component.getPurl()),
+                        String.valueOf(i + 1) + ".0",
+                        Instant.now(),
+                        null,
+                        null));
+                artifactMetadataList.add(new PackageArtifactMetadata(
+                        component.getPurl(),
+                        PurlUtil.silentPurlPackageOnly(component.getPurl()),
+                        null, null, null, null, null, null, null, Instant.now()));
             } else if (i < 500) {
                 // 300 recent components, 25 of these are direct dependencies
-                final var metaComponent = new RepositoryMetaComponent();
-                metaComponent.setRepositoryType(RepositoryType.MAVEN);
-                metaComponent.setNamespace("component-group");
-                metaComponent.setName("component-name-" + i);
-                metaComponent.setLatestVersion(String.valueOf(i) + ".0");
-                metaComponent.setLastCheck(new Date());
-                qm.persist(metaComponent);
+                metadataList.add(new PackageMetadata(
+                        PurlUtil.silentPurlPackageOnly(component.getPurl()),
+                        String.valueOf(i) + ".0",
+                        Instant.now(),
+                        null,
+                        null));
+                artifactMetadataList.add(new PackageArtifactMetadata(
+                        component.getPurl(),
+                        PurlUtil.silentPurlPackageOnly(component.getPurl()),
+                        null, null, null, null, null, null, null, Instant.now()));
             } else {
-                // 500 components with no RepositoryMetaComponent containing version
-                // metadata, all transitive dependencies
+                // 500 components with no metadata, all transitive dependencies
             }
         }
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(metadataList);
+            new PackageArtifactMetadataDao(handle).upsertAll(artifactMetadataList);
+        });
         project.setDirectDependencies("[" + String.join(",", directDepencencies.toArray(new String[0])) + "]");
         return project;
     }
@@ -144,7 +157,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
      * (Regression-)Test for ensuring that all data is mapped in the project component
      */
     @Test
-    public void testMappingComponentProjectionWithAllFields() {
+    public void testMappingComponentProjectionWithAllFields() throws Exception {
         final var project = new Project();
         project.setUuid(UUID.fromString("d7173786-60aa-4a4f-a950-c92fe6422307"));
         project.setGroup("projectGroup");
@@ -222,30 +235,24 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
         component.setResolvedLicense(license);
         qm.persist(component);
 
-        final var metaComponent = new IntegrityMetaComponent();
-        metaComponent.setPurl("componentPurl");
-        metaComponent.setPublishedAt(new java.util.Date(222));
-        metaComponent.setRepositoryUrl("integrityRepoUrl");
-        metaComponent.setLastFetch(new Date());
-        qm.persist(metaComponent);
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(List.of(
+                    new PackageMetadata(
+                            new PackageURL("pkg:maven/a/b"),
+                            "2.0",
+                            Instant.ofEpochMilli(222),
+                            null,
+                            null)));
 
-        final var integrityAnalysis = new IntegrityAnalysis();
-        integrityAnalysis.setComponent(component);
-        integrityAnalysis.setMd5HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_UNKNOWN);
-        integrityAnalysis.setSha1HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_UNKNOWN);
-        integrityAnalysis.setSha256HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_UNKNOWN);
-        integrityAnalysis.setSha512HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_UNKNOWN);
-        integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_UNKNOWN);
-        integrityAnalysis.setUpdatedAt(new java.util.Date(222));
-        qm.persist(integrityAnalysis);
-
-        var repoMeta = new RepositoryMetaComponent();
-        repoMeta.setName(component.getName());
-        repoMeta.setLatestVersion("2.0");
-        repoMeta.setNamespace(component.getGroup());
-        repoMeta.setRepositoryType(RepositoryType.MAVEN);
-        repoMeta.setLastCheck(new java.util.Date(222));
-        qm.persist(repoMeta);
+            new PackageArtifactMetadataDao(handle).upsertAll(List.of(
+                    new PackageArtifactMetadata(
+                            new PackageURL("pkg:maven/a/b@1.0"),
+                            new PackageURL("pkg:maven/a/b"),
+                            null, null, null, null,
+                            Instant.ofEpochMilli(222),
+                            null, null,
+                            Instant.now())));
+        });
 
         var components = qm.getComponents(project, false, true, false);
         assertThat(components.getTotal()).isEqualTo(1);
@@ -258,9 +265,11 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
      * <li>3 recent dependencies</li></ul>
      * @throws MalformedPackageURLException
      */
-    private Project prepareProjectUngroupedComponents() throws MalformedPackageURLException {
+    private Project prepareProjectUngroupedComponents() throws Exception {
         final Project project = qm.createProject("Ungrouped Application", null, null, null, null, null, null, false);
         final List<String> directDepencencies = new ArrayList<>();
+        final List<PackageMetadata> metadataList = new ArrayList<>();
+        final List<PackageArtifactMetadata> artifactMetadataList = new ArrayList<>();
         // Generate 10 dependencies
         for (int i = 0; i < 10; i++) {
             Component component = new Component();
@@ -276,21 +285,29 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
             }
             // Recent & Outdated
             if ((i < 7)) {
-                final var metaComponent = new RepositoryMetaComponent();
-                metaComponent.setRepositoryType(RepositoryType.PYPI);
-                metaComponent.setName("component-name-"+i);
-                metaComponent.setLatestVersion(String.valueOf(i+1)+".0");
-                metaComponent.setLastCheck(new Date());
-                qm.persist(metaComponent);
+                metadataList.add(new PackageMetadata(
+                        PurlUtil.silentPurlPackageOnly(component.getPurl()),
+                        String.valueOf(i+1)+".0",
+                        Instant.now(),
+                        null,
+                        null));
             } else {
-                final var metaComponent = new RepositoryMetaComponent();
-                metaComponent.setRepositoryType(RepositoryType.PYPI);
-                metaComponent.setName("component-name-"+i);
-                metaComponent.setLatestVersion(String.valueOf(i)+".0");
-                metaComponent.setLastCheck(new Date());
-                qm.persist(metaComponent);
+                metadataList.add(new PackageMetadata(
+                        PurlUtil.silentPurlPackageOnly(component.getPurl()),
+                        String.valueOf(i)+".0",
+                        Instant.now(),
+                        null,
+                        null));
             }
+            artifactMetadataList.add(new PackageArtifactMetadata(
+                    component.getPurl(),
+                    PurlUtil.silentPurlPackageOnly(component.getPurl()),
+                    null, null, null, null, null, null, null, Instant.now()));
         }
+        useJdbiHandle(handle -> {
+            new PackageMetadataDao(handle).upsertAll(metadataList);
+            new PackageArtifactMetadataDao(handle).upsertAll(artifactMetadataList);
+        });
         project.setDirectDependencies("[" + String.join(",", directDepencencies.toArray(new String[0])) + "]");
         return project;
     }

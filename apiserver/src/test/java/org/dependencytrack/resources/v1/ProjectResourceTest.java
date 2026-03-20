@@ -23,7 +23,7 @@ import alpine.event.framework.EventService;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.ManagedUser;
 import alpine.model.Team;
-import alpine.server.auth.JsonWebToken;
+import alpine.server.auth.SessionTokenService;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import com.github.packageurl.PackageURL;
@@ -38,6 +38,7 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.Mappers;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -78,7 +79,6 @@ import org.dependencytrack.tasks.CloneProjectTask;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.hamcrest.CoreMatchers;
-import org.json.JSONArray;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -2824,8 +2824,8 @@ class ProjectResourceTest extends ResourceTest {
         service.setVersion("3.0.0");
         qm.persist(service);
 
-        project.setDirectDependencies(new JSONArray().put(new ComponentIdentity(componentA).toJSON()).toString());
-        componentA.setDirectDependencies(new JSONArray().put(new ComponentIdentity(componentB).toJSON()).toString());
+        project.setDirectDependencies(Mappers.jsonMapper().createArrayNode().add(new ComponentIdentity(componentA).toJSON()).toString());
+        componentA.setDirectDependencies(Mappers.jsonMapper().createArrayNode().add(new ComponentIdentity(componentB).toJSON()).toString());
 
         final var vuln = new Vulnerability();
         vuln.setVulnId("INT-123");
@@ -3782,11 +3782,11 @@ class ProjectResourceTest extends ResourceTest {
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         qm.addUserToTeam(testUser, team);
 
-        final String userJwt = new JsonWebToken().createToken(testUser);
+        final String userSessionToken = new SessionTokenService().createSession(testUser.getId());
 
         final Response response = jersey.target(V1_PROJECT)
                 .request()
-                .header("Authorization", "Bearer " + userJwt)
+                .header("Authorization", "Bearer " + userSessionToken)
                 .put(Entity.json(/* language=JSON */ """
                         {
                           "name": "acme-app",
@@ -3827,11 +3827,11 @@ class ProjectResourceTest extends ResourceTest {
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         qm.addUserToTeam(testUser, team);
 
-        final String userJwt = new JsonWebToken().createToken(testUser);
+        final String sessionToken = new SessionTokenService().createSession(testUser.getId());
 
         final Response response = jersey.target(V1_PROJECT)
                 .request()
-                .header("Authorization", "Bearer " + userJwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.json(/* language=JSON */ """
                         {
                           "name": "acme-app",
@@ -3872,11 +3872,11 @@ class ProjectResourceTest extends ResourceTest {
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         qm.addUserToTeam(testUser, team);
 
-        final String userJwt = new JsonWebToken().createToken(testUser);
+        final String userSessionToken = new SessionTokenService().createSession(testUser.getId());
 
         final Response response = jersey.target(V1_PROJECT)
                 .request()
-                .header("Authorization", "Bearer " + userJwt)
+                .header("Authorization", "Bearer " + userSessionToken)
                 .put(Entity.json(/* language=JSON */ """
                         {
                           "name": "acme-app"
@@ -3911,11 +3911,11 @@ class ProjectResourceTest extends ResourceTest {
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
 
-        final String userJwt = new JsonWebToken().createToken(testUser);
+        final String userSessionToken = new SessionTokenService().createSession(testUser.getId());
 
         final Response response = jersey.target(V1_PROJECT)
                 .request()
-                .header("Authorization", "Bearer " + userJwt)
+                .header("Authorization", "Bearer " + userSessionToken)
                 .put(Entity.json(/* language=JSON */ """
                         {
                           "name": "acme-app",
@@ -3946,13 +3946,13 @@ class ProjectResourceTest extends ResourceTest {
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         qm.addUserToTeam(testUser, team);
 
-        final String userJwt = new JsonWebToken().createToken(testUser);
+        final String userSessionToken = new SessionTokenService().createSession(testUser.getId());
 
         final Team otherTeam = qm.createTeam("otherTeam");
 
         final Response response = jersey.target(V1_PROJECT)
                 .request()
-                .header("Authorization", "Bearer " + userJwt)
+                .header("Authorization", "Bearer " + userSessionToken)
                 .put(Entity.json(/* language=JSON */ """
                         {
                           "name": "acme-app",
@@ -3992,11 +3992,11 @@ class ProjectResourceTest extends ResourceTest {
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
 
-        final String userJwt = new JsonWebToken().createToken(testUser);
+        final String userSessionToken = new SessionTokenService().createSession(testUser.getId());
 
         final Response response = jersey.target(V1_PROJECT)
                 .request()
-                .header("Authorization", "Bearer " + userJwt)
+                .header("Authorization", "Bearer " + userSessionToken)
                 .put(Entity.json(/* language=JSON */ """
                         {
                           "name": "acme-app",
@@ -4028,11 +4028,11 @@ class ProjectResourceTest extends ResourceTest {
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         qm.addUserToTeam(testUser, team);
 
-        final String userJwt = new JsonWebToken().createToken(testUser);
+        final String userSessionToken = new SessionTokenService().createSession(testUser.getId());
 
         final Response response = jersey.target(V1_PROJECT)
                 .request()
-                .header("Authorization", "Bearer " + userJwt)
+                .header("Authorization", "Bearer " + userSessionToken)
                 .put(Entity.json(/* language=JSON */ """
                         {
                           "name": "acme-app",

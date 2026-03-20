@@ -22,6 +22,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
+import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
@@ -90,20 +91,21 @@ class DexEngineInitializerTest {
                 .build();
 
         dataSourceRegistry = new DataSourceRegistry(config);
+        final var cacheManager = new NoopCacheManager();
         final var healthCheckRegistry = new HealthCheckRegistry(Collections.emptyList());
         final var secretManager = new TestSecretManager();
 
         final var servletContextMock = mock(ServletContext.class);
-        doReturn(healthCheckRegistry)
-                .when(servletContextMock).getAttribute(eq(HealthCheckRegistry.class.getName()));
+        doReturn(cacheManager)
+                .when(servletContextMock).getAttribute(eq(CacheManager.class.getName()));
         doReturn(new MemoryFileStorage())
                 .when(servletContextMock).getAttribute(eq(FileStorage.class.getName()));
-        doReturn(new PluginManager(config, new NoopCacheManager(), secretManager::getSecretValue, Collections.emptyList()))
+        doReturn(new PluginManager(config, cacheManager, secretManager::getSecretValue, Collections.emptyList()))
                 .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
         doReturn(secretManager)
                 .when(servletContextMock).getAttribute(eq(SecretManager.class.getName()));
 
-        initializer = new DexEngineInitializer(config, dataSourceRegistry, new SimpleMeterRegistry());
+        initializer = new DexEngineInitializer(config, dataSourceRegistry, new SimpleMeterRegistry(), healthCheckRegistry);
         initializer.contextInitialized(new ServletContextEvent(servletContextMock));
 
         final var engineCaptor = ArgumentCaptor.forClass(DexEngine.class);

@@ -30,9 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -97,57 +95,55 @@ public class Config {
 
     public enum AlpineKey implements Key {
         // @formatter:off
-        WORKER_THREADS                         ("alpine.worker.threads",             0),
-        WORKER_THREAD_MULTIPLIER               ("alpine.worker.thread.multiplier",   4),
-        DATA_DIRECTORY                         ("alpine.data.directory",             "~/.alpine"),
-        SECRET_KEY_PATH                        ("alpine.secret.key.path",            null),
-        DATABASE_URL                           ("alpine.database.url",               "jdbc:h2:mem:alpine"),
-        DATABASE_USERNAME                      ("alpine.database.username",          "sa"),
-        DATABASE_PASSWORD                      ("alpine.database.password",          ""),
-        BCRYPT_ROUNDS                          ("alpine.bcrypt.rounds",              14),
-        LDAP_ENABLED                           ("alpine.ldap.enabled",               false),
-        LDAP_SERVER_URL                        ("alpine.ldap.server.url",            null),
-        LDAP_BASEDN                            ("alpine.ldap.basedn",                null),
-        LDAP_SECURITY_AUTH                     ("alpine.ldap.security.auth",         null),
-        LDAP_BIND_USERNAME                     ("alpine.ldap.bind.username",         null),
-        LDAP_BIND_PASSWORD                     ("alpine.ldap.bind.password",         null),
-        LDAP_BIND_PASSWORD_FILE                ("alpine.ldap.bind.password.file",    null),
-        LDAP_AUTH_USERNAME_FMT                 ("alpine.ldap.auth.username.format",  null),
-        LDAP_ATTRIBUTE_NAME                    ("alpine.ldap.attribute.name",        "userPrincipalName"),
-        LDAP_ATTRIBUTE_MAIL                    ("alpine.ldap.attribute.mail",        "mail"),
-        LDAP_GROUPS_FILTER                     ("alpine.ldap.groups.filter",         null),
-        LDAP_USER_GROUPS_FILTER                ("alpine.ldap.user.groups.filter",    null),
-        LDAP_GROUPS_SEARCH_FILTER              ("alpine.ldap.groups.search.filter",  null),
-        LDAP_USERS_SEARCH_FILTER               ("alpine.ldap.users.search.filter",   null),
-        LDAP_USER_PROVISIONING                 ("alpine.ldap.user.provisioning",     false),
-        LDAP_TEAM_SYNCHRONIZATION              ("alpine.ldap.team.synchronization",  false),
-        OIDC_ENABLED                           ("alpine.oidc.enabled",               false),
-        OIDC_ISSUER                            ("alpine.oidc.issuer",                null),
-        OIDC_CLIENT_ID                         ("alpine.oidc.client.id",             null),
-        OIDC_USERNAME_CLAIM                    ("alpine.oidc.username.claim",       "sub"),
-        OIDC_USER_PROVISIONING                 ("alpine.oidc.user.provisioning",    false),
-        OIDC_TEAM_SYNCHRONIZATION              ("alpine.oidc.team.synchronization", false),
-        OIDC_TEAMS_CLAIM                       ("alpine.oidc.teams.claim",       "groups"),
-        OIDC_TEAMS_DEFAULT                     ("alpine.oidc.teams.default",         null),
-        OIDC_AUTH_CUSTOMIZER                   ("alpine.oidc.auth.customizer",       "alpine.server.auth.DefaultOidcAuthenticationCustomizer"),
-        HTTP_PROXY_ADDRESS                     ("alpine.http.proxy.address",         null),
-        HTTP_PROXY_PORT                        ("alpine.http.proxy.port",            null),
-        HTTP_PROXY_USERNAME                    ("alpine.http.proxy.username",        null),
-        HTTP_PROXY_PASSWORD                    ("alpine.http.proxy.password",        null),
-        HTTP_PROXY_PASSWORD_FILE               ("alpine.http.proxy.password.file",   null),
-        NO_PROXY                               ("alpine.no.proxy",                   null),
-        HTTP_TIMEOUT_CONNECTION                ("alpine.http.timeout.connection",    30),
-        HTTP_TIMEOUT_POOL                      ("alpine.http.timeout.pool",          60),
-        HTTP_TIMEOUT_SOCKET                    ("alpine.http.timeout.socket",        30),
-        CORS_ENABLED                           ("alpine.cors.enabled",               true),
-        CORS_ALLOW_ORIGIN                      ("alpine.cors.allow.origin",          "*"),
-        CORS_ALLOW_METHODS                     ("alpine.cors.allow.methods",         "GET,POST,PUT,PATCH,DELETE,OPTIONS"),
-        CORS_ALLOW_HEADERS                     ("alpine.cors.allow.headers",         "Origin,Content-Type,Authorization,X-Requested-With,Content-Length,Accept,Origin,X-Api-Key,X-Total-Count,*"),
-        CORS_EXPOSE_HEADERS                    ("alpine.cors.expose.headers",        "Origin,Content-Type,Authorization,X-Requested-With,Content-Length,Accept,Origin,X-Api-Key,X-Total-Count"),
-        CORS_ALLOW_CREDENTIALS                 ("alpine.cors.allow.credentials",     true),
-        CORS_MAX_AGE                           ("alpine.cors.max.age",               3600),
-        API_KEY_PREFIX                         ("alpine.api.key.prefix",             "alpine_"),
-        AUTH_JWT_TTL_SECONDS                   ("alpine.auth.jwt.ttl.seconds",       7 * 24 * 60 * 60);
+        WORKER_THREADS                         ("dt.worker.threads",             0),
+        WORKER_THREAD_MULTIPLIER               ("dt.worker.thread.multiplier",   4),
+        DATA_DIRECTORY                         ("dt.data.directory",             "~/.alpine"),
+        DATABASE_URL                           ("dt.database.url",               "jdbc:h2:mem:alpine"),
+        DATABASE_USERNAME                      ("dt.database.username",          "sa"),
+        DATABASE_PASSWORD                      ("dt.database.password",          ""),
+        BCRYPT_ROUNDS                          ("dt.bcrypt.rounds",              14),
+        LDAP_ENABLED                           ("dt.ldap.enabled",               false),
+        LDAP_SERVER_URL                        ("dt.ldap.server.url",            null),
+        LDAP_BASEDN                            ("dt.ldap.basedn",                null),
+        LDAP_SECURITY_AUTH                     ("dt.ldap.security.auth",         null),
+        LDAP_BIND_USERNAME                     ("dt.ldap.bind.username",         null),
+        LDAP_BIND_PASSWORD                     ("dt.ldap.bind.password",         null),
+        LDAP_BIND_PASSWORD_FILE                ("dt.ldap.bind.password.file",    null),
+        LDAP_AUTH_USERNAME_FMT                 ("dt.ldap.auth.username.format",  null),
+        LDAP_ATTRIBUTE_NAME                    ("dt.ldap.attribute.name",        "userPrincipalName"),
+        LDAP_ATTRIBUTE_MAIL                    ("dt.ldap.attribute.mail",        "mail"),
+        LDAP_GROUPS_FILTER                     ("dt.ldap.groups.filter",         null),
+        LDAP_USER_GROUPS_FILTER                ("dt.ldap.user.groups.filter",    null),
+        LDAP_GROUPS_SEARCH_FILTER              ("dt.ldap.groups.search.filter",  null),
+        LDAP_USERS_SEARCH_FILTER               ("dt.ldap.users.search.filter",   null),
+        LDAP_USER_PROVISIONING                 ("dt.ldap.user.provisioning",     false),
+        LDAP_TEAM_SYNCHRONIZATION              ("dt.ldap.team.synchronization",  false),
+        OIDC_ENABLED                           ("dt.oidc.enabled",               false),
+        OIDC_ISSUER                            ("dt.oidc.issuer",                null),
+        OIDC_CLIENT_ID                         ("dt.oidc.client.id",             null),
+        OIDC_USERNAME_CLAIM                    ("dt.oidc.username.claim",       "sub"),
+        OIDC_USER_PROVISIONING                 ("dt.oidc.user.provisioning",    false),
+        OIDC_TEAM_SYNCHRONIZATION              ("dt.oidc.team.synchronization", false),
+        OIDC_TEAMS_CLAIM                       ("dt.oidc.teams.claim",       "groups"),
+        OIDC_TEAMS_DEFAULT                     ("dt.oidc.teams.default",         null),
+        OIDC_AUTH_CUSTOMIZER                   ("dt.oidc.auth.customizer",       "alpine.server.auth.DefaultOidcAuthenticationCustomizer"),
+        HTTP_PROXY_ADDRESS                     ("dt.http.proxy.address",         null),
+        HTTP_PROXY_PORT                        ("dt.http.proxy.port",            null),
+        HTTP_PROXY_USERNAME                    ("dt.http.proxy.username",        null),
+        HTTP_PROXY_PASSWORD                    ("dt.http.proxy.password",        null),
+        HTTP_PROXY_PASSWORD_FILE               ("dt.http.proxy.password.file",   null),
+        NO_PROXY                               ("dt.no.proxy",                   null),
+        HTTP_TIMEOUT_CONNECTION                ("dt.http.timeout.connection",    30),
+        HTTP_TIMEOUT_POOL                      ("dt.http.timeout.pool",          60),
+        HTTP_TIMEOUT_SOCKET                    ("dt.http.timeout.socket",        30),
+        CORS_ENABLED                           ("dt.cors.enabled",               true),
+        CORS_ALLOW_ORIGIN                      ("dt.cors.allow.origin",          "*"),
+        CORS_ALLOW_METHODS                     ("dt.cors.allow.methods",         "GET,POST,PUT,PATCH,DELETE,OPTIONS"),
+        CORS_ALLOW_HEADERS                     ("dt.cors.allow.headers",         "Origin,Content-Type,Authorization,X-Requested-With,Content-Length,Accept,Origin,X-Api-Key,X-Total-Count,*"),
+        CORS_EXPOSE_HEADERS                    ("dt.cors.expose.headers",        "Origin,Content-Type,Authorization,X-Requested-With,Content-Length,Accept,Origin,X-Api-Key,X-Total-Count"),
+        CORS_ALLOW_CREDENTIALS                 ("dt.cors.allow.credentials",     true),
+        CORS_MAX_AGE                           ("dt.cors.max.age",               3600),
+        API_KEY_PREFIX                         ("dt.api.key.prefix",             "alpine_");
         // @formatter:on
 
         private String propertyName;
@@ -422,37 +418,6 @@ public class Config {
                 .map(String::trim)
                 .filter(not(String::isEmpty))
                 .collect(Collectors.toList());
-    }
-
-    /**
-     * Get "pass-through" properties with a given {@code prefix}.
-     * <p>
-     * Pass-through properties do not have corresponding {@link Config.Key}s.
-     * Their main use-case is to allow users to configure certain aspects of libraries and frameworks used by Alpine,
-     * without Alpine having to introduce {@link AlpineKey}s for every single option.
-     * <p>
-     * Properties are read from both environment variables, and {@link #PROP_FILE}.
-     * When a property is defined in both environment and {@code application.properties}, environment takes precedence.
-     * <p>
-     * Properties <strong>must</strong> be prefixed with {@code ALPINE_} (for environment variables) or {@code alpine.}
-     * (for {@code application.properties}) respectively. The Alpine prefix will be removed in keys of the returned
-     * {@link Map}, but the given {@code prefix} will be retained.
-     *
-     * @param prefix Prefix of the properties to fetch
-     * @return A {@link Map} containing the matched properties
-     * @since 2.3.0
-     */
-    public Map<String, String> getPassThroughProperties(final String prefix) {
-        final var passThroughProperties = new HashMap<String, String>();
-        for (final String propertyName : ConfigProvider.getConfig().getPropertyNames()) {
-            if (!propertyName.startsWith("alpine.%s.".formatted(prefix))) {
-                continue;
-            }
-
-            final String key = propertyName.replaceFirst("^alpine\\.", "");
-            passThroughProperties.put(key, ConfigProvider.getConfig().getValue(propertyName, String.class));
-        }
-        return passThroughProperties;
     }
 
     /**

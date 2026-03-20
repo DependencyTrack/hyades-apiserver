@@ -31,7 +31,6 @@ public interface IConfigProperty {
         INTEGER,
         NUMBER,
         STRING,
-        ENCRYPTEDSTRING,
         TIMESTAMP,
         URL,
         UUID

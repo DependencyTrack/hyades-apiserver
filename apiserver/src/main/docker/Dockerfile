@@ -44,8 +44,6 @@ ARG UID
 ARG GID
 
 ENV TZ=Etc/UTC \
-    # Dependency-Track's default logging level
-    LOGGING_LEVEL=INFO \
     # JVM Options that are passed at runtime by default
     JAVA_OPTIONS="-XX:+UseG1GC -XX:+UseStringDeduplication -XX:+UseCompactObjectHeaders -XX:MaxGCPauseMillis=250 -XX:MaxRAMPercentage=80.0" \
     # JVM Options that can be passed at runtime, while maintaining also those set in JAVA_OPTIONS.
@@ -89,19 +87,19 @@ CMD [ \
         --add-opens java.base/java.util.concurrent=ALL-UNNAMED \
         --enable-native-access=ALL-UNNAMED \
         --sun-misc-unsafe-memory-access=allow \
-        -DdependencyTrack.logging.level=${LOGGING_LEVEL} \
         -cp 'dependency-track-apiserver.jar:lib/*' \
         org.dependencytrack.Application \
         -context ${CONTEXT}" \
 ]
 
-# Specify which port Dependency-Track listens on
+# Specify which ports Dependency-Track listens on
 EXPOSE 8080
+EXPOSE 9000
 
-# Add a healthcheck using the Dependency-Track version API
+# Health check against the management port
 HEALTHCHECK --interval=30s --start-period=60s --timeout=3s CMD [ \
     "/bin/sh", "-c", \
-    "curl -f -s --max-time 3 --noproxy '*' -o /dev/null http://127.0.0.1:8080${CONTEXT}health" \
+    "curl -f -s --max-time 3 --noproxy '*' -o /dev/null http://127.0.0.1:9000/health" \
 ]
 
 # metadata labels

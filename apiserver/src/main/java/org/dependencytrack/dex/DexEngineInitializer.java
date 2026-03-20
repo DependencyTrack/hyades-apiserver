@@ -20,14 +20,14 @@ package org.dependencytrack.dex;
 
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.analysis.AnalyzeProjectWorkflow;
-import org.dependencytrack.common.EncryptedPageTokenEncoder;
+import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
+import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
 import org.dependencytrack.csaf.DiscoverCsafProvidersActivity;
 import org.dependencytrack.csaf.DiscoverCsafProvidersWorkflow;
 import org.dependencytrack.csaf.ImportCsafDocumentsActivity;
@@ -41,13 +41,15 @@ import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.listener.DelayedBomProcessedNotificationEmitter;
 import org.dependencytrack.dex.listener.ProjectVulnAnalysisCompleteNotificationEmitter;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.metrics.UpdateProjectMetricsActivity;
 import org.dependencytrack.notification.PublishNotificationActivity;
 import org.dependencytrack.notification.PublishNotificationWorkflow;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
+import org.dependencytrack.pkgmetadata.FetchPackageMetadataResolutionCandidatesActivity;
+import org.dependencytrack.pkgmetadata.ResolvePackageMetadataActivity;
+import org.dependencytrack.pkgmetadata.ResolvePackageMetadataWorkflow;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.policy.EvalProjectPoliciesActivity;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
@@ -56,15 +58,18 @@ import org.dependencytrack.proto.internal.workflow.v1.AnalyzeProjectWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
 import org.dependencytrack.proto.internal.workflow.v1.DiscoverCsafProvidersArg;
 import org.dependencytrack.proto.internal.workflow.v1.EvalProjectPoliciesArg;
+import org.dependencytrack.proto.internal.workflow.v1.FetchPackageMetadataResolutionCandidatesRes;
 import org.dependencytrack.proto.internal.workflow.v1.ImportBomArg;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerRes;
+import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
 import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisArg;
 import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisRes;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationActivityArg;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
+import org.dependencytrack.proto.internal.workflow.v1.ResolvePackageMetadataActivityArg;
 import org.dependencytrack.proto.internal.workflow.v1.UpdateProjectMetricsArg;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
 import org.dependencytrack.secret.management.SecretManager;
@@ -74,8 +79,9 @@ import org.dependencytrack.vulnanalysis.InvokeVulnAnalyzerActivity;
 import org.dependencytrack.vulnanalysis.PrepareVulnAnalysisActivity;
 import org.dependencytrack.vulnanalysis.ReconcileVulnAnalysisResultsActivity;
 import org.dependencytrack.vulnanalysis.VulnAnalysisWorkflow;
+import org.dependencytrack.vulndatasource.MirrorVulnDataSourceActivity;
+import org.dependencytrack.vulndatasource.MirrorVulnDataSourceWorkflow;
 import org.eclipse.microprofile.config.Config;
-import org.eclipse.microprofile.config.ConfigProvider;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,17 +113,14 @@ public final class DexEngineInitializer implements ServletContextListener {
     private final Config config;
     private final DataSourceRegistry dataSourceRegistry;
     private final MeterRegistry meterRegistry;
+    private final HealthCheckRegistry healthCheckRegistry;
     private @Nullable DexEngine engine;
 
-    DexEngineInitializer(Config config, DataSourceRegistry dataSourceRegistry, MeterRegistry meterRegistry) {
+    public DexEngineInitializer(Config config, DataSourceRegistry dataSourceRegistry, MeterRegistry meterRegistry, HealthCheckRegistry healthCheckRegistry) {
         this.config = config;
         this.dataSourceRegistry = dataSourceRegistry;
         this.meterRegistry = meterRegistry;
-    }
-
-    @SuppressWarnings("unused") // Used by servlet container.
-    public DexEngineInitializer() {
-        this(ConfigProvider.getConfig(), DataSourceRegistry.getInstance(), Metrics.globalRegistry);
+        this.healthCheckRegistry = healthCheckRegistry;
     }
 
     @Override
@@ -127,14 +130,14 @@ public final class DexEngineInitializer implements ServletContextListener {
 
         final ServletContext servletContext = event.getServletContext();
 
-        final var healthCheckRegistry = (HealthCheckRegistry) servletContext.getAttribute(HealthCheckRegistry.class.getName());
-        requireNonNull(healthCheckRegistry, "healthCheckRegistry has not been initialized");
-
         final var fileStorage = (FileStorage) servletContext.getAttribute(FileStorage.class.getName());
         requireNonNull(fileStorage, "fileStorage has not been initialized");
 
         final var pluginManager = (PluginManager) servletContext.getAttribute(PluginManager.class.getName());
         requireNonNull(pluginManager, "pluginManager has not been initialized");
+
+        final var cacheManager = (CacheManager) servletContext.getAttribute(CacheManager.class.getName());
+        requireNonNull(cacheManager, "cacheManager has not been initialized");
 
         final var secretManager = (SecretManager) servletContext.getAttribute(SecretManager.class.getName());
         requireNonNull(secretManager, "secretManager has not been initialized");
@@ -165,13 +168,23 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
+                new ImportBomWorkflow(),
+                protoConverter(ImportBomArg.class),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerWorkflow(
+                new MirrorVulnDataSourceWorkflow(),
+                protoConverter(MirrorVulnDataSourceArg.class),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerWorkflow(
                 new PublishNotificationWorkflow(),
                 protoConverter(PublishNotificationWorkflowArg.class),
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
-                new ImportBomWorkflow(),
-                protoConverter(ImportBomArg.class),
+                new ResolvePackageMetadataWorkflow(),
+                voidConverter(),
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
@@ -183,9 +196,8 @@ public final class DexEngineInitializer implements ServletContextListener {
         engine.registerActivity(
                 new ImportBomActivity(
                         fileStorage,
-                        new KafkaEventDispatcher(),
                         engine,
-                        config.getOptionalValue("tmp.delay.bom.processed.notification", boolean.class).orElse(false)),
+                        config.getOptionalValue("dt.tmp.delay.bom.processed.notification", boolean.class).orElse(false)),
                 protoConverter(ImportBomArg.class),
                 voidConverter(),
                 Duration.ofMinutes(5));
@@ -205,6 +217,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(5));
         engine.registerActivity(
+                new FetchPackageMetadataResolutionCandidatesActivity(pluginManager),
+                voidConverter(),
+                protoConverter(FetchPackageMetadataResolutionCandidatesRes.class),
+                Duration.ofMinutes(1));
+        engine.registerActivity(
                 new ImportCsafDocumentsActivity(),
                 protoConverter(ImportCsafDocumentsArg.class),
                 voidConverter(),
@@ -213,6 +230,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 new InvokeVulnAnalyzerActivity(fileStorage, pluginManager),
                 protoConverter(InvokeVulnAnalyzerArg.class),
                 protoConverter(InvokeVulnAnalyzerRes.class),
+                Duration.ofMinutes(5));
+        engine.registerActivity(
+                new MirrorVulnDataSourceActivity(pluginManager),
+                protoConverter(MirrorVulnDataSourceArg.class),
+                voidConverter(),
                 Duration.ofMinutes(5));
         engine.registerActivity(
                 new PrepareVulnAnalysisActivity(fileStorage, pluginManager),
@@ -237,6 +259,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(5));
         engine.registerActivity(
+                new ResolvePackageMetadataActivity(pluginManager, secretManager),
+                protoConverter(ResolvePackageMetadataActivityArg.class),
+                voidConverter(),
+                Duration.ofMinutes(10));
+        engine.registerActivity(
                 new UpdateProjectMetricsActivity(),
                 protoConverter(UpdateProjectMetricsArg.class),
                 voidConverter(),
@@ -248,6 +275,7 @@ public final class DexEngineInitializer implements ServletContextListener {
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "artifact-imports", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "metrics-updates", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "notifications", 25),
+                new CreateTaskQueueRequest(TaskType.ACTIVITY, "package-metadata-resolutions", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "policy-evaluations", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analyses", 25),
                 new CreateTaskQueueRequest(TaskType.ACTIVITY, "vuln-analysis-reconciliations", 25)));
@@ -282,7 +310,7 @@ public final class DexEngineInitializer implements ServletContextListener {
 
         engine.addEventListener(new ProjectVulnAnalysisCompleteNotificationEmitter());
         if (config
-                .getOptionalValue("tmp.delay.bom.processed.notification", boolean.class)
+                .getOptionalValue("dt.tmp.delay.bom.processed.notification", boolean.class)
                 .orElse(false)) {
             engine.addEventListener(new DelayedBomProcessedNotificationEmitter());
         }
@@ -313,7 +341,7 @@ public final class DexEngineInitializer implements ServletContextListener {
         final DataSource dataSource = dataSourceRegistry.get(dataSourceName);
 
         final var engineConfig = new DexEngineConfig(dataSource);
-        engineConfig.setPageTokenEncoder(new EncryptedPageTokenEncoder());
+        engineConfig.setPageTokenEncoder(new SimplePageTokenEncoder());
 
         // Leader election.
         config.getOptionalValue("dt.dex-engine.leader-election.enabled", boolean.class)

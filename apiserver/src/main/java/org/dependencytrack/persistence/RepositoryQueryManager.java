@@ -21,20 +21,13 @@ package org.dependencytrack.persistence;
 import alpine.common.logging.Logger;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
-import alpine.security.crypto.DataEncryption;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.Repository;
-import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public class RepositoryQueryManager extends QueryManager implements IQueryManager {
@@ -169,13 +162,7 @@ public class RepositoryQueryManager extends QueryManager implements IQueryManage
         repo.setAuthenticationRequired(isAuthenticationRequired);
         if (Boolean.TRUE.equals(isAuthenticationRequired) && (username != null || password != null)) {
             repo.setUsername(StringUtils.trimToNull(username));
-            try {
-                if (password != null) {
-                    repo.setPassword(new DataEncryption().encryptAsString(password));
-                }
-            } catch (Exception e) {
-                LOGGER.error("An error occurred while saving password in encrypted state", e);
-            }
+            repo.setPassword(StringUtils.trimToNull(password));
         }
         return persist(repo);
     }
@@ -211,100 +198,4 @@ public class RepositoryQueryManager extends QueryManager implements IQueryManage
         return persist(repository);
     }
 
-    /**
-     * Returns a RepositoryMetaComponent object from the specified type, group, and name.
-     *
-     * @param repositoryType the type of repository
-     * @param namespace      the Package URL namespace of the meta component
-     * @param name           the Package URL name of the meta component
-     * @return a RepositoryMetaComponent object, or null if not found
-     */
-    public RepositoryMetaComponent getRepositoryMetaComponent(RepositoryType repositoryType, String namespace, String name) {
-        final Query<RepositoryMetaComponent> query = pm.newQuery(RepositoryMetaComponent.class);
-        query.setFilter("repositoryType == :repositoryType && namespace == :namespace && name == :name");
-        query.setRange(0, 1);
-        return singleResult(query.execute(repositoryType, namespace, name));
-    }
-
-    /**
-     * Synchronizes a RepositoryMetaComponent, updating it if it needs updating, or creating it if it doesn't exist.
-     *
-     * @param transientRepositoryMetaComponent the RepositoryMetaComponent object to synchronize
-     * @return a synchronized RepositoryMetaComponent object
-     */
-    public synchronized RepositoryMetaComponent synchronizeRepositoryMetaComponent(final RepositoryMetaComponent transientRepositoryMetaComponent) {
-        final RepositoryMetaComponent metaComponent = getRepositoryMetaComponent(transientRepositoryMetaComponent.getRepositoryType(),
-                transientRepositoryMetaComponent.getNamespace(), transientRepositoryMetaComponent.getName());
-        if (metaComponent != null) {
-            metaComponent.setRepositoryType(transientRepositoryMetaComponent.getRepositoryType());
-            metaComponent.setNamespace(transientRepositoryMetaComponent.getNamespace());
-            metaComponent.setLastCheck(transientRepositoryMetaComponent.getLastCheck());
-            metaComponent.setLatestVersion(transientRepositoryMetaComponent.getLatestVersion());
-            metaComponent.setName(transientRepositoryMetaComponent.getName());
-            metaComponent.setPublished(transientRepositoryMetaComponent.getPublished());
-            return persist(metaComponent);
-        } else {
-            return persist(transientRepositoryMetaComponent);
-        }
-    }
-
-    /**
-     * Returns a list of {@link RepositoryMetaComponent} objects from the specified type, group, and name.
-     * @param list a list of {@link RepositoryQueryManager.RepositoryMetaComponentSearch} used to filter
-     * @return a List of {@link RepositoryMetaComponent} objects
-     * @since 4.9.0
-     */
-    public List<RepositoryMetaComponent> getRepositoryMetaComponents(final List<RepositoryQueryManager.RepositoryMetaComponentSearch> list) {
-        if (list == null || list.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        final Query<RepositoryMetaComponent> query = pm.newQuery(RepositoryMetaComponent.class);
-
-        // Dynamically build the filter string and populate the parameters
-        final String filterTemplate  = "(repositoryType == :%s && name == :%s && namespace == :%s)";
-
-        // List with all the filters
-        final List<String> filters = new ArrayList<>(list.size());
-
-        // Map with all the parameters
-        final Map<String, Object> params = new HashMap<>(list.size() * 3);
-
-        final String repositoryTypeTemplate = "repositoryType_%d";
-        final String nameTemplate = "name_%d";
-        final String namespaceTemplate = "namespace_%d";
-
-        String repositoryTypeTemplatePopulate;
-        String nameTemplatePopulate;
-        String namespaceTemplatePopulate;
-
-        for (int i = 0; i < list.size(); i++) {
-            // Create the template strings for this iteration
-            repositoryTypeTemplatePopulate = String.format(repositoryTypeTemplate, i);
-            namespaceTemplatePopulate = String.format(namespaceTemplate, i);
-            nameTemplatePopulate = String.format(nameTemplate, i);
-
-            // Add the filter to the list
-            filters.add(String.format(filterTemplate, repositoryTypeTemplatePopulate, nameTemplatePopulate, namespaceTemplatePopulate));
-
-            // Add the parameters to the map
-            params.put(repositoryTypeTemplatePopulate, list.get(i).type());
-            params.put(nameTemplatePopulate, list.get(i).name());
-            params.put(namespaceTemplatePopulate, list.get(i).namespace());
-        }
-
-        // Join all filters with OR operator
-        query.setFilter(String.join(" || ", filters));
-        query.setNamedParameters(params);
-        return query.executeList();
-    }
-
-
-    /**
-     * Object used to search for a RepositoryMetaComponent by type, namespace, and name.
-     *
-     * @author Nathan Mittelette <mittelette.nathan@gmail.com>
-     * @since 4.9.0
-     */
-    public record RepositoryMetaComponentSearch(RepositoryType type, String namespace, String name) implements Serializable { }
 }

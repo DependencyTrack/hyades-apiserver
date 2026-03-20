@@ -18,20 +18,15 @@
  */
 package org.dependencytrack.filestorage.s3;
 
-import io.minio.MakeBucketArgs;
-import io.minio.MinioClient;
+import com.adobe.testing.s3mock.testcontainers.S3MockContainer;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.eclipse.microprofile.config.Config;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.MinIOContainer;
-import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -44,31 +39,13 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+@Testcontainers
 class S3FileStorageTest {
 
-    private static MinIOContainer minioContainer;
-
-    @BeforeAll
-    static void beforeAll() throws Exception {
-        minioContainer = new MinIOContainer(DockerImageName.parse("minio/minio:latest"));
-        minioContainer.start();
-
-        try (var s3Client = MinioClient.builder()
-                .endpoint(minioContainer.getS3URL())
-                .credentials(minioContainer.getUserName(), minioContainer.getPassword())
-                .build()) {
-            s3Client.makeBucket(MakeBucketArgs.builder()
-                    .bucket("test")
-                    .build());
-        }
-    }
-
-    @AfterAll
-    static void afterAll() {
-        if (minioContainer != null) {
-            minioContainer.stop();
-        }
-    }
+    @Container
+    private static final S3MockContainer s3MockContainer =
+            new S3MockContainer("4.11.0")
+                    .withInitialBuckets("test");
 
     @Test
     void shouldHaveNameS3() {
@@ -80,9 +57,9 @@ class S3FileStorageTest {
     void shouldThrowWhenBucketDoesNotExist() {
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> createStorage(Map.ofEntries(
-                        Map.entry("dt.file-storage.s3.endpoint", minioContainer.getS3URL()),
-                        Map.entry("dt.file-storage.s3.access.key", minioContainer.getUserName()),
-                        Map.entry("dt.file-storage.s3.secret.key", minioContainer.getPassword()),
+                        Map.entry("dt.file-storage.s3.endpoint", s3MockContainer.getHttpEndpoint()),
+                        Map.entry("dt.file-storage.s3.access.key", "foo"),
+                        Map.entry("dt.file-storage.s3.secret.key", "bar"),
                         Map.entry("dt.file-storage.s3.bucket", "does-not-exist"))))
                 .withMessage("Bucket does-not-exist does not exist");
     }
@@ -92,8 +69,8 @@ class S3FileStorageTest {
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> createStorage(Map.ofEntries(
                         Map.entry("dt.file-storage.s3.endpoint", "http://localhost:1"),
-                        Map.entry("dt.file-storage.s3.access.key", "minioadmin"),
-                        Map.entry("dt.file-storage.s3.secret.key", "minioadmin"),
+                        Map.entry("dt.file-storage.s3.access.key", "foo"),
+                        Map.entry("dt.file-storage.s3.secret.key", "bar"),
                         Map.entry("dt.file-storage.s3.bucket", "does-not-exist"),
                         Map.entry("dt.file-storage.s3.connect-timeout-ms", "500"))))
                 .withMessage("Failed to determine if bucket does-not-exist exists");
@@ -162,29 +139,10 @@ class S3FileStorageTest {
     @Nested
     class WhenHostIsUnavailable {
 
-        private MinIOContainer ephemeralContainer;
-
-        @BeforeEach
-        void beforeEach() throws Exception {
-            ephemeralContainer = new MinIOContainer(DockerImageName.parse("minio/minio:latest"));
-            ephemeralContainer.start();
-
-            try (var s3Client = MinioClient.builder()
-                    .endpoint(ephemeralContainer.getS3URL())
-                    .credentials(ephemeralContainer.getUserName(), ephemeralContainer.getPassword())
-                    .build()) {
-                s3Client.makeBucket(MakeBucketArgs.builder()
-                        .bucket("test")
-                        .build());
-            }
-        }
-
-        @AfterEach
-        void afterEach() {
-            if (ephemeralContainer != null) {
-                ephemeralContainer.stop();
-            }
-        }
+        @Container
+        private final S3MockContainer ephemeralContainer =
+                new S3MockContainer("4.11.0")
+                        .withInitialBuckets("test");
 
         @Test
         void storeShouldThrowWhenHostIsUnavailable() throws Exception {
@@ -224,9 +182,9 @@ class S3FileStorageTest {
 
         private FileStorage createEphemeralStorage() {
             return createStorage(Map.ofEntries(
-                    Map.entry("dt.file-storage.s3.endpoint", ephemeralContainer.getS3URL()),
-                    Map.entry("dt.file-storage.s3.access.key", ephemeralContainer.getUserName()),
-                    Map.entry("dt.file-storage.s3.secret.key", ephemeralContainer.getPassword()),
+                    Map.entry("dt.file-storage.s3.endpoint", ephemeralContainer.getHttpEndpoint()),
+                    Map.entry("dt.file-storage.s3.access.key", "foo"),
+                    Map.entry("dt.file-storage.s3.secret.key", "bar"),
                     Map.entry("dt.file-storage.s3.bucket", "test"),
                     Map.entry("dt.file-storage.s3.connect-timeout-ms", "500"),
                     Map.entry("dt.file-storage.s3.read-timeout-ms", "500"),
@@ -237,9 +195,9 @@ class S3FileStorageTest {
 
     private FileStorage createStorage() {
         return createStorage(Map.ofEntries(
-                Map.entry("dt.file-storage.s3.endpoint", minioContainer.getS3URL()),
-                Map.entry("dt.file-storage.s3.access.key", minioContainer.getUserName()),
-                Map.entry("dt.file-storage.s3.secret.key", minioContainer.getPassword()),
+                Map.entry("dt.file-storage.s3.endpoint", s3MockContainer.getHttpEndpoint()),
+                Map.entry("dt.file-storage.s3.access.key", "foo"),
+                Map.entry("dt.file-storage.s3.secret.key", "bar"),
                 Map.entry("dt.file-storage.s3.bucket", "test")));
     }
 

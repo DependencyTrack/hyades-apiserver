@@ -14,9 +14,15 @@ If Maven needs to be invoked directly, only do so from the repository root.
 * Run multiple tests: `make test-single MODULE=apiserver TEST="FooTest,BarTest"`
 * Clean: `make clean`
 * Clean build cache: `make clean-build-cache`
+* Run e2e tests: `make test-e2e`
 * Lint (Java): `make lint-java`
 * Lint (OpenAPI): `make lint-openapi`
 * Lint (Protobuf): `make lint-proto`
+
+> [!NOTE]
+> When running Maven via `make … AGENT=1`, Maven is invoked in quiet mode (`-q`), so successful test runs may produce little or no output.
+> In this mode, a zero exit code is sufficient to confirm success; do not re-run tests or investigate
+> further solely because the output is empty. When invoking Maven directly or running `make` without `AGENT=1`, normal Maven output will be shown.
 
 ## GitHub Issues and PRs
 

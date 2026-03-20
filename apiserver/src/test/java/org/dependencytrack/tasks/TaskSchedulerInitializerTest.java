@@ -23,6 +23,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.plugin.PluginManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Test;
@@ -41,19 +42,22 @@ class TaskSchedulerInitializerTest extends PersistenceCapableTest {
         final Config config = ConfigProvider.getConfig();
         final var scheduler = new TaskScheduler();
         final var dexEngineMock = mock(DexEngine.class);
+        final var pluginManagerMock = mock(PluginManager.class);
 
         final var servletContextMock = mock(ServletContext.class);
         doReturn(dexEngineMock)
                 .when(servletContextMock).getAttribute(eq(DexEngine.class.getName()));
+        doReturn(pluginManagerMock)
+                .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
 
         final var initializer = new TaskSchedulerInitializer(config, scheduler);
         initializer.contextInitialized(new ServletContextEvent(servletContextMock));
 
         assertThat(scheduler.scheduledTaskIds()).containsExactlyInAnyOrder(
                 "CSAF Document Import",
-                "Component Metadata Maintenance",
                 "Defect Dojo Upload",
                 "EPSS Mirror",
+                "Expired Session Cleanup",
                 "Fortify SSC Upload",
                 "GitHub Advisories Mirror",
                 "Internal Component Identification",
@@ -62,8 +66,9 @@ class TaskSchedulerInitializerTest extends PersistenceCapableTest {
                 "Metrics Maintenance",
                 "NVD Mirror",
                 "OSV Mirror",
+                "Package Metadata Maintenance",
+                "Package Metadata Resolution",
                 "Portfolio Metrics Update",
-                "Portfolio Repository Meta Analysis",
                 "Portfolio Vulnerability Analysis",
                 "Project Maintenance",
                 "Tag Maintenance",
@@ -85,10 +90,13 @@ class TaskSchedulerInitializerTest extends PersistenceCapableTest {
                 .build();
         final var schedulerMock = mock(TaskScheduler.class);
         final var dexEngineMock = mock(DexEngine.class);
+        final var pluginManagerMock = mock(PluginManager.class);
 
         final var servletContextMock = mock(ServletContext.class);
         doReturn(dexEngineMock)
                 .when(servletContextMock).getAttribute(eq(DexEngine.class.getName()));
+        doReturn(pluginManagerMock)
+                .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
 
         final var initializer = new TaskSchedulerInitializer(config, schedulerMock);
         initializer.contextInitialized(new ServletContextEvent(servletContextMock));

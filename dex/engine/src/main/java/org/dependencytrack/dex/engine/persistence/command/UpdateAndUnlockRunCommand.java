@@ -29,6 +29,7 @@ public record UpdateAndUnlockRunCommand(
         String queueName,
         WorkflowRunStatus status,
         @Nullable String customStatus,
+        boolean continuedAsNew,
         @Nullable Instant createdAt,
         @Nullable Instant updatedAt,
         @Nullable Instant startedAt,

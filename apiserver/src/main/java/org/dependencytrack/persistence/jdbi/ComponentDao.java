@@ -174,12 +174,12 @@ public interface ComponentDao extends SqlObject {
                             OR ("C"."NAME" = :lastName AND "C"."VERSION" = :lastVersion AND "C"."ID" > :lastId))
                 </#if>
                 <#if onlyOutdated && onlyOutdated == true>
-                    AND NOT (NOT EXISTS (
-                        SELECT "R"."ID"
-                        FROM "REPOSITORY_META_COMPONENT" "R" WHERE "R"."NAME" = "C"."NAME"
-                        AND ("R"."NAMESPACE" = "C"."GROUP" OR "R"."NAMESPACE" IS NULL OR "C"."GROUP" IS NULL)
-                        AND "R"."LATEST_VERSION" <> "C"."VERSION"
-                        AND "C"."PURL" LIKE (('pkg:' || LOWER("R"."REPOSITORY_TYPE")) || '/%') ESCAPE E'\\\\'))
+                    AND EXISTS (
+                        SELECT 1
+                          FROM "PACKAGE_ARTIFACT_METADATA" "PAM"
+                          JOIN "PACKAGE_METADATA" "PM" ON "PM"."PURL" = "PAM"."PACKAGE_PURL"
+                         WHERE "PAM"."PURL" = "C"."PURL"
+                           AND "PM"."LATEST_VERSION" <> "C"."VERSION")
                 </#if>
                 <#if onlyDirect && onlyDirect == true>
                     AND "PROJECT"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "C"."UUID"))

@@ -22,7 +22,7 @@ import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
-import alpine.server.auth.JsonWebToken;
+import alpine.server.auth.SessionTokenService;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
@@ -200,7 +200,7 @@ class BomResourceTest extends ResourceTest {
         enablePortfolioAccessControl();
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
-        final String jwt = new JsonWebToken().createToken(testUser);
+        final String sessionToken = new SessionTokenService().createSession(testUser.getId());
 
         final var project = new Project();
         project.setName("acme-app");
@@ -210,7 +210,7 @@ class BomResourceTest extends ResourceTest {
                 .target(V1_BOM + "/cyclonedx/project/" + project.getUuid())
                 .queryParam("variant", "inventory")
                 .request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .get(Response.class);
 
         Response response = responseSupplier.get();

@@ -92,6 +92,10 @@ apiserver-dev:
 	$(MVN) $(MVN_FLAGS) -q -Pquick,dev-services -pl apiserver -am verify
 .PHONY: apiserver-dev
 
+test-e2e: build-image
+	$(MVND) $(MVN_FLAGS) -pl e2e -DskipE2E=false verify
+.PHONY: test-e2e
+
 clean:
 	$(MVND) $(MVN_FLAGS) -q -Dmaven.build.cache.enabled=false clean
 .PHONY: clean

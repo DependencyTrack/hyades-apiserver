@@ -457,6 +457,23 @@ public class ModelConverterProto {
         return Optional.ofNullable(classifier);
     }
 
+    public static Classification convertClassifier(Classifier classifier) {
+        return switch (classifier) {
+            case APPLICATION -> Classification.CLASSIFICATION_APPLICATION;
+            case FRAMEWORK -> Classification.CLASSIFICATION_FRAMEWORK;
+            case LIBRARY -> Classification.CLASSIFICATION_LIBRARY;
+            case OPERATING_SYSTEM -> Classification.CLASSIFICATION_OPERATING_SYSTEM;
+            case DEVICE -> Classification.CLASSIFICATION_DEVICE;
+            case FILE -> Classification.CLASSIFICATION_FILE;
+            case CONTAINER -> Classification.CLASSIFICATION_CONTAINER;
+            case FIRMWARE -> Classification.CLASSIFICATION_FIRMWARE;
+            case DEVICE_DRIVER -> Classification.CLASSIFICATION_DEVICE_DRIVER;
+            case PLATFORM -> Classification.CLASSIFICATION_PLATFORM;
+            case MACHINE_LEARNING_MODEL -> Classification.CLASSIFICATION_MACHINE_LEARNING_MODEL;
+            case DATA -> Classification.CLASSIFICATION_DATA;
+        };
+    }
+
     private static List<ExternalReference> convertExternalReferences(final List<org.cyclonedx.proto.v1_6.ExternalReference> cdxExternalReferences) {
         if (cdxExternalReferences.isEmpty()) {
             return null;

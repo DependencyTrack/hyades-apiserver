@@ -23,12 +23,11 @@
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>12.1.0</lib.cyclonedx-java.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
-        <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
-        <lib.swagger-parser.version>2.1.38</lib.swagger-parser.version>
+        <lib.swagger-parser.version>2.1.39</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.woodstox.version>7.1.1</lib.woodstox.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>7.6.0</lib.net.javacrumbs.shedlock.version>
+        <lib.net.javacrumbs.shedlock.version>7.7.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
 
         <!-- CycloneDX CLI -->
@@ -64,6 +63,11 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>cache-provider-database</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>common-init</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -133,12 +137,32 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>package-metadata-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>package-metadata-resolution</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>vuln-analyzer-oss-index</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>vuln-analyzer-snyk</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>vuln-analyzer-trivy</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>vuln-analyzer-vuln-db</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -305,21 +329,20 @@
             <artifactId>jetty-server</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.jetty.compression</groupId>
+            <artifactId>jetty-compression-gzip</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.compression</groupId>
+            <artifactId>jetty-compression-server</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.eclipse.jetty.ee11</groupId>
             <artifactId>jetty-ee11-servlet</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jul-to-slf4j</artifactId>
-        </dependency>
-        <!-- org.json
-        This was previously transitively included with Unirest. However, Unirest v3.x removed reliance on org.json
-        in favor of their own API compatible replacement. Therefore, it was necessary to directly include org.json.
-        Removal of org.json is documented in https://github.com/DependencyTrack/dependency-track/issues/1113 -->
-        <dependency>
-            <groupId>org.json</groupId>
-            <artifactId>json</artifactId>
-            <version>20251224</version>
         </dependency>
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
@@ -338,10 +361,6 @@
 
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-json-org</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
@@ -349,17 +368,6 @@
         <dependency>
             <groupId>com.github.package-url</groupId>
             <artifactId>packageurl-java</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.confluent.parallelconsumer</groupId>
-            <artifactId>parallel-consumer-core</artifactId>
-            <version>${lib.parallel-consumer.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-clients</artifactId>
         </dependency>
 
         <!-- shedlock dependencies -->
@@ -379,6 +387,10 @@
             <version>${lib.javacron.version}</version>
         </dependency>
         <!-- Micrometer Metrics -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-java11</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
@@ -428,11 +440,6 @@
         <dependency>
             <groupId>io.github.nscuro</groupId>
             <artifactId>versatile-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-artifact</artifactId>
-            <version>3.9.12</version>
         </dependency>
 
         <dependency>
@@ -523,13 +530,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers-kafka</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers-minio</artifactId>
+            <groupId>com.adobe.testing</groupId>
+            <artifactId>s3mock-testcontainers</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -602,7 +604,7 @@
                         -Xshare:off
                     </argLine>
                     <systemPropertyVariables>
-                        <dependencyTrack.logging.level>${unitTestLogLevel}</dependencyTrack.logging.level>
+                        <unitTestLogLevel>${unitTestLogLevel}</unitTestLogLevel>
                         <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
                     </systemPropertyVariables>
                 </configuration>
@@ -781,12 +783,6 @@
                     <version>${lib.testcontainers.version}</version>
                     <scope>compile</scope>
                 </dependency>
-                <dependency>
-                    <groupId>org.testcontainers</groupId>
-                    <artifactId>testcontainers-kafka</artifactId>
-                    <version>${lib.testcontainers.version}</version>
-                    <scope>compile</scope>
-                </dependency>
             </dependencies>
             <build>
                 <plugins>
@@ -803,7 +799,7 @@
                                     <mainClass>org.dependencytrack.Application</mainClass>
                                     <systemProperties>
                                         <systemProperty>
-                                            <key>smallrye.config.profile</key>
+                                            <key>dt.config.profile</key>
                                             <value>dev</value>
                                         </systemProperty>
                                         <systemProperty>

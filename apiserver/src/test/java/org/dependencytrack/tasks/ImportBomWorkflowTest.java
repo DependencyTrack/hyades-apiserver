@@ -29,8 +29,6 @@ import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.dex.testing.WorkflowTestExtension;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
@@ -90,7 +88,7 @@ class ImportBomWorkflowTest extends PersistenceCapableTest {
                 Duration.ofSeconds(5));
         engine.registerActivity(
                 new ImportBomActivity(
-                        fileStorage, new KafkaEventDispatcher(), mock(DexEngine.class), false),
+                        fileStorage, mock(DexEngine.class), false),
                 protoConverter(ImportBomArg.class),
                 voidConverter(),
                 Duration.ofSeconds(30));
@@ -154,9 +152,6 @@ class ImportBomWorkflowTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox())
                 .anySatisfy(notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED))
                 .anySatisfy(notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name()));
 
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);

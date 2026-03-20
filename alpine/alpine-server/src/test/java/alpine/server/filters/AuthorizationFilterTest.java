@@ -25,10 +25,16 @@ import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.persistence.AlpineQueryManager;
-import alpine.server.auth.JsonWebToken;
 import alpine.server.auth.PermissionRequired;
+import alpine.server.auth.SessionTokenService;
 import alpine.server.persistence.PersistenceManagerFactory;
 import alpine.server.resources.AlpineResource;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.Application;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
@@ -37,12 +43,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.Application;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.util.Map;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -183,7 +183,7 @@ public class AuthorizationFilterTest extends JerseyTest {
         try (final var qm = new AlpineQueryManager()) {
             final ManagedUser managedUser = qm.createManagedUser("test", "test");
 
-            bearerToken = new JsonWebToken().createToken(managedUser);
+            bearerToken = new SessionTokenService().createSession(managedUser.getId());
         }
 
         final Response response = target("/")
@@ -202,7 +202,7 @@ public class AuthorizationFilterTest extends JerseyTest {
             final ManagedUser managedUser = qm.createManagedUser("test", "test");
             managedUser.getPermissions().add(bazPermission);
 
-            bearerToken = new JsonWebToken().createToken(managedUser);
+            bearerToken = new SessionTokenService().createSession(managedUser.getId());
         }
 
         final Response response = target("/")
@@ -223,7 +223,7 @@ public class AuthorizationFilterTest extends JerseyTest {
             managedUser.getPermissions().add(fooPermission);
             managedUser.getPermissions().add(bazPermission);
 
-            bearerToken = new JsonWebToken().createToken(managedUser);
+            bearerToken = new SessionTokenService().createSession(managedUser.getId());
         }
 
         final Response response = target("/")
@@ -254,7 +254,7 @@ public class AuthorizationFilterTest extends JerseyTest {
             managedUser.getPermissions().add(bazPermission);
             managedUser.getTeams().add(team);
 
-            bearerToken = new JsonWebToken().createToken(managedUser);
+            bearerToken = new SessionTokenService().createSession(managedUser.getId());
         }
 
         final Response response = target("/")
@@ -277,7 +277,7 @@ public class AuthorizationFilterTest extends JerseyTest {
         try (final var qm = new AlpineQueryManager()) {
             final LdapUser ldapUser = qm.createLdapUser("test");
 
-            bearerToken = new JsonWebToken().createToken(ldapUser);
+            bearerToken = new SessionTokenService().createSession(ldapUser.getId());
         }
 
         final Response response = target("/")
@@ -296,7 +296,7 @@ public class AuthorizationFilterTest extends JerseyTest {
             final LdapUser ldapUser = qm.createLdapUser("test");
             ldapUser.getPermissions().add(bazPermission);
 
-            bearerToken = new JsonWebToken().createToken(ldapUser);
+            bearerToken = new SessionTokenService().createSession(ldapUser.getId());
         }
 
         final Response response = target("/")
@@ -317,7 +317,7 @@ public class AuthorizationFilterTest extends JerseyTest {
             ldapUser.getPermissions().add(fooPermission);
             ldapUser.getPermissions().add(bazPermission);
 
-            bearerToken = new JsonWebToken().createToken(ldapUser);
+            bearerToken = new SessionTokenService().createSession(ldapUser.getId());
         }
 
         final Response response = target("/")
@@ -348,7 +348,7 @@ public class AuthorizationFilterTest extends JerseyTest {
             ldapUser.getPermissions().add(bazPermission);
             ldapUser.getTeams().add(team);
 
-            bearerToken = new JsonWebToken().createToken(ldapUser);
+            bearerToken = new SessionTokenService().createSession(ldapUser.getId());
         }
 
         final Response response = target("/")
@@ -371,7 +371,7 @@ public class AuthorizationFilterTest extends JerseyTest {
         try (final var qm = new AlpineQueryManager()) {
             final OidcUser oidcUser = qm.createOidcUser("test");
 
-            bearerToken = new JsonWebToken().createToken(oidcUser);
+            bearerToken = new SessionTokenService().createSession(oidcUser.getId());
         }
 
         final Response response = target("/")
@@ -390,7 +390,7 @@ public class AuthorizationFilterTest extends JerseyTest {
             final OidcUser oidcUser = qm.createOidcUser("test");
             oidcUser.getPermissions().add(bazPermission);
 
-            bearerToken = new JsonWebToken().createToken(oidcUser);
+            bearerToken = new SessionTokenService().createSession(oidcUser.getId());
         }
 
         final Response response = target("/")
@@ -411,7 +411,7 @@ public class AuthorizationFilterTest extends JerseyTest {
             oidcUser.getPermissions().add(fooPermission);
             oidcUser.getPermissions().add(bazPermission);
 
-            bearerToken = new JsonWebToken().createToken(oidcUser);
+            bearerToken = new SessionTokenService().createSession(oidcUser.getId());
         }
 
         final Response response = target("/")
@@ -442,7 +442,7 @@ public class AuthorizationFilterTest extends JerseyTest {
             oidcUser.getPermissions().add(bazPermission);
             oidcUser.getTeams().add(team);
 
-            bearerToken = new JsonWebToken().createToken(oidcUser);
+            bearerToken = new SessionTokenService().createSession(oidcUser.getId());
         }
 
         final Response response = target("/")

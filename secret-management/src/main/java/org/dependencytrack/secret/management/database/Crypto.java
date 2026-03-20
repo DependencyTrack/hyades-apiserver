@@ -25,12 +25,16 @@ import com.google.crypto.tink.RegistryConfiguration;
 import com.google.crypto.tink.TinkJsonProtoKeysetFormat;
 import com.google.crypto.tink.TinkProtoKeysetFormat;
 import com.google.crypto.tink.aead.AeadConfig;
+import com.google.crypto.tink.aead.AesGcmKey;
 import com.google.crypto.tink.aead.PredefinedAeadParameters;
+import com.google.crypto.tink.util.SecretBytes;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
@@ -38,9 +42,13 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.security.GeneralSecurityException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Set;
-import java.util.concurrent.Callable;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * @since 5.7.0
@@ -97,35 +105,69 @@ final class Crypto {
         return new EncryptionResult(cipherText, serializedDek);
     }
 
-    private Aead loadKek(final DatabaseSecretManagerConfig config) {
+    private Aead loadKek(DatabaseSecretManagerConfig config) {
         // The KEK is usually meant to be fetched from an external KMS.
         // We can't make KMSes a mandatory requirement, hence we support
-        // loading the KEK keyset from file instead. However, support for
-        // external KMSes would be relatively easy to add if requested.
+        // fixed keys from config, or loading the KEK keyset from file instead.
+        // However, support for external KMSes would be relatively easy to add if requested.
         // https://developers.google.com/tink/key-management-overview
 
-        return doLocked(() -> {
+        final Logger logger = LoggerFactory.getLogger(DatabaseSecretManager.class);
+
+        final byte[] kekBytes = config.getKek();
+        if (kekBytes != null) {
+            logger.info("Loading KEK from config");
+
+            // Derive a stable key ID from the key bytes.
+            // Note that Tink by convention uses positive key IDs,
+            // while hashCode can yield negative values.
+            // Clear the sign bit to ensure we're always following the Tink convention.
+            final int keyId = Arrays.hashCode(kekBytes) & 0x7FFFFFFF | 1;
+
+            try {
+                final var key = AesGcmKey.builder()
+                        .setIdRequirement(keyId)
+                        .setParameters(PredefinedAeadParameters.AES256_GCM)
+                        .setKeyBytes(SecretBytes.copyFrom(kekBytes, InsecureSecretKeyAccess.get()))
+                        .build();
+
+                final var keysetHandle = KeysetHandle.newBuilder()
+                        .addEntry(KeysetHandle
+                                .importKey(key)
+                                .withFixedId(keyId)
+                                .makePrimary())
+                        .build();
+
+                return doLocked(connection -> {
+                    verifyOrStoreKekKeyIds(connection, keysetHandle);
+                    return keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead.class);
+                });
+            } catch (GeneralSecurityException e) {
+                throw new IllegalStateException("Failed to load KEK from config", e);
+            }
+        }
+
+        // NB: Throws when not configured.
+        // Calling it here so we don't even open a DB connection if missing.
+        final Path kekKeysetPath = config.getKekKeysetPath();
+
+        return doLocked(connection -> {
             // This must execute in a locked context to avoid race conditions
             // when multiple instances start at the same time,
             // and the create-if-missing option is enabled.
-            //
-            // TODO: Ideally this would be an init task. That requires decoupling
-            //  the init task API from the apiserver module first, though.
 
             final KeysetHandle keysetHandle;
-            if (Files.exists(config.getKekKeysetPath())) {
-                LoggerFactory.getLogger(DatabaseSecretManager.class).info(
-                        "Loading existing KEK keyset from {}", config.getKekKeysetPath());
+            if (Files.exists(kekKeysetPath)) {
+                logger.info("Loading existing KEK keyset from {}", kekKeysetPath);
                 keysetHandle =
                         TinkJsonProtoKeysetFormat.parseKeyset(
-                                Files.readString(config.getKekKeysetPath()), InsecureSecretKeyAccess.get());
+                                Files.readString(kekKeysetPath), InsecureSecretKeyAccess.get());
             } else if (config.isCreateKekKeysetIfMissing()) {
-                LoggerFactory.getLogger(DatabaseSecretManager.class).info(
-                        "KEK keyset at {} does not exist yet; Creating it", config.getKekKeysetPath());
-                keysetHandle = KeysetHandle.generateNew(PredefinedAeadParameters.AES128_GCM);
+                logger.info("KEK keyset at {} does not exist yet; Creating it", kekKeysetPath);
+                keysetHandle = KeysetHandle.generateNew(PredefinedAeadParameters.AES256_GCM);
 
                 // Ensure all directories leading up to the keyset exist.
-                Files.createDirectories(config.getKekKeysetPath().getParent());
+                Files.createDirectories(kekKeysetPath.getParent());
 
                 // Create the file with as restrictive permissions as possible.
                 // Note that GROUP_READ is necessary for OpenShift deployments,
@@ -137,16 +179,16 @@ final class Crypto {
                                 PosixFilePermission.GROUP_READ));
 
                 if (!System.getProperty("os.name").toLowerCase().startsWith("win")) {
-                    Files.createFile(config.getKekKeysetPath(), posixPermissionsAttribute);
+                    Files.createFile(kekKeysetPath, posixPermissionsAttribute);
                 } else {
                     // POSIX permissions don't work on Windows.
                     // Note that this fallback is mainly for developers working on Windows
                     // machines, since our official distribution is a Linux-based container image.
-                    Files.createFile(config.getKekKeysetPath());
+                    Files.createFile(kekKeysetPath);
                 }
 
                 Files.writeString(
-                        config.getKekKeysetPath(),
+                        kekKeysetPath,
                         TinkJsonProtoKeysetFormat.serializeKeyset(keysetHandle, InsecureSecretKeyAccess.get()),
                         StandardOpenOption.WRITE);
             } else {
@@ -154,27 +196,139 @@ final class Crypto {
                         KEK keyset at %s does not exist and \
                         dt.secret-management.database.kek-keyset.create-if-missing \
                         is false. Can not continue without a valid KEK keyset.\
-                        """.formatted(config.getKekKeysetPath()));
+                        """.formatted(kekKeysetPath));
             }
+
+            verifyOrStoreKekKeyIds(connection, keysetHandle);
 
             return keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead.class);
         });
     }
 
-    private <T> T doLocked(final Callable<T> callable) {
-        try (final Connection connection = dataSource.getConnection();
-             final PreparedStatement ps = connection.prepareStatement("""
-                     SELECT pg_advisory_xact_lock(?)
-                     """)) {
-            ps.setLong(1, ADVISORY_LOCK_ID);
-            ps.execute();
+    static Set<Integer> extractKeyIds(final KeysetHandle keysetHandle) {
+        return IntStream.range(0, keysetHandle.size())
+                .mapToObj(i -> keysetHandle.getAt(i).getId())
+                .collect(Collectors.toCollection(TreeSet::new));
+    }
 
-            return callable.call();
-        } catch (SQLException e) {
-            throw new IllegalStateException("Failed to acquire advisory lock", e);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
+    private static String serializeKeyIds(Set<Integer> keyIds) {
+        return keyIds.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining(","));
+    }
+
+    private static Set<Integer> deserializeKeyIds(String value) {
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Integer::parseInt)
+                .collect(Collectors.toCollection(TreeSet::new));
+    }
+
+    private static void verifyOrStoreKekKeyIds(Connection connection, KeysetHandle keysetHandle) throws SQLException {
+        // Prevent the scenario where multiple nodes generate different KEK keysets,
+        // which could lead to secret decryption failures at runtime.
+
+        final Set<Integer> loadedKeyIds = extractKeyIds(keysetHandle);
+
+        final String existingValue;
+        try (final PreparedStatement ps = connection.prepareStatement("""
+                SELECT "PROPERTYVALUE"
+                  FROM "CONFIGPROPERTY"
+                 WHERE "GROUPNAME" = 'secret-management'
+                   AND "PROPERTYNAME" = 'kek-keyset-key-ids'
+                """)) {
+            final ResultSet rs = ps.executeQuery();
+            existingValue = rs.next()
+                    ? rs.getString(1)
+                    : null;
         }
+
+        if (existingValue == null) {
+            upsertKeyIds(connection, serializeKeyIds(loadedKeyIds));
+            return;
+        }
+
+        final Set<Integer> storedKeyIds = deserializeKeyIds(existingValue);
+        if (loadedKeyIds.equals(storedKeyIds)) {
+            return;
+        }
+
+        // Rotation: the loaded keyset contains all previously known keys AND new ones.
+        if (loadedKeyIds.containsAll(storedKeyIds)) {
+            LoggerFactory
+                    .getLogger(DatabaseSecretManager.class)
+                    .info("KEK keyset has been rotated; Updating stored key IDs");
+            upsertKeyIds(connection, serializeKeyIds(loadedKeyIds));
+            return;
+        }
+
+        throw new IllegalStateException("""
+                KEK keyset mismatch. The loaded keyset does not contain all keys previously \
+                registered in the database (expected at least %s, got %s). This typically indicates \
+                that multiple nodes are using different KEK keysets, which leads to silent data \
+                corruption. Ensure all nodes share the same KEK keyset file (e.g. via a Kubernetes \
+                secret mount, or shared volume).""".formatted(serializeKeyIds(storedKeyIds), serializeKeyIds(loadedKeyIds)));
+    }
+
+    private static void upsertKeyIds(Connection connection, String keyIdsValue) throws SQLException {
+        try (final PreparedStatement ps = connection.prepareStatement("""
+                INSERT INTO "CONFIGPROPERTY" ("GROUPNAME", "PROPERTYNAME", "PROPERTYTYPE", "PROPERTYVALUE")
+                VALUES ('secret-management', 'kek-keyset-key-ids', 'STRING', ?)
+                ON CONFLICT ("GROUPNAME", "PROPERTYNAME")
+                DO UPDATE SET "PROPERTYVALUE" = ?
+                """)) {
+            ps.setString(1, keyIdsValue);
+            ps.setString(2, keyIdsValue);
+            ps.executeUpdate();
+        }
+    }
+
+    private <T> T doLocked(CheckedFunction<Connection, T> function) {
+        try (final Connection connection = dataSource.getConnection()) {
+            final boolean originalAutoCommit = connection.getAutoCommit();
+            try {
+                connection.setAutoCommit(false);
+
+                try (final PreparedStatement ps = connection.prepareStatement("""
+                        
+                           SELECT pg_advisory_xact_lock(?)
+                        """)) {
+                    ps.setLong(1, ADVISORY_LOCK_ID);
+                    ps.execute();
+                } catch (SQLException e) {
+                    throw new IllegalStateException("Failed to acquire advisory lock", e);
+                }
+
+                final T result = function.apply(connection);
+                connection.commit();
+                return result;
+            } catch (Exception e) {
+                try {
+                    connection.rollback();
+                } catch (SQLException rollbackEx) {
+                    e.addSuppressed(rollbackEx);
+                }
+
+                if (e instanceof final RuntimeException re) {
+                    throw re;
+                }
+
+                throw new IllegalStateException(e);
+            } finally {
+                try {
+                    connection.setAutoCommit(originalAutoCommit);
+                } catch (SQLException ignored) {
+                }
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to execute locked operation", e);
+        }
+    }
+
+    @FunctionalInterface
+    private interface CheckedFunction<T, R> {
+        R apply(T t) throws Exception;
     }
 
 }

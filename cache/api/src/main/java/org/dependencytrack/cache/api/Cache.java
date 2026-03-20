@@ -31,6 +31,16 @@ public interface Cache {
 
     byte @Nullable [] get(String key, Function<String, byte @Nullable []> loader);
 
+    default byte @Nullable [] get(String key) {
+        try {
+            return get(key, ignored -> {
+                throw CacheMissException.INSTANCE;
+            });
+        } catch (CacheMissException e) {
+            return null;
+        }
+    }
+
     Map<String, byte @Nullable []> getMany(Set<String> keys);
 
     void put(String key, byte @Nullable [] value);

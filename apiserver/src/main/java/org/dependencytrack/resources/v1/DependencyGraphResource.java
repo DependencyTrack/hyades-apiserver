@@ -18,10 +18,9 @@
  */
 package org.dependencytrack.resources.v1;
 
-import com.github.packageurl.MalformedPackageURLException;
-import com.github.packageurl.PackageURL;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.filters.ResourceAccessRequired;
+import com.github.packageurl.PackageURL;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -32,18 +31,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.RepositoryMetaComponent;
-import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.RepositoryQueryManager;
-import org.dependencytrack.resources.AbstractApiResource;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
-
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonException;
@@ -55,6 +42,19 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.PackageMetadata;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
+import org.dependencytrack.resources.AbstractApiResource;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
+import org.dependencytrack.util.PurlUtil;
+
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -62,6 +62,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing requests related to DependencyGraph.
@@ -189,60 +191,37 @@ public class DependencyGraphResource extends AbstractApiResource {
         // Fetch all child components
         final List<DependencyGraphResponse> components = qm.getComponentDependencyGraphByUuids(uuids);
 
-        // Map the components to their respective repository types
-        final HashMap<DependencyGraphResponse, RepositoryQueryManager.RepositoryMetaComponentSearch> repoMetaComponentSearchListHashMap = new HashMap<>(components.size());
+        final var componentsByPurlPackage = new HashMap<DependencyGraphResponse, String>(components.size());
+        final var purlPackages = new HashSet<String>(components.size());
 
-        // Set of unique repository meta components
-        final HashSet<RepositoryQueryManager.RepositoryMetaComponentSearch> repoMetaComponentSearches = new HashSet<>(components.size());
-
-        PackageURL purl = null;
-        RepositoryType type = null;
-
-        // Fetch all the latest versions for the components
-        for (DependencyGraphResponse dependencyGraphResponse : components) {
-            RepositoryQueryManager.RepositoryMetaComponentSearch repositoryMetaComponentSearch = null;
-
-            // Only components that got a purl can be searched for latest version
+        for (final DependencyGraphResponse dependencyGraphResponse : components) {
+            String purlPackage = null;
             if (dependencyGraphResponse.purl() != null) {
-                try {
-                    purl = new PackageURL(dependencyGraphResponse.purl());
-                } catch (MalformedPackageURLException e) {
-                    purl = null;
-                }
-
-                if (purl != null) {
-                    type = RepositoryType.resolve(purl);
-                    if (RepositoryType.UNSUPPORTED != type) {
-
-                        // Create a new repository meta component search
-                        repositoryMetaComponentSearch = new RepositoryQueryManager.RepositoryMetaComponentSearch(type, purl.getNamespace(), purl.getName());
-
-                        // Add the repository meta component search to the set
-                        repoMetaComponentSearches.add(repositoryMetaComponentSearch);
-                    }
+                final PackageURL purl = PurlUtil.silentPurl(dependencyGraphResponse.purl());
+                if (purl != null && RepositoryType.UNSUPPORTED != RepositoryType.resolve(purl)) {
+                    purlPackage = PurlUtil.purlPackageOnly(purl);
+                    purlPackages.add(purlPackage);
                 }
             }
-
-            // Keep the link between the component and the repository meta component search
-            repoMetaComponentSearchListHashMap.put(dependencyGraphResponse, repositoryMetaComponentSearch);
+            componentsByPurlPackage.put(dependencyGraphResponse, purlPackage);
         }
 
-        // Fetch the latest versions for the components
-        final List<RepositoryMetaComponent> repositoryMetaComponents = qm.getRepositoryMetaComponentsBatch(repoMetaComponentSearches.stream().toList());
-
-        // Create HashMap with the repository meta components and their latest version
-        final HashMap<RepositoryQueryManager.RepositoryMetaComponentSearch, String> repositoryMetaComponentsSet = new HashMap<>(repositoryMetaComponents.size());
-
-        for (RepositoryMetaComponent repositoryMetaComponent : repositoryMetaComponents) {
-            repositoryMetaComponentsSet.put(new RepositoryQueryManager.RepositoryMetaComponentSearch(repositoryMetaComponent.getRepositoryType(), repositoryMetaComponent.getNamespace(), repositoryMetaComponent.getName()), repositoryMetaComponent.getLatestVersion());
+        final var latestVersionByPurl = new HashMap<String, String>();
+        if (!purlPackages.isEmpty()) {
+            final List<PackageMetadata> packageMetadataList = withJdbiHandle(
+                    handle -> new PackageMetadataDao(handle).getAll(purlPackages));
+            for (final PackageMetadata pm : packageMetadataList) {
+                if (pm.latestVersion() != null) {
+                    latestVersionByPurl.put(pm.purl().canonicalize(), pm.latestVersion());
+                }
+            }
         }
 
-        // Add the latest version to the components
-        for (Map.Entry<DependencyGraphResponse, RepositoryQueryManager.RepositoryMetaComponentSearch> dependencyGraphResponseEntry : repoMetaComponentSearchListHashMap.entrySet()) {
-            if (dependencyGraphResponseEntry.getValue() == null) {
-                response.add(dependencyGraphResponseEntry.getKey());
+        for (final Map.Entry<DependencyGraphResponse, String> entry : componentsByPurlPackage.entrySet()) {
+            if (entry.getValue() == null) {
+                response.add(entry.getKey());
             } else {
-                response.add(new DependencyGraphResponse(dependencyGraphResponseEntry.getKey(), repositoryMetaComponentsSet.get(dependencyGraphResponseEntry.getValue())));
+                response.add(new DependencyGraphResponse(entry.getKey(), latestVersionByPurl.get(entry.getValue())));
             }
         }
 

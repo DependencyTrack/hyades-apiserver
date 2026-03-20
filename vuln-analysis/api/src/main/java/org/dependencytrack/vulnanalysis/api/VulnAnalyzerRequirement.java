@@ -25,6 +25,10 @@ public enum VulnAnalyzerRequirement {
 
     COMPONENT_CPE,
 
-    COMPONENT_PURL
+    COMPONENT_PURL,
+
+    COMPONENT_TYPE,
+
+    COMPONENT_PROPERTIES
 
 }

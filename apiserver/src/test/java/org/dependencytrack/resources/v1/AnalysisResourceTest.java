@@ -19,7 +19,7 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.model.ManagedUser;
-import alpine.server.auth.JsonWebToken;
+import alpine.server.auth.SessionTokenService;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
@@ -422,7 +422,7 @@ class AnalysisResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
         ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
-        String jwt = new JsonWebToken().createToken(testUser);
+        String sessionToken = new SessionTokenService().createSession(testUser.getId());
         qm.addUserToTeam(testUser, team);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -446,7 +446,7 @@ class AnalysisResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .request()
-                .header("Authorization", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + sessionToken)
                 .put(Entity.entity(analysisRequest, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();

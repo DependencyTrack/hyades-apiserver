@@ -1072,4 +1072,258 @@
             )
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-50-tag" author="nscuro">
+        <tagDatabase tag="pre-package-metadata-migration"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-50" author="nscuro">
+        <!-- Create new PACKAGE_METADATA and PACKAGE_ARTIFACT_METADATA tables. -->
+        <sql splitStatements="true">
+            CREATE TABLE "PACKAGE_METADATA" (
+              "PURL" TEXT
+            , "LATEST_VERSION" TEXT
+            , "RESOLVED_BY" TEXT
+            , "RESOLVED_FROM" TEXT
+            , "RESOLVED_AT" TIMESTAMPTZ NOT NULL
+            , CONSTRAINT "PACKAGE_METADATA_PK" PRIMARY KEY ("PURL")
+            , CONSTRAINT "PACKAGE_METADATA_PURL_CHECK" CHECK (
+                "PURL" NOT LIKE '%@%'
+                AND "PURL" NOT LIKE '%?%'
+                AND "PURL" NOT LIKE '%&amp;%'
+                AND "PURL" NOT LIKE '%#%'
+              )
+            );
+
+            CREATE TABLE "PACKAGE_ARTIFACT_METADATA" (
+              "PURL" TEXT
+            , "PACKAGE_PURL" TEXT NOT NULL
+            , "HASH_MD5" VARCHAR(32)
+            , "HASH_SHA1" VARCHAR(40)
+            , "HASH_SHA256" VARCHAR(64)
+            , "HASH_SHA512" VARCHAR(128)
+            , "PUBLISHED_AT" TIMESTAMPTZ
+            , "RESOLVED_BY" TEXT
+            , "RESOLVED_FROM" TEXT
+            , "RESOLVED_AT" TIMESTAMPTZ
+            , CONSTRAINT "PACKAGE_ARTIFACT_METADATA_PK" PRIMARY KEY ("PURL")
+            );
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-51" author="nscuro">
+        <!--
+            Create a temporary index on NAME and GROUP of the COMPONENT table.
+            To be leveraged in the next changeset. Necessary for large existing tables.
+        -->
+        <sql>
+            CREATE INDEX "COMPONENT_NAME_GROUP_IDX"
+                ON "COMPONENT" ("NAME", "GROUP");
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-52" author="nscuro">
+        <!--
+            Migrate existing data from REPO_META_COMPONENT to PACKAGE_METADATA.
+            Only consider records for which a corresponding COMPONENT record exists.
+        -->
+        <sql>
+            INSERT INTO "PACKAGE_METADATA" ("PURL", "LATEST_VERSION", "RESOLVED_AT")
+            SELECT DISTINCT ON (t."PURL")
+                   t."PURL"
+                 , t."LATEST_VERSION"
+                 , t."LAST_CHECK"
+              FROM (
+                SELECT SPLIT_PART(c."PURLCOORDINATES", '@', 1) AS "PURL"
+                     , rmc."LATEST_VERSION"
+                     , rmc."LAST_CHECK"
+                  FROM "REPOSITORY_META_COMPONENT" rmc
+                 INNER JOIN "COMPONENT" c
+                    ON c."NAME" = rmc."NAME"
+                   AND (c."GROUP" = rmc."NAMESPACE" OR (c."GROUP" IS NULL AND rmc."NAMESPACE" IS NULL))
+                   AND LOWER(c."PURL") LIKE ('pkg:' || LOWER(rmc."REPOSITORY_TYPE") || '/%')
+              ) t
+             WHERE t."PURL" NOT LIKE '%@%'
+               AND t."PURL" NOT LIKE '%?%'
+               AND t."PURL" NOT LIKE '%&amp;%'
+               AND t."PURL" NOT LIKE '%#%'
+             ORDER BY t."PURL"
+                    , t."LAST_CHECK" DESC;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-53" author="nscuro">
+        <!--
+            Migrate existing data from INTEGRITY_META_COMPONENT to PACKAGE_ARTIFACT_METADATA.
+            Only consider records for which a corresponding PACKAGE_METADATA record exists.
+        -->
+        <sql>
+            INSERT INTO "PACKAGE_ARTIFACT_METADATA" (
+              "PURL"
+            , "PACKAGE_PURL"
+            , "HASH_MD5"
+            , "HASH_SHA1"
+            , "HASH_SHA256"
+            , "HASH_SHA512"
+            , "PUBLISHED_AT"
+            , "RESOLVED_AT"
+            )
+            SELECT imc."PURL"
+                 , SPLIT_PART(imc."PURL", '@', 1)
+                 , imc."MD5"
+                 , imc."SHA1"
+                 , imc."SHA256"
+                 , imc."SHA512"
+                 , imc."PUBLISHED_AT"
+                 , imc."LAST_FETCH"
+              FROM "INTEGRITY_META_COMPONENT" imc
+             WHERE EXISTS (
+               SELECT 1 FROM "PACKAGE_METADATA" pm
+                WHERE pm."PURL" = SPLIT_PART(imc."PURL", '@', 1)
+             );
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-54" author="nscuro">
+        <!--
+            Create indexes and FK constraints on PACKAGE_METADATA and PACKAGE_ARTIFACT_METADATA.
+            Done separately to allow data migrations to limit transaction durations.
+        -->
+        <sql splitStatements="true">
+            CREATE INDEX "PACKAGE_METADATA_RESOLVED_AT_IDX"
+                ON "PACKAGE_METADATA" ("RESOLVED_AT");
+
+            CREATE INDEX "PACKAGE_ARTIFACT_METADATA_PACKAGE_PURL_IDX"
+                ON "PACKAGE_ARTIFACT_METADATA" ("PACKAGE_PURL");
+
+            CREATE INDEX "PACKAGE_ARTIFACT_METADATA_RESOLVED_AT_IDX"
+                ON "PACKAGE_ARTIFACT_METADATA" ("RESOLVED_AT");
+
+            ALTER TABLE "PACKAGE_ARTIFACT_METADATA"
+            ADD CONSTRAINT "PACKAGE_ARTIFACT_METADATA_PACKAGE_PURL_FK"
+            FOREIGN KEY ("PACKAGE_PURL") REFERENCES "PACKAGE_METADATA" ("PURL")
+            ON DELETE CASCADE;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-55" author="nscuro">
+        <!-- Drop old tables and temporary index. -->
+        <sql splitStatements="true">
+            DROP TABLE "INTEGRITY_ANALYSIS";
+            DROP TABLE "INTEGRITY_META_COMPONENT";
+            DROP TABLE "REPOSITORY_META_COMPONENT";
+            DROP INDEX "COMPONENT_NAME_GROUP_IDX";
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-56" author="nscuro">
+        <sql splitStatements="true">
+            CREATE TABLE "USER_SESSION" (
+              "TOKEN_HASH" VARCHAR(64)
+            , "USER_ID" BIGINT NOT NULL
+            , "CREATED_AT" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            , "EXPIRES_AT" TIMESTAMPTZ NOT NULL
+            , "LAST_USED_AT" TIMESTAMPTZ
+            , CONSTRAINT "USER_SESSION_PK" PRIMARY KEY ("TOKEN_HASH")
+            , CONSTRAINT "USER_SESSION_USER_FK" FOREIGN KEY ("USER_ID") REFERENCES "USER" ("ID") ON DELETE CASCADE
+            );
+
+            CREATE INDEX "USER_SESSION_EXPIRES_AT_IDX" ON "USER_SESSION" ("EXPIRES_AT");
+            CREATE INDEX "USER_SESSION_USER_ID_IDX" ON "USER_SESSION" ("USER_ID");
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-57" author="nscuro">
+        <!--
+            Remove support for ENCRYPTEDSTRING properties.
+            Secrets are handled exclusively by SecretManager going forward.
+            We can't migrate them to secret storage in DB migrations.
+        -->
+        <sql splitStatements="true">
+            UPDATE "CONFIGPROPERTY"
+               SET "PROPERTYVALUE" = NULL
+                 , "PROPERTYTYPE" = 'STRING'
+             WHERE "PROPERTYTYPE" = 'ENCRYPTEDSTRING';
+
+            UPDATE "PROJECT_PROPERTY"
+               SET "PROPERTYVALUE" = NULL
+                 , "PROPERTYTYPE" = 'STRING'
+             WHERE "PROPERTYTYPE" = 'ENCRYPTEDSTRING';
+
+            UPDATE "COMPONENT_PROPERTY"
+               SET "PROPERTYVALUE" = NULL
+                 , "PROPERTYTYPE" = 'STRING'
+             WHERE "PROPERTYTYPE" = 'ENCRYPTEDSTRING';
+        </sql>
+
+        <!--
+            The Defect Dojo API key was erroneously not stored
+            as ENCRYPTEDSTRING before, but is now also being moved
+            to SecretManager and must thus be cleared.
+        -->
+        <sql>
+            UPDATE "CONFIGPROPERTY"
+               SET "PROPERTYVALUE" = NULL
+             WHERE "GROUPNAME" = 'integrations'
+               AND "PROPERTYNAME" = 'defectdojo.apiKey';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-58" author="nscuro">
+        <!--
+            Remove existing repository passwords. They too are being handled
+            by SecretManager going forward. Disable all affected repos to
+            prevent authentication failures. Users can re-enable them when
+            new secrets have been configured.
+        -->
+        <sql splitStatements="true">
+            UPDATE "REPOSITORY"
+               SET "PASSWORD" = NULL
+                 , "ENABLED" = FALSE
+             WHERE "PASSWORD" IS NOT NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-59" author="nscuro">
+        <sql>
+            ALTER TABLE "COMPONENT_PROPERTY" DROP CONSTRAINT "COMPONENT_PROPERTY_TYPE_check";
+            ALTER TABLE "COMPONENT_PROPERTY" ADD CONSTRAINT "COMPONENT_PROPERTY_TYPE_check" CHECK (
+              "PROPERTYTYPE" IS NULL
+              OR "PROPERTYTYPE"::TEXT = ANY(ARRAY['BOOLEAN', 'INTEGER', 'NUMBER', 'STRING', 'TIMESTAMP', 'URL', 'UUID'])
+            );
+        </sql>
+    </changeSet>
+    
+    <changeSet id="v5.7.0-60" author="nscuro">
+        <!--
+            Delete any duplicate policy violations.
+            Note that this doesn't do any fancy reconciliation, it just keeps the latest.
+            Users upgrading from v4 should already not have duplicates anymore, as of v4.12.1.
+            https://github.com/DependencyTrack/dependency-track/pull/4234
+        -->
+        <sql>
+            WITH duplicate AS (
+              SELECT "ID"
+                   , ROW_NUMBER() OVER(
+                       PARTITION BY "COMPONENT_ID", "PROJECT_ID", "POLICYCONDITION_ID"
+                       ORDER BY "TIMESTAMP" DESC
+                     ) AS rn
+                FROM "POLICYVIOLATION"
+            )
+            DELETE FROM "POLICYVIOLATION"
+             USING duplicate
+             WHERE "POLICYVIOLATION"."ID" = duplicate."ID"
+               AND duplicate.rn > 1
+        </sql>
+
+        <!-- Create unique index to prevent new dupes from being created. -->
+        <createIndex tableName="POLICYVIOLATION" indexName="POLICYVIOLATION_IDENTITY_IDX" unique="true">
+            <column name="COMPONENT_ID"/>
+            <column name="PROJECT_ID"/>
+            <column name="POLICYCONDITION_ID"/>
+        </createIndex>
+
+        <!-- Drop redundant index that is covered by the new unique index. -->
+        <dropIndex tableName="POLICYVIOLATION" indexName="POLICYVIOLATION_COMPONENT_IDX"/>
+    </changeSet>
 </databaseChangeLog>

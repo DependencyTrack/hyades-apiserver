@@ -39,10 +39,12 @@
         <module>cache</module>
         <module>file-storage</module>
         <module>migration</module>
+        <module>package-metadata</module>
         <module>secret-management</module>
         <module>vuln-analysis</module>
         <module>vuln-data-source</module>
         <module>apiserver</module>
+        <module>e2e</module>
         <module>coverage-report</module>
     </modules>
 
@@ -114,7 +116,7 @@
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
-        <lib.flyway.version>12.0.3</lib.flyway.version>
+        <lib.flyway.version>12.1.0</lib.flyway.version>
         <lib.eclipse-angus.version>2.0.5</lib.eclipse-angus.version>
         <lib.greenmail.version>2.1.8</lib.greenmail.version>
         <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
@@ -124,27 +126,29 @@
         <lib.jackson.version>2.21.1</lib.jackson.version>
         <lib.jdbi.version>3.51.0</lib.jdbi.version>
         <lib.jersey.version>4.0.2</lib.jersey.version>
-        <lib.jetty.version>12.1.6</lib.jetty.version>
+        <lib.jetty.version>12.1.7</lib.jetty.version>
         <lib.json-schema-validator.version>1.5.9</lib.json-schema-validator.version>
-        <lib.json-unit.version>5.1.0</lib.json-unit.version>
+        <lib.json-unit.version>5.1.1</lib.json-unit.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit-jupiter.version>6.0.3</lib.junit-jupiter.version>
         <lib.kafka-clients.version>4.2.0</lib.kafka-clients.version>
-        <lib.kotlin.version>2.3.10</lib.kotlin.version>
+        <lib.kotlin.version>2.3.20</lib.kotlin.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.logback.version>1.5.32</lib.logback.version>
-        <lib.micrometer.version>1.16.3</lib.micrometer.version>
+        <lib.micrometer.version>1.16.4</lib.micrometer.version>
         <lib.microprofile-config.version>3.1</lib.microprofile-config.version>
         <lib.microprofile-health.version>4.0.1</lib.microprofile-health.version>
         <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.22.0</lib.mockito.version>
         <lib.okhttp.version>5.3.2</lib.okhttp.version>
+        <lib.open-feign.version>13.8</lib.open-feign.version>
         <lib.open-vulnerability-clients.version>9.0.3</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.pebble.version>4.1.1</lib.pebble.version>
         <lib.postgresql.version>42.7.10</lib.postgresql.version>
         <lib.protobuf-java.version>4.34.0</lib.protobuf-java.version>
-        <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
+        <lib.resilience4j.version>2.4.0</lib.resilience4j.version>
+        <lib.s3mock.version>4.11.0</lib.s3mock.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
         <lib.smallrye-config.version>3.16.0</lib.smallrye-config.version>
         <lib.swagger.version>2.2.44</lib.swagger.version>
@@ -301,6 +305,14 @@
                 <groupId>org.jdbi</groupId>
                 <artifactId>jdbi3-bom</artifactId>
                 <version>${lib.jdbi.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.github.openfeign</groupId>
+                <artifactId>feign-bom</artifactId>
+                <version>${lib.open-feign.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -488,6 +500,12 @@
             </dependency>
 
             <dependency>
+                <groupId>com.adobe.testing</groupId>
+                <artifactId>s3mock-testcontainers</artifactId>
+                <version>${lib.s3mock.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-bom</artifactId>
                 <version>${lib.slf4j.version}</version>
@@ -657,7 +675,7 @@
                 <plugin>
                     <groupId>io.github.ascopes</groupId>
                     <artifactId>protobuf-maven-plugin</artifactId>
-                    <version>5.0.1</version>
+                    <version>5.0.2</version>
                     <configuration>
                         <protoc>${lib.protobuf-java.version}</protoc>
                         <sourceDirectories>
