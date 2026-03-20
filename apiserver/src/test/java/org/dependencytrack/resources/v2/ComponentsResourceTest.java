@@ -286,7 +286,7 @@ public class ComponentsResourceTest extends ResourceTest {
     public void listComponentsByIdentityWithCpeTest() {
         prepareComponents();
         Response response = jersey.target("/components")
-                .queryParam("cpe", "nameB")
+                .queryParam("cpe", "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*")
                 .queryParam("limit", 2)
                 .request()
                 .header(X_API_KEY, apiKey)
