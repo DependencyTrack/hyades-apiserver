@@ -283,7 +283,8 @@ public interface ComponentDao extends SqlObject {
                         "L"."NAME" AS "licenseName",
                         "PROJECT"."NAME" AS "projectName",
                         "PROJECT"."UUID" AS "projectUuid",
-                        "PROJECT"."VERSION" AS "projectVersion"
+                        "PROJECT"."VERSION" AS "projectVersion",
+                        "PROJECT"."DIRECT_DEPENDENCIES" AS "projectDirectDependencies"
                 FROM "COMPONENT" "C"
                 INNER JOIN "PROJECT" ON "C"."PROJECT_ID" = "PROJECT"."ID"
                 LEFT OUTER JOIN "LICENSE" "L" ON "C"."LICENSE_ID" = "L"."ID"
@@ -346,6 +347,7 @@ public interface ComponentDao extends SqlObject {
                 project.setUuid(UUID.fromString(rs.getString("projectUuid")));
                 maybeSet(rs, "projectName", ResultSet::getString, project::setName);
                 maybeSet(rs, "projectVersion", ResultSet::getString, project::setVersion);
+                maybeSet(rs, "projectDirectDependencies", ResultSet::getString, project::setDirectDependencies);
                 component.setProject(project);
             }
             maybeSet(rs, "componentPurl", ResultSet::getString, component::setPurl);

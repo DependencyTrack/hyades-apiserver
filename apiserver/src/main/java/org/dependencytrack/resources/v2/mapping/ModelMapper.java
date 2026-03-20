@@ -62,6 +62,7 @@ public class ModelMapper {
                 .name(project.getName())
                 .version(project.getVersion())
                 .uuid(project.getUuid())
+                .directDependencies(project.getDirectDependencies())
                 .build();
     }
 

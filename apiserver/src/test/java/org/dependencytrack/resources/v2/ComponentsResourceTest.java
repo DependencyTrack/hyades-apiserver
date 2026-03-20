@@ -26,6 +26,7 @@ import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.Project;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -163,7 +164,8 @@ public class ComponentsResourceTest extends ResourceTest {
                         "project": {
                             "name": "projectA",
                             "version": "1.0",
-                            "uuid": "${json-unit.any-string}"
+                            "uuid": "${json-unit.any-string}",
+                            "direct_dependencies": "${json-unit.any-string}"
                         }
                       },
                       {
@@ -352,7 +354,8 @@ public class ComponentsResourceTest extends ResourceTest {
                         "project": {
                             "name": "projectA",
                             "version": "1.0",
-                            "uuid": "${json-unit.any-string}"
+                            "uuid": "${json-unit.any-string}",
+                            "direct_dependencies": "${json-unit.any-string}"
                         }
                       }
                   ]
@@ -399,7 +402,8 @@ public class ComponentsResourceTest extends ResourceTest {
                         "project": {
                             "name": "projectA",
                             "version": "1.0",
-                            "uuid": "${json-unit.any-string}"
+                            "uuid": "${json-unit.any-string}",
+                            "direct_dependencies": "${json-unit.any-string}"
                         }
                       }
                   ]
@@ -418,6 +422,7 @@ public class ComponentsResourceTest extends ResourceTest {
         componentA.setCpe("cpe:2.3:a:groupA:nameA:versionA:*:*:*:*:*:*:*");
         componentA.setPurl("pkg:maven/groupA/nameA@versionA?foo=bar");
         qm.createComponent(componentA, false);
+        projectA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
 
         final Project projectB = qm.createProject("projectB", null, "1.0", null, null, null, null, false);
         var componentB = new Component();

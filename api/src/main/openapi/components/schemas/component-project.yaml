@@ -25,3 +25,5 @@ properties:
   uuid:
     type: string
     format: uuid
+  direct_dependencies:
+    type: string
