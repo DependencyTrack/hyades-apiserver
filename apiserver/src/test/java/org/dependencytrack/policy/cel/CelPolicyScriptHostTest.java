@@ -38,10 +38,10 @@ import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULN
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class CelPolicyScriptHostTest {
+class CelPolicyScriptHostTest {
 
     @Test
-    public void testCompileWithCache() throws Exception {
+    void testCompileWithCache() throws Exception {
         final var scriptSrc = """
                 component.name == "foo"
                 """;
@@ -55,7 +55,7 @@ public class CelPolicyScriptHostTest {
     }
 
     @Test
-    public void testCompileWithoutCache() throws Exception {
+    void testCompileWithoutCache() throws Exception {
         final var scriptSrc = """
                 component.name == "foo"
                 """;
@@ -69,7 +69,7 @@ public class CelPolicyScriptHostTest {
     }
 
     @Test
-    public void testRequirementsAnalysis() throws Exception {
+    void testRequirementsAnalysis() throws Exception {
         final CelPolicyScript compiledScript = CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
                 component.resolved_license.groups.exists(licenseGroup, licenseGroup.name == "Permissive")
                   && vulns.exists(vuln, vuln.severity in ["HIGH", "CRITICAL"] && has(vuln.aliases))
@@ -96,7 +96,43 @@ public class CelPolicyScriptHostTest {
     }
 
     @Test
-    public void testVisitVersRangeCheck() {
+    void testRequirementsAnalysisWithFieldAccessInList() throws Exception {
+        final CelPolicyScript compiledScript = CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
+                [component.name, project.name].exists(name, name == "foo")
+                """, CacheMode.NO_CACHE);
+
+        final Map<Type, Collection<String>> requirements = compiledScript.getRequirements().asMap();
+        assertThat(requirements).containsOnlyKeys(TYPE_COMPONENT, TYPE_PROJECT);
+        assertThat(requirements.get(TYPE_COMPONENT)).containsOnly("name");
+        assertThat(requirements.get(TYPE_PROJECT)).containsOnly("name");
+    }
+
+    @Test
+    void testRequirementsAnalysisWithFieldAccessInStructValue() throws Exception {
+        final CelPolicyScript compiledScript = CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
+                project.depends_on(v1.Component{name: component.name})
+                """, CacheMode.NO_CACHE);
+
+        final Map<Type, Collection<String>> requirements = compiledScript.getRequirements().asMap();
+        assertThat(requirements).containsOnlyKeys(TYPE_COMPONENT, TYPE_PROJECT);
+        assertThat(requirements.get(TYPE_COMPONENT)).containsOnly("name");
+        assertThat(requirements.get(TYPE_PROJECT)).containsOnly("uuid");
+    }
+
+    @Test
+    void testRequirementsAnalysisWithFieldAccessInMapKey() throws Exception {
+        final CelPolicyScript compiledScript = CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
+                {component.name: project.name}.size() > 0
+                """, CacheMode.NO_CACHE);
+
+        final Map<Type, Collection<String>> requirements = compiledScript.getRequirements().asMap();
+        assertThat(requirements).containsOnlyKeys(TYPE_COMPONENT, TYPE_PROJECT);
+        assertThat(requirements.get(TYPE_COMPONENT)).containsOnly("name");
+        assertThat(requirements.get(TYPE_PROJECT)).containsOnly("name");
+    }
+
+    @Test
+    void testVisitVersRangeCheck() {
         var exception = assertThrows(ScriptCreateException.class, () -> CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
                 project.name == "foo" && project.matches_range("vers:generic<1")
                   && project.depends_on(v1.Component{
