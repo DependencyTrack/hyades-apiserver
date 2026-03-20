@@ -21,6 +21,7 @@ package org.dependencytrack.policy.cel;
 import alpine.common.logging.Logger;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import com.google.api.expr.v1alpha1.Type;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import jakarta.annotation.Nullable;
@@ -69,6 +70,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VERSION_DISTANCE;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
 
 public class CelCommonPolicyLibrary implements Library {
 
@@ -81,6 +83,25 @@ public class CelCommonPolicyLibrary implements Library {
     static final String FUNC_MATCHES_RANGE = "matches_range";
     static final String FUNC_COMPARE_AGE = "compare_age";
     static final String FUNC_COMPARE_VERSION_DISTANCE = "version_distance";
+
+    static final Map<String, Map<Type, List<String>>> FUNCTION_FIELD_REQUIREMENTS = Map.ofEntries(
+            Map.entry(FUNC_DEPENDS_ON, Map.of(TYPE_PROJECT, List.of("uuid"), TYPE_COMPONENT, List.of("uuid"))),
+            Map.entry(FUNC_IS_DEPENDENCY_OF, Map.of(TYPE_COMPONENT, List.of("uuid"))),
+            Map.entry(FUNC_IS_EXCLUSIVE_DEPENDENCY_OF, Map.of(TYPE_COMPONENT, List.of("uuid"))),
+            Map.entry(FUNC_IS_DIRECT_DEPENDENCY_OF, Map.of(TYPE_COMPONENT, List.of("uuid"))),
+            Map.entry(FUNC_MATCHES_RANGE, Map.of(TYPE_PROJECT, List.of("version"), TYPE_COMPONENT, List.of("version"))),
+            Map.entry(FUNC_COMPARE_VERSION_DISTANCE, Map.of(TYPE_COMPONENT, List.of("purl", "uuid", "version", "latest_version"))),
+            Map.entry(FUNC_COMPARE_AGE, Map.of(TYPE_COMPONENT, List.of("purl", "published_at"))));
+
+    static final Map<Type, Map<String, List<String>>> FIELD_EXPANSIONS = Map.of(
+            TYPE_VULNERABILITY, Map.of(
+                    "severity", List.of(
+                            "cvssv2_base_score",
+                            "cvssv3_base_score",
+                            "cvssv4_score",
+                            "owasp_rr_likelihood_score",
+                            "owasp_rr_technical_impact_score",
+                            "owasp_rr_business_impact_score")));
 
     @Override
     public List<EnvOption> getCompileOptions() {

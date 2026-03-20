@@ -43,19 +43,12 @@ import org.projectnessie.cel.tools.ScriptCreateException;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_COMPARE_AGE;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_COMPARE_VERSION_DISTANCE;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_DEPENDS_ON;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_DIRECT_DEPENDENCY_OF;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_EXCLUSIVE_DEPENDENCY_OF;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_MATCHES_RANGE;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FIELD_EXPANSIONS;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNCTION_FIELD_REQUIREMENTS;
 import static org.projectnessie.cel.Issues.newIssues;
 import static org.projectnessie.cel.common.Source.newTextSource;
 
@@ -151,48 +144,31 @@ public class CelPolicyScriptHost {
         final var visitor = new CelPolicyScriptVisitor(expr.getTypeMapMap());
         visitor.visit(expr.getExpr());
 
-        // Fields that are accessed directly are always a requirement.
         final MultiValuedMap<Type, String> requirements = visitor.getAccessedFieldsByType();
 
-        // Special case for vulnerability severity: The "true" severity may or may not be persisted
-        // in the SEVERITY database column. To compute the actual severity, CVSSv2, CVSSv3, CVSSv4, and OWASP RR
-        // scores may be required. See https://github.com/DependencyTrack/dependency-track/issues/2474
-        if (requirements.containsKey(TYPE_VULNERABILITY)
-            && requirements.get(TYPE_VULNERABILITY).contains("severity")) {
-            requirements.putAll(TYPE_VULNERABILITY, List.of(
-                    "cvssv2_base_score",
-                    "cvssv3_base_score",
-                    "cvssv4_score",
-                    "owasp_rr_likelihood_score",
-                    "owasp_rr_technical_impact_score",
-                    "owasp_rr_business_impact_score"
-            ));
+        for (final var expansion : FIELD_EXPANSIONS.entrySet()) {
+            final Type type = expansion.getKey();
+            if (!requirements.containsKey(type)) {
+                continue;
+            }
+
+            for (final var fieldExpansion : expansion.getValue().entrySet()) {
+                if (requirements.get(type).contains(fieldExpansion.getKey())) {
+                    requirements.putAll(type, fieldExpansion.getValue());
+                }
+            }
         }
 
-        // Custom functions may access certain fields implicitly, in a way that is not visible
-        // to the AST visitor. To compensate, we hardcode the functions' requirements here.
-        // TODO: This should be restructured to be more generic.
-        for (final FunctionSignature functionSignature : visitor.getUsedFunctionSignatures()) {
-            switch (functionSignature.function()) {
-                case FUNC_DEPENDS_ON, FUNC_IS_DEPENDENCY_OF, FUNC_IS_EXCLUSIVE_DEPENDENCY_OF, FUNC_IS_DIRECT_DEPENDENCY_OF -> {
-                    if (TYPE_PROJECT.equals(functionSignature.targetType())) {
-                        requirements.put(TYPE_PROJECT, "uuid");
-                    } else if (TYPE_COMPONENT.equals(functionSignature.targetType())) {
-                        requirements.put(TYPE_COMPONENT, "uuid");
-                    }
-                }
-                case FUNC_MATCHES_RANGE -> {
-                    if (TYPE_PROJECT.equals(functionSignature.targetType())) {
-                        requirements.put(TYPE_PROJECT, "version");
-                    } else if (TYPE_COMPONENT.equals(functionSignature.targetType())) {
-                        requirements.put(TYPE_COMPONENT, "version");
-                    }
-                }
-                case FUNC_COMPARE_VERSION_DISTANCE ->
-                        requirements.putAll(TYPE_COMPONENT, List.of("purl", "uuid", "version", "latest_version"));
+        for (final FunctionSignature funcSignature : visitor.getUsedFunctionSignatures()) {
+            final Map<Type, List<String>> funcRequirements =
+                    FUNCTION_FIELD_REQUIREMENTS.get(funcSignature.function());
+            if (funcRequirements == null) {
+                continue;
+            }
 
-                case FUNC_COMPARE_AGE -> requirements.putAll(TYPE_COMPONENT, List.of("purl", "published_at"));
-
+            final List<String> fields = funcRequirements.get(funcSignature.targetType());
+            if (fields != null) {
+                requirements.putAll(funcSignature.targetType(), fields);
             }
         }
 
