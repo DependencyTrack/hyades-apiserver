@@ -98,6 +98,14 @@ get:
         application/json:
           schema:
             $ref: "../components/schemas/list-components-response.yaml"
+    "400":
+      description: Bad Request
+      content:
+        application/problem+json:
+          schema:
+            anyOf:
+              - $ref: "../components/schemas/json-schema-validation-problem-details.yaml"
+              - $ref: "../components/schemas/problem-details.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":

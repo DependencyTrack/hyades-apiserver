@@ -283,6 +283,20 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     @Test
+    public void listComponentsByIdentityWithInvalidCpeTest() {
+        prepareComponents();
+        Response response = jersey.target("/components")
+                .queryParam("cpe", "nameB")
+                .queryParam("limit", 2)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_BAD_REQUEST);
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThat(responseJson.toString()).contains("Invalid CPE: nameB");
+    }
+
+    @Test
     public void listComponentsByIdentityWithCpeTest() {
         prepareComponents();
         Response response = jersey.target("/components")
