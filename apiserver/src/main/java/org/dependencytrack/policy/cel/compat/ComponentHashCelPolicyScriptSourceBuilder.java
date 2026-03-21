@@ -32,6 +32,7 @@ import static org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder
 public class ComponentHashCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
 
     private static final Logger LOGGER = Logger.getLogger(ComponentHashCelPolicyScriptSourceBuilder.class);
+
     @Override
     public String apply(final PolicyCondition policyCondition) {
         final Hash hash = extractHashValues(policyCondition);
@@ -44,14 +45,18 @@ public class ComponentHashCelPolicyScriptSourceBuilder implements CelPolicyScrip
             LOGGER.warn("Component does not have a field named %s".formatted(fieldName));
             return null;
         }
-        if (policyCondition.getOperator().equals(PolicyCondition.Operator.IS)) {
-            return """
+        return switch (policyCondition.getOperator()) {
+            case IS -> """
                     component.%s == "%s"
                     """.formatted(fieldName, escapeQuotes(hash.getValue()));
-        } else {
-            LOGGER.warn("Policy operator %s is not allowed with this policy".formatted(policyCondition.getOperator().toString()));
-            return null;
-        }
+            case IS_NOT -> """
+                    component.%s != "%s"
+                    """.formatted(fieldName, escapeQuotes(hash.getValue()));
+            default -> {
+                LOGGER.warn("Policy operator %s is not supported for this subject".formatted(policyCondition.getOperator()));
+                yield null;
+            }
+        };
     }
 
     private static Hash extractHashValues(PolicyCondition condition) {
