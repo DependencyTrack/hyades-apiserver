@@ -97,5 +97,6 @@ jobs:
           fi
 
           gh release create "${RELEASE_VERSION}" \
+            --draft \
             --generate-notes \
             ${PRERELEASE_FLAG}
