@@ -30,6 +30,7 @@ import jakarta.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ExternalReference;
@@ -518,6 +519,7 @@ public class ComponentResourceTest extends ResourceTest {
             setName("SampleAuthor");
         }});
         component.setAuthors(authors);
+        component.setClassifier(Classifier.APPLICATION);
         component.setPurl("pkg:maven/org.acme/abc");
         Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
@@ -528,6 +530,7 @@ public class ComponentResourceTest extends ResourceTest {
         Assertions.assertEquals("My Component", json.getString("name"));
         Assertions.assertEquals("1.0", json.getString("version"));
         Assertions.assertEquals("SampleAuthor" ,json.getJsonArray("authors").getJsonObject(0).getString("name"));
+        Assertions.assertEquals("APPLICATION", json.getString("classifier"));
         Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
     }
 
@@ -538,6 +541,7 @@ public class ComponentResourceTest extends ResourceTest {
         component.setProject(project);
         component.setName("My Component");
         component.setVersion("1.0");
+        component.setClassifier(Classifier.LIBRARY);
         component.setPurl("pkg:maven/org.acme/abc");
         component.setSha1("640ab2bae07bedc4c163f679a746f7ab7fb5d1fa".toUpperCase());
         component.setSha256("532eaabd9574880dbf76b9b8cc00832c20a6ec113d682299550d7a6e0f345e25".toUpperCase());
@@ -579,7 +583,8 @@ public class ComponentResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
                         {
-                          "name": "acme-lib"
+                          "name": "acme-lib",
+                          "classifier": "LIBRARY"
                         }
                         """));
 
@@ -607,6 +612,7 @@ public class ComponentResourceTest extends ResourceTest {
         component.setPurl("pkg:maven/org.acme/abc");
         component.setName("My Component");
         component.setVersion("1.0");
+        component.setClassifier(Classifier.APPLICATION);
         qm.createComponent(component, false);
 
         var jsonComponent = new Component();
@@ -614,6 +620,7 @@ public class ComponentResourceTest extends ResourceTest {
         jsonComponent.setPurl("pkg:maven/org.acme/abc");
         jsonComponent.setName("My Component");
         jsonComponent.setVersion("1.0");
+        jsonComponent.setClassifier(Classifier.LIBRARY);
         jsonComponent.setDescription("Test component");
         var externalReference = new ExternalReference();
         externalReference.setType(org.cyclonedx.model.ExternalReference.Type.WEBSITE);
@@ -629,22 +636,112 @@ public class ComponentResourceTest extends ResourceTest {
         Assertions.assertEquals("My Component", json.getString("name"));
         Assertions.assertEquals("1.0", json.getString("version"));
         Assertions.assertEquals("Test component", json.getString("description"));
+        Assertions.assertEquals("LIBRARY", json.getString("classifier"));
         Assertions.assertEquals(1, json.getJsonArray("externalReferences").size());
     }
 
     @Test
-    public void updateComponentEmptyNameTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
-        Component component = new Component();
+    public void shouldRejectUpdateWithEmptyName() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
         component.setProject(project);
-        component.setName("My Component");
-        component.setVersion("1.0");
-        component = qm.createComponent(component, false);
-        component.setName(" ");
-        Response response = jersey.target(V1_COMPONENT).request()
+        component.setName("acme-lib");
+        component.setClassifier(Classifier.LIBRARY);
+        qm.persist(component);
+
+        final Response response = jersey.target(V1_COMPONENT).request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.entity(component, MediaType.APPLICATION_JSON));
-        Assertions.assertEquals(400, response.getStatus(), 0);
+                .post(Entity.json("""
+                        {
+                          "uuid": "%s",
+                          "name": "",
+                          "classifier": "LIBRARY"
+                        }
+                        """.formatted(component.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(400);
+    }
+
+    @Test
+    public void shouldRejectCreateWithEmptyName() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid()).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json("""
+                        {
+                          "name": "",
+                          "classifier": "LIBRARY"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(400);
+    }
+
+    @Test
+    public void shouldUpdateComponentWithEmptyOptionalFields() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setVersion("1.0.0");
+        component.setClassifier(Classifier.LIBRARY);
+        component.setDescription("some description");
+        component.setLicense("Apache-2.0");
+        component.setCopyright("Copyright Acme");
+        qm.persist(component);
+
+        final Response response = jersey.target(V1_COMPONENT).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json("""
+                        {
+                          "uuid": "%s",
+                          "name": "acme-lib",
+                          "classifier": "LIBRARY",
+                          "version": "",
+                          "group": "",
+                          "description": "",
+                          "license": "",
+                          "licenseExpression": "",
+                          "licenseUrl": "",
+                          "filename": "",
+                          "cpe": "",
+                          "swidTagId": "",
+                          "copyright": "",
+                          "md5": "",
+                          "sha1": "",
+                          "sha256": "",
+                          "sha512": "",
+                          "sha3_256": "",
+                          "sha3_512": ""
+                        }
+                        """.formatted(component.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        qm.getPersistenceManager().evictAll();
+        final Component updated = qm.getObjectByUuid(Component.class, component.getUuid());
+        assertThat(updated.getVersion()).isNull();
+        assertThat(updated.getGroup()).isNull();
+        assertThat(updated.getDescription()).isNull();
+        assertThat(updated.getLicense()).isNull();
+        assertThat(updated.getLicenseExpression()).isNull();
+        assertThat(updated.getLicenseUrl()).isNull();
+        assertThat(updated.getFilename()).isNull();
+        assertThat(updated.getCpe()).isNull();
+        assertThat(updated.getSwidTagId()).isNull();
+        assertThat(updated.getCopyright()).isNull();
+        assertThat(updated.getMd5()).isNull();
+        assertThat(updated.getSha1()).isNull();
+        assertThat(updated.getSha256()).isNull();
+        assertThat(updated.getSha512()).isNull();
+        assertThat(updated.getSha3_256()).isNull();
+        assertThat(updated.getSha3_512()).isNull();
     }
 
     @Test
@@ -671,6 +768,7 @@ public class ComponentResourceTest extends ResourceTest {
                           "uuid": "%s",
                           "name": "acme-lib",
                           "version": "1.0.0",
+                          "classifier": "LIBRARY",
                           "licenseExpression": "(invalid"
                         }
                         """.formatted(component.getUuid()), MediaType.APPLICATION_JSON_TYPE));
@@ -707,7 +805,8 @@ public class ComponentResourceTest extends ResourceTest {
                 .post(Entity.json(/* language=JSON */ """
                         {
                           "uuid": "%s",
-                          "name": "acme-lib-foobar"
+                          "name": "acme-lib-foobar",
+                          "classifier": "LIBRARY"
                         }
                         """.formatted(component.getUuid())));
 
