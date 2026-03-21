@@ -26,6 +26,7 @@ import alpine.model.Team;
 import alpine.server.auth.SessionTokenService;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.resources.GlobalExceptionHandler;
 import com.github.packageurl.PackageURL;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -35,6 +36,7 @@ import jakarta.ws.rs.HttpMethod;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -56,6 +58,7 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
@@ -86,6 +89,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Date;
@@ -116,7 +120,8 @@ class ProjectResourceTest extends ResourceTest {
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(ProjectResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(GlobalExceptionHandler.class));
 
     @AfterEach
     void afterEach() {
@@ -1998,7 +2003,7 @@ class ProjectResourceTest extends ResourceTest {
                           "version": "1.2.3"
                         }
                         """.formatted(parentProject.getUuid())));
-        assertThat(response.getStatus()).isEqualTo(409);
+        assertThat(response.getStatus()).isEqualTo(400);
         assertThat(getPlainTextBody(response)).isEqualTo("An inactive Parent cannot be selected as parent");
     }
 
@@ -4207,5 +4212,288 @@ class ProjectResourceTest extends ResourceTest {
                           "active": true
                         }
                         """);
+    }
+
+    @Test
+    void shouldReturnCollectionProjectMetricsInConciseList() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        final var regularProject = new Project();
+        regularProject.setName("acme-regular");
+        qm.persist(regularProject);
+
+        final var collectionProject = new Project();
+        collectionProject.setName("acme-collection");
+        collectionProject.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN);
+        qm.createProject(collectionProject, List.of(), false);
+
+        final var childProject = new Project();
+        childProject.setName("acme-child");
+        childProject.setParent(collectionProject);
+        qm.persist(childProject);
+
+        useJdbiHandle(handle -> {
+            final var testDao = handle.attach(MetricsTestDao.class);
+            final LocalDate dbToday = handle.createQuery("SELECT CURRENT_DATE").mapTo(LocalDate.class).one();
+            testDao.createMetricsPartitionsForDate("PROJECTMETRICS", dbToday);
+            final Instant dbNow = handle.createQuery("SELECT CURRENT_TIMESTAMP").mapTo(Instant.class).one();
+
+            final var regularMetrics = new ProjectMetrics();
+            regularMetrics.setProjectId(regularProject.getId());
+            regularMetrics.setCritical(1);
+            regularMetrics.setComponents(2);
+            regularMetrics.setFirstOccurrence(Date.from(dbNow));
+            regularMetrics.setLastOccurrence(Date.from(dbNow));
+            testDao.createProjectMetrics(regularMetrics);
+
+            final var childMetrics = new ProjectMetrics();
+            childMetrics.setProjectId(childProject.getId());
+            childMetrics.setCritical(5);
+            childMetrics.setHigh(3);
+            childMetrics.setComponents(10);
+            childMetrics.setFirstOccurrence(Date.from(dbNow));
+            childMetrics.setLastOccurrence(Date.from(dbNow));
+            testDao.createProjectMetrics(childMetrics);
+        });
+
+        final Response response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("includeMetrics", "true")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("3");
+
+        final JsonArray jsonArray = parseJsonArray(response);
+        assertThat(jsonArray).hasSize(3);
+
+        final JsonObject collectionObj = jsonArray.stream()
+                .map(JsonObject.class::cast)
+                .filter(o -> "acme-collection".equals(o.getString("name")))
+                .findFirst().orElseThrow();
+        assertThatJson(collectionObj.getJsonObject("metrics").toString())
+                .withOptions(Option.IGNORING_EXTRA_FIELDS)
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "critical": 5,
+                          "high": 3,
+                          "components": 10
+                        }
+                        """);
+
+        final JsonObject regularObj = jsonArray.stream()
+                .map(JsonObject.class::cast)
+                .filter(o -> "acme-regular".equals(o.getString("name")))
+                .findFirst().orElseThrow();
+        assertThatJson(regularObj.getJsonObject("metrics").toString())
+                .withOptions(Option.IGNORING_EXTRA_FIELDS)
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "critical": 1,
+                          "components": 2
+                        }
+                        """);
+    }
+
+    @Test
+    void shouldCreateCollectionProjectWithoutClassifier() {
+        final Response response = jersey
+                .target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "acme-collection",
+                          "version": "1.0",
+                          "classifier": "LIBRARY",
+                          "collectionLogic": "AGGREGATE_DIRECT_CHILDREN"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+        final JsonObject json = parseJsonObject(response);
+        assertThat(json.getString("collectionLogic")).isEqualTo("AGGREGATE_DIRECT_CHILDREN");
+        assertThat(json.containsKey("classifier")).isFalse();
+    }
+
+    @Test
+    void shouldUpdateProjectToCollectionAndNullClassifier() {
+        final var project = qm.createProject("acme-app", null, "1.0", null, null, null, null, false);
+        project.setClassifier(Classifier.APPLICATION);
+        qm.persist(project);
+
+        final Response response = jersey
+                .target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "uuid": "%s",
+                          "name": "acme-app",
+                          "version": "1.0",
+                          "collectionLogic": "AGGREGATE_DIRECT_CHILDREN"
+                        }
+                        """.formatted(project.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonObject json = parseJsonObject(response);
+        assertThat(json.getString("collectionLogic")).isEqualTo("AGGREGATE_DIRECT_CHILDREN");
+        assertThat(json.containsKey("classifier")).isFalse();
+    }
+
+    @Test
+    void shouldPatchCollectionLogicAndNullClassifier() {
+        final var project = qm.createProject("acme-app", null, "1.0", null, null, null, null, false);
+        project.setClassifier(Classifier.APPLICATION);
+        qm.persist(project);
+
+        final Response response = jersey
+                .target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                .method("PATCH", Entity.json(/* language=JSON */ """
+                        {
+                          "collectionLogic": "AGGREGATE_DIRECT_CHILDREN"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonObject json = parseJsonObject(response);
+        assertThat(json.getString("collectionLogic")).isEqualTo("AGGREGATE_DIRECT_CHILDREN");
+        assertThat(json.containsKey("classifier")).isFalse();
+    }
+
+    @Test
+    void shouldNotAllowClassifierOnExistingCollectionViaPatch() {
+        final var project = qm.createProject("acme-collection", null, "1.0", null, null, null, null, false);
+        project.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN);
+        qm.persist(project);
+
+        final Response response = jersey
+                .target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                .method("PATCH", Entity.json(/* language=JSON */ """
+                        {
+                          "classifier": "APPLICATION"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonObject json = parseJsonObject(response);
+        assertThat(json.getString("collectionLogic")).isEqualTo("AGGREGATE_DIRECT_CHILDREN");
+        assertThat(json.containsKey("classifier")).isFalse();
+    }
+
+    @Test
+    void shouldCreateProjectWithNonExistentCollectionTag() {
+        final Response response = jersey
+                .target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "acme-collection",
+                          "version": "1.0",
+                          "collectionLogic": "AGGREGATE_DIRECT_CHILDREN_WITH_TAG",
+                          "collectionTag": {"name": "new-tag"}
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+        final JsonObject json = parseJsonObject(response);
+        assertThat(json.getString("collectionLogic")).isEqualTo("AGGREGATE_DIRECT_CHILDREN_WITH_TAG");
+        assertThat(json.getJsonObject("collectionTag").getString("name")).isEqualTo("new-tag");
+        assertThat(qm.getTagByName("new-tag")).isNotNull();
+    }
+
+    @Test
+    void shouldUpdateProjectWithNonExistentCollectionTag() {
+        final var project = qm.createProject("acme-collection", null, "1.0", null, null, null, null, false);
+
+        final Response response = jersey
+                .target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "uuid": "%s",
+                          "name": "acme-collection",
+                          "version": "1.0",
+                          "collectionLogic": "AGGREGATE_DIRECT_CHILDREN_WITH_TAG",
+                          "collectionTag": {"name": "new-tag"}
+                        }
+                        """.formatted(project.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonObject json = parseJsonObject(response);
+        assertThat(json.getString("collectionLogic")).isEqualTo("AGGREGATE_DIRECT_CHILDREN_WITH_TAG");
+        assertThat(json.getJsonObject("collectionTag").getString("name")).isEqualTo("new-tag");
+        assertThat(qm.getTagByName("new-tag")).isNotNull();
+    }
+
+    @Test
+    void shouldPatchProjectWithNonExistentCollectionTag() {
+        final var project = qm.createProject("acme-collection", null, "1.0", null, null, null, null, false);
+
+        final Response response = jersey
+                .target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                .method("PATCH", Entity.json(/* language=JSON */ """
+                        {
+                          "collectionLogic": "AGGREGATE_DIRECT_CHILDREN_WITH_TAG",
+                          "collectionTag": {"name": "new-tag"}
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonObject json = parseJsonObject(response);
+        assertThat(json.getString("collectionLogic")).isEqualTo("AGGREGATE_DIRECT_CHILDREN_WITH_TAG");
+        assertThat(json.getJsonObject("collectionTag").getString("name")).isEqualTo("new-tag");
+        assertThat(qm.getTagByName("new-tag")).isNotNull();
+    }
+
+    @Test
+    void shouldCloneCollectionProject() {
+        EventService.getInstance().subscribe(CloneProjectEvent.class, new CloneProjectTask());
+
+        final Tag prodTag = qm.createTag("prod");
+
+        final var project = new Project();
+        project.setName("acme-collection");
+        project.setVersion("1.0");
+        project.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG);
+        project.setCollectionTag(prodTag);
+        qm.createProject(project, List.of(), false);
+
+        final Response response = jersey.target("%s/clone".formatted(V1_PROJECT)).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "project": "%s",
+                          "version": "2.0",
+                          "includeTags": true
+                        }
+                        """.formatted(project.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(202);
+        final JsonObject json = parseJsonObject(response);
+        assertThat(json.getString("token")).isNotNull();
+        final UUID token = UUID.fromString(json.getString("token"));
+
+        await("Cloning completion")
+                .atMost(Duration.ofSeconds(15))
+                .pollInterval(Duration.ofMillis(50))
+                .untilAsserted(() -> {
+                    qm.getPersistenceManager().evictAll(false, WorkflowState.class);
+                    assertThat(qm.getAllWorkflowStatesForAToken(token)).satisfiesExactly(
+                            workflowState -> {
+                                assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.PROJECT_CLONE);
+                                assertThat(workflowState.getStatus()).isEqualTo(WorkflowStatus.COMPLETED);
+                            });
+                });
+
+        final Project clonedProject = qm.getProject("acme-collection", "2.0");
+        assertThat(clonedProject).isNotNull();
+        assertThat(clonedProject.getUuid()).isNotEqualTo(project.getUuid());
+        assertThat(clonedProject.getCollectionLogic()).isEqualTo(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG);
+        assertThat(clonedProject.getCollectionTag()).isNotNull();
+        assertThat(clonedProject.getCollectionTag().getName()).isEqualTo("prod");
     }
 }

@@ -352,6 +352,12 @@ public class ComponentResource extends AbstractApiResource {
                     return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
                 }
                 requireAccess(qm, project);
+                if (project.getCollectionLogic() != null) {
+                    return Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity("A collection project cannot contain components.")
+                            .build();
+                }
                 final License resolvedLicense = qm.getLicense(jsonComponent.getLicense());
                 final Component component = new Component();
                 component.setProject(project);

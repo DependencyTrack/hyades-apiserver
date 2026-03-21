@@ -33,6 +33,7 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
@@ -164,6 +165,7 @@ class UpdatePortfolioMetricsWorkflowTest extends AbstractMetricsUpdateTaskTest {
         vuln.setSeverity(Severity.HIGH);
         qm.createVulnerability(vuln, false);
 
+        // Create a project with an unaudited vulnerability.
         var projectUnaudited = new Project();
         projectUnaudited.setName("acme-app-a");
         qm.createProject(projectUnaudited, List.of(), false);
@@ -174,6 +176,7 @@ class UpdatePortfolioMetricsWorkflowTest extends AbstractMetricsUpdateTaskTest {
         qm.createComponent(componentUnaudited, false);
         qm.addVulnerability(vuln, componentUnaudited, "none");
 
+        // Create a project with an audited vulnerability.
         var projectAudited = new Project();
         projectAudited.setName("acme-app-b");
         qm.createProject(projectAudited, List.of(), false);
@@ -187,6 +190,7 @@ class UpdatePortfolioMetricsWorkflowTest extends AbstractMetricsUpdateTaskTest {
                 new MakeAnalysisCommand(componentAudited, vuln)
                         .withState(AnalysisState.NOT_AFFECTED));
 
+        // Create a project with a suppressed vulnerability.
         var projectSuppressed = new Project();
         projectSuppressed.setName("acme-app-c");
         qm.createProject(projectSuppressed, List.of(), false);
@@ -206,17 +210,17 @@ class UpdatePortfolioMetricsWorkflowTest extends AbstractMetricsUpdateTaskTest {
         final PortfolioMetrics metrics = withJdbiHandle(
                 handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
         assertThat(metrics.getProjects()).isEqualTo(3);
-        assertThat(metrics.getVulnerableProjects()).isEqualTo(2);
+        assertThat(metrics.getVulnerableProjects()).isEqualTo(2); // Finding for one project is suppressed
         assertThat(metrics.getComponents()).isEqualTo(3);
-        assertThat(metrics.getVulnerableComponents()).isEqualTo(2);
+        assertThat(metrics.getVulnerableComponents()).isEqualTo(2); // Finding for one component is suppressed
         assertThat(metrics.getCritical()).isZero();
-        assertThat(metrics.getHigh()).isEqualTo(2);
+        assertThat(metrics.getHigh()).isEqualTo(2); // One is suppressed
         assertThat(metrics.getMedium()).isZero();
         assertThat(metrics.getLow()).isZero();
         assertThat(metrics.getUnassigned()).isZero();
-        assertThat(metrics.getVulnerabilities()).isEqualTo(2);
+        assertThat(metrics.getVulnerabilities()).isEqualTo(2); // One is suppressed
         assertThat(metrics.getSuppressed()).isEqualTo(1);
-        assertThat(metrics.getFindingsTotal()).isEqualTo(2);
+        assertThat(metrics.getFindingsTotal()).isEqualTo(2); // One is suppressed
         assertThat(metrics.getFindingsAudited()).isEqualTo(1);
         assertThat(metrics.getFindingsUnaudited()).isEqualTo(1);
         assertThat(metrics.getInheritedRiskScore()).isEqualTo(10.0);
@@ -258,6 +262,7 @@ class UpdatePortfolioMetricsWorkflowTest extends AbstractMetricsUpdateTaskTest {
         qm.createComponent(componentUnaudited, false);
         createPolicyViolation(componentUnaudited, Policy.ViolationState.FAIL, PolicyViolation.Type.LICENSE);
 
+        // Create a project with an audited violation.
         var projectAudited = new Project();
         projectAudited.setName("acme-app-b");
         qm.createProject(projectAudited, List.of(), false);
@@ -271,6 +276,7 @@ class UpdatePortfolioMetricsWorkflowTest extends AbstractMetricsUpdateTaskTest {
                 new MakeViolationAnalysisCommand(componentAudited, violationAudited)
                         .withState(ViolationAnalysisState.APPROVED));
 
+        // Create a project with a suppressed violation.
         var projectSuppressed = new Project();
         projectSuppressed.setName("acme-app-c");
         qm.createProject(projectSuppressed, List.of(), false);
@@ -335,20 +341,20 @@ class UpdatePortfolioMetricsWorkflowTest extends AbstractMetricsUpdateTaskTest {
         var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
-        var componentA = new Component();
+        final var componentA = new Component();
         componentA.setProject(projectA);
         componentA.setName("acme-lib-a");
         qm.persist(componentA);
 
-        var projectB = new Project();
+        final var projectB = new Project();
         projectB.setName("acme-app-b");
         qm.persist(projectB);
-        var componentB = new Component();
+        final var componentB = new Component();
         componentB.setProject(projectB);
         componentB.setName("acme-lib-b");
         qm.persist(componentB);
 
-        var inactiveProject = new Project();
+        final var inactiveProject = new Project();
         inactiveProject.setName("inactive-project");
         inactiveProject.setInactiveSince(new Date());
         qm.persist(inactiveProject);
@@ -376,7 +382,7 @@ class UpdatePortfolioMetricsWorkflowTest extends AbstractMetricsUpdateTaskTest {
         assertThat(recentProjectMetrics).satisfiesExactlyInAnyOrder(
                 metrics -> {
                     assertThat(metrics.getProjectId()).isEqualTo(projectA.getId());
-                    assertThat(metrics.getComponents()).isEqualTo(0); // Old value preserved.
+                    assertThat(metrics.getComponents()).isEqualTo(0); // Old value.
                 },
                 metrics -> {
                     assertThat(metrics.getProjectId()).isEqualTo(projectB.getId());
@@ -384,6 +390,38 @@ class UpdatePortfolioMetricsWorkflowTest extends AbstractMetricsUpdateTaskTest {
                 }
                 // No metrics for inactiveProject.
         );
+    }
+
+    @Test
+    public void shouldExcludeCollectionProjectsFromPortfolioMetrics() {
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INTERNAL-001");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln.setSeverity(Severity.HIGH);
+        qm.createVulnerability(vuln, false);
+
+        var regularProject = new Project();
+        regularProject.setName("acme-app-regular");
+        qm.createProject(regularProject, List.of(), false);
+
+        var component = new Component();
+        component.setProject(regularProject);
+        component.setName("acme-lib");
+        qm.createComponent(component, false);
+        qm.addVulnerability(vuln, component, "none");
+
+        var collectionProject = new Project();
+        collectionProject.setName("acme-collection");
+        collectionProject.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN);
+        qm.createProject(collectionProject, List.of(), false);
+
+        runWorkflow();
+
+        final PortfolioMetrics metrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
+        assertThat(metrics.getProjects()).isEqualTo(1);
+        assertThat(metrics.getComponents()).isEqualTo(1);
+        assertThat(metrics.getHigh()).isEqualTo(1);
     }
 
 }

@@ -56,6 +56,7 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
@@ -66,6 +67,7 @@ import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
+import org.dependencytrack.persistence.jdbi.query.ListProjectsConciseQuery;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
@@ -190,8 +192,19 @@ public class ProjectResource extends AbstractApiResource {
             @Parameter(description = "Whether to include metrics in the response.")
             @QueryParam("includeMetrics") final boolean includeMetrics
     ) {
-        final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, versionFilter, classifierFilter, tagFilter, teamFilter, activeFilter, onlyRootFilter, /* parentUuidFilter */ null, includeMetrics));
+        final List<ConciseProjectListRow> projectRows = withJdbiHandle(
+                getAlpineRequest(),
+                handle -> handle
+                        .attach(ProjectDao.class)
+                        .getPageConcise(new ListProjectsConciseQuery()
+                                .withNameFilter(nameFilter)
+                                .withVersionFilter(versionFilter)
+                                .withClassifierFilter(classifierFilter)
+                                .withTagFilter(tagFilter)
+                                .withTeamFilter(teamFilter)
+                                .withActiveFilter(activeFilter)
+                                .withOnlyRootFilter(onlyRootFilter)
+                                .withIncludeMetrics(includeMetrics)));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
@@ -235,8 +248,19 @@ public class ProjectResource extends AbstractApiResource {
             @Parameter(description = "Whether to include metrics in the response.")
             @QueryParam("includeMetrics") final boolean includeMetrics
     ) {
-        final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, versionFilter, classifierFilter, tagFilter, teamFilter, activeFilter, /* onlyRootFilter */ null, UUID.fromString(parentUuid), includeMetrics));
+        final List<ConciseProjectListRow> projectRows = withJdbiHandle(
+                getAlpineRequest(),
+                handle -> handle
+                        .attach(ProjectDao.class)
+                        .getPageConcise(new ListProjectsConciseQuery()
+                                .withNameFilter(nameFilter)
+                                .withVersionFilter(versionFilter)
+                                .withClassifierFilter(classifierFilter)
+                                .withTagFilter(tagFilter)
+                                .withTeamFilter(teamFilter)
+                                .withActiveFilter(activeFilter)
+                                .withParentUuidFilter(UUID.fromString(parentUuid))
+                                .withIncludeMetrics(includeMetrics)));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
@@ -466,12 +490,15 @@ public class ProjectResource extends AbstractApiResource {
                 validator.validateProperty(jsonProject, "description"),
                 validator.validateProperty(jsonProject, "version"),
                 validator.validateProperty(jsonProject, "classifier"),
+                validator.validateProperty(jsonProject, "collectionLogic"),
                 validator.validateProperty(jsonProject, "cpe"),
                 validator.validateProperty(jsonProject, "purl"),
                 validator.validateProperty(jsonProject, "swidTagId"),
                 validator.validateProperty(jsonProject, "accessTeams")
         );
-        if (jsonProject.getClassifier() == null) {
+        if (jsonProject.getCollectionLogic() != null) {
+            jsonProject.setClassifier(null);
+        } else if (jsonProject.getClassifier() == null) {
             jsonProject.setClassifier(Classifier.APPLICATION);
         }
         try (final var qm = new QueryManager()) {
@@ -558,8 +585,8 @@ public class ProjectResource extends AbstractApiResource {
                 } catch (IllegalArgumentException e) {
                     LOGGER.debug("Failed to create project %s".formatted(jsonProject), e);
                     throw new ClientErrorException(Response
-                            .status(Response.Status.CONFLICT)
-                            .entity("An inactive Parent cannot be selected as parent")
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity(e.getMessage())
                             .build());
                 } catch (RuntimeException e) {
                     if (isUniqueConstraintViolation(e)) {
@@ -623,11 +650,14 @@ public class ProjectResource extends AbstractApiResource {
                 validator.validateProperty(jsonProject, "description"),
                 validator.validateProperty(jsonProject, "version"),
                 validator.validateProperty(jsonProject, "classifier"),
+                validator.validateProperty(jsonProject, "collectionLogic"),
                 validator.validateProperty(jsonProject, "cpe"),
                 validator.validateProperty(jsonProject, "purl"),
                 validator.validateProperty(jsonProject, "swidTagId")
         );
-        if (jsonProject.getClassifier() == null) {
+        if (jsonProject.getCollectionLogic() != null) {
+            jsonProject.setClassifier(null);
+        } else if (jsonProject.getClassifier() == null) {
             jsonProject.setClassifier(Classifier.APPLICATION);
         }
         try (final var qm = new QueryManager()) {
@@ -661,6 +691,14 @@ public class ProjectResource extends AbstractApiResource {
                     if(oldLatest != null) {
                         requireAccess(qm, oldLatest);
                     }
+                }
+
+                if (jsonProject.getCollectionLogic() == ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG
+                        && jsonProject.getCollectionTag() == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity("A collection tag must be specified for AGGREGATE_DIRECT_CHILDREN_WITH_TAG logic.")
+                            .build());
                 }
 
                 try {
@@ -733,6 +771,7 @@ public class ProjectResource extends AbstractApiResource {
                 validator.validateProperty(jsonProject, "description"),
                 validator.validateProperty(jsonProject, "version"),
                 validator.validateProperty(jsonProject, "classifier"),
+                validator.validateProperty(jsonProject, "collectionLogic"),
                 validator.validateProperty(jsonProject, "cpe"),
                 validator.validateProperty(jsonProject, "purl"),
                 validator.validateProperty(jsonProject, "swidTagId")
@@ -766,6 +805,8 @@ public class ProjectResource extends AbstractApiResource {
                 modified |= setIfDifferent(jsonProject, project, Project::getGroup, Project::setGroup);
                 modified |= setIfDifferent(jsonProject, project, Project::getDescription, Project::setDescription);
                 modified |= setIfDifferent(jsonProject, project, Project::getClassifier, Project::setClassifier);
+                modified |= setIfDifferent(jsonProject, project, Project::getCollectionLogic, Project::setCollectionLogic);
+                modified |= setIfDifferent(jsonProject, project, Project::getCollectionTag, Project::setCollectionTag);
                 modified |= setIfDifferent(jsonProject, project, Project::getCpe, Project::setCpe);
                 modified |= setIfDifferent(jsonProject, project, Project::getPurl, Project::setPurl);
                 modified |= setIfDifferent(jsonProject, project, Project::getSwidTagId, Project::setSwidTagId);
@@ -773,6 +814,10 @@ public class ProjectResource extends AbstractApiResource {
                 modified |= setIfDifferent(jsonProject, project, Project::getSupplier, Project::setSupplier);
                 modified |= setIfDifferent(jsonProject, project, Project::isLatest, Project::setIsLatest);
                 modified |= setIfDifferent(jsonProject, project, Project::isActive, Project::setActive);
+                if (project.getCollectionLogic() != null && project.getClassifier() != null) {
+                    project.setClassifier(null);
+                    modified = true;
+                }
                 if (jsonProject.getParent() != null && jsonProject.getParent().getUuid() != null) {
                     final Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
                     if (parent == null) {
@@ -796,6 +841,14 @@ public class ProjectResource extends AbstractApiResource {
 
                 if (!modified) {
                     return null;
+                }
+
+                if (project.getCollectionLogic() == ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG
+                        && project.getCollectionTag() == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity("A collection tag must be specified for AGGREGATE_DIRECT_CHILDREN_WITH_TAG logic.")
+                            .build());
                 }
 
                 try {

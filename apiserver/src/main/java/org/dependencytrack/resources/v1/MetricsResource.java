@@ -52,6 +52,7 @@ import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao.ProjectInfoRow;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.util.DateUtil;
@@ -61,11 +62,11 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import static org.apache.commons.lang3.time.DateUtils.addDays;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_METRICS_RETENTION_DAYS;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -255,13 +256,32 @@ public class MetricsResource extends AbstractApiResource {
     public Response getProjectCurrentMetrics(
             @Parameter(description = "The UUID of the project to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        return inJdbiTransaction(getAlpineRequest(), handle -> {
-            var projectId = handle.attach(ProjectDao.class).getProjectId(UUID.fromString(uuid));
-            if (projectId == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
+        return withJdbiHandle(getAlpineRequest(), handle -> {
             requireProjectAccess(handle, UUID.fromString(uuid));
-            final ProjectMetrics metrics = handle.attach(MetricsDao.class).getMostRecentProjectMetrics(projectId);
+
+            final ProjectInfoRow projectInfo = handle
+                    .attach(ProjectDao.class)
+                    .getProjectInfo(UUID.fromString(uuid));
+            if (projectInfo == null) {
+                throw new NoSuchElementException("Project could not be found");
+            }
+
+            final var metricsDao = handle.attach(MetricsDao.class);
+
+            ProjectMetrics metrics;
+            if (projectInfo.isCollection()) {
+                metrics = metricsDao.getMostRecentCollectionProjectMetrics(projectInfo.id());
+            } else {
+                metrics = metricsDao.getMostRecentProjectMetrics(projectInfo.id());
+            }
+
+            if (metrics == null) {
+                metrics = new ProjectMetrics();
+                final var now = new Date();
+                metrics.setFirstOccurrence(now);
+                metrics.setLastOccurrence(now);
+            }
+
             return Response.ok(metrics).build();
         });
     }
@@ -296,7 +316,7 @@ public class MetricsResource extends AbstractApiResource {
             @Parameter(description = "The start date to retrieve metrics for", required = true)
             @PathParam("date") String date) {
         final Date since = DateUtil.parseShortDate(date);
-        return getProjectMetrics(uuid, since);
+        return getProjectMetrics(UUID.fromString(uuid), since);
     }
 
     @GET
@@ -327,7 +347,7 @@ public class MetricsResource extends AbstractApiResource {
             @Parameter(description = "The number of days back to retrieve metrics for", required = true)
             @PathParam("days") int days) {
         final Date since = addDays(new Date(), -days);
-        return getProjectMetrics(uuid, since);
+        return getProjectMetrics(UUID.fromString(uuid), since);
     }
 
     @GET
@@ -386,7 +406,7 @@ public class MetricsResource extends AbstractApiResource {
     public Response getComponentCurrentMetrics(
             @Parameter(description = "The UUID of the component to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        return inJdbiTransaction(getAlpineRequest(), handle -> {
+        return withJdbiHandle(getAlpineRequest(), handle -> {
             var componentId = handle.attach(ComponentDao.class).getComponentId(UUID.fromString(uuid));
             if (componentId == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
@@ -494,21 +514,34 @@ public class MetricsResource extends AbstractApiResource {
         return Response.ok().build();
     }
 
-    /**
-     * Private method common to retrieving project metrics based on a time period.
-     *
-     * @param uuid  the UUID of the project
-     * @param since the Date to start retrieving metrics from
-     * @return a Response object
-     */
-    private Response getProjectMetrics(String uuid, Date since) {
-        return inJdbiTransaction(getAlpineRequest(), handle -> {
-            var projectId = handle.attach(ProjectDao.class).getProjectId(UUID.fromString(uuid));
-            if (projectId == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+    private Response getProjectMetrics(UUID uuid, Date since) {
+        return withJdbiHandle(getAlpineRequest(), handle -> {
+            requireProjectAccess(handle, uuid);
+
+            final ProjectInfoRow projectInfo = handle
+                    .attach(ProjectDao.class)
+                    .getProjectInfo(uuid);
+            if (projectInfo == null) {
+                throw new NoSuchElementException("Project could not be found");
             }
-            requireProjectAccess(handle, UUID.fromString(uuid));
-            final List<ProjectMetrics> metrics = handle.attach(MetricsDao.class).getProjectMetricsSince(projectId, since.toInstant());
+
+            final int retentionDays = handle.attach(ConfigPropertyDao.class)
+                    .getOptionalValue(MAINTENANCE_METRICS_RETENTION_DAYS, Integer.class)
+                    .orElseGet(() -> Integer.parseInt(MAINTENANCE_METRICS_RETENTION_DAYS.getDefaultPropertyValue()));
+            final Date retentionCutoff = addDays(new Date(), -retentionDays);
+            final Date effectiveSince = since.before(retentionCutoff) ? retentionCutoff : since;
+
+            final var metricsDao = handle.attach(MetricsDao.class);
+
+            final List<ProjectMetrics> metrics;
+            if (projectInfo.isCollection()) {
+                metrics = metricsDao.getCollectionProjectMetricsSince(
+                        projectInfo.id(),
+                        effectiveSince.toInstant());
+            } else {
+                metrics = metricsDao.getProjectMetricsSince(projectInfo.id(), effectiveSince.toInstant());
+            }
+
             return Response.ok(metrics).build();
         });
     }
@@ -521,13 +554,20 @@ public class MetricsResource extends AbstractApiResource {
      * @return a Response object
      */
     private Response getComponentMetrics(String uuid, Date since) {
-        return inJdbiTransaction(getAlpineRequest(), handle -> {
+        return withJdbiHandle(getAlpineRequest(), handle -> {
             var componentId = handle.attach(ComponentDao.class).getComponentId(UUID.fromString(uuid));
             if (componentId == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
             requireComponentAccess(handle, UUID.fromString(uuid));
-            final List<DependencyMetrics> metrics = handle.attach(MetricsDao.class).getDependencyMetricsSince(componentId, since.toInstant());
+
+            final int retentionDays = handle.attach(ConfigPropertyDao.class)
+                    .getOptionalValue(MAINTENANCE_METRICS_RETENTION_DAYS, Integer.class)
+                    .orElseGet(() -> Integer.parseInt(MAINTENANCE_METRICS_RETENTION_DAYS.getDefaultPropertyValue()));
+            final Date retentionCutoff = addDays(new Date(), -retentionDays);
+            final Date effectiveSince = since.before(retentionCutoff) ? retentionCutoff : since;
+
+            final List<DependencyMetrics> metrics = handle.attach(MetricsDao.class).getDependencyMetricsSince(componentId, effectiveSince.toInstant());
             return Response.ok(metrics).build();
         });
     }

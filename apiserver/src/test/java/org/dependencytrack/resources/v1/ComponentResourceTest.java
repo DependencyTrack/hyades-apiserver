@@ -30,6 +30,7 @@ import jakarta.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentOccurrence;
@@ -38,6 +39,7 @@ import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.PackageArtifactMetadata;
 import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.persistence.jdbi.PackageArtifactMetadataDao;
 import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -1150,6 +1152,28 @@ public class ComponentResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
         assertThatJson(getPlainTextBody(response)).isEqualTo("[]");
+    }
+
+    @Test
+    void shouldRejectComponentCreationForCollectionProject() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT, Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN);
+        qm.createProject(project, List.of(), false);
+
+        final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid()).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "acme-lib",
+                          "version": "1.0.0",
+                          "classifier": "LIBRARY"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("A collection project cannot contain components.");
     }
 
 }
