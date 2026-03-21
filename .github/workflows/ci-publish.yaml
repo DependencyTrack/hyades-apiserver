@@ -19,8 +19,7 @@ name: Publish CI
 on:
   release:
     types:
-      - released
-      - prereleased
+      - created
   workflow_dispatch:
 
 permissions: { }
@@ -106,3 +105,10 @@ jobs:
             target/dependency-track-apiserver-dist.tar.gz \
             target/bom.json \
             target/checksums.txt
+
+      - name: Publish Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_RELEASE_TOKEN }}
+        run: |-
+          gh release edit ${{ needs.read-version.outputs.version }} \
+            --draft=false
