@@ -28,6 +28,7 @@ import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
 import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
 import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
@@ -150,8 +151,7 @@ final class PypiPackageMetadataResolver implements PackageMetadataResolver {
     private @Nullable PypiPackageDocument fetchDocument(
             PackageURL purl,
             PackageRepository repository) throws InterruptedException {
-        final String baseUrl = trimTrailingSlash(repository.url());
-        final String url = baseUrl + "/pypi/" + purl.getName() + "/json";
+        final String url = UrlUtils.join(repository.url(), "pypi", purl.getName(), "json");
 
         final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -234,10 +234,6 @@ final class PypiPackageMetadataResolver implements PackageMetadataResolver {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private static String trimTrailingSlash(String url) {
-        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
 }
