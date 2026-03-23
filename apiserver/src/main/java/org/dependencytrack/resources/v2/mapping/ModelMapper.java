@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.resources.v2.mapping;
 
+import org.dependencytrack.api.v2.model.ComponentProject;
+import org.dependencytrack.api.v2.model.DependencyMetrics;
 import org.dependencytrack.api.v2.model.Hashes;
 import org.dependencytrack.api.v2.model.License;
 import org.dependencytrack.api.v2.model.OrganizationalContact;
@@ -49,6 +51,52 @@ public class ModelMapper {
                 .licenseId(license.getLicenseId())
                 .osiApproved(license.isOsiApproved())
                 .uuid(license.getUuid())
+                .build();
+    }
+
+    public static ComponentProject mapProject(org.dependencytrack.model.Project project) {
+        if (project == null) {
+            return null;
+        }
+        return ComponentProject.builder()
+                .name(project.getName())
+                .version(project.getVersion())
+                .uuid(project.getUuid())
+                .directDependencies(project.getDirectDependencies())
+                .build();
+    }
+
+    public static DependencyMetrics mapDependencyMetrics(org.dependencytrack.model.DependencyMetrics metrics) {
+        if (metrics == null) {
+            return null;
+        }
+        return DependencyMetrics.builder()
+                .critical(metrics.getCritical())
+                .high(metrics.getHigh())
+                .medium(metrics.getMedium())
+                .low(metrics.getLow())
+                .unassigned(metrics.getUnassigned())
+                .vulnerabilities(metrics.getVulnerabilities())
+                .suppressed(metrics.getSuppressed())
+                .findingsTotal(metrics.getFindingsTotal())
+                .findingsAudited(metrics.getFindingsAudited())
+                .findingsUnaudited(metrics.getFindingsUnaudited())
+                .inheritedRiskScore(metrics.getInheritedRiskScore())
+                .policyViolationsFail(metrics.getPolicyViolationsFail())
+                .policyViolationsWarn(metrics.getPolicyViolationsWarn())
+                .policyViolationsInfo(metrics.getPolicyViolationsInfo())
+                .policyViolationsTotal(metrics.getPolicyViolationsTotal())
+                .policyViolationsAudited(metrics.getPolicyViolationsAudited())
+                .policyViolationsUnaudited(metrics.getPolicyViolationsUnaudited())
+                .policyViolationsSecurityTotal(metrics.getPolicyViolationsSecurityTotal())
+                .policyViolationsSecurityAudited(metrics.getPolicyViolationsSecurityAudited())
+                .policyViolationsSecurityUnaudited(metrics.getPolicyViolationsSecurityUnaudited())
+                .policyViolationsLicenseTotal(metrics.getPolicyViolationsLicenseTotal())
+                .policyViolationsLicenseAudited(metrics.getPolicyViolationsLicenseAudited())
+                .policyViolationsLicenseUnaudited(metrics.getPolicyViolationsLicenseUnaudited())
+                .policyViolationsOperationalTotal(metrics.getPolicyViolationsOperationalTotal())
+                .policyViolationsOperationalAudited(metrics.getPolicyViolationsOperationalAudited())
+                .policyViolationsOperationalUnaudited(metrics.getPolicyViolationsOperationalUnaudited())
                 .build();
     }
 

@@ -18,14 +18,20 @@
  */
 package org.dependencytrack.resources.v2;
 
+import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
+import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.Project;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -133,5 +139,308 @@ public class ComponentsResourceTest extends ResourceTest {
                         }
                         """.formatted(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(201);
+    }
+
+    @Test
+    public void listComponentsByIdentityPaginationTest() {
+        prepareComponents();
+        Response response = jersey.target("/components")
+                .queryParam("limit", 2)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "items" : [ {
+                        "name": "nameA",
+                        "version": "versionA",
+                        "group": "groupA",
+                        "cpe": "cpe:2.3:a:groupA:nameA:versionA:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupA/nameA@versionA?foo=bar",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectA",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}",
+                            "direct_dependencies": "${json-unit.any-string}"
+                        }
+                      },
+                      {
+                        "name": "nameB",
+                        "version": "versionB",
+                        "group": "groupB",
+                        "cpe": "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
+                      }
+                  ],
+                  "next_page_token": "${json-unit.any-string}"
+                }
+                """);
+
+        final String nextPageToken = responseJson.getString("next_page_token");
+        response = jersey.target("/components")
+                .queryParam("limit", 1)
+                .queryParam("page_token", nextPageToken)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "items" : [ {
+                        "name": "nameC",
+                        "version": "versionC",
+                        "group": "groupC",
+                        "cpe": "cpe:2.3:a:groupC:nameC:versionC:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupC/nameC@versionC?baz=qux",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
+                      }
+                  ]
+                }
+                """);
+    }
+
+    @Test
+    public void listComponentsByIdentityWithCoordinatesTest() {
+        prepareComponents();
+        Response response = jersey.target("/components")
+                .queryParam("group", "B")
+                .queryParam("name", "B")
+                .queryParam("version", "versionB")
+                .queryParam("limit", 2)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "items" : [ {
+                        "name": "nameB",
+                        "version": "versionB",
+                        "group": "groupB",
+                        "cpe": "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
+                      }
+                  ]
+                }
+                """);
+    }
+
+    @Test
+    public void listComponentsByIdentityWithPurlTest() {
+        prepareComponents();
+        Response response = jersey.target("/components")
+                .queryParam("purl", "pkg:maven/groupB/nameB@versionB?baz=qux")
+                .queryParam("limit", 2)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "items" : [ {
+                        "name": "nameB",
+                        "version": "versionB",
+                        "group": "groupB",
+                        "cpe": "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
+                      }
+                  ]
+                }
+                """);
+    }
+
+    @Test
+    public void listComponentsByIdentityWithInvalidCpeTest() {
+        prepareComponents();
+        Response response = jersey.target("/components")
+                .queryParam("cpe", "nameB")
+                .queryParam("limit", 2)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_BAD_REQUEST);
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThat(responseJson.toString()).contains("Invalid CPE: nameB");
+    }
+
+    @Test
+    public void listComponentsByIdentityWithCpeTest() {
+        prepareComponents();
+        Response response = jersey.target("/components")
+                .queryParam("cpe", "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*")
+                .queryParam("limit", 2)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "items" : [ {
+                        "name": "nameB",
+                        "version": "versionB",
+                        "group": "groupB",
+                        "cpe": "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
+                      }
+                  ]
+                }
+                """);
+    }
+
+    @Test
+    public void listComponentsByIdentityWithProjectTest() {
+        prepareComponents();
+        Response response = jersey.target("/components")
+                .queryParam("project_uuid", qm.getProject("projectA", "1.0").getUuid())
+                .queryParam("limit", 2)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "items" : [ {
+                        "name": "nameA",
+                        "version": "versionA",
+                        "group": "groupA",
+                        "cpe": "cpe:2.3:a:groupA:nameA:versionA:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupA/nameA@versionA?foo=bar",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectA",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}",
+                            "direct_dependencies": "${json-unit.any-string}"
+                        }
+                      }
+                  ]
+                }
+                """);
+    }
+
+    @Test
+    public void listComponentsByIdentityWithProjectWhenProjectDoesNotExistTest() {
+        Response response = jersey.target("/components")
+                .queryParam("project_uuid", UUID.randomUUID())
+                .queryParam("limit", 2)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_NOT_FOUND);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
+        assertThat(getPlainTextBody(response)).contains("Not Found");
+    }
+
+    @Test
+    public void listComponentsByIdentityAclTest() {
+        enablePortfolioAccessControl();
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        prepareComponents();
+        Response response = jersey.target("/components")
+                .queryParam("name", "name")
+                .queryParam("limit", 2)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "items" : [ {
+                        "name": "nameA",
+                        "version": "versionA",
+                        "group": "groupA",
+                        "cpe": "cpe:2.3:a:groupA:nameA:versionA:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupA/nameA@versionA?foo=bar",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectA",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}",
+                            "direct_dependencies": "${json-unit.any-string}"
+                        }
+                      }
+                  ]
+                }
+                """);
+    }
+
+    private void prepareComponents() {
+        final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, null, false);
+        projectA.addAccessTeam(team);
+        var componentA = new Component();
+        componentA.setProject(projectA);
+        componentA.setGroup("groupA");
+        componentA.setName("nameA");
+        componentA.setVersion("versionA");
+        componentA.setCpe("cpe:2.3:a:groupA:nameA:versionA:*:*:*:*:*:*:*");
+        componentA.setPurl("pkg:maven/groupA/nameA@versionA?foo=bar");
+        qm.createComponent(componentA, false);
+        projectA.setDirectDependencies("[%s]".formatted(new ComponentIdentity(componentA).toJSON()));
+
+        final Project projectB = qm.createProject("projectB", null, "1.0", null, null, null, null, false);
+        var componentB = new Component();
+        componentB.setProject(projectB);
+        componentB.setGroup("groupB");
+        componentB.setName("nameB");
+        componentB.setVersion("versionB");
+        componentB.setCpe("cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*");
+        componentB.setPurl("pkg:maven/groupB/nameB@versionB?baz=qux");
+        qm.createComponent(componentB, false);
+
+        var componentC = new Component();
+        componentC.setProject(projectB);
+        componentC.setGroup("groupC");
+        componentC.setName("nameC");
+        componentC.setVersion("versionC");
+        componentC.setCpe("cpe:2.3:a:groupC:nameC:versionC:*:*:*:*:*:*:*");
+        componentC.setPurl("pkg:maven/groupC/nameC@versionC?baz=qux");
+        qm.createComponent(componentC, false);
     }
 }

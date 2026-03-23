@@ -23,7 +23,9 @@ import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentOccurrence;
+import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.License;
+import org.dependencytrack.model.Project;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.mapper.reflect.BeanMapper;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -38,8 +40,13 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.hasColumn;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
 public interface ComponentDao extends SqlObject {
@@ -193,6 +200,141 @@ public interface ComponentDao extends SqlObject {
             @Bind Long lastId
     );
 
+    default Page<Component> listComponents(
+            final Long projectId,
+            final Boolean includeMetrics,
+            final String componentPurl,
+            final String componentCpe,
+            final String componentSwidTagId,
+            final String componentGroup,
+            final String componentName,
+            final String componentVersion,
+            final int limit,
+            final String pageToken) {
+        final PageTokenEncoder pageTokenEncoder =
+                getHandle().getConfig(PaginationConfig.class).getPageTokenEncoder();
+        final var decodedPageToken = pageTokenEncoder.decode(pageToken, ListComponentPageToken.class);
+
+        final List<Component> rows = listComponents(projectId, limit + 1,
+                componentGroup, componentName, componentVersion, componentPurl, componentCpe, componentSwidTagId,
+                decodedPageToken != null ? decodedPageToken.lastName() : null,
+                decodedPageToken != null ? decodedPageToken.lastVersion() : null,
+                decodedPageToken != null ? decodedPageToken.lastId() : null);
+
+        final List<Component> resultRows = rows.size() > 1
+                ? rows.subList(0, Math.min(rows.size(), limit))
+                : rows;
+
+        final ListComponentPageToken nextPageToken = rows.size() > limit
+                ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion(), resultRows.getLast().getId())
+                : null;
+
+        if (includeMetrics) {
+            final Map<Long, Component> componentById = resultRows.stream()
+                    .collect(Collectors.toMap(Component::getId, Function.identity()));
+            final List<DependencyMetrics> metricsList = withJdbiHandle(
+                    handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(componentById.keySet()));
+            for (final DependencyMetrics metrics : metricsList) {
+                final var component = componentById.get(metrics.getComponentId());
+                if (component != null) {
+                    component.setMetrics(metrics);
+                }
+            }
+        }
+
+        return new Page<>(resultRows, pageTokenEncoder.encode(nextPageToken));
+    }
+
+    @SqlQuery(/* language=InjectedFreeMarker */ """
+            <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
+            SELECT "C"."ID",
+                        "C"."NAME",
+                        "C"."BLAKE2B_256",
+                        "C"."BLAKE2B_384",
+                        "C"."BLAKE2B_512",
+                        "C"."BLAKE3",
+                        "C"."CLASSIFIER",
+                        "C"."COPYRIGHT",
+                        "C"."CPE",
+                        "C"."PURL" AS "componentPurl",
+                        "C"."GROUP",
+                        "C"."INTERNAL",
+                        "C"."LAST_RISKSCORE" AS "lastInheritedRiskScore",
+                        "C"."LICENSE" AS "componentLicenseName",
+                        "C"."LICENSE_EXPRESSION" AS "licenseExpression",
+                        "C"."LICENSE_URL" AS "licenseUrl",
+                        "C"."TEXT",
+                        "C"."MD5",
+                        "C"."SHA1",
+                        "C"."SHA_256" AS "sha256",
+                        "C"."SHA_384" AS "sha384",
+                        "C"."SHA_512" AS "sha512",
+                        "C"."SHA3_256",
+                        "C"."SHA3_384",
+                        "C"."SHA3_512",
+                        "C"."SWIDTAGID",
+                        "C"."UUID",
+                        "C"."VERSION",
+                        "L"."ISCUSTOMLICENSE",
+                        "L"."FSFLIBRE" AS "isFsfLibre",
+                        "L"."LICENSEID",
+                        "L"."ISOSIAPPROVED",
+                        "L"."UUID" AS "licenseUuid",
+                        "L"."NAME" AS "licenseName",
+                        "PROJECT"."NAME" AS "projectName",
+                        "PROJECT"."UUID" AS "projectUuid",
+                        "PROJECT"."VERSION" AS "projectVersion",
+                        "PROJECT"."DIRECT_DEPENDENCIES" AS "projectDirectDependencies"
+                FROM "COMPONENT" "C"
+                INNER JOIN "PROJECT" ON "C"."PROJECT_ID" = "PROJECT"."ID"
+                LEFT OUTER JOIN "LICENSE" "L" ON "C"."LICENSE_ID" = "L"."ID"
+                WHERE ${apiProjectAclCondition}
+                <#if projectId>
+                    AND "C"."PROJECT_ID" = :projectId
+                </#if>
+                <#if componentGroup>
+                    AND LOWER("C"."GROUP") LIKE ('%' || LOWER(:componentGroup) || '%')
+                </#if>
+                <#if componentName>
+                    AND LOWER("C"."NAME") LIKE ('%' || LOWER(:componentName) || '%')
+                </#if>
+                <#if componentVersion>
+                    AND LOWER("C"."VERSION") LIKE ('%' || LOWER(:componentVersion) || '%')
+                </#if>
+                <#if componentPurl>
+                    AND LOWER("C"."PURL") LIKE LOWER(:componentPurl) || '%'
+                </#if>
+                <#if componentCpe>
+                    AND LOWER("C"."CPE") LIKE ('%' || LOWER(:componentCpe) || '%')
+                </#if>
+                <#if componentSwidTagId>
+                    AND LOWER("C"."SWIDTAGID") LIKE ('%' || LOWER(:componentSwidTagId) || '%')
+                </#if>
+                <#if lastName && lastVersion && lastId>
+                    AND ("C"."NAME" > :lastName
+                            OR ("C"."NAME" = :lastName AND "C"."VERSION" < :lastVersion)
+                            OR ("C"."NAME" = :lastName AND "C"."VERSION" = :lastVersion AND "C"."ID" > :lastId))
+                </#if>
+                ORDER BY "NAME" ASC, "VERSION" DESC, "ID" ASC
+                LIMIT :limit
+            """)
+    @DefineNamedBindings
+    @RegisterRowMapper(ComponentListRowMapper.class)
+    @DefineApiProjectAclCondition(projectIdColumn = "\"C\".\"PROJECT_ID\"")
+    List<Component> listComponents(
+            @Bind Long projectId,
+            @Bind int limit,
+            @Bind String componentGroup,
+            @Bind String componentName,
+            @Bind String componentVersion,
+            @Bind String componentPurl,
+            @Bind String componentCpe,
+            @Bind String componentSwidTagId,
+            @Bind String lastName,
+            @Bind String lastVersion,
+            @Bind Long lastId
+    );
+
     class ComponentListRowMapper implements RowMapper<Component> {
 
         private final RowMapper<Component> componentRowMapper = BeanMapper.of(Component.class);
@@ -200,8 +342,16 @@ public interface ComponentDao extends SqlObject {
         @Override
         public Component map(final ResultSet rs, final StatementContext ctx) throws SQLException {
             final Component component = componentRowMapper.map(rs, ctx);
+            if (hasColumn(rs, "projectUuid") && rs.getString("projectUuid") != null) {
+                final var project = new Project();
+                project.setUuid(UUID.fromString(rs.getString("projectUuid")));
+                maybeSet(rs, "projectName", ResultSet::getString, project::setName);
+                maybeSet(rs, "projectVersion", ResultSet::getString, project::setVersion);
+                maybeSet(rs, "projectDirectDependencies", ResultSet::getString, project::setDirectDependencies);
+                component.setProject(project);
+            }
             maybeSet(rs, "componentPurl", ResultSet::getString, component::setPurl);
-            if (rs.getString("licenseUuid") != null) {
+            if (hasColumn(rs, "licenseUuid") && rs.getString("licenseUuid") != null) {
                 final var license = new License();
                 license.setUuid(UUID.fromString(rs.getString("licenseUuid")));
                 maybeSet(rs, "licenseId", ResultSet::getString, license::setLicenseId);
@@ -211,7 +361,9 @@ public interface ComponentDao extends SqlObject {
                 maybeSet(rs, "isOsiApproved", ResultSet::getBoolean, license::setOsiApproved);
                 component.setResolvedLicense(license);
             }
-            maybeSet(rs, "occurrenceCount", ResultSet::getLong, component::setOccurrenceCount);
+            if (hasColumn(rs, "occurrenceCount")) {
+                maybeSet(rs, "occurrenceCount", ResultSet::getLong, component::setOccurrenceCount);
+            }
             return component;
         }
     }
