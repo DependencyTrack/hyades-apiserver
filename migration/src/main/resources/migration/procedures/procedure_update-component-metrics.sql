@@ -80,7 +80,7 @@ BEGIN
        , v_low
        , v_unassigned;
 
-  v_risk_score = "CALC_RISK_SCORE"(v_critical, v_high, v_medium, v_low, v_unassigned);
+  v_risk_score = COALESCE("CALC_RISK_SCORE"(v_critical, v_high, v_medium, v_low, v_unassigned), 0);
 
   SELECT COALESCE(COUNT(*) FILTER (
              WHERE a."SUPPRESSED" = FALSE

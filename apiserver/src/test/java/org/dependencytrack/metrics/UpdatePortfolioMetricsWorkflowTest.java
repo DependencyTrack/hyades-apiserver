@@ -18,11 +18,15 @@
  */
 package org.dependencytrack.metrics;
 
-import alpine.event.framework.EventService;
-import net.jcip.annotations.NotThreadSafe;
-import org.dependencytrack.event.CallbackEvent;
-import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
-import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import io.github.resilience4j.core.IntervalFunction;
+import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.TaskType;
+import org.dependencytrack.dex.engine.api.TaskWorkerOptions;
+import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.dex.testing.WorkflowTestExtension;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
@@ -37,42 +41,89 @@ import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.MetricsTestDao;
-import org.dependencytrack.tasks.CallbackTask;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.dependencytrack.proto.internal.workflow.v1.FetchProjectMetricsUpdateCandidatesRes;
+import org.dependencytrack.proto.internal.workflow.v1.UpdateProjectMetricsArg;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.util.Collections;
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.metrics.PortfolioMetricsUpdateTask.partition;
+import static org.dependencytrack.dex.api.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.dex.api.payload.PayloadConverters.voidConverter;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
-@NotThreadSafe
-public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
+class UpdatePortfolioMetricsWorkflowTest extends AbstractMetricsUpdateTaskTest {
 
-    @BeforeAll
-    public static void setUpClass1() {
-        EventService.getInstance().subscribe(ProjectMetricsUpdateEvent.class, new ProjectMetricsUpdateTask());
-        EventService.getInstance().subscribe(CallbackEvent.class, new CallbackTask());
+    @RegisterExtension
+    private final WorkflowTestExtension workflowTest =
+            new WorkflowTestExtension(DataSourceRegistry.getInstance().getDefault());
+
+    @BeforeEach
+    void beforeEach() {
+        createTestConfigProperties();
+
+        final DexEngine engine = workflowTest.getEngine();
+
+        engine.registerWorkflow(
+                new UpdatePortfolioMetricsWorkflow(),
+                voidConverter(),
+                voidConverter(),
+                Duration.ofSeconds(30));
+        engine.registerActivity(
+                new FetchProjectMetricsUpdateCandidatesActivity(),
+                voidConverter(),
+                protoConverter(FetchProjectMetricsUpdateCandidatesRes.class),
+                Duration.ofSeconds(10));
+        engine.registerActivity(
+                new RefreshGlobalPortfolioMetricsActivity(),
+                voidConverter(),
+                voidConverter(),
+                Duration.ofSeconds(10));
+        engine.registerActivity(
+                new UpdateProjectMetricsActivity(),
+                protoConverter(UpdateProjectMetricsArg.class),
+                voidConverter(),
+                Duration.ofSeconds(10));
+
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.WORKFLOW, "default", 1));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "default", 1));
+        engine.createTaskQueue(new CreateTaskQueueRequest(TaskType.ACTIVITY, "metrics-updates", 5));
+
+        engine.registerTaskWorker(
+                new TaskWorkerOptions(TaskType.WORKFLOW, "workflow-worker", "default", 1)
+                        .withMinPollInterval(Duration.ofMillis(25))
+                        .withPollBackoffFunction(IntervalFunction.of(25)));
+        engine.registerTaskWorker(
+                new TaskWorkerOptions(TaskType.ACTIVITY, "activity-worker-default", "default", 1)
+                        .withMinPollInterval(Duration.ofMillis(25))
+                        .withPollBackoffFunction(IntervalFunction.of(25)));
+        engine.registerTaskWorker(
+                new TaskWorkerOptions(TaskType.ACTIVITY, "activity-worker-metrics", "metrics-updates", 5)
+                        .withMinPollInterval(Duration.ofMillis(25))
+                        .withPollBackoffFunction(IntervalFunction.of(25)));
+
+        engine.start();
     }
 
-    @AfterAll
-    public static void tearDownClass1() {
-        EventService.getInstance().unsubscribe(ProjectMetricsUpdateTask.class);
-        EventService.getInstance().unsubscribe(CallbackTask.class);
+    private UUID runWorkflow() {
+        final UUID runId = workflowTest.getEngine().createRun(
+                new CreateWorkflowRunRequest<>(UpdatePortfolioMetricsWorkflow.class));
+        workflowTest.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+        return runId;
     }
 
     @Test
-    public void testUpdateMetricsEmpty() {
-        // Create risk score configproperties
-        createTestConfigProperties();
+    void shouldUpdateMetricsEmpty() {
+        runWorkflow();
 
-        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
-        final PortfolioMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
+        final PortfolioMetrics metrics = withJdbiHandle(
+                handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
         assertThat(metrics.getProjects()).isZero();
         assertThat(metrics.getVulnerableProjects()).isZero();
         assertThat(metrics.getComponents()).isZero();
@@ -106,14 +157,13 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     }
 
     @Test
-    public void testUpdateMetricsVulnerabilities() {
+    void shouldUpdateMetricsVulnerabilities() {
         var vuln = new Vulnerability();
         vuln.setVulnId("INTERNAL-001");
         vuln.setSource(Vulnerability.Source.INTERNAL);
         vuln.setSeverity(Severity.HIGH);
         qm.createVulnerability(vuln, false);
 
-        // Create a project with an unaudited vulnerability.
         var projectUnaudited = new Project();
         projectUnaudited.setName("acme-app-a");
         qm.createProject(projectUnaudited, List.of(), false);
@@ -124,13 +174,9 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.createComponent(componentUnaudited, false);
         qm.addVulnerability(vuln, componentUnaudited, "none");
 
-        // Create a project with an audited vulnerability.
         var projectAudited = new Project();
         projectAudited.setName("acme-app-b");
         qm.createProject(projectAudited, List.of(), false);
-
-        // Create risk score configproperties
-        createTestConfigProperties();
 
         var componentAudited = new Component();
         componentAudited.setProject(projectAudited);
@@ -141,7 +187,6 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
                 new MakeAnalysisCommand(componentAudited, vuln)
                         .withState(AnalysisState.NOT_AFFECTED));
 
-        // Create a project with a suppressed vulnerability.
         var projectSuppressed = new Project();
         projectSuppressed.setName("acme-app-c");
         qm.createProject(projectSuppressed, List.of(), false);
@@ -156,21 +201,22 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
                         .withState(AnalysisState.FALSE_POSITIVE)
                         .withSuppress(true));
 
-        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
+        runWorkflow();
 
-        final PortfolioMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
+        final PortfolioMetrics metrics = withJdbiHandle(
+                handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
         assertThat(metrics.getProjects()).isEqualTo(3);
-        assertThat(metrics.getVulnerableProjects()).isEqualTo(2); // Finding for one project is suppressed
+        assertThat(metrics.getVulnerableProjects()).isEqualTo(2);
         assertThat(metrics.getComponents()).isEqualTo(3);
-        assertThat(metrics.getVulnerableComponents()).isEqualTo(2); // Finding for one component is suppressed
+        assertThat(metrics.getVulnerableComponents()).isEqualTo(2);
         assertThat(metrics.getCritical()).isZero();
-        assertThat(metrics.getHigh()).isEqualTo(2); // One is suppressed
+        assertThat(metrics.getHigh()).isEqualTo(2);
         assertThat(metrics.getMedium()).isZero();
         assertThat(metrics.getLow()).isZero();
         assertThat(metrics.getUnassigned()).isZero();
-        assertThat(metrics.getVulnerabilities()).isEqualTo(2); // One is suppressed
+        assertThat(metrics.getVulnerabilities()).isEqualTo(2);
         assertThat(metrics.getSuppressed()).isEqualTo(1);
-        assertThat(metrics.getFindingsTotal()).isEqualTo(2); // One is suppressed
+        assertThat(metrics.getFindingsTotal()).isEqualTo(2);
         assertThat(metrics.getFindingsAudited()).isEqualTo(1);
         assertThat(metrics.getFindingsUnaudited()).isEqualTo(1);
         assertThat(metrics.getInheritedRiskScore()).isEqualTo(10.0);
@@ -201,14 +247,10 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     }
 
     @Test
-    public void testUpdateMetricsPolicyViolations() {
-        // Create a project with an unaudited violation.
+    void shouldUpdateMetricsPolicyViolations() {
         var projectUnaudited = new Project();
         projectUnaudited.setName("acme-app-a");
         qm.createProject(projectUnaudited, List.of(), false);
-
-        // Create risk score configproperties
-        createTestConfigProperties();
 
         var componentUnaudited = new Component();
         componentUnaudited.setProject(projectUnaudited);
@@ -216,7 +258,6 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.createComponent(componentUnaudited, false);
         createPolicyViolation(componentUnaudited, Policy.ViolationState.FAIL, PolicyViolation.Type.LICENSE);
 
-        // Create a project with an audited violation.
         var projectAudited = new Project();
         projectAudited.setName("acme-app-b");
         qm.createProject(projectAudited, List.of(), false);
@@ -230,7 +271,6 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
                 new MakeViolationAnalysisCommand(componentAudited, violationAudited)
                         .withState(ViolationAnalysisState.APPROVED));
 
-        // Create a project with a suppressed violation.
         var projectSuppressed = new Project();
         projectSuppressed.setName("acme-app-c");
         qm.createProject(projectSuppressed, List.of(), false);
@@ -245,9 +285,10 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
                         .withState(ViolationAnalysisState.REJECTED)
                         .withSuppress(true));
 
-        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
+        runWorkflow();
 
-        final PortfolioMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
+        final PortfolioMetrics metrics = withJdbiHandle(
+                handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
         assertThat(metrics.getProjects()).isEqualTo(3);
         assertThat(metrics.getVulnerableProjects()).isZero();
         assertThat(metrics.getComponents()).isEqualTo(3);
@@ -290,26 +331,24 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     }
 
     @Test
-    public void shouldNotUpdateMetricsForProjectsWithRecentMetrics() {
-        createTestConfigProperties();
-
-        final var projectA = new Project();
+    void shouldSkipProjectsWithRecentMetrics() {
+        var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
-        final var componentA = new Component();
+        var componentA = new Component();
         componentA.setProject(projectA);
         componentA.setName("acme-lib-a");
         qm.persist(componentA);
 
-        final var projectB = new Project();
+        var projectB = new Project();
         projectB.setName("acme-app-b");
         qm.persist(projectB);
-        final var componentB = new Component();
+        var componentB = new Component();
         componentB.setProject(projectB);
         componentB.setName("acme-lib-b");
         qm.persist(componentB);
 
-        final var inactiveProject = new Project();
+        var inactiveProject = new Project();
         inactiveProject.setName("inactive-project");
         inactiveProject.setInactiveSince(new Date());
         qm.persist(inactiveProject);
@@ -318,7 +357,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         // Despite this difference, we expect no metrics refresh to be performed
         // for it, because a data point for the current day is already present.
         useJdbiTransaction(handle -> {
-            var dao = handle.attach(MetricsTestDao.class);
+            final var dao = handle.attach(MetricsTestDao.class);
             final var projectAMetrics = new ProjectMetrics();
             projectAMetrics.setProjectId(projectA.getId());
             projectAMetrics.setComponents(0);
@@ -327,7 +366,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
             dao.createProjectMetrics(projectAMetrics);
         });
 
-        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
+        runWorkflow();
 
         final List<ProjectMetrics> recentProjectMetrics = withJdbiHandle(
                 handle -> handle.attach(MetricsDao.class)
@@ -337,7 +376,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         assertThat(recentProjectMetrics).satisfiesExactlyInAnyOrder(
                 metrics -> {
                     assertThat(metrics.getProjectId()).isEqualTo(projectA.getId());
-                    assertThat(metrics.getComponents()).isEqualTo(0); // Old value.
+                    assertThat(metrics.getComponents()).isEqualTo(0); // Old value preserved.
                 },
                 metrics -> {
                     assertThat(metrics.getProjectId()).isEqualTo(projectB.getId());
@@ -345,38 +384,6 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
                 }
                 // No metrics for inactiveProject.
         );
-    }
-
-    @Test
-    public void testPartitionWithNull() {
-        final List<Integer> list = null;
-        final List<List<Integer>> partitions = partition(list, 4);
-        assertThat(partitions).isEmpty();
-    }
-
-    @Test
-    public void testPartitionWithEmptyList() {
-        final List<Integer> list = Collections.emptyList();
-        final List<List<Integer>> partitions = partition(list, 4);
-        assertThat(partitions).isEmpty();
-    }
-
-    @Test
-    public void testPartitionWithSmallList() {
-        final List<Integer> list = List.of(1, 2);
-        final List<List<Integer>> partitions = partition(list, 4);
-        assertThat(partitions).hasSize(2);
-    }
-
-    @Test
-    public void testPartitionWithUnevenSizeList() {
-        final List<Integer> list = List.of(1, 2, 3, 4, 5);
-        final List<List<Integer>> partitions = partition(list, 4);
-        assertThat(partitions).satisfiesExactlyInAnyOrder(
-                partition -> assertThat(partition).hasSize(2),
-                partition -> assertThat(partition).hasSize(1),
-                partition -> assertThat(partition).hasSize(1),
-                partition -> assertThat(partition).hasSize(1));
     }
 
 }

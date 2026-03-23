@@ -35,7 +35,6 @@ import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
-import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
@@ -44,7 +43,7 @@ import org.dependencytrack.event.maintenance.PackageMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
-import org.dependencytrack.metrics.PortfolioMetricsUpdateTask;
+import org.dependencytrack.metrics.UpdatePortfolioMetricsWorkflow;
 import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.pkgmetadata.ResolvePackageMetadataWorkflow;
@@ -208,8 +207,12 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         })
                 .schedule(
                         "Portfolio Metrics Update",
-                        getCronScheduleForTask(PortfolioMetricsUpdateTask.class),
-                        () -> Event.dispatch(new PortfolioMetricsUpdateEvent()))
+                        getCronScheduleFromConfig(config, "dt.task.portfolio-metrics-update.cron"),
+                        () -> {
+                            dexEngine.createRun(
+                                    new CreateWorkflowRunRequest<>(UpdatePortfolioMetricsWorkflow.class)
+                                            .withWorkflowInstanceId(UpdatePortfolioMetricsWorkflow.INSTANCE_ID));
+                        })
                 .schedule(
                         "Portfolio Vulnerability Analysis",
                         getCronScheduleForTask(VulnerabilityAnalysisTask.class),

@@ -16,29 +16,17 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+syntax = "proto3";
 
-import alpine.event.framework.AbstractChainableEvent;
-import alpine.event.framework.Event;
-import org.dependencytrack.model.Project;
+package org.dependencytrack.internal.workflow.v1;
 
-import java.util.UUID;
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.internal.workflow.v1";
 
-/**
- * Defines an {@link Event} used to trigger {@link Project} metrics updates.
- *
- * @since 4.6.0
- */
-public class ProjectMetricsUpdateEvent extends AbstractChainableEvent {
+message FetchProjectMetricsUpdateCandidatesRes {
+  repeated string project_uuids = 1;
+}
 
-    private final UUID uuid;
-
-    public ProjectMetricsUpdateEvent(final UUID uuid) {
-        this.uuid = uuid;
-    }
-
-    public UUID getUuid() {
-        return uuid;
-    }
-
+message UpdateProjectMetricsArg {
+  string project_uuid = 1;
 }

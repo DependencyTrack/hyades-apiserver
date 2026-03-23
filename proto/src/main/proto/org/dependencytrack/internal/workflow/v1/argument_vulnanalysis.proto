@@ -68,10 +68,6 @@ message EvalProjectPoliciesArg {
   string project_uuid = 1;
 }
 
-message UpdateProjectMetricsArg {
-  string project_uuid = 1;
-}
-
 message ReconcileVulnAnalysisResultsArg {
   string project_uuid = 1;
   AnalysisTrigger analysis_trigger = 2;
