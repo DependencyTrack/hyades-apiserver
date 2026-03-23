@@ -28,16 +28,24 @@ import org.dependencytrack.integrations.AbstractIntegrationPoint;
 import org.dependencytrack.integrations.PortfolioFindingUploader;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.secret.management.SecretManager;
+import org.slf4j.MDC;
 
+import javax.jdo.Query;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 
 import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_NAME;
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
+import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_API_URL;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_CONNECTOR_ID;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_TOKEN;
@@ -46,8 +54,6 @@ public class KennaSecurityUploader extends AbstractIntegrationPoint implements P
 
     private static final Logger LOGGER = Logger.getLogger(KennaSecurityUploader.class);
     private static final String ASSET_EXTID_PROPERTY = "kenna.asset.external_id";
-    private static final String API_ROOT = "https://api.kennasecurity.com";
-    private static final String CONNECTOR_UPLOAD_URL = API_ROOT + "/connectors/%s/data_file";
 
     private final HttpClient httpClient;
     private final SecretManager secretManager;
@@ -70,9 +76,8 @@ public class KennaSecurityUploader extends AbstractIntegrationPoint implements P
 
     @Override
     public boolean isEnabled() {
-        final ConfigProperty enabled = qm.getConfigProperty(KENNA_ENABLED.getGroupName(), KENNA_ENABLED.getPropertyName());
         final ConfigProperty connector = qm.getConfigProperty(KENNA_CONNECTOR_ID.getGroupName(), KENNA_CONNECTOR_ID.getPropertyName());
-        if (enabled != null && Boolean.valueOf(enabled.getPropertyValue()) && connector != null && connector.getPropertyValue() != null) {
+        if (qm.isEnabled(KENNA_ENABLED) && connector != null && connector.getPropertyValue() != null) {
             connectorId = connector.getPropertyValue();
             return true;
         }
@@ -83,19 +88,42 @@ public class KennaSecurityUploader extends AbstractIntegrationPoint implements P
     public InputStream process() {
         LOGGER.debug("Processing...");
         final KennaDataTransformer kdi = new KennaDataTransformer(qm);
-        for (final Project project : qm.getAllProjects()) {
-            final ProjectProperty externalId = qm.getProjectProperty(project, KENNA_ENABLED.getGroupName(), ASSET_EXTID_PROPERTY);
-            if (externalId != null && externalId.getPropertyValue() != null) {
-                LOGGER.debug("Transforming findings for project: " + project.getUuid() + " to KDI format");
-                kdi.process(project, externalId.getPropertyValue());
+
+        List<Project> projects = fetchNextProjectBatch(qm, null);
+        while (!projects.isEmpty()) {
+            if (Thread.currentThread().isInterrupted()) {
+                LOGGER.warn("Interrupted before all projects could be processed");
+                break;
             }
+
+            for (final Project project : projects) {
+                try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, project.getUuid().toString());
+                     var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, project.getName());
+                     var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, project.getVersion())) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        LOGGER.warn("Interrupted before project could be processed");
+                        break;
+                    }
+
+                    final ProjectProperty externalId = qm.getProjectProperty(project, KENNA_ENABLED.getGroupName(), ASSET_EXTID_PROPERTY);
+                    if (externalId != null && externalId.getPropertyValue() != null) {
+                        LOGGER.debug("Transforming findings to KDI format");
+                        kdi.process(project, externalId.getPropertyValue());
+                    }
+                }
+            }
+
+            qm.getPersistenceManager().evictAll(false, Project.class);
+            projects = fetchNextProjectBatch(qm, projects.getLast().getId());
         }
+
         return new ByteArrayInputStream(kdi.generate().toString().getBytes());
     }
 
     @Override
     public void upload(final InputStream payload) {
         LOGGER.debug("Uploading payload to KennaSecurity");
+        final ConfigProperty apiUrlProperty = qm.getConfigProperty(KENNA_API_URL.getGroupName(), KENNA_API_URL.getPropertyName());
         final ConfigProperty tokenProperty = qm.getConfigProperty(KENNA_TOKEN.getGroupName(), KENNA_TOKEN.getPropertyName());
         if (tokenProperty == null) {
             LOGGER.warn("Kenna Security token not specified. Aborting");
@@ -118,7 +146,7 @@ public class KennaSecurityUploader extends AbstractIntegrationPoint implements P
                     .addFilePart("file", "findings.json", payload, "application/json");
 
             final var request = HttpRequest.newBuilder()
-                    .uri(URI.create(String.format(CONNECTOR_UPLOAD_URL, connectorId)))
+                    .uri(URI.create("%s/connectors/%s/data_file".formatted(apiUrlProperty.getPropertyValue(), connectorId)))
                     .header("X-Risk-Token", tokenValue)
                     .header("Accept", "application/json")
                     .header("Content-Type", multipart.contentType())
@@ -141,4 +169,24 @@ public class KennaSecurityUploader extends AbstractIntegrationPoint implements P
             LOGGER.error("An error occurred attempting to upload findings to Kenna Security", e);
         }
     }
+
+    private List<Project> fetchNextProjectBatch(final QueryManager qm, final Long lastId) {
+        // TODO: Shouldn't we only select active projects here?
+        //  This is existing behavior so we can't just change it.
+
+        final Query<Project> query = qm.getPersistenceManager().newQuery(Project.class);
+        if (lastId != null) {
+            query.setFilter("id > :lastId");
+            query.setParameters(lastId);
+        }
+        query.setOrdering("id asc");
+        query.setRange(0, 100);
+
+        try {
+            return List.copyOf(query.executeList());
+        } finally {
+            query.closeAll();
+        }
+    }
+
 }
