@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.metrics;
 
-import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
@@ -33,6 +32,7 @@ import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.MetricsTestDao;
+import org.dependencytrack.proto.internal.workflow.v1.UpdateProjectMetricsArg;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -43,10 +43,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
-public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
+class UpdateProjectMetricsActivityTest extends AbstractMetricsUpdateTaskTest {
+
+    private final UpdateProjectMetricsActivity activity = new UpdateProjectMetricsActivity();
 
     @Test
-    public void testUpdateMetricsEmpty() {
+    void shouldUpdateMetricsEmpty() throws Exception {
         final var project = new Project();
         project.setName("acme-app");
         qm.createProject(project, List.of(), false);
@@ -54,7 +56,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         // Create risk score configproperties
         createTestConfigProperties();
 
-        new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
+        executeActivity(project);
 
         final ProjectMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
         assertThat(metrics.getComponents()).isZero();
@@ -91,7 +93,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
     }
 
     @Test
-    public void testUpdateMetricsUnchanged() {
+    void shouldUpdateMetricsUnchanged() throws Exception {
         final var project = new Project();
         project.setName("acme-app");
         qm.createProject(project, List.of(), false);
@@ -100,22 +102,22 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         createTestConfigProperties();
 
         // Record initial project metrics
-        new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
+        executeActivity(project);
         final ProjectMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
         assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
 
         // Run the task a second time, without any metric being changed
         final var beforeSecondRun = new Date();
-        new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
+        executeActivity(project);
 
         // Two records should be created in today's partition since it's append-only
-        var recentMetrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
+        final var recentMetrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
         assertThat(recentMetrics.getLastOccurrence()).isNotEqualTo(metrics.getFirstOccurrence());
         assertThat(recentMetrics.getLastOccurrence()).isAfterOrEqualTo(beforeSecondRun);
     }
 
     @Test
-    public void testUpdateMetricsVulnerabilities() {
+    void shouldUpdateMetricsVulnerabilities() throws Exception {
         var project = new Project();
         project.setName("acme-app");
         qm.createProject(project, List.of(), false);
@@ -136,7 +138,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         qm.createComponent(componentUnaudited, false);
         qm.addVulnerability(vuln, componentUnaudited, "none");
 
-        // Create a project with an audited vulnerability.
+        // Create a component with an audited vulnerability.
         var componentAudited = new Component();
         componentAudited.setProject(project);
         componentAudited.setName("acme-lib-b");
@@ -146,7 +148,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
                 new MakeAnalysisCommand(componentAudited, vuln)
                         .withState(AnalysisState.NOT_AFFECTED));
 
-        // Create a project with a suppressed vulnerability.
+        // Create a component with a suppressed vulnerability.
         var componentSuppressed = new Component();
         componentSuppressed.setProject(project);
         componentSuppressed.setName("acme-lib-c");
@@ -158,10 +160,10 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
                         .withSuppress(true));
 
         // Create "old" metrics data points for all three components.
-        // When the calculating project metrics, only the latest data point for each component
-        // must be considered. Because the update task calculates new component metrics data points,
+        // When calculating project metrics, only the latest data point for each component
+        // must be considered. Because the activity calculates new component metrics data points,
         // the ones created below must be ignored.
-        useJdbiHandle(handle ->  {
+        useJdbiHandle(handle -> {
             var dao = handle.attach(MetricsTestDao.class);
             final var componentUnauditedOldMetrics = new DependencyMetrics();
             componentUnauditedOldMetrics.setProjectId(project.getId());
@@ -188,7 +190,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
             dao.createDependencyMetrics(componentSuppressedOldMetrics);
         });
 
-        new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
+        executeActivity(project);
 
         final ProjectMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
         assertThat(metrics.getComponents()).isEqualTo(3);
@@ -228,7 +230,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
     }
 
     @Test
-    public void testUpdateMetricsPolicyViolations() {
+    void shouldUpdateMetricsPolicyViolations() throws Exception {
         final var project = new Project();
         project.setName("acme-app");
         qm.createProject(project, List.of(), false);
@@ -265,10 +267,10 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
                         .withSuppress(true));
 
         // Create "old" metrics data points for all three components.
-        // When the calculating project metrics, only the latest data point for each component
-        // must be considered. Because the update task calculates new component metrics data points,
+        // When calculating project metrics, only the latest data point for each component
+        // must be considered. Because the activity calculates new component metrics data points,
         // the ones created below must be ignored.
-        useJdbiHandle(handle ->  {
+        useJdbiHandle(handle -> {
             var dao = handle.attach(MetricsTestDao.class);
             final var componentUnauditedOldMetrics = new DependencyMetrics();
             componentUnauditedOldMetrics.setProjectId(project.getId());
@@ -295,7 +297,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
             dao.createDependencyMetrics(componentSuppressedOldMetrics);
         });
 
-        new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
+        executeActivity(project);
 
         final ProjectMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
         assertThat(metrics.getComponents()).isEqualTo(3);
@@ -332,6 +334,12 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         assertThat(componentUnaudited.getLastInheritedRiskScore()).isZero();
         assertThat(componentAudited.getLastInheritedRiskScore()).isZero();
         assertThat(componentSuppressed.getLastInheritedRiskScore()).isZero();
+    }
+
+    private void executeActivity(Project project) throws Exception {
+        activity.execute(null, UpdateProjectMetricsArg.newBuilder()
+                .setProjectUuid(project.getUuid().toString())
+                .build());
     }
 
 }

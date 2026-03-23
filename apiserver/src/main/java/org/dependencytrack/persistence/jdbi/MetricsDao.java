@@ -279,6 +279,11 @@ public interface MetricsDao extends SqlObject {
             """)
     void updateProjectMetrics(@Bind UUID uuid);
 
+    @SqlCall("""
+            CALL "UPDATE_COMPONENT_METRICS"(:uuid)
+            """)
+    void updateComponentMetrics(@Bind UUID uuid);
+
     @SqlQuery("""
             SELECT *, "RISKSCORE" AS inherited_risk_score
             FROM "DEPENDENCYMETRICS"

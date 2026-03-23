@@ -42,6 +42,9 @@ import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.listener.DelayedBomProcessedNotificationEmitter;
 import org.dependencytrack.dex.listener.ProjectVulnAnalysisCompleteNotificationEmitter;
 import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.metrics.FetchProjectMetricsUpdateCandidatesActivity;
+import org.dependencytrack.metrics.RefreshGlobalPortfolioMetricsActivity;
+import org.dependencytrack.metrics.UpdatePortfolioMetricsWorkflow;
 import org.dependencytrack.metrics.UpdateProjectMetricsActivity;
 import org.dependencytrack.notification.PublishNotificationActivity;
 import org.dependencytrack.notification.PublishNotificationWorkflow;
@@ -59,6 +62,7 @@ import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
 import org.dependencytrack.proto.internal.workflow.v1.DiscoverCsafProvidersArg;
 import org.dependencytrack.proto.internal.workflow.v1.EvalProjectPoliciesArg;
 import org.dependencytrack.proto.internal.workflow.v1.FetchPackageMetadataResolutionCandidatesRes;
+import org.dependencytrack.proto.internal.workflow.v1.FetchProjectMetricsUpdateCandidatesRes;
 import org.dependencytrack.proto.internal.workflow.v1.ImportBomArg;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerArg;
@@ -188,6 +192,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
+                new UpdatePortfolioMetricsWorkflow(),
+                voidConverter(),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerWorkflow(
                 new VulnAnalysisWorkflow(),
                 protoConverter(VulnAnalysisWorkflowArg.class),
                 voidConverter(),
@@ -220,6 +229,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 new FetchPackageMetadataResolutionCandidatesActivity(pluginManager),
                 voidConverter(),
                 protoConverter(FetchPackageMetadataResolutionCandidatesRes.class),
+                Duration.ofMinutes(1));
+        engine.registerActivity(
+                new FetchProjectMetricsUpdateCandidatesActivity(),
+                voidConverter(),
+                protoConverter(FetchProjectMetricsUpdateCandidatesRes.class),
                 Duration.ofMinutes(1));
         engine.registerActivity(
                 new ImportCsafDocumentsActivity(),
@@ -256,6 +270,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                         pluginManager,
                         new CelVulnerabilityPolicyEvaluator()),
                 protoConverter(ReconcileVulnAnalysisResultsArg.class),
+                voidConverter(),
+                Duration.ofMinutes(5));
+        engine.registerActivity(
+                new RefreshGlobalPortfolioMetricsActivity(),
+                voidConverter(),
                 voidConverter(),
                 Duration.ofMinutes(5));
         engine.registerActivity(
