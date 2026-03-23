@@ -37,6 +37,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Validator;
+import jakarta.validation.constraints.Size;
 import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -75,6 +76,7 @@ import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.dependencytrack.resources.v1.vo.ConciseProject;
 import org.jdbi.v3.core.Handle;
+import org.owasp.security.logging.SecurityMarkers;
 
 import javax.jdo.FetchGroup;
 import java.security.Principal;
@@ -94,6 +96,7 @@ import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
 import static org.dependencytrack.notification.api.NotificationFactory.createProjectCreatedNotification;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.PersistenceUtil.isPersistent;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
@@ -150,7 +153,7 @@ public class ProjectResource extends AbstractApiResource {
             }
             final PaginatedResult projectPages = withJdbiHandle(getAlpineRequest(), handle ->
                     (name != null) ? handle.attach(ProjectDao.class).getProjects(name, null, null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot, false)
-                    : handle.attach(ProjectDao.class).getProjects(null, null, null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot, true));
+                            : handle.attach(ProjectDao.class).getProjects(null, null, null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot, true));
             return Response.ok(projectPages.getObjects()).header(TOTAL_COUNT_HEADER, projectPages.getTotal()).build();
         }
     }
@@ -502,9 +505,9 @@ public class ProjectResource extends AbstractApiResource {
             jsonProject.setClassifier(Classifier.APPLICATION);
         }
         try (final var qm = new QueryManager()) {
-            if(jsonProject.isLatest()) {
+            if (jsonProject.isLatest()) {
                 final Project oldLatest = qm.getLatestProjectVersion(jsonProject.getName());
-                if(oldLatest != null) {
+                if (oldLatest != null) {
                     requireAccess(qm, oldLatest);
                 }
             }
@@ -563,9 +566,9 @@ public class ProjectResource extends AbstractApiResource {
                             throw new ClientErrorException(Response
                                     .status(Response.Status.BAD_REQUEST)
                                     .entity("""
-                                        The team with %s can not be assigned because it does not exist, \
-                                        or is not accessible to the authenticated principal.\
-                                        """.formatted(chosenTeam.getUuid() != null
+                                            The team with %s can not be assigned because it does not exist, \
+                                            or is not accessible to the authenticated principal.\
+                                            """.formatted(chosenTeam.getUuid() != null
                                             ? "UUID " + chosenTeam.getUuid()
                                             : "name " + chosenTeam.getName()))
                                     .build());
@@ -688,7 +691,7 @@ public class ProjectResource extends AbstractApiResource {
                 // if project is newly set to latest, ensure user has access to current latest version to modify it
                 if (jsonProject.isLatest() && !project.isLatest()) {
                     final Project oldLatest = qm.getLatestProjectVersion(name);
-                    if(oldLatest != null) {
+                    if (oldLatest != null) {
                         requireAccess(qm, oldLatest);
                     }
                 }
@@ -717,8 +720,7 @@ public class ProjectResource extends AbstractApiResource {
 
             LOGGER.info("Project " + updatedProject + " updated by " + super.getPrincipal().getName());
             return Response.ok(updatedProject).build();
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             if (isUniqueConstraintViolation(e)) {
                 throw new ClientErrorException(Response
                         .status(Response.Status.CONFLICT)
@@ -791,7 +793,7 @@ public class ProjectResource extends AbstractApiResource {
                 if (jsonProject.isLatest() && !project.isLatest()) {
                     final var oldName = jsonProject.getName() != null ? jsonProject.getName() : project.getName();
                     final Project oldLatest = qm.getLatestProjectVersion(oldName);
-                    if(oldLatest != null) {
+                    if (oldLatest != null) {
                         requireAccess(qm, oldLatest);
                     }
                 }
@@ -961,6 +963,32 @@ public class ProjectResource extends AbstractApiResource {
         return Response.status(Response.Status.NO_CONTENT).build();
     }
 
+    @POST
+    @Path("/batchDelete")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Deletes a list of projects specified by their UUIDs",
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_DELETE</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Projects removed successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @PermissionRequired({
+            Permissions.Constants.PORTFOLIO_MANAGEMENT,
+            Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE
+    })
+    public Response deleteProjects(@Size(min = 1, max = 1000) final Set<UUID> uuids) {
+        final Set<UUID> deletedProjectUuids = inJdbiTransaction(
+                getAlpineRequest(),
+                handle -> handle.attach(ProjectDao.class).deleteProjects(uuids));
+        for (final UUID uuid : deletedProjectUuids) {
+            LOGGER.info(SecurityMarkers.SECURITY_AUDIT, "Deleted project {}", uuid);
+        }
+        return Response.status(Response.Status.NO_CONTENT).build();
+    }
+
     @PUT
     @Path("/clone")
     @Deprecated(since = "5.7.0")
@@ -1011,7 +1039,7 @@ public class ProjectResource extends AbstractApiResource {
                 // if project is newly set to latest, ensure user has access to current latest version to modify it
                 if (jsonRequest.makeCloneLatest() && !sourceProject.isLatest()) {
                     final Project oldLatest = qm.getLatestProjectVersion(sourceProject.getName());
-                    if(oldLatest != null) {
+                    if (oldLatest != null) {
                         requireAccess(qm, oldLatest);
                     }
                 }
