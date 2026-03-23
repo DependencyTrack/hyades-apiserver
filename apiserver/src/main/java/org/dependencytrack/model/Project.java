@@ -35,14 +35,14 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.dependencytrack.persistence.converter.OrganizationalContactsJsonConverter;
-import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
-import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import org.dependencytrack.persistence.converter.OrganizationalContactsJsonConverter;
+import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
+import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
+
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Convert;
 import javax.jdo.annotations.Element;
@@ -313,6 +313,17 @@ public class Project implements Serializable {
     @Persistent(mappedBy = "project")
     @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private ProjectMetadata metadata;
+
+    @Persistent
+    @Column(name = "COLLECTION_LOGIC", jdbcType = "VARCHAR")
+    @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
+    private ProjectCollectionLogic collectionLogic;
+
+    @Persistent
+    @ForeignKey(name = "PROJECT_COLLECTION_TAG_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.RESTRICT)
+    @Column(name = "COLLECTION_TAG_ID")
+    @JsonIncludeProperties(value = {"name"})
+    private Tag collectionTag;
 
     @Persistent
     @Index(name = "PROJECT_IS_LATEST_IDX")
@@ -614,12 +625,28 @@ public class Project implements Serializable {
         this.dependencyGraph = dependencyGraph;
     }
 
-    public String getAuthor(){
+    public String getAuthor() {
         return author;
     }
 
-    public String setAuthor(String author){
-        return this.author=author;
+    public void setAuthor(String author) {
+        this.author = author;
+    }
+
+    public ProjectCollectionLogic getCollectionLogic() {
+        return collectionLogic;
+    }
+
+    public void setCollectionLogic(ProjectCollectionLogic collectionLogic) {
+        this.collectionLogic = collectionLogic;
+    }
+
+    public Tag getCollectionTag() {
+        return collectionTag;
+    }
+
+    public void setCollectionTag(Tag collectionTag) {
+        this.collectionTag = collectionTag;
     }
 
     @JsonProperty("isLatest")

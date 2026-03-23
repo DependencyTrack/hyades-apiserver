@@ -353,6 +353,12 @@ public class BomResource extends AbstractApiResource {
                                 .build());
                     }
                     requireAccess(qm, project);
+                    if (project.getCollectionLogic() != null) {
+                        throw new WebApplicationException(Response
+                                .status(Response.Status.BAD_REQUEST)
+                                .entity("BOM cannot be uploaded to a collection project.")
+                                .build());
+                    }
                     return ProjectInfo.of(project);
                 });
             }
@@ -420,6 +426,12 @@ public class BomResource extends AbstractApiResource {
                                 .build());
                     }
                     requireAccess(qm, project);
+                    if (project.getCollectionLogic() != null) {
+                        throw new WebApplicationException(Response
+                                .status(Response.Status.BAD_REQUEST)
+                                .entity("BOM cannot be uploaded to a collection project.")
+                                .build());
+                    }
                     return ProjectInfo.of(project);
                 });
             }
@@ -515,6 +527,12 @@ public class BomResource extends AbstractApiResource {
                                 .build());
                     }
                     requireAccess(qm, project);
+                    if (project.getCollectionLogic() != null) {
+                        throw new WebApplicationException(Response
+                                .status(Response.Status.BAD_REQUEST)
+                                .entity("BOM cannot be uploaded to a collection project.")
+                                .build());
+                    }
                     return ProjectInfo.of(project);
                 });
             }
@@ -574,6 +592,12 @@ public class BomResource extends AbstractApiResource {
                                 .build());
                     }
                     requireAccess(qm, project);
+                    if (project.getCollectionLogic() != null) {
+                        throw new WebApplicationException(Response
+                                .status(Response.Status.BAD_REQUEST)
+                                .entity("BOM cannot be uploaded to a collection project.")
+                                .build());
+                    }
                     return ProjectInfo.of(project);
                 });
             }
