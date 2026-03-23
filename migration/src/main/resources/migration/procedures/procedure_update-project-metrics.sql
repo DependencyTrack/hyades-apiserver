@@ -36,9 +36,12 @@ DECLARE
   "v_policy_violations_security_audited"      INT; -- Number of audited policy violations of type security
   "v_policy_violations_security_unaudited"    INT; -- Number of unaudited policy violations of type security
 BEGIN
-  SELECT "ID" FROM "PROJECT" WHERE "UUID" = "project_uuid" INTO "v_project_id";
+  SELECT "ID" FROM "PROJECT"
+   WHERE "UUID" = "project_uuid"
+     AND "COLLECTION_LOGIC" IS NULL
+    INTO "v_project_id";
   IF "v_project_id" IS NULL THEN
-    RAISE EXCEPTION 'Project with UUID % does not exist', "project_uuid";
+    RETURN;
   END IF;
 
   FOR "v_component_uuid" IN SELECT "UUID" FROM "COMPONENT" WHERE "PROJECT_ID" = "v_project_id"

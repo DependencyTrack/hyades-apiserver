@@ -49,6 +49,14 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
         super(pm, request);
     }
 
+    public boolean hasServiceComponents(Project project) {
+        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                SELECT EXISTS(SELECT 1 FROM "SERVICECOMPONENT" WHERE "PROJECT_ID" = ?)
+                """);
+        query.setParameters(project.getId());
+        return executeAndCloseResultUnique(query, Boolean.class);
+    }
+
     /**
      * Returns a service component by matching its identity information.
      * @param project the Project the component is a dependency of

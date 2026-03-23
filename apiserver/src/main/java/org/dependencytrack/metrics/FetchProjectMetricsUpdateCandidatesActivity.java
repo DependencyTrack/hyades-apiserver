@@ -45,6 +45,7 @@ public final class FetchProjectMetricsUpdateCandidatesActivity implements Activi
                                 SELECT "UUID"
                                   FROM "PROJECT"
                                  WHERE "INACTIVE_SINCE" IS NULL
+                                   AND "COLLECTION_LOGIC" IS NULL
                                    AND NOT EXISTS(
                                      SELECT 1
                                        FROM "PROJECTMETRICS"

@@ -24,8 +24,11 @@ import alpine.model.Team;
 import alpine.model.User;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.Role;
+import org.dependencytrack.model.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -42,6 +45,7 @@ import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class QueryManagerTest extends PersistenceCapableTest {
 
@@ -240,6 +244,57 @@ public class QueryManagerTest extends PersistenceCapableTest {
             assertThat(entry.getPermissionNames(qm.getEffectivePermissions(entry.user(), entry.project())))
                     .contains(Permissions.POLICY_VIOLATION_ANALYSIS.name());
         }
+    }
+
+    @Test
+    public void shouldRejectConvertingProjectWithComponentsToCollection() {
+        var project = new Project();
+        project.setName("acme-app");
+        qm.createProject(project, List.of(), false);
+
+        var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.createComponent(component, false);
+
+        var transientProject = new Project();
+        transientProject.setUuid(project.getUuid());
+        transientProject.setName(project.getName());
+        transientProject.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN);
+
+        assertThatThrownBy(() -> qm.updateProject(transientProject, false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("A project with components or services cannot be converted to a collection project.");
+    }
+
+    @Test
+    public void shouldRejectWithTagLogicWithoutTag() {
+        var project = new Project();
+        project.setName("acme-app");
+        project.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG);
+
+        assertThatThrownBy(() -> qm.createProject(project, List.of(), false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("A collection tag must be specified for AGGREGATE_DIRECT_CHILDREN_WITH_TAG logic.");
+    }
+
+    @Test
+    public void shouldClearCollectionTagWhenLogicChanges() {
+        final Tag prodTag = qm.createTag("prod");
+
+        var project = new Project();
+        project.setName("acme-app");
+        project.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG);
+        project.setCollectionTag(prodTag);
+        qm.createProject(project, List.of(), false);
+
+        var transientProject = new Project();
+        transientProject.setUuid(project.getUuid());
+        transientProject.setName(project.getName());
+        transientProject.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN);
+        final Project updated = qm.updateProject(transientProject, false);
+
+        assertThat(updated.getCollectionTag()).isNull();
     }
 
 }

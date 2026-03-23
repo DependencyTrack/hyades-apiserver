@@ -34,6 +34,7 @@ import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
@@ -850,5 +851,35 @@ public class VexResourceTest extends ResourceTest {
                         }
                         """.formatted(encodedBom), MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(400);
+    }
+
+    @Test
+    void shouldRejectVexUploadForCollectionProject() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN);
+        qm.persist(project);
+
+        final String encodedVex = Base64.getEncoder().encodeToString("""
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.5",
+                  "version": 1
+                }
+                """.getBytes());
+
+        final Response response = jersey.target(V1_VEX).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity("""
+                        {
+                          "projectName": "acme-app",
+                          "projectVersion": "1.0.0",
+                          "vex": "%s"
+                        }
+                        """.formatted(encodedVex), MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("VEX cannot be uploaded to a collection project.");
     }
 }

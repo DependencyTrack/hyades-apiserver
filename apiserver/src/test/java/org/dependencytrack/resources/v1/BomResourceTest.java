@@ -53,6 +53,7 @@ import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.Role;
@@ -1863,5 +1864,46 @@ class BomResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assertions.assertEquals(403, response.getStatus(), 0);
+    }
+
+    @Test
+    void shouldRejectBomUploadForCollectionProject() throws Exception {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN);
+        qm.createProject(project, List.of(), false);
+
+        final String bomString = Base64.getEncoder().encodeToString(
+                FileUtils.readFileToByteArray(new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI())));
+        final Response response = jersey.target(V1_BOM).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "project": "%s",
+                          "bom": "%s"
+                        }
+                        """.formatted(project.getUuid(), bomString)));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("BOM cannot be uploaded to a collection project.");
+    }
+
+    @Test
+    void shouldRejectBomUploadMultipartForCollectionProject() throws Exception {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN);
+        qm.createProject(project, List.of(), false);
+
+        final var multiPart = new FormDataMultiPart()
+                .field("project", project.getUuid().toString())
+                .field("bom", new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI()),
+                        MediaType.APPLICATION_OCTET_STREAM_TYPE);
+        final Response response = jersey.target(V1_BOM).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity(multiPart, multiPart.getMediaType()));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("BOM cannot be uploaded to a collection project.");
     }
 }
