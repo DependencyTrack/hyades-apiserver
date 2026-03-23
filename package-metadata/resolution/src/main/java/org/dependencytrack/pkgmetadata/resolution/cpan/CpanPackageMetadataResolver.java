@@ -29,6 +29,7 @@ import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
 import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
 import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
@@ -97,8 +98,7 @@ final class CpanPackageMetadataResolver implements PackageMetadataResolver {
 
     private byte @Nullable [] fetchRelease(String name, PackageRepository repository)
             throws InterruptedException {
-        final String baseUrl = trimTrailingSlash(repository.url());
-        final String url = baseUrl + "/v1/release/" + name;
+        final String url = UrlUtils.join(repository.url(), "v1", "release", name);
 
         final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -158,8 +158,5 @@ final class CpanPackageMetadataResolver implements PackageMetadataResolver {
         }
     }
 
-    private static String trimTrailingSlash(String url) {
-        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
-    }
 
 }

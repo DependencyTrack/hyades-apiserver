@@ -29,6 +29,7 @@ import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
 import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
 import org.dependencytrack.pkgmetadata.resolution.cargo.CargoCrateDocument.Version;
 import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
@@ -131,8 +132,7 @@ final class CargoPackageMetadataResolver implements PackageMetadataResolver {
 
     private @Nullable CargoCrateDocument fetchCrate(String name, PackageRepository repository)
             throws InterruptedException {
-        final String baseUrl = trimTrailingSlash(repository.url());
-        final String url = baseUrl + "/api/v1/crates/" + name;
+        final String url = UrlUtils.join(repository.url(), "api", "v1", "crates", name);
 
         final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -209,10 +209,6 @@ final class CargoPackageMetadataResolver implements PackageMetadataResolver {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private static String trimTrailingSlash(String url) {
-        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
 }

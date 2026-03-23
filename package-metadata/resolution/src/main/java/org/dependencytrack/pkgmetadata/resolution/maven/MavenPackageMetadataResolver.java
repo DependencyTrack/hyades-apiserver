@@ -28,6 +28,7 @@ import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
 import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
 import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,8 +51,10 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.pkgmetadata.resolution.support.UrlUtils.join;
 
 final class MavenPackageMetadataResolver implements PackageMetadataResolver {
 
@@ -76,10 +79,11 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
             @Nullable PackageRepository repository) throws InterruptedException {
         requireNonNull(repository, "repository must not be null");
 
-        final String baseUrl = "%s/%s/%s".formatted(
-                trimTrailingSlash(repository.url()),
-                purl.getNamespace().replace('.', '/'),
-                purl.getName());
+        final String baseUrl = join(repository.url(),
+                Stream.concat(
+                        Stream.of(purl.getNamespace().split("\\.")),
+                        Stream.of(purl.getName())
+                ).toArray(String[]::new));
 
         final MavenPackageInfo packageInfo = resolvePackageInfo(baseUrl, purl, repository);
         if (packageInfo == null) {
@@ -89,8 +93,13 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
             throw new InterruptedException();
         }
 
-        final String artifactUrl = baseUrl + "/" + purl.getVersion()
-                + "/" + formatArtifactFileName(purl);
+        final var resolvedAt = packageInfo.resolvedAt();
+
+        if (purl.getVersion() == null) {
+            return new PackageMetadata(packageInfo.latestVersion(), resolvedAt, null);
+        }
+
+        final String artifactUrl = join(baseUrl, purl.getVersion(), formatArtifactFileName(purl));
 
         final Instant publishedAt = resolvePublishedAt(artifactUrl, repository);
         if (Thread.interrupted()) {
@@ -103,7 +112,6 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
             hashes.put(HashAlgorithm.SHA1, sha1);
         }
 
-        final var resolvedAt = packageInfo.resolvedAt();
         return new PackageMetadata(
                 packageInfo.latestVersion(),
                 resolvedAt,
@@ -179,7 +187,7 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
         try {
             response = httpClient.send(
                     createAuthenticatedRequest(
-                            URI.create(baseUrl + "/maven-metadata.xml"),
+                            URI.create(UrlUtils.join(baseUrl, "maven-metadata.xml")),
                             repository,
                             "GET"),
                     HttpResponse.BodyHandlers.ofByteArray());
@@ -194,8 +202,8 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
         }
         RetryableResolutionException.throwIfRetryableError(response);
         if (response.statusCode() != 200) {
-            throw new UncheckedIOException(new IOException("Unexpected status code %d for %s/maven-metadata.xml"
-                    .formatted(response.statusCode(), baseUrl)));
+            throw new UncheckedIOException(new IOException("Unexpected status code %d for %s"
+                    .formatted(response.statusCode(), join(baseUrl, "maven-metadata.xml"))));
         }
 
         return response.body();
@@ -313,10 +321,6 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
         }
 
         return sb.append('.').append(extension).toString();
-    }
-
-    private static String trimTrailingSlash(String url) {
-        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
 }
