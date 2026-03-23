@@ -468,6 +468,29 @@
       ]
     },
     {
+      "bom-ref": "service:org.dependencytrack.metrics",
+      "provider": {
+        "name": "OWASP",
+        "url": [
+          "https://owasp.org"
+        ]
+      },
+      "group": "org.dependencytrack.metrics",
+      "name": "Dependency-Track Telemetry",
+      "description": "Dependency-Track telemetry service for collecting anonymous usage data.",
+      "endpoints": [
+        "https://metrics.dependencytrack.org"
+      ],
+      "authenticated": false,
+      "x-trust-boundary": true,
+      "data": [
+        {
+          "classification": "public",
+          "flow": "outbound"
+        }
+      ]
+    },
+    {
       "bom-ref": "service:io.snyk",
       "provider": {
         "name": "Snyk",
