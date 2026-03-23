@@ -219,13 +219,19 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
         return callInTransaction(() -> {
             boolean modified = false;
 
+            if (notificationRule.getTags() == null) {
+                notificationRule.setTags(new HashSet<>());
+            }
+
             if (!keepExisting) {
                 final Iterator<Tag> existingTagsIterator = notificationRule.getTags().iterator();
                 while (existingTagsIterator.hasNext()) {
                     final Tag existingTag = existingTagsIterator.next();
                     if (!tags.contains(existingTag)) {
                         existingTagsIterator.remove();
-                        existingTag.getNotificationRules().remove(notificationRule);
+                        if (existingTag.getNotificationRules() != null) {
+                            existingTag.getNotificationRules().remove(notificationRule);
+                        }
                         modified = true;
                     }
                 }

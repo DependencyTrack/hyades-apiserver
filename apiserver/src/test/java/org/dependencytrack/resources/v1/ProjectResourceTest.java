@@ -1939,14 +1939,21 @@ class ProjectResourceTest extends ResourceTest {
     void createProjectTest() {
         createCatchAllNotificationRule(qm, NotificationScope.PORTFOLIO);
 
-        Project project = new Project();
-        project.setName("Acme Example");
-        project.setVersion("1.0");
-        project.setDescription("Test project");
         Response response = jersey.target(V1_PROJECT)
                 .request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.entity(project, MediaType.APPLICATION_JSON));
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "Acme Example",
+                          "version": "1.0",
+                          "description": "Test project",
+                          "tags": [
+                            {
+                              "name": "foo"
+                            }
+                          ]
+                        }
+                        """));
         Assertions.assertEquals(201, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
         Assertions.assertNotNull(json);
@@ -1954,6 +1961,13 @@ class ProjectResourceTest extends ResourceTest {
         Assertions.assertEquals("1.0", json.getString("version"));
         Assertions.assertEquals("Test project", json.getString("description"));
         Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
+        assertThatJson(json.getJsonArray("tags").toString()).isEqualTo("""
+                [
+                  {
+                    "name": "foo"
+                  }
+                ]
+                """);
 
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
             assertThat(notification).isNotNull();
