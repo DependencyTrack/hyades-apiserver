@@ -157,6 +157,12 @@ final class ActivityTaskScheduler implements Closeable {
                 if (Thread.currentThread().isInterrupted() || stopped) {
                     break;
                 }
+
+                // Enforce minimum poll interval even when nudged.
+                final long elapsedSinceLastPoll = System.currentTimeMillis() - lastPolledAtMillis;
+                if (elapsedSinceLastPoll < pollIntervalMillis) {
+                    continue;
+                }
             }
 
             lastPolledAtMillis = System.currentTimeMillis();

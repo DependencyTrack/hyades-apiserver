@@ -222,6 +222,12 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
                     if (Thread.currentThread().isInterrupted() || status.isStoppingOrStopped()) {
                         break;
                     }
+
+                    // Enforce minimum poll interval even when nudged.
+                    final long elapsedSinceLastPoll = System.currentTimeMillis() - lastPolledAtMillis;
+                    if (elapsedSinceLastPoll < minPollIntervalMillis) {
+                        continue;
+                    }
                 }
 
                 logger.debug("Waiting for at least one executor to be available");
