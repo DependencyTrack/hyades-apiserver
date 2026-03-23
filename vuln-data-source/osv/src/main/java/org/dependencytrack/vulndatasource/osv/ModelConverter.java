@@ -541,6 +541,9 @@ final class ModelConverter {
                 LOGGER.warn("Failed to parse CVSS vector: {}", vector, e);
                 return;
             }
+            if (cvss == null) {
+                return;
+            }
 
             double score = cvss.calculateScore().getBaseScore();
 
