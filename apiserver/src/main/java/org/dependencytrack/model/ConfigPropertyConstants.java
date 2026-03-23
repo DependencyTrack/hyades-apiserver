@@ -53,6 +53,7 @@ public enum ConfigPropertyConstants {
     DEFECTDOJO_URL("integrations", "defectdojo.url", null, PropertyType.URL, "Base URL to DefectDojo", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_API_KEY("integrations", "defectdojo.apiKey", null, PropertyType.STRING, "Name of the secret containing the DefectDojo API key", ConfigPropertyAccessMode.READ_WRITE, false, true),
     KENNA_ENABLED("integrations", "kenna.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable Kenna Security integration", ConfigPropertyAccessMode.READ_WRITE),
+    KENNA_API_URL("integrations", "kenna.api.url", "https://api.kennasecurity.com", PropertyType.STRING, "Kenna Security API URL", ConfigPropertyAccessMode.READ_WRITE),
     KENNA_TOKEN("integrations", "kenna.token", null, PropertyType.STRING, "Name of the secret containing the Kenna Security authentication token", ConfigPropertyAccessMode.READ_WRITE, false, true),
     KENNA_CONNECTOR_ID("integrations", "kenna.connector.id", null, PropertyType.STRING, "The Kenna Security connector identifier to upload to", ConfigPropertyAccessMode.READ_WRITE),
     ACCESS_MANAGEMENT_ACL_ENABLED("access-management", "acl.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable access control to projects in the portfolio", ConfigPropertyAccessMode.READ_WRITE, true),

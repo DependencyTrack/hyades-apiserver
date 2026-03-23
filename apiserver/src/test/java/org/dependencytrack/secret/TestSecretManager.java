@@ -24,9 +24,21 @@ import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretMetadata;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Map;
+
 public final class TestSecretManager implements SecretManager {
 
     public static final String NAME = "test";
+
+    private final Map<String, String> secretByName;
+
+    public TestSecretManager() {
+        this.secretByName = Map.of();
+    }
+
+    public TestSecretManager(Map<String, String> secretByName) {
+        this.secretByName = Map.copyOf(secretByName);
+    }
 
     @Override
     public String name() {
@@ -61,6 +73,9 @@ public final class TestSecretManager implements SecretManager {
 
     @Override
     public @Nullable String getSecretValue(String name) {
+        if (!secretByName.isEmpty()) {
+            return secretByName.get(name);
+        }
         throw new UnsupportedOperationException();
     }
 

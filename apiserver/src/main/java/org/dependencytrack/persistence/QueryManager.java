@@ -445,14 +445,6 @@ public class QueryManager extends AlpineQueryManager {
     //// BEGIN WRAPPER METHODS                                                                                      ////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public List<Project> getAllProjects() {
-        return getProjectQueryManager().getAllProjects();
-    }
-
-    public List<Project> getAllProjects(boolean excludeInactive) {
-        return getProjectQueryManager().getAllProjects(excludeInactive);
-    }
-
     public Project getProject(final String uuid) {
         return getProjectQueryManager().getProject(uuid);
     }
