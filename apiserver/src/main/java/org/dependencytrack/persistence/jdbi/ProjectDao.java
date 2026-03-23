@@ -47,6 +47,7 @@ import org.jdbi.v3.sqlobject.customizer.AllowUnusedBindings;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
+import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jspecify.annotations.Nullable;
@@ -55,6 +56,7 @@ import org.postgresql.util.PSQLException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -538,6 +540,23 @@ public interface ProjectDao extends SqlObject {
              WHERE "UUID" = :projectUuid
             """)
     int deleteProject(@Bind final UUID projectUuid);
+
+    @SqlUpdate("""
+            WITH cte_locked AS (
+              SELECT "ID"
+                FROM "PROJECT"
+               WHERE ${apiProjectAclCondition}
+                 AND "UUID" = ANY(:projectUuids)
+               ORDER BY "ID"
+                 FOR UPDATE
+            )
+            DELETE
+              FROM "PROJECT"
+             WHERE "ID" IN (SELECT "ID" FROM cte_locked)
+            RETURNING "UUID"
+            """)
+    @GetGeneratedKeys
+    Set<UUID> deleteProjects(@Bind Collection<UUID> projectUuids);
 
     @SqlQuery("""
              WITH "CTE" AS (

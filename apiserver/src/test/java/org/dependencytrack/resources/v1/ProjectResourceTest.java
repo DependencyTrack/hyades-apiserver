@@ -2356,6 +2356,36 @@ class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
+    void shouldBatchDeleteExistingAndAccessibleProjects() {
+        enablePortfolioAccessControl();
+
+        final var accessibleProject = new Project();
+        accessibleProject.setName("acme-app-a");
+        accessibleProject.addAccessTeam(super.team);
+        qm.persist(accessibleProject);
+
+        final var inaccessibleProject = new Project();
+        inaccessibleProject.setName("acme-app-b");
+        qm.persist(inaccessibleProject);
+
+        final Response response = jersey
+                .target(V1_PROJECT + "/batchDelete")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json("""
+                        [
+                          "%s",
+                          "%s",
+                          "7638dd9a-a4ca-4cd6-98cc-10386bf0f2d6"
+                        ]
+                        """.formatted(accessibleProject.getUuid(), inaccessibleProject.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(204);
+
+        assertThat(qm.doesProjectExist("acme-app-a", null)).isFalse();
+        assertThat(qm.doesProjectExist("acme-app-b", null)).isTrue();
+    }
+
+    @Test
     void patchProjectNotModifiedTest() {
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
         final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, null, false);
