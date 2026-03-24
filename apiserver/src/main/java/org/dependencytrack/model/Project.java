@@ -295,6 +295,11 @@ public class Project implements Serializable {
     private Double lastInheritedRiskScore;
 
     @Persistent
+    @Column(name = "LAST_VULNERABILITY_ANALYSIS", allowsNull = "true")
+    @Schema(type = "integer", format = "int64", requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "UNIX epoch timestamp in milliseconds")
+    private Date lastVulnerabilityAnalysis;
+
+    @Persistent
     @Column(name = "INACTIVE_SINCE")
     @Schema(accessMode = Schema.AccessMode.READ_ONLY,
             type = "integer", format = "int64", description = "UNIX epoch timestamp in milliseconds")
@@ -527,6 +532,14 @@ public class Project implements Serializable {
 
     public void setLastInheritedRiskScore(Double lastInheritedRiskScore) {
         this.lastInheritedRiskScore = lastInheritedRiskScore;
+    }
+
+    public Date getLastVulnerabilityAnalysis() {
+        return lastVulnerabilityAnalysis;
+    }
+
+    public void setLastVulnerabilityAnalysis(Date lastVulnerabilityAnalysis) {
+        this.lastVulnerabilityAnalysis = lastVulnerabilityAnalysis;
     }
 
     public List<ExternalReference> getExternalReferences() {

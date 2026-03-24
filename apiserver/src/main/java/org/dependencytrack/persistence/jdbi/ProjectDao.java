@@ -679,6 +679,16 @@ public interface ProjectDao extends SqlObject {
         }
     }
 
+    /**
+     * @since 5.7.0
+     */
+    @SqlUpdate("""
+            UPDATE "PROJECT"
+               SET "LAST_VULNERABILITY_ANALYSIS" = NOW()
+             WHERE "UUID" = :uuid
+            """)
+    void updateLastVulnAnalysis(@Bind UUID uuid);
+
     class ProjectListRowMapper implements RowMapper<ProjectListRow> {
 
         private static final TypeReference<Set<Tag>> TAGS_TYPE_REF = new TypeReference<>() {
