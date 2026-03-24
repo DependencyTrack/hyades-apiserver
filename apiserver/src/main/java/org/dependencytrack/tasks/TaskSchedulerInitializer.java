@@ -24,6 +24,7 @@ import alpine.server.auth.SessionTokenService;
 import alpine.server.tasks.LdapSyncTask;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.HttpClient;
 import org.dependencytrack.common.pagination.PageIterator;
 import org.dependencytrack.csaf.CsafProviderDao;
 import org.dependencytrack.csaf.ImportCsafDocumentsWorkflow;
@@ -241,7 +242,12 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                 .schedule(
                         "Expired Session Cleanup",
                         getCronScheduleFromConfig(config, "dt.task.expired-session-cleanup.cron"),
-                        () -> new SessionTokenService().deleteExpiredSessions());
+                        () -> new SessionTokenService().deleteExpiredSessions())
+                .schedule(
+                        "Telemetry Submission",
+                        getCronScheduleFromConfig(config, "dt.task.telemetry-submission.cron"),
+                        new TelemetrySubmissionTask(HttpClient.INSTANCE, config),
+                        /* triggerOnFirstRun */ true);
     }
 
     @Override
