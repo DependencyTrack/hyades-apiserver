@@ -1506,4 +1506,10 @@
             $$;
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-63" author="nscuro">
+        <addColumn tableName="PROJECT">
+            <column name="LAST_VULNERABILITY_ANALYSIS" type="TIMESTAMPTZ"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

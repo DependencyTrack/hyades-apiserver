@@ -235,6 +235,9 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         assertThat(qm.getNotificationOutbox()).satisfiesExactly(notification -> {
             assertThat(notification.getGroup()).isEqualTo(GROUP_NEW_VULNERABILITY);
         });
+
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getLastVulnerabilityAnalysis()).isNotNull();
     }
 
     @Test
@@ -1150,6 +1153,9 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
                                 .setProjectUuid(project.getUuid().toString())
                                 .build()));
         workflowTest.awaitRunStatus(runId, WorkflowRunStatus.FAILED);
+
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.getLastVulnerabilityAnalysis()).isNull();
     }
 
     @Test
