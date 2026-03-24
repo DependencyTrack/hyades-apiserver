@@ -31,7 +31,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -65,6 +64,7 @@ import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.notification.JdbiNotificationEmitter;
 import org.dependencytrack.notification.JdoNotificationEmitter;
@@ -96,8 +96,10 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.util.function.Predicate.not;
 import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_BOM_UPLOAD_TOKEN;
@@ -116,7 +118,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransactio
  * @since 3.0.0
  */
 @Path("/v1/bom")
-@Tag(name = "bom")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "bom")
 @SecurityRequirements({
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
@@ -359,6 +361,7 @@ public class BomResource extends AbstractApiResource {
                                 .entity("BOM cannot be uploaded to a collection project.")
                                 .build());
                     }
+                    maybeBindTags(qm, project, request.getProjectTags());
                     return ProjectInfo.of(project);
                 });
             }
@@ -432,6 +435,7 @@ public class BomResource extends AbstractApiResource {
                                 .entity("BOM cannot be uploaded to a collection project.")
                                 .build());
                     }
+                    maybeBindTags(qm, project, request.getProjectTags());
                     return ProjectInfo.of(project);
                 });
             }
@@ -515,6 +519,10 @@ public class BomResource extends AbstractApiResource {
                     .build());
         }
 
+        final List<Tag> requestTags = (projectTags != null && !projectTags.isBlank())
+                ? Arrays.stream(projectTags.split(",")).map(String::trim).filter(not(String::isEmpty)).map(Tag::new).toList()
+                : null;
+
         final ProjectInfo projectInfo;
         if (projectUuid != null) { // behavior in v3.0.0
             try (QueryManager qm = new QueryManager()) {
@@ -533,6 +541,7 @@ public class BomResource extends AbstractApiResource {
                                 .entity("BOM cannot be uploaded to a collection project.")
                                 .build());
                     }
+                    maybeBindTags(qm, project, requestTags);
                     return ProjectInfo.of(project);
                 });
             }
@@ -568,10 +577,7 @@ public class BomResource extends AbstractApiResource {
                                     requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
                                 }
                             }
-                            final List<org.dependencytrack.model.Tag> tags = (projectTags != null && !projectTags.isBlank())
-                                    ? Arrays.stream(projectTags.split(",")).map(String::trim).filter(not(String::isEmpty)).map(org.dependencytrack.model.Tag::new).toList()
-                                    : null;
-                            project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, tags, parent, null, null, isLatest, true);
+                            project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, requestTags, parent, null, null, isLatest, true);
                             Principal principal = getPrincipal();
                             qm.updateNewProjectACL(project, principal);
                             new JdoNotificationEmitter(qm).emit(
@@ -598,6 +604,7 @@ public class BomResource extends AbstractApiResource {
                                 .entity("BOM cannot be uploaded to a collection project.")
                                 .build());
                     }
+                    maybeBindTags(qm, project, requestTags);
                     return ProjectInfo.of(project);
                 });
             }
@@ -625,7 +632,7 @@ public class BomResource extends AbstractApiResource {
                     project.getName(),
                     project.getVersion(),
                     project.getTags() != null
-                            ? project.getTags().stream().map(org.dependencytrack.model.Tag::getName).toList()
+                            ? project.getTags().stream().map(Tag::getName).toList()
                             : List.of());
         }
     }
@@ -789,4 +796,42 @@ public class BomResource extends AbstractApiResource {
                     || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
         }
     }
+
+    private void maybeBindTags(QueryManager qm, Project project, List<Tag> tags) {
+        if (tags == null) {
+            return;
+        }
+
+        // If the principal has the PROJECT_CREATION_UPLOAD permission,
+        // and a new project was created as part of this upload,
+        // the project might already have the requested tags.
+        final Set<String> existingTagNames = project.getTags() != null
+                ? project.getTags().stream().map(Tag::getName).collect(Collectors.toSet())
+                : Collections.emptySet();
+        final Set<String> requestTagNames = tags.stream()
+                .filter(Objects::nonNull)
+                .map(Tag::getName)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (!Objects.equals(existingTagNames, requestTagNames)
+                && !hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+                && !hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE)) {
+            // Most CI integrations will use API keys with PROJECT_CREATION_UPLOAD permission,
+            // but not PORTFOLIO_MANAGEMENT(_UPDATE) permission. They will not send different
+            // upload requests though, after a project was first created. Failing the request
+            // would break those integrations. Log a warning instead.
+            LOGGER.warn("""
+                    Project tags were provided as part of the BOM upload request, \
+                    but the authenticated principal is missing the %s or %s permission; \
+                    Tags will not be modified""".formatted(
+                    Permissions.Constants.PORTFOLIO_MANAGEMENT,
+                    Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE));
+            return;
+        }
+
+        final Set<Tag> resolvedTags = qm.resolveTags(tags);
+        qm.bind(project, resolvedTags);
+    }
+
 }
