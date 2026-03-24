@@ -23,7 +23,6 @@ import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -54,6 +53,10 @@ public final class BomSubmitRequest {
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The project version may only contain printable characters")
     private final String projectVersion;
 
+    @Schema(description = """
+            Overwrite project tags. Modifying the tags of an existing \
+            project requires the PORTFOLIO_MANAGEMENT or \
+            PORTFOLIO_MANAGEMENT_UPDATE permission.""")
     private final List<Tag> projectTags;
 
     @Pattern(regexp = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", message = "The parent UUID must be a valid 36 character UUID")
