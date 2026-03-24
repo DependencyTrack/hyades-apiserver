@@ -364,4 +364,190 @@ class NotificationRouterTest extends PersistenceCapableTest {
 
     }
 
+    @Nested
+    class FilterExpressionTest {
+
+        @Test
+        void shouldMatchWhenFilterExpressionEvaluatesToTrue() {
+            final var rule = new NotificationRule();
+            rule.setName("rule");
+            rule.setScope(NotificationScope.PORTFOLIO);
+            rule.setNotifyOn(Set.of(NotificationGroup.NEW_VULNERABILITY));
+            rule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            rule.setEnabled(true);
+            rule.setTriggerType(NotificationTriggerType.EVENT);
+            rule.setFilterExpression("subject.vulnerability.severity == \"MEDIUM\"");
+            qm.persist(rule);
+
+            final Notification notification = TestNotificationFactory.createNewVulnerabilityTestNotification();
+
+            assertThat(router.route(List.of(notification))).satisfiesExactly(result -> {
+                assertThat(result.ruleNames()).containsOnly(rule.getName());
+                assertThat(result.notification()).isEqualTo(notification);
+            });
+        }
+
+        @Test
+        void shouldNotMatchWhenFilterExpressionEvaluatesToFalse() {
+            final var rule = new NotificationRule();
+            rule.setName("rule");
+            rule.setScope(NotificationScope.PORTFOLIO);
+            rule.setNotifyOn(Set.of(NotificationGroup.NEW_VULNERABILITY));
+            rule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            rule.setEnabled(true);
+            rule.setTriggerType(NotificationTriggerType.EVENT);
+            rule.setFilterExpression("subject.vulnerability.severity == \"CRITICAL\"");
+            qm.persist(rule);
+
+            final Notification notification = TestNotificationFactory.createNewVulnerabilityTestNotification();
+
+            assertThat(router.route(List.of(notification))).isEmpty();
+        }
+
+        @Test
+        void shouldFilterOnNotificationLevel() {
+            final var rule = new NotificationRule();
+            rule.setName("rule");
+            rule.setScope(NotificationScope.PORTFOLIO);
+            rule.setNotifyOn(Set.of(NotificationGroup.NEW_VULNERABILITY));
+            rule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            rule.setEnabled(true);
+            rule.setTriggerType(NotificationTriggerType.EVENT);
+            rule.setFilterExpression("level == Level.LEVEL_INFORMATIONAL");
+            qm.persist(rule);
+
+            final Notification notification = TestNotificationFactory.createNewVulnerabilityTestNotification();
+
+            assertThat(router.route(List.of(notification))).satisfiesExactly(
+                    result -> assertThat(result.ruleNames()).containsOnly(rule.getName()));
+        }
+
+        @Test
+        void shouldFilterOnSubjectProjectName() {
+            final var rule = new NotificationRule();
+            rule.setName("rule");
+            rule.setScope(NotificationScope.PORTFOLIO);
+            rule.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            rule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            rule.setEnabled(true);
+            rule.setTriggerType(NotificationTriggerType.EVENT);
+            rule.setFilterExpression("subject.project.name.startsWith(\"project\")");
+            qm.persist(rule);
+
+            final Notification notification = TestNotificationFactory.createBomConsumedTestNotification();
+
+            assertThat(router.route(List.of(notification))).satisfiesExactly(
+                    result -> assertThat(result.ruleNames()).containsOnly(rule.getName()));
+        }
+
+        @Test
+        void shouldFailOpenOnInvalidFilterExpression() {
+            final var rule = new NotificationRule();
+            rule.setName("rule");
+            rule.setScope(NotificationScope.PORTFOLIO);
+            rule.setNotifyOn(Set.of(NotificationGroup.NEW_VULNERABILITY));
+            rule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            rule.setEnabled(true);
+            rule.setTriggerType(NotificationTriggerType.EVENT);
+            rule.setFilterExpression("this is not valid CEL");
+            qm.persist(rule);
+
+            final Notification notification = TestNotificationFactory.createNewVulnerabilityTestNotification();
+
+            assertThat(router.route(List.of(notification))).satisfiesExactly(
+                    result -> assertThat(result.ruleNames()).containsOnly(rule.getName()));
+        }
+
+        @Test
+        void shouldFailOpenOnFilterRuntimeError() {
+            // Create a rule with invalid filter expression,
+            // i.e. an expression accessing fields that are not available.
+            final var invalidRule = new NotificationRule();
+            invalidRule.setName("expression-runtime-error");
+            invalidRule.setScope(NotificationScope.PORTFOLIO);
+            invalidRule.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            invalidRule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            invalidRule.setEnabled(true);
+            invalidRule.setTriggerType(NotificationTriggerType.EVENT);
+            invalidRule.setFilterExpression("subject.nonExistentField == \"whatever\"");
+            qm.persist(invalidRule);
+
+            // Also create a rule with valid expression that evaluates to false,
+            // to confirm that fail-open is actually triggered.
+            final var validRule = new NotificationRule();
+            validRule.setName("expression-valid-false");
+            validRule.setScope(NotificationScope.PORTFOLIO);
+            validRule.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            validRule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            validRule.setEnabled(true);
+            validRule.setTriggerType(NotificationTriggerType.EVENT);
+            validRule.setFilterExpression("subject.project.name == \"nonexistent\"");
+            qm.persist(validRule);
+
+            final Notification notification = TestNotificationFactory.createBomConsumedTestNotification();
+
+            assertThat(router.route(List.of(notification))).satisfiesExactly(
+                    result -> assertThat(result.ruleNames()).containsOnly(invalidRule.getName()));
+        }
+
+        @Test
+        void shouldApplyProjectFilterBeforeFilterExpression() throws Exception {
+            final var project = new Project();
+            project.setName("acme-app");
+            qm.persist(project);
+
+            final var otherProject = new Project();
+            otherProject.setName("other-app");
+            qm.persist(otherProject);
+
+            // Rule is limited to otherProject, but expression would match.
+            final var rule = new NotificationRule();
+            rule.setName("rule");
+            rule.setScope(NotificationScope.PORTFOLIO);
+            rule.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            rule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            rule.setEnabled(true);
+            rule.setTriggerType(NotificationTriggerType.EVENT);
+            rule.setProjects(List.of(otherProject));
+            rule.setFilterExpression("true");
+            qm.persist(rule);
+
+            // Notification is for project, not otherProject.
+            final Notification.Builder notificationBuilder =
+                    TestNotificationFactory.createBomConsumedTestNotification().toBuilder();
+            final Notification notification = notificationBuilder
+                    .setSubject(Any.pack(notificationBuilder.getSubject()
+                            .unpack(BomConsumedOrProcessedSubject.class)
+                            .toBuilder()
+                            .setProject(
+                                    org.dependencytrack.notification.proto.v1.Project.newBuilder()
+                                            .setUuid(project.getUuid().toString())
+                                            .setName(project.getName())
+                                            .build())
+                            .build()))
+                    .build();
+
+            assertThat(router.route(List.of(notification))).isEmpty();
+        }
+
+        @Test
+        void shouldNotApplyFilterExpressionWhenExpressionIsBlank() {
+            final var rule = new NotificationRule();
+            rule.setName("rule");
+            rule.setScope(NotificationScope.PORTFOLIO);
+            rule.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
+            rule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+            rule.setEnabled(true);
+            rule.setTriggerType(NotificationTriggerType.EVENT);
+            rule.setFilterExpression("   ");
+            qm.persist(rule);
+
+            final Notification notification = TestNotificationFactory.createBomConsumedTestNotification();
+
+            assertThat(router.route(List.of(notification))).satisfiesExactly(
+                    result -> assertThat(result.ruleNames()).containsOnly(rule.getName()));
+        }
+
+    }
+
 }

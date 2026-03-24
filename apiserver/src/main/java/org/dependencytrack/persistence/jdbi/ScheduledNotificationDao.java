@@ -57,6 +57,7 @@ public final class ScheduledNotificationDao {
                              , COALESCE("SCHEDULE_SKIP_UNCHANGED", FALSE) AS "SCHEDULE_SKIP_UNCHANGED"
                              , "NOTIFY_CHILDREN"
                              , "NOTIFY_ON"
+                             , "FILTER_EXPRESSION"
                           FROM "NOTIFICATIONRULE"
                          WHERE "NAME" = :name
                            AND "TRIGGER_TYPE" = 'SCHEDULE'

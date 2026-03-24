@@ -1939,4 +1939,10 @@
             ALTER TABLE "VULNERABILITY_POLICY" DROP COLUMN "CONDITIONS";
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-76" author="nscuro">
+        <addColumn tableName="NOTIFICATIONRULE">
+            <column name="FILTER_EXPRESSION" type="TEXT"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

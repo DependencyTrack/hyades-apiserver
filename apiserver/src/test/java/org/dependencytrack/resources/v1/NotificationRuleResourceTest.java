@@ -750,4 +750,174 @@ class NotificationRuleResourceTest extends ResourceTest {
                 }
                 """);
     }
+
+    @Test
+    void shouldUpdateNotificationRuleWithValidFilterExpression() {
+        initializeWithPermissions(
+                Permissions.SYSTEM_CONFIGURATION_CREATE,
+                Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
+        Response response = jersey
+                .target(V1_NOTIFICATION_RULE)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "Rule 1",
+                          "notificationLevel": "INFORMATIONAL",
+                          "scope": "PORTFOLIO",
+                          "publisher": {
+                            "uuid": "%s"
+                          }
+                        }
+                        """.formatted(publisher.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(201);
+
+        final JsonObjectBuilder ruleJson = Json.createObjectBuilder(parseJsonObject(response));
+        ruleJson.add("filterExpression", "group == 1");
+
+        response = jersey
+                .target(V1_NOTIFICATION_RULE)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(ruleJson.build().toString()));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "name": "Rule 1",
+                  "enabled": true,
+                  "notifyChildren": true,
+                  "logSuccessfulPublish": false,
+                  "scope": "PORTFOLIO",
+                  "notificationLevel": "INFORMATIONAL",
+                  "projects": [],
+                  "tags": [],
+                  "teams": [],
+                  "notifyOn": [],
+                  "publisher": {
+                    "name": "Slack",
+                    "description": "description",
+                    "extensionName": "slack",
+                    "templateMimeType": "templateMimeType",
+                    "defaultPublisher": true,
+                    "uuid": "${json-unit.any-string}"
+                  },
+                  "publisherConfig": "${json-unit.any-string}",
+                  "triggerType": "EVENT",
+                  "filterExpression": "group == 1",
+                  "uuid": "${json-unit.any-string}"
+                }
+                """);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenFilterExpressionIsInvalid() {
+        initializeWithPermissions(
+                Permissions.SYSTEM_CONFIGURATION_CREATE,
+                Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
+        Response response = jersey
+                .target(V1_NOTIFICATION_RULE)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "Rule 1",
+                          "notificationLevel": "INFORMATIONAL",
+                          "scope": "PORTFOLIO",
+                          "publisher": {
+                            "uuid": "%s"
+                          }
+                        }
+                        """.formatted(publisher.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(201);
+
+        final JsonObjectBuilder ruleJson = Json.createObjectBuilder(parseJsonObject(response));
+        ruleJson.add("filterExpression", "invalid %%% expression");
+
+        response = jersey
+                .target(V1_NOTIFICATION_RULE)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(ruleJson.build().toString()));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 400,
+                  "title": "Bad Request",
+                  "detail": "Filter expression is invalid",
+                  "errors": [
+                    {
+                      "line": 1,
+                      "column": 9,
+                      "message": "${json-unit.any-string}"
+                    },
+                    {
+                      "line": 1,
+                      "column": 10,
+                      "message": "${json-unit.any-string}"
+                    }
+                  ]
+                }
+                """);
+    }
+
+    @Test
+    void shouldUpdateNotificationRuleWithNullFilterExpression() {
+        initializeWithPermissions(
+                Permissions.SYSTEM_CONFIGURATION_CREATE,
+                Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
+        Response response = jersey
+                .target(V1_NOTIFICATION_RULE)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "Rule 1",
+                          "notificationLevel": "INFORMATIONAL",
+                          "scope": "PORTFOLIO",
+                          "publisher": {
+                            "uuid": "%s"
+                          }
+                        }
+                        """.formatted(publisher.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(201);
+
+        final JsonObjectBuilder ruleJson = Json.createObjectBuilder(parseJsonObject(response));
+        ruleJson.addNull("filterExpression");
+
+        response = jersey
+                .target(V1_NOTIFICATION_RULE)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(ruleJson.build().toString()));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "name": "Rule 1",
+                  "enabled": true,
+                  "notifyChildren": true,
+                  "logSuccessfulPublish": false,
+                  "scope": "PORTFOLIO",
+                  "notificationLevel": "INFORMATIONAL",
+                  "projects": [],
+                  "tags": [],
+                  "teams": [],
+                  "notifyOn": [],
+                  "publisher": {
+                    "name": "Slack",
+                    "description": "description",
+                    "extensionName": "slack",
+                    "templateMimeType": "templateMimeType",
+                    "defaultPublisher": true,
+                    "uuid": "${json-unit.any-string}"
+                  },
+                  "publisherConfig": "${json-unit.any-string}",
+                  "triggerType": "EVENT",
+                  "uuid": "${json-unit.any-string}"
+                }
+                """);
+    }
+
 }

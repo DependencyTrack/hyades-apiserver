@@ -209,6 +209,11 @@ public class NotificationRule implements Serializable {
             Must not be set for rules with trigger type EVENT.""")
     private Boolean scheduleSkipUnchanged;
 
+    @Persistent
+    @Column(name = "FILTER_EXPRESSION", allowsNull = "true")
+    @JsonDeserialize(using = TrimmedStringDeserializer.class)
+    private String filterExpression;
+
     @Persistent(defaultFetchGroup = "true", customValueStrategy = "uuid")
     @Unique(name = "NOTIFICATIONRULE_UUID_IDX")
     @Column(name = "UUID", sqlType = "UUID", allowsNull = "false")
@@ -340,6 +345,14 @@ public class NotificationRule implements Serializable {
 
     public void setPublisherConfig(String publisherConfig) {
         this.publisherConfig = publisherConfig;
+    }
+
+    public String getFilterExpression() {
+        return filterExpression;
+    }
+
+    public void setFilterExpression(String filterExpression) {
+        this.filterExpression = filterExpression;
     }
 
     @NotNull

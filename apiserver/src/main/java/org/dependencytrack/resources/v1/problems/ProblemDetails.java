@@ -33,6 +33,7 @@ import java.net.URI;
         description = "An RFC 9457 problem object",
         subTypes = {
                 InvalidBomProblemDetails.class,
+                InvalidNotificationFilterExpressionProblemDetails.class,
                 TagOperationProblemDetails.class
         }
 )

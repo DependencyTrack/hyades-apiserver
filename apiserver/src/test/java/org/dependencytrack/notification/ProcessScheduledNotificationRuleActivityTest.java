@@ -43,6 +43,7 @@ import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.proto.internal.workflow.v1.ProcessScheduledNotificationRuleArg;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -521,6 +522,157 @@ class ProcessScheduledNotificationRuleActivityTest extends PersistenceCapableTes
                         .build());
 
         verify(dexEngine, times(2)).createRun(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Nested
+    class FilterExpressionTest {
+
+        @Test
+        void shouldDispatchWhenFilterExpressionMatchesNewVulnSummary() {
+            final Instant ruleLastFiredAt = Instant.now().minus(10, ChronoUnit.MINUTES);
+            final Instant afterRuleLastFiredAt = ruleLastFiredAt.plus(5, ChronoUnit.MINUTES);
+
+            final var vuln = new Vulnerability();
+            vuln.setVulnId("INT-001");
+            vuln.setSource(Vulnerability.Source.INTERNAL);
+            vuln.setSeverity(Severity.CRITICAL);
+            qm.persist(vuln);
+
+            final var project = new Project();
+            project.setName("acme-app");
+            qm.persist(project);
+            final var component = new Component();
+            component.setProject(project);
+            component.setName("acme-lib");
+            qm.persist(component);
+            qm.addVulnerability(vuln, component, "internal",
+                    null, null, Date.from(afterRuleLastFiredAt));
+
+            final var publisher = qm.createNotificationPublisher(
+                    "foo", null, "webhook", "template", "templateMimeType", false);
+            final NotificationRule rule = qm.createScheduledNotificationRule(
+                    "foo", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
+            rule.setNotifyOn(Set.of(NotificationGroup.NEW_VULNERABILITIES_SUMMARY));
+            rule.setProjects(List.of(project));
+            rule.setScheduleCron("* * * * *");
+            rule.setScheduleLastTriggeredAt(Date.from(ruleLastFiredAt));
+            rule.updateScheduleNextTriggerAt();
+            rule.setEnabled(true);
+            rule.setFilterExpression("\"CRITICAL\" in subject.overview.new_vulnerabilities_count_by_severity");
+
+            final var dexEngine = mock(DexEngine.class);
+            doReturn(UUID.randomUUID()).when(dexEngine).createRun(any(CreateWorkflowRunRequest.class));
+
+            final var activity = new ProcessScheduledNotificationRuleActivity(
+                    dexEngine, mock(FileStorage.class), Integer.MAX_VALUE);
+            activity.execute(
+                    mock(ActivityContext.class),
+                    ProcessScheduledNotificationRuleArg.newBuilder()
+                            .setRuleName(rule.getName())
+                            .build());
+
+            verify(dexEngine).createRun(any(CreateWorkflowRunRequest.class));
+        }
+
+        @Test
+        void shouldNotDispatchWhenFilterExpressionDoesNotMatch() {
+            final Instant ruleLastFiredAt = Instant.now().minus(10, ChronoUnit.MINUTES);
+            final Instant afterRuleLastFiredAt = ruleLastFiredAt.plus(5, ChronoUnit.MINUTES);
+
+            final var vuln = new Vulnerability();
+            vuln.setVulnId("INT-001");
+            vuln.setSource(Vulnerability.Source.INTERNAL);
+            vuln.setSeverity(Severity.LOW);
+            qm.persist(vuln);
+
+            final var project = new Project();
+            project.setName("acme-app");
+            qm.persist(project);
+            final var component = new Component();
+            component.setProject(project);
+            component.setName("acme-lib");
+            qm.persist(component);
+            qm.addVulnerability(vuln, component, "internal",
+                    null, null, Date.from(afterRuleLastFiredAt));
+
+            final var publisher = qm.createNotificationPublisher(
+                    "foo", null, "webhook", "template", "templateMimeType", false);
+            final NotificationRule rule = qm.createScheduledNotificationRule(
+                    "foo", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
+            rule.setNotifyOn(Set.of(NotificationGroup.NEW_VULNERABILITIES_SUMMARY));
+            rule.setProjects(List.of(project));
+            rule.setScheduleCron("* * * * *");
+            rule.setScheduleLastTriggeredAt(Date.from(ruleLastFiredAt));
+            rule.updateScheduleNextTriggerAt();
+            rule.setEnabled(true);
+            rule.setFilterExpression("\"CRITICAL\" in subject.overview.new_vulnerabilities_count_by_severity");
+
+            final var dexEngine = mock(DexEngine.class);
+
+            final var activity = new ProcessScheduledNotificationRuleActivity(
+                    dexEngine, mock(FileStorage.class), Integer.MAX_VALUE);
+            activity.execute(
+                    mock(ActivityContext.class),
+                    ProcessScheduledNotificationRuleArg.newBuilder()
+                            .setRuleName(rule.getName())
+                            .build());
+
+            verifyNoInteractions(dexEngine);
+
+            // Schedule should still be advanced.
+            qm.getPersistenceManager().evictAll();
+            final NotificationRule updatedRule = qm.getObjectByUuid(NotificationRule.class, rule.getUuid());
+            assertThat(updatedRule.getScheduleLastTriggeredAt())
+                    .isAfterOrEqualTo(Date.from(ruleLastFiredAt.truncatedTo(ChronoUnit.SECONDS)));
+        }
+
+        @Test
+        void shouldFailOpenOnInvalidFilterExpression() {
+            final Instant ruleLastFiredAt = Instant.now().minus(10, ChronoUnit.MINUTES);
+            final Instant afterRuleLastFiredAt = ruleLastFiredAt.plus(5, ChronoUnit.MINUTES);
+
+            final var vuln = new Vulnerability();
+            vuln.setVulnId("INT-001");
+            vuln.setSource(Vulnerability.Source.INTERNAL);
+            vuln.setSeverity(Severity.LOW);
+            qm.persist(vuln);
+
+            final var project = new Project();
+            project.setName("acme-app");
+            qm.persist(project);
+            final var component = new Component();
+            component.setProject(project);
+            component.setName("acme-lib");
+            qm.persist(component);
+            qm.addVulnerability(vuln, component, "internal",
+                    null, null, Date.from(afterRuleLastFiredAt));
+
+            final var publisher = qm.createNotificationPublisher(
+                    "foo", null, "webhook", "template", "templateMimeType", false);
+            final NotificationRule rule = qm.createScheduledNotificationRule(
+                    "foo", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
+            rule.setNotifyOn(Set.of(NotificationGroup.NEW_VULNERABILITIES_SUMMARY));
+            rule.setProjects(List.of(project));
+            rule.setScheduleCron("* * * * *");
+            rule.setScheduleLastTriggeredAt(Date.from(ruleLastFiredAt));
+            rule.updateScheduleNextTriggerAt();
+            rule.setEnabled(true);
+            rule.setFilterExpression("this is not valid CEL");
+
+            final var dexEngine = mock(DexEngine.class);
+            doReturn(UUID.randomUUID()).when(dexEngine).createRun(any(CreateWorkflowRunRequest.class));
+
+            final var activity = new ProcessScheduledNotificationRuleActivity(
+                    dexEngine, mock(FileStorage.class), Integer.MAX_VALUE);
+            activity.execute(
+                    mock(ActivityContext.class),
+                    ProcessScheduledNotificationRuleArg.newBuilder()
+                            .setRuleName(rule.getName())
+                            .build());
+
+            verify(dexEngine).createRun(any(CreateWorkflowRunRequest.class));
+        }
+
     }
 
 }

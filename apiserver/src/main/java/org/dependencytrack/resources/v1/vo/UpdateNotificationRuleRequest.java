@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.validation.ValidCronExpression;
 import org.dependencytrack.notification.NotificationGroup;
@@ -45,6 +46,7 @@ public record UpdateNotificationRuleRequest(
         @JsonAlias("notificationLevel") @NotNull NotificationLevel level,
         Set<@NotNull NotificationGroup> notifyOn,
         String publisherConfig,
+        @Size(max = 2048) String filterExpression,
         Set<Tag> tags,
         @NotNull UUID uuid,
         @Nullable @ValidCronExpression String scheduleCron,

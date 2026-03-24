@@ -21,6 +21,7 @@ package org.dependencytrack.notification;
 import com.asahaf.javacron.InvalidExpressionException;
 import com.asahaf.javacron.Schedule;
 import com.fasterxml.uuid.Generators;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.Timestamps;
 import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityContext;
@@ -48,6 +49,7 @@ import org.dependencytrack.persistence.jdbi.ScheduledNotificationDao.NewPolicyVi
 import org.dependencytrack.proto.internal.workflow.v1.ProcessScheduledNotificationRuleArg;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
 import org.jspecify.annotations.Nullable;
+import org.projectnessie.cel.Program;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -170,7 +172,7 @@ public final class ProcessScheduledNotificationRuleActivity
                 };
             });
 
-            if (notification != null) {
+            if (notification != null && evaluateFilterExpression(rule, notification, group)) {
                 dispatchNotification(notification, rule.getName());
             }
         }
@@ -477,6 +479,48 @@ public final class ProcessScheduledNotificationRuleActivity
         }
 
         return createNewPolicyViolationsSummaryNotification(notificationId, subjectBuilder.build());
+    }
+
+    private boolean evaluateFilterExpression(
+            NotificationRule rule,
+            Notification notification,
+            NotificationGroup group) {
+        final String filterExpression = rule.getFilterExpression();
+        if (filterExpression == null || filterExpression.isBlank()) {
+            return true;
+        }
+
+        final Object subject = unpackSubject(notification, group);
+        final var scriptHost = NotificationFilterScriptHost.getInstance();
+
+        try {
+            final Program program = scriptHost.compile(filterExpression);
+            final boolean result = scriptHost.evaluate(program, notification, subject);
+            LOGGER.debug("Filter expression evaluated to {}", result);
+            return result;
+        } catch (RuntimeException e) {
+            LOGGER.warn("Failed to evaluate filter expression for rule {}; Failing open", rule.getName(), e);
+            return true;
+        }
+    }
+
+    private @Nullable Object unpackSubject(Notification notification, NotificationGroup group) {
+        if (!notification.hasSubject()) {
+            return null;
+        }
+
+        try {
+            return switch (group) {
+                case NEW_VULNERABILITIES_SUMMARY -> notification.getSubject().unpack(
+                        NewVulnerabilitiesSummarySubject.class);
+                case NEW_POLICY_VIOLATIONS_SUMMARY -> notification.getSubject().unpack(
+                        NewPolicyViolationsSummarySubject.class);
+                default -> null;
+            };
+        } catch (InvalidProtocolBufferException e) {
+            LOGGER.warn("Failed to unpack notification subject", e);
+            return null;
+        }
     }
 
     private void dispatchNotification(Notification notification, String ruleName) {

@@ -53,6 +53,7 @@ import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.NotificationTriggerType;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.notification.NotificationFilterScriptHost;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.persistence.QueryManager;
@@ -63,6 +64,7 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.problems.InvalidNotificationFilterExpressionProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.CreateNotificationRuleRequest;
 import org.dependencytrack.resources.v1.vo.CreateScheduledNotificationRuleRequest;
@@ -268,6 +270,12 @@ public class NotificationRuleResource extends AbstractApiResource {
                     description = "The updated notification rule",
                     content = @Content(schema = @Schema(implementation = NotificationRule.class))
             ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid filter expression",
+                    content = @Content(
+                            schema = @Schema(implementation = InvalidNotificationFilterExpressionProblemDetails.class),
+                            mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the notification rule could not be found")
     })
@@ -276,6 +284,10 @@ public class NotificationRuleResource extends AbstractApiResource {
             Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE
     })
     public Response updateNotificationRule(@Valid UpdateNotificationRuleRequest request) {
+        if (request.filterExpression() != null && !request.filterExpression().isBlank()) {
+            NotificationFilterScriptHost.getInstance().compile(request.filterExpression());
+        }
+
         final NotificationRule updatedRule;
         try (final var qm = new QueryManager(getAlpineRequest())) {
             updatedRule = qm.callInTransaction(() -> {
@@ -330,6 +342,7 @@ public class NotificationRuleResource extends AbstractApiResource {
                 transientRule.setNotificationLevel(request.level());
                 transientRule.setNotifyOn(request.notifyOn());
                 transientRule.setPublisherConfig(request.publisherConfig());
+                transientRule.setFilterExpression(request.filterExpression());
                 transientRule.setTags(request.tags());
                 transientRule.setUuid(rule.getUuid());
                 transientRule.setTriggerType(rule.getTriggerType());
@@ -577,4 +590,5 @@ public class NotificationRuleResource extends AbstractApiResource {
             });
         }
     }
+
 }
