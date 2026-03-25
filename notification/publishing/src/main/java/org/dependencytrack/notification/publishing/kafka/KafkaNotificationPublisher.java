@@ -190,7 +190,8 @@ final class KafkaNotificationPublisher implements NotificationPublisher {
                 yield subject.getUsername();
             }
             case GROUP_ANALYZER, GROUP_CONFIGURATION, GROUP_DATASOURCE_MIRRORING,
-                 GROUP_FILE_SYSTEM, GROUP_INTEGRATION, GROUP_REPOSITORY -> null;
+                 GROUP_FILE_SYSTEM, GROUP_INTEGRATION, GROUP_REPOSITORY,
+                 GROUP_NEW_VULNERABILITIES_SUMMARY, GROUP_NEW_POLICY_VIOLATIONS_SUMMARY -> null;
             case GROUP_UNSPECIFIED, UNRECOGNIZED -> throw new IllegalArgumentException("""
                     Unable to determine record key because the notification does not \
                     specify a notification group: %s""".formatted(notification.getGroup()));

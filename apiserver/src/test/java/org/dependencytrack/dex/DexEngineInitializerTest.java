@@ -87,7 +87,8 @@ class DexEngineInitializerTest {
                         Map.entry("dt.dex-engine.datasource.name", "foo"),
                         Map.entry("dt.datasource.foo.url", postgresContainer.getJdbcUrl()),
                         Map.entry("dt.datasource.foo.username", postgresContainer.getUsername()),
-                        Map.entry("dt.datasource.foo.password", postgresContainer.getPassword())))
+                        Map.entry("dt.datasource.foo.password", postgresContainer.getPassword()),
+                        Map.entry("dt.notification.outbox-relay.large-notification-threshold-bytes", "65536")))
                 .build();
 
         dataSourceRegistry = new DataSourceRegistry(config);

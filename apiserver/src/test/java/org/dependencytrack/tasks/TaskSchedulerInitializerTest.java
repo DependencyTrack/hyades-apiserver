@@ -71,11 +71,12 @@ class TaskSchedulerInitializerTest extends PersistenceCapableTest {
                 "Portfolio Metrics Update",
                 "Portfolio Vulnerability Analysis",
                 "Project Maintenance",
+                "Scheduled Notification Dispatch",
                 "Tag Maintenance",
+                "Telemetry Submission",
                 "Vulnerability Database Maintenance",
                 "Vulnerability Metrics Update",
-                "Vulnerability Policy Sync",
-                "Telemetry Submission");
+                "Vulnerability Policy Sync");
 
         assertThat(scheduler.isRunning()).isTrue();
 

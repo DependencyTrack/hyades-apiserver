@@ -22,6 +22,7 @@ import com.google.protobuf.Any;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.model.NotificationTriggerType;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.notification.api.TestNotificationFactory;
@@ -104,6 +105,7 @@ class NotificationRouterTest extends PersistenceCapableTest {
         void routeShouldMatchEnabledRules() {
             // Create a rule that is enabled.
             final var enabledRule = new NotificationRule();
+            enabledRule.setTriggerType(NotificationTriggerType.EVENT);
             enabledRule.setName("A");
             enabledRule.setScope(NotificationScope.PORTFOLIO);
             enabledRule.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
@@ -113,6 +115,7 @@ class NotificationRouterTest extends PersistenceCapableTest {
 
             // Create a rule that disabled.
             final var disabledRule = new NotificationRule();
+            disabledRule.setTriggerType(NotificationTriggerType.EVENT);
             disabledRule.setName("B");
             disabledRule.setScope(NotificationScope.PORTFOLIO);
             disabledRule.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
@@ -141,6 +144,7 @@ class NotificationRouterTest extends PersistenceCapableTest {
 
             // Create a rule that is limited to project A.
             final var ruleProjectA = new NotificationRule();
+            ruleProjectA.setTriggerType(NotificationTriggerType.EVENT);
             ruleProjectA.setName("A");
             ruleProjectA.setScope(NotificationScope.PORTFOLIO);
             ruleProjectA.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
@@ -151,6 +155,7 @@ class NotificationRouterTest extends PersistenceCapableTest {
 
             // Create a rule that is limited to project B.
             final var ruleProjectB = new NotificationRule();
+            ruleProjectB.setTriggerType(NotificationTriggerType.EVENT);
             ruleProjectB.setName("B");
             ruleProjectB.setScope(NotificationScope.PORTFOLIO);
             ruleProjectB.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
@@ -194,6 +199,7 @@ class NotificationRouterTest extends PersistenceCapableTest {
             // Create a rule that is limited to the parent project,
             // but has the "notify children" feature ENABLED.
             final var ruleNotifyChildren = new NotificationRule();
+            ruleNotifyChildren.setTriggerType(NotificationTriggerType.EVENT);
             ruleNotifyChildren.setName("A");
             ruleNotifyChildren.setScope(NotificationScope.PORTFOLIO);
             ruleNotifyChildren.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
@@ -206,6 +212,7 @@ class NotificationRouterTest extends PersistenceCapableTest {
             // Create a rule that is limited to the parent project,
             // but has the "notify children" feature DISABLED.
             final var ruleDoNotNotifyChildren = new NotificationRule();
+            ruleDoNotNotifyChildren.setTriggerType(NotificationTriggerType.EVENT);
             ruleDoNotNotifyChildren.setName("B");
             ruleDoNotNotifyChildren.setScope(NotificationScope.PORTFOLIO);
             ruleDoNotNotifyChildren.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
@@ -249,6 +256,7 @@ class NotificationRouterTest extends PersistenceCapableTest {
 
             // Create a rule limited to tag A.
             final var ruleTagA = new NotificationRule();
+            ruleTagA.setTriggerType(NotificationTriggerType.EVENT);
             ruleTagA.setName("A");
             ruleTagA.setScope(NotificationScope.PORTFOLIO);
             ruleTagA.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
@@ -259,6 +267,7 @@ class NotificationRouterTest extends PersistenceCapableTest {
 
             // Create a rule limited to tag B.
             final var ruleTagB = new NotificationRule();
+            ruleTagB.setTriggerType(NotificationTriggerType.EVENT);
             ruleTagB.setName("B");
             ruleTagB.setScope(NotificationScope.PORTFOLIO);
             ruleTagB.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
@@ -292,6 +301,7 @@ class NotificationRouterTest extends PersistenceCapableTest {
         @Test
         void routeShouldMatchMultipleRules() {
             final var ruleA = new NotificationRule();
+            ruleA.setTriggerType(NotificationTriggerType.EVENT);
             ruleA.setName("A");
             ruleA.setScope(NotificationScope.PORTFOLIO);
             ruleA.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
@@ -300,6 +310,7 @@ class NotificationRouterTest extends PersistenceCapableTest {
             qm.persist(ruleA);
 
             final var ruleB = new NotificationRule();
+            ruleB.setTriggerType(NotificationTriggerType.EVENT);
             ruleB.setName("B");
             ruleB.setScope(NotificationScope.PORTFOLIO);
             ruleB.setNotifyOn(Set.of(NotificationGroup.BOM_CONSUMED));
@@ -337,6 +348,7 @@ class NotificationRouterTest extends PersistenceCapableTest {
         @MethodSource("routeShouldHandleAllNotificationTypesParams")
         void routeShouldHandleAllNotificationTypes(final Notification notification) {
             final var rule = new NotificationRule();
+            rule.setTriggerType(NotificationTriggerType.EVENT);
             rule.setName("foo");
             rule.setScope(convert(notification.getScope()));
             rule.setNotifyOn(Set.of(convert(notification.getGroup())));

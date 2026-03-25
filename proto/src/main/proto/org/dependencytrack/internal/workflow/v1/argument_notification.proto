@@ -44,6 +44,16 @@ message PublishNotificationWorkflowArg {
   repeated string notification_rule_names = 4;
 }
 
+// Argument of the process-scheduled-notifications workflow.
+message ProcessScheduledNotificationsWorkflowArg {
+  repeated string rule_names = 1;
+}
+
+// Argument of the process-scheduled-notification-rule activity.
+message ProcessScheduledNotificationRuleArg {
+  string rule_name = 1;
+}
+
 // Argument of the publish-notification activity.
 message PublishNotificationActivityArg {
   // ID of the notification.

@@ -55,6 +55,7 @@ import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.model.NotificationTriggerType;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
@@ -977,12 +978,16 @@ public class QueryManager extends AlpineQueryManager {
         return getNotificationQueryManager().createNotificationRule(name, scope, level, publisher);
     }
 
+    public NotificationRule createScheduledNotificationRule(String name, NotificationScope scope, NotificationLevel level, NotificationPublisher publisher) {
+        return getNotificationQueryManager().createScheduledNotificationRule(name, scope, level, publisher);
+    }
+
     public NotificationRule updateNotificationRule(NotificationRule transientRule) {
         return getNotificationQueryManager().updateNotificationRule(transientRule);
     }
 
-    public PaginatedResult getNotificationRules() {
-        return getNotificationQueryManager().getNotificationRules();
+    public PaginatedResult getNotificationRules(NotificationTriggerType triggerTypeFilter) {
+        return getNotificationQueryManager().getNotificationRules(triggerTypeFilter);
     }
 
     public List<NotificationPublisher> getAllNotificationPublishers() {

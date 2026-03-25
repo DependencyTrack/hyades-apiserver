@@ -22,6 +22,7 @@ import alpine.common.util.UuidUtil;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.resources.GlobalExceptionHandler;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -77,7 +78,8 @@ class NotificationRuleResourceTest extends ResourceTest {
                         protected void configure() {
                             bindFactory(() -> pluginManager).to(PluginManager.class);
                         }
-                    }));
+                    })
+                    .register(GlobalExceptionHandler.class));
 
     private NotificationPublisher publisher;
 
@@ -167,6 +169,7 @@ class NotificationRuleResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}"
                   },
                   "publisherConfig": "{\\"destinationUrl\\":\\"https://slack.example.com\\"}",
+                  "triggerType": "EVENT",
                   "uuid": "${json-unit.any-string}"
                 }
                 """);
@@ -238,6 +241,7 @@ class NotificationRuleResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}"
                   },
                   "publisherConfig": "{\\"destinationUrl\\":\\"https://slack.example.com\\"}",
+                  "triggerType": "EVENT",
                   "uuid": "${json-unit.any-string}"
                 }
                 """);
@@ -558,6 +562,7 @@ class NotificationRuleResourceTest extends ResourceTest {
                             "defaultPublisher": true,
                             "uuid": "${json-unit.matches:publisherUuid}"
                           },
+                          "triggerType": "EVENT",
                           "uuid": "${json-unit.matches:ruleUuid}"
                         }
                         """);
@@ -670,6 +675,7 @@ class NotificationRuleResourceTest extends ResourceTest {
                             "uuid": "${json-unit.any-string}"
                           },
                           "publisherConfig": "${json-unit.any-string}",
+                          "triggerType": "EVENT",
                           "uuid": "${json-unit.any-string}"
                         }
                         """);
@@ -708,6 +714,7 @@ class NotificationRuleResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}"
                   },
                   "publisherConfig": "${json-unit.any-string}",
+                  "triggerType": "EVENT",
                   "uuid": "${json-unit.any-string}"
                 }
                 """);

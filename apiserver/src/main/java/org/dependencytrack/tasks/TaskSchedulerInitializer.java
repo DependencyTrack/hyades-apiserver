@@ -46,12 +46,15 @@ import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
 import org.dependencytrack.metrics.UpdatePortfolioMetricsWorkflow;
 import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
+import org.dependencytrack.notification.ProcessScheduledNotificationsWorkflow;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ScheduledNotificationDao;
 import org.dependencytrack.pkgmetadata.ResolvePackageMetadataWorkflow;
 import org.dependencytrack.plugin.NoSuchExtensionException;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
+import org.dependencytrack.proto.internal.workflow.v1.ProcessScheduledNotificationsWorkflowArg;
 import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.PackageMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
@@ -67,6 +70,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABLED;
@@ -243,6 +247,24 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         "Expired Session Cleanup",
                         getCronScheduleFromConfig(config, "dt.task.expired-session-cleanup.cron"),
                         () -> new SessionTokenService().deleteExpiredSessions())
+                .schedule(
+                        "Scheduled Notification Dispatch",
+                        getCronScheduleFromConfig(config, "dt.task.scheduled-notification-dispatch.cron"),
+                        () -> {
+                            final Set<String> ruleNames = withJdbiHandle(
+                                    handle -> new ScheduledNotificationDao(handle)
+                                            .getDueScheduledNotificationRuleNames());
+                            if (ruleNames.isEmpty()) {
+                                return;
+                            }
+
+                            dexEngine.createRun(
+                                    new CreateWorkflowRunRequest<>(ProcessScheduledNotificationsWorkflow.class)
+                                            .withWorkflowInstanceId(ProcessScheduledNotificationsWorkflow.INSTANCE_ID)
+                                            .withArgument(ProcessScheduledNotificationsWorkflowArg.newBuilder()
+                                                    .addAllRuleNames(ruleNames)
+                                                    .build()));
+                        })
                 .schedule(
                         "Telemetry Submission",
                         getCronScheduleFromConfig(config, "dt.task.telemetry-submission.cron"),
