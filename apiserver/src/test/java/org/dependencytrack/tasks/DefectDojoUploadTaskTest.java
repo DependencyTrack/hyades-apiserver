@@ -708,7 +708,7 @@ class DefectDojoUploadTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    void testUploadWithProjectLevelReimportAndTestName(WireMockRuntimeInfo wmRuntimeInfo) {
+    void testUploadWithProjectLevelReimportAndTestTitle(WireMockRuntimeInfo wmRuntimeInfo) {
         qm.createConfigProperty(
                 DEFECTDOJO_ENABLED.getGroupName(),
                 DEFECTDOJO_ENABLED.getPropertyName(),
