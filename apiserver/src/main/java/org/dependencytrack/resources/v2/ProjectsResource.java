@@ -28,8 +28,8 @@ import org.dependencytrack.api.v2.ProjectsApi;
 import org.dependencytrack.api.v2.model.CloneProjectInclude;
 import org.dependencytrack.api.v2.model.CloneProjectRequest;
 import org.dependencytrack.api.v2.model.CloneProjectResponse;
-import org.dependencytrack.api.v2.model.ListComponentsResponse;
-import org.dependencytrack.api.v2.model.ListComponentsResponseItem;
+import org.dependencytrack.api.v2.model.ListProjectComponentsResponse;
+import org.dependencytrack.api.v2.model.ListProjectComponentsResponseItem;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.model.Component;
@@ -67,10 +67,10 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
             final Page<Component> componentsPage = handle.attach(ComponentDao.class)
                     .listProjectComponents(projectId, onlyOutdated, onlyDirect, limit, pageToken);
 
-            final var response = ListComponentsResponse.builder()
+            final var response = ListProjectComponentsResponse.builder()
                     .items(componentsPage.items().stream()
-                            .<ListComponentsResponseItem>map(
-                                    componentRow -> ListComponentsResponseItem.builder()
+                            .<ListProjectComponentsResponseItem>map(
+                                    componentRow -> ListProjectComponentsResponseItem.builder()
                                             .name(componentRow.getName())
                                             .hashes(mapHashes(componentRow))
                                             .classifier(componentRow.getClassifier() != null ? componentRow.getClassifier().name() : null)

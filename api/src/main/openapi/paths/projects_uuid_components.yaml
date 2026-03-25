@@ -46,7 +46,7 @@ get:
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/list-components-response.yaml"
+            $ref: "../components/schemas/list-project-components-response.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":

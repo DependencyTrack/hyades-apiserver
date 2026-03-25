@@ -55,13 +55,13 @@ properties:
     maxLength: 255
   resolved_license:
     $ref: "./license.yaml"
+  occurrence_count:
+    type: integer
+    format: int64
+    minimum: 0
   last_inherited_risk_score:
     type: number
     format: double
   uuid:
     type: string
     format: uuid
-  project:
-    $ref: "./component-project.yaml"
-  metrics:
-    $ref: "./dependency-metrics.yaml"
