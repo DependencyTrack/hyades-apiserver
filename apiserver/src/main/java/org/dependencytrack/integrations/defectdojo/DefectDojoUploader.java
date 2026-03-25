@@ -147,10 +147,11 @@ public class DefectDojoUploader extends AbstractIntegrationPoint implements Proj
                 LOGGER.warn("DefectDojo API key secret '%s' could not be resolved. Aborting".formatted(apiKeySecretName));
                 return;
             }
+            final String testTitle = getTestTitle(project);
             final DefectDojoClient client = new DefectDojoClient(httpClient, this, new URL(defectDojoUrl.getPropertyValue()));
             if (isReimportConfigured(project) || globalReimportEnabled) {
                 final ArrayList<String> testsIds = client.getDojoTestIds(apiKeyValue, engagementId.getPropertyValue());
-                final String testId = client.getDojoTestId(engagementId.getPropertyValue(), testsIds, getTestTitle(project));
+                final String testId = client.getDojoTestId(engagementId.getPropertyValue(), testsIds, testTitle);
                 LOGGER.debug("Found existing test Id: " + testId);
                 if (testId.equals("")) {
                     client.uploadDependencyTrackFindings(
@@ -158,7 +159,7 @@ public class DefectDojoUploader extends AbstractIntegrationPoint implements Proj
                             engagementId.getPropertyValue(),
                             payload,
                             verifyFindings,
-                            getTestTitle(project));
+                            testTitle);
                 } else {
                     client.reimportDependencyTrackFindings(
                             apiKeyValue,
@@ -167,7 +168,7 @@ public class DefectDojoUploader extends AbstractIntegrationPoint implements Proj
                             testId,
                             isDoNotReactivateConfigured(project),
                             verifyFindings,
-                            getTestTitle(project));
+                            testTitle);
                 }
             } else {
                 client.uploadDependencyTrackFindings(
@@ -175,7 +176,7 @@ public class DefectDojoUploader extends AbstractIntegrationPoint implements Proj
                         engagementId.getPropertyValue(),
                         payload,
                         verifyFindings,
-                        getTestTitle(project));
+                        testTitle);
             }
         } catch (Exception e) {
             LOGGER.error("An error occurred attempting to upload findings to DefectDojo", e);
