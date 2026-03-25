@@ -33,11 +33,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -102,6 +104,31 @@ public class TagResource extends AlpineResource {
                 .toList();
         final long totalCount = tagListRows.isEmpty() ? 0 : tagListRows.getFirst().totalCount();
         return Response.ok(tags).header(TOTAL_COUNT_HEADER, totalCount).build();
+    }
+
+    @PUT
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Creates one or more tags.",
+            description = "<p>Requires permission <strong>TAG_MANAGEMENT</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "Tags created successfully."
+            )
+    })
+    @PermissionRequired(Permissions.Constants.TAG_MANAGEMENT)
+    public Response createTags(
+            @Parameter(description = "Names of the tags to create")
+            @NotNull @Size(min = 1, max = 100) final Set<@NotBlank String> tagNames
+    ) {
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            qm.runInTransaction(() -> qm.createTags(tagNames));
+        }
+
+        return Response.status(Response.Status.CREATED).build();
     }
 
     @DELETE
