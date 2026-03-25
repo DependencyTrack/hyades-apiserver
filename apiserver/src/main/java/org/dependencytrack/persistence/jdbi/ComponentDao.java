@@ -19,6 +19,7 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.common.pagination.Page;
+import org.dependencytrack.common.pagination.Page.TotalCount;
 import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.model.Component;
@@ -33,12 +34,16 @@ import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
+import org.jdbi.v3.sqlobject.customizer.BindMap;
+import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -49,7 +54,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.hasColumn;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
-public interface ComponentDao extends SqlObject {
+public interface ComponentDao extends SqlObject, PaginationSupport {
 
     @SqlUpdate("""
             DELETE
@@ -115,13 +120,13 @@ public interface ComponentDao extends SqlObject {
                 : rows;
 
         final ListComponentPageToken nextPageToken = rows.size() > limit
-                ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion(), resultRows.getLast().getId())
+                ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion(), resultRows.getLast().getId(), null)
                 : null;
 
         return new Page<>(resultRows, pageTokenEncoder.encode(nextPageToken));
     }
 
-    record ListComponentPageToken(String lastName, String lastVersion, Long lastId) implements PageToken {
+    record ListComponentPageToken(String lastName, String lastVersion, Long lastId, TotalCount totalCount) implements PageToken {
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
@@ -215,8 +220,52 @@ public interface ComponentDao extends SqlObject {
                 getHandle().getConfig(PaginationConfig.class).getPageTokenEncoder();
         final var decodedPageToken = pageTokenEncoder.decode(pageToken, ListComponentPageToken.class);
 
-        final List<Component> rows = listComponents(projectId, limit + 1,
-                componentGroup, componentName, componentVersion, componentPurl, componentCpe, componentSwidTagId,
+        TotalCount totalCount;
+        final var whereConditions = new ArrayList<String>();
+        final var queryParams = new HashMap<String, Object>();
+        whereConditions.add("TRUE");
+        if (projectId != null) {
+            whereConditions.add("\"C\".\"PROJECT_ID\" = :projectId");
+            queryParams.put("projectId", projectId);
+        }
+        if (componentGroup != null) {
+            whereConditions.add("LOWER(\"C\".\"GROUP\") LIKE ('%' || LOWER(:componentGroup) || '%')");
+            queryParams.put("componentGroup", componentGroup);
+        }
+        if (componentName != null) {
+            whereConditions.add("LOWER(\"C\".\"NAME\") LIKE ('%' || LOWER(:componentName) || '%')");
+            queryParams.put("componentName", componentName);
+        }
+        if (componentVersion != null) {
+            whereConditions.add("LOWER(\"C\".\"VERSION\") LIKE ('%' || LOWER(:componentVersion) || '%')");
+            queryParams.put("componentVersion", componentVersion);
+        }
+        if (componentPurl != null) {
+            whereConditions.add("LOWER(\"C\".\"PURL\") LIKE LOWER(:componentPurl) || '%'");
+            queryParams.put("componentPurl", componentPurl);
+        }
+        if (componentCpe != null) {
+            whereConditions.add("LOWER(\"C\".\"CPE\") LIKE ('%' || LOWER(:componentCpe) || '%')");
+            queryParams.put("componentCpe", componentCpe);
+        }
+        if (componentSwidTagId != null) {
+            whereConditions.add("LOWER(\"C\".\"SWIDTAGID\") LIKE ('%' || LOWER(:componentSwidTagId) || '%')");
+            queryParams.put("componentSwidTagId", componentSwidTagId);
+        }
+
+        if (decodedPageToken != null) {
+            totalCount = decodedPageToken.totalCount();
+        } else {
+            totalCount = getBoundedTotalCountWithProjectAcl("""
+                            FROM "COMPONENT" "C"
+                            WHERE %s
+                            """.formatted(String.join(" AND ", whereConditions)),
+                    queryParams,
+                    10000,
+                    "\"C\".\"PROJECT_ID\"");
+        }
+
+        final List<Component> rows = listComponents(whereConditions, queryParams, limit + 1,
                 decodedPageToken != null ? decodedPageToken.lastName() : null,
                 decodedPageToken != null ? decodedPageToken.lastVersion() : null,
                 decodedPageToken != null ? decodedPageToken.lastId() : null);
@@ -226,7 +275,7 @@ public interface ComponentDao extends SqlObject {
                 : rows;
 
         final ListComponentPageToken nextPageToken = rows.size() > limit
-                ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion(), resultRows.getLast().getId())
+                ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion(), resultRows.getLast().getId(), totalCount)
                 : null;
 
         if (includeMetrics) {
@@ -242,11 +291,12 @@ public interface ComponentDao extends SqlObject {
             }
         }
 
-        return new Page<>(resultRows, pageTokenEncoder.encode(nextPageToken));
+        return new Page<>(resultRows, pageTokenEncoder.encode(nextPageToken), totalCount);
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
+            <#-- @ftlvariable name="whereConditions" type="java.util.Collection<String>" -->
             SELECT "C"."ID",
                         "C"."NAME",
                         "C"."BLAKE2B_256",
@@ -289,27 +339,7 @@ public interface ComponentDao extends SqlObject {
                 INNER JOIN "PROJECT" ON "C"."PROJECT_ID" = "PROJECT"."ID"
                 LEFT OUTER JOIN "LICENSE" "L" ON "C"."LICENSE_ID" = "L"."ID"
                 WHERE ${apiProjectAclCondition}
-                <#if projectId>
-                    AND "C"."PROJECT_ID" = :projectId
-                </#if>
-                <#if componentGroup>
-                    AND LOWER("C"."GROUP") LIKE ('%' || LOWER(:componentGroup) || '%')
-                </#if>
-                <#if componentName>
-                    AND LOWER("C"."NAME") LIKE ('%' || LOWER(:componentName) || '%')
-                </#if>
-                <#if componentVersion>
-                    AND LOWER("C"."VERSION") LIKE ('%' || LOWER(:componentVersion) || '%')
-                </#if>
-                <#if componentPurl>
-                    AND LOWER("C"."PURL") LIKE LOWER(:componentPurl) || '%'
-                </#if>
-                <#if componentCpe>
-                    AND LOWER("C"."CPE") LIKE ('%' || LOWER(:componentCpe) || '%')
-                </#if>
-                <#if componentSwidTagId>
-                    AND LOWER("C"."SWIDTAGID") LIKE ('%' || LOWER(:componentSwidTagId) || '%')
-                </#if>
+                AND ${whereConditions?join(" AND ")}
                 <#if lastName && lastVersion && lastId>
                     AND ("C"."NAME" > :lastName
                             OR ("C"."NAME" = :lastName AND "C"."VERSION" < :lastVersion)
@@ -322,14 +352,9 @@ public interface ComponentDao extends SqlObject {
     @RegisterRowMapper(ComponentListRowMapper.class)
     @DefineApiProjectAclCondition(projectIdColumn = "\"C\".\"PROJECT_ID\"")
     List<Component> listComponents(
-            @Bind Long projectId,
+            @Define ArrayList<String> whereConditions,
+            @BindMap Map<String, Object> queryParams,
             @Bind int limit,
-            @Bind String componentGroup,
-            @Bind String componentName,
-            @Bind String componentVersion,
-            @Bind String componentPurl,
-            @Bind String componentCpe,
-            @Bind String componentSwidTagId,
             @Bind String lastName,
             @Bind String lastVersion,
             @Bind Long lastId

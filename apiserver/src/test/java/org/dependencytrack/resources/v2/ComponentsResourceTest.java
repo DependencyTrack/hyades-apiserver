@@ -183,7 +183,11 @@ public class ComponentsResourceTest extends ResourceTest {
                         }
                       }
                   ],
-                  "next_page_token": "${json-unit.any-string}"
+                  "next_page_token": "${json-unit.any-string}",
+                  "total": {
+                    "count": 3,
+                    "type": "EXACT"
+                  }
                 }
                 """);
 
@@ -212,7 +216,11 @@ public class ComponentsResourceTest extends ResourceTest {
                             "uuid": "${json-unit.any-string}"
                         }
                       }
-                  ]
+                  ],
+                  "total": {
+                    "count": 3,
+                    "type": "EXACT"
+                  }
                 }
                 """);
     }
@@ -247,7 +255,11 @@ public class ComponentsResourceTest extends ResourceTest {
                             "uuid": "${json-unit.any-string}"
                         }
                       }
-                  ]
+                  ],
+                  "total": {
+                    "count": 1,
+                    "type": "EXACT"
+                  }
                 }
                 """);
     }
@@ -256,7 +268,7 @@ public class ComponentsResourceTest extends ResourceTest {
     public void listComponentsByIdentityWithPurlTest() {
         prepareComponents();
         Response response = jersey.target("/components")
-                .queryParam("purl", "pkg:maven/groupB/nameB@versionB?baz=qux")
+                .queryParam("purl", "pkg:maven/groupB/nameB@versionB")
                 .queryParam("limit", 2)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -279,7 +291,11 @@ public class ComponentsResourceTest extends ResourceTest {
                             "uuid": "${json-unit.any-string}"
                         }
                       }
-                  ]
+                  ],
+                  "total": {
+                    "count": 1,
+                    "type": "EXACT"
+                  }
                 }
                 """);
     }
@@ -325,7 +341,11 @@ public class ComponentsResourceTest extends ResourceTest {
                             "uuid": "${json-unit.any-string}"
                         }
                       }
-                  ]
+                  ],
+                  "total": {
+                    "count": 1,
+                    "type": "EXACT"
+                  }
                 }
                 """);
     }
@@ -358,7 +378,11 @@ public class ComponentsResourceTest extends ResourceTest {
                             "direct_dependencies": "${json-unit.any-string}"
                         }
                       }
-                  ]
+                  ],
+                  "total": {
+                    "count": 1,
+                    "type": "EXACT"
+                  }
                 }
                 """);
     }
@@ -406,7 +430,11 @@ public class ComponentsResourceTest extends ResourceTest {
                             "direct_dependencies": "${json-unit.any-string}"
                         }
                       }
-                  ]
+                  ],
+                  "total": {
+                    "count": 1,
+                    "type": "EXACT"
+                  }
                 }
                 """);
     }
