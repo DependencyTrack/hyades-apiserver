@@ -611,6 +611,7 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
      * @param names the name(s) of the Tag(s) to create
      * @return the created Tag object(s)
      */
+    @Override
     public Set<Tag> createTags(final Collection<String> names) {
         final Set<Tag> newTags = new HashSet<>();
         for (final String name : names) {
