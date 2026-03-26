@@ -21,8 +21,8 @@ package org.dependencytrack.notification.publishing.webhook;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
-import org.dependencytrack.notification.publishing.http.HttpNotificationPublisherRuleConfigV1;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.jspecify.annotations.Nullable;
 
@@ -63,8 +63,28 @@ public final class WebhookNotificationPublisherFactory implements NotificationPu
     @Override
     public RuntimeConfigSpec ruleConfigSpec() {
         return RuntimeConfigSpec.of(
-                new HttpNotificationPublisherRuleConfigV1()
-                        .withDestinationUrl(URI.create("https://example.com")));
+                new WebhookNotificationPublisherRuleConfigV1()
+                        .withDestinationUrl(URI.create("https://example.com")),
+                config -> {
+                    final String authHeaderName = config.getAuthHeaderName();
+                    final String authHeaderValue = config.getAuthHeaderValue();
+                    if (authHeaderName != null && authHeaderName.isBlank()) {
+                        throw new InvalidRuntimeConfigException(
+                                "authHeaderName must not be blank");
+                    }
+                    if (authHeaderValue != null && authHeaderValue.isBlank()) {
+                        throw new InvalidRuntimeConfigException(
+                                "authHeaderValue must not be blank");
+                    }
+                    if (authHeaderValue != null && authHeaderName == null) {
+                        throw new InvalidRuntimeConfigException(
+                                "authHeaderName is required when authHeaderValue is set");
+                    }
+                    if (authHeaderName != null && authHeaderValue == null) {
+                        throw new InvalidRuntimeConfigException(
+                                "authHeaderValue is required when authHeaderName is set");
+                    }
+                });
     }
 
     @Override
