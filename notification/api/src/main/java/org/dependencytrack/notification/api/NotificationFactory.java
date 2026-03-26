@@ -33,6 +33,8 @@ import org.dependencytrack.notification.proto.v1.Component;
 import org.dependencytrack.notification.proto.v1.ComponentVulnAnalysisCompleteSubject;
 import org.dependencytrack.notification.proto.v1.Group;
 import org.dependencytrack.notification.proto.v1.Level;
+import org.dependencytrack.notification.proto.v1.NewPolicyViolationsSummarySubject;
+import org.dependencytrack.notification.proto.v1.NewVulnerabilitiesSummarySubject;
 import org.dependencytrack.notification.proto.v1.NewVulnerabilitySubject;
 import org.dependencytrack.notification.proto.v1.NewVulnerableDependencySubject;
 import org.dependencytrack.notification.proto.v1.Notification;
@@ -61,6 +63,8 @@ import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_PROCESSE
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_PROCESSING_FAILED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_VALIDATION_FAILED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_INTEGRATION;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_POLICY_VIOLATIONS_SUMMARY;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABILITIES_SUMMARY;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABILITY;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABLE_DEPENDENCY;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_POLICY_VIOLATION;
@@ -557,6 +561,46 @@ public final class NotificationFactory {
                                 .setAnalysis(analysis)
                                 .build()))
                 .build();
+    }
+
+    public static Notification createNewVulnerabilitiesSummaryNotification(
+            NewVulnerabilitiesSummarySubject subject) {
+        return createNewVulnerabilitiesSummaryNotification(null, subject);
+    }
+
+    public static Notification createNewVulnerabilitiesSummaryNotification(
+            @Nullable String notificationId,
+            NewVulnerabilitiesSummarySubject subject) {
+        requireNonNull(subject, "subject must not be null");
+
+        final var builder = newNotificationBuilder(SCOPE_PORTFOLIO, GROUP_NEW_VULNERABILITIES_SUMMARY, LEVEL_INFORMATIONAL)
+                .setTitle("New Vulnerabilities Summary")
+                .setContent("A summary of new vulnerabilities has been generated")
+                .setSubject(Any.pack(subject));
+        if (notificationId != null) {
+            builder.setId(notificationId);
+        }
+        return builder.build();
+    }
+
+    public static Notification createNewPolicyViolationsSummaryNotification(
+            NewPolicyViolationsSummarySubject subject) {
+        return createNewPolicyViolationsSummaryNotification(null, subject);
+    }
+
+    public static Notification createNewPolicyViolationsSummaryNotification(
+            @Nullable String notificationId,
+            NewPolicyViolationsSummarySubject subject) {
+        requireNonNull(subject, "subject must not be null");
+
+        final var builder = newNotificationBuilder(SCOPE_PORTFOLIO, GROUP_NEW_POLICY_VIOLATIONS_SUMMARY, LEVEL_INFORMATIONAL)
+                .setTitle("New Policy Violations Summary")
+                .setContent("A summary of new policy violations has been generated")
+                .setSubject(Any.pack(subject));
+        if (notificationId != null) {
+            builder.setId(notificationId);
+        }
+        return builder.build();
     }
 
     static Notification.Builder newNotificationBuilder(

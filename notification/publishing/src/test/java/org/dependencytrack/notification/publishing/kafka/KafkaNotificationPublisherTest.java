@@ -98,7 +98,10 @@ class KafkaNotificationPublisherTest extends AbstractNotificationPublisherTest {
     @Override
     protected void validateNotificationPublish(Notification notification) throws Exception {
         final ConsumerRecord<String, byte[]> record = pollNotificationRecord();
-        if (notification.getScope() == Scope.SCOPE_PORTFOLIO) {
+        if (notification.getGroup() == Group.GROUP_NEW_VULNERABILITIES_SUMMARY
+                || notification.getGroup() == Group.GROUP_NEW_POLICY_VIOLATIONS_SUMMARY) {
+            assertThat(record.key()).isNull();
+        } else if (notification.getScope() == Scope.SCOPE_PORTFOLIO) {
             assertThat(record.key()).isEqualTo("c9c9539a-e381-4b36-ac52-6a7ab83b2c95");
         } else {
             if (notification.getGroup() == Group.GROUP_USER_CREATED

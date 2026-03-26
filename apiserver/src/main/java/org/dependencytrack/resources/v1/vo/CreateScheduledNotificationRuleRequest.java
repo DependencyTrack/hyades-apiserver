@@ -18,35 +18,28 @@
  */
 package org.dependencytrack.resources.v1.vo;
 
+import alpine.common.validation.RegexSequence;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import org.dependencytrack.model.Tag;
-import org.dependencytrack.model.validation.ValidCronExpression;
-import org.dependencytrack.notification.NotificationGroup;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
-import org.jspecify.annotations.Nullable;
 
-import java.util.Set;
 import java.util.UUID;
 
-/**
- * @since 5.7.0
- */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record UpdateNotificationRuleRequest(
-        @NotBlank String name,
-        boolean enabled,
-        boolean notifyChildren,
-        boolean logSuccessfulPublish,
+public record CreateScheduledNotificationRuleRequest(
+        @NotBlank @Size(min = 1, max = 255)
+        @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
+        String name,
         @NotNull NotificationScope scope,
         @JsonAlias("notificationLevel") @NotNull NotificationLevel level,
-        Set<@NotNull NotificationGroup> notifyOn,
-        String publisherConfig,
-        Set<Tag> tags,
-        @NotNull UUID uuid,
-        @Nullable @ValidCronExpression String scheduleCron,
-        @Nullable Boolean scheduleSkipUnchanged) {
+        @NotNull @Valid Publisher publisher) {
+
+    public record Publisher(@NotNull UUID uuid) {
+    }
 }

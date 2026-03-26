@@ -29,6 +29,7 @@ import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.model.NotificationTriggerType;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
@@ -101,11 +102,13 @@ class TagResourceTest extends ResourceTest {
         qm.bind(policy, List.of(tagBar));
 
         final var notificationRuleA = new NotificationRule();
+        notificationRuleA.setTriggerType(NotificationTriggerType.EVENT);
         notificationRuleA.setName("rule-a");
         notificationRuleA.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRuleA);
 
         final var notificationRuleB = new NotificationRule();
+        notificationRuleB.setTriggerType(NotificationTriggerType.EVENT);
         notificationRuleB.setName("rule-b");
         notificationRuleB.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRuleB);
@@ -1386,6 +1389,7 @@ class TagResourceTest extends ResourceTest {
         final Tag usedTag = qm.createTag("bar");
 
         final var notificationRule = new NotificationRule();
+        notificationRule.setTriggerType(NotificationTriggerType.EVENT);
         notificationRule.setName("rule");
         notificationRule.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRule);
@@ -1412,6 +1416,7 @@ class TagResourceTest extends ResourceTest {
         final Tag usedTag = qm.createTag("bar");
 
         final var notificationRule = new NotificationRule();
+        notificationRule.setTriggerType(NotificationTriggerType.EVENT);
         notificationRule.setName("rule");
         notificationRule.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRule);
@@ -1449,11 +1454,13 @@ class TagResourceTest extends ResourceTest {
         final Tag tagBar = qm.createTag("bar");
 
         final var notificationRuleA = new NotificationRule();
+        notificationRuleA.setTriggerType(NotificationTriggerType.EVENT);
         notificationRuleA.setName("rule-a");
         notificationRuleA.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRuleA);
 
         final var notificationRuleB = new NotificationRule();
+        notificationRuleB.setTriggerType(NotificationTriggerType.EVENT);
         notificationRuleB.setName("rule-b");
         notificationRuleB.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRuleB);
@@ -1487,7 +1494,8 @@ class TagResourceTest extends ResourceTest {
 
         for (int i = 0; i < 5; i++) {
             final var notificationRule = new NotificationRule();
-            notificationRule.setName("rule-" + (i+1));
+            notificationRule.setTriggerType(NotificationTriggerType.EVENT);
+            notificationRule.setName("rule-" + (i + 1));
             notificationRule.setScope(NotificationScope.PORTFOLIO);
             qm.persist(notificationRule);
 
@@ -1574,11 +1582,13 @@ class TagResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
 
         final var notificationRuleA = new NotificationRule();
+        notificationRuleA.setTriggerType(NotificationTriggerType.EVENT);
         notificationRuleA.setName("rule-a");
         notificationRuleA.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRuleA);
 
         final var notificationRuleB = new NotificationRule();
+        notificationRuleB.setTriggerType(NotificationTriggerType.EVENT);
         notificationRuleB.setName("rule-b");
         notificationRuleB.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRuleB);
@@ -1586,6 +1596,7 @@ class TagResourceTest extends ResourceTest {
         qm.createTag("foo");
 
         final var notificationRuleC = new NotificationRule();
+        notificationRuleC.setTriggerType(NotificationTriggerType.EVENT);
         notificationRuleC.setName("rule-c");
         notificationRuleC.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRuleC);
@@ -1613,6 +1624,7 @@ class TagResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
 
         final var notificationRule = new NotificationRule();
+        notificationRule.setTriggerType(NotificationTriggerType.EVENT);
         notificationRule.setName("rule");
         notificationRule.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRule);
@@ -1660,11 +1672,13 @@ class TagResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
 
         final var notificationRuleA = new NotificationRule();
+        notificationRuleA.setTriggerType(NotificationTriggerType.EVENT);
         notificationRuleA.setName("rule-a");
         notificationRuleA.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRuleA);
 
         final var notificationRuleB = new NotificationRule();
+        notificationRuleB.setTriggerType(NotificationTriggerType.EVENT);
         notificationRuleB.setName("rule-b");
         notificationRuleB.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRuleB);
@@ -1690,6 +1704,7 @@ class TagResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
 
         final var notificationRule = new NotificationRule();
+        notificationRule.setTriggerType(NotificationTriggerType.EVENT);
         notificationRule.setName("rule");
         notificationRule.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRule);
@@ -1768,6 +1783,7 @@ class TagResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
 
         final var notificationRule = new NotificationRule();
+        notificationRule.setTriggerType(NotificationTriggerType.EVENT);
         notificationRule.setName("rule");
         notificationRule.setScope(NotificationScope.PORTFOLIO);
         qm.persist(notificationRule);

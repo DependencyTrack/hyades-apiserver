@@ -61,6 +61,12 @@ enum Group {
   // e.g. due to upstream sources correcting their data.
   GROUP_VULNERABILITY_RETRACTED = 22;
 
+  // Scheduled summary of new vulnerabilities across projects.
+  GROUP_NEW_VULNERABILITIES_SUMMARY = 23;
+
+  // Scheduled summary of new policy violations across projects.
+  GROUP_NEW_POLICY_VIOLATIONS_SUMMARY = 24;
+
   // Indexing service has been removed as of
   // https://github.com/DependencyTrack/hyades/issues/661
   reserved 5;
@@ -288,4 +294,82 @@ message VulnerabilityRetractedSubject {
 
   // The previously reported vulnerability.
   Vulnerability vulnerability = 3;
+}
+
+// Subject for GROUP_NEW_VULNERABILITIES_SUMMARY notifications.
+message NewVulnerabilitiesSummarySubject {
+  Overview overview = 1;
+  repeated ProjectSummaryEntry project_summaries = 2;
+  repeated ProjectFindingsEntry findings_by_project = 3;
+  google.protobuf.Timestamp since = 4;
+
+  message Overview {
+    int32 affected_projects_count = 1;
+    int32 affected_components_count = 2;
+    int32 new_vulnerabilities_count = 3;
+    map<string, int32> new_vulnerabilities_count_by_severity = 4;
+    int32 suppressed_new_vulnerabilities_count = 5;
+    int32 total_new_vulnerabilities_count = 6;
+  }
+
+  message ProjectSummaryEntry {
+    Project project = 1;
+    map<string, int32> new_vulnerabilities_count_by_severity = 2;
+    map<string, int32> suppressed_new_vulnerabilities_count_by_severity = 3;
+    map<string, int32> total_new_vulnerabilities_count_by_severity = 4;
+  }
+
+  message ProjectFindingsEntry {
+    Project project = 1;
+    repeated Finding findings = 2;
+  }
+
+  message Finding {
+    Component component = 1;
+    Vulnerability vulnerability = 2;
+    optional string analyzer_identity = 3;
+    google.protobuf.Timestamp attributed_on = 4;
+    optional string reference_url = 5;
+    optional string analysis_state = 6;
+    bool suppressed = 7;
+  }
+}
+
+// Subject for GROUP_NEW_POLICY_VIOLATIONS_SUMMARY notifications.
+message NewPolicyViolationsSummarySubject {
+  Overview overview = 1;
+  repeated ProjectSummaryEntry project_summaries = 2;
+  repeated ProjectViolationsEntry violations_by_project = 3;
+  google.protobuf.Timestamp since = 4;
+
+  message Overview {
+    int32 affected_projects_count = 1;
+    int32 affected_components_count = 2;
+    int32 new_violations_count = 3;
+    map<string, int32> new_violations_count_by_type = 4;
+    int32 suppressed_new_violations_count = 5;
+    int32 total_new_violations_count = 6;
+  }
+
+  message ProjectSummaryEntry {
+    Project project = 1;
+    map<string, int32> new_violations_count_by_type = 2;
+    map<string, int32> suppressed_new_violations_count_by_type = 3;
+    map<string, int32> total_new_violations_count_by_type = 4;
+  }
+
+  message ProjectViolationsEntry {
+    Project project = 1;
+    repeated Violation violations = 2;
+  }
+
+  message Violation {
+    string uuid = 1;
+    Component component = 2;
+    PolicyCondition policy_condition = 3;
+    string type = 4;
+    google.protobuf.Timestamp timestamp = 5;
+    optional string analysis_state = 6;
+    bool suppressed = 7;
+  }
 }

@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.notification;
 
+import org.dependencytrack.model.NotificationTriggerType;
+
 public enum NotificationGroup {
 
     // System Groups
@@ -43,5 +45,23 @@ public enum NotificationGroup {
     PROJECT_CREATED,
     PROJECT_VULN_ANALYSIS_COMPLETE,
     USER_CREATED,
-    USER_DELETED
+    USER_DELETED,
+
+    // Scheduled Groups
+    NEW_VULNERABILITIES_SUMMARY(NotificationTriggerType.SCHEDULE),
+    NEW_POLICY_VIOLATIONS_SUMMARY(NotificationTriggerType.SCHEDULE);
+
+    private final NotificationTriggerType supportedTriggerType;
+
+    NotificationGroup() {
+        this(NotificationTriggerType.EVENT);
+    }
+
+    NotificationGroup(NotificationTriggerType supportedTriggerType) {
+        this.supportedTriggerType = supportedTriggerType;
+    }
+
+    public NotificationTriggerType getSupportedTriggerType() {
+        return supportedTriggerType;
+    }
 }

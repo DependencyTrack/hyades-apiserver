@@ -23,7 +23,9 @@ import alpine.persistence.ScopedCustomization;
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.model.NotificationTriggerType;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.proto.v1.Notification;
@@ -33,7 +35,10 @@ import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -79,9 +84,36 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
             rule.setScope(scope);
             rule.setNotificationLevel(level);
             rule.setPublisher(publisher);
+            rule.setTriggerType(NotificationTriggerType.EVENT);
             rule.setEnabled(true);
             rule.setNotifyChildren(true);
             rule.setLogSuccessfulPublish(false);
+            return persist(rule);
+        });
+    }
+
+    /**
+     * @since 4.13.0
+     */
+    @Override
+    public NotificationRule createScheduledNotificationRule(
+            String name,
+            NotificationScope scope,
+            NotificationLevel level,
+            NotificationPublisher publisher) {
+        return callInTransaction(() -> {
+            final var rule = new NotificationRule();
+            rule.setName(name);
+            rule.setScope(scope);
+            rule.setNotificationLevel(level);
+            rule.setPublisher(publisher);
+            rule.setTriggerType(NotificationTriggerType.SCHEDULE);
+            rule.setEnabled(false);
+            rule.setLogSuccessfulPublish(false);
+            rule.setScheduleCron("0 * * * *");
+            rule.setScheduleLastTriggeredAt(new Date());
+            rule.setScheduleSkipUnchanged(false);
+            rule.updateScheduleNextTriggerAt();
             return persist(rule);
         });
     }
@@ -94,7 +126,36 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
     @Override
     public NotificationRule updateNotificationRule(NotificationRule transientRule) {
         return callInTransaction(() -> {
-            final NotificationRule rule = getObjectByUuid(NotificationRule.class, transientRule.getUuid());
+            final var rule = getObjectByUuid(NotificationRule.class, transientRule.getUuid());
+            if (transientRule.getTriggerType() != null
+                    && rule.getTriggerType() != transientRule.getTriggerType()) {
+                throw new IllegalArgumentException("Trigger type can not be changed");
+            }
+
+            if (rule.getTriggerType() == NotificationTriggerType.SCHEDULE) {
+                final List<NotificationGroup> invalidGroups = transientRule.getNotifyOn().stream()
+                        .filter(group -> group.getSupportedTriggerType() != NotificationTriggerType.SCHEDULE)
+                        .toList();
+                if (!invalidGroups.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "Groups %s are not supported for trigger type %s".formatted(
+                                    invalidGroups, rule.getTriggerType()));
+                }
+
+                rule.setScheduleCron(transientRule.getScheduleCron());
+                rule.setScheduleSkipUnchanged(transientRule.isScheduleSkipUnchanged());
+                rule.updateScheduleNextTriggerAt();
+            } else if (rule.getTriggerType() == NotificationTriggerType.EVENT) {
+                final List<NotificationGroup> invalidGroups = transientRule.getNotifyOn().stream()
+                        .filter(group -> group.getSupportedTriggerType() != NotificationTriggerType.EVENT)
+                        .toList();
+                if (!invalidGroups.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "Groups %s are not supported for trigger type %s".formatted(
+                                    invalidGroups, rule.getTriggerType()));
+                }
+            }
+
             rule.setName(transientRule.getName());
             rule.setEnabled(transientRule.isEnabled());
             rule.setNotifyChildren(transientRule.isNotifyChildren());
@@ -103,7 +164,7 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
             rule.setPublisherConfig(transientRule.getPublisherConfig());
             rule.setNotifyOn(transientRule.getNotifyOn());
             bind(rule, resolveTags(transientRule.getTags()));
-            return persist(rule);
+            return rule;
         });
     }
 
@@ -112,17 +173,27 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
      * @return a paginated list of NotificationRules
      */
     @Override
-    public PaginatedResult getNotificationRules() {
+    public PaginatedResult getNotificationRules(NotificationTriggerType triggerTypeFilter) {
+        final var filterParts = new ArrayList<String>();
+        final var filterParams = new HashMap<String, Object>();
+
+        if (triggerTypeFilter != null) {
+            filterParts.add("triggerType == :triggerType");
+            filterParams.put("triggerType", triggerTypeFilter);
+        }
+        if (this.filter != null) {
+            filterParts.add("name.toLowerCase().matches(:name) || publisher.name.toLowerCase().matches(:name)");
+            filterParams.put("name", ".*" + filter.toLowerCase() + ".*");
+        }
+
         final Query<NotificationRule> query = pm.newQuery(NotificationRule.class);
-        if (orderBy == null) {
+        if (!filterParts.isEmpty()) {
+            query.setFilter(String.join(" && ", filterParts));
+        }
+        if (this.orderBy == null) {
             query.setOrdering("name asc");
         }
-        if (filter != null) {
-            query.setFilter("name.toLowerCase().matches(:name) || publisher.name.toLowerCase().matches(:name)");
-            final String filterString = ".*" + filter.toLowerCase() + ".*";
-            return execute(query, filterString);
-        }
-        return execute(query);
+        return execute(query, filterParams);
     }
 
     /**

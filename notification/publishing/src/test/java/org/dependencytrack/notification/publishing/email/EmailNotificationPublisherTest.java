@@ -80,6 +80,8 @@ class EmailNotificationPublisherTest extends AbstractNotificationPublisherTest {
             case GROUP_BOM_VALIDATION_FAILED -> validateBomValidationFailedNotificationPublish();
             case GROUP_NEW_VULNERABILITY -> validateNewVulnerabilityNotificationPublish();
             case GROUP_NEW_VULNERABLE_DEPENDENCY -> validateNewVulnerableDependencyNotificationPublish();
+            case GROUP_NEW_VULNERABILITIES_SUMMARY -> validateNewVulnerabilitiesSummaryNotificationPublish();
+            case GROUP_NEW_POLICY_VIOLATIONS_SUMMARY -> validateNewPolicyViolationsSummaryNotificationPublish();
         }
     }
 
@@ -225,6 +227,106 @@ class EmailNotificationPublisherTest extends AbstractNotificationPublisherTest {
                 --------------------------------------------------------------------------------
                 
                 A dependency was introduced that contains 1 known vulnerability
+                
+                --------------------------------------------------------------------------------
+                
+                2006-06-06T06:06:06.666Z
+                """);
+    }
+
+    private void validateNewVulnerabilitiesSummaryNotificationPublish() {
+        final ReceivedMessage message = getReceivedMessage();
+        assertThat(message.subject()).isEqualTo("[Dependency-Track] New Vulnerabilities Summary");
+        assertThat(message.content()).isEqualToIgnoringWhitespace("""
+                New Vulnerabilities Summary
+                
+                --------------------------------------------------------------------------------
+                
+                Overview:
+                - New Vulnerabilities: 1 (Suppressed: 1)
+                - Affected Projects:   1
+                - Affected Components: 1
+                - Since:               1970-01-01T00:01:06Z
+                
+                --------------------------------------------------------------------------------
+                
+                Project Summaries:
+                
+                - Project: [projectName : projectVersion]
+                  Project URL: https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95
+                
+                  + New Vulnerabilities Of Severity MEDIUM: 1 (Suppressed: 1)
+                
+                --------------------------------------------------------------------------------
+                
+                Vulnerability Details:
+                
+                - Project: [projectName : projectVersion]
+                  Project URL: https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95
+                
+                  + Vulnerability ID:       INT-001
+                    Vulnerability Source:   INTERNAL
+                    Vulnerability Severity: MEDIUM
+                    Vulnerability URL:      https://example.com/vulnerability/?source=INTERNAL&vulnId=INT-001
+                    Component:              componentName : componentVersion
+                    Component URL:          https://example.com/component/?uuid=94f87321-a5d1-4c2f-b2fe-95165debebc6
+                    Timestamp:              1970-01-01T18:31:06Z
+                    Analysis State:         FALSE_POSITIVE
+                    Suppressed:             true
+                
+                --------------------------------------------------------------------------------
+                
+                A summary of new vulnerabilities has been generated
+                
+                --------------------------------------------------------------------------------
+                
+                2006-06-06T06:06:06.666Z
+                """);
+    }
+
+    private void validateNewPolicyViolationsSummaryNotificationPublish() {
+        final ReceivedMessage message = getReceivedMessage();
+        assertThat(message.subject()).isEqualTo("[Dependency-Track] New Policy Violations Summary");
+        assertThat(message.content()).isEqualToIgnoringWhitespace("""
+                New Policy Violations Summary
+                
+                --------------------------------------------------------------------------------
+                
+                Overview:
+                - New Violations:      1 (Suppressed: 0)
+                  - Of Type LICENSE: 1
+                - Affected Projects:   1
+                - Affected Components: 1
+                - Since:               1970-01-01T00:01:06Z
+                
+                --------------------------------------------------------------------------------
+                
+                Project Summaries:
+                
+                - Project: [projectName : projectVersion]
+                  Project URL: https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95
+                
+                  + New Violations Of Type LICENSE: 1 (Suppressed: 0)
+                
+                --------------------------------------------------------------------------------
+                
+                Violation Details:
+                
+                - Project: [projectName : projectVersion]
+                  Project URL: https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95
+                
+                  + Policy:                policyName
+                    Policy Condition:      AGE NUMERIC_EQUAL P666D
+                    Policy Violation Type: LICENSE
+                    Component:             componentName : componentVersion
+                    Component URL:         https://example.com/component/?uuid=94f87321-a5d1-4c2f-b2fe-95165debebc6
+                    Timestamp:             1970-01-01T18:31:06Z
+                    Analysis State:        APPROVED
+                    Suppressed:            false
+                
+                --------------------------------------------------------------------------------
+                
+                A summary of new policy violations has been generated
                 
                 --------------------------------------------------------------------------------
                 

@@ -44,11 +44,13 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.model.NotificationTriggerType;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.notification.NotificationScope;
@@ -63,6 +65,7 @@ import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.CreateNotificationRuleRequest;
+import org.dependencytrack.resources.v1.vo.CreateScheduledNotificationRuleRequest;
 import org.dependencytrack.resources.v1.vo.UpdateNotificationRuleRequest;
 import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
@@ -115,9 +118,11 @@ public class NotificationRuleResource extends AbstractApiResource {
             Permissions.Constants.SYSTEM_CONFIGURATION,
             Permissions.Constants.SYSTEM_CONFIGURATION_READ
     })
-    public Response getAllNotificationRules() {
+    public Response getAllNotificationRules(
+            @Parameter(description = "The notification trigger type to filter on")
+            @QueryParam("triggerType") final NotificationTriggerType triggerTypeFilter) {
         try (final var qm = new QueryManager(getAlpineRequest())) {
-            final PaginatedResult result = qm.getNotificationRules();
+            final PaginatedResult result = qm.getNotificationRules(triggerTypeFilter);
             return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
         }
     }
@@ -186,6 +191,71 @@ public class NotificationRuleResource extends AbstractApiResource {
                 .build();
     }
 
+    @PUT
+    @Path("/scheduled")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Creates a new scheduled notification rule",
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "The created scheduled notification rule",
+                    content = @Content(schema = @Schema(implementation = NotificationRule.class))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The UUID of the notification publisher could not be found")
+    })
+    @PermissionRequired({
+            Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_CREATE
+    })
+    public Response createScheduledNotificationRule(@Valid CreateScheduledNotificationRuleRequest request) {
+        final NotificationRule createdRule;
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            createdRule = qm.callInTransaction(() -> {
+                NotificationPublisher publisher = null;
+                if (request.publisher() != null) {
+                    publisher = qm.getObjectByUuid(NotificationPublisher.class, request.publisher().uuid());
+                }
+                if (publisher == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The UUID of the notification publisher could not be found.")
+                            .build());
+                }
+
+                final NotificationPublisherFactory extensionFactory = pluginManager.getFactory(
+                        org.dependencytrack.notification.api.publishing.NotificationPublisher.class,
+                        publisher.getExtensionName());
+
+                final NotificationRule rule = qm.createScheduledNotificationRule(
+                        request.name(),
+                        request.scope(),
+                        request.level(),
+                        publisher);
+
+                final RuntimeConfigSpec ruleConfigSpec = extensionFactory.ruleConfigSpec();
+                if (ruleConfigSpec != null) {
+                    final String defaultRuleConfigJson =
+                            RuntimeConfigMapper.getInstance()
+                                    .serialize(ruleConfigSpec.defaultConfig());
+                    rule.setPublisherConfig(defaultRuleConfigJson);
+                }
+
+                return rule;
+            });
+        }
+
+        LOGGER.info(SecurityMarkers.SECURITY_AUDIT, "Created scheduled notification rule '{}'", createdRule.getName());
+
+        return Response
+                .status(Response.Status.CREATED)
+                .entity(createdRule)
+                .build();
+    }
+
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -205,7 +275,7 @@ public class NotificationRuleResource extends AbstractApiResource {
             Permissions.Constants.SYSTEM_CONFIGURATION,
             Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE
     })
-    public Response updateNotificationRule(UpdateNotificationRuleRequest request) {
+    public Response updateNotificationRule(@Valid UpdateNotificationRuleRequest request) {
         final NotificationRule updatedRule;
         try (final var qm = new QueryManager(getAlpineRequest())) {
             updatedRule = qm.callInTransaction(() -> {
@@ -261,9 +331,21 @@ public class NotificationRuleResource extends AbstractApiResource {
                 transientRule.setNotifyOn(request.notifyOn());
                 transientRule.setPublisherConfig(request.publisherConfig());
                 transientRule.setTags(request.tags());
-                transientRule.setUuid(request.uuid());
+                transientRule.setUuid(rule.getUuid());
+                transientRule.setTriggerType(rule.getTriggerType());
+                if (transientRule.getTriggerType() == NotificationTriggerType.SCHEDULE) {
+                    transientRule.setScheduleCron(request.scheduleCron());
+                    transientRule.setScheduleSkipUnchanged(request.scheduleSkipUnchanged());
+                }
 
-                return qm.updateNotificationRule(transientRule);
+                try {
+                    return qm.updateNotificationRule(transientRule);
+                } catch (IllegalArgumentException e) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity(e.getMessage())
+                            .build());
+                }
             });
         }
 
