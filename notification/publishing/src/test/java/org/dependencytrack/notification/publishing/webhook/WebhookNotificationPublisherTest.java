@@ -21,18 +21,25 @@ package org.dependencytrack.notification.publishing.webhook;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.assertj.core.api.Assertions;
+import org.dependencytrack.notification.api.publishing.NotificationPublishContext;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.publishing.RetryablePublishException;
+import org.dependencytrack.notification.api.templating.NotificationTemplateRenderer;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.publishing.AbstractNotificationPublisherTest;
-import org.dependencytrack.notification.publishing.http.HttpNotificationPublisherRuleConfigV1;
+import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
+import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
+import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.URI;
+import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
@@ -41,6 +48,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.notification.api.TestNotificationFactory.createBomConsumedTestNotification;
 
 class WebhookNotificationPublisherTest extends AbstractNotificationPublisherTest {
@@ -57,8 +65,8 @@ class WebhookNotificationPublisherTest extends AbstractNotificationPublisherTest
 
     @Override
     protected void customizeRuleConfig(RuntimeConfig ruleConfig) {
-        final var httpRuleConfig = (HttpNotificationPublisherRuleConfigV1) ruleConfig;
-        httpRuleConfig.setDestinationUrl(URI.create(WIREMOCK.baseUrl()));
+        final var webhookRuleConfig = (WebhookNotificationPublisherRuleConfigV1) ruleConfig;
+        webhookRuleConfig.setDestinationUrl(URI.create(WIREMOCK.baseUrl()));
     }
 
     @BeforeEach
@@ -391,6 +399,37 @@ class WebhookNotificationPublisherTest extends AbstractNotificationPublisherTest
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> publisher.publish(publishContext, createBomConsumedTestNotification()))
                 .withMessage("Request failed with unexpected response code: " + status);
+    }
+
+    @Test
+    void shouldSendAuthHeaderWhenConfigured() {
+        try (final var factory = new WebhookNotificationPublisherFactory()) {
+            final var configRegistry = new MockConfigRegistry(
+                    Map.of(), null, RuntimeConfigMapper.getInstance(), null);
+            factory.init(new org.dependencytrack.plugin.api.ExtensionContext(configRegistry));
+
+            try (final var publisher = factory.create()) {
+                final RuntimeConfigSpec ruleConfigSpec = factory.ruleConfigSpec();
+                final var ruleConfig = (WebhookNotificationPublisherRuleConfigV1) ruleConfigSpec.defaultConfig();
+                ruleConfig.setDestinationUrl(URI.create(WIREMOCK.baseUrl()));
+                ruleConfig.setAuthHeaderName("Authorization");
+                ruleConfig.setAuthHeaderValue("Bearer my-secret-token");
+
+                final var templateRendererFactory =
+                        new PebbleNotificationTemplateRendererFactory(
+                                Map.of("baseUrl", () -> "https://example.com"));
+                final NotificationTemplateRenderer templateRenderer =
+                        templateRendererFactory.createRenderer(factory.defaultTemplate());
+
+                final var ctx = new NotificationPublishContext(ruleConfig, templateRenderer);
+
+                assertThatNoException()
+                        .isThrownBy(() -> publisher.publish(ctx, createBomConsumedTestNotification()));
+
+                WIREMOCK.verify(postRequestedFor(anyUrl())
+                        .withHeader("Authorization", equalTo("Bearer my-secret-token")));
+            }
+        }
     }
 
 }

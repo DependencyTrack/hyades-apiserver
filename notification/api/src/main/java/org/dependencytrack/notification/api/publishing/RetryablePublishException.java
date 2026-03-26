@@ -20,6 +20,7 @@ package org.dependencytrack.notification.api.publishing;
 
 import org.jspecify.annotations.Nullable;
 
+import java.net.http.HttpResponse;
 import java.time.Duration;
 
 /**
@@ -56,6 +57,32 @@ public class RetryablePublishException extends RuntimeException {
 
     public @Nullable Duration getRetryAfter() {
         return retryAfter;
+    }
+
+    public static void throwIfRetryableError(HttpResponse<?> response) {
+        final int statusCode = response.statusCode();
+        if (statusCode != 429 && statusCode != 503) {
+            return;
+        }
+
+        final Duration retryAfter = response.headers()
+                .firstValue("Retry-After")
+                .map(RetryablePublishException::parseRetryAfterHeader)
+                .orElse(null);
+
+        throw new RetryablePublishException(
+                "Request failed with retryable response code: " + statusCode, null, retryAfter);
+    }
+
+    private static @Nullable Duration parseRetryAfterHeader(String value) {
+        try {
+            final long seconds = Long.parseLong(value.strip());
+            return seconds > 0
+                    ? Duration.ofSeconds(seconds)
+                    : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
 }
