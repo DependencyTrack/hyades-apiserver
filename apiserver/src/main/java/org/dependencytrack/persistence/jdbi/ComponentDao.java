@@ -214,6 +214,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             final String componentGroup,
             final String componentName,
             final String componentVersion,
+            final String componentHash,
             final int limit,
             final String pageToken) {
         final PageTokenEncoder pageTokenEncoder =
@@ -251,6 +252,18 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
         if (componentSwidTagId != null) {
             whereConditions.add("LOWER(\"C\".\"SWIDTAGID\") LIKE ('%' || LOWER(:componentSwidTagId) || '%')");
             queryParams.put("componentSwidTagId", componentSwidTagId);
+        }
+        if (componentHash != null) {
+            whereConditions.add(
+                    switch (componentHash.length()) {
+                        case 32 -> "\"C\".\"MD5\" = :componentHash";
+                        case 40 -> "\"C\".\"SHA1\" = :componentHash";
+                        case 64 -> "(\"C\".\"SHA_256\" = :componentHash || \"C\".\"SHA3_256\" = :componentHash || \"C\".\"BLAKE2B_256\" = :componentHash)";
+                        case 96 -> "(\"C\".\"SHA_384\" = :componentHash || \"C\".\"SHA3_384\" = :componentHash || \"C\".\"BLAKE2B_384\" = :componentHash)";
+                        case 128 -> "(\"C\".\"SHA_512\" = :componentHash || \"C\".\"SHA3_512\" = :componentHash || \"C\".\"BLAKE2B_512\" = :componentHash)";
+                        default -> "\"C\".\"BLAKE3\" = :componentHash";
+            });
+            queryParams.put("componentHash", componentHash);
         }
 
         if (decodedPageToken != null) {

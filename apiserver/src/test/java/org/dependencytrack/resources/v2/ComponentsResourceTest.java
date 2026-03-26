@@ -142,7 +142,7 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listComponentsByIdentityPaginationTest() {
+    public void listComponentsPaginationTest() {
         prepareComponents();
         Response response = jersey.target("/components")
                 .queryParam("limit", 2)
@@ -208,6 +208,9 @@ public class ComponentsResourceTest extends ResourceTest {
                         "group": "groupC",
                         "cpe": "cpe:2.3:a:groupC:nameC:versionC:*:*:*:*:*:*:*",
                         "purl":"pkg:maven/groupC/nameC@versionC?baz=qux",
+                        "hashes": {
+                            "sha1":"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                        },
                         "internal": false,
                         "uuid": "${json-unit.any-string}",
                         "project": {
@@ -226,7 +229,7 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listComponentsByIdentityWithCoordinatesTest() {
+    public void listComponentsWithCoordinatesTest() {
         prepareComponents();
         Response response = jersey.target("/components")
                 .queryParam("group", "B")
@@ -265,7 +268,7 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listComponentsByIdentityWithPurlTest() {
+    public void listComponentsWithPurlTest() {
         prepareComponents();
         Response response = jersey.target("/components")
                 .queryParam("purl", "pkg:maven/groupB/nameB@versionB")
@@ -301,7 +304,7 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listComponentsByIdentityWithInvalidCpeTest() {
+    public void listComponentsWithInvalidCpeTest() {
         prepareComponents();
         Response response = jersey.target("/components")
                 .queryParam("cpe", "nameB")
@@ -315,7 +318,7 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listComponentsByIdentityWithCpeTest() {
+    public void listComponentsWithCpeTest() {
         prepareComponents();
         Response response = jersey.target("/components")
                 .queryParam("cpe", "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*")
@@ -351,7 +354,7 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listComponentsByIdentityWithProjectTest() {
+    public void listComponentsWithProjectTest() {
         prepareComponents();
         Response response = jersey.target("/components")
                 .queryParam("project_uuid", qm.getProject("projectA", "1.0").getUuid())
@@ -388,7 +391,7 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listComponentsByIdentityWithProjectWhenProjectDoesNotExistTest() {
+    public void listComponentsWithProjectWhenProjectDoesNotExistTest() {
         Response response = jersey.target("/components")
                 .queryParam("project_uuid", UUID.randomUUID())
                 .queryParam("limit", 2)
@@ -401,7 +404,7 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listComponentsByIdentityAclTest() {
+    public void listComponentsAclTest() {
         enablePortfolioAccessControl();
         initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         prepareComponents();
@@ -428,6 +431,45 @@ public class ComponentsResourceTest extends ResourceTest {
                             "version": "1.0",
                             "uuid": "${json-unit.any-string}",
                             "direct_dependencies": "${json-unit.any-string}"
+                        }
+                      }
+                  ],
+                  "total": {
+                    "count": 1,
+                    "type": "EXACT"
+                  }
+                }
+                """);
+    }
+
+    @Test
+    public void listComponentByHashTest() {
+        prepareComponents();
+        Response response = jersey.target("/components")
+                .queryParam("hash", "da39a3ee5e6b4b0d3255bfef95601890afd80709")
+                .queryParam("limit", 2)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "items" : [ {
+                        "name": "nameC",
+                        "version": "versionC",
+                        "group": "groupC",
+                        "cpe": "cpe:2.3:a:groupC:nameC:versionC:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupC/nameC@versionC?baz=qux",
+                        "hashes": {
+                            "sha1":"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                        },
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
                         }
                       }
                   ],
@@ -469,6 +511,7 @@ public class ComponentsResourceTest extends ResourceTest {
         componentC.setVersion("versionC");
         componentC.setCpe("cpe:2.3:a:groupC:nameC:versionC:*:*:*:*:*:*:*");
         componentC.setPurl("pkg:maven/groupC/nameC@versionC?baz=qux");
+        componentC.setSha1("da39a3ee5e6b4b0d3255bfef95601890afd80709");
         qm.createComponent(componentC, false);
     }
 }

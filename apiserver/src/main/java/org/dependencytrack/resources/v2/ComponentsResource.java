@@ -105,7 +105,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
     }
 
     @Override
-    public Response listComponents(UUID projectUuid, String group, String name, String version, String purl, String cpe, String swidTagId, Integer limit, String pageToken) {
+    public Response listComponents(UUID projectUuid, String group, String name, String version, String purl, String cpe, String swidTagId, String hash, Integer limit, String pageToken) {
         return inJdbiTransaction(getAlpineRequest(), handle -> {
             Long projectId = null;
             if (projectUuid != null) {
@@ -133,7 +133,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
             final Page<Component> componentsPage = handle.attach(ComponentDao.class)
                     .listComponents(projectId, true, packageURL != null ? packageURL.canonicalize().toLowerCase() : null, StringUtils.trimToNull(cpe),
                             StringUtils.trimToNull(swidTagId), StringUtils.trimToNull(group), StringUtils.trimToNull(name),
-                            StringUtils.trimToNull(version), limit, pageToken);
+                            StringUtils.trimToNull(version), StringUtils.trimToNull(hash), limit, pageToken);
 
             final var response = ListComponentsResponse.builder()
                     .items(componentsPage.items().stream()
