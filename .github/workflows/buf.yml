@@ -32,6 +32,8 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # tag=v6.0.2
+      with:
+        persist-credentials: false
     - name: Setup buf
       uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # tag=v1.50.0
       with:
