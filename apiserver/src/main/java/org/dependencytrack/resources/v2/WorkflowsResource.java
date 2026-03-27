@@ -278,7 +278,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                 .build();
     }
 
-    private static org.dependencytrack.common.pagination.@Nullable SortDirection convert(
+    public static org.dependencytrack.common.pagination.@Nullable SortDirection convert(
             @Nullable SortDirection sortDirection) {
         return switch (sortDirection) {
             case ASC -> org.dependencytrack.common.pagination.SortDirection.ASC;

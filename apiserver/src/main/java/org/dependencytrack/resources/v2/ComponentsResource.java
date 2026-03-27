@@ -34,6 +34,7 @@ import org.dependencytrack.api.v2.ComponentsApi;
 import org.dependencytrack.api.v2.model.CreateComponentRequest;
 import org.dependencytrack.api.v2.model.ListComponentsResponse;
 import org.dependencytrack.api.v2.model.ListComponentsResponseItem;
+import org.dependencytrack.api.v2.model.SortDirection;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.exception.ProjectAccessDeniedException;
@@ -56,6 +57,7 @@ import us.springett.parsers.cpe.exceptions.CpeParsingException;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.resources.v2.WorkflowsResource.convert;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapDependencyMetrics;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapHashes;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapLicense;
@@ -105,7 +107,9 @@ public class ComponentsResource extends AbstractApiResource implements Component
     }
 
     @Override
-    public Response listComponents(UUID projectUuid, String group, String name, String version, String purl, String cpe, String swidTagId, String hash, Integer limit, String pageToken) {
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response listComponents(UUID projectUuid, String group, String name, String version, String purl, String cpe,
+                                   String swidTagId, String hash, Integer limit, String pageToken, SortDirection sortDirection, String sortBy) {
         return inJdbiTransaction(getAlpineRequest(), handle -> {
             Long projectId = null;
             if (projectUuid != null) {
@@ -133,7 +137,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
             final Page<Component> componentsPage = handle.attach(ComponentDao.class)
                     .listComponents(projectId, true, packageURL != null ? packageURL.canonicalize().toLowerCase() : null, StringUtils.trimToNull(cpe),
                             StringUtils.trimToNull(swidTagId), StringUtils.trimToNull(group), StringUtils.trimToNull(name),
-                            StringUtils.trimToNull(version), StringUtils.trimToNull(hash), limit, pageToken);
+                            StringUtils.trimToNull(version), StringUtils.trimToNull(hash), limit, pageToken, sortBy, convert(sortDirection));
 
             final var response = ListComponentsResponse.builder()
                     .items(componentsPage.items().stream()

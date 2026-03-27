@@ -22,6 +22,7 @@ import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.Page.TotalCount;
 import org.dependencytrack.common.pagination.PageToken;
 import org.dependencytrack.common.pagination.PageTokenEncoder;
+import org.dependencytrack.common.pagination.SortDirection;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.DependencyMetrics;
@@ -216,7 +217,9 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             final String componentVersion,
             final String componentHash,
             final int limit,
-            final String pageToken) {
+            final String pageToken,
+            final String sortBy,
+            final SortDirection sortDirection) {
         final PageTokenEncoder pageTokenEncoder =
                 getHandle().getConfig(PaginationConfig.class).getPageTokenEncoder();
         final var decodedPageToken = pageTokenEncoder.decode(pageToken, ListComponentPageToken.class);
@@ -262,7 +265,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                         case 96 -> "(\"C\".\"SHA_384\" = :componentHash || \"C\".\"SHA3_384\" = :componentHash || \"C\".\"BLAKE2B_384\" = :componentHash)";
                         case 128 -> "(\"C\".\"SHA_512\" = :componentHash || \"C\".\"SHA3_512\" = :componentHash || \"C\".\"BLAKE2B_512\" = :componentHash)";
                         default -> "\"C\".\"BLAKE3\" = :componentHash";
-            });
+                    });
             queryParams.put("componentHash", componentHash);
         }
 
@@ -278,18 +281,55 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                     "\"C\".\"PROJECT_ID\"");
         }
 
+        final String cursorPrimary = decodedPageToken != null ? decodedPageToken.lastName() : null;
+        final String cursorSecondary = decodedPageToken != null ? decodedPageToken.lastVersion() : null;
+        final Long cursorId = decodedPageToken != null ? decodedPageToken.lastId() : null;
+        final boolean hasCursor = decodedPageToken != null;
+        final String sortDirectionSql = sortDirection != null ? sortDirection.name() : "ASC";
+
+        var sortByColumn = switch (sortBy) {
+            case "name" -> "NAME";
+            case "version" -> "VERSION";
+            case "group" -> "GROUP";
+            case "purl" -> "componentPurl";
+            case "cpe" -> "CPE";
+            case "swid_tag_id" -> "SWIDTAGID";
+            case "last_inherited_risk_score" -> "lastInheritedRiskScore";
+            case null, default -> null;
+        };
+
         final List<Component> rows = listComponents(whereConditions, queryParams, limit + 1,
-                decodedPageToken != null ? decodedPageToken.lastName() : null,
-                decodedPageToken != null ? decodedPageToken.lastVersion() : null,
-                decodedPageToken != null ? decodedPageToken.lastId() : null);
+                cursorPrimary,
+                cursorSecondary,
+                cursorId,
+                sortByColumn, sortDirectionSql, hasCursor);
 
         final List<Component> resultRows = rows.size() > 1
                 ? rows.subList(0, Math.min(rows.size(), limit))
                 : rows;
 
-        final ListComponentPageToken nextPageToken = rows.size() > limit
-                ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion(), resultRows.getLast().getId(), totalCount)
-                : null;
+        final ListComponentPageToken nextPageToken;
+        if (rows.size() > limit) {
+            final Component lastRow = resultRows.getLast();
+            final Object lastPrimary = switch (sortByColumn) {
+                case "NAME" -> lastRow.getName();
+                case "VERSION" -> lastRow.getVersion();
+                case "GROUP" -> lastRow.getGroup();
+                case "componentPurl" -> lastRow.getPurl();
+                case "CPE" -> lastRow.getCpe();
+                case "SWIDTAGID" -> lastRow.getSwidTagId();
+                case "lastInheritedRiskScore" -> lastRow.getLastInheritedRiskScore();
+                case null, default -> lastRow.getName();
+            };
+            final String lastSecondary = sortByColumn == null ? lastRow.getVersion() : null;
+            nextPageToken = new ListComponentPageToken(
+                    lastPrimary != null ? lastPrimary.toString() : null,
+                    lastSecondary,
+                    lastRow.getId(),
+                    totalCount);
+        } else {
+            nextPageToken = null;
+        }
 
         if (includeMetrics) {
             final Map<Long, Component> componentById = resultRows.stream()
@@ -353,12 +393,41 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                 LEFT OUTER JOIN "LICENSE" "L" ON "C"."LICENSE_ID" = "L"."ID"
                 WHERE ${apiProjectAclCondition}
                 AND ${whereConditions?join(" AND ")}
-                <#if lastName && lastVersion && lastId>
-                    AND ("C"."NAME" > :lastName
-                            OR ("C"."NAME" = :lastName AND "C"."VERSION" < :lastVersion)
-                            OR ("C"."NAME" = :lastName AND "C"."VERSION" = :lastVersion AND "C"."ID" > :lastId))
+                <#if hasCursor && sortByColumn?has_content>
+                    AND (
+                        <#if sortDirection == "DESC">
+                            ("C"."${sortByColumn}" <
+                                <#if sortByColumn == "lastInheritedRiskScore" > CAST(:lastPrimaryValue AS DOUBLE PRECISION)
+                                <#else> :lastPrimaryValue
+                                </#if>
+                             OR ("C"."${sortByColumn}" =
+                                <#if sortByColumn == "lastInheritedRiskScore" > CAST(:lastPrimaryValue AS DOUBLE PRECISION)
+                                <#else> :lastPrimaryValue
+                                </#if>
+                             AND "C"."ID" > :lastId))
+                        <#else>
+                            ("C"."${sortByColumn}" >
+                                <#if sortByColumn == "lastInheritedRiskScore" > CAST(:lastPrimaryValue AS DOUBLE PRECISION)
+                                <#else> :lastPrimaryValue
+                                </#if>
+                             OR ("C"."${sortByColumn}" =
+                                <#if sortByColumn == "lastInheritedRiskScore" > CAST(:lastPrimaryValue AS DOUBLE PRECISION)
+                                <#else>:lastPrimaryValue
+                                </#if>
+                             AND "C"."ID" > :lastId))
+                        </#if>
+                    )
+                <#elseif hasCursor && lastPrimaryValue?has_content && lastSecondaryValue?has_content && lastId?has_content>
+                    AND ("C"."NAME" > :lastPrimaryValue
+                            OR ("C"."NAME" = :lastPrimaryValue AND "C"."VERSION" < :lastSecondaryValue)
+                            OR ("C"."NAME" = :lastPrimaryValue AND "C"."VERSION" = :lastSecondaryValue AND "C"."ID" > :lastId))
                 </#if>
-                ORDER BY "NAME" ASC, "VERSION" DESC, "ID" ASC
+                <#if sortByColumn?has_content>
+                    ORDER BY "${sortByColumn}" ${sortDirection!"ASC"}, "ID" ASC
+                <#else>
+                    <#-- Default sorting to ensure consistent pagination -->
+                    ORDER BY "NAME" ASC, "VERSION" DESC, "ID" ASC
+                </#if>
                 LIMIT :limit
             """)
     @DefineNamedBindings
@@ -368,9 +437,12 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             @Define ArrayList<String> whereConditions,
             @BindMap Map<String, Object> queryParams,
             @Bind int limit,
-            @Bind String lastName,
-            @Bind String lastVersion,
-            @Bind Long lastId
+            @Bind String lastPrimaryValue,
+            @Bind String lastSecondaryValue,
+            @Bind Long lastId,
+            @Define String sortByColumn,
+            @Define String sortDirection,
+            @Define boolean hasCursor
     );
 
     class ComponentListRowMapper implements RowMapper<Component> {

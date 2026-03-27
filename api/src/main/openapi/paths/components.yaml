@@ -48,8 +48,23 @@ post:
 
 get:
   operationId: listComponents
-  summary: Retrieves a list of all components that have the specified component identity. This resource accepts coordinates (group, name, version) or purl, cpe, or swidTagId.
-  description: Requires permission <strong>VIEW_PORTFOLIO</strong>
+  summary: List all components
+  description: |-
+    Retrieves a list of all components that have the specified component identity. This resource accepts coordinates (group, name, version) or purl, cpe, or swidTagId.
+    
+    ### Sortable fields
+    
+    Sorting is supported for the following fields:
+    
+    * `name`
+    * `version`
+    * `group`
+    * `purl`
+    * `cpe`
+    * `swid_tag_id`
+    * `last_inherited_risk_score`
+    
+    Requires permission <strong>VIEW_PORTFOLIO</strong>
   tags:
     - Components
   parameters:
@@ -96,6 +111,8 @@ get:
         type: string
     - $ref: "../components/parameters/pagination-limit.yaml"
     - $ref: "../components/parameters/page-token.yaml"
+    - $ref: "../components/parameters/sort-direction.yaml"
+    - $ref: "../components/parameters/sort-by.yaml"
   responses:
     "200":
       description: A list of all components for a given identity
