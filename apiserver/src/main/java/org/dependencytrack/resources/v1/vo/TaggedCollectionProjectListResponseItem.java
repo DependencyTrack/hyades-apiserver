@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.resources.v1.vo;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.UUID;
@@ -25,9 +26,11 @@ import java.util.UUID;
 import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
 
 /**
- * @since 4.12.0
+ * @since 4.13.1
  */
-public record TaggedPolicyListResponseItem(
-        @Schema(description = "UUID of the policy", requiredMode = REQUIRED) UUID uuid,
-        @Schema(description = "Name of the policy", requiredMode = REQUIRED) String name) {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public record TaggedCollectionProjectListResponseItem(
+        @Schema(description = "UUID of the collection project", requiredMode = REQUIRED) UUID uuid,
+        @Schema(description = "Name of the collection project", requiredMode = REQUIRED) String name,
+        @Schema(description = "Version of the collection project") String version) {
 }

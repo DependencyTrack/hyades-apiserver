@@ -32,6 +32,7 @@ import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.NotificationTriggerType;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationScope;
@@ -94,6 +95,21 @@ class TagResourceTest extends ResourceTest {
         projectB.addAccessTeam(team);
         // NB: Not assigning projectC
 
+        final var collectionProjectA = new Project();
+        collectionProjectA.setName("acme-collection-a");
+        collectionProjectA.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG);
+        collectionProjectA.setCollectionTag(tagFoo);
+        qm.persist(collectionProjectA);
+
+        final var collectionProjectB = new Project();
+        collectionProjectB.setName("acme-collection-b");
+        collectionProjectB.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG);
+        collectionProjectB.setCollectionTag(tagFoo);
+        qm.persist(collectionProjectB);
+
+        collectionProjectA.addAccessTeam(team);
+        // NB: Not assigning collectionProjectB
+
         final var policy = new Policy();
         policy.setName("policy");
         policy.setOperator(Policy.Operator.ALL);
@@ -128,11 +144,12 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "name": "bar",
                     "projectCount": 1,
+                    "collectionProjectCount": 0,
                     "policyCount": 1,
                     "notificationRuleCount": 0,
                     "vulnerabilityCount": 0
@@ -140,6 +157,7 @@ class TagResourceTest extends ResourceTest {
                   {
                     "name": "foo",
                     "projectCount": 2,
+                    "collectionProjectCount": 1,
                     "policyCount": 0,
                     "notificationRuleCount": 1,
                     "vulnerabilityCount": 1
@@ -163,11 +181,12 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "name": "tag-1",
                     "projectCount": 0,
+                    "collectionProjectCount": 0,
                     "policyCount": 0,
                     "notificationRuleCount": 0,
                     "vulnerabilityCount": 0
@@ -175,6 +194,7 @@ class TagResourceTest extends ResourceTest {
                   {
                     "name": "tag-2",
                     "projectCount": 0,
+                    "collectionProjectCount": 0,
                     "policyCount": 0,
                     "notificationRuleCount": 0,
                     "vulnerabilityCount": 0
@@ -182,6 +202,7 @@ class TagResourceTest extends ResourceTest {
                   {
                     "name": "tag-3",
                     "projectCount": 0,
+                    "collectionProjectCount": 0,
                     "policyCount": 0,
                     "notificationRuleCount": 0,
                     "vulnerabilityCount": 0
@@ -197,11 +218,12 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "name": "tag-4",
                     "projectCount": 0,
+                    "collectionProjectCount": 0,
                     "policyCount": 0,
                     "notificationRuleCount": 0,
                     "vulnerabilityCount": 0
@@ -209,6 +231,7 @@ class TagResourceTest extends ResourceTest {
                   {
                     "name": "tag-5",
                     "projectCount": 0,
+                    "collectionProjectCount": 0,
                     "policyCount": 0,
                     "notificationRuleCount": 0,
                     "vulnerabilityCount": 0
@@ -230,11 +253,12 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "name": "foo",
                     "projectCount": 0,
+                    "collectionProjectCount": 0,
                     "policyCount": 0,
                     "notificationRuleCount": 0,
                     "vulnerabilityCount": 0
@@ -268,11 +292,12 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "name": "foo",
                     "projectCount": 2,
+                    "collectionProjectCount": 0,
                     "policyCount": 0,
                     "notificationRuleCount": 0,
                     "vulnerabilityCount": 0
@@ -280,6 +305,7 @@ class TagResourceTest extends ResourceTest {
                   {
                     "name": "bar",
                     "projectCount": 1,
+                    "collectionProjectCount": 0,
                     "policyCount": 0,
                     "notificationRuleCount": 0,
                     "vulnerabilityCount": 0
@@ -347,7 +373,7 @@ class TagResourceTest extends ResourceTest {
                 .method(HttpMethod.DELETE, Entity.json(List.of("foo")));
         assertThat(response.getStatus()).isEqualTo(400);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */"""
                 {
                   "status": 400,
                   "title": "Tag operation failed",
@@ -403,7 +429,7 @@ class TagResourceTest extends ResourceTest {
                 .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
         assertThat(response.getStatus()).isEqualTo(400);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */"""
                 {
                   "status": 400,
                   "title": "Tag operation failed",
@@ -453,7 +479,7 @@ class TagResourceTest extends ResourceTest {
                 .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
         assertThat(response.getStatus()).isEqualTo(400);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */"""
                 {
                   "status": 400,
                   "title": "Tag operation failed",
@@ -467,6 +493,41 @@ class TagResourceTest extends ResourceTest {
         qm.getPersistenceManager().evictAll();
         assertThat(qm.getTagByName("foo")).isNotNull();
         assertThat(qm.getTagByName("bar")).isNotNull();
+    }
+
+    @Test
+    void deleteTagsWhenAssignedToCollectionProjectTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT, Permissions.TAG_MANAGEMENT);
+
+        final Tag unusedTag = qm.createTag("foo");
+        final Tag usedTag = qm.createTag("bar");
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG);
+        project.setCollectionTag(usedTag);
+        qm.persist(project);
+
+        final Response response = jersey.target(V1_TAG)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 400,
+                  "title": "Tag operation failed",
+                  "detail": "The tag(s) bar could not be deleted",
+                  "errors": {
+                    "bar": "The tag is used by 1 collection project(s)"
+                  }
+                }
+                """);
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getTagByName("foo")).isNotNull();
     }
 
     @Test
@@ -518,7 +579,7 @@ class TagResourceTest extends ResourceTest {
                 .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
         assertThat(response.getStatus()).isEqualTo(400);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */"""
                 {
                   "status": 400,
                   "title": "Tag operation failed",
@@ -577,7 +638,7 @@ class TagResourceTest extends ResourceTest {
         assertThatJson(getPlainTextBody(response))
                 .withMatcher("projectUuidA", equalTo(projectA.getUuid().toString()))
                 .withMatcher("projectUuidB", equalTo(projectB.getUuid().toString()))
-                .isEqualTo("""
+                .isEqualTo(/* language=JSON */"""
                         [
                           {
                             "uuid": "${json-unit.matches:projectUuidA}",
@@ -612,7 +673,7 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "uuid": "${json-unit.any-string}",
@@ -637,7 +698,7 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "uuid": "${json-unit.any-string}",
@@ -724,7 +785,7 @@ class TagResourceTest extends ResourceTest {
                 .post(Entity.json(List.of(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(404);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "status": 404,
                   "title": "Resource does not exist",
@@ -743,7 +804,7 @@ class TagResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(Collections.emptyList()));
         assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "message": "size must be between 1 and 100",
@@ -887,7 +948,7 @@ class TagResourceTest extends ResourceTest {
                 .method(HttpMethod.DELETE, Entity.json(List.of(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(404);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "status": 404,
                   "title": "Resource does not exist",
@@ -907,7 +968,7 @@ class TagResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .method(HttpMethod.DELETE, Entity.json(Collections.emptyList()));
         assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "message": "size must be between 1 and 100",
@@ -935,7 +996,7 @@ class TagResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .method(HttpMethod.DELETE, Entity.json(projectUuids));
         assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "message": "size must be between 1 and 100",
@@ -968,6 +1029,143 @@ class TagResourceTest extends ResourceTest {
     }
 
     @Test
+    void getTaggedCollectionProjectsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        qm.createConfigProperty(
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
+        );
+
+        final Tag tagFoo = qm.createTag("foo");
+        final Tag tagBar = qm.createTag("bar");
+
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        projectA.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG);
+        projectA.setCollectionTag(tagFoo);
+        qm.persist(projectA);
+
+        final var projectB = new Project();
+        projectB.setName("acme-app-b");
+        projectB.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG);
+        projectB.setCollectionTag(tagBar);
+        qm.persist(projectB);
+
+        projectA.addAccessTeam(team);
+        // NB: Not assigning projectB
+
+        final Response response = jersey.target(V1_TAG + "/foo/collectionProject")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("projectUuidA", equalTo(projectA.getUuid().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        [
+                          {
+                            "uuid": "${json-unit.matches:projectUuidA}",
+                            "name": "acme-app-a"
+                          }
+                        ]
+                        """);
+    }
+
+    @Test
+    void getTaggedCollectionProjectsWithPaginationTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        final Tag tag = qm.createTag("foo");
+
+        for (int i = 0; i < 5; i++) {
+            final var project = new Project();
+            project.setName("acme-app-" + (i + 1));
+            project.setCollectionLogic(ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG);
+            project.setCollectionTag(tag);
+            qm.persist(project);
+        }
+
+        Response response = jersey.target(V1_TAG + "/foo/collectionProject")
+                .queryParam("pageNumber", "1")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-1"
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-2"
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-3"
+                  }
+                ]
+                """);
+
+        response = jersey.target(V1_TAG + "/foo/collectionProject")
+                .queryParam("pageNumber", "2")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-4"
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-5"
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    void getTaggedCollectionProjectsWithTagNotExistsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        final Response response = jersey.target(V1_TAG + "/foo/collectionProject")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+    }
+
+    @Test
+    void getTaggedCollectionProjectsWithNonLowerCaseTagNameTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        qm.createTag("foo");
+
+        final Response response = jersey.target(V1_TAG + "/Foo/collectionProject")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+    }
+
+    @Test
     void getTaggedPoliciesTest() {
         initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
         final Tag tagFoo = qm.createTag("foo");
@@ -996,7 +1194,7 @@ class TagResourceTest extends ResourceTest {
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
         assertThatJson(getPlainTextBody(response))
                 .withMatcher("policyUuidA", equalTo(policyA.getUuid().toString()))
-                .isEqualTo("""
+                .isEqualTo(/* language=JSON */ """
                         [
                           {
                             "uuid": "${json-unit.matches:policyUuidA}",
@@ -1028,7 +1226,7 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "uuid": "${json-unit.any-string}",
@@ -1053,7 +1251,7 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "uuid": "${json-unit.any-string}",
@@ -1150,7 +1348,7 @@ class TagResourceTest extends ResourceTest {
                 .post(Entity.json(List.of(policy.getUuid())));
         assertThat(response.getStatus()).isEqualTo(404);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "status": 404,
                   "title": "Resource does not exist",
@@ -1170,7 +1368,7 @@ class TagResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(Collections.emptyList()));
         assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "message": "size must be between 1 and 100",
@@ -1231,7 +1429,7 @@ class TagResourceTest extends ResourceTest {
                 .method(HttpMethod.DELETE, Entity.json(List.of(policy.getUuid())));
         assertThat(response.getStatus()).isEqualTo(404);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "status": 404,
                   "title": "Resource does not exist",
@@ -1252,7 +1450,7 @@ class TagResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .method(HttpMethod.DELETE, Entity.json(Collections.emptyList()));
         assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "message": "size must be between 1 and 100",
@@ -1281,7 +1479,7 @@ class TagResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .method(HttpMethod.DELETE, Entity.json(policyUuids));
         assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "message": "size must be between 1 and 100",
@@ -1430,7 +1628,7 @@ class TagResourceTest extends ResourceTest {
                 .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
         assertThat(response.getStatus()).isEqualTo(400);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "status": 400,
                   "title": "Tag operation failed",
@@ -1476,7 +1674,7 @@ class TagResourceTest extends ResourceTest {
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
         assertThatJson(getPlainTextBody(response))
                 .withMatcher("notificationRuleUuidA", equalTo(notificationRuleA.getUuid().toString()))
-                .isEqualTo("""
+                .isEqualTo(/* language=JSON */ """
                         [
                           {
                             "uuid": "${json-unit.matches:notificationRuleUuidA}",
@@ -1510,7 +1708,7 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "uuid": "${json-unit.any-string}",
@@ -1535,7 +1733,7 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "uuid": "${json-unit.any-string}",
@@ -1635,7 +1833,7 @@ class TagResourceTest extends ResourceTest {
                 .post(Entity.json(List.of(notificationRule.getUuid())));
         assertThat(response.getStatus()).isEqualTo(404);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "status": 404,
                   "title": "Resource does not exist",
@@ -1655,7 +1853,7 @@ class TagResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(Collections.emptyList()));
         assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "message": "size must be between 1 and 100",
@@ -1716,7 +1914,7 @@ class TagResourceTest extends ResourceTest {
                 .method(HttpMethod.DELETE, Entity.json(List.of(notificationRule.getUuid())));
         assertThat(response.getStatus()).isEqualTo(404);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "status": 404,
                   "title": "Resource does not exist",
@@ -1737,7 +1935,7 @@ class TagResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .method(HttpMethod.DELETE, Entity.json(Collections.emptyList()));
         assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "message": "size must be between 1 and 100",
@@ -1766,7 +1964,7 @@ class TagResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .method(HttpMethod.DELETE, Entity.json(policyUuids));
         assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "message": "size must be between 1 and 100",
@@ -1830,7 +2028,7 @@ class TagResourceTest extends ResourceTest {
         assertThatJson(getPlainTextBody(response))
                 .withMatcher("vulnUuidA", equalTo(vulnA.getUuid().toString()))
                 .withMatcher("vulnUuidB", equalTo(vulnB.getUuid().toString()))
-                .isEqualTo("""
+                .isEqualTo(/* language=JSON */ """
                         [
                           {
                             "uuid": "${json-unit.matches:vulnUuidA}",
@@ -1867,7 +2065,7 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "uuid": "${json-unit.any-string}",
@@ -1895,7 +2093,7 @@ class TagResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "uuid": "${json-unit.any-string}",
@@ -1984,7 +2182,7 @@ class TagResourceTest extends ResourceTest {
 
         assertThat(response.getStatus()).isEqualTo(404);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "status": 404,
                   "title": "Resource does not exist",
@@ -2006,7 +2204,7 @@ class TagResourceTest extends ResourceTest {
                 .method(HttpMethod.DELETE, Entity.json(Collections.emptyList()));
 
         assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "message": "size must be between 1 and 100",
@@ -2036,7 +2234,7 @@ class TagResourceTest extends ResourceTest {
                 .method(HttpMethod.DELETE, Entity.json(vulnUuids));
 
         assertThat(response.getStatus()).isEqualTo(400);
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "message": "size must be between 1 and 100",
@@ -2117,7 +2315,7 @@ class TagResourceTest extends ResourceTest {
                 .method(HttpMethod.DELETE, Entity.json(List.of(unusedTag.getName(), usedTag.getName())));
         assertThat(response.getStatus()).isEqualTo(400);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "status": 400,
                   "title": "Tag operation failed",
