@@ -38,6 +38,8 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # tag=v6.0.2
+      with:
+        persist-credentials: false
     - name: Lint OpenAPI Spec
       run: make lint-openapi
 
@@ -48,6 +50,8 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # tag=v6.0.2
+      with:
+        persist-credentials: false
     - name: Detect Breaking Changes
       uses: oasdiff/oasdiff-action/breaking@2a37bc82462349c03a533b8b608bebbaf57b3e60 # tag=v0.0.33
       with:
