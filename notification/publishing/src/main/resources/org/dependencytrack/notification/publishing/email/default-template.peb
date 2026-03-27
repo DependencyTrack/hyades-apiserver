@@ -104,6 +104,12 @@ Project:           {{ subject.project.name }}
 Version:           {{ subject.project.version }}
 Description:       {{ subject.project.description }}
 Project URL:       {{ baseUrl }}/projects/{{ subject.project.uuid }}
+
+Component:         {{ subject.component.name }}
+Component Version: {{ subject.component.version }}
+Component URL:     {{ baseUrl }}/components/{{ subject.component.uuid }}
+
+Violated Policy:   {{ subject.policyViolation.policyCondition.policy.name }}
 {% elseif notification.group == "GROUP_NEW_VULNERABILITIES_SUMMARY" %}
 Overview:
 - New Vulnerabilities: {{ subject.overview.totalNewVulnerabilitiesCount }} (Suppressed: {{ subject.overview.suppressedNewVulnerabilitiesCount }})
