@@ -66,6 +66,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -766,22 +767,23 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
         for (final Map.Entry<String, ComponentIdentity> entry : identitiesByBomRef.entrySet()) {
             final String componentBomRef = entry.getKey();
             final Collection<String> directDependencyBomRefs = dependencyGraph.get(componentBomRef);
-            final String directDependenciesJson = resolveDirectDependenciesJson(componentBomRef, directDependencyBomRefs, identitiesByBomRef);
-
-            final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(entry.getKey());
-            final Component component = componentsByIdentity.get(dependencyIdentity);
-            // TODO: Check servicesByIdentity when persistentComponent is null
-            //   We do not currently store directDependencies for ServiceComponent
-            if (component != null) {
-                assertPersistent(component, "Component must be persistent");
-                if (!Objects.equals(directDependenciesJson, component.getDirectDependencies())) {
-                    component.setDirectDependencies(directDependenciesJson);
-                }
-            } else {
+            final ComponentIdentity componentIdentity = entry.getValue();
+            final Component component = componentsByIdentity.get(componentIdentity);
+            if (component == null) {
+                // TODO: Check servicesByIdentity when component is null.
+                //   We do not currently store directDependencies for ServiceComponent.
                 LOGGER.warn("""
                         Unable to resolve component identity %s to a persistent component; \
                         As a result, the dependency graph will likely be incomplete\
-                        """.formatted(dependencyIdentity.toJSON()));
+                        """.formatted(componentIdentity.toJSON()));
+                continue;
+            }
+
+            assertPersistent(component, "Component must be persistent");
+            final String mergedDirectDependenciesJson = resolveMergedDirectDependenciesJson(
+                    componentIdentity, dependencyGraph, identitiesByBomRef);
+            if (!Objects.equals(mergedDirectDependenciesJson, component.getDirectDependencies())) {
+                component.setDirectDependencies(mergedDirectDependenciesJson);
             }
         }
 
@@ -838,6 +840,41 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
             }
         }
 
+        return jsonDependencies.isEmpty() ? null : jsonDependencies.toString();
+    }
+
+    private @Nullable String resolveMergedDirectDependenciesJson(
+            final ComponentIdentity componentIdentity,
+            final MultiValuedMap<String, String> dependencyGraph,
+            final Map<String, ComponentIdentity> identitiesByBomRef
+    ) {
+        final var mergedDirectDependencyIdentities = new LinkedHashSet<ComponentIdentity>();
+        for (final Map.Entry<String, ComponentIdentity> entry : identitiesByBomRef.entrySet()) {
+            if (!componentIdentity.equals(entry.getValue())) {
+                continue;
+            }
+
+            final String componentBomRef = entry.getKey();
+            final Collection<String> directDependencyBomRefs = dependencyGraph.get(componentBomRef);
+            if (directDependencyBomRefs == null || directDependencyBomRefs.isEmpty()) {
+                continue;
+            }
+
+            for (final String directDependencyBomRef : directDependencyBomRefs) {
+                final ComponentIdentity directDependencyIdentity = identitiesByBomRef.get(directDependencyBomRef);
+                if (directDependencyIdentity != null) {
+                    mergedDirectDependencyIdentities.add(directDependencyIdentity);
+                } else {
+                    LOGGER.warn("""
+                            Unable to resolve BOM ref %s to a component identity while processing direct \
+                            dependencies of BOM ref %s; As a result, the dependency graph will likely be incomplete\
+                            """.formatted(componentBomRef, directDependencyBomRef));
+                }
+            }
+        }
+
+        final var jsonDependencies = Mappers.jsonMapper().createArrayNode();
+        mergedDirectDependencyIdentities.forEach(identity -> jsonDependencies.add(identity.toJSON()));
         return jsonDependencies.isEmpty() ? null : jsonDependencies.toString();
     }
 
