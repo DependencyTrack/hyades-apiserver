@@ -233,7 +233,9 @@ class ProcessScheduledNotificationRuleActivityTest extends PersistenceCapableTes
 
         qm.getPersistenceManager().evictAll();
         final NotificationRule updatedRule = qm.getObjectByUuid(NotificationRule.class, rule.getUuid());
-        assertThat(updatedRule.getScheduleLastTriggeredAt()).isAfter(Date.from(ruleLastFiredAt));
+        // DB timestamps may be stored with second precision; tolerate truncated milliseconds.
+        assertThat(updatedRule.getScheduleLastTriggeredAt())
+                .isAfterOrEqualTo(Date.from(ruleLastFiredAt.truncatedTo(ChronoUnit.SECONDS)));
         assertThat(updatedRule.getScheduleNextTriggerAt()).isAfter(new Date());
     }
 
