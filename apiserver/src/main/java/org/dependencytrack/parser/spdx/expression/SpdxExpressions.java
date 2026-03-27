@@ -31,13 +31,11 @@ import java.util.function.Predicate;
  */
 public final class SpdxExpressions {
 
-    private static final SpdxExpressionParser PARSER = new SpdxExpressionParser();
-
     private SpdxExpressions() {
     }
 
     public static boolean allows(String expression, List<String> ids) {
-        final SpdxExpression parsed = PARSER.parse(expression);
+        final SpdxExpression parsed = SpdxExpressionParser.getInstance().parse(expression);
         if (parsed == SpdxExpression.INVALID) {
             return false;
         }
@@ -46,7 +44,7 @@ public final class SpdxExpressions {
     }
 
     public static boolean requiresAny(String expression, List<String> ids) {
-        final SpdxExpression parsed = PARSER.parse(expression);
+        final SpdxExpression parsed = SpdxExpressionParser.getInstance().parse(expression);
         if (parsed == SpdxExpression.INVALID) {
             return false;
         }
@@ -59,7 +57,7 @@ public final class SpdxExpressions {
         final List<SpdxExpression> withComposites = new ArrayList<>();
 
         for (final String id : ids) {
-            final SpdxExpression parsed = PARSER.parse(id);
+            final SpdxExpression parsed = SpdxExpressionParser.getInstance().parse(id);
             if (parsed == SpdxExpression.INVALID) {
                 leafEntries.add(SpdxLicenseId.of(id));
                 continue;
@@ -96,7 +94,7 @@ public final class SpdxExpressions {
         final List<SpdxExpression> withComposites = new ArrayList<>();
 
         for (final String id : ids) {
-            final SpdxExpression parsed = PARSER.parse(id);
+            final SpdxExpression parsed = SpdxExpressionParser.getInstance().parse(id);
             if (parsed == SpdxExpression.INVALID) {
                 leafEntries.add(SpdxLicenseId.of(id));
                 continue;

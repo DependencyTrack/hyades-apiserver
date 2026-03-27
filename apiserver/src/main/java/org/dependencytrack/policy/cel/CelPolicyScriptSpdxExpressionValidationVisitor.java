@@ -39,7 +39,6 @@ import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_SPDX_EX
 final class CelPolicyScriptSpdxExpressionValidationVisitor {
 
     private static final Logger LOGGER = Logger.getLogger(CelPolicyScriptSpdxExpressionValidationVisitor.class);
-    private static final SpdxExpressionParser PARSER = new SpdxExpressionParser();
 
     static final Set<String> RELEVANT_FUNCTIONS = Set.of(
             FUNC_SPDX_EXPR_ALLOWS,
@@ -131,7 +130,7 @@ final class CelPolicyScriptSpdxExpressionValidationVisitor {
         }
 
         final String value = constExpr.getStringValue();
-        final SpdxExpression parsed = PARSER.parse(value);
+        final SpdxExpression parsed = SpdxExpressionParser.getInstance().parse(value);
         if (parsed == SpdxExpression.INVALID) {
             errors.add(
                     new SpdxExpressionValidationError(

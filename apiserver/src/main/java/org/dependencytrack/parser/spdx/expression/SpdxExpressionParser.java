@@ -37,6 +37,15 @@ import java.util.List;
  */
 public final class SpdxExpressionParser {
 
+    private static final SpdxExpressionParser INSTANCE = new SpdxExpressionParser();
+
+    private SpdxExpressionParser() {
+    }
+
+    public static SpdxExpressionParser getInstance() {
+        return INSTANCE;
+    }
+
     /**
      * Reads in a SPDX expression and returns a parsed tree of SpdxExpressionOperators and license
      * ids.
@@ -46,6 +55,14 @@ public final class SpdxExpressionParser {
      * parsing
      */
     public SpdxExpression parse(final String spdxExpression) {
+        try {
+            return parseInternal(spdxExpression);
+        } catch (RuntimeException e) {
+            return SpdxExpression.INVALID;
+        }
+    }
+
+    private SpdxExpression parseInternal(final String spdxExpression) {
         if (spdxExpression == null || spdxExpression.isBlank()) {
             return SpdxExpression.INVALID;
         }

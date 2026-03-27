@@ -268,8 +268,7 @@ public class ModelConverter {
             final Expression licenseExpression = cdxComponent.getLicenses().getExpression();
             if (licenseExpression != null && isNotBlank(licenseExpression.getValue())) {
                 // If the expression consists of just one license ID, add it as another option.
-                final var expressionParser = new SpdxExpressionParser();
-                final SpdxExpression expression = expressionParser.parse(licenseExpression.getValue());
+                final SpdxExpression expression = SpdxExpressionParser.getInstance().parse(licenseExpression.getValue());
                 if (!SpdxExpression.INVALID.equals(expression)) {
                     component.setLicenseExpression(trim(licenseExpression.getValue()));
 
