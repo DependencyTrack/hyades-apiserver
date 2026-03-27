@@ -400,7 +400,7 @@ public class BomResource extends AbstractApiResource {
                                 requireAccess(qm, parent, "Access to the specified parent project is forbidden");
                             }
                             final String trimmedProjectName = StringUtils.trimToNull(request.getProjectName());
-                            if (request.isLatestProjectVersion()) {
+                            if (request.isLatest()) {
                                 final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
                                 if (oldLatest != null) {
                                     requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
@@ -408,7 +408,7 @@ public class BomResource extends AbstractApiResource {
                             }
                             project = qm.createProject(trimmedProjectName, null,
                                     StringUtils.trimToNull(request.getProjectVersion()), request.getProjectTags(), parent,
-                                    null, null, request.isLatestProjectVersion(), true);
+                                    null, null, request.isLatest(), true);
                             Principal principal = getPrincipal();
                             qm.updateNewProjectACL(project, principal);
                             new JdoNotificationEmitter(qm).emit(
