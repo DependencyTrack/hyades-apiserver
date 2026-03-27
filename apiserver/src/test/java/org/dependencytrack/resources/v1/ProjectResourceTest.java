@@ -437,9 +437,15 @@ class ProjectResourceTest extends ResourceTest {
         var projectMetrics = new ProjectMetrics();
         projectMetrics.setProjectId(project.getId());
         projectMetrics.setLow(10);
-        projectMetrics.setFirstOccurrence(Date.from(Instant.now()));
-        projectMetrics.setLastOccurrence(Date.from(Instant.now()));
-        withJdbiHandle(handle -> handle.attach(MetricsTestDao.class).createProjectMetrics(projectMetrics));
+        useJdbiHandle(handle -> {
+            var dao = handle.attach(MetricsTestDao.class);
+            final LocalDate dbToday = handle.createQuery("SELECT CURRENT_DATE").mapTo(LocalDate.class).one();
+            dao.createMetricsPartitionsForDate("PROJECTMETRICS", dbToday);
+            final Instant dbNow = handle.createQuery("SELECT CURRENT_TIMESTAMP").mapTo(Instant.class).one();
+            projectMetrics.setFirstOccurrence(Date.from(dbNow));
+            projectMetrics.setLastOccurrence(Date.from(dbNow));
+            dao.createProjectMetrics(projectMetrics);
+        });
         project.setMetrics(projectMetrics);
 
         Response response = jersey.target(V1_PROJECT)
@@ -1126,12 +1132,15 @@ class ProjectResourceTest extends ResourceTest {
         project.setName("acme-app");
         qm.persist(project);
 
-        final Instant now = Instant.now();
-        final Instant projectMetricsOldOccurrence = now.minus(1, ChronoUnit.HOURS);
-        final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
-
         useJdbiHandle(handle -> {
             var dao = handle.attach(MetricsTestDao.class);
+            final LocalDate dbToday = handle.createQuery("SELECT CURRENT_DATE").mapTo(LocalDate.class).one();
+            dao.createMetricsPartitionsForDate("PROJECTMETRICS", dbToday);
+            dao.createMetricsPartitionsForDate("PROJECTMETRICS", dbToday.minusDays(1));
+            final Instant dbNow = handle.createQuery("SELECT CURRENT_TIMESTAMP").mapTo(Instant.class).one();
+            final Instant projectMetricsOldOccurrence = dbNow.minus(1, ChronoUnit.HOURS);
+            final Instant projectMetricsLatestOccurrence = dbNow.minus(5, ChronoUnit.MINUTES);
+
             final var projectMetricsOld = new ProjectMetrics();
             projectMetricsOld.setProjectId(project.getId());
             projectMetricsOld.setCritical(666);
@@ -1661,12 +1670,15 @@ class ProjectResourceTest extends ResourceTest {
         childProject.setName("acme-child-app");
         qm.persist(childProject);
 
-        final Instant now = Instant.now();
-        final Instant projectMetricsOldOccurrence = now.minus(1, ChronoUnit.HOURS);
-        final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
-
         useJdbiHandle(handle -> {
             var dao = handle.attach(MetricsTestDao.class);
+            final LocalDate dbToday = handle.createQuery("SELECT CURRENT_DATE").mapTo(LocalDate.class).one();
+            dao.createMetricsPartitionsForDate("PROJECTMETRICS", dbToday);
+            dao.createMetricsPartitionsForDate("PROJECTMETRICS", dbToday.minusDays(1));
+            final Instant dbNow = handle.createQuery("SELECT CURRENT_TIMESTAMP").mapTo(Instant.class).one();
+            final Instant projectMetricsOldOccurrence = dbNow.minus(1, ChronoUnit.HOURS);
+            final Instant projectMetricsLatestOccurrence = dbNow.minus(5, ChronoUnit.MINUTES);
+
             final var projectMetricsOld = new ProjectMetrics();
             projectMetricsOld.setProjectId(childProject.getId());
             projectMetricsOld.setCritical(666);
