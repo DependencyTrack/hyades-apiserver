@@ -38,25 +38,25 @@ public class SpdxExpressionParserTest {
     @Test
     public void testParsingOfSuperfluousParentheses() throws IOException {
         var exp = parser.parse("(Apache OR MIT WITH (CPE) AND GPL WITH ((CC0 OR GPL-2)))");
-        assertEquals("OR(Apache, AND(WITH(MIT, CPE), WITH(GPL, OR(CC0, GPL-2))))", exp.toString());
+        assertEquals("OR(AND(WITH(GPL, OR(CC0, GPL-2)), WITH(MIT, CPE)), Apache)", exp.toString());
     }
 
     @Test
     public void testThatAndOperatorBindsStrongerThanOrOperator() throws IOException {
         var exp = parser.parse("LGPL-2.1-only OR BSD-3-Clause AND MIT");
-        assertEquals("OR(LGPL-2.1-only, AND(BSD-3-Clause, MIT))", exp.toString());
+        assertEquals("OR(AND(BSD-3-Clause, MIT), LGPL-2.1-only)", exp.toString());
     }
 
     @Test
     public void testThatWithOperatorBindsStrongerThanAndOperator() throws IOException {
         var exp = parser.parse("LGPL-2.1-only WITH CPE AND MIT OR BSD-3-Clause");
-        assertEquals("OR(AND(WITH(LGPL-2.1-only, CPE), MIT), BSD-3-Clause)", exp.toString());
+        assertEquals("OR(AND(MIT, WITH(LGPL-2.1-only, CPE)), BSD-3-Clause)", exp.toString());
     }
 
     @Test
     public void testThatParenthesesOverrideOperatorPrecedence() throws IOException {
         var exp = parser.parse("MIT AND (LGPL-2.1-or-later OR BSD-3-Clause)");
-        assertEquals("AND(MIT, OR(LGPL-2.1-or-later, BSD-3-Clause))", exp.toString());
+        assertEquals("AND(MIT, OR(BSD-3-Clause, LGPL-2.1-or-later))", exp.toString());
     }
 
     @Test
@@ -75,6 +75,24 @@ public class SpdxExpressionParserTest {
     public void testMissingOpeningParenthesis() throws IOException {
         var exp = parser.parse("MIT )(OR BSD-3-Clause");
         assertEquals(SpdxExpression.INVALID, exp);
+    }
+
+    @Test
+    public void testMissingOperand() {
+        assertEquals(SpdxExpression.INVALID, parser.parse("MIT OR"));
+        assertEquals(SpdxExpression.INVALID, parser.parse("OR MIT"));
+        assertEquals(SpdxExpression.INVALID, parser.parse("MIT AND OR Apache-2.0"));
+    }
+
+    @Test
+    public void testDanglingOperands() {
+        assertEquals(SpdxExpression.INVALID, parser.parse("MIT Apache-2.0"));
+    }
+
+    @Test
+    public void testStandalonePlus() {
+        assertEquals(SpdxExpression.INVALID, parser.parse("+"));
+        assertEquals(SpdxExpression.INVALID, parser.parse("MIT +"));
     }
 
 }

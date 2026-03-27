@@ -47,6 +47,9 @@ import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityAliasDao;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -56,6 +59,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -2221,6 +2225,72 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 component.resolved_license.groups.size() == 2
                 """, PolicyViolation.Type.OPERATIONAL);
+
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
+    }
+
+    private static Stream<Arguments> shouldEvaluateSpdxExprFunctionOnLicenseExpressionArgs() {
+        return Stream.of(
+                Arguments.of("spdx_expr_allows(component.license_expression, ['MIT', 'Apache-2.0'])", "MIT OR Apache-2.0", true),
+                Arguments.of("spdx_expr_allows(component.license_expression, ['MIT'])", "MIT AND Apache-2.0", false),
+                Arguments.of("spdx_expr_requires_any(component.license_expression, ['MIT'])", "MIT AND Apache-2.0", true),
+                Arguments.of("spdx_expr_requires_any(component.license_expression, ['MIT'])", "MIT OR Apache-2.0", false),
+                Arguments.of("spdx_expr_requires_any(component.license_expression, ['MIT', 'BSD'])", "MIT AND Apache-2.0", true),
+                Arguments.of("spdx_expr_requires_any(component.license_expression, ['MIT', 'BSD'])", "Apache-2.0 OR GPL-3.0", false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("shouldEvaluateSpdxExprFunctionOnLicenseExpressionArgs")
+    void shouldEvaluateSpdxExprFunctionOnLicenseExpression(
+            String celExpression,
+            String licenseExpression,
+            boolean expectViolation) {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION,
+                PolicyCondition.Operator.MATCHES, celExpression, PolicyViolation.Type.LICENSE);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setLicenseExpression(licenseExpression);
+        qm.persist(component);
+
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+        if (expectViolation) {
+            assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
+        } else {
+            assertThat(qm.getAllPolicyViolations(component)).isEmpty();
+        }
+    }
+
+    @Test
+    void shouldEvaluateSpdxExprFunctionOnResolvedLicenseId() {
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                has(component.resolved_license)
+                    && spdx_expr_allows(component.resolved_license.id, ["MIT"])
+                """, PolicyViolation.Type.LICENSE);
+
+        final var license = new License();
+        license.setUuid(UUID.randomUUID());
+        license.setLicenseId("MIT");
+        license.setName("MIT License");
+        qm.persist(license);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setResolvedLicense(license);
+        qm.persist(component);
 
         new CelPolicyEngine().evaluateProject(project.getUuid());
         assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
