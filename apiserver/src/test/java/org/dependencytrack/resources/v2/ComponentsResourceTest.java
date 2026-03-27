@@ -229,6 +229,75 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     @Test
+    public void listComponentsSortingTest() {
+        prepareComponents();
+        final Response response = jersey.target("/components")
+                .queryParam("limit", 3)
+                .queryParam("sort_by", "purl")
+                .queryParam("sort_direction", "DESC")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "items" : [ {
+                        "name": "nameC",
+                        "version": "versionC",
+                        "group": "groupC",
+                        "cpe": "cpe:2.3:a:groupC:nameC:versionC:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupC/nameC@versionC?baz=qux",
+                        "hashes": {
+                            "sha1":"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                        },
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
+                      },
+                      {
+                        "name": "nameB",
+                        "version": "versionB",
+                        "group": "groupB",
+                        "cpe": "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectB",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}"
+                        }
+                      },
+                      {
+                        "name": "nameA",
+                        "version": "versionA",
+                        "group": "groupA",
+                        "cpe": "cpe:2.3:a:groupA:nameA:versionA:*:*:*:*:*:*:*",
+                        "purl":"pkg:maven/groupA/nameA@versionA?foo=bar",
+                        "internal": false,
+                        "uuid": "${json-unit.any-string}",
+                        "project": {
+                            "name": "projectA",
+                            "version": "1.0",
+                            "uuid": "${json-unit.any-string}",
+                            "direct_dependencies": "${json-unit.any-string}"
+                        }
+                      }
+                  ],
+                  "total": {
+                    "count": 3,
+                    "type": "EXACT"
+                  }
+                }
+                """);
+    }
+
+    @Test
     public void listComponentsWithCoordinatesTest() {
         prepareComponents();
         Response response = jersey.target("/components")
@@ -392,6 +461,7 @@ public class ComponentsResourceTest extends ResourceTest {
 
     @Test
     public void listComponentsWithProjectWhenProjectDoesNotExistTest() {
+        prepareComponents();
         Response response = jersey.target("/components")
                 .queryParam("project_uuid", UUID.randomUUID())
                 .queryParam("limit", 2)
@@ -482,6 +552,8 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     private void prepareComponents() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, null, false);
         projectA.addAccessTeam(team);
         var componentA = new Component();
