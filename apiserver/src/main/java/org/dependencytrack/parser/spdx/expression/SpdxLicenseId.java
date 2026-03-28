@@ -18,10 +18,7 @@
  */
 package org.dependencytrack.parser.spdx.expression;
 
-import jakarta.annotation.Nullable;
-import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
-import org.dependencytrack.parser.spdx.expression.model.SpdxExpressionOperation;
-import org.dependencytrack.parser.spdx.expression.model.SpdxOperator;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Locale;
 
@@ -48,19 +45,11 @@ record SpdxLicenseId(String id, boolean orLater) {
     }
 
     static @Nullable SpdxLicenseId of(SpdxExpression expr) {
-        if (expr.getSpdxLicenseId() != null) {
-            return of(expr.getSpdxLicenseId());
-        }
-
-        final SpdxExpressionOperation operation = expr.getOperation();
-        if (operation != null
-                && operation.getOperator() == SpdxOperator.PLUS
-                && !operation.getArguments().isEmpty()
-                && operation.getArguments().getFirst().getSpdxLicenseId() != null) {
-            return new SpdxLicenseId(operation.getArguments().getFirst().getSpdxLicenseId(), true);
-        }
-
-        return null;
+        return switch (expr) {
+            case SpdxExpression.Identifier it -> of(it.id());
+            case SpdxExpression.OrLater it -> new SpdxLicenseId(it.license().id(), true);
+            default -> null;
+        };
     }
 
     boolean isEquivalentTo(SpdxLicenseId other) {

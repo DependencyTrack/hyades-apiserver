@@ -18,12 +18,9 @@
  */
 package org.dependencytrack.model.validation;
 
-import org.dependencytrack.parser.spdx.expression.SpdxExpressionParser;
-import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
-
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
-import java.util.Objects;
+import org.dependencytrack.parser.spdx.expression.SpdxExpressionParser;
 
 public class SpdxExpressionValidator implements ConstraintValidator<ValidSpdxExpression, String> {
 
@@ -34,7 +31,7 @@ public class SpdxExpressionValidator implements ConstraintValidator<ValidSpdxExp
             return true;
         }
 
-        return !Objects.equals(SpdxExpressionParser.getInstance().parse(expressionString), SpdxExpression.INVALID);
+        return SpdxExpressionParser.getInstance().tryParse(expressionString) != null;
     }
 
 }

@@ -20,4 +20,7 @@
 /**
  * Package contains JSON parser for processing SPDX expressions.
  */
+@NullMarked
 package org.dependencytrack.parser.spdx.expression;
+
+import org.jspecify.annotations.NullMarked;

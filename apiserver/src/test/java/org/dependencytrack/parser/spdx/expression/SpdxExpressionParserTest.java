@@ -18,77 +18,103 @@
  */
 package org.dependencytrack.parser.spdx.expression;
 
-import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class SpdxExpressionParserTest {
 
     @Test
-    void testParsingOfSuperfluousParentheses() {
+    void shouldParseSuperfluousParentheses() {
         var exp = SpdxExpressionParser.getInstance().parse("(Apache OR MIT WITH (CPE) AND GPL WITH ((CC0 OR GPL-2)))");
-        assertEquals("OR(AND(WITH(GPL, OR(CC0, GPL-2)), WITH(MIT, CPE)), Apache)", exp.toString());
+        assertThat(exp).hasToString("OR(AND(WITH(GPL, OR(CC0, GPL-2)), WITH(MIT, CPE)), Apache)");
     }
 
     @Test
-    void testThatAndOperatorBindsStrongerThanOrOperator() {
+    void shouldBindAndStrongerThanOr() {
         var exp = SpdxExpressionParser.getInstance().parse("LGPL-2.1-only OR BSD-3-Clause AND MIT");
-        assertEquals("OR(AND(BSD-3-Clause, MIT), LGPL-2.1-only)", exp.toString());
+        assertThat(exp).hasToString("OR(AND(BSD-3-Clause, MIT), LGPL-2.1-only)");
     }
 
     @Test
-    void testThatWithOperatorBindsStrongerThanAndOperator() {
+    void shouldBindWithStrongerThanAnd() {
         var exp = SpdxExpressionParser.getInstance().parse("LGPL-2.1-only WITH CPE AND MIT OR BSD-3-Clause");
-        assertEquals("OR(AND(MIT, WITH(LGPL-2.1-only, CPE)), BSD-3-Clause)", exp.toString());
+        assertThat(exp).hasToString("OR(AND(MIT, WITH(LGPL-2.1-only, CPE)), BSD-3-Clause)");
     }
 
     @Test
-    void testThatParenthesesOverrideOperatorPrecedence() {
+    void shouldOverridePrecedenceWithParentheses() {
         var exp = SpdxExpressionParser.getInstance().parse("MIT AND (LGPL-2.1-or-later OR BSD-3-Clause)");
-        assertEquals("AND(MIT, OR(BSD-3-Clause, LGPL-2.1-or-later))", exp.toString());
+        assertThat(exp).hasToString("AND(MIT, OR(BSD-3-Clause, LGPL-2.1-or-later))");
     }
 
     @Test
-    void testParsingWithMissingSpaceAfterParenthesis() {
+    void shouldParseWithMissingSpaceAfterParenthesis() {
         var exp = SpdxExpressionParser.getInstance().parse("(MIT)AND(LGPL-2.1-or-later WITH(CC0 OR GPL-2))");
-        assertEquals("AND(MIT, WITH(LGPL-2.1-or-later, OR(CC0, GPL-2)))", exp.toString());
+        assertThat(exp).hasToString("AND(MIT, WITH(LGPL-2.1-or-later, OR(CC0, GPL-2)))");
     }
 
     @Test
-    void testMissingClosingParenthesis() {
-        var exp = SpdxExpressionParser.getInstance().parse("MIT (OR BSD-3-Clause");
-        assertEquals(SpdxExpression.INVALID, exp);
+    void shouldRejectMissingClosingParenthesis() {
+        assertThatExceptionOfType(SpdxExpressionParseException.class)
+                .isThrownBy(() -> SpdxExpressionParser.getInstance().parse("MIT (OR BSD-3-Clause"));
     }
 
     @Test
-    void testMissingOpeningParenthesis() {
-        var exp = SpdxExpressionParser.getInstance().parse("MIT )(OR BSD-3-Clause");
-        assertEquals(SpdxExpression.INVALID, exp);
+    void shouldRejectMissingOpeningParenthesis() {
+        assertThatExceptionOfType(SpdxExpressionParseException.class)
+                .isThrownBy(() -> SpdxExpressionParser.getInstance().parse("MIT )(OR BSD-3-Clause"));
     }
 
     @Test
-    void testDanglingOperator() {
-        var exp = SpdxExpressionParser.getInstance().parse("GPL-3.0-or-later AND GPL-2.0-or-later AND GPL-2.0-only AND");
-        assertEquals(SpdxExpression.INVALID, exp);
+    void shouldRejectDanglingOperator() {
+        assertThatExceptionOfType(SpdxExpressionParseException.class)
+                .isThrownBy(() -> SpdxExpressionParser.getInstance().parse("GPL-3.0-or-later AND GPL-2.0-or-later AND GPL-2.0-only AND"));
     }
 
     @Test
-    void testMissingOperand() {
-        assertEquals(SpdxExpression.INVALID, SpdxExpressionParser.getInstance().parse("MIT OR"));
-        assertEquals(SpdxExpression.INVALID, SpdxExpressionParser.getInstance().parse("OR MIT"));
-        assertEquals(SpdxExpression.INVALID, SpdxExpressionParser.getInstance().parse("MIT AND OR Apache-2.0"));
+    void shouldRejectMissingOperand() {
+        assertThatExceptionOfType(SpdxExpressionParseException.class)
+                .isThrownBy(() -> SpdxExpressionParser.getInstance().parse("MIT OR"));
+        assertThatExceptionOfType(SpdxExpressionParseException.class)
+                .isThrownBy(() -> SpdxExpressionParser.getInstance().parse("OR MIT"));
+        assertThatExceptionOfType(SpdxExpressionParseException.class)
+                .isThrownBy(() -> SpdxExpressionParser.getInstance().parse("MIT AND OR Apache-2.0"));
     }
 
     @Test
-    void testDanglingOperands() {
-        assertEquals(SpdxExpression.INVALID, SpdxExpressionParser.getInstance().parse("MIT Apache-2.0"));
+    void shouldRejectDanglingOperands() {
+        assertThatExceptionOfType(SpdxExpressionParseException.class)
+                .isThrownBy(() -> SpdxExpressionParser.getInstance().parse("MIT Apache-2.0"));
     }
 
     @Test
-    void testStandalonePlus() {
-        assertEquals(SpdxExpression.INVALID, SpdxExpressionParser.getInstance().parse("+"));
-        assertEquals(SpdxExpression.INVALID, SpdxExpressionParser.getInstance().parse("MIT +"));
+    void shouldRejectStandalonePlus() {
+        assertThatExceptionOfType(SpdxExpressionParseException.class)
+                .isThrownBy(() -> SpdxExpressionParser.getInstance().parse("+"));
+        assertThatExceptionOfType(SpdxExpressionParseException.class)
+                .isThrownBy(() -> SpdxExpressionParser.getInstance().parse("MIT +"));
+    }
+
+    @Test
+    void shouldRejectCompoundExpressionAsWithLhs() {
+        assertThatExceptionOfType(SpdxExpressionParseException.class)
+                .isThrownBy(() -> SpdxExpressionParser.getInstance().parse(
+                        "(MIT OR BSD-3-Clause) WITH Classpath-exception-2.0"));
+    }
+
+    @Test
+    void shouldAcceptOrLaterAsWithLhs() {
+        var exp = SpdxExpressionParser.getInstance().parse("GPL-2.0+ WITH Classpath-exception-2.0");
+        assertThat(exp).hasToString("WITH(+(GPL-2.0), Classpath-exception-2.0)");
+    }
+
+    @Test
+    void shouldReturnNullFromTryParseOnInvalidInput() {
+        assertThat(SpdxExpressionParser.getInstance().tryParse("MIT OR")).isNull();
+        assertThat(SpdxExpressionParser.getInstance().tryParse(null)).isNull();
+        assertThat(SpdxExpressionParser.getInstance().tryParse("")).isNull();
     }
 
 }

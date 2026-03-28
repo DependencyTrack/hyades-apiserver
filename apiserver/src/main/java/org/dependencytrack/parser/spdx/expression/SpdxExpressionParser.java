@@ -18,19 +18,19 @@
  */
 package org.dependencytrack.parser.spdx.expression;
 
-import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
-import org.dependencytrack.parser.spdx.expression.model.SpdxExpressionOperation;
-import org.dependencytrack.parser.spdx.expression.model.SpdxOperator;
+import org.dependencytrack.parser.spdx.expression.SpdxExpressionToken.Grouping;
+import org.dependencytrack.parser.spdx.expression.SpdxExpressionToken.Identifier;
+import org.dependencytrack.parser.spdx.expression.SpdxExpressionToken.Operator;
+import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
- * This class parses SPDX expressions according to
- * https://spdx.github.io/spdx-spec/v2-draft/SPDX-license-expressions/ into a tree of
- * SpdxExpressions and SpdxExpressionOperations
+ * Parses SPDX license expressions as defined in
+ * <a href="https://spdx.github.io/spdx-spec/v2-draft/SPDX-license-expressions/">the SPDX spec</a>
+ * into a tree of {@link SpdxExpression} nodes.
  *
  * @author hborchardt
  * @since 4.9.0
@@ -38,6 +38,7 @@ import java.util.List;
 public final class SpdxExpressionParser {
 
     private static final SpdxExpressionParser INSTANCE = new SpdxExpressionParser();
+    private static final Pattern TOKEN_PATTERN = Pattern.compile("[()]|[^\\s()]+");
 
     private SpdxExpressionParser() {
     }
@@ -47,138 +48,202 @@ public final class SpdxExpressionParser {
     }
 
     /**
-     * Reads in a SPDX expression and returns a parsed tree of SpdxExpressionOperators and license
-     * ids.
+     * Parses an SPDX expression.
      *
-     * @param spdxExpression spdx expression string
-     * @return parsed SpdxExpression tree, or SpdxExpression.INVALID if an error has occurred during
-     * parsing
+     * @param expression The expression to parse.
+     * @return The parsed {@link SpdxExpression}.
+     * @throws SpdxExpressionParseException When parsing failed.
      */
-    public SpdxExpression parse(final String spdxExpression) {
+    public SpdxExpression parse(String expression) {
+        if (expression == null || expression.isBlank()) {
+            throw new SpdxExpressionParseException("Expression must not be null or blank");
+        }
+
+        final var cursor = new TokenCursor(tokenize(expression));
+
+        final SpdxExpression result = parseOrExpression(cursor);
+        if (cursor.hasNext()) {
+            throw new SpdxExpressionParseException(
+                    "Unexpected token after expression: " + cursor.next());
+        }
+
+        return result;
+    }
+
+    /**
+     * Parses an SPDX expression, returning {@code null} on failure.
+     *
+     * @param expression The expression to parse.
+     * @return The parsed {@link SpdxExpression}, or {@code null} when parsing failed.
+     */
+    public @Nullable SpdxExpression tryParse(@Nullable String expression) {
+        if (expression == null) {
+            return null;
+        }
+
         try {
-            return parseInternal(spdxExpression);
-        } catch (RuntimeException e) {
-            return SpdxExpression.INVALID;
+            return parse(expression);
+        } catch (SpdxExpressionParseException e) {
+            return null;
         }
     }
 
-    private SpdxExpression parseInternal(final String spdxExpression) {
-        if (spdxExpression == null || spdxExpression.isBlank()) {
-            return SpdxExpression.INVALID;
-        }
+    private List<SpdxExpressionToken> tokenize(String expression) {
+        final var tokens = new ArrayList<SpdxExpressionToken>();
+        final var matcher = TOKEN_PATTERN.matcher(expression);
 
-        // operators are surrounded by spaces or brackets. Let's make our life easier and surround brackets by spaces.
-        var _spdxExpression = spdxExpression.replace("(", " ( ").replace(")", " ) ").split(" ");
+        while (matcher.find()) {
+            final String rawToken = matcher.group();
 
-        // Shunting yard algorithm to convert SPDX expression to reverse polish notation
-        // specify list of infix operators
-        List<String> infixOperators = List.of(
-                SpdxOperator.OR.getToken(),
-                SpdxOperator.AND.getToken(),
-                SpdxOperator.WITH.getToken());
-
-        ArrayDeque<String> operatorStack = new ArrayDeque<>();
-        ArrayDeque<String> outputQueue = new ArrayDeque<>();
-        for (String token : List.of(_spdxExpression)) {
-            if (token.isEmpty()) {
-                continue;
-            }
-            if (infixOperators.contains(token)) {
-                int opPrecedence = SpdxOperator.valueOf(token).getPrecedence();
-                for (String o2; (o2 = operatorStack.peek()) != null && !o2.equals("(")
-                        && SpdxOperator.valueOf(o2).getPrecedence() > opPrecedence; ) {
-                    outputQueue.push(operatorStack.pop());
-                }
-                operatorStack.push(token);
-            } else if (token.equals("(")) {
-                operatorStack.push(token);
-            } else if (token.equals(")")) {
-                for (String o2; (o2 = operatorStack.peek()) == null || !o2.equals("("); ) {
-                    if (o2 == null) {
-                        // Mismatched parentheses
-                        return SpdxExpression.INVALID;
-                    }
-                    outputQueue.push(operatorStack.pop());
-                }
-                String leftParens = operatorStack.pop();
-
-                if (!"(".equals(leftParens)) {
-                    // Mismatched parentheses
-                    return SpdxExpression.INVALID;
-                }
-                // no function tokens implemented
+            if ("(".equals(rawToken)) {
+                tokens.add(Grouping.LEFT_PAREN);
+            } else if (")".equals(rawToken)) {
+                tokens.add(Grouping.RIGHT_PAREN);
+            } else if ("+".equals(rawToken)) {
+                throw new SpdxExpressionParseException("Standalone '+' operator");
+            } else if (rawToken.length() > 1 && rawToken.endsWith("+")) {
+                addIdentifierTokens(rawToken.substring(0, rawToken.length() - 1), tokens);
+                tokens.add(new Operator(SpdxExpressionOperator.PLUS));
             } else {
-                outputQueue.push(token);
+                final SpdxExpressionOperator op = SpdxExpressionOperator.ofToken(rawToken);
+                if (op != null && op != SpdxExpressionOperator.PLUS) {
+                    tokens.add(new Operator(op));
+                } else {
+                    addIdentifierTokens(rawToken, tokens);
+                }
             }
-        }
-        for (String o2; (o2 = operatorStack.peek()) != null; ) {
-            if ("(".equals(o2)) {
-                // Mismatched parentheses
-                return SpdxExpression.INVALID;
-            }
-            outputQueue.push(operatorStack.pop());
         }
 
-        // Convert RPN stack into tree.
-        ArrayDeque<SpdxExpression> expressions = new ArrayDeque<>();
-        while (!outputQueue.isEmpty()) {
-            var token = outputQueue.pollLast();
-            if (infixOperators.contains(token)) {
-                if (expressions.size() < 2) {
-                    return SpdxExpression.INVALID;
-                }
-                var rhs = expressions.pop();
-                var lhs = expressions.pop();
-                final var operator = SpdxOperator.valueOf(token);
-                if (operator == SpdxOperator.AND || operator == SpdxOperator.OR) {
-                    // Flatten associative chains and sort for commutativity.
-                    final var operands = new ArrayList<SpdxExpression>();
-                    collectOperands(lhs, operator, operands);
-                    collectOperands(rhs, operator, operands);
-                    operands.sort(Comparator.comparing(SpdxExpression::toString, String.CASE_INSENSITIVE_ORDER));
-                    expressions.push(new SpdxExpression(operator, List.copyOf(operands)));
-                } else {
-                    expressions.push(new SpdxExpression(operator, List.of(lhs, rhs)));
-                }
-            } else {
-                if ("+".equals(token)) {
-                    return SpdxExpression.INVALID;
-                } else if (token.endsWith("+")) {
-                    expressions.push(new SpdxExpression(
-                            SpdxOperator.PLUS,
-                            List.of(new SpdxExpression(token.substring(0, token.length() - 1)))));
-                } else {
-                    // Resolve deprecated WITH-compound IDs (e.g. GPL-2.0-with-classpath-exception)
-                    // to their modern WITH expression equivalents.
-                    final String resolved = SpdxLicenseRegistry.resolveWithCompound(token);
-                    if (resolved != null) {
-                        final SpdxExpression resolvedExpr = parse(resolved);
-                        if (resolvedExpr == SpdxExpression.INVALID) {
-                            return SpdxExpression.INVALID;
-                        }
-                        expressions.push(resolvedExpr);
-                    } else {
-                        expressions.push(new SpdxExpression(token));
-                    }
-                }
-            }
-        }
-        if (expressions.size() != 1) {
-            return SpdxExpression.INVALID;
-        }
-
-        return expressions.pop();
+        return tokens;
     }
 
-    private static void collectOperands(SpdxExpression expr, SpdxOperator operator, List<SpdxExpression> out) {
-        final SpdxExpressionOperation op = expr.getOperation();
-        if (op != null && op.getOperator() == operator) {
-            for (final SpdxExpression arg : op.getArguments()) {
-                collectOperands(arg, operator, out);
-            }
+    private void addIdentifierTokens(String id, List<SpdxExpressionToken> tokens) {
+        final String resolved = SpdxLicenseRegistry.resolveWithCompound(id);
+        if (resolved != null) {
+            tokens.addAll(tokenize(resolved));
         } else {
-            out.add(expr);
+            tokens.add(new Identifier(id));
         }
+    }
+
+    private static SpdxExpression parseOrExpression(TokenCursor cursor) {
+        final var operands = new ArrayList<SpdxExpression>();
+
+        do {
+            operands.add(parseAndExpression(cursor));
+        } while (cursor.matchOperator(SpdxExpressionOperator.OR));
+
+        if (operands.size() == 1) {
+            return operands.getFirst();
+        }
+
+        return new SpdxExpression.Or(operands);
+    }
+
+    private static SpdxExpression parseAndExpression(TokenCursor cursor) {
+        final var operands = new ArrayList<SpdxExpression>();
+
+        do {
+            operands.add(parseWithExpression(cursor));
+        } while (cursor.matchOperator(SpdxExpressionOperator.AND));
+
+        if (operands.size() == 1) {
+            return operands.getFirst();
+        }
+
+        return new SpdxExpression.And(operands);
+    }
+
+    private static SpdxExpression parseWithExpression(TokenCursor cursor) {
+        final SpdxExpression lhs = parseUnaryExpression(cursor);
+
+        if (cursor.matchOperator(SpdxExpressionOperator.WITH)) {
+            // Per the SPDX spec, WITH requires a simple license ID (or id+) on
+            // the left. The RHS should be an exception ID, but we intentionally
+            // accept any expression to handle malformed real-world SBOMs.
+            if (!(lhs instanceof SpdxExpression.Identifier)
+                    && !(lhs instanceof SpdxExpression.OrLater)) {
+                throw new SpdxExpressionParseException(
+                        "WITH requires a license ID on the left hand side");
+            }
+            final SpdxExpression rhs = parseUnaryExpression(cursor);
+            return new SpdxExpression.With(lhs, rhs);
+        }
+
+        return lhs;
+    }
+
+    private static SpdxExpression parseUnaryExpression(TokenCursor cursor) {
+        final SpdxExpression expr = parsePrimaryExpression(cursor);
+
+        if (cursor.matchOperator(SpdxExpressionOperator.PLUS)) {
+            if (!(expr instanceof SpdxExpression.Identifier id)) {
+                throw new SpdxExpressionParseException("'+' can only be applied to a license ID");
+            }
+
+            return new SpdxExpression.OrLater(id);
+        }
+
+        return expr;
+    }
+
+    private static SpdxExpression parsePrimaryExpression(TokenCursor cursor) {
+        final SpdxExpressionToken token = cursor.next();
+
+        if (token instanceof Identifier(String id)) {
+            return new SpdxExpression.Identifier(id);
+        }
+
+        if (token == Grouping.LEFT_PAREN) {
+            final SpdxExpression expr = parseOrExpression(cursor);
+            cursor.expect(Grouping.RIGHT_PAREN);
+            return expr;
+        }
+
+        throw new SpdxExpressionParseException(
+                "Expected license ID or '(', but got: " + token);
+    }
+
+    private static final class TokenCursor {
+
+        private final List<SpdxExpressionToken> tokens;
+        private int position;
+
+        private TokenCursor(List<SpdxExpressionToken> tokens) {
+            this.tokens = tokens;
+        }
+
+        private boolean hasNext() {
+            return position < tokens.size();
+        }
+
+        private SpdxExpressionToken next() {
+            if (!hasNext()) {
+                throw new SpdxExpressionParseException("Unexpected end of expression");
+            }
+
+            return tokens.get(position++);
+        }
+
+        private boolean matchOperator(SpdxExpressionOperator expected) {
+            if (hasNext()
+                    && tokens.get(position) instanceof Operator(SpdxExpressionOperator operator)
+                    && operator == expected) {
+                position++;
+                return true;
+            }
+
+            return false;
+        }
+
+        private void expect(SpdxExpressionToken expected) {
+            final SpdxExpressionToken token = next();
+            if (!token.equals(expected)) {
+                throw new SpdxExpressionParseException(
+                        "Expected %s, but got: %s".formatted(expected, token));
+            }
+        }
+
     }
 
 }

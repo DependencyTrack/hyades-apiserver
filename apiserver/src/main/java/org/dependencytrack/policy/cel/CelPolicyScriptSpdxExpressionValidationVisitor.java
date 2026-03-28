@@ -21,8 +21,8 @@ package org.dependencytrack.policy.cel;
 import alpine.common.logging.Logger;
 import com.google.api.expr.v1alpha1.Constant;
 import com.google.api.expr.v1alpha1.Expr;
+import org.dependencytrack.parser.spdx.expression.SpdxExpressionParseException;
 import org.dependencytrack.parser.spdx.expression.SpdxExpressionParser;
-import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -130,11 +130,12 @@ final class CelPolicyScriptSpdxExpressionValidationVisitor {
         }
 
         final String value = constExpr.getStringValue();
-        final SpdxExpression parsed = SpdxExpressionParser.getInstance().parse(value);
-        if (parsed == SpdxExpression.INVALID) {
+        try {
+            SpdxExpressionParser.getInstance().parse(value);
+        } catch (SpdxExpressionParseException e) {
             errors.add(
                     new SpdxExpressionValidationError(
-                            "Invalid SPDX expression: \"%s\"".formatted(value),
+                            "Invalid SPDX expression: " + e.getMessage(),
                             positions.get(expr.getId())));
         }
     }
