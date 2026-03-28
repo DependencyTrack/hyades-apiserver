@@ -33,28 +33,43 @@ import java.util.Set;
 
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_DEPENDS_ON;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_DEPENDENCY_OF;
-import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_EXCLUSIVE_DEPENDENCY_OF;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_DIRECT_DEPENDENCY_OF;
+import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_IS_EXCLUSIVE_DEPENDENCY_OF;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNC_MATCHES_RANGE;
 
-class CelPolicyScriptVersValidationVisitor {
+final class CelPolicyScriptVersValidationVisitor {
 
     private static final Logger LOGGER = Logger.getLogger(CelPolicyScriptVersValidationVisitor.class);
     private static final Set<String> COMPONENT_FILTER_FIELDS = Set.of("group", "name", "cpe", "purl", "swid_tag_id");
     private static final List<String> COMPONENT_FILTER_FIELDS_SORTED = COMPONENT_FILTER_FIELDS.stream().sorted().toList();
+
+    static final Set<String> RELEVANT_FUNCTIONS = Set.of(
+            FUNC_MATCHES_RANGE,
+            FUNC_DEPENDS_ON,
+            FUNC_IS_DEPENDENCY_OF,
+            FUNC_IS_EXCLUSIVE_DEPENDENCY_OF,
+            FUNC_IS_DIRECT_DEPENDENCY_OF);
 
     record VersValidationError(RuntimeException exception, Integer position) {
     }
 
     private final Map<Long, Integer> positions;
     private final List<VersValidationError> errors;
+    private final boolean isApplicable;
 
-    CelPolicyScriptVersValidationVisitor(final Map<Long, Integer> positions) {
+    CelPolicyScriptVersValidationVisitor(
+            Map<Long, Integer> positions,
+            Set<String> usedFunctions) {
         this.positions = positions;
         this.errors = new ArrayList<>();
+        this.isApplicable = usedFunctions.stream().anyMatch(RELEVANT_FUNCTIONS::contains);
     }
 
     void visit(final Expr expr) {
+        if (!isApplicable) {
+            return;
+        }
+
         switch (expr.getExprKindCase()) {
             case CALL_EXPR -> visitCall(expr);
             case COMPREHENSION_EXPR -> visitComprehension(expr);
@@ -71,10 +86,10 @@ class CelPolicyScriptVersValidationVisitor {
             maybeValidateVers(callExpr.getArgs(0));
             return;
         } else if ((FUNC_DEPENDS_ON.equals(functionName)
-                    || FUNC_IS_DEPENDENCY_OF.equals(functionName)
-                    || FUNC_IS_EXCLUSIVE_DEPENDENCY_OF.equals(functionName)
-                    || FUNC_IS_DIRECT_DEPENDENCY_OF.equals(functionName))
-                   && callExpr.getArgsCount() == 1) {
+                || FUNC_IS_DEPENDENCY_OF.equals(functionName)
+                || FUNC_IS_EXCLUSIVE_DEPENDENCY_OF.equals(functionName)
+                || FUNC_IS_DIRECT_DEPENDENCY_OF.equals(functionName))
+                && callExpr.getArgsCount() == 1) {
             maybeValidateComponentStruct(callExpr.getArgs(0));
             return;
         }

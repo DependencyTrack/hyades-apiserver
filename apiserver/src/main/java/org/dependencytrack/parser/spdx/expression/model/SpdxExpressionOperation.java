@@ -19,6 +19,7 @@
 package org.dependencytrack.parser.spdx.expression.model;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -29,8 +30,9 @@ import java.util.stream.Collectors;
  * @since 4.9.0
  */
 public class SpdxExpressionOperation {
-    private SpdxOperator operator;
-    private List<SpdxExpression> arguments;
+
+    private final SpdxOperator operator;
+    private final List<SpdxExpression> arguments;
 
     public SpdxExpressionOperation(SpdxOperator operator, List<SpdxExpression> arguments) {
         this.operator = operator;
@@ -41,16 +43,26 @@ public class SpdxExpressionOperation {
         return operator;
     }
 
-    public void setOperator(SpdxOperator operator) {
-        this.operator = operator;
-    }
-
     public List<SpdxExpression> getArguments() {
         return arguments;
     }
 
-    public void setArguments(List<SpdxExpression> arguments) {
-        this.arguments = arguments;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof SpdxExpressionOperation other)) {
+            return false;
+        }
+
+        return operator == other.operator
+                && Objects.equals(arguments, other.arguments);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(operator, arguments);
     }
 
     @Override
@@ -58,4 +70,5 @@ public class SpdxExpressionOperation {
         return operator + "("
                 + arguments.stream().map(SpdxExpression::toString).collect(Collectors.joining(", ")) + ")";
     }
+
 }

@@ -18,12 +18,14 @@
  */
 package org.dependencytrack.parser.spdx.expression;
 
-import java.util.ArrayDeque;
-import java.util.Iterator;
-import java.util.List;
-
-import org.dependencytrack.parser.spdx.expression.model.SpdxOperator;
 import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
+import org.dependencytrack.parser.spdx.expression.model.SpdxExpressionOperation;
+import org.dependencytrack.parser.spdx.expression.model.SpdxOperator;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * This class parses SPDX expressions according to
@@ -33,56 +35,54 @@ import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
  * @author hborchardt
  * @since 4.9.0
  */
-public class SpdxExpressionParser {
+public final class SpdxExpressionParser {
 
     /**
      * Reads in a SPDX expression and returns a parsed tree of SpdxExpressionOperators and license
      * ids.
      *
-     * @param spdxExpression
-     *            spdx expression string
+     * @param spdxExpression spdx expression string
      * @return parsed SpdxExpression tree, or SpdxExpression.INVALID if an error has occurred during
-     *         parsing
+     * parsing
      */
     public SpdxExpression parse(final String spdxExpression) {
+        if (spdxExpression == null || spdxExpression.isBlank()) {
+            return SpdxExpression.INVALID;
+        }
+
         // operators are surrounded by spaces or brackets. Let's make our life easier and surround brackets by spaces.
         var _spdxExpression = spdxExpression.replace("(", " ( ").replace(")", " ) ").split(" ");
-        if (_spdxExpression.length == 1) {
-            return new SpdxExpression(spdxExpression);
-        }
 
         // Shunting yard algorithm to convert SPDX expression to reverse polish notation
         // specify list of infix operators
-        List<String> infixOperators = List.of(SpdxOperator.OR.getToken(), SpdxOperator.AND.getToken(),
+        List<String> infixOperators = List.of(
+                SpdxOperator.OR.getToken(),
+                SpdxOperator.AND.getToken(),
                 SpdxOperator.WITH.getToken());
 
         ArrayDeque<String> operatorStack = new ArrayDeque<>();
         ArrayDeque<String> outputQueue = new ArrayDeque<>();
-        Iterator<String> it = List.of(_spdxExpression).iterator();
-        while(it.hasNext()) {
-            var token = it.next();
-            if (token.length() == 0) {
+        for (String token : List.of(_spdxExpression)) {
+            if (token.isEmpty()) {
                 continue;
             }
             if (infixOperators.contains(token)) {
                 int opPrecedence = SpdxOperator.valueOf(token).getPrecedence();
                 for (String o2; (o2 = operatorStack.peek()) != null && !o2.equals("(")
-                        && SpdxOperator.valueOf(o2).getPrecedence() > opPrecedence;) {
+                        && SpdxOperator.valueOf(o2).getPrecedence() > opPrecedence; ) {
                     outputQueue.push(operatorStack.pop());
                 }
-                ;
                 operatorStack.push(token);
             } else if (token.equals("(")) {
                 operatorStack.push(token);
             } else if (token.equals(")")) {
-                for (String o2; (o2 = operatorStack.peek()) == null || !o2.equals("(");) {
+                for (String o2; (o2 = operatorStack.peek()) == null || !o2.equals("("); ) {
                     if (o2 == null) {
                         // Mismatched parentheses
                         return SpdxExpression.INVALID;
                     }
                     outputQueue.push(operatorStack.pop());
                 }
-                ;
                 String leftParens = operatorStack.pop();
 
                 if (!"(".equals(leftParens)) {
@@ -94,7 +94,7 @@ public class SpdxExpressionParser {
                 outputQueue.push(token);
             }
         }
-        for (String o2; (o2 = operatorStack.peek()) != null;) {
+        for (String o2; (o2 = operatorStack.peek()) != null; ) {
             if ("(".equals(o2)) {
                 // Mismatched parentheses
                 return SpdxExpression.INVALID;
@@ -102,27 +102,66 @@ public class SpdxExpressionParser {
             outputQueue.push(operatorStack.pop());
         }
 
-        // convert RPN stack into tree
-        // this is easy because all infix operators have two arguments
+        // Convert RPN stack into tree.
         ArrayDeque<SpdxExpression> expressions = new ArrayDeque<>();
-        SpdxExpression expr = null;
         while (!outputQueue.isEmpty()) {
             var token = outputQueue.pollLast();
             if (infixOperators.contains(token)) {
+                if (expressions.size() < 2) {
+                    return SpdxExpression.INVALID;
+                }
                 var rhs = expressions.pop();
                 var lhs = expressions.pop();
-                expr = new SpdxExpression(SpdxOperator.valueOf(token), List.of(lhs, rhs));
-            } else {
-                if (token.endsWith("+")) {
-                    // trailing `+` is not a whitespace-delimited operator - process it separately 
-                    expr = new SpdxExpression(SpdxOperator.PLUS,
-                            List.of(new SpdxExpression(token.substring(0, token.length() - 1))));
+                final var operator = SpdxOperator.valueOf(token);
+                if (operator == SpdxOperator.AND || operator == SpdxOperator.OR) {
+                    // Flatten associative chains and sort for commutativity.
+                    final var operands = new ArrayList<SpdxExpression>();
+                    collectOperands(lhs, operator, operands);
+                    collectOperands(rhs, operator, operands);
+                    operands.sort(Comparator.comparing(SpdxExpression::toString, String.CASE_INSENSITIVE_ORDER));
+                    expressions.push(new SpdxExpression(operator, List.copyOf(operands)));
                 } else {
-                    expr = new SpdxExpression(token);
+                    expressions.push(new SpdxExpression(operator, List.of(lhs, rhs)));
+                }
+            } else {
+                if ("+".equals(token)) {
+                    return SpdxExpression.INVALID;
+                } else if (token.endsWith("+")) {
+                    expressions.push(new SpdxExpression(
+                            SpdxOperator.PLUS,
+                            List.of(new SpdxExpression(token.substring(0, token.length() - 1)))));
+                } else {
+                    // Resolve deprecated WITH-compound IDs (e.g. GPL-2.0-with-classpath-exception)
+                    // to their modern WITH expression equivalents.
+                    final String resolved = SpdxLicenseRegistry.resolveWithCompound(token);
+                    if (resolved != null) {
+                        final SpdxExpression resolvedExpr = parse(resolved);
+                        if (resolvedExpr == SpdxExpression.INVALID) {
+                            return SpdxExpression.INVALID;
+                        }
+                        expressions.push(resolvedExpr);
+                    } else {
+                        expressions.push(new SpdxExpression(token));
+                    }
                 }
             }
-            expressions.push(expr);
         }
-        return expr;
+        if (expressions.size() != 1) {
+            return SpdxExpression.INVALID;
+        }
+
+        return expressions.pop();
     }
+
+    private static void collectOperands(SpdxExpression expr, SpdxOperator operator, List<SpdxExpression> out) {
+        final SpdxExpressionOperation op = expr.getOperation();
+        if (op != null && op.getOperator() == operator) {
+            for (final SpdxExpression arg : op.getArguments()) {
+                collectOperands(arg, operator, out);
+            }
+        } else {
+            out.add(expr);
+        }
+    }
+
 }

@@ -19,6 +19,8 @@
 package org.dependencytrack.parser.spdx.expression.model;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 /**
  * A node of an SPDX expression tree. If it is a leaf node, it contains a spdxLicenseId. If it is an
@@ -28,7 +30,9 @@ import java.util.List;
  * @since 4.9.0
  */
 public class SpdxExpression {
+
     public static final SpdxExpression INVALID = new SpdxExpression(null);
+
     public SpdxExpression(String spdxLicenseId) {
         this.spdxLicenseId = spdxLicenseId;
     }
@@ -44,16 +48,35 @@ public class SpdxExpression {
         return operation;
     }
 
-    public void setOperation(SpdxExpressionOperation operation) {
-        this.operation = operation;
-    }
-
     public String getSpdxLicenseId() {
         return spdxLicenseId;
     }
 
-    public void setSpdxLicenseId(String spdxLicenseId) {
-        this.spdxLicenseId = spdxLicenseId;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (this == INVALID || o == INVALID) {
+            return false;
+        }
+        if (!(o instanceof SpdxExpression other)) {
+            return false;
+        }
+        if (spdxLicenseId != null) {
+            return spdxLicenseId.equalsIgnoreCase(other.spdxLicenseId);
+        }
+
+        return other.spdxLicenseId == null && Objects.equals(operation, other.operation);
+    }
+
+    @Override
+    public int hashCode() {
+        if (spdxLicenseId != null) {
+            return spdxLicenseId.toLowerCase(Locale.ROOT).hashCode();
+        }
+
+        return Objects.hash(operation);
     }
 
     @Override
@@ -64,6 +87,8 @@ public class SpdxExpression {
         if (spdxLicenseId != null) {
             return spdxLicenseId;
         }
+
         return operation.toString();
     }
+
 }
