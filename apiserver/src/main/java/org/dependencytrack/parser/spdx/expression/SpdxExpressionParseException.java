@@ -16,33 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.parser.spdx.expression.model;
+package org.dependencytrack.parser.spdx.expression;
 
 /**
- * One of the SPDX expression operators as defined in the spec, together with their precedence.
- *
- * @author hborchardt
- * @since 4.9.0
+ * @since 5.7.0
  */
-public enum SpdxOperator {
-    OR(1, "OR"), AND(2, "AND"), WITH(3, "WITH"), PLUS(4, "+");
+public final class SpdxExpressionParseException extends RuntimeException {
 
-    SpdxOperator(int precedence, String token) {
-        this.precedence = precedence;
-        this.token = token;
+    SpdxExpressionParseException(String message) {
+        super(message);
     }
 
-    private final int precedence;
-    private final String token;
-
-    public int getPrecedence() {
-        return precedence;
-    }
-    public String getToken() {
-        return token;
-    }
-    @Override
-    public String toString() {
-        return this.token;
-    }
 }

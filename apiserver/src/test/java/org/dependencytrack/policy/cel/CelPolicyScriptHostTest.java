@@ -180,7 +180,7 @@ class CelPolicyScriptHostTest {
                 () -> CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
                         spdx_expr_allows("(MIT", ["MIT"])
                         """, CacheMode.NO_CACHE));
-        assertThat(exception.getMessage()).contains("Invalid SPDX expression: \"(MIT\"");
+        assertThat(exception.getMessage()).contains("Invalid SPDX expression: Unexpected end of expression");
     }
 
     @Test
