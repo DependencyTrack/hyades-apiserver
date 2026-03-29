@@ -22,10 +22,10 @@ import alpine.server.auth.PermissionRequired;
 import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
+import jakarta.ws.rs.ext.Provider;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.api.v2.ComponentsApi;
 import org.dependencytrack.api.v2.model.CreateComponentRequest;
@@ -48,7 +48,7 @@ import java.util.UUID;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapOrganizationalContacts;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
-@Path("/")
+@Provider
 public class ComponentsResource extends AbstractApiResource implements ComponentsApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComponentsResource.class);

@@ -19,9 +19,9 @@ get:
   summary: List findings by project and advisory
   description: Requires permission <strong>VIEW_VULNERABILITY</strong>
   tags:
-  - Advisories
+  - Projects
   parameters:
-  - name: projectUuid
+  - name: uuid
     in: path
     description: The UUID of the project
     required: true
