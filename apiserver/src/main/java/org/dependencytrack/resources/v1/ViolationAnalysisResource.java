@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.common.validation.RegexSequence;
 import alpine.common.validation.ValidationTask;
 import alpine.server.auth.PermissionRequired;
+import alpine.server.filters.ProjectAccessFiltered;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -84,6 +85,7 @@ public class ViolationAnalysisResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The component or policy violation could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_POLICY_VIOLATION)
+    @ProjectAccessFiltered
     public Response retrieveAnalysis(@Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true)
                                      @QueryParam("component") @ValidUuid String componentUuid,
                                      @Parameter(description = "The UUID of the policy violation", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -128,6 +130,7 @@ public class ViolationAnalysisResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The component or policy violation could not be found")
     })
     @PermissionRequired(Permissions.Constants.POLICY_VIOLATION_ANALYSIS)
+    @ProjectAccessFiltered
     public Response updateAnalysis(ViolationAnalysisRequest request) {
         final Validator validator = getValidator();
         failOnValidationError(

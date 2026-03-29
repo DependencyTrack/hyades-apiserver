@@ -20,8 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.filters.ResourceAccessRequired;
-import alpine.server.resources.AlpineResource;
+import alpine.server.filters.ProjectAccessFiltered;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -50,6 +49,7 @@ import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.TagQueryManager;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.problems.TagOperationProblemDetails;
@@ -69,7 +69,7 @@ import java.util.Set;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class TagResource extends AlpineResource {
+public class TagResource extends AbstractApiResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -87,7 +87,7 @@ public class TagResource extends AlpineResource {
     })
     @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getAllTags() {
         final List<TagQueryManager.TagListRow> tagListRows;
         try (final var qm = new QueryManager(getAlpineRequest())) {
@@ -192,7 +192,7 @@ public class TagResource extends AlpineResource {
     })
     @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getTaggedProjects(
             @Parameter(description = "Name of the tag to get projects for.", required = true)
             @PathParam("name") final String tagName
@@ -304,7 +304,7 @@ public class TagResource extends AlpineResource {
     })
     @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getTaggedCollectionProjects(
             @Parameter(description = "Name of the tag to get collection projects for", required = true)
             @PathParam("name") final String tagName
@@ -453,7 +453,7 @@ public class TagResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getTagsForPolicy(
             @Parameter(description = "The UUID of the policy", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid final String uuid

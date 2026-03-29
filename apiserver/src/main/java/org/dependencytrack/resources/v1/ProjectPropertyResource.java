@@ -19,6 +19,7 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.server.auth.PermissionRequired;
+import alpine.server.filters.ProjectAccessFiltered;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -91,6 +92,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_READ})
+    @ProjectAccessFiltered
     public Response getProperties(
             @Parameter(description = "The UUID of the project to retrieve properties for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -128,6 +130,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "409", description = "A property with the specified project/group/name combination already exists")
     })
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
+    @ProjectAccessFiltered
     public Response createProperty(
             @Parameter(description = "The UUID of the project to create a property for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -187,6 +190,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found"),
     })
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
+    @ProjectAccessFiltered
     public Response updateProperty(
             @Parameter(description = "The UUID of the project to create a property for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -232,6 +236,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "404", description = "The project or project property could not be found"),
     })
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
+    @ProjectAccessFiltered
     public Response deleteProperty(
             @Parameter(description = "The UUID of the project to delete a property from", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,

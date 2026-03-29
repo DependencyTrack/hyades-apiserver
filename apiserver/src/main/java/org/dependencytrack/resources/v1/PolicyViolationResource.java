@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
+import alpine.server.filters.ProjectAccessFiltered;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -31,6 +32,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.PolicyViolation;
@@ -41,13 +49,6 @@ import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import java.util.Collection;
@@ -85,6 +86,7 @@ public class PolicyViolationResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_POLICY_VIOLATION)
+    @ProjectAccessFiltered
     public Response getViolations(@Parameter(description = "Optionally includes suppressed violations")
                                       @QueryParam("suppressed") boolean suppressed,
                                   @Parameter(description = "Optionally includes inactive projects")
@@ -145,6 +147,7 @@ public class PolicyViolationResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_POLICY_VIOLATION)
+    @ProjectAccessFiltered
     public Response getViolationsByProject(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                            @PathParam("uuid") @ValidUuid String uuid,
                                            @Parameter(description = "Optionally includes suppressed violations")
@@ -186,6 +189,7 @@ public class PolicyViolationResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_POLICY_VIOLATION)
+    @ProjectAccessFiltered
     public Response getViolationsByComponent(@Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true)
                                              @PathParam("uuid") @ValidUuid String uuid,
                                              @Parameter(description = "Optionally includes suppressed violations")

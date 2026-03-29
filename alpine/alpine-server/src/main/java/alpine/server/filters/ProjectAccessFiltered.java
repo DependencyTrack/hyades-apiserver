@@ -1,5 +1,5 @@
 /*
- * This file is part of Alpine.
+ * This file is part of Dependency-Track.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package alpine.server.filters;
 
@@ -25,10 +25,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * This annotation is intended to be used in conjunction with JAX-RS resources (methods)
- * to disable standard authorization checks when attempting to access the method.
+ * Indicates that a JAX-RS resource method filters its results based on the
+ * principal's project-level access. When portfolio access control is enabled,
+ * the {@link AuthorizationFilter} will accept project-scoped permissions in
+ * addition to global ones for methods carrying this annotation.
  * <p>
- * An ACL specific to the requested resource will be used instead.
+ * The annotated method is responsible for enforcing project-level ACLs,
+ * either via query-level filtering or explicit access checks.
  *
  * @author Jonathan Howard
  * @since 5.6.0
@@ -36,5 +39,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 @Documented
-public @interface ResourceAccessRequired {
+public @interface ProjectAccessFiltered {
 }

@@ -167,6 +167,7 @@ class BomResourceTest extends ResourceTest {
 
     @Test
     void exportProjectAsCycloneDxAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -216,13 +217,6 @@ class BomResourceTest extends ResourceTest {
 
         Response response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_FORBIDDEN);
-        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
-                {
-                  "status": 403,
-                  "title": "Project access denied",
-                  "detail": "Access to the requested project is forbidden"
-                }
-                """);
 
         final Permission permission = qm.createPermission("VIEW_PORTFOLIO", null);
         final Role role = qm.createRole("Test Role", List.of(permission));
@@ -1010,6 +1004,7 @@ class BomResourceTest extends ResourceTest {
 
     @Test
     void exportComponentAsCycloneDxAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -1232,16 +1227,16 @@ class BomResourceTest extends ResourceTest {
     }
 
     private static Object[] uploadBomIsLatestTestParameters() {
-        return new Object[] {
-                new Object[] { true, null, true },
-                new Object[] { true, true, true },
-                new Object[] { true, false, false },
-                new Object[] { false, null, false },
-                new Object[] { false, true, true },
-                new Object[] { false, false, false },
-                new Object[] { null, null, false },
-                new Object[] { null, true, true },
-                new Object[] { null, false, false },
+        return new Object[]{
+                new Object[]{true, null, true},
+                new Object[]{true, true, true},
+                new Object[]{true, false, false},
+                new Object[]{false, null, false},
+                new Object[]{false, true, true},
+                new Object[]{false, false, false},
+                new Object[]{null, null, false},
+                new Object[]{null, true, true},
+                new Object[]{null, false, false},
         };
     }
 

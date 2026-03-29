@@ -19,7 +19,7 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.server.auth.PermissionRequired;
-import alpine.server.filters.ResourceAccessRequired;
+import alpine.server.filters.ProjectAccessFiltered;
 import com.github.packageurl.PackageURL;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -98,7 +98,7 @@ public class DependencyGraphResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "Any component can be found"),
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getComponentsAndServicesByProjectUuid(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true) final @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
@@ -142,7 +142,7 @@ public class DependencyGraphResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "Any component can be found"),
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getComponentsAndServicesByComponentUuid(@Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true) final @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);

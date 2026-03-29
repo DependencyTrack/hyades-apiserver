@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.common.validation.RegexSequence;
 import alpine.common.validation.ValidationTask;
 import alpine.server.auth.PermissionRequired;
+import alpine.server.filters.ProjectAccessFiltered;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -86,6 +87,7 @@ public class AnalysisResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @ProjectAccessFiltered
     public Response retrieveAnalysis(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"))
                                      @QueryParam("project") @ValidUuid String projectUuid,
                                      @Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -142,6 +144,7 @@ public class AnalysisResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
     @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
+    @ProjectAccessFiltered
     public Response updateAnalysis(AnalysisRequest request) {
         final Validator validator = getValidator();
         failOnValidationError(

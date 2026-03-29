@@ -19,7 +19,7 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.server.auth.PermissionRequired;
-import alpine.server.filters.ResourceAccessRequired;
+import alpine.server.filters.ProjectAccessFiltered;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -89,7 +89,7 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getProperties(
             @Parameter(description = "The UUID of the component to retrieve properties for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {

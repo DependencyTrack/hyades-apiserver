@@ -1093,6 +1093,35 @@ public class QueryManager extends AlpineQueryManager {
                 .getEffectivePermissions(user.getId(), project.getId()));
     }
 
+    /**
+     * @since 5.7.0
+     */
+    public boolean hasAnyProjectPermission(Principal principal, Project project, Collection<String> permissionNames) {
+        final Set<String> globalPermissions = getEffectivePermissions(principal);
+        if (!Collections.disjoint(globalPermissions, permissionNames)) {
+            return true;
+        }
+
+        if (!(principal instanceof final User user)) {
+            return false;
+        }
+
+        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                SELECT EXISTS(
+                  SELECT 1
+                    FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                   WHERE "USER_ID" = :userId
+                     AND "PROJECT_ID" = :projectId
+                     AND "PERMISSION_NAME" = ANY(:permissionNames)
+                )
+                """);
+        query.setNamedParameters(Map.of(
+                "userId", user.getId(),
+                "projectId", project.getId(),
+                "permissionNames", permissionNames.toArray(new String[0])));
+        return executeAndCloseResultUnique(query, Boolean.class);
+    }
+
     public boolean hasAccessManagementPermission(final Object principal) {
         if (principal instanceof final User user) {
             return hasAccessManagementPermission(user);

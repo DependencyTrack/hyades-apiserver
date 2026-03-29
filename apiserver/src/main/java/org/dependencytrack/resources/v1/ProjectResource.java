@@ -25,7 +25,7 @@ import alpine.model.Team;
 import alpine.model.User;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.filters.ResourceAccessRequired;
+import alpine.server.filters.ProjectAccessFiltered;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -134,7 +134,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getProjects(@Parameter(description = "The optional name of the project to query on")
                                 @QueryParam("name") String name,
                                 @Parameter(description = "Optionally excludes inactive projects from being returned")
@@ -176,7 +176,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getProjectsConcise(
             @Parameter(description = "Name to filter on. Must be exact match.")
             @QueryParam("name") final String nameFilter,
@@ -232,7 +232,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getProjectChildrenConcise(
             @Parameter(description = "UUID of the project", required = true)
             @PathParam("uuid") final String parentUuid,
@@ -291,7 +291,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getProject(
             @Parameter(description = "The UUID of the project to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -327,7 +327,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getLatestProjectByName(
             @Parameter(description = "The name of the project to retrieve the latest version of", required = true)
             @PathParam("name") String name) {
@@ -364,7 +364,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getProject(
             @Parameter(description = "The name of the project to query on", required = true)
             @QueryParam("name") String name,
@@ -399,7 +399,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getProjectsByTag(
             @Parameter(description = "The tag to query on", required = true)
             @PathParam("tag") String tagString,
@@ -430,7 +430,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getProjectsByClassifier(
             @Parameter(description = "The classifier to query on", required = true)
             @PathParam("classifier") String classifierString,
@@ -1085,7 +1085,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getChildrenProjects(@Parameter(description = "The UUID of the project to get the children from", schema = @Schema(type = "string", format = "uuid"), required = true)
                                         @PathParam("uuid") @ValidUuid String uuid,
                                         @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
@@ -1125,7 +1125,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getChildrenProjectsByClassifier(
             @Parameter(description = "The classifier to query on", required = true)
             @PathParam("classifier") String classifierString,
@@ -1169,7 +1169,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getChildrenProjectsByTag(
             @Parameter(description = "The tag to query on", required = true)
             @PathParam("tag") String tagString,
@@ -1213,7 +1213,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response getProjectsWithoutDescendantsOf(
             @Parameter(description = "The UUID of the project which descendants will be excluded", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,

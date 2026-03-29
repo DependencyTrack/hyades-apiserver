@@ -812,6 +812,39 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
+     * Determines if the given {@link Principal} has any of the specified permissions
+     * at a project scope, i.e. via {@code USER_PROJECT_EFFECTIVE_PERMISSIONS}.
+     * <p>
+     * Returns {@code false} for {@link ApiKey} principals because API keys do not have
+     * project-scoped permissions. Project-level access for API keys is controlled via
+     * {@code PROJECT_ACCESS_TEAMS}, which governs which projects an API key (or team)
+     * can see, not what permissions it has on them.
+     *
+     * @param principal       The {@link Principal} to check.
+     * @param permissionNames Names of the permissions to check for.
+     * @return {@code true} if the principal has at least one of the given permissions on at least one project.
+     * @since 5.7.0
+     */
+    public boolean hasAnyProjectPermission(Principal principal, Set<String> permissionNames) {
+        if (!(principal instanceof final User user) || permissionNames.isEmpty()) {
+            return false;
+        }
+
+        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                SELECT EXISTS(
+                  SELECT 1
+                    FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                   WHERE "USER_ID" = :userId
+                     AND "PERMISSION_NAME" = ANY(:permissionNames)
+                )
+                """);
+        query.setNamedParameters(Map.of(
+                "userId", user.getId(),
+                "permissionNames", permissionNames.toArray(new String[0])));
+        return executeAndCloseResultUnique(query, Boolean.class);
+    }
+
+    /**
      * Determines if the specified User has been assigned the specified permission.
      * @param user the User to query
      * @param permissionName the name of the permission

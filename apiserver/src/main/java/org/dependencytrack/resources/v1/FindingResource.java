@@ -22,6 +22,7 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.model.About;
 import alpine.server.auth.PermissionRequired;
+import alpine.server.filters.ProjectAccessFiltered;
 import com.github.packageurl.PackageURL;
 import io.pebbletemplates.pebble.PebbleEngine;
 import io.pebbletemplates.pebble.template.PebbleTemplate;
@@ -136,6 +137,7 @@ public class FindingResource extends AbstractApiResource {
     })
     @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @ProjectAccessFiltered
     public Response getFindingsByProject(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                          @PathParam("uuid") @ValidUuid String uuid,
                                          @Parameter(description = "Optionally includes suppressed findings")
@@ -195,6 +197,7 @@ public class FindingResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @ProjectAccessFiltered
     public Response exportFindingsByProject(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
@@ -257,6 +260,7 @@ public class FindingResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS)
+    @ProjectAccessFiltered
     public Response analyzeProject(
             @Parameter(description = "The UUID of the project to analyze", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -303,6 +307,7 @@ public class FindingResource extends AbstractApiResource {
     })
     @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @ProjectAccessFiltered
     public Response getAllFindings(@Parameter(description = "Show inactive projects")
                                    @QueryParam("showInactive") boolean showInactive,
                                    @Parameter(description = "Show suppressed findings")
@@ -373,6 +378,7 @@ public class FindingResource extends AbstractApiResource {
     })
     @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @ProjectAccessFiltered
     public Response getAllFindings(@Parameter(description = "Show inactive projects")
                                    @QueryParam("showInactive") boolean showInactive,
                                    @Parameter(description = "Filter by severity")

@@ -21,7 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.filters.ResourceAccessRequired;
+import alpine.server.filters.ProjectAccessFiltered;
 import com.fasterxml.uuid.Generators;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -165,7 +165,7 @@ public class BomResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response exportProjectAsCycloneDx(
             @Parameter(description = "The UUID of the project to export", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -183,23 +183,20 @@ public class BomResource extends AbstractApiResource {
             requireAccess(qm, project);
 
             final CycloneDXExporter exporter;
+            final var vulnPermissions = Set.of(
+                    Permissions.Constants.VIEW_VULNERABILITY,
+                    Permissions.Constants.VULNERABILITY_ANALYSIS,
+                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ);
+
             if (StringUtils.trimToNull(variant) == null || variant.equalsIgnoreCase("inventory")) {
                 exporter = new CycloneDXExporter(CycloneDXExporter.Variant.INVENTORY, qm);
             } else if (variant.equalsIgnoreCase("withVulnerabilities")) {
-                final Set<String> permissions = qm.getEffectivePermissions(getPrincipal());
-                if (Collections.disjoint(permissions, Set.of(
-                        Permissions.Constants.VIEW_VULNERABILITY,
-                        Permissions.Constants.VULNERABILITY_ANALYSIS,
-                        Permissions.Constants.VULNERABILITY_ANALYSIS_READ))) {
+                if (!qm.hasAnyProjectPermission(getPrincipal(), project, vulnPermissions)) {
                     throw new ForbiddenException();
                 }
                 exporter = new CycloneDXExporter(CycloneDXExporter.Variant.INVENTORY_WITH_VULNERABILITIES, qm);
             } else if (variant.equalsIgnoreCase("vdr")) {
-                final Set<String> permissions = qm.getEffectivePermissions(getPrincipal());
-                if (Collections.disjoint(permissions, Set.of(
-                        Permissions.Constants.VIEW_VULNERABILITY,
-                        Permissions.Constants.VULNERABILITY_ANALYSIS,
-                        Permissions.Constants.VULNERABILITY_ANALYSIS_READ))) {
+                if (!qm.hasAnyProjectPermission(getPrincipal(), project, vulnPermissions)) {
                     throw new ForbiddenException();
                 }
                 exporter = new CycloneDXExporter(CycloneDXExporter.Variant.VDR, qm);
@@ -255,7 +252,7 @@ public class BomResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response exportComponentAsCycloneDx(
             @Parameter(description = "The UUID of the component to export", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -336,7 +333,7 @@ public class BomResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
-    @ResourceAccessRequired
+    @ProjectAccessFiltered
     public Response uploadBom(@Parameter(required = true) BomSubmitRequest request) {
         final Validator validator = getValidator();
         final ProjectInfo projectInfo;
