@@ -20,8 +20,8 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.TaskQueuesApi;
 import org.dependencytrack.api.v2.model.ListTaskQueuesResponse;
 import org.dependencytrack.api.v2.model.TaskQueue;
@@ -40,7 +40,7 @@ import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Path("/")
+@Provider
 @NullMarked
 public final class TaskQueuesResource extends AbstractApiResource implements TaskQueuesApi {
 

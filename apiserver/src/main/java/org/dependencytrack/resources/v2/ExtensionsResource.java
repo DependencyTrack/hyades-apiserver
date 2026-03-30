@@ -26,8 +26,8 @@ import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.ExtensionsApi;
 import org.dependencytrack.api.v2.model.GetExtensionConfigResponse;
 import org.dependencytrack.api.v2.model.ListExtensionPointsResponse;
@@ -69,7 +69,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 /**
  * @since 5.7.0
  */
-@Path("/")
+@Provider
 public class ExtensionsResource extends AbstractApiResource implements ExtensionsApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ExtensionsResource.class);

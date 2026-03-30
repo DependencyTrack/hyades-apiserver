@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.util.JsonFormat;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.WorkflowsApi;
 import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponseItem;
@@ -64,7 +64,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-@Path("/")
+@Provider
 @NullMarked
 public class WorkflowsResource extends AbstractApiResource implements WorkflowsApi {
 

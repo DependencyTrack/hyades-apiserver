@@ -22,7 +22,7 @@ get:
     
     Requires the `VIEW_VULNERABILITY` permission.
   tags:
-  - Advisories
+  - Projects
   parameters:
   - name: uuid
     in: path
