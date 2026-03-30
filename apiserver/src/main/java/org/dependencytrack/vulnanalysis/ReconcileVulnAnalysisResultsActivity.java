@@ -865,20 +865,13 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
     }
 
     private static org.dependencytrack.notification.proto.v1.AnalysisTrigger convertAnalysisTrigger(AnalysisTrigger trigger) {
-        if (trigger == AnalysisTrigger.ANALYSIS_TRIGGER_BOM_UPLOAD) {
-            return org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_BOM_UPLOAD;
-        }
-        if (trigger == AnalysisTrigger.ANALYSIS_TRIGGER_SCHEDULE) {
-            return org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_SCHEDULE;
-        }
-        if (trigger == AnalysisTrigger.ANALYSIS_TRIGGER_MANUAL) {
-            return org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_MANUAL;
-        }
-        if (trigger == AnalysisTrigger.UNRECOGNIZED) {
-            return org.dependencytrack.notification.proto.v1.AnalysisTrigger.UNRECOGNIZED;
-        }
-
-        return org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_UNSPECIFIED;
+        return switch (trigger) {
+            case ANALYSIS_TRIGGER_BOM_UPLOAD -> org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_BOM_UPLOAD;
+            case ANALYSIS_TRIGGER_SCHEDULE -> org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_SCHEDULE;
+            case ANALYSIS_TRIGGER_MANUAL -> org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_MANUAL;
+            case ANALYSIS_TRIGGER_UNSPECIFIED -> org.dependencytrack.notification.proto.v1.AnalysisTrigger.ANALYSIS_TRIGGER_UNSPECIFIED;
+            case UNRECOGNIZED -> org.dependencytrack.notification.proto.v1.AnalysisTrigger.UNRECOGNIZED;
+        };
     }
 
 }
