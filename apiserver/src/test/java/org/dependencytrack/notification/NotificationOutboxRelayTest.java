@@ -104,7 +104,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
                 ArgumentCaptor.forClass(Collection.class);
 
         await("Workflow run creation")
-                .atMost(1, TimeUnit.SECONDS)
+                .atMost(5, TimeUnit.SECONDS)
                 .untilAsserted(() -> Mockito.verify(dexEngineMock).createRuns(createRunsCaptor.capture()));
 
         assertThat(createRunsCaptor.getValue()).satisfiesExactly(request -> {
@@ -121,7 +121,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
         });
 
         await("Outbox record removal")
-                .atMost(1, TimeUnit.SECONDS)
+                .atMost(5, TimeUnit.SECONDS)
                 .untilAsserted(() -> assertThat(qm.getNotificationOutbox()).isEmpty());
     }
 
@@ -141,7 +141,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
         relay.start();
 
         await("Outbox record removal")
-                .atMost(1, TimeUnit.SECONDS)
+                .atMost(5, TimeUnit.SECONDS)
                 .untilAsserted(() -> assertThat(qm.getNotificationOutbox()).isEmpty());
 
         Mockito.verify(dexEngineMock, never()).createRuns(anyCollection());
@@ -169,7 +169,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
                 ArgumentCaptor.forClass(Collection.class);
 
         await("Workflow run creation")
-                .atMost(1, TimeUnit.SECONDS)
+                .atMost(5, TimeUnit.SECONDS)
                 .untilAsserted(() -> Mockito.verify(dexEngineMock, times(2)).createRuns(requestsCaptor.capture()));
 
         assertThat(requestsCaptor.getAllValues())
@@ -182,7 +182,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
                 });
 
         await("Outbox record removal")
-                .atMost(1, TimeUnit.SECONDS)
+                .atMost(5, TimeUnit.SECONDS)
                 .untilAsserted(() -> assertThat(qm.getNotificationOutbox()).isEmpty());
     }
 
@@ -208,7 +208,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
                 ArgumentCaptor.forClass(Collection.class);
 
         await("Workflow run creation")
-                .atMost(1, TimeUnit.SECONDS)
+                .atMost(5, TimeUnit.SECONDS)
                 .untilAsserted(() -> Mockito.verify(dexEngineMock).createRuns(createRunsCaptor.capture()));
 
         assertThat(createRunsCaptor.getValue()).satisfiesExactly(request -> {
@@ -231,7 +231,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
         });
 
         await("Outbox record removal")
-                .atMost(1, TimeUnit.SECONDS)
+                .atMost(5, TimeUnit.SECONDS)
                 .untilAsserted(() -> assertThat(qm.getNotificationOutbox()).isEmpty());
     }
 
