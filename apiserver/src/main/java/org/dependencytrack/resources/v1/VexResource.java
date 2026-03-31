@@ -45,6 +45,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.CycloneDxMediaType;
+import org.cyclonedx.Version;
 import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.VexUploadEvent;
@@ -65,6 +66,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * JAX-RS resources for processing VEX documents.
@@ -81,6 +83,7 @@ import java.util.List;
 public class VexResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(VexResource.class);
+    private static final String DEFAULT_EXPORT_VERSION = "1.5";
 
     @GET
     @Path("/cyclonedx/project/{uuid}")
@@ -110,8 +113,17 @@ public class VexResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the project to export", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             @Parameter(description = "Force the resulting VEX to be downloaded as a file (defaults to 'false')")
-            @QueryParam("download") boolean download) {
+            @QueryParam("download") boolean download,
+            @Parameter(description = "The CycloneDX Spec variant exported (defaults to: '" + DEFAULT_EXPORT_VERSION + "')")
+            @QueryParam("version") String version
+    ) {
         try (QueryManager qm = new QueryManager()) {
+            String versionParameter =  Objects.toString(StringUtils.trimToNull(version), DEFAULT_EXPORT_VERSION);
+            Version cdxOutputVersion = Version.fromVersionString(versionParameter);
+            if(cdxOutputVersion == null) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("Invalid CycloneDX version specified.").build();
+            }
+
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
@@ -122,10 +134,10 @@ public class VexResource extends AbstractApiResource {
 
             try {
                 if (download) {
-                    return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.JSON), MediaType.APPLICATION_OCTET_STREAM)
+                    return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.JSON, cdxOutputVersion), MediaType.APPLICATION_OCTET_STREAM)
                             .header("content-disposition", "attachment; filename=\"" + project.getUuid() + "-vex.cdx.json\"").build();
                 } else {
-                    return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.JSON),
+                    return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.JSON, cdxOutputVersion),
                             CycloneDxMediaType.APPLICATION_CYCLONEDX_JSON).build();
                 }
             } catch (GeneratorException e) {
