@@ -45,6 +45,8 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Base64;
 import java.util.Collections;
@@ -263,6 +265,52 @@ public class VexResourceTest extends ResourceTest {
 
         response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1.4", "1.5", "1.6", ""})
+    void exportVexWithVersion(String version) {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
+
+        Project project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setClassifier(Classifier.APPLICATION);
+        qm.persist(project);
+
+        Response response = jersey.target("%s/cyclonedx/project/%s".formatted(V1_VEX, project.getUuid()))
+                .queryParam("version", version)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        final String jsonResponse = getPlainTextBody(response);
+        assertThatNoException().isThrownBy(() -> CycloneDxValidator.getInstance().validate(jsonResponse.getBytes()));
+
+        String expectedCdxVersionSpec = version.isEmpty() ? "1.5" : version;
+        assertThatJson(jsonResponse, json -> json.inPath("specVersion").isEqualTo("\"" + expectedCdxVersionSpec + "\""));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"99", "-15", "1.9", " 0.9", "invalidString"})
+    void exportVexWithInvalidVersionsStrings(String version) {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
+
+        Project project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setClassifier(Classifier.APPLICATION);
+        qm.persist(project);
+
+        Response response = jersey.target("%s/cyclonedx/project/%s".formatted(V1_VEX, project.getUuid()))
+                .queryParam("version", version)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("Invalid CycloneDX version specified.");
     }
 
     @Test
