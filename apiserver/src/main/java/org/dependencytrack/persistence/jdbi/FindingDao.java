@@ -95,6 +95,8 @@ public interface FindingDao {
             BigDecimal cvssV2BaseScore,
             BigDecimal cvssV3BaseScore,
             BigDecimal cvssV4Score,
+            BigDecimal epssScore,
+            BigDecimal epssPercentile,
             Instant vulnPublished,
             List<Integer> cwes,
             String analyzerIdentity,
@@ -333,8 +335,8 @@ public interface FindingDao {
                  , COALESCE(a."SEVERITY", v."SEVERITY") AS "vulnSeverity"
                  , CAST(STRING_TO_ARRAY(v."CWES", ',') AS INT[]) AS "CWES"
                  , JSONB_VULN_ALIASES(v."SOURCE", v."VULNID") AS "vulnAliasesJson"
-                 , "EPSS"."SCORE" AS "epssScore"
-                 , "EPSS"."PERCENTILE" AS "epssPercentile"
+                 , ep."SCORE" AS "epssScore"
+                 , ep."PERCENTILE" AS "epssPercentile"
                  , fa."ANALYZERIDENTITY"
                  , fa."ATTRIBUTED_ON"
                  , fa."ALT_ID"
@@ -347,8 +349,8 @@ public interface FindingDao {
                 ON c."ID" = cv."COMPONENT_ID"
              INNER JOIN "VULNERABILITY" AS v
                 ON cv."VULNERABILITY_ID" = v."ID"
-             LEFT JOIN "EPSS"
-                ON v."VULNID" = "EPSS"."CVE"
+             LEFT JOIN "EPSS" AS ep
+                ON v."VULNID" = ep."CVE"
              INNER JOIN LATERAL (
                SELECT *
                  FROM "FINDINGATTRIBUTION" AS fa
@@ -448,6 +450,8 @@ public interface FindingDao {
                      THEN a."CVSSV4SCORE"
                      ELSE v."CVSSV4SCORE"
                    END AS "cvssV4Score"
+                 , ep."SCORE" AS "epssScore"
+                 , ep."PERCENTILE" AS "epssPercentile"
                  , v."PUBLISHED" AS "vulnPublished"
                  , CAST(STRING_TO_ARRAY(v."CWES", ',') AS INT[]) AS "CWES"
                  , fa."ANALYZERIDENTITY"
@@ -470,6 +474,8 @@ public interface FindingDao {
                        , fa."ID"
                 LIMIT 1
              ) AS fa ON TRUE
+              LEFT JOIN "EPSS" AS ep
+                ON ep."CVE" = v."VULNID"
               LEFT JOIN "ANALYSIS" AS a
                 ON c."ID" = a."COMPONENT_ID"
                AND v."ID" = a."VULNERABILITY_ID"
@@ -491,6 +497,8 @@ public interface FindingDao {
                   , "cvssV2BaseScore"
                   , "cvssV3BaseScore"
                   , "cvssV4Score"
+                  , ep."SCORE"
+                  , ep."PERCENTILE"
                   , fa."ANALYZERIDENTITY"
                   , v."PUBLISHED"
                   , v."CWES"
@@ -568,9 +576,17 @@ public interface FindingDao {
                 case "cvssv3To" ->
                         processRangeFilter(queryFilter, params, filter, filters.get(filter), "v.\"CVSSV3BASESCORE\"", false, false, false);
                 case "cvssv4From" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV4SCORE\"", true, false, false);
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "v.\"CVSSV4SCORE\"", true, false, false);
                 case "cvssv4To" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV4SCORE\"", false, false, false);
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "v.\"CVSSV4SCORE\"", false, false, false);
+                case "epssFrom" ->
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "ep.\"SCORE\"", true, false, false);
+                case "epssTo" ->
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "ep.\"SCORE\"", false, false, false);
+                case "epssPercentileFrom" ->
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "ep.\"PERCENTILE\"", true, false, false);
+                case "epssPercentileTo" ->
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "ep.\"PERCENTILE\"", false, false, false);
             }
         }
     }
