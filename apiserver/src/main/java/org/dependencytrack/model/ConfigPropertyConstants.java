@@ -33,6 +33,7 @@ public enum ConfigPropertyConstants {
     GENERAL_BADGE_ENABLED("general", "badge.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable public access to SVG badges", ConfigPropertyAccessMode.READ_WRITE),
     INTERNAL_COMPONENTS_GROUPS_REGEX("internal-components", "groups.regex", null, PropertyType.STRING, "Regex that matches groups of internal components", ConfigPropertyAccessMode.READ_WRITE),
     INTERNAL_COMPONENTS_NAMES_REGEX("internal-components", "names.regex", null, PropertyType.STRING, "Regex that matches names of internal components", ConfigPropertyAccessMode.READ_WRITE),
+    INTERNAL_COMPONENTS_MATCH_MODE("internal-components", "match-mode", "OR", PropertyType.STRING, "Determines how internal component regexes are combined: OR (default) or AND", ConfigPropertyAccessMode.READ_WRITE),
     MAINTENANCE_METRICS_RETENTION_DAYS("maintenance", "metrics.retention.days", "90", PropertyType.INTEGER, "Number of days to retain metrics data for", ConfigPropertyAccessMode.READ_WRITE),
     MAINTENANCE_PROJECTS_RETENTION_DAYS("maintenance", "projects.retention.days", "30", PropertyType.INTEGER, "Number of days to retain inactive projects for", ConfigPropertyAccessMode.READ_WRITE),
     MAINTENANCE_PROJECTS_RETENTION_TYPE("maintenance", "projects.retention.type", null, PropertyType.STRING, "Retention policy type for inactive projects", ConfigPropertyAccessMode.READ_WRITE),
