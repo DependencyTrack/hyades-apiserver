@@ -164,8 +164,7 @@ public class ComponentsResourceTest extends ResourceTest {
                         "project": {
                             "name": "projectA",
                             "version": "1.0",
-                            "uuid": "${json-unit.any-string}",
-                            "direct_dependencies": "${json-unit.any-string}"
+                            "uuid": "${json-unit.any-string}"
                         }
                       },
                       {
@@ -284,8 +283,7 @@ public class ComponentsResourceTest extends ResourceTest {
                         "project": {
                             "name": "projectA",
                             "version": "1.0",
-                            "uuid": "${json-unit.any-string}",
-                            "direct_dependencies": "${json-unit.any-string}"
+                            "uuid": "${json-unit.any-string}"
                         }
                       }
                   ],
@@ -446,8 +444,7 @@ public class ComponentsResourceTest extends ResourceTest {
                         "project": {
                             "name": "projectA",
                             "version": "1.0",
-                            "uuid": "${json-unit.any-string}",
-                            "direct_dependencies": "${json-unit.any-string}"
+                            "uuid": "${json-unit.any-string}"
                         }
                       }
                   ],
@@ -499,8 +496,7 @@ public class ComponentsResourceTest extends ResourceTest {
                         "project": {
                             "name": "projectA",
                             "version": "1.0",
-                            "uuid": "${json-unit.any-string}",
-                            "direct_dependencies": "${json-unit.any-string}"
+                            "uuid": "${json-unit.any-string}"
                         }
                       }
                   ],
@@ -516,6 +512,7 @@ public class ComponentsResourceTest extends ResourceTest {
     public void listComponentByHashTest() {
         prepareComponents();
         Response response = jersey.target("/components")
+                .queryParam("hash_type", "SHA1")
                 .queryParam("hash", "da39a3ee5e6b4b0d3255bfef95601890afd80709")
                 .queryParam("limit", 2)
                 .request()

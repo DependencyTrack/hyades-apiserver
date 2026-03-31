@@ -109,7 +109,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
     @Override
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response listComponents(UUID projectUuid, String group, String name, String version, String purl, String cpe,
-                                   String swidTagId, String hash, Integer limit, String pageToken, SortDirection sortDirection, String sortBy) {
+                                   String swidTagId, String hashType, String hash, Integer limit, String pageToken, SortDirection sortDirection, String sortBy) {
         return inJdbiTransaction(getAlpineRequest(), handle -> {
             Long projectId = null;
             if (projectUuid != null) {
@@ -137,7 +137,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
             final Page<Component> componentsPage = handle.attach(ComponentDao.class)
                     .listComponents(projectId, true, packageURL != null ? packageURL.canonicalize().toLowerCase() : null, StringUtils.trimToNull(cpe),
                             StringUtils.trimToNull(swidTagId), StringUtils.trimToNull(group), StringUtils.trimToNull(name),
-                            StringUtils.trimToNull(version), StringUtils.trimToNull(hash), limit, pageToken, sortBy, convert(sortDirection));
+                            StringUtils.trimToNull(version), StringUtils.trimToNull(hashType), StringUtils.trimToNull(hash), limit, pageToken, sortBy, convert(sortDirection));
 
             final var response = ListComponentsResponse.builder()
                     .items(componentsPage.items().stream()

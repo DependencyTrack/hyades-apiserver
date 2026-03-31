@@ -143,7 +143,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                         "C"."CLASSIFIER",
                         "C"."COPYRIGHT",
                         "C"."CPE",
-                        "C"."PURL" AS "componentPurl",
+                        "C"."PURL",
                         "C"."GROUP",
                         "C"."INTERNAL",
                         "C"."LAST_RISKSCORE" AS "lastInheritedRiskScore",
@@ -215,6 +215,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             final String componentGroup,
             final String componentName,
             final String componentVersion,
+            final String componentHashType,
             final String componentHash,
             final int limit,
             final String pageToken,
@@ -256,16 +257,23 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             whereConditions.add("LOWER(\"C\".\"SWIDTAGID\") LIKE ('%' || LOWER(:componentSwidTagId) || '%')");
             queryParams.put("componentSwidTagId", componentSwidTagId);
         }
-        if (componentHash != null) {
-            whereConditions.add(
-                    switch (componentHash.length()) {
-                        case 32 -> "\"C\".\"MD5\" = :componentHash";
-                        case 40 -> "\"C\".\"SHA1\" = :componentHash";
-                        case 64 -> "(\"C\".\"SHA_256\" = :componentHash || \"C\".\"SHA3_256\" = :componentHash || \"C\".\"BLAKE2B_256\" = :componentHash)";
-                        case 96 -> "(\"C\".\"SHA_384\" = :componentHash || \"C\".\"SHA3_384\" = :componentHash || \"C\".\"BLAKE2B_384\" = :componentHash)";
-                        case 128 -> "(\"C\".\"SHA_512\" = :componentHash || \"C\".\"SHA3_512\" = :componentHash || \"C\".\"BLAKE2B_512\" = :componentHash)";
-                        default -> "\"C\".\"BLAKE3\" = :componentHash";
-                    });
+        if (componentHashType != null && componentHash != null) {
+            final HashType hashType = HashType.valueOf(componentHashType.toUpperCase());
+            final String hashColumn = switch (hashType) {
+                case MD5 -> "\"C\".\"MD5\"";
+                case SHA1 -> "\"C\".\"SHA1\"";
+                case SHA_256 -> "\"C\".\"SHA_256\"";
+                case SHA_384 -> "\"C\".\"SHA_384\"";
+                case SHA_512 -> "\"C\".\"SHA_512\"";
+                case SHA3_256 -> "\"C\".\"SHA3_256\"";
+                case SHA3_384 -> "\"C\".\"SHA3_384\"";
+                case SHA3_512 -> "\"C\".\"SHA3_512\"";
+                case BLAKE2B_256 -> "\"C\".\"BLAKE2B_256\"";
+                case BLAKE2B_384 -> "\"C\".\"BLAKE2B_384\"";
+                case BLAKE2B_512 -> "\"C\".\"BLAKE2B_512\"";
+                case BLAKE3 -> "\"C\".\"BLAKE3\"";
+            };
+            whereConditions.add("%s = :componentHash".formatted(hashColumn));
             queryParams.put("componentHash", componentHash);
         }
 
@@ -288,13 +296,13 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
         final String sortDirectionSql = sortDirection != null ? sortDirection.name() : "ASC";
 
         var sortByColumn = switch (sortBy) {
-            case "name" -> "NAME";
-            case "version" -> "VERSION";
-            case "group" -> "GROUP";
-            case "purl" -> "componentPurl";
-            case "cpe" -> "CPE";
-            case "swid_tag_id" -> "SWIDTAGID";
-            case "last_inherited_risk_score" -> "lastInheritedRiskScore";
+            case "name" -> SortBy.NAME;
+            case "version" -> SortBy.VERSION;
+            case "group" -> SortBy.GROUP;
+            case "purl" -> SortBy.PURL;
+            case "cpe" -> SortBy.CPE;
+            case "swid_tag_id" -> SortBy.SWIDTAGID;
+            case "last_inherited_risk_score" -> SortBy.lastInheritedRiskScore;
             case null, default -> null;
         };
 
@@ -312,14 +320,14 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
         if (rows.size() > limit) {
             final Component lastRow = resultRows.getLast();
             final Object lastPrimary = switch (sortByColumn) {
-                case "NAME" -> lastRow.getName();
-                case "VERSION" -> lastRow.getVersion();
-                case "GROUP" -> lastRow.getGroup();
-                case "componentPurl" -> lastRow.getPurl();
-                case "CPE" -> lastRow.getCpe();
-                case "SWIDTAGID" -> lastRow.getSwidTagId();
-                case "lastInheritedRiskScore" -> lastRow.getLastInheritedRiskScore();
-                case null, default -> lastRow.getName();
+                case SortBy.NAME -> lastRow.getName();
+                case SortBy.VERSION -> lastRow.getVersion();
+                case SortBy.GROUP -> lastRow.getGroup();
+                case SortBy.PURL -> lastRow.getPurl();
+                case SortBy.CPE -> lastRow.getCpe();
+                case SortBy.SWIDTAGID -> lastRow.getSwidTagId();
+                case SortBy.lastInheritedRiskScore -> lastRow.getLastInheritedRiskScore();
+                case null -> lastRow.getName();
             };
             final String lastSecondary = sortByColumn == null ? lastRow.getVersion() : null;
             nextPageToken = new ListComponentPageToken(
@@ -349,6 +357,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
+            <#-- @ftlvariable name="sortBy" type="org.dependencytrack.persistence.jdbi.SortBy" -->
             <#-- @ftlvariable name="whereConditions" type="java.util.Collection<String>" -->
             SELECT "C"."ID",
                         "C"."NAME",
@@ -359,7 +368,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                         "C"."CLASSIFIER",
                         "C"."COPYRIGHT",
                         "C"."CPE",
-                        "C"."PURL" AS "componentPurl",
+                        "C"."PURL",
                         "C"."GROUP",
                         "C"."INTERNAL",
                         "C"."LAST_RISKSCORE" AS "lastInheritedRiskScore",
@@ -378,16 +387,12 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                         "C"."SWIDTAGID",
                         "C"."UUID",
                         "C"."VERSION",
-                        "L"."ISCUSTOMLICENSE",
-                        "L"."FSFLIBRE" AS "isFsfLibre",
                         "L"."LICENSEID",
-                        "L"."ISOSIAPPROVED",
                         "L"."UUID" AS "licenseUuid",
                         "L"."NAME" AS "licenseName",
                         "PROJECT"."NAME" AS "projectName",
                         "PROJECT"."UUID" AS "projectUuid",
-                        "PROJECT"."VERSION" AS "projectVersion",
-                        "PROJECT"."DIRECT_DEPENDENCIES" AS "projectDirectDependencies"
+                        "PROJECT"."VERSION" AS "projectVersion"
                 FROM "COMPONENT" "C"
                 INNER JOIN "PROJECT" ON "C"."PROJECT_ID" = "PROJECT"."ID"
                 LEFT OUTER JOIN "LICENSE" "L" ON "C"."LICENSE_ID" = "L"."ID"
@@ -426,7 +431,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                     ORDER BY "${sortByColumn}" ${sortDirection!"ASC"}, "ID" ASC
                 <#else>
                     <#-- Default sorting to ensure consistent pagination -->
-                    ORDER BY "NAME" ASC, "VERSION" DESC, "ID" ASC
+                    ORDER BY "NAME" ASC, "ID" ASC
                 </#if>
                 LIMIT :limit
             """)
@@ -440,10 +445,35 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             @Bind String lastPrimaryValue,
             @Bind String lastSecondaryValue,
             @Bind Long lastId,
-            @Define String sortByColumn,
+            @Define SortBy sortByColumn,
             @Define String sortDirection,
             @Define boolean hasCursor
     );
+
+    enum SortBy {
+        NAME,
+        VERSION,
+        GROUP,
+        PURL,
+        CPE,
+        SWIDTAGID,
+        lastInheritedRiskScore
+    }
+
+    enum HashType {
+        MD5,
+        SHA1,
+        SHA_256,
+        SHA_384,
+        SHA_512,
+        SHA3_256,
+        SHA3_384,
+        SHA3_512,
+        BLAKE2B_256,
+        BLAKE2B_384,
+        BLAKE2B_512,
+        BLAKE3
+    }
 
     class ComponentListRowMapper implements RowMapper<Component> {
 
@@ -457,10 +487,9 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                 project.setUuid(UUID.fromString(rs.getString("projectUuid")));
                 maybeSet(rs, "projectName", ResultSet::getString, project::setName);
                 maybeSet(rs, "projectVersion", ResultSet::getString, project::setVersion);
-                maybeSet(rs, "projectDirectDependencies", ResultSet::getString, project::setDirectDependencies);
                 component.setProject(project);
             }
-            maybeSet(rs, "componentPurl", ResultSet::getString, component::setPurl);
+            maybeSet(rs, "PURL", ResultSet::getString, component::setPurl);
             if (hasColumn(rs, "licenseUuid") && rs.getString("licenseUuid") != null) {
                 final var license = new License();
                 license.setUuid(UUID.fromString(rs.getString("licenseUuid")));
