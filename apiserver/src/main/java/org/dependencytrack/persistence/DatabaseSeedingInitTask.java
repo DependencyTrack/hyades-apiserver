@@ -76,38 +76,6 @@ public final class DatabaseSeedingInitTask implements InitTask {
             "Badge Viewers", List.of(
                     Permissions.Constants.VIEW_BADGES));
 
-    private static final Map<String, List<String>> DEFAULT_ROLE_PERMISSIONS = Map.of(
-            "Project Admin", List.of(
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_CREATE,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE,
-                    Permissions.Constants.POLICY_MANAGEMENT,
-                    Permissions.Constants.POLICY_MANAGEMENT_CREATE,
-                    Permissions.Constants.POLICY_MANAGEMENT_READ,
-                    Permissions.Constants.POLICY_MANAGEMENT_UPDATE,
-                    Permissions.Constants.POLICY_MANAGEMENT_DELETE),
-            "Project Auditor", List.of(
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.VIEW_VULNERABILITY,
-                    Permissions.Constants.VIEW_POLICY_VIOLATION,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ),
-            "Project Editor", List.of(
-                    Permissions.Constants.BOM_UPLOAD,
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
-                    Permissions.Constants.VIEW_VULNERABILITY,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ,
-                    Permissions.Constants.PROJECT_CREATION_UPLOAD),
-            "Project Viewer", List.of(
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.VIEW_VULNERABILITY,
-                    Permissions.Constants.VIEW_BADGES));
-
     @Override
     public int priority() {
         return PRIORITY_HIGHEST - 10;
@@ -147,7 +115,6 @@ public final class DatabaseSeedingInitTask implements InitTask {
             final boolean isFirstExecution = defaultObjectsVersion == null;
             if (isFirstExecution) {
                 seedDefaultTeams(handle);
-                seedDefaultRoles(handle);
                 seedDefaultUsers(handle);
                 seedDefaultLicenseGroups(handle);
             }
@@ -226,45 +193,6 @@ public final class DatabaseSeedingInitTask implements InitTask {
 
         update
                 .bindArray("teamNames", String.class, teamNames)
-                .bindArray("permissionNames", String.class, permissionNames)
-                .execute();
-    }
-
-    public static void seedDefaultRoles(final Handle jdbiHandle) {
-        final Update update = jdbiHandle.createUpdate("""
-                WITH cte_role_permission AS (
-                  SELECT *
-                    FROM UNNEST(:roleNames, :permissionNames) AS t(role_name, permission_name)
-                ),
-                cte_created_role AS (
-                  INSERT INTO "ROLE" ("NAME", "UUID")
-                  SELECT DISTINCT ON (role_name)
-                         role_name
-                       , GEN_RANDOM_UUID()
-                    FROM cte_role_permission
-                  RETURNING "ID" AS id
-                          , "NAME" AS name
-                )
-                INSERT INTO "ROLES_PERMISSIONS" ("ROLE_ID", "PERMISSION_ID")
-                SELECT cte_created_role.id
-                     , (SELECT "ID" FROM "PERMISSION" WHERE "NAME" = cte_role_permission.permission_name)
-                  FROM cte_role_permission
-                 INNER JOIN cte_created_role
-                    ON cte_created_role.name = cte_role_permission.role_name
-                """);
-
-        final var roleNames = new ArrayList<String>();
-        final var permissionNames = new ArrayList<String>();
-
-        for (final Map.Entry<String, List<String>> entry : DEFAULT_ROLE_PERMISSIONS.entrySet()) {
-            for (final String permissionName : entry.getValue()) {
-                roleNames.add(entry.getKey());
-                permissionNames.add(permissionName);
-            }
-        }
-
-        update
-                .bindArray("roleNames", String.class, roleNames)
                 .bindArray("permissionNames", String.class, permissionNames)
                 .execute();
     }

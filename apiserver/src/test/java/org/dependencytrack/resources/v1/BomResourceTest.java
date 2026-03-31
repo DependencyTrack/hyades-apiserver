@@ -21,7 +21,6 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
 import alpine.model.ManagedUser;
-import alpine.model.Permission;
 import alpine.server.auth.SessionTokenService;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
@@ -56,7 +55,6 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectProperty;
-import org.dependencytrack.model.Role;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
@@ -167,6 +165,7 @@ class BomResourceTest extends ResourceTest {
 
     @Test
     void exportProjectAsCycloneDxAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -201,6 +200,7 @@ class BomResourceTest extends ResourceTest {
         enablePortfolioAccessControl();
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        testUser.setPermissions(List.of(qm.createPermission(Permissions.VIEW_PORTFOLIO.name(), null)));
         final String sessionToken = new SessionTokenService().createSession(testUser.getId());
 
         final var project = new Project();
@@ -224,9 +224,8 @@ class BomResourceTest extends ResourceTest {
                 }
                 """);
 
-        final Permission permission = qm.createPermission("VIEW_PORTFOLIO", null);
-        final Role role = qm.createRole("Test Role", List.of(permission));
-        qm.addRoleToUser(testUser, role, project);
+        project.addAccessTeam(super.team);
+        qm.addUserToTeam(testUser, super.team);
 
         response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
@@ -1010,6 +1009,7 @@ class BomResourceTest extends ResourceTest {
 
     @Test
     void exportComponentAsCycloneDxAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();
