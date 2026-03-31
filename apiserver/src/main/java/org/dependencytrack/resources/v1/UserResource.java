@@ -31,7 +31,6 @@ import alpine.server.auth.OidcAuthenticationService;
 import alpine.server.auth.PasswordService;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.auth.SessionTokenService;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -62,6 +61,7 @@ import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
@@ -90,7 +90,7 @@ import static org.dependencytrack.notification.api.NotificationFactory.createUse
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class UserResource extends AlpineResource {
+public class UserResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(UserResource.class);
 

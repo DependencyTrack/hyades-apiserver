@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import com.github.packageurl.PackageURL;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -28,6 +29,7 @@ import jakarta.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.PackageArtifactMetadata;
@@ -57,10 +59,13 @@ public class ComponentResourcePostgresTest extends ResourceTest {
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(ComponentResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     @Test
     public void getAllComponentsTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final Project project = prepareProject();
 
         final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
@@ -112,6 +117,8 @@ public class ComponentResourcePostgresTest extends ResourceTest {
 
     @Test
     public void getOutdatedComponentsTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final Project project = prepareProject();
 
         final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
@@ -129,6 +136,8 @@ public class ComponentResourcePostgresTest extends ResourceTest {
 
     @Test
     public void getOutdatedDirectComponentsTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final Project project = prepareProject();
 
         final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
@@ -146,6 +155,8 @@ public class ComponentResourcePostgresTest extends ResourceTest {
 
     @Test
     public void getAllDirectComponentsTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final Project project = prepareProject();
 
         final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
@@ -162,6 +173,8 @@ public class ComponentResourcePostgresTest extends ResourceTest {
 
     @Test
     public void getAllComponentsFilterTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -196,6 +209,8 @@ public class ComponentResourcePostgresTest extends ResourceTest {
 
     @Test
     public void getComponentsByNameTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final Project project = prepareProject();
 
         final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
@@ -212,6 +227,8 @@ public class ComponentResourcePostgresTest extends ResourceTest {
 
     @Test
     public void getComponentsByGroupTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final Project project = prepareProject();
 
         final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())

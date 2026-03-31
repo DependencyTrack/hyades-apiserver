@@ -24,7 +24,6 @@ import alpine.model.OidcGroup;
 import alpine.model.Team;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import alpine.server.util.OidcUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -50,6 +49,7 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.vo.MappedOidcGroupRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
@@ -67,7 +67,7 @@ import java.util.stream.Collectors;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class OidcResource extends AlpineResource {
+public class OidcResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(OidcResource.class);
 

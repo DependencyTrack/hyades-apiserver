@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.event.framework.Event;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -42,6 +41,7 @@ import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.request.ExistsWorkflowRunRequest;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
 
 import java.util.Map;
@@ -62,7 +62,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class EventResource extends AlpineResource {
+public class EventResource extends AbstractApiResource {
 
     private final DexEngine dexEngine;
 

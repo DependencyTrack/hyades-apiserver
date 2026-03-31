@@ -21,11 +21,13 @@ package org.dependencytrack.resources.v1;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.Project;
@@ -52,6 +54,7 @@ public class ComponentPropertyResourceTest extends ResourceTest {
             new ResourceConfig(ComponentPropertyResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class)
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
@@ -61,6 +64,8 @@ public class ComponentPropertyResourceTest extends ResourceTest {
 
     @Test
     public void getPropertiesTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -121,6 +126,8 @@ public class ComponentPropertyResourceTest extends ResourceTest {
 
     @Test
     public void getPropertiesInvalidTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final Response response = jersey.target("%s/%s/property".formatted(V1_COMPONENT, UUID.randomUUID())).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -132,6 +139,7 @@ public class ComponentPropertyResourceTest extends ResourceTest {
 
     @Test
     public void getPropertiesAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -166,6 +174,8 @@ public class ComponentPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
+
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -203,6 +213,8 @@ public class ComponentPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyWithoutGroupTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
+
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -238,6 +250,8 @@ public class ComponentPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyDuplicateTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
+
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -275,6 +289,8 @@ public class ComponentPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyComponentNotFoundTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
+
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -303,6 +319,7 @@ public class ComponentPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -345,6 +362,8 @@ public class ComponentPropertyResourceTest extends ResourceTest {
 
     @Test
     public void deletePropertyTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_DELETE);
+
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -372,6 +391,7 @@ public class ComponentPropertyResourceTest extends ResourceTest {
 
     @Test
     public void deletePropertyAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_DELETE);
         enablePortfolioAccessControl();
 
         final var project = new Project();

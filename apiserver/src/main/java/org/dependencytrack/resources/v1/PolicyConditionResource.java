@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -50,6 +49,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.CelPolicyScriptHost;
 import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
 import org.dependencytrack.policy.cel.CelPolicyType;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.vo.CelExpressionError;
 import org.projectnessie.cel.common.CELError;
 import org.projectnessie.cel.tools.ScriptCreateException;
@@ -69,7 +69,7 @@ import java.util.Map;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class PolicyConditionResource extends AlpineResource {
+public class PolicyConditionResource extends AbstractApiResource {
 
     @PUT
     @Path("/{uuid}/condition")

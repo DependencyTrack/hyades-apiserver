@@ -22,6 +22,7 @@ import alpine.model.ConfigProperty;
 import alpine.model.IConfigProperty;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -29,6 +30,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretMetadata;
@@ -60,6 +62,7 @@ public class ConfigPropertyResourceTest extends ResourceTest {
             new ResourceConfig(ConfigPropertyResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class)
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
@@ -69,6 +72,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void getConfigPropertiesTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
         qm.createConfigProperty("my.group", "my.string", "ABC", IConfigProperty.PropertyType.STRING, "A string");
         qm.createConfigProperty("my.group", "my.integer", "1", IConfigProperty.PropertyType.INTEGER, "A integer");
         Response response = jersey.target(V1_CONFIG_PROPERTY).request()
@@ -92,6 +97,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updateConfigPropertyStringTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         ConfigProperty property = qm.createConfigProperty("my.group", "my.string", "ABC", IConfigProperty.PropertyType.STRING, "A string");
         ConfigProperty request = qm.detach(ConfigProperty.class, property.getId());
         request.setPropertyValue("DEF");
@@ -110,6 +117,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updateConfigPropertyBooleanTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         ConfigProperty property = qm.createConfigProperty("my.group", "my.boolean", "false", IConfigProperty.PropertyType.BOOLEAN, "A boolean");
         ConfigProperty request = qm.detach(ConfigProperty.class, property.getId());
         request.setPropertyValue("true");
@@ -128,6 +137,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updateConfigPropertyNumberTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         ConfigProperty property = qm.createConfigProperty("my.group", "my.number", "7.75", IConfigProperty.PropertyType.NUMBER, "A number");
         ConfigProperty request = qm.detach(ConfigProperty.class, property.getId());
         request.setPropertyValue("5.50");
@@ -146,6 +157,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updateConfigPropertyUrlTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         ConfigProperty property = qm.createConfigProperty("my.group", "my.url", "http://localhost", IConfigProperty.PropertyType.URL, "A url");
         ConfigProperty request = qm.detach(ConfigProperty.class, property.getId());
         request.setPropertyValue("http://localhost/path");
@@ -164,6 +177,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updateConfigPropertyUuidTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         ConfigProperty property = qm.createConfigProperty("my.group", "my.uuid", "a496cabc-749d-4751-b9e5-3b49b656d018", IConfigProperty.PropertyType.UUID, "A uuid");
         ConfigProperty request = qm.detach(ConfigProperty.class, property.getId());
         request.setPropertyValue("fe03c401-b5a1-4b86-bc3b-1b7a68f0f78d");
@@ -182,6 +197,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updateConfigPropertyReadOnlyTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         qm.createConfigProperty(
                 ConfigPropertyConstants.INTERNAL_CLUSTER_ID.getGroupName(),
                 ConfigPropertyConstants.INTERNAL_CLUSTER_ID.getPropertyName(),
@@ -206,6 +223,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void testRiskScoreInvalid(){
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         qm.createConfigProperty(
                 CUSTOM_RISK_SCORE_CRITICAL.getGroupName(),
                 CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(),
@@ -258,6 +277,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void testRiskScoreUpdate(){
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         qm.createConfigProperty(
                 CUSTOM_RISK_SCORE_CRITICAL.getGroupName(),
                 CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(),
@@ -316,6 +337,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updateConfigPropertiesAggregateTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         ConfigProperty prop1 = qm.createConfigProperty("my.group", "my.string1", "ABC", IConfigProperty.PropertyType.STRING, "A string");
         ConfigProperty prop2 = qm.createConfigProperty("my.group", "my.string2", "DEF", IConfigProperty.PropertyType.STRING, "A string");
         ConfigProperty prop3 = qm.createConfigProperty("my.group", "my.string3", "GHI", IConfigProperty.PropertyType.STRING, "A string");
@@ -339,6 +362,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updateConfigPropertyBomValidationModeTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         qm.createConfigProperty(
                 ConfigPropertyConstants.BOM_VALIDATION_MODE.getGroupName(),
                 ConfigPropertyConstants.BOM_VALIDATION_MODE.getPropertyName(),
@@ -382,6 +407,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updateConfigPropertyBomValidationTagsExclusiveTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         qm.createConfigProperty(
                 ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE.getGroupName(),
                 ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE.getPropertyName(),
@@ -425,6 +452,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updateConfigPropertyBomValidationTagsInclusiveTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         qm.createConfigProperty(
                 ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE.getGroupName(),
                 ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE.getPropertyName(),
@@ -468,6 +497,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updateConfigPropertySecretNameNotFoundTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         qm.createConfigProperty(
                 ConfigPropertyConstants.FORTIFY_SSC_TOKEN.getGroupName(),
                 ConfigPropertyConstants.FORTIFY_SSC_TOKEN.getPropertyName(),
@@ -494,6 +525,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updateConfigPropertySecretNameFoundTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         qm.createConfigProperty(
                 ConfigPropertyConstants.KENNA_TOKEN.getGroupName(),
                 ConfigPropertyConstants.KENNA_TOKEN.getPropertyName(),
@@ -519,6 +552,8 @@ public class ConfigPropertyResourceTest extends ResourceTest {
 
     @Test
     public void getPublicAllPropertiesTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
         for (ConfigPropertyConstants configProperty : ConfigPropertyConstants.values()) {
             String groupName = configProperty.getGroupName();
             String propertyName = configProperty.getPropertyName();

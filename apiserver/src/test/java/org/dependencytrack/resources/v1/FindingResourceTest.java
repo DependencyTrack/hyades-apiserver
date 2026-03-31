@@ -25,6 +25,7 @@ import alpine.model.ConfigProperty;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
@@ -33,6 +34,7 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.Mappers;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
@@ -86,6 +88,7 @@ public class FindingResourceTest extends ResourceTest {
             new ResourceConfig(FindingResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class)
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
@@ -100,6 +103,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectTest() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
@@ -165,6 +170,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectEmptyTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         useJdbiHandle(handle -> new PackageMetadataDao(handle).upsertAll(List.of(
                 new PackageMetadata(
                         new com.github.packageurl.PackageURL("pkg:maven/com.acme/acme-lib"),
@@ -188,6 +195,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectInvalidTest() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -199,6 +208,7 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectAclTest() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -228,6 +238,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectWithAnalysisTest() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example 1", null, "1.0", null, null, null, null, false);
 
         Component c1 = createComponent(p1, "Component A", "1.0"); // with analysis
@@ -288,6 +300,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void exportFindingsByProjectTest() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
@@ -361,6 +375,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void exportFindingsByProjectInvalidTest() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID() + "/export").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -372,6 +388,7 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void exportFindingsByProjectAclTest() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -401,6 +418,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectWithComponentLatestVersionTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
@@ -496,6 +515,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectWithComponentLatestVersionWithoutRepositoryMetaComponent() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         c1.setPurl("pkg:/maven/org.acme/component-a@1.0.0");
@@ -524,6 +545,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectWithCvssAndOwaspData() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         c1.setPurl("pkg:/maven/org.acme/component-a@1.0.0");
@@ -555,6 +578,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectWithComponentOccurrence() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
@@ -589,6 +614,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectWithRatingOverride() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         c1.setPurl("pkg:/maven/org.acme/component-a@1.0.0");
@@ -622,6 +649,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void analyzeProjectShouldCreateAnalyzeProjectWorkflowRun() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+
         var project = new Project();
         project.setName("Acme Example");
         project = qm.persist(project);
@@ -658,6 +687,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getAllFindings() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example 1", null, "1.0", null, null, null, null, false);
         Project p1_child = qm.createProject("Acme Example 2", null, "1.0", null, p1, null, null, false);
         Project p2 = qm.createProject("Acme Example 3", null, "1.0", null, null, null, null, false);
@@ -716,6 +747,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getAllFindingsSortedBySeverity() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example 1", null, "1.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
@@ -750,6 +783,7 @@ public class FindingResourceTest extends ResourceTest {
         Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, null, false);
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Team team = qm.createTeam("Team Acme");
+        team.setPermissions(List.of(qm.createPermission(Permissions.VIEW_VULNERABILITY.name(), null)));
         ApiKey apiKey = qm.createApiKey(team);
         p1.addAccessTeam(team);
         Component c1 = createComponent(p1, "Component A", "1.0");
@@ -809,6 +843,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getAllFindingsWithComponentOccurrence() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
@@ -844,6 +880,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getAllFindingsGroupedByVulnerability() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, null, false);
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
@@ -924,6 +962,7 @@ public class FindingResourceTest extends ResourceTest {
         Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, null, false);
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Team team = qm.createTeam("Team Acme");
+        team.setPermissions(List.of(qm.createPermission(Permissions.VIEW_VULNERABILITY.name(), null)));
         ApiKey apiKey = qm.createApiKey(team);
         p1.addAccessTeam(team);
         Component c1 = createComponent(p1, "Component A", "1.0");
@@ -996,6 +1035,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getSARIFFindingsByProjectTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c1 = createComponent(project, "Component 1", "1.1.4");
         Component c2 = createComponent(project, "Component 2", "2.78.123");
@@ -1175,6 +1216,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectWithPaginationTest() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         for (int i = 0; i < 5; i++) {
@@ -1214,6 +1257,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getAllFindingsWithPaginationTest() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         for (int i = 0; i < 5; i++) {
@@ -1253,6 +1298,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getAllGroupedFindingsWithPaginationTest() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         for (int i = 0; i < 5; i++) {

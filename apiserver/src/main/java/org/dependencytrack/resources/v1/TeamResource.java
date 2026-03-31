@@ -26,7 +26,6 @@ import alpine.persistence.PaginatedResult;
 import alpine.security.ApiKeyDecoder;
 import alpine.security.InvalidApiKeyFormatException;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -52,6 +51,7 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.problems.TeamAlreadyExistsProblemDetails;
@@ -77,7 +77,7 @@ import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolati
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class TeamResource extends AlpineResource {
+public class TeamResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(TeamResource.class);
 
