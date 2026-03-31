@@ -24,7 +24,6 @@ import alpine.model.Team;
 import alpine.server.auth.LdapConnectionWrapper;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.cache.CacheManager;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -48,6 +47,7 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.vo.MappedLdapGroupRequest;
 
 import javax.naming.NamingException;
@@ -69,7 +69,7 @@ import java.util.stream.Collectors;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class LdapResource extends AlpineResource {
+public class LdapResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(LdapResource.class);
 

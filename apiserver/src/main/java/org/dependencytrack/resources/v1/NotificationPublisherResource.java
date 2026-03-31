@@ -20,7 +20,6 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -55,6 +54,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.NoSuchExtensionException;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.vo.CreateNotificationPublisherRequest;
 import org.dependencytrack.resources.v1.vo.UpdateNotificationPublisherRequest;
 import org.owasp.security.logging.SecurityMarkers;
@@ -82,7 +82,7 @@ import static org.dependencytrack.notification.proto.v1.Level.LEVEL_WARNING;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class NotificationPublisherResource extends AlpineResource {
+public class NotificationPublisherResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(NotificationPublisherResource.class);
 

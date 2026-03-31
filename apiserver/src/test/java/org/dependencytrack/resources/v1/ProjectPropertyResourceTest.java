@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -28,6 +29,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.secret.management.SecretManager;
@@ -54,6 +56,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
             new ResourceConfig(ProjectPropertyResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class)
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
@@ -63,6 +66,8 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void getPropertiesTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_READ);
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         qm.createProjectProperty(project, "mygroup", "prop1", "value1", PropertyType.STRING, "Test Property 1");
         qm.createProjectProperty(project, "mygroup", "prop2", "value2", PropertyType.STRING, "Test Property 2");
@@ -88,6 +93,8 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void getPropertiesInvalidTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_READ);
+
         Response response = jersey.target(V1_PROJECT + "/" + UUID.randomUUID().toString() + "/property").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -99,6 +106,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void getPropertiesAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_READ);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -129,6 +137,8 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         ProjectProperty property = new ProjectProperty();
         property.setProject(project);
@@ -152,6 +162,8 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyDuplicateTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         qm.createProjectProperty(project, "mygroup", "prop1", "value1", PropertyType.STRING, null);
         String uuid = project.getUuid().toString();
@@ -174,6 +186,8 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyInvalidTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         ProjectProperty property = new ProjectProperty();
         property.setProject(project);
@@ -193,6 +207,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -230,6 +245,8 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updatePropertyTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         String uuid = project.getUuid().toString();
         ProjectProperty property = qm.createProjectProperty(project, "mygroup", "prop1", "value1", PropertyType.STRING, null);
@@ -250,6 +267,8 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updatePropertyInvalidTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         ProjectProperty property = new ProjectProperty();
         property.setProject(project);
@@ -269,6 +288,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updatePropertyAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -314,6 +334,8 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void deletePropertyTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_DELETE);
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         ProjectProperty property = qm.createProjectProperty(project, "mygroup", "prop1", "value1", PropertyType.STRING, null);
         String uuid = project.getUuid().toString();
@@ -328,6 +350,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void deletePropertyAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_DELETE);
         enablePortfolioAccessControl();
 
         final var project = new Project();

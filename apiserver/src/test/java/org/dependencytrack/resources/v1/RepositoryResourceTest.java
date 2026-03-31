@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import com.github.packageurl.PackageURL;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
@@ -28,6 +29,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.PackageMetadata;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryType;
@@ -65,6 +67,7 @@ public class RepositoryResourceTest extends ResourceTest {
             new ResourceConfig(RepositoryResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class)
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
@@ -85,6 +88,8 @@ public class RepositoryResourceTest extends ResourceTest {
 
     @Test
     public void getRepositoriesTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
         Response response = jersey.target(V1_REPOSITORY).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -104,6 +109,8 @@ public class RepositoryResourceTest extends ResourceTest {
 
     @Test
     public void getRepositoriesByTypeTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
         Response response = jersey.target(V1_REPOSITORY + "/MAVEN").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -199,6 +206,8 @@ public class RepositoryResourceTest extends ResourceTest {
 
     @Test
     public void createRepositoryTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE);
+
         Response response = jersey
                 .target(V1_REPOSITORY)
                 .request()
@@ -234,6 +243,8 @@ public class RepositoryResourceTest extends ResourceTest {
 
     @Test
     public void createRepositoryWithNonExistentSecretTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE);
+
         reset(secretManager);
         when(secretManager.getSecretMetadata("nonExistentSecret")).thenReturn(null);
 
@@ -260,6 +271,8 @@ public class RepositoryResourceTest extends ResourceTest {
 
     @Test
     public void createRepositoryAuthFalseTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE, Permissions.SYSTEM_CONFIGURATION_READ);
+
         Repository repository = new Repository();
         repository.setAuthenticationRequired(false);
         repository.setEnabled(true);
@@ -288,6 +301,8 @@ public class RepositoryResourceTest extends ResourceTest {
 
     @Test
     public void updateRepositoryTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE, Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         Response response = jersey
                 .target(V1_REPOSITORY)
                 .request()
@@ -343,6 +358,8 @@ public class RepositoryResourceTest extends ResourceTest {
 
     @Test
     public void updateRepositoryWithNonExistentSecretTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE, Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         Response response = jersey
                 .target(V1_REPOSITORY)
                 .request()
@@ -389,6 +406,8 @@ public class RepositoryResourceTest extends ResourceTest {
 
     @Test
     public void createRepositoryAuthRequiredWithoutPasswordTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE);
+
         Response response = jersey
                 .target(V1_REPOSITORY)
                 .request()
@@ -411,6 +430,8 @@ public class RepositoryResourceTest extends ResourceTest {
 
     @Test
     public void updateRepositoryAuthRequiredWithoutPasswordTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE, Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         Response response = jersey
                 .target(V1_REPOSITORY)
                 .request()
@@ -453,6 +474,8 @@ public class RepositoryResourceTest extends ResourceTest {
 
     @Test
     public void updateRepositoryEnableAuthWithoutPasswordTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE, Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         Response response = jersey
                 .target(V1_REPOSITORY)
                 .request()
@@ -493,6 +516,8 @@ public class RepositoryResourceTest extends ResourceTest {
 
     @Test
     public void authenticationNullTest() throws Exception {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE);
+
         Repository repository = new Repository();
         repository.setEnabled(true);
         repository.setInternal(true);

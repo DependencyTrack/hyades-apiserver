@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -34,6 +33,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.resources.AbstractApiResource;
 import us.springett.cvss.Cvss;
 import us.springett.cvss.MalformedVectorException;
 import us.springett.cvss.Score;
@@ -52,7 +52,7 @@ import us.springett.owasp.riskrating.OwaspRiskRating;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class CalculatorResource extends AlpineResource {
+public class CalculatorResource extends AbstractApiResource {
 
     @GET
     @Path("/cvss")

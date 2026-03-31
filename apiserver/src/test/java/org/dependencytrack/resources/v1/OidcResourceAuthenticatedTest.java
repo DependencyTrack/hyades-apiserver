@@ -23,6 +23,7 @@ import alpine.model.OidcGroup;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -30,6 +31,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.resources.v1.vo.MappedOidcGroupRequest;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Test;
@@ -45,10 +47,13 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(OidcResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     @Test
     public void retrieveGroupsShouldReturnListOfGroups() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_READ);
+
         final OidcGroup oidcGroup = new OidcGroup();
         oidcGroup.setName("groupName");
         qm.persist(oidcGroup);
@@ -65,6 +70,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void retrieveGroupsShouldReturnEmptyListWhenNoGroupsWhereFound() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_READ);
+
         final Response response = jersey.target(V1_OIDC + "/group")
                 .request().header(X_API_KEY, apiKey).get();
 
@@ -76,6 +83,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void createGroupShouldReturnCreatedGroup() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
+
         final OidcGroup oidcGroup = new OidcGroup();
         oidcGroup.setName("groupName");
 
@@ -94,6 +103,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void createGroupShouldIndicateConflictWhenGroupAlreadyExists() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
+
         qm.createOidcGroup("groupName");
 
         final OidcGroup oidcGroup = new OidcGroup();
@@ -109,6 +120,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void createGroupShouldIndicateBadRequestWhenRequestIsInvalid() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
+
         final OidcGroup oidcGroup = new OidcGroup();
         oidcGroup.setName(" ");
 
@@ -122,6 +135,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void updateGroupShouldUpdateAndReturnGroup() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_UPDATE);
+
         final OidcGroup existingGroup = qm.createOidcGroup("groupName");
 
         final OidcGroup jsonGroup = new OidcGroup();
@@ -141,6 +156,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void updateGroupShouldIndicateBadRequestWhenRequestBodyIsInvalid() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_UPDATE);
+
         final OidcGroup jsonGroup = new OidcGroup();
 
         final Response response = jersey.target(V1_OIDC + "/group").request()
@@ -152,6 +169,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void updateGroupShouldIndicateNotFoundWhenGroupDoesNotExist() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_UPDATE);
+
         final OidcGroup jsonGroup = new OidcGroup();
         jsonGroup.setUuid(UUID.randomUUID());
         jsonGroup.setName("groupName");
@@ -165,6 +184,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void deleteGroupShouldDeleteGroupAndIndicateNoContent() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_DELETE);
+
         final OidcGroup existingOidcGroup = qm.createOidcGroup("groupName");
 
         final Response response = jersey.target(V1_OIDC + "/group/" + existingOidcGroup.getUuid())
@@ -178,6 +199,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void deleteGroupShouldIndicateNotFoundWhenGroupDoesNotExist() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_DELETE);
+
         final Response response = jersey.target(V1_OIDC + "/group/" + UUID.randomUUID())
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -188,6 +211,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void retrieveTeamsMappedToGroupShouldReturnTeamsMappedToSpecifiedGroup() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_READ);
+
         final OidcGroup oidcGroup = qm.createOidcGroup("groupName");
         final Team team = qm.createTeam("teamName");
         qm.createMappedOidcGroup(team, oidcGroup);
@@ -204,6 +229,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void retrieveTeamsMappedToGroupShouldIndicateNotFoundWhenGroupDoesNotExit() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_READ);
+
         final Response response = jersey.target(V1_OIDC + "/group/" + UUID.randomUUID() + "/team")
                 .request().header(X_API_KEY, apiKey).get();
 
@@ -212,6 +239,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void addMappingShouldIndicateBadRequestWhenRequestIsInvalid() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
+
         final MappedOidcGroupRequest request = new MappedOidcGroupRequest("not-a-uuid", "not-a-uuid");
 
         final Response response = jersey.target(V1_OIDC + "/mapping")
@@ -224,6 +253,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void addMappingShouldIndicateNotFoundWhenTeamDoesNotExist() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
+
         final OidcGroup group = qm.createOidcGroup("groupName");
 
         final MappedOidcGroupRequest request = new MappedOidcGroupRequest(UUID.randomUUID().toString(), group.getUuid().toString());
@@ -238,6 +269,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void addMappingShouldIndicateNotFoundWhenGroupDoesNotExist() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
+
         final Team team = qm.createTeam("teamName");
 
         final MappedOidcGroupRequest request = new MappedOidcGroupRequest(team.getUuid().toString(), UUID.randomUUID().toString());
@@ -252,6 +285,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void addMappingShouldIndicateConflictWhenMappingAlreadyExists() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
+
         final Team team = qm.createTeam("teamName");
         final OidcGroup group = qm.createOidcGroup("groupName");
         qm.createMappedOidcGroup(team, group);
@@ -268,6 +303,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void addMappingShouldReturnCreatedMapping() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
+
         final Team team = qm.createTeam("teamName");
         final OidcGroup group = qm.createOidcGroup("groupName");
 
@@ -289,6 +326,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void deleteMappingByUuidShouldDeleteMappingAndIndicateNoContent() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_DELETE);
+
         final Team team = qm.createTeam("teamName");
         final OidcGroup group = qm.createOidcGroup("groupName");
         final MappedOidcGroup mapping = qm.createMappedOidcGroup(team, group);
@@ -304,6 +343,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void deleteMappingByUuidShouldIndicateNotFoundWhenMappingDoesNotExist() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_DELETE);
+
         final Response response = jersey.target(V1_OIDC + "/mapping/" + UUID.randomUUID())
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -314,6 +355,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void deleteMappingShouldDeleteMappingAndIndicateNoContent() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_DELETE);
+
         final OidcGroup oidcGroup = qm.createOidcGroup("groupName");
         final Team team = qm.createTeam("teamName");
         final MappedOidcGroup mapping = qm.createMappedOidcGroup(team, oidcGroup);
@@ -328,6 +371,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void deleteMappingShouldIndicateNotFoundWhenTeamDoesNotExist() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_DELETE);
+
         final OidcGroup oidcGroup = qm.createOidcGroup("groupName");
 
         final Response response = jersey.target(V1_OIDC + "/group/" + oidcGroup.getUuid() + "/team/" + UUID.randomUUID() + "/mapping").request()
@@ -339,6 +384,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void deleteMappingShouldIndicateNotFoundWhenGroupDoesNotExist() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_DELETE);
+
         final Team team = qm.createTeam("teamName");
 
         final Response response = jersey.target(V1_OIDC + "/group/" + UUID.randomUUID() + "/team/" + team.getUuid() + "/mapping").request()
@@ -350,6 +397,8 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void deleteMappingShouldIndicateNotFoundWhenMappingDoesNotExist() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_DELETE);
+
         final OidcGroup oidcGroup = qm.createOidcGroup("groupName");
         final Team team = qm.createTeam("teamName");
 

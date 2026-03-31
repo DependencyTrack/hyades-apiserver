@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
@@ -65,6 +66,7 @@ public class VexResourceTest extends ResourceTest {
             new ResourceConfig(VexResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class)
                     .register(MultiPartFeature.class));
 
     @BeforeEach
@@ -75,6 +77,8 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
+
         var vulnA = new Vulnerability();
         vulnA.setVulnId("INT-001");
         vulnA.setSource(Vulnerability.Source.INTERNAL);
@@ -232,6 +236,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxAclTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -262,7 +267,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexInvalidJsonTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
         final var project = new Project();
         project.setName("acme-app");
@@ -310,7 +315,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexInvalidXmlTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
         final var project = new Project();
         project.setName("acme-app");
@@ -355,6 +360,8 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexTooLargeViaPutTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
+
         final var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");
@@ -384,6 +391,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexAclTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -435,6 +443,8 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void exportVexWithSameVulnAnalysisValidJsonTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
+
         var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");
@@ -542,6 +552,8 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void exportVexWithDifferentVulnAnalysisValidJsonTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
+
         var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");
@@ -676,7 +688,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexWithValidationModeDisabledTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -721,7 +733,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexWithValidationModeEnabledForTagsTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -788,7 +800,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexWithValidationModeDisabledForTagsTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -855,7 +867,8 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     void shouldRejectVexUploadForCollectionProject() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
+
         final var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");

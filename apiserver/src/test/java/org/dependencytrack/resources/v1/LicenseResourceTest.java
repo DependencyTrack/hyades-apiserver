@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -28,6 +29,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.License;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -44,7 +46,8 @@ public class LicenseResourceTest extends ResourceTest {
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(LicenseResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     @BeforeEach
     @Override
@@ -114,6 +117,8 @@ public class LicenseResourceTest extends ResourceTest {
 
     @Test
     public void createCustomLicense() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE);
+
         License license = new License();
         license.setName("Acme Example");
         license.setLicenseId("Acme-Example-License");
@@ -135,6 +140,8 @@ public class LicenseResourceTest extends ResourceTest {
 
     @Test
     public void createCustomLicenseDuplicate() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE);
+
         License license = new License();
         license.setName("Apache License 2.0");
         license.setLicenseId("Apache-2.0");
@@ -150,6 +157,8 @@ public class LicenseResourceTest extends ResourceTest {
 
     @Test
     public void createCustomLicenseWithoutLicenseId() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE);
+
         License license = new License();
         license.setName("Acme Example");
         Response response = jersey.target(V1_LICENSE)
@@ -162,6 +171,8 @@ public class LicenseResourceTest extends ResourceTest {
 
     @Test
     public void deleteCustomLicense() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_DELETE);
+
         License license = new License();
         license.setLicenseId("Acme-Example-License");
         license.setName("Acme Example");
@@ -178,6 +189,8 @@ public class LicenseResourceTest extends ResourceTest {
 
     @Test
     public void deleteNotCustomLicense() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_DELETE);
+
         License license1 = new License();
         license1.setLicenseId("Acme-Example-License");
         license1.setName("Acme Example");

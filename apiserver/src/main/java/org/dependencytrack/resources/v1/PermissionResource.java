@@ -23,7 +23,6 @@ import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -47,6 +46,7 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.vo.TeamPermissionsSetRequest;
 import org.dependencytrack.resources.v1.vo.UserPermissionsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
@@ -67,7 +67,7 @@ import java.util.Map;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class PermissionResource extends AlpineResource {
+public class PermissionResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(PermissionResource.class);
 
