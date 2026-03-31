@@ -332,7 +332,15 @@ public class FindingResource extends AbstractApiResource {
                                    @Parameter(description = "Filter CVSSv3 from this value")
                                    @QueryParam("cvssv3From") String cvssv3From,
                                    @Parameter(description = "Filter CVSSv3 from this Value")
-                                   @QueryParam("cvssv3To") String cvssv3To) {
+                                   @QueryParam("cvssv3To") String cvssv3To,
+                                   @Parameter(description = "Filter EPSS from this value")
+                                   @QueryParam("epssFrom") String epssFrom,
+                                   @Parameter(description = "Filter EPSS to this value")
+                                   @QueryParam("epssTo") String epssTo,
+                                   @Parameter(description = "Filter EPSS Percentile from this value")
+                                   @QueryParam("epssPercentileFrom") String epssPercentileFrom,
+                                   @Parameter(description = "Filter EPSS Percentile to this value")
+                                   @QueryParam("epssPercentileTo") String epssPercentileTo) {
         final Map<String, String> filters = new HashMap<>();
         filters.put("severity", severity);
         filters.put("analysisStatus", analysisStatus);
@@ -347,6 +355,10 @@ public class FindingResource extends AbstractApiResource {
         filters.put("cvssv2To", cvssv2To);
         filters.put("cvssv3From", cvssv3From);
         filters.put("cvssv3To", cvssv3To);
+        filters.put("epssFrom", epssFrom);
+        filters.put("epssTo", epssTo);
+        filters.put("epssPercentileFrom", epssPercentileFrom);
+        filters.put("epssPercentileTo", epssPercentileTo);
         List<FindingDao.FindingRow> findingRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(FindingDao.class)
                 .getAllFindings(filters, showSuppressed, showInactive));
         final long totalCount = findingRows.isEmpty() ? 0 : findingRows.getFirst().totalCount();
@@ -393,6 +405,14 @@ public class FindingResource extends AbstractApiResource {
                                    @QueryParam("cvssv3From") String cvssv3From,
                                    @Parameter(description = "Filter CVSSv3 to this value")
                                    @QueryParam("cvssv3To") String cvssv3To,
+                                   @Parameter(description = "Filter EPSS from this value")
+                                   @QueryParam("epssFrom") String epssFrom,
+                                   @Parameter(description = "Filter EPSS to this value")
+                                   @QueryParam("epssTo") String epssTo,
+                                   @Parameter(description = "Filter EPSS Percentile from this value")
+                                   @QueryParam("epssPercentileFrom") String epssPercentileFrom,
+                                   @Parameter(description = "Filter EPSS Percentile to this value")
+                                   @QueryParam("epssPercentileTo") String epssPercentileTo,
                                    @Parameter(description = "Filter occurrences in projects from this value")
                                    @QueryParam("occurrencesFrom") String occurrencesFrom,
                                    @Parameter(description = "Filter occurrences in projects to this value")
@@ -407,6 +427,10 @@ public class FindingResource extends AbstractApiResource {
         filters.put("cvssv2To", cvssv2To);
         filters.put("cvssv3From", cvssv3From);
         filters.put("cvssv3To", cvssv3To);
+        filters.put("epssFrom", epssFrom);
+        filters.put("epssTo", epssTo);
+        filters.put("epssPercentileFrom", epssPercentileFrom);
+        filters.put("epssPercentileTo", epssPercentileTo);
         filters.put("occurrencesFrom", occurrencesFrom);
         filters.put("occurrencesTo", occurrencesTo);
         List<FindingDao.GroupedFindingRow> findingRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(FindingDao.class)
