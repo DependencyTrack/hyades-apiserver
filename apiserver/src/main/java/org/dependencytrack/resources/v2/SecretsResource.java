@@ -22,8 +22,8 @@ import alpine.server.auth.PermissionRequired;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.SecretsApi;
 import org.dependencytrack.api.v2.model.CreateSecretRequest;
 import org.dependencytrack.api.v2.model.ListSecretsResponse;
@@ -40,7 +40,7 @@ import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Path("/")
+@Provider
 public class SecretsResource extends AbstractApiResource implements SecretsApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SecretsResource.class);

@@ -21,11 +21,13 @@ package org.dependencytrack.policy.cel;
 import alpine.common.logging.Logger;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import com.google.api.expr.v1alpha1.Type;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import jakarta.annotation.Nullable;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.parser.spdx.expression.SpdxExpressions;
+import org.dependencytrack.policy.cel.persistence.CelPolicyDao;
 import org.dependencytrack.proto.policy.v1.Component;
 import org.dependencytrack.proto.policy.v1.License;
 import org.dependencytrack.proto.policy.v1.Project;
@@ -41,8 +43,10 @@ import org.projectnessie.cel.ProgramOption;
 import org.projectnessie.cel.checker.Decls;
 import org.projectnessie.cel.common.types.BoolT;
 import org.projectnessie.cel.common.types.Err;
+import org.projectnessie.cel.common.types.IntT;
 import org.projectnessie.cel.common.types.Types;
 import org.projectnessie.cel.common.types.ref.Val;
+import org.projectnessie.cel.common.types.traits.Lister;
 import org.projectnessie.cel.interpreter.functions.Overload;
 
 import java.time.Instant;
@@ -65,9 +69,11 @@ import java.util.stream.Collectors;
 import static org.apache.commons.lang3.StringUtils.substringAfter;
 import static org.dependencytrack.persistence.jdbi.JdbiAttributes.ATTRIBUTE_QUERY_NAME;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VERSION_DISTANCE;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
 
 public class CelCommonPolicyLibrary implements Library {
 
@@ -80,6 +86,29 @@ public class CelCommonPolicyLibrary implements Library {
     static final String FUNC_MATCHES_RANGE = "matches_range";
     static final String FUNC_COMPARE_AGE = "compare_age";
     static final String FUNC_COMPARE_VERSION_DISTANCE = "version_distance";
+    static final String FUNC_SPDX_EXPR_ALLOWS = "spdx_expr_allows";
+    static final String FUNC_SPDX_EXPR_REQUIRES_ANY = "spdx_expr_requires_any";
+
+    private static final com.google.api.expr.v1alpha1.Type TYPE_STRING_LIST = Decls.newListType(Decls.String);
+
+    static final Map<String, Map<Type, List<String>>> FUNCTION_FIELD_REQUIREMENTS = Map.ofEntries(
+            Map.entry(FUNC_DEPENDS_ON, Map.of(TYPE_PROJECT, List.of("uuid"), TYPE_COMPONENT, List.of("uuid"))),
+            Map.entry(FUNC_IS_DEPENDENCY_OF, Map.of(TYPE_COMPONENT, List.of("uuid"))),
+            Map.entry(FUNC_IS_EXCLUSIVE_DEPENDENCY_OF, Map.of(TYPE_COMPONENT, List.of("uuid"))),
+            Map.entry(FUNC_IS_DIRECT_DEPENDENCY_OF, Map.of(TYPE_COMPONENT, List.of("uuid"))),
+            Map.entry(FUNC_MATCHES_RANGE, Map.of(TYPE_PROJECT, List.of("version"), TYPE_COMPONENT, List.of("version"))),
+            Map.entry(FUNC_COMPARE_VERSION_DISTANCE, Map.of(TYPE_COMPONENT, List.of("purl", "uuid", "version", "latest_version"))),
+            Map.entry(FUNC_COMPARE_AGE, Map.of(TYPE_COMPONENT, List.of("purl", "published_at"))));
+
+    static final Map<Type, Map<String, List<String>>> FIELD_EXPANSIONS = Map.of(
+            TYPE_VULNERABILITY, Map.of(
+                    "severity", List.of(
+                            "cvssv2_base_score",
+                            "cvssv3_base_score",
+                            "cvssv4_score",
+                            "owasp_rr_likelihood_score",
+                            "owasp_rr_technical_impact_score",
+                            "owasp_rr_business_impact_score")));
 
     @Override
     public List<EnvOption> getCompileOptions() {
@@ -152,6 +181,22 @@ public class CelCommonPolicyLibrary implements Library {
                                         List.of(TYPE_COMPONENT, Decls.String, TYPE_VERSION_DISTANCE),
                                         Decls.Bool
                                 )
+                        ),
+                        Decls.newFunction(
+                                FUNC_SPDX_EXPR_ALLOWS,
+                                Decls.newOverload(
+                                        "spdx_expr_allows_string_list_bool",
+                                        List.of(Decls.String, TYPE_STRING_LIST),
+                                        Decls.Bool
+                                )
+                        ),
+                        Decls.newFunction(
+                                FUNC_SPDX_EXPR_REQUIRES_ANY,
+                                Decls.newOverload(
+                                        "spdx_expr_requires_any_string_list_bool",
+                                        List.of(Decls.String, TYPE_STRING_LIST),
+                                        Decls.Bool
+                                )
                         )
                 ),
                 EnvOption.types(
@@ -193,10 +238,22 @@ public class CelCommonPolicyLibrary implements Library {
                                 FUNC_MATCHES_RANGE,
                                 CelCommonPolicyLibrary::matchesRangeFunc
                         ),
-                        Overload.function(FUNC_COMPARE_AGE,
-                                CelCommonPolicyLibrary::isComponentOldFunc),
-                        Overload.function(FUNC_COMPARE_VERSION_DISTANCE,
-                                CelCommonPolicyLibrary::matchesVersionDistanceFunc)
+                        Overload.function(
+                                FUNC_COMPARE_AGE,
+                                CelCommonPolicyLibrary::isComponentOldFunc
+                        ),
+                        Overload.function(
+                                FUNC_COMPARE_VERSION_DISTANCE,
+                                CelCommonPolicyLibrary::matchesVersionDistanceFunc
+                        ),
+                        Overload.binary(
+                                FUNC_SPDX_EXPR_ALLOWS,
+                                CelCommonPolicyLibrary::spdxExprAllowsFunc
+                        ),
+                        Overload.binary(
+                                FUNC_SPDX_EXPR_REQUIRES_ANY,
+                                CelCommonPolicyLibrary::spdxExprRequiresAnyFunc
+                        )
                 )
         );
     }
@@ -248,11 +305,8 @@ public class CelCommonPolicyLibrary implements Library {
                     """.formatted(FUNC_COMPARE_VERSION_DISTANCE, component, component.getUuid(), component.getVersion(), component.getLatestVersion()), e);
             return false;
         }
-        final boolean isDirectDependency;
-        try (final var qm = new QueryManager();
-             final var celQm = new CelPolicyQueryManager(qm)) {
-            isDirectDependency = celQm.isDirectDependency(component);
-        }
+        final boolean isDirectDependency = withJdbiHandle(handle ->
+                new CelPolicyDao(handle).isDirectDependency(component));
         return isDirectDependency && org.dependencytrack.model.VersionDistance.evaluate(value, comparatorComputed, versionDistance);
     }
 
@@ -686,7 +740,7 @@ public class CelCommonPolicyLibrary implements Library {
             // If the component is a direct dependency of the project,
             // it can no longer be a dependency exclusively introduced
             // through another component.
-            if (isDirectDependency(jdbiHandle, leafComponent)) {
+            if (new CelPolicyDao(jdbiHandle).isDirectDependency(leafComponent)) {
                 return false;
             }
 
@@ -935,6 +989,32 @@ public class CelCommonPolicyLibrary implements Library {
         };
     }
 
+    private static Val spdxExprAllowsFunc(Val lhs, Val rhs) {
+        if (!(lhs.value() instanceof final String expr)) {
+            return Err.maybeNoSuchOverloadErr(lhs);
+        }
+
+        final List<String> ids = extractStringList(rhs);
+        if (ids == null) {
+            return Err.maybeNoSuchOverloadErr(rhs);
+        }
+
+        return Types.boolOf(SpdxExpressions.allows(expr, ids));
+    }
+
+    private static Val spdxExprRequiresAnyFunc(Val lhs, Val rhs) {
+        if (!(lhs.value() instanceof final String expr)) {
+            return Err.maybeNoSuchOverloadErr(lhs);
+        }
+
+        final List<String> ids = extractStringList(rhs);
+        if (ids == null) {
+            return Err.maybeNoSuchOverloadErr(rhs);
+        }
+
+        return Types.boolOf(SpdxExpressions.requiresAny(expr, ids));
+    }
+
     public record DependencyNode(@Nullable Long id, @Nullable String version,
                                  @Nullable Boolean found, @Nullable List<Long> path) {
     }
@@ -1087,25 +1167,22 @@ public class CelCommonPolicyLibrary implements Library {
         return Objects.equals(lhs, rhs);
     }
 
-    private static boolean isDirectDependency(final Handle jdbiHandle, final Component component) {
-        final Query query = jdbiHandle.createQuery("""
-                SELECT
-                  1
-                FROM
-                  "COMPONENT" AS "C"
-                INNER JOIN
-                  "PROJECT" AS "P" ON "P"."ID" = "C"."PROJECT_ID"
-                WHERE
-                  "C"."UUID" = :leafComponentUuid
-                  AND "P"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
-                """);
+    private static @Nullable List<String> extractStringList(Val val) {
+        if (!(val instanceof final Lister lister)) {
+            return null;
+        }
 
-        return query
-                .define(ATTRIBUTE_QUERY_NAME, "%s#isDirectDependency".formatted(CelCommonPolicyLibrary.class.getSimpleName()))
-                .bind("leafComponentUuid", UUID.fromString(component.getUuid()))
-                .mapTo(Boolean.class)
-                .findOne()
-                .orElse(false);
+        final int size = (int) lister.size().intValue();
+        final var list = new ArrayList<String>(size);
+        for (int i = 0; i < size; i++) {
+            final Val element = lister.get(IntT.intOf(i));
+            if (!(element.value() instanceof final String s)) {
+                return null;
+            }
+            list.add(s);
+        }
+
+        return list;
     }
 
 }

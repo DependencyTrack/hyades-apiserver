@@ -28,6 +28,7 @@ import org.cyclonedx.proto.v1_6.Property;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -43,6 +44,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.testcontainers.containers.wait.strategy.Wait.forLogMessage;
 
+@Disabled("Pulling Trivy images is unreliable until https://github.com/aquasecurity/trivy/discussions/10425 is fully resolved.")
 class TrivyVulnAnalyzerIntegrationTest {
 
     private static final String LATEST_VERSION = "0.69.3";

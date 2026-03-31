@@ -25,7 +25,6 @@ import alpine.model.Team;
 import alpine.model.User;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.filters.ResourceAccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -37,6 +36,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Validator;
+import jakarta.validation.constraints.Size;
 import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -56,6 +56,7 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
@@ -66,6 +67,7 @@ import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
+import org.dependencytrack.persistence.jdbi.query.ListProjectsConciseQuery;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
@@ -73,6 +75,7 @@ import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.dependencytrack.resources.v1.vo.ConciseProject;
 import org.jdbi.v3.core.Handle;
+import org.owasp.security.logging.SecurityMarkers;
 
 import javax.jdo.FetchGroup;
 import java.security.Principal;
@@ -92,6 +95,7 @@ import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
 import static org.dependencytrack.notification.api.NotificationFactory.createProjectCreatedNotification;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.PersistenceUtil.isPersistent;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
@@ -129,7 +133,6 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getProjects(@Parameter(description = "The optional name of the project to query on")
                                 @QueryParam("name") String name,
                                 @Parameter(description = "Optionally excludes inactive projects from being returned")
@@ -148,7 +151,7 @@ public class ProjectResource extends AbstractApiResource {
             }
             final PaginatedResult projectPages = withJdbiHandle(getAlpineRequest(), handle ->
                     (name != null) ? handle.attach(ProjectDao.class).getProjects(name, null, null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot, false)
-                    : handle.attach(ProjectDao.class).getProjects(null, null, null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot, true));
+                            : handle.attach(ProjectDao.class).getProjects(null, null, null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot, true));
             return Response.ok(projectPages.getObjects()).header(TOTAL_COUNT_HEADER, projectPages.getTotal()).build();
         }
     }
@@ -171,7 +174,6 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getProjectsConcise(
             @Parameter(description = "Name to filter on. Must be exact match.")
             @QueryParam("name") final String nameFilter,
@@ -190,8 +192,19 @@ public class ProjectResource extends AbstractApiResource {
             @Parameter(description = "Whether to include metrics in the response.")
             @QueryParam("includeMetrics") final boolean includeMetrics
     ) {
-        final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, versionFilter, classifierFilter, tagFilter, teamFilter, activeFilter, onlyRootFilter, /* parentUuidFilter */ null, includeMetrics));
+        final List<ConciseProjectListRow> projectRows = withJdbiHandle(
+                getAlpineRequest(),
+                handle -> handle
+                        .attach(ProjectDao.class)
+                        .getPageConcise(new ListProjectsConciseQuery()
+                                .withNameFilter(nameFilter)
+                                .withVersionFilter(versionFilter)
+                                .withClassifierFilter(classifierFilter)
+                                .withTagFilter(tagFilter)
+                                .withTeamFilter(teamFilter)
+                                .withActiveFilter(activeFilter)
+                                .withOnlyRootFilter(onlyRootFilter)
+                                .withIncludeMetrics(includeMetrics)));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
@@ -216,7 +229,6 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getProjectChildrenConcise(
             @Parameter(description = "UUID of the project", required = true)
             @PathParam("uuid") final String parentUuid,
@@ -235,8 +247,19 @@ public class ProjectResource extends AbstractApiResource {
             @Parameter(description = "Whether to include metrics in the response.")
             @QueryParam("includeMetrics") final boolean includeMetrics
     ) {
-        final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, versionFilter, classifierFilter, tagFilter, teamFilter, activeFilter, /* onlyRootFilter */ null, UUID.fromString(parentUuid), includeMetrics));
+        final List<ConciseProjectListRow> projectRows = withJdbiHandle(
+                getAlpineRequest(),
+                handle -> handle
+                        .attach(ProjectDao.class)
+                        .getPageConcise(new ListProjectsConciseQuery()
+                                .withNameFilter(nameFilter)
+                                .withVersionFilter(versionFilter)
+                                .withClassifierFilter(classifierFilter)
+                                .withTagFilter(tagFilter)
+                                .withTeamFilter(teamFilter)
+                                .withActiveFilter(activeFilter)
+                                .withParentUuidFilter(UUID.fromString(parentUuid))
+                                .withIncludeMetrics(includeMetrics)));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
@@ -264,7 +287,6 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getProject(
             @Parameter(description = "The UUID of the project to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -300,7 +322,6 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getLatestProjectByName(
             @Parameter(description = "The name of the project to retrieve the latest version of", required = true)
             @PathParam("name") String name) {
@@ -337,7 +358,6 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getProject(
             @Parameter(description = "The name of the project to query on", required = true)
             @QueryParam("name") String name,
@@ -372,7 +392,6 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getProjectsByTag(
             @Parameter(description = "The tag to query on", required = true)
             @PathParam("tag") String tagString,
@@ -403,7 +422,6 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getProjectsByClassifier(
             @Parameter(description = "The classifier to query on", required = true)
             @PathParam("classifier") String classifierString,
@@ -466,18 +484,21 @@ public class ProjectResource extends AbstractApiResource {
                 validator.validateProperty(jsonProject, "description"),
                 validator.validateProperty(jsonProject, "version"),
                 validator.validateProperty(jsonProject, "classifier"),
+                validator.validateProperty(jsonProject, "collectionLogic"),
                 validator.validateProperty(jsonProject, "cpe"),
                 validator.validateProperty(jsonProject, "purl"),
                 validator.validateProperty(jsonProject, "swidTagId"),
                 validator.validateProperty(jsonProject, "accessTeams")
         );
-        if (jsonProject.getClassifier() == null) {
+        if (jsonProject.getCollectionLogic() != null) {
+            jsonProject.setClassifier(null);
+        } else if (jsonProject.getClassifier() == null) {
             jsonProject.setClassifier(Classifier.APPLICATION);
         }
         try (final var qm = new QueryManager()) {
-            if(jsonProject.isLatest()) {
+            if (jsonProject.isLatest()) {
                 final Project oldLatest = qm.getLatestProjectVersion(jsonProject.getName());
-                if(oldLatest != null) {
+                if (oldLatest != null) {
                     requireAccess(qm, oldLatest);
                 }
             }
@@ -536,9 +557,9 @@ public class ProjectResource extends AbstractApiResource {
                             throw new ClientErrorException(Response
                                     .status(Response.Status.BAD_REQUEST)
                                     .entity("""
-                                        The team with %s can not be assigned because it does not exist, \
-                                        or is not accessible to the authenticated principal.\
-                                        """.formatted(chosenTeam.getUuid() != null
+                                            The team with %s can not be assigned because it does not exist, \
+                                            or is not accessible to the authenticated principal.\
+                                            """.formatted(chosenTeam.getUuid() != null
                                             ? "UUID " + chosenTeam.getUuid()
                                             : "name " + chosenTeam.getName()))
                                     .build());
@@ -558,8 +579,8 @@ public class ProjectResource extends AbstractApiResource {
                 } catch (IllegalArgumentException e) {
                     LOGGER.debug("Failed to create project %s".formatted(jsonProject), e);
                     throw new ClientErrorException(Response
-                            .status(Response.Status.CONFLICT)
-                            .entity("An inactive Parent cannot be selected as parent")
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity(e.getMessage())
                             .build());
                 } catch (RuntimeException e) {
                     if (isUniqueConstraintViolation(e)) {
@@ -623,11 +644,14 @@ public class ProjectResource extends AbstractApiResource {
                 validator.validateProperty(jsonProject, "description"),
                 validator.validateProperty(jsonProject, "version"),
                 validator.validateProperty(jsonProject, "classifier"),
+                validator.validateProperty(jsonProject, "collectionLogic"),
                 validator.validateProperty(jsonProject, "cpe"),
                 validator.validateProperty(jsonProject, "purl"),
                 validator.validateProperty(jsonProject, "swidTagId")
         );
-        if (jsonProject.getClassifier() == null) {
+        if (jsonProject.getCollectionLogic() != null) {
+            jsonProject.setClassifier(null);
+        } else if (jsonProject.getClassifier() == null) {
             jsonProject.setClassifier(Classifier.APPLICATION);
         }
         try (final var qm = new QueryManager()) {
@@ -658,9 +682,17 @@ public class ProjectResource extends AbstractApiResource {
                 // if project is newly set to latest, ensure user has access to current latest version to modify it
                 if (jsonProject.isLatest() && !project.isLatest()) {
                     final Project oldLatest = qm.getLatestProjectVersion(name);
-                    if(oldLatest != null) {
+                    if (oldLatest != null) {
                         requireAccess(qm, oldLatest);
                     }
+                }
+
+                if (jsonProject.getCollectionLogic() == ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG
+                        && jsonProject.getCollectionTag() == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity("A collection tag must be specified for AGGREGATE_DIRECT_CHILDREN_WITH_TAG logic.")
+                            .build());
                 }
 
                 try {
@@ -679,8 +711,7 @@ public class ProjectResource extends AbstractApiResource {
 
             LOGGER.info("Project " + updatedProject + " updated by " + super.getPrincipal().getName());
             return Response.ok(updatedProject).build();
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             if (isUniqueConstraintViolation(e)) {
                 throw new ClientErrorException(Response
                         .status(Response.Status.CONFLICT)
@@ -733,6 +764,7 @@ public class ProjectResource extends AbstractApiResource {
                 validator.validateProperty(jsonProject, "description"),
                 validator.validateProperty(jsonProject, "version"),
                 validator.validateProperty(jsonProject, "classifier"),
+                validator.validateProperty(jsonProject, "collectionLogic"),
                 validator.validateProperty(jsonProject, "cpe"),
                 validator.validateProperty(jsonProject, "purl"),
                 validator.validateProperty(jsonProject, "swidTagId")
@@ -752,7 +784,7 @@ public class ProjectResource extends AbstractApiResource {
                 if (jsonProject.isLatest() && !project.isLatest()) {
                     final var oldName = jsonProject.getName() != null ? jsonProject.getName() : project.getName();
                     final Project oldLatest = qm.getLatestProjectVersion(oldName);
-                    if(oldLatest != null) {
+                    if (oldLatest != null) {
                         requireAccess(qm, oldLatest);
                     }
                 }
@@ -766,6 +798,8 @@ public class ProjectResource extends AbstractApiResource {
                 modified |= setIfDifferent(jsonProject, project, Project::getGroup, Project::setGroup);
                 modified |= setIfDifferent(jsonProject, project, Project::getDescription, Project::setDescription);
                 modified |= setIfDifferent(jsonProject, project, Project::getClassifier, Project::setClassifier);
+                modified |= setIfDifferent(jsonProject, project, Project::getCollectionLogic, Project::setCollectionLogic);
+                modified |= setIfDifferent(jsonProject, project, Project::getCollectionTag, Project::setCollectionTag);
                 modified |= setIfDifferent(jsonProject, project, Project::getCpe, Project::setCpe);
                 modified |= setIfDifferent(jsonProject, project, Project::getPurl, Project::setPurl);
                 modified |= setIfDifferent(jsonProject, project, Project::getSwidTagId, Project::setSwidTagId);
@@ -773,6 +807,10 @@ public class ProjectResource extends AbstractApiResource {
                 modified |= setIfDifferent(jsonProject, project, Project::getSupplier, Project::setSupplier);
                 modified |= setIfDifferent(jsonProject, project, Project::isLatest, Project::setIsLatest);
                 modified |= setIfDifferent(jsonProject, project, Project::isActive, Project::setActive);
+                if (project.getCollectionLogic() != null && project.getClassifier() != null) {
+                    project.setClassifier(null);
+                    modified = true;
+                }
                 if (jsonProject.getParent() != null && jsonProject.getParent().getUuid() != null) {
                     final Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
                     if (parent == null) {
@@ -796,6 +834,14 @@ public class ProjectResource extends AbstractApiResource {
 
                 if (!modified) {
                     return null;
+                }
+
+                if (project.getCollectionLogic() == ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG
+                        && project.getCollectionTag() == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity("A collection tag must be specified for AGGREGATE_DIRECT_CHILDREN_WITH_TAG logic.")
+                            .build());
                 }
 
                 try {
@@ -908,6 +954,32 @@ public class ProjectResource extends AbstractApiResource {
         return Response.status(Response.Status.NO_CONTENT).build();
     }
 
+    @POST
+    @Path("/batchDelete")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Deletes a list of projects specified by their UUIDs",
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_DELETE</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Projects removed successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @PermissionRequired({
+            Permissions.Constants.PORTFOLIO_MANAGEMENT,
+            Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE
+    })
+    public Response deleteProjects(@Size(min = 1, max = 1000) final Set<UUID> uuids) {
+        final Set<UUID> deletedProjectUuids = inJdbiTransaction(
+                getAlpineRequest(),
+                handle -> handle.attach(ProjectDao.class).deleteProjects(uuids));
+        for (final UUID uuid : deletedProjectUuids) {
+            LOGGER.info(SecurityMarkers.SECURITY_AUDIT, "Deleted project {}", uuid);
+        }
+        return Response.status(Response.Status.NO_CONTENT).build();
+    }
+
     @PUT
     @Path("/clone")
     @Deprecated(since = "5.7.0")
@@ -958,7 +1030,7 @@ public class ProjectResource extends AbstractApiResource {
                 // if project is newly set to latest, ensure user has access to current latest version to modify it
                 if (jsonRequest.makeCloneLatest() && !sourceProject.isLatest()) {
                     final Project oldLatest = qm.getLatestProjectVersion(sourceProject.getName());
-                    if(oldLatest != null) {
+                    if (oldLatest != null) {
                         requireAccess(qm, oldLatest);
                     }
                 }
@@ -1004,7 +1076,6 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getChildrenProjects(@Parameter(description = "The UUID of the project to get the children from", schema = @Schema(type = "string", format = "uuid"), required = true)
                                         @PathParam("uuid") @ValidUuid String uuid,
                                         @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
@@ -1044,7 +1115,6 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getChildrenProjectsByClassifier(
             @Parameter(description = "The classifier to query on", required = true)
             @PathParam("classifier") String classifierString,
@@ -1088,7 +1158,6 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getChildrenProjectsByTag(
             @Parameter(description = "The tag to query on", required = true)
             @PathParam("tag") String tagString,
@@ -1132,7 +1201,6 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getProjectsWithoutDescendantsOf(
             @Parameter(description = "The UUID of the project which descendants will be excluded", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,

@@ -18,17 +18,67 @@
  */
 package org.dependencytrack.notification.publishing.webhook;
 
-import org.dependencytrack.notification.publishing.http.AbstractHttpNotificationPublisher;
+import org.dependencytrack.notification.api.publishing.NotificationPublishContext;
+import org.dependencytrack.notification.api.publishing.NotificationPublisher;
+import org.dependencytrack.notification.api.publishing.RetryablePublishException;
+import org.dependencytrack.notification.api.templating.RenderedNotificationTemplate;
+import org.dependencytrack.notification.proto.v1.Notification;
 
+import java.io.IOException;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.net.http.HttpTimeoutException;
+import java.time.Duration;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
  */
-final class WebhookNotificationPublisher extends AbstractHttpNotificationPublisher {
+final class WebhookNotificationPublisher implements NotificationPublisher {
+
+    private final HttpClient httpClient;
 
     WebhookNotificationPublisher(HttpClient httpClient) {
-        super(httpClient);
+        this.httpClient = requireNonNull(httpClient, "httpClient must not be null");
+    }
+
+    @Override
+    public void publish(NotificationPublishContext ctx, Notification notification) throws IOException {
+        final var ruleConfig = ctx.ruleConfig(WebhookNotificationPublisherRuleConfigV1.class);
+
+        final RenderedNotificationTemplate renderedTemplate = ctx.templateRenderer().render(notification);
+        if (renderedTemplate == null) {
+            throw new IllegalStateException("No template configured");
+        }
+
+        final var requestBuilder = HttpRequest
+                .newBuilder(ruleConfig.getDestinationUrl())
+                .header("Content-Type", renderedTemplate.mimeType())
+                .POST(BodyPublishers.ofString(renderedTemplate.content()))
+                .timeout(Duration.ofSeconds(10));
+
+        final String authHeaderName = ruleConfig.getAuthHeaderName();
+        final String authHeaderValue = ruleConfig.getAuthHeaderValue();
+        if (authHeaderName != null && authHeaderValue != null) {
+            requestBuilder.header(authHeaderName, authHeaderValue);
+        }
+
+        try {
+            final var response = httpClient.send(requestBuilder.build(), BodyHandlers.discarding());
+            RetryablePublishException.throwIfRetryableError(response);
+            final int statusCode = response.statusCode();
+            if (statusCode < 200 || statusCode > 299) {
+                throw new IllegalStateException("Request failed with unexpected response code: " + statusCode);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RetryablePublishException("Interrupted while sending request", e);
+        } catch (HttpTimeoutException e) {
+            throw new RetryablePublishException("Timed out while sending request", e);
+        }
     }
 
 }

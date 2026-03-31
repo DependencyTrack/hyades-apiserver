@@ -30,6 +30,7 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.ProjectVersion;
@@ -78,33 +79,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      */
     ProjectQueryManager(final PersistenceManager pm, final AlpineRequest request) {
         super(pm, request);
-    }
-
-    /**
-     * Returns a list of all projects.
-     * This method if designed NOT to provide paginated results.
-     *
-     * @return a List of Projects
-     */
-    @Override
-    public List<Project> getAllProjects() {
-        return getAllProjects(false);
-    }
-
-    /**
-     * Returns a list of all projects.
-     * This method if designed NOT to provide paginated results.
-     *
-     * @return a List of Projects
-     */
-    @Override
-    public List<Project> getAllProjects(boolean excludeInactive) {
-        final Query<Project> query = pm.newQuery(Project.class);
-        if (excludeInactive) {
-            query.setFilter("inactiveSince == null");
-        }
-        query.setOrdering("id asc");
-        return query.executeList();
     }
 
     /**
@@ -236,6 +210,19 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 throw new IllegalArgumentException("An inactive Parent cannot be selected as parent");
             }
 
+            if (project.getCollectionLogic() == ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG) {
+                if (project.getCollectionTag() == null) {
+                    throw new IllegalArgumentException(
+                            "A collection tag must be specified for AGGREGATE_DIRECT_CHILDREN_WITH_TAG logic.");
+                }
+
+                final Set<Tag> resolvedCollectionTags =
+                        resolveTags(List.of(project.getCollectionTag()));
+                project.setCollectionTag(resolvedCollectionTags.iterator().next());
+            } else {
+                project.setCollectionTag(null);
+            }
+
             // Remove isLatest flag from current latest project version, if the new project will be the latest
             final Project oldLatestProject = project.isLatest() ? getLatestProjectVersion(project.getName()) : null;
             if (oldLatestProject != null) {
@@ -245,6 +232,9 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 // record is created. Necessary to prevent unique constraint violation.
                 pm.flush();
             }
+
+            // NB: Prevent JDO from implicitly creating any tags already assigned to the project object.
+            project.setTags(null);
 
             final Project newProject = persist(project);
             final Set<Tag> resolvedTags = resolveTags(tags);
@@ -311,6 +301,37 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 project.setParent(parent);
             } else {
                 project.setParent(null);
+            }
+
+            // Prevent illegal states of collection projects (must not contain components or services).
+            final ProjectCollectionLogic newCollectionLogic = transientProject.getCollectionLogic();
+            if (newCollectionLogic != null
+                    && !newCollectionLogic.equals(project.getCollectionLogic())
+                    && (hasComponents(project) || hasServiceComponents(project))) {
+                throw new IllegalArgumentException(
+                        "A project with components or services cannot be converted to a collection project.");
+            }
+
+            // NB: Resolve the collection tag BEFORE setting collectionLogic on the persistent project,
+            // as resolveTags triggers a query that flushes dirty state, which would violate the
+            // PROJECT_COLLECTION_TAG_REQUIRED_check constraint if collectionLogic is already set
+            // but collectionTag is still null.
+            Tag resolvedCollectionTag = null;
+            if (newCollectionLogic == ProjectCollectionLogic.AGGREGATE_DIRECT_CHILDREN_WITH_TAG) {
+                if (transientProject.getCollectionTag() == null) {
+                    throw new IllegalArgumentException(
+                            "A collection tag must be specified for AGGREGATE_DIRECT_CHILDREN_WITH_TAG logic.");
+                }
+
+                final Set<Tag> resolvedCollectionTags =
+                        resolveTags(List.of(transientProject.getCollectionTag()));
+                resolvedCollectionTag = resolvedCollectionTags.iterator().next();
+            }
+
+            project.setCollectionLogic(newCollectionLogic);
+            project.setCollectionTag(resolvedCollectionTag);
+            if (newCollectionLogic != null) {
+                project.setClassifier(null);
             }
 
             final Set<Tag> resolvedTags = resolveTags(transientProject.getTags());
@@ -384,13 +405,19 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         return callInTransaction(() -> {
             boolean modified = false;
 
+            if (project.getTags() == null) {
+                project.setTags(new HashSet<>());
+            }
+
             if (!keepExisting) {
                 final Iterator<Tag> existingTagsIterator = project.getTags().iterator();
                 while (existingTagsIterator.hasNext()) {
                     final Tag existingTag = existingTagsIterator.next();
                     if (!tags.contains(existingTag)) {
                         existingTagsIterator.remove();
-                        existingTag.getProjects().remove(project);
+                        if (existingTag.getProjects() != null) {
+                            existingTag.getProjects().remove(project);
+                        }
                         modified = true;
                     }
                 }
@@ -435,12 +462,11 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 query = pm.newQuery(Query.SQL, /* language=SQL */ """
                                 SELECT EXISTS(
                                   SELECT 1
-                                    FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" AS upep
+                                    FROM "PROJECT_ACCESS_USERS" AS pau
                                    INNER JOIN "PROJECT_HIERARCHY" AS ph
-                                      ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
+                                      ON ph."PARENT_PROJECT_ID" = pau."PROJECT_ID"
                                    WHERE ph."CHILD_PROJECT_ID" = ?
-                                     AND upep."USER_ID" = ?
-                                     AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+                                     AND pau."USER_ID" = ?
                                 )
                                 """)
                         .setParameters(project.getId(), user.getId());

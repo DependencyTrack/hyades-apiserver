@@ -18,166 +18,565 @@
  */
 package org.dependencytrack.policy.cel.persistence;
 
-import alpine.common.logging.Logger;
 import com.google.api.expr.v1alpha1.Type;
 import org.apache.commons.collections4.MultiValuedMap;
-import org.dependencytrack.policy.cel.mapping.ComponentProjection;
-import org.dependencytrack.policy.cel.mapping.ProjectProjection;
-import org.dependencytrack.policy.cel.mapping.ProjectPropertyProjection;
-import org.dependencytrack.policy.cel.mapping.VulnerabilityProjection;
+import org.dependencytrack.model.Policy;
+import org.dependencytrack.model.PolicyCondition;
+import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.proto.policy.v1.Component;
+import org.dependencytrack.proto.policy.v1.License;
 import org.dependencytrack.proto.policy.v1.Project;
 import org.dependencytrack.proto.policy.v1.Vulnerability;
-import org.jdbi.v3.sqlobject.config.KeyColumn;
-import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
-import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.Define;
-import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import org.jdbi.v3.core.Handle;
+import org.jspecify.annotations.Nullable;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_METADATA;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_PROPERTY;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
-import static org.dependencytrack.policy.cel.mapping.FieldMappingUtil.getFieldMappings;
+import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.COMPONENT_FIELDS;
+import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.LICENSE_FIELDS;
+import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.LICENSE_GROUP_FIELDS;
+import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.PROJECT_FIELDS;
+import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.PROJECT_PROPERTY_FIELDS;
+import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.VULNERABILITY_FIELDS;
+import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.selectColumns;
 
-public interface CelPolicyDao {
+public final class CelPolicyDao {
 
-    Logger LOGGER = Logger.getLogger(CelPolicyDao.class);
+    private final Handle jdbiHandle;
 
-    @SqlQuery("""
-            SELECT ${fetchColumns?join(", ")}
-              FROM "PROJECT" AS p
-            <#if fetchColumns?filter(col -> col?contains("\\"metadata_tools\\""))?size gt 0>
-             INNER JOIN "PROJECT_METADATA" AS pm
-                ON pm."PROJECT_ID" = p."ID"
-            </#if>
-            <#if fetchColumns?filter(col -> col?contains("\\"bom_generated\\""))?size gt 0>
-             INNER JOIN "BOM" AS b
-                ON b."PROJECT_ID" = p."ID"
-            </#if>
-            <#if fetchPropertyColumns?size gt 0>
-              LEFT JOIN LATERAL (
-                SELECT CAST(JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT(${fetchPropertyColumns?join(", ")})) AS TEXT) AS "properties"
-                  FROM "PROJECT_PROPERTY" AS pp
-                 WHERE pp."PROJECT_ID" = p."ID"
-              ) AS "properties" ON TRUE
-            </#if>
-            <#if fetchColumns?seq_contains("\\"tags\\"")>
-              LEFT JOIN LATERAL (
-                SELECT ARRAY_AGG(DISTINCT t."NAME") AS "tags"
-                  FROM "TAG" AS t
-                 INNER JOIN "PROJECTS_TAGS" AS pt
-                    ON pt."TAG_ID" = t."ID"
-                 WHERE pt."PROJECT_ID" = p."ID"
-              ) AS "tags" ON TRUE
-            </#if>
-             WHERE p."ID" = :id
-            """)
-    @RegisterRowMapper(CelPolicyProjectRowMapper.class)
-    Project getProject(
-            @Define List<String> fetchColumns,
-            @Define List<String> fetchPropertyColumns,
-            @Bind long id);
+    public CelPolicyDao(Handle jdbiHandle) {
+        this.jdbiHandle = jdbiHandle;
+    }
 
-    @SqlQuery("""
-            SELECT c."ID" AS db_id
-            <#if fetchColumns?size gt 0>
-                 , ${fetchColumns?join(", ")}
-            </#if>
-              FROM "COMPONENT" AS c
-            <#if fetchColumns?seq_contains("\\"published_at\\"")>
-              LEFT JOIN LATERAL (
-                SELECT pam."PUBLISHED_AT" AS "published_at"
-                  FROM "PACKAGE_ARTIFACT_METADATA" AS pam
-                 WHERE pam."PURL" = c."PURL"
-              ) AS "integrityMeta" ON TRUE
-            </#if>
-            <#if fetchColumns?seq_contains("\\"latest_version\\"")>
-              LEFT JOIN LATERAL (
-                SELECT pm."LATEST_VERSION" AS "latest_version"
-                  FROM "PACKAGE_ARTIFACT_METADATA" AS pam
-                  JOIN "PACKAGE_METADATA" AS pm ON pm."PURL" = pam."PACKAGE_PURL"
-                 WHERE pam."PURL" = c."PURL"
-              ) AS "repoMeta" ON TRUE
-            </#if>
-             WHERE c."ID" = ANY(:ids)
-            """)
-    @KeyColumn("db_id")
-    @RegisterRowMapper(CelPolicyComponentRowMapper.class)
-    Map<Long, Component> getComponents(@Define List<String> fetchColumns, @Bind Collection<Long> ids);
+    public record ComponentWithLicenseId(
+            Component component,
+            @Nullable Long resolvedLicenseId) {
+    }
 
-    @SqlQuery("""
-            SELECT v."ID" AS db_id
-            <#if fetchColumns?size gt 0>
-                 , ${fetchColumns?join(", ")}
-            </#if>
-              FROM "VULNERABILITY" AS v
-            <#if fetchColumns?seq_contains("e.\\"SCORE\\" AS \\"epss_score\\"") || fetchColumns?seq_contains("e.\\"PERCENTILE\\" AS \\"epss_percentile\\"")>
-              LEFT JOIN "EPSS" AS e
-                ON v."VULNID" = e."CVE"
-            </#if>
-             WHERE v."ID" = ANY(:ids)
-            """)
-    @KeyColumn("db_id")
-    @RegisterRowMapper(CelPolicyVulnerabilityRowMapper.class)
-    Map<Long, Vulnerability> getVulnerabilities(@Define List<String> fetchColumns, @Bind Collection<Long> ids);
+    public Map<Long, ComponentWithLicenseId> fetchAllComponents(
+            long projectId,
+            Collection<String> protoFieldNames) {
+        final List<String> fetchColumns = new ArrayList<>();
+        fetchColumns.add("c.\"ID\" AS db_id");
 
-    default Project loadRequiredFields(long projectId, final MultiValuedMap<Type, String> requirements) {
+        final boolean needsResolvedLicense = protoFieldNames.contains("resolved_license");
+        final List<String> fieldNames = protoFieldNames.stream()
+                .filter(fieldName -> !"resolved_license".equals(fieldName))
+                .toList();
+        fetchColumns.addAll(selectColumns(COMPONENT_FIELDS, fieldNames));
+
+        if (needsResolvedLicense) {
+            fetchColumns.add("c.\"LICENSE_ID\" AS resolved_license_id");
+        }
+
+        final boolean shouldJoinPam =
+                protoFieldNames.contains("published_at")
+                        || protoFieldNames.contains("latest_version");
+
+        final var componentRowMapper = new CelPolicyComponentRowMapper();
+        return jdbiHandle
+                .createQuery(/* language=InjectedFreeMarker */ """
+                        <#-- @ftlvariable name="fetchColumns" type="java.util.Collection<String>" -->
+                        <#-- @ftlvariable name="shouldJoinPam" type="boolean" -->
+                        <#-- @ftlvariable name="shouldJoinLatestVersion" type="boolean" -->
+                        SELECT ${fetchColumns?join(", ")}
+                          FROM "COMPONENT" AS c
+                        <#if shouldJoinPam!false>
+                          LEFT JOIN "PACKAGE_ARTIFACT_METADATA" AS pam
+                            ON pam."PURL" = c."PURL"
+                        </#if>
+                        <#if shouldJoinLatestVersion!false>
+                          LEFT JOIN "PACKAGE_METADATA" AS pm
+                            ON pm."PURL" = pam."PACKAGE_PURL"
+                        </#if>
+                         WHERE c."PROJECT_ID" = :projectId
+                        """)
+                .define("fetchColumns", fetchColumns)
+                .define("shouldJoinPam", shouldJoinPam)
+                .define("shouldJoinLatestVersion", protoFieldNames.contains("latest_version"))
+                .bind("projectId", projectId)
+                .reduceResultSet(
+                        new HashMap<>(),
+                        (accumulator, rs, ctx) -> {
+                            final long dbId = rs.getLong("db_id");
+                            Long licenseId = needsResolvedLicense
+                                    ? rs.getLong("resolved_license_id")
+                                    : null;
+                            if (licenseId != null && rs.wasNull()) {
+                                licenseId = null;
+                            }
+                            accumulator.put(
+                                    dbId,
+                                    new ComponentWithLicenseId(
+                                            componentRowMapper.map(rs, ctx),
+                                            licenseId));
+                            return accumulator;
+                        });
+    }
+
+    public Map<Long, Set<Long>> fetchAllComponentsVulnerabilities(long projectId) {
+        return jdbiHandle
+                .createQuery("""
+                        SELECT cv."COMPONENT_ID" AS component_id
+                             , cv."VULNERABILITY_ID" AS vulnerability_id
+                          FROM "COMPONENTS_VULNERABILITIES" AS cv
+                         INNER JOIN "COMPONENT" AS c
+                            ON c."ID" = cv."COMPONENT_ID"
+                         WHERE c."PROJECT_ID" = :projectId
+                           AND EXISTS (
+                             SELECT 1
+                               FROM "FINDINGATTRIBUTION" AS fa
+                              WHERE fa."COMPONENT_ID" = c."ID"
+                                AND fa."VULNERABILITY_ID" = cv."VULNERABILITY_ID"
+                                AND fa."DELETED_AT" IS NULL
+                           )
+                        """)
+                .bind("projectId", projectId)
+                .reduceResultSet(
+                        new HashMap<>(),
+                        (accumulator, rs, ctx) -> {
+                            final long componentId = rs.getLong("component_id");
+                            final long vulnerabilityId = rs.getLong("vulnerability_id");
+                            accumulator
+                                    .computeIfAbsent(componentId, k -> new HashSet<>())
+                                    .add(vulnerabilityId);
+                            return accumulator;
+                        });
+    }
+
+    public Map<Long, License> fetchAllLicenses(
+            long projectId,
+            Collection<String> licenseProtoFieldNames,
+            Collection<String> licenseGroupProtoFieldNames) {
+        final List<String> fetchColumns = new ArrayList<>();
+        fetchColumns.add("l.\"ID\" AS db_id");
+        fetchColumns.addAll(selectColumns(LICENSE_FIELDS, licenseProtoFieldNames));
+
+        if (!licenseProtoFieldNames.contains("groups")) {
+            final var licenseRowMapper = new CelPolicyLicenseRowMapper();
+            return jdbiHandle
+                    .createQuery(/* language=InjectedFreeMarker */ """
+                            <#-- @ftlvariable name="fetchColumns" type="java.util.Collection<String>" -->
+                            SELECT DISTINCT ${fetchColumns?join(", ")}
+                              FROM "LICENSE" AS l
+                             INNER JOIN "COMPONENT" AS c
+                                ON c."LICENSE_ID" = l."ID"
+                             WHERE c."PROJECT_ID" = :projectId
+                            """)
+                    .define("fetchColumns", fetchColumns)
+                    .bind("projectId", projectId)
+                    .reduceResultSet(new HashMap<>(), (accumulator, rs, ctx) -> {
+                        final long dbId = rs.getLong("db_id");
+                        accumulator.put(dbId, licenseRowMapper.map(rs, ctx));
+                        return accumulator;
+                    });
+        }
+
+        final List<String> groupByColumns = Stream.concat(
+                        Stream.of("l.\"ID\""),
+                        LICENSE_FIELDS.stream()
+                                .filter(fieldMapping -> licenseProtoFieldNames.contains(fieldMapping.protoFieldName()))
+                                .map(CelPolicyFieldMappingRegistry.FieldMapping::sqlExpression))
+                .toList();
+
+        final var groupObjectColumns = new ArrayList<>(LICENSE_GROUP_FIELDS.stream()
+                .filter(fieldMapping -> licenseGroupProtoFieldNames.contains(fieldMapping.protoFieldName()))
+                .map(fieldMapping -> "'%s', %s".formatted(fieldMapping.protoFieldName(), fieldMapping.sqlExpression()))
+                .toList());
+
+        // Always include UUID to ensure DISTINCT produces correct cardinality,
+        // even when no specific group fields are accessed.
+        if (licenseGroupProtoFieldNames.stream().noneMatch("uuid"::equals)) {
+            groupObjectColumns.addFirst("'uuid', lg.\"UUID\"");
+        }
+
+        fetchColumns.add("""
+                CAST(
+                  COALESCE(
+                    JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT(%s)) FILTER (WHERE lg."ID" IS NOT NULL)
+                  , CAST('[]' AS JSONB)
+                  ) AS TEXT
+                ) AS groups_json\
+                """.formatted(String.join(", ", groupObjectColumns)));
+
+        final var licenseRowMapper = new CelPolicyLicenseRowMapper();
+        return jdbiHandle
+                .createQuery(/* language=InjectedFreeMarker */ """
+                        <#-- @ftlvariable name="fetchColumns" type="java.util.Collection<String>" -->
+                        <#-- @ftlvariable name="groupByColumns" type="java.util.Collection<String>" -->
+                        SELECT DISTINCT
+                          ${fetchColumns?join(", ")}
+                          FROM "LICENSE" AS l
+                         INNER JOIN "COMPONENT" AS c
+                            ON c."LICENSE_ID" = l."ID"
+                          LEFT JOIN "LICENSEGROUP_LICENSE" AS lgl
+                            ON lgl."LICENSE_ID" = l."ID"
+                          LEFT JOIN "LICENSEGROUP" AS lg
+                            ON lg."ID" = lgl."LICENSEGROUP_ID"
+                         WHERE c."PROJECT_ID" = :projectId
+                         GROUP BY ${groupByColumns?join(", ")}
+                        """)
+                .define("fetchColumns", fetchColumns)
+                .define("groupByColumns", groupByColumns)
+                .bind("projectId", projectId)
+                .reduceResultSet(
+                        new HashMap<>(),
+                        (accumulator, rs, ctx) -> {
+                            final long dbId = rs.getLong("db_id");
+                            accumulator.put(dbId, licenseRowMapper.map(rs, ctx));
+                            return accumulator;
+                        });
+    }
+
+    public Map<Long, Vulnerability> fetchAllVulnerabilities(
+            long projectId,
+            Collection<String> protoFieldNames) {
+        final List<String> fetchColumns = new ArrayList<>();
+        fetchColumns.add("v.\"ID\" AS db_id");
+        fetchColumns.addAll(selectColumns(VULNERABILITY_FIELDS, protoFieldNames));
+
+        final boolean shouldFetchEpss =
+                protoFieldNames.contains("epss_score")
+                        || protoFieldNames.contains("epss_percentile");
+
+        final var vulnRowMapper = new CelPolicyVulnerabilityRowMapper();
+        return jdbiHandle
+                .createQuery(/* language=InjectedFreeMarker */ """
+                        <#-- @ftlvariable name="fetchColumns" type="java.util.Collection<String>" -->
+                        <#-- @ftlvariable name="shouldFetchEpss" type="boolean" -->
+                        SELECT DISTINCT ${fetchColumns?join(", ")}
+                          FROM "VULNERABILITY" AS v
+                         INNER JOIN "COMPONENTS_VULNERABILITIES" AS cv
+                            ON cv."VULNERABILITY_ID" = v."ID"
+                         INNER JOIN "COMPONENT" AS c
+                            ON c."ID" = cv."COMPONENT_ID"
+                        <#if shouldFetchEpss!false>
+                          LEFT JOIN "EPSS" AS ep
+                            ON v."VULNID" = ep."CVE"
+                        </#if>
+                         WHERE c."PROJECT_ID" = :projectId
+                           AND EXISTS (
+                             SELECT 1
+                               FROM "FINDINGATTRIBUTION" AS fa
+                              WHERE fa."COMPONENT_ID" = c."ID"
+                                AND fa."VULNERABILITY_ID" = v."ID"
+                                AND fa."DELETED_AT" IS NULL
+                           )
+                        """)
+                .define("fetchColumns", fetchColumns)
+                .define("shouldFetchEpss", shouldFetchEpss)
+                .bind("projectId", projectId)
+                .reduceResultSet(
+                        new HashMap<>(),
+                        (accumulator, rs, ctx) -> {
+                            final long dbId = rs.getLong("db_id");
+                            accumulator.put(dbId, vulnRowMapper.map(rs, ctx));
+                            return accumulator;
+                        });
+    }
+
+    public boolean isDirectDependency(Component component) {
+        return jdbiHandle
+                .createQuery("""
+                        SELECT EXISTS (
+                          SELECT 1
+                            FROM "COMPONENT" AS c
+                           INNER JOIN "PROJECT" AS p
+                              ON p."ID" = c."PROJECT_ID"
+                             AND p."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :uuid))
+                           WHERE c."UUID" = CAST(:uuid AS UUID)
+                        )
+                        """)
+                .bind("uuid", component.getUuid())
+                .mapTo(Boolean.class)
+                .one();
+    }
+
+    public List<Policy> getApplicablePolicies(long projectId) {
+        return jdbiHandle
+                .createQuery("""
+                        SELECT p."ID" AS policy_id
+                             , p."UUID" AS policy_uuid
+                             , p."NAME" AS policy_name
+                             , p."OPERATOR" AS policy_operator
+                             , p."VIOLATIONSTATE" AS policy_violation_state
+                             , pc."ID" AS condition_id
+                             , pc."UUID" AS condition_uuid
+                             , pc."OPERATOR" AS condition_operator
+                             , pc."SUBJECT" AS condition_subject
+                             , pc."VALUE" AS condition_value
+                             , pc."VIOLATIONTYPE" AS condition_violation_type
+                          FROM "POLICY" AS p
+                         INNER JOIN "POLICYCONDITION" AS pc
+                            ON pc."POLICY_ID" = p."ID"
+                         WHERE p."ID" IN (
+                           -- "Global" policies without restrictions.
+                           SELECT p2."ID"
+                             FROM "POLICY" AS p2
+                            WHERE NOT EXISTS (SELECT 1 FROM "POLICY_PROJECTS" WHERE "POLICY_ID" = p2."ID")
+                              AND NOT EXISTS (SELECT 1 FROM "POLICY_TAGS" WHERE "POLICY_ID" = p2."ID")
+                           UNION
+                           -- Policies restricted to the project, or a parent of the project.
+                           SELECT pp."POLICY_ID"
+                             FROM "POLICY_PROJECTS" AS pp
+                            INNER JOIN "POLICY" AS p3
+                               ON p3."ID" = pp."POLICY_ID"
+                            INNER JOIN "PROJECT_HIERARCHY" AS ph
+                               ON ph."PARENT_PROJECT_ID" = pp."PROJECT_ID"
+                            WHERE ph."CHILD_PROJECT_ID" = :projectId
+                              AND (ph."DEPTH" = 0 OR p3."INCLUDE_CHILDREN")
+                           UNION
+                           -- Policies restricted tags shared with the project.
+                           SELECT pt."POLICY_ID"
+                             FROM "POLICY_TAGS" AS pt
+                            INNER JOIN "PROJECTS_TAGS" AS prt
+                               ON prt."TAG_ID" = pt."TAG_ID"
+                            WHERE prt."PROJECT_ID" = :projectId
+                         )
+                         ORDER BY p."ID"
+                                , pc."ID"
+                        """)
+                .bind("projectId", projectId)
+                .reduceResultSet(
+                        new LinkedHashMap<Long, Policy>(),
+                        (accumulator, rs, ctx) -> {
+                            final long policyId = rs.getLong("policy_id");
+
+                            Policy policy = accumulator.get(policyId);
+                            if (policy == null) {
+                                policy = new Policy();
+                                policy.setId(policyId);
+                                policy.setUuid(rs.getObject("policy_uuid", UUID.class));
+                                policy.setName(rs.getString("policy_name"));
+                                policy.setOperator(Policy.Operator.valueOf(rs.getString("policy_operator")));
+                                policy.setViolationState(Policy.ViolationState.valueOf(rs.getString("policy_violation_state")));
+                                policy.setPolicyConditions(new ArrayList<>());
+                                accumulator.put(policyId, policy);
+                            }
+
+                            final var condition = new PolicyCondition();
+                            condition.setId(rs.getLong("condition_id"));
+                            condition.setUuid(rs.getObject("condition_uuid", UUID.class));
+                            condition.setOperator(PolicyCondition.Operator.valueOf(rs.getString("condition_operator")));
+                            condition.setSubject(PolicyCondition.Subject.valueOf(rs.getString("condition_subject")));
+                            condition.setValue(rs.getString("condition_value"));
+                            final String violationType = rs.getString("condition_violation_type");
+                            if (violationType != null) {
+                                condition.setViolationType(PolicyViolation.Type.valueOf(violationType));
+                            }
+                            condition.setPolicy(policy);
+
+                            policy.getPolicyConditions().add(condition);
+
+                            return accumulator;
+                        })
+                .values()
+                .stream()
+                .toList();
+    }
+
+    public Set<Long> reconcileViolations(
+            long projectId,
+            MultiValuedMap<Long, PolicyViolation> reportedViolationsByComponentId) {
+        if (reportedViolationsByComponentId.isEmpty()) {
+            jdbiHandle
+                    .createUpdate("""
+                            DELETE FROM "POLICYVIOLATION"
+                             WHERE "ID" IN (
+                               SELECT "ID"
+                                 FROM "POLICYVIOLATION"
+                                WHERE "PROJECT_ID" = :projectId
+                                ORDER BY "ID"
+                                  FOR UPDATE
+                             )
+                            """)
+                    .bind("projectId", projectId)
+                    .execute();
+            return Set.of();
+        }
+
+        final int size = reportedViolationsByComponentId.size();
+        final var timestamps = new Timestamp[size];
+        final var componentIds = new Long[size];
+        final var projIds = new Long[size];
+        final var condIds = new Long[size];
+        final var types = new String[size];
+
+        int i = 0;
+        for (final var entry : reportedViolationsByComponentId.entries()) {
+            timestamps[i] = new Timestamp(entry.getValue().getTimestamp().getTime());
+            componentIds[i] = entry.getKey();
+            projIds[i] = projectId;
+            condIds[i] = entry.getValue().getPolicyCondition().getId();
+            types[i] = entry.getValue().getType().name();
+            i++;
+        }
+
+        return jdbiHandle
+                .createQuery("""
+                        WITH created AS (
+                          INSERT INTO "POLICYVIOLATION" (
+                            "UUID"
+                          , "TIMESTAMP"
+                          , "COMPONENT_ID"
+                          , "PROJECT_ID"
+                          , "POLICYCONDITION_ID"
+                          , "TYPE"
+                          )
+                          SELECT GEN_RANDOM_UUID()
+                               , t.*
+                            FROM UNNEST(:timestamps, :componentIds, :projectIds, :policyConditionIds, :types)
+                              AS t("TIMESTAMP", "COMPONENT_ID", "PROJECT_ID", "POLICYCONDITION_ID", "TYPE")
+                           ORDER BY t."PROJECT_ID"
+                                  , t."COMPONENT_ID"
+                                  , t."POLICYCONDITION_ID"
+                          ON CONFLICT DO NOTHING
+                          RETURNING "ID"
+                        ),
+                        deleted AS (
+                          DELETE FROM "POLICYVIOLATION"
+                           WHERE "ID" IN (
+                             SELECT "ID"
+                               FROM "POLICYVIOLATION"
+                              WHERE "PROJECT_ID" = :projectId
+                                AND ("COMPONENT_ID", "POLICYCONDITION_ID") NOT IN (
+                                  SELECT * FROM UNNEST(:componentIds, :policyConditionIds)
+                                )
+                              ORDER BY "ID"
+                                FOR UPDATE
+                           )
+                        )
+                        SELECT "ID" FROM created
+                        """)
+                .bind("timestamps", timestamps)
+                .bind("componentIds", componentIds)
+                .bind("projectIds", projIds)
+                .bind("policyConditionIds", condIds)
+                .bind("types", types)
+                .bind("projectId", projectId)
+                .mapTo(Long.class)
+                .set();
+    }
+
+    public Project loadRequiredFields(long projectId, MultiValuedMap<Type, String> requirements) {
         final Collection<String> projectRequirements = requirements.get(TYPE_PROJECT);
-        if (projectRequirements == null || projectRequirements.isEmpty()) {
+        if (projectRequirements.isEmpty()) {
             return Project.getDefaultInstance();
         }
 
-        final List<String> sqlSelectColumns = getFieldMappings(ProjectProjection.class).stream()
-                .filter(fieldMapping -> projectRequirements.contains(fieldMapping.protoFieldName()))
-                .map(fieldMapping -> "p.\"%s\" AS \"%s\"".formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName()))
-                .collect(Collectors.toList());
+        final var allProjectFieldNames = new ArrayList<>(projectRequirements);
+        final boolean needsMetadataTools = projectRequirements.contains("metadata")
+                && requirements.containsKey(TYPE_PROJECT_METADATA)
+                && requirements.get(TYPE_PROJECT_METADATA).contains("tools");
+        final boolean needsBomGenerated = projectRequirements.contains("metadata")
+                && requirements.containsKey(TYPE_PROJECT_METADATA)
+                && requirements.get(TYPE_PROJECT_METADATA).contains("bom_generated");
 
-        if (projectRequirements.contains("metadata")
-            && requirements.containsKey(TYPE_PROJECT_METADATA)) {
-            if (requirements.get(TYPE_PROJECT_METADATA).contains("tools")) {
-                sqlSelectColumns.add("pm.\"TOOLS\" AS \"metadata_tools\"");
-            }
-            if (requirements.get(TYPE_PROJECT_METADATA).contains("bom_generated")) {
-                sqlSelectColumns.add("b.\"GENERATED\" AS \"bom_generated\"");
-            }
+        if (needsMetadataTools) {
+            allProjectFieldNames.add("metadata_tools");
         }
-
+        if (needsBomGenerated) {
+            allProjectFieldNames.add("bom_generated");
+        }
         if (projectRequirements.contains("is_active")) {
-            sqlSelectColumns.add("p.\"INACTIVE_SINCE\" AS \"inactive_since\"");
+            allProjectFieldNames.add("inactive_since");
         }
 
-        final var sqlPropertySelectColumns = new ArrayList<String>();
-        if (projectRequirements.contains("properties") && requirements.containsKey(TYPE_PROJECT_PROPERTY)) {
-            sqlSelectColumns.add("\"properties\"");
+        final List<String> fetchColumns = new ArrayList<>(selectColumns(PROJECT_FIELDS, allProjectFieldNames));
 
-            getFieldMappings(ProjectPropertyProjection.class).stream()
-                    .filter(mapping -> requirements.get(TYPE_PROJECT_PROPERTY).contains(mapping.protoFieldName()))
-                    .map(mapping -> "'%s', pp.\"%s\"".formatted(mapping.protoFieldName(), mapping.sqlColumnName()))
-                    .forEach(sqlPropertySelectColumns::add);
-        }
-        if (projectRequirements.contains("tags")) {
-            sqlSelectColumns.add("\"tags\"");
+        final var propertyColumns = new ArrayList<String>();
+        final boolean needsProperties = projectRequirements.contains("properties");
+        if (needsProperties) {
+            fetchColumns.add("properties");
+            if (requirements.containsKey(TYPE_PROJECT_PROPERTY)) {
+                PROJECT_PROPERTY_FIELDS.stream()
+                        .filter(f -> requirements.get(TYPE_PROJECT_PROPERTY).contains(f.protoFieldName()))
+                        .map(f -> "'%s', %s".formatted(f.protoFieldName(), f.sqlExpression()))
+                        .forEach(propertyColumns::add);
+            }
+
+            // Always include ID to ensure DISTINCT produces correct cardinality,
+            // even when no specific property fields are accessed.
+            if (propertyColumns.isEmpty()) {
+                propertyColumns.add("'_id', pp.\"ID\"");
+            }
         }
 
-        final Project fetchedProject = getProject(sqlSelectColumns, sqlPropertySelectColumns, projectId);
-        if (fetchedProject == null) {
+        final boolean needsTags = projectRequirements.contains("tags");
+        if (needsTags) {
+            fetchColumns.add("tags");
+        }
+
+        final Project project = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
+                        <#-- @ftlvariable name="fetchColumns" type="java.util.Collection<String>" -->
+                        <#-- @ftlvariable name="needsMetadataTools" type="boolean" -->
+                        <#-- @ftlvariable name="needsBomGenerated" type="boolean" -->
+                        <#-- @ftlvariable name="needsProperties" type="boolean" -->
+                        <#-- @ftlvariable name="propertyColumns" type="java.util.Collection<String>" -->
+                        <#-- @ftlvariable name="needsTags" type="boolean" -->
+                        SELECT ${fetchColumns?join(", ")}
+                          FROM "PROJECT" AS p
+                        <#if needsMetadataTools!false>
+                         INNER JOIN "PROJECT_METADATA" AS pm
+                            ON pm."PROJECT_ID" = p."ID"
+                        </#if>
+                        <#if needsBomGenerated!false>
+                         INNER JOIN "BOM" AS b
+                            ON b."PROJECT_ID" = p."ID"
+                        </#if>
+                        <#if needsProperties!false>
+                          LEFT JOIN LATERAL (
+                            SELECT CAST(JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT(${propertyColumns?join(", ")})) AS TEXT) AS properties
+                              FROM "PROJECT_PROPERTY" AS pp
+                             WHERE pp."PROJECT_ID" = p."ID"
+                          ) AS properties_sub ON TRUE
+                        </#if>
+                        <#if needsTags!false>
+                          LEFT JOIN LATERAL (
+                            SELECT ARRAY_AGG(DISTINCT t."NAME") AS tags
+                              FROM "TAG" AS t
+                             INNER JOIN "PROJECTS_TAGS" AS pt
+                                ON pt."TAG_ID" = t."ID"
+                             WHERE pt."PROJECT_ID" = p."ID"
+                          ) AS tags_sub ON TRUE
+                        </#if>
+                         WHERE p."ID" = :id
+                        """)
+                .define("fetchColumns", fetchColumns)
+                .define("needsMetadataTools", needsMetadataTools)
+                .define("needsBomGenerated", needsBomGenerated)
+                .define("needsProperties", needsProperties)
+                .define("propertyColumns", propertyColumns)
+                .define("needsTags", needsTags)
+                .bind("id", projectId)
+                .map(new CelPolicyProjectRowMapper())
+                .findOne()
+                .orElse(null);
+
+        if (project == null) {
             throw new NoSuchElementException();
         }
 
-        return fetchedProject;
+        return project;
     }
 
-    default Map<Long, Component> loadRequiredComponentFields(
+    public Map<Long, Component> loadRequiredComponentFields(
             Collection<Long> componentIds,
             MultiValuedMap<Type, String> requirements) {
         if (componentIds.isEmpty()) {
@@ -185,7 +584,7 @@ public interface CelPolicyDao {
         }
 
         final Collection<String> componentRequirements = requirements.get(TYPE_COMPONENT);
-        if (componentRequirements == null || componentRequirements.isEmpty()) {
+        if (componentRequirements.isEmpty()) {
             final var result = new HashMap<Long, Component>();
             for (long componentId : componentIds) {
                 result.put(componentId, Component.getDefaultInstance());
@@ -193,22 +592,44 @@ public interface CelPolicyDao {
             return result;
         }
 
-        final List<String> sqlSelectColumns = getFieldMappings(ComponentProjection.class).stream()
-                .filter(fieldMapping -> componentRequirements.contains(fieldMapping.protoFieldName()))
-                .map(fieldMapping -> "c.\"%s\" AS \"%s\"".formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName()))
-                .collect(Collectors.toList());
+        final List<String> fetchColumns = new ArrayList<>(selectColumns(COMPONENT_FIELDS, componentRequirements));
 
-        if (componentRequirements.contains("latest_version")) {
-            sqlSelectColumns.add("\"latest_version\"");
-        }
-        if (componentRequirements.contains("published_at")) {
-            sqlSelectColumns.add("\"published_at\"");
-        }
+        final boolean needsLatestVersion = componentRequirements.contains("latest_version");
+        final boolean needsPublishedAt = componentRequirements.contains("published_at");
+        final boolean needsPam = needsPublishedAt || needsLatestVersion;
 
-        return getComponents(sqlSelectColumns, componentIds);
+        final var componentRowMapper = new CelPolicyComponentRowMapper();
+        return jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
+                        <#-- @ftlvariable name="fetchColumns" type="java.util.Collection<String>" -->
+                        <#-- @ftlvariable name="needsPam" type="boolean" -->
+                        <#-- @ftlvariable name="needsLatestVersion" type="boolean" -->
+                        SELECT c."ID" AS db_id
+                        <#if fetchColumns?size gt 0>
+                             , ${fetchColumns?join(", ")}
+                        </#if>
+                          FROM "COMPONENT" AS c
+                        <#if needsPam!false>
+                          LEFT JOIN "PACKAGE_ARTIFACT_METADATA" AS pam
+                            ON pam."PURL" = c."PURL"
+                        </#if>
+                        <#if needsLatestVersion!false>
+                          LEFT JOIN "PACKAGE_METADATA" AS pm
+                            ON pm."PURL" = pam."PACKAGE_PURL"
+                        </#if>
+                         WHERE c."ID" = ANY(:ids)
+                        """)
+                .define("fetchColumns", fetchColumns)
+                .define("needsPam", needsPam)
+                .define("needsLatestVersion", needsLatestVersion)
+                .bindArray("ids", Long.class, componentIds)
+                .reduceResultSet(new HashMap<>(), (accumulator, rs, ctx) -> {
+                    final long dbId = rs.getLong("db_id");
+                    accumulator.put(dbId, componentRowMapper.map(rs, ctx));
+                    return accumulator;
+                });
     }
 
-    default Map<Long, Vulnerability> loadRequiredVulnerabilityFields(
+    public Map<Long, Vulnerability> loadRequiredVulnerabilityFields(
             Collection<Long> vulnIds,
             MultiValuedMap<Type, String> requirements) {
         if (vulnIds.isEmpty()) {
@@ -216,7 +637,7 @@ public interface CelPolicyDao {
         }
 
         final Collection<String> vulnRequirements = requirements.get(TYPE_VULNERABILITY);
-        if (vulnRequirements == null || vulnRequirements.isEmpty()) {
+        if (vulnRequirements.isEmpty()) {
             final var result = new HashMap<Long, Vulnerability>();
             for (long vulnId : vulnIds) {
                 result.put(vulnId, Vulnerability.getDefaultInstance());
@@ -224,28 +645,37 @@ public interface CelPolicyDao {
             return result;
         }
 
-        final List<String> sqlSelectColumns = getFieldMappings(VulnerabilityProjection.class).stream()
-                .filter(fieldMapping -> vulnRequirements.contains(fieldMapping.protoFieldName()))
-                .map(fieldMapping -> {
-                    if ("cwes".equals(fieldMapping.protoFieldName())) {
-                        return "STRING_TO_ARRAY(v.\"%s\", ',') AS \"%s\""
-                                .formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName());
-                    }
-                    return "v.\"%s\" AS \"%s\"".formatted(fieldMapping.sqlColumnName(), fieldMapping.protoFieldName());
-                })
-                .collect(Collectors.toList());
+        final List<String> fetchColumns = new ArrayList<>(selectColumns(VULNERABILITY_FIELDS, vulnRequirements));
 
-        if (vulnRequirements.contains("aliases")) {
-            sqlSelectColumns.add("JSONB_VULN_ALIASES(v.\"SOURCE\", v.\"VULNID\") AS \"aliases\"");
-        }
-        if (vulnRequirements.contains("epss_score")) {
-            sqlSelectColumns.add("e.\"SCORE\" AS \"epss_score\"");
-        }
-        if (vulnRequirements.contains("epss_percentile")) {
-            sqlSelectColumns.add("e.\"PERCENTILE\" AS \"epss_percentile\"");
-        }
+        final boolean needsEpss = vulnRequirements.contains("epss_score")
+                || vulnRequirements.contains("epss_percentile");
 
-        return getVulnerabilities(sqlSelectColumns, vulnIds);
+        final var vulnRowMapper = new CelPolicyVulnerabilityRowMapper();
+
+        return jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
+                        <#-- @ftlvariable name="fetchColumns" type="java.util.Collection<String>" -->
+                        <#-- @ftlvariable name="needsEpss" type="boolean" -->
+                        SELECT v."ID" AS db_id
+                        <#if fetchColumns?size gt 0>
+                             , ${fetchColumns?join(", ")}
+                        </#if>
+                          FROM "VULNERABILITY" AS v
+                        <#if needsEpss!false>
+                          LEFT JOIN "EPSS" AS ep
+                            ON v."VULNID" = ep."CVE"
+                        </#if>
+                         WHERE v."ID" = ANY(:ids)
+                        """)
+                .define("fetchColumns", fetchColumns)
+                .define("needsEpss", needsEpss)
+                .bindArray("ids", Long.class, vulnIds)
+                .reduceResultSet(
+                        new HashMap<>(),
+                        (accumulator, rs, ctx) -> {
+                            final long dbId = rs.getLong("db_id");
+                            accumulator.put(dbId, vulnRowMapper.map(rs, ctx));
+                            return accumulator;
+                        });
     }
 
 }

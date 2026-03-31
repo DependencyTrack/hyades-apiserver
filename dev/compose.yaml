@@ -63,6 +63,7 @@ services:
       DT_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/dtrack"
       DT_DATASOURCE_USERNAME: "dtrack"
       DT_DATASOURCE_PASSWORD: "dtrack"
+      DT_TELEMETRY_SUBMISSION_ENABLED_DEFAULT: "false"
     healthcheck:
       test: [ "NONE" ]
     volumes:

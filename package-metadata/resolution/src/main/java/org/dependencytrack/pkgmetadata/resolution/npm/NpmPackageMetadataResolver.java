@@ -31,6 +31,7 @@ import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionExcepti
 import org.dependencytrack.pkgmetadata.resolution.npm.NpmPackageDocument.PackageInfo;
 import org.dependencytrack.pkgmetadata.resolution.npm.NpmPackageDocument.VersionInfo;
 import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,12 +40,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
@@ -126,15 +125,14 @@ final class NpmPackageMetadataResolver implements PackageMetadataResolver {
 
     private static String formatPackageName(PackageURL purl) {
         return purl.getNamespace() != null
-                ? URLEncoder.encode(purl.getNamespace() + "/" + purl.getName(), StandardCharsets.UTF_8)
-                : URLEncoder.encode(purl.getName(), StandardCharsets.UTF_8);
+                ? purl.getNamespace() + "/" + purl.getName()
+                : purl.getName();
     }
 
     private @Nullable NpmPackageDocument fetchAndParseDocument(
             String packageName,
             PackageRepository repository) throws InterruptedException {
-        final String baseUrl = trimTrailingSlash(repository.url());
-        final String url = baseUrl + "/" + packageName;
+        final String url = UrlUtils.join(repository.url(), packageName);
 
         final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -233,10 +231,6 @@ final class NpmPackageMetadataResolver implements PackageMetadataResolver {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private static String trimTrailingSlash(String url) {
-        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
 }

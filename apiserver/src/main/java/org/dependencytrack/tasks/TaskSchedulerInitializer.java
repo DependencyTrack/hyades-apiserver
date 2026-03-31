@@ -24,6 +24,7 @@ import alpine.server.auth.SessionTokenService;
 import alpine.server.tasks.LdapSyncTask;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.HttpClient;
 import org.dependencytrack.common.pagination.PageIterator;
 import org.dependencytrack.csaf.CsafProviderDao;
 import org.dependencytrack.csaf.ImportCsafDocumentsWorkflow;
@@ -35,7 +36,6 @@ import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
-import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
@@ -44,14 +44,17 @@ import org.dependencytrack.event.maintenance.PackageMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
-import org.dependencytrack.metrics.PortfolioMetricsUpdateTask;
+import org.dependencytrack.metrics.UpdatePortfolioMetricsWorkflow;
 import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
+import org.dependencytrack.notification.ProcessScheduledNotificationsWorkflow;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ScheduledNotificationDao;
 import org.dependencytrack.pkgmetadata.ResolvePackageMetadataWorkflow;
 import org.dependencytrack.plugin.NoSuchExtensionException;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
+import org.dependencytrack.proto.internal.workflow.v1.ProcessScheduledNotificationsWorkflowArg;
 import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.PackageMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
@@ -67,6 +70,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABLED;
@@ -208,8 +212,12 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         })
                 .schedule(
                         "Portfolio Metrics Update",
-                        getCronScheduleForTask(PortfolioMetricsUpdateTask.class),
-                        () -> Event.dispatch(new PortfolioMetricsUpdateEvent()))
+                        getCronScheduleFromConfig(config, "dt.task.portfolio-metrics-update.cron"),
+                        () -> {
+                            dexEngine.createRun(
+                                    new CreateWorkflowRunRequest<>(UpdatePortfolioMetricsWorkflow.class)
+                                            .withWorkflowInstanceId(UpdatePortfolioMetricsWorkflow.INSTANCE_ID));
+                        })
                 .schedule(
                         "Portfolio Vulnerability Analysis",
                         getCronScheduleForTask(VulnerabilityAnalysisTask.class),
@@ -238,7 +246,30 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                 .schedule(
                         "Expired Session Cleanup",
                         getCronScheduleFromConfig(config, "dt.task.expired-session-cleanup.cron"),
-                        () -> new SessionTokenService().deleteExpiredSessions());
+                        () -> new SessionTokenService().deleteExpiredSessions())
+                .schedule(
+                        "Scheduled Notification Dispatch",
+                        getCronScheduleFromConfig(config, "dt.task.scheduled-notification-dispatch.cron"),
+                        () -> {
+                            final Set<String> ruleNames = withJdbiHandle(
+                                    handle -> new ScheduledNotificationDao(handle)
+                                            .getDueScheduledNotificationRuleNames());
+                            if (ruleNames.isEmpty()) {
+                                return;
+                            }
+
+                            dexEngine.createRun(
+                                    new CreateWorkflowRunRequest<>(ProcessScheduledNotificationsWorkflow.class)
+                                            .withWorkflowInstanceId(ProcessScheduledNotificationsWorkflow.INSTANCE_ID)
+                                            .withArgument(ProcessScheduledNotificationsWorkflowArg.newBuilder()
+                                                    .addAllRuleNames(ruleNames)
+                                                    .build()));
+                        })
+                .schedule(
+                        "Telemetry Submission",
+                        getCronScheduleFromConfig(config, "dt.task.telemetry-submission.cron"),
+                        new TelemetrySubmissionTask(HttpClient.INSTANCE, config),
+                        /* triggerOnFirstRun */ true);
     }
 
     @Override

@@ -23,9 +23,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.model.validation.ValidCronExpression;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Set;
 import java.util.UUID;
@@ -44,5 +46,7 @@ public record UpdateNotificationRuleRequest(
         Set<@NotNull NotificationGroup> notifyOn,
         String publisherConfig,
         Set<Tag> tags,
-        @NotNull UUID uuid) {
+        @NotNull UUID uuid,
+        @Nullable @ValidCronExpression String scheduleCron,
+        @Nullable Boolean scheduleSkipUnchanged) {
 }

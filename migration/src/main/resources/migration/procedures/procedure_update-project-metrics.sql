@@ -36,9 +36,12 @@ DECLARE
   "v_policy_violations_security_audited"      INT; -- Number of audited policy violations of type security
   "v_policy_violations_security_unaudited"    INT; -- Number of unaudited policy violations of type security
 BEGIN
-  SELECT "ID" FROM "PROJECT" WHERE "UUID" = "project_uuid" INTO "v_project_id";
+  SELECT "ID" FROM "PROJECT"
+   WHERE "UUID" = "project_uuid"
+     AND "COLLECTION_LOGIC" IS NULL
+    INTO "v_project_id";
   IF "v_project_id" IS NULL THEN
-    RAISE EXCEPTION 'Project with UUID % does not exist', "project_uuid";
+    RETURN;
   END IF;
 
   FOR "v_component_uuid" IN SELECT "UUID" FROM "COMPONENT" WHERE "PROJECT_ID" = "v_project_id"
@@ -117,7 +120,7 @@ BEGIN
     "v_policy_violations_security_audited",
     "v_policy_violations_security_unaudited";
 
-  "v_risk_score" = "CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned");
+  "v_risk_score" = COALESCE("CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned"), 0);
 
   INSERT INTO "PROJECTMETRICS" ("PROJECT_ID",
                                   "COMPONENTS",

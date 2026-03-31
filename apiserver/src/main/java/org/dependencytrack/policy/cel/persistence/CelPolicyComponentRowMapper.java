@@ -28,7 +28,7 @@ import java.sql.SQLException;
 
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
-public class CelPolicyComponentRowMapper implements RowMapper<Component> {
+public final class CelPolicyComponentRowMapper implements RowMapper<Component> {
 
     @Override
     public Component map(final ResultSet rs, final StatementContext ctx) throws SQLException {
@@ -50,6 +50,10 @@ public class CelPolicyComponentRowMapper implements RowMapper<Component> {
         maybeSet(rs, "sha3_256", ResultSet::getString, builder::setSha3256);
         maybeSet(rs, "sha3_384", ResultSet::getString, builder::setSha3384);
         maybeSet(rs, "sha3_512", ResultSet::getString, builder::setSha3512);
+        maybeSet(rs, "blake2b_256", ResultSet::getString, builder::setBlake2B256);
+        maybeSet(rs, "blake2b_384", ResultSet::getString, builder::setBlake2B384);
+        maybeSet(rs, "blake2b_512", ResultSet::getString, builder::setBlake2B512);
+        maybeSet(rs, "blake3", ResultSet::getString, builder::setBlake3);
         maybeSet(rs, "license_name", ResultSet::getString, builder::setLicenseName);
         maybeSet(rs, "license_expression", ResultSet::getString, builder::setLicenseExpression);
         maybeSet(rs, "published_at", RowMapperUtil::nullableTimestamp, builder::setPublishedAt);

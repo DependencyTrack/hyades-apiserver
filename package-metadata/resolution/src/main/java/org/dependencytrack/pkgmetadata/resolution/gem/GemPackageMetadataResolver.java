@@ -28,6 +28,7 @@ import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
 import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
 import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,8 +122,7 @@ final class GemPackageMetadataResolver implements PackageMetadataResolver {
 
     private byte @Nullable [] fetchVersions(String name, PackageRepository repository)
             throws InterruptedException {
-        final String baseUrl = trimTrailingSlash(repository.url());
-        final String url = baseUrl + "/api/v1/versions/" + name + ".json";
+        final String url = UrlUtils.join(repository.url(), "api", "v1", "versions", name + ".json");
 
         final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -156,10 +156,6 @@ final class GemPackageMetadataResolver implements PackageMetadataResolver {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private static String trimTrailingSlash(String url) {
-        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
 }

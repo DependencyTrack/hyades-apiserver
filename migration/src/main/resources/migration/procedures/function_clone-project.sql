@@ -60,6 +60,8 @@ BEGIN
     , "SWIDTAGID"
     , "DIRECT_DEPENDENCIES"
     , "PARENT_PROJECT_ID"
+    , "COLLECTION_LOGIC"
+    , "COLLECTION_TAG_ID"
     , "UUID"
     )
     SELECT "AUTHORS"
@@ -77,6 +79,8 @@ BEGIN
          , "SWIDTAGID"
          , "DIRECT_DEPENDENCIES"
          , "PARENT_PROJECT_ID"
+         , "COLLECTION_LOGIC"
+         , "COLLECTION_TAG_ID"
          , gen_random_uuid()
       FROM "PROJECT"
      WHERE "UUID" = source_project_uuid

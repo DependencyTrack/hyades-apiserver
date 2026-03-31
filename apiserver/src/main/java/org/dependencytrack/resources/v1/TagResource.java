@@ -20,7 +20,6 @@ package org.dependencytrack.resources.v1;
 
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.filters.ResourceAccessRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,11 +32,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -52,6 +53,7 @@ import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.problems.TagOperationProblemDetails;
 import org.dependencytrack.resources.v1.vo.TagListResponseItem;
+import org.dependencytrack.resources.v1.vo.TaggedCollectionProjectListResponseItem;
 import org.dependencytrack.resources.v1.vo.TaggedNotificationRuleListResponseItem;
 import org.dependencytrack.resources.v1.vo.TaggedPolicyListResponseItem;
 import org.dependencytrack.resources.v1.vo.TaggedProjectListResponseItem;
@@ -84,7 +86,6 @@ public class TagResource extends AlpineResource {
     })
     @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getAllTags() {
         final List<TagQueryManager.TagListRow> tagListRows;
         try (final var qm = new QueryManager(getAlpineRequest())) {
@@ -95,6 +96,7 @@ public class TagResource extends AlpineResource {
                 .map(row -> new TagListResponseItem(
                         row.name(),
                         row.projectCount(),
+                        row.collectionProjectCount(),
                         row.policyCount(),
                         row.notificationRuleCount(),
                         row.vulnerabilityCount()
@@ -102,6 +104,31 @@ public class TagResource extends AlpineResource {
                 .toList();
         final long totalCount = tagListRows.isEmpty() ? 0 : tagListRows.getFirst().totalCount();
         return Response.ok(tags).header(TOTAL_COUNT_HEADER, totalCount).build();
+    }
+
+    @PUT
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Creates one or more tags.",
+            description = "<p>Requires permission <strong>TAG_MANAGEMENT</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "Tags created successfully."
+            )
+    })
+    @PermissionRequired(Permissions.Constants.TAG_MANAGEMENT)
+    public Response createTags(
+            @Parameter(description = "Names of the tags to create")
+            @NotNull @Size(min = 1, max = 100) final Set<@NotBlank String> tagNames
+    ) {
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            qm.runInTransaction(() -> qm.createTags(tagNames));
+        }
+
+        return Response.status(Response.Status.CREATED).build();
     }
 
     @DELETE
@@ -163,7 +190,6 @@ public class TagResource extends AlpineResource {
     })
     @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getTaggedProjects(
             @Parameter(description = "Name of the tag to get projects for.", required = true)
             @PathParam("name") final String tagName
@@ -256,6 +282,43 @@ public class TagResource extends AlpineResource {
         }
 
         return Response.noContent().build();
+    }
+
+    @GET
+    @Path("/{name}/collectionProject")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns a list of all collection projects that use the given tag for their collection logic.",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all collection projects that use the given tag for their collection logic",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of collection projects", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TaggedCollectionProjectListResponseItem.class)))
+            )
+    })
+    @PaginatedApi
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getTaggedCollectionProjects(
+            @Parameter(description = "Name of the tag to get collection projects for", required = true)
+            @PathParam("name") final String tagName
+    ) {
+        // TODO: Should enforce lowercase for tagName once we are sure that
+        //   users don't have any mixed-case tags in their system anymore.
+        //   Will likely need a migration to cleanup existing tags for this.
+
+        final List<TagQueryManager.TaggedCollectionProjectRow> taggedCollectionProjectListRows;
+        try (final var qm = new QueryManager(getAlpineRequest())) {
+            taggedCollectionProjectListRows = qm.getTaggedCollectionProjects(tagName);
+        }
+
+        final List<TaggedCollectionProjectListResponseItem> tags = taggedCollectionProjectListRows.stream()
+                .map(row -> new TaggedCollectionProjectListResponseItem(row.uuid(), row.name(), row.version()))
+                .toList();
+        final long totalCount = taggedCollectionProjectListRows.isEmpty() ? 0 : taggedCollectionProjectListRows.getFirst().totalCount();
+        return Response.ok(tags).header(TOTAL_COUNT_HEADER, totalCount).build();
     }
 
     @GET
@@ -386,7 +449,6 @@ public class TagResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response getTagsForPolicy(
             @Parameter(description = "The UUID of the policy", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid final String uuid

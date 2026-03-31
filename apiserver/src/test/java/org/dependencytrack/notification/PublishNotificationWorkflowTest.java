@@ -36,6 +36,7 @@ import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.model.NotificationTriggerType;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.publishing.DefaultNotificationPublishersPlugin;
@@ -291,6 +292,7 @@ class PublishNotificationWorkflowTest extends PersistenceCapableTest {
         qm.persist(publisher);
 
         final var rule = new NotificationRule();
+        rule.setTriggerType(NotificationTriggerType.EVENT);
         rule.setName("Test Rule");
         rule.setEnabled(true);
         rule.setScope(NotificationScope.PORTFOLIO);

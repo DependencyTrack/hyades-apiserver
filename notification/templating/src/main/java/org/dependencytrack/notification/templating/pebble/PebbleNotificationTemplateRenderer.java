@@ -31,6 +31,8 @@ import org.dependencytrack.notification.api.templating.RenderedNotificationTempl
 import org.dependencytrack.notification.proto.v1.BomConsumedOrProcessedSubject;
 import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
 import org.dependencytrack.notification.proto.v1.BomValidationFailedSubject;
+import org.dependencytrack.notification.proto.v1.NewPolicyViolationsSummarySubject;
+import org.dependencytrack.notification.proto.v1.NewVulnerabilitiesSummarySubject;
 import org.dependencytrack.notification.proto.v1.NewVulnerabilitySubject;
 import org.dependencytrack.notification.proto.v1.NewVulnerableDependencySubject;
 import org.dependencytrack.notification.proto.v1.Notification;
@@ -161,6 +163,10 @@ final class PebbleNotificationTemplateRenderer implements NotificationTemplateRe
             return subject.unpack(ProjectVulnAnalysisCompleteSubject.class);
         } else if (subject.is(UserSubject.class)) {
             return subject.unpack(UserSubject.class);
+        } else if (subject.is(NewVulnerabilitiesSummarySubject.class)) {
+            return subject.unpack(NewVulnerabilitiesSummarySubject.class);
+        } else if (subject.is(NewPolicyViolationsSummarySubject.class)) {
+            return subject.unpack(NewPolicyViolationsSummarySubject.class);
         }
 
         return null;

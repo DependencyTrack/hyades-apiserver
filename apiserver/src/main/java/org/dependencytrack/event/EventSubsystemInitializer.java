@@ -31,8 +31,6 @@ import org.dependencytrack.event.maintenance.PackageMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
-import org.dependencytrack.metrics.PortfolioMetricsUpdateTask;
-import org.dependencytrack.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.tasks.CallbackTask;
@@ -102,8 +100,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.subscribe(
                 PortfolioVulnerabilityAnalysisEvent.class,
                 new VulnerabilityAnalysisTask(dexEngine));
-        eventService.subscribe(ProjectMetricsUpdateEvent.class, new ProjectMetricsUpdateTask());
-        eventService.subscribe(PortfolioMetricsUpdateEvent.class, new PortfolioMetricsUpdateTask());
         eventService.subscribe(VulnerabilityMetricsUpdateEvent.class, new VulnerabilityMetricsUpdateTask());
         eventService.subscribe(CloneProjectEvent.class, new CloneProjectTask());
         eventService.subscribe(FortifySscUploadEventAbstract.class, new FortifySscUploadTask(HttpClient.INSTANCE, secretManager));
@@ -133,8 +129,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.unsubscribe(VexUploadProcessingTask.class);
         eventService.unsubscribe(LdapSyncTaskWrapper.class);
         eventService.unsubscribe(VulnerabilityAnalysisTask.class);
-        eventService.unsubscribe(ProjectMetricsUpdateTask.class);
-        eventService.unsubscribe(PortfolioMetricsUpdateTask.class);
         eventService.unsubscribe(VulnerabilityMetricsUpdateTask.class);
         eventService.unsubscribe(CloneProjectTask.class);
         eventService.unsubscribe(FortifySscUploadTask.class);

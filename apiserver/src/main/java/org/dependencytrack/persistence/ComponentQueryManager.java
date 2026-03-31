@@ -84,6 +84,14 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         super(pm, request);
     }
 
+    public boolean hasComponents(Project project) {
+        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                SELECT EXISTS(SELECT 1 FROM "COMPONENT" WHERE "PROJECT_ID" = ?)
+                """);
+        query.setParameters(project.getId());
+        return executeAndCloseResultUnique(query, Boolean.class);
+    }
+
     /**
      * Returns a List of all Components for the specified Project.
      * This method if designed NOT to provide paginated results.

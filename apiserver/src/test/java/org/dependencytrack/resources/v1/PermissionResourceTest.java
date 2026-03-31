@@ -32,7 +32,6 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Role;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Assertions;
@@ -40,7 +39,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -453,115 +451,4 @@ public class PermissionResourceTest extends ResourceTest {
                 "User should have all new permissions assigned: " + userPermissions);
     }
 
-    @Test
-    public void addPermissionToRoleTest() {
-        Role role = qm.createRole("Test Role", new ArrayList<Permission>());
-
-        Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/role/" + role.getUuid()).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity(null, MediaType.APPLICATION_JSON));
-
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        JsonObject json = parseJsonObject(response);
-        Assertions.assertNotNull(json);
-        Assertions.assertEquals("Test Role", json.getString("name"));
-        Assertions.assertEquals(1, json.getJsonArray("permissions").size());
-        Assertions.assertEquals("PORTFOLIO_MANAGEMENT",
-                json.getJsonArray("permissions").getJsonObject(0).getString("name"));
-    }
-
-    @Test
-    public void addPermissionToRoleInvalidRoleTest() {
-        Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/role/" + UUID.randomUUID()).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity(null, MediaType.APPLICATION_JSON));
-
-        Assertions.assertEquals(404, response.getStatus(), 0);
-        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        String body = getPlainTextBody(response);
-        Assertions.assertEquals("The role could not be found.", body);
-    }
-
-    @Test
-    public void addPermissionToRoleInvalidPermissionTest() {
-        Role role = qm.createRole("Test Role", new ArrayList<Permission>());
-
-        Response response = jersey.target(V1_PERMISSION + "/BLAH/role/" + role.getUuid()).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity(null, MediaType.APPLICATION_JSON));
-
-        Assertions.assertEquals(404, response.getStatus(), 0);
-        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        String body = getPlainTextBody(response);
-        Assertions.assertEquals("The permission could not be found.", body);
-    }
-
-    @Test
-    public void addPermissionToRoleDuplicateTest() {
-        List<Permission> permissionSet1 = List.of(
-                qm.getPermission("PORTFOLIO_MANAGEMENT"));
-        Role role = qm.createRole("Test Role", permissionSet1);
-
-        Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/role/" + role.getUuid()).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity(null, MediaType.APPLICATION_JSON));
-
-        Assertions.assertEquals(304, response.getStatus(), 0);
-        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-    }
-
-    @Test
-    public void removePermissionFromRoleTest() {
-        List<Permission> permissionSet1 = List.of(
-                qm.getPermission("PORTFOLIO_MANAGEMENT"));
-        Role role = qm.createRole("Test Role", permissionSet1);
-
-        Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/role/" + role.getUuid()).request()
-                .header(X_API_KEY, apiKey)
-                .delete();
-
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        JsonObject json = parseJsonObject(response);
-        Assertions.assertNotNull(json);
-        Assertions.assertEquals("Test Role", json.getString("name"));
-        Assertions.assertEquals(0, json.getJsonArray("permissions").size());
-    }
-
-    @Test
-    public void removePermissionFromRoleInvalidRoleTest() {
-        Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/role/" + UUID.randomUUID()).request()
-                .header(X_API_KEY, apiKey)
-                .delete();
-
-        Assertions.assertEquals(404, response.getStatus(), 0);
-        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        String body = getPlainTextBody(response);
-        Assertions.assertEquals("The role could not be found.", body);
-    }
-
-    @Test
-    public void removePermissionFromRoleInvalidPermissionTest() {
-        Role role = qm.createRole("Test Role", new ArrayList<Permission>());
-
-        Response response = jersey.target(V1_PERMISSION + "/BLAH/role/" + role.getUuid()).request()
-                .header(X_API_KEY, apiKey)
-                .delete();
-
-        Assertions.assertEquals(404, response.getStatus(), 0);
-        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-        String body = getPlainTextBody(response);
-        Assertions.assertEquals("The permission could not be found.", body);
-    }
-
-    @Test
-    public void removePermissionFromRoleNoChangesTest() {
-        Role role = qm.createRole("Test Role", new ArrayList<Permission>());
-
-        Response response = jersey.target(V1_PERMISSION + "/PORTFOLIO_MANAGEMENT/role/" + role.getUuid()).request()
-                .header(X_API_KEY, apiKey)
-                .delete();
-
-        Assertions.assertEquals(304, response.getStatus(), 0);
-        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
-    }
 }

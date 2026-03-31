@@ -79,6 +79,8 @@ public interface ConfigPropertyDao extends SqlObject {
             convertedValue = clazz.cast(Boolean.parseBoolean(optionalStringValue.get()));
         } else if (clazz.isAssignableFrom(Integer.class)) {
             convertedValue = clazz.cast(Integer.parseInt(optionalStringValue.get()));
+        } else if (clazz.isAssignableFrom(Long.class)) {
+            convertedValue = clazz.cast(Long.parseLong(optionalStringValue.get()));
         } else {
             throw new IllegalArgumentException("Cannot convert to %s".formatted(clazz.getName()));
         }

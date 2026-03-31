@@ -20,6 +20,7 @@ package org.dependencytrack.model;
 
 import alpine.model.IConfigProperty;
 import alpine.model.IConfigProperty.PropertyType;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 import java.util.Arrays;
 import java.util.UUID;
@@ -53,6 +54,7 @@ public enum ConfigPropertyConstants {
     DEFECTDOJO_URL("integrations", "defectdojo.url", null, PropertyType.URL, "Base URL to DefectDojo", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_API_KEY("integrations", "defectdojo.apiKey", null, PropertyType.STRING, "Name of the secret containing the DefectDojo API key", ConfigPropertyAccessMode.READ_WRITE, false, true),
     KENNA_ENABLED("integrations", "kenna.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable Kenna Security integration", ConfigPropertyAccessMode.READ_WRITE),
+    KENNA_API_URL("integrations", "kenna.api.url", "https://api.kennasecurity.com", PropertyType.STRING, "Kenna Security API URL", ConfigPropertyAccessMode.READ_WRITE),
     KENNA_TOKEN("integrations", "kenna.token", null, PropertyType.STRING, "Name of the secret containing the Kenna Security authentication token", ConfigPropertyAccessMode.READ_WRITE, false, true),
     KENNA_CONNECTOR_ID("integrations", "kenna.connector.id", null, PropertyType.STRING, "The Kenna Security connector identifier to upload to", ConfigPropertyAccessMode.READ_WRITE),
     ACCESS_MANAGEMENT_ACL_ENABLED("access-management", "acl.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable access control to projects in the portfolio", ConfigPropertyAccessMode.READ_WRITE, true),
@@ -64,7 +66,10 @@ public enum ConfigPropertyConstants {
     CUSTOM_RISK_SCORE_UNASSIGNED("risk-score", "weight.unassigned", "5", PropertyType.INTEGER, "Unassigned severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
     WELCOME_MESSAGE("general", "welcome.message.html", "%3Chtml%3E%3Ch1%3EYour%20Welcome%20Message%3C%2Fh1%3E%3C%2Fhtml%3E", PropertyType.STRING, "Custom HTML Code that is displayed before login", ConfigPropertyAccessMode.READ_WRITE, true),
     IS_WELCOME_MESSAGE("general", "welcome.message.enabled", "false", PropertyType.BOOLEAN, "Bool that says whether to show the welcome message or not", ConfigPropertyAccessMode.READ_WRITE, true),
-    DEFAULT_LANGUAGE("general", "default.locale", null, PropertyType.STRING, "Determine the default Language to use", ConfigPropertyAccessMode.READ_WRITE, true);
+    DEFAULT_LANGUAGE("general", "default.locale", null, PropertyType.STRING, "Determine the default Language to use", ConfigPropertyAccessMode.READ_WRITE, true),
+    TELEMETRY_SUBMISSION_ENABLED("telemetry", "submission.enabled", ConfigProvider.getConfig().getOptionalValue("dt.telemetry.submission.enabled.default", boolean.class).map(String::valueOf).orElse("true"), PropertyType.BOOLEAN, "Whether submission of telemetry data is enabled", ConfigPropertyAccessMode.READ_WRITE),
+    TELEMETRY_LAST_SUBMISSION_DATA("telemetry", "last.submission.data", null, PropertyType.STRING, "Data of the last telemetry submission", ConfigPropertyAccessMode.READ_ONLY),
+    TELEMETRY_LAST_SUBMISSION_EPOCH_SECONDS("telemetry", "last.submission.epoch.seconds", null, PropertyType.INTEGER, "Timestamp of the last telemetry submission in epoch seconds", ConfigPropertyAccessMode.READ_ONLY);
 
     private final String groupName;
     private final String propertyName;

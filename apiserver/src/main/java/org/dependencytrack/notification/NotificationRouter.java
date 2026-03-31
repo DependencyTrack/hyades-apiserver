@@ -219,6 +219,7 @@ final class NotificationRouter {
                    AND t."group" = ANY(rule."NOTIFY_ON")
                    AND rule."NOTIFICATION_LEVEL" <= t.level
                  WHERE rule."ENABLED"
+                   AND rule."TRIGGER_TYPE" = 'EVENT'
                 """);
 
         return query

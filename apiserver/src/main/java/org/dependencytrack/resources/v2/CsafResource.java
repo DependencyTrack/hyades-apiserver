@@ -22,8 +22,8 @@ import alpine.server.auth.PermissionRequired;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.CsafApi;
 import org.dependencytrack.api.v2.model.CreateCsafAggregatorRequest;
 import org.dependencytrack.api.v2.model.CreateCsafProviderRequest;
@@ -59,7 +59,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
  *
  * @since 5.7.0
  */
-@Path("/")
+@Provider
 public class CsafResource extends AbstractApiResource implements CsafApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CsafResource.class);

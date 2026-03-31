@@ -133,8 +133,8 @@ paths:
     $ref: "./paths/metrics_vulnerabilities.yaml"
   /projects/{uuid}/advisories:
     $ref: "./paths/projects__uuid__advisories.yaml"
-  /projects/{projectUuid}/advisories/{advisoryId}/findings:
-    $ref: "./paths/projects__projectUuid__advisories__advisoryId__findings.yaml"
+  /projects/{uuid}/advisories/{advisoryId}/findings:
+    $ref: "./paths/projects__uuid__advisories__advisoryId__findings.yaml"
   /projects/{uuid}/clone:
     $ref: "./paths/projects__uuid__clone.yaml"
   /projects/{uuid}/components:

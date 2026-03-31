@@ -560,6 +560,9 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                 }
             }
 
+            LOGGER.debug("Updating project's last vuln analysis timestamp");
+            handle.attach(ProjectDao.class).updateLastVulnAnalysis(projectUuid);
+
             LOGGER.debug("Emitting {} notification(s)", notifications.size());
             new JdbiNotificationEmitter(handle).emitAll(notifications);
         });

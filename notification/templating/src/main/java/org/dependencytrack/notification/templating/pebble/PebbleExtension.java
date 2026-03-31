@@ -36,7 +36,9 @@ final class PebbleExtension implements Extension {
 
     @Override
     public Map<String, Filter> getFilters() {
-        return Map.of("summarize", new SummarizeFilter());
+        return Map.of(
+                "formatTimestamp", new FormatTimestampFilter(),
+                "summarize", new SummarizeFilter());
     }
 
     @Override

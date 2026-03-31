@@ -23,6 +23,8 @@ import org.dependencytrack.notification.proto.v1.Bom;
 import org.dependencytrack.notification.proto.v1.Component;
 import org.dependencytrack.notification.proto.v1.Group;
 import org.dependencytrack.notification.proto.v1.Level;
+import org.dependencytrack.notification.proto.v1.NewPolicyViolationsSummarySubject;
+import org.dependencytrack.notification.proto.v1.NewVulnerabilitiesSummarySubject;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.proto.v1.Policy;
 import org.dependencytrack.notification.proto.v1.PolicyCondition;
@@ -62,6 +64,8 @@ import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_PROCESSE
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_PROCESSING_FAILED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_VALIDATION_FAILED;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_INTEGRATION;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_POLICY_VIOLATIONS_SUMMARY;
+import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABILITIES_SUMMARY;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABILITY;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABLE_DEPENDENCY;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_POLICY_VIOLATION;
@@ -146,7 +150,13 @@ public final class TestNotificationFactory {
                             TestNotificationFactory::createUserCreatedTestNotification),
                     Map.entry(
                             new SupplierMatrixKey(SCOPE_SYSTEM, GROUP_USER_DELETED, LEVEL_INFORMATIONAL),
-                            TestNotificationFactory::createUserDeletedTestNotification));
+                            TestNotificationFactory::createUserDeletedTestNotification),
+                    Map.entry(
+                            new SupplierMatrixKey(SCOPE_PORTFOLIO, GROUP_NEW_VULNERABILITIES_SUMMARY, LEVEL_INFORMATIONAL),
+                            TestNotificationFactory::createNewVulnerabilitiesSummaryTestNotification),
+                    Map.entry(
+                            new SupplierMatrixKey(SCOPE_PORTFOLIO, GROUP_NEW_POLICY_VIOLATIONS_SUMMARY, LEVEL_INFORMATIONAL),
+                            TestNotificationFactory::createNewPolicyViolationsSummaryTestNotification));
 
     private TestNotificationFactory() {
     }
@@ -264,6 +274,80 @@ public final class TestNotificationFactory {
         return createVexProcessedNotification(createProject(), createBom());
     }
 
+    public static Notification createNewVulnerabilitiesSummaryTestNotification() {
+        final Project project = createProject();
+        final Component component = createComponent();
+        final Vulnerability vulnerability = createVulnerability();
+
+        final var finding = NewVulnerabilitiesSummarySubject.Finding.newBuilder()
+                .setComponent(component)
+                .setVulnerability(vulnerability)
+                .setAnalyzerIdentity("internal")
+                .setAttributedOn(Timestamps.fromSeconds(66666))
+                .setAnalysisState("FALSE_POSITIVE")
+                .setSuppressed(true)
+                .build();
+
+        final var sinceTimestamp = Timestamps.fromMillis(66666);
+
+        final var subject = NewVulnerabilitiesSummarySubject.newBuilder()
+                .setOverview(NewVulnerabilitiesSummarySubject.Overview.newBuilder()
+                        .setAffectedProjectsCount(1)
+                        .setAffectedComponentsCount(1)
+                        .setNewVulnerabilitiesCount(0)
+                        .setSuppressedNewVulnerabilitiesCount(1)
+                        .setTotalNewVulnerabilitiesCount(1))
+                .addProjectSummaries(NewVulnerabilitiesSummarySubject.ProjectSummaryEntry.newBuilder()
+                        .setProject(project)
+                        .putSuppressedNewVulnerabilitiesCountBySeverity("MEDIUM", 1)
+                        .putTotalNewVulnerabilitiesCountBySeverity("MEDIUM", 1))
+                .addFindingsByProject(NewVulnerabilitiesSummarySubject.ProjectFindingsEntry.newBuilder()
+                        .setProject(project)
+                        .addFindings(finding))
+                .setSince(sinceTimestamp)
+                .build();
+
+        return NotificationFactory.createNewVulnerabilitiesSummaryNotification(subject);
+    }
+
+    public static Notification createNewPolicyViolationsSummaryTestNotification() {
+        final Project project = createProject();
+        final Component component = createComponent();
+        final PolicyCondition condition = createScheduledPolicyCondition();
+
+        final var violation = NewPolicyViolationsSummarySubject.Violation.newBuilder()
+                .setUuid("924eaf86-454d-49f5-96c0-71d9008ac614")
+                .setComponent(component)
+                .setPolicyCondition(condition)
+                .setType("LICENSE")
+                .setTimestamp(Timestamps.fromSeconds(66666))
+                .setAnalysisState("APPROVED")
+                .setSuppressed(false)
+                .build();
+
+        final var sinceTimestamp = Timestamps.fromMillis(66666);
+
+        final var subject = NewPolicyViolationsSummarySubject.newBuilder()
+                .setOverview(NewPolicyViolationsSummarySubject.Overview.newBuilder()
+                        .setAffectedProjectsCount(1)
+                        .setAffectedComponentsCount(1)
+                        .setNewViolationsCount(1)
+                        .putNewViolationsCountByType("LICENSE", 1)
+                        .setSuppressedNewViolationsCount(0)
+                        .setTotalNewViolationsCount(1))
+                .addProjectSummaries(NewPolicyViolationsSummarySubject.ProjectSummaryEntry.newBuilder()
+                        .setProject(project)
+                        .putNewViolationsCountByType("LICENSE", 1)
+                        .putTotalNewViolationsCountByType("LICENSE", 1))
+                .addViolationsByProject(NewPolicyViolationsSummarySubject.ProjectViolationsEntry.newBuilder()
+                        .setProject(project)
+                        .addViolations(violation))
+                .setSince(sinceTimestamp)
+                .build();
+
+        return NotificationFactory.createNewPolicyViolationsSummaryNotification(subject);
+    }
+
     private static Bom createBom() {
         return Bom.newBuilder()
                 .setContent("bomContent")
@@ -295,6 +379,16 @@ public final class TestNotificationFactory {
                 .setSubject("PACKAGE_URL")
                 .setOperator("IS")
                 .setValue("pkg:maven/foo/bar@1.2.3")
+                .build();
+    }
+
+    private static PolicyCondition createScheduledPolicyCondition() {
+        return PolicyCondition.newBuilder()
+                .setUuid("b029fce3-96f2-4c4a-9049-61070e9b6ea6")
+                .setPolicy(createPolicy())
+                .setSubject("AGE")
+                .setOperator("NUMERIC_EQUAL")
+                .setValue("P666D")
                 .build();
     }
 

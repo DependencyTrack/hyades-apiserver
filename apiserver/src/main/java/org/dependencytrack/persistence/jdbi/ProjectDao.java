@@ -22,15 +22,16 @@ import alpine.model.Team;
 import alpine.persistence.PaginatedResult;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.core.type.TypeReference;
-import jakarta.annotation.Nullable;
 import org.dependencytrack.exception.AlreadyExistsException;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.persistence.jdbi.mapping.ExternalReferenceMapper;
 import org.dependencytrack.persistence.jdbi.mapping.OrganizationalContactMapper;
 import org.dependencytrack.persistence.jdbi.mapping.OrganizationalEntityMapper;
+import org.dependencytrack.persistence.jdbi.query.ListProjectsConciseQuery;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.mapper.reflect.BeanMapper;
 import org.jdbi.v3.core.mapper.reflect.ColumnName;
@@ -46,13 +47,16 @@ import org.jdbi.v3.sqlobject.customizer.AllowUnusedBindings;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
+import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
+import org.jspecify.annotations.Nullable;
 import org.postgresql.util.PSQLException;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -61,7 +65,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.deserializeJson;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
@@ -94,6 +97,8 @@ public interface ProjectDao extends SqlObject {
                  , "PROJECT"."CLASSIFIER" AS "classifier"
                  , "PROJECT"."INACTIVE_SINCE" AS "inactiveSince"
                  , "PROJECT"."IS_LATEST" AS "isLatest"
+                 , "PROJECT"."COLLECTION_LOGIC" AS "collectionLogic"
+                 , "PROJECT"."COLLECTION_TAG_ID" AS "collectionTagId"
                  , (SELECT ARRAY_AGG("TAG"."NAME")
                       FROM "TAG"
                      INNER JOIN "PROJECTS_TAGS"
@@ -131,6 +136,7 @@ public interface ProjectDao extends SqlObject {
                              , "VULNERABILITIES"
                           FROM "PROJECTMETRICS"
                          WHERE "PROJECTMETRICS"."PROJECT_ID" = "PROJECT"."ID"
+                           AND "PROJECT"."COLLECTION_LOGIC" IS NULL
                          ORDER BY "PROJECTMETRICS"."LAST_OCCURRENCE" DESC
                          LIMIT 1
                       ) AS m
@@ -207,7 +213,7 @@ public interface ProjectDao extends SqlObject {
             @AllowApiOrdering.Column(name = "lastBomImportFormat"),
             @AllowApiOrdering.Column(name = "lastRiskScore")
     })
-    List<ConciseProjectListRow> getPageConcise(
+    List<ConciseProjectListRow> queryPageConcise(
             @Bind String nameFilter,
             @Bind String versionFilter,
             @Bind String classifierFilter,
@@ -216,10 +222,52 @@ public interface ProjectDao extends SqlObject {
             @Bind Boolean activeFilter,
             @Bind Boolean onlyRootFilter,
             @Bind UUID parentUuidFilter,
-            @Define boolean includeMetrics
-    );
+            @Define boolean includeMetrics);
+
+    default List<ConciseProjectListRow> getPageConcise(ListProjectsConciseQuery query) {
+        List<ConciseProjectListRow> rows = queryPageConcise(
+                query.nameFilter(),
+                query.versionFilter(),
+                query.classifierFilter(),
+                query.tagFilter(),
+                query.teamFilter(),
+                query.activeFilter(),
+                query.onlyRootFilter(),
+                query.parentUuidFilter(),
+                query.includeMetrics());
+        if (!query.includeMetrics() || rows.isEmpty()) {
+            return rows;
+        }
+
+        // Metrics of collection projects cannot reasonably be queried inline.
+        // If this result set contains collections, query their metrics separately.
+        // Note that collection metrics are retrieved in bulk, and does not cause N+1.
+        final Set<Long> collectionIds = rows.stream()
+                .filter(row -> row.collectionLogic() != null && row.metrics() == null)
+                .map(ConciseProjectListRow::id)
+                .collect(Collectors.toSet());
+        if (collectionIds.isEmpty()) {
+            return rows;
+        }
+
+        final Map<Long, ProjectMetrics> collectionMetricsById = getHandle()
+                .attach(MetricsDao.class)
+                .getMostRecentCollectionProjectMetrics(collectionIds)
+                .stream()
+                .collect(Collectors.toMap(ProjectMetrics::getProjectId, Function.identity()));
+
+        return rows.stream()
+                .map(row -> {
+                    final ProjectMetrics pm = collectionMetricsById.get(row.id());
+                    return pm != null
+                            ? row.withMetrics(ConciseProjectMetricsRow.of(pm))
+                            : row;
+                })
+                .toList();
+    }
 
     record ConciseProjectListRow(
+            long id,
             UUID uuid,
             String group,
             String name,
@@ -227,6 +275,8 @@ public interface ProjectDao extends SqlObject {
             String classifier,
             @Nullable Instant inactiveSince,
             boolean isLatest,
+            @Nullable ProjectCollectionLogic collectionLogic,
+            @Nullable Long collectionTagId,
             List<String> tags,
             List<String> teams,
             @Nullable Instant lastBomImport,
@@ -234,8 +284,30 @@ public interface ProjectDao extends SqlObject {
             @Nullable Double lastRiskScore,
             boolean hasChildren,
             @Nullable @Json ConciseProjectMetricsRow metrics,
-            long totalCount
-    ) {
+            long totalCount) {
+
+        ConciseProjectListRow withMetrics(@Nullable ConciseProjectMetricsRow metrics) {
+            return new ConciseProjectListRow(
+                    this.id,
+                    this.uuid,
+                    this.group,
+                    this.name,
+                    this.version,
+                    this.classifier,
+                    this.inactiveSince,
+                    this.isLatest,
+                    this.collectionLogic,
+                    this.collectionTagId,
+                    this.tags,
+                    this.teams,
+                    this.lastBomImport,
+                    this.lastBomImportFormat,
+                    this.lastRiskScore,
+                    this.hasChildren,
+                    metrics,
+                    this.totalCount);
+        }
+
     }
 
     record ConciseProjectMetricsRow(
@@ -253,8 +325,27 @@ public interface ProjectDao extends SqlObject {
             @JsonAlias("policyviolations_warn") int policyViolationsWarn,
             @JsonAlias("riskscore") double riskScore,
             @JsonAlias("unassigned_severity") int unassigned,
-            int vulnerabilities
-    ) {
+            int vulnerabilities) {
+
+        static ConciseProjectMetricsRow of(ProjectMetrics pm) {
+            return new ConciseProjectMetricsRow(
+                    pm.getComponents(),
+                    pm.getCritical(),
+                    pm.getHigh(),
+                    pm.getLow(),
+                    pm.getMedium(),
+                    pm.getPolicyViolationsFail(),
+                    pm.getPolicyViolationsInfo(),
+                    pm.getPolicyViolationsLicenseTotal(),
+                    pm.getPolicyViolationsOperationalTotal(),
+                    pm.getPolicyViolationsSecurityTotal(),
+                    pm.getPolicyViolationsTotal(),
+                    pm.getPolicyViolationsWarn(),
+                    pm.getInheritedRiskScore(),
+                    pm.getUnassigned(),
+                    pm.getVulnerabilities());
+        }
+
     }
 
     record ProjectListRow(Project project, long totalCount) {
@@ -293,6 +384,7 @@ public interface ProjectDao extends SqlObject {
                  , "PROJECT"."AUTHORS"
                  , "PROJECT"."IS_LATEST" AS "isLatest"
                  , "PROJECT"."INACTIVE_SINCE" AS "inactiveSince"
+                 , "PROJECT"."COLLECTION_LOGIC" AS "collectionLogic"
                  , (SELECT JSONB_AGG(JSONB_BUILD_OBJECT('id', "ID", 'name', "NAME"))
                         FROM "TAG"
                         INNER JOIN "PROJECTS_TAGS"
@@ -383,25 +475,62 @@ public interface ProjectDao extends SqlObject {
             @Define boolean onlyRoot
     );
 
-    default PaginatedResult getProjects(String nameFilter, String classifierFilter, String tagFilter, String teamFilter, String notAssignedToTeamWithUuid,
-                                         boolean excludeInactive, boolean onlyRoot, boolean includeMetrics) {
-        final List<ProjectListRow> projectListRows = getProjects(nameFilter, classifierFilter, tagFilter, teamFilter, notAssignedToTeamWithUuid, excludeInactive, onlyRoot);
-        final long totalCount = projectListRows.isEmpty() ? 0 : projectListRows.getFirst().totalCount();
+    default PaginatedResult getProjects(
+            String nameFilter,
+            String classifierFilter,
+            String tagFilter,
+            String teamFilter,
+            String notAssignedToTeamWithUuid,
+            boolean excludeInactive,
+            boolean onlyRoot,
+            boolean includeMetrics) {
+        final List<ProjectListRow> projectListRows = getProjects(
+                nameFilter,
+                classifierFilter,
+                tagFilter,
+                teamFilter,
+                notAssignedToTeamWithUuid,
+                excludeInactive,
+                onlyRoot);
+        final long totalCount = !projectListRows.isEmpty()
+                ? projectListRows.getFirst().totalCount()
+                : 0;
         final List<Project> projects = projectListRows.stream()
                 .map(ProjectListRow::project)
                 .toList();
+
         if (includeMetrics) {
             final Map<Long, Project> projectById = projects.stream()
+                    .filter(project -> project.getCollectionLogic() == null)
                     .collect(Collectors.toMap(Project::getId, Function.identity()));
-            final List<ProjectMetrics> metricsList = withJdbiHandle(
-                    handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(projectById.keySet()));
+            final List<ProjectMetrics> metricsList = getHandle()
+                    .attach(MetricsDao.class)
+                    .getMostRecentProjectMetrics(projectById.keySet());
+
             for (final ProjectMetrics metrics : metricsList) {
                 final Project project = projectById.get(metrics.getProjectId());
                 if (project != null) {
                     project.setMetrics(metrics);
                 }
             }
+
+            final Map<Long, Project> collectionById = projects.stream()
+                    .filter(project -> project.getCollectionLogic() != null)
+                    .collect(Collectors.toMap(Project::getId, Function.identity()));
+            if (!collectionById.isEmpty()) {
+                final List<ProjectMetrics> collectionMetrics = getHandle()
+                        .attach(MetricsDao.class)
+                        .getMostRecentCollectionProjectMetrics(collectionById.keySet());
+
+                for (final ProjectMetrics metrics : collectionMetrics) {
+                    final Project collection = collectionById.get(metrics.getProjectId());
+                    if (collection != null) {
+                        collection.setMetrics(metrics);
+                    }
+                }
+            }
         }
+
         return (new PaginatedResult()).objects(projects).total(totalCount);
     }
 
@@ -412,19 +541,36 @@ public interface ProjectDao extends SqlObject {
             """)
     int deleteProject(@Bind final UUID projectUuid);
 
-    @SqlQuery("""
-            WITH "CTE" AS (
+    @SqlUpdate("""
+            WITH cte_locked AS (
               SELECT "ID"
                 FROM "PROJECT"
-               WHERE "INACTIVE_SINCE" < :retentionCutOff
-               ORDER BY "INACTIVE_SINCE"
-               LIMIT :batchSize
+               WHERE ${apiProjectAclCondition}
+                 AND "UUID" = ANY(:projectUuids)
+               ORDER BY "ID"
+                 FOR UPDATE
             )
             DELETE
               FROM "PROJECT"
-             WHERE "ID" IN (SELECT "ID" FROM "CTE")
-             RETURNING "NAME", "VERSION", "INACTIVE_SINCE", "UUID"
-           """)
+             WHERE "ID" IN (SELECT "ID" FROM cte_locked)
+            RETURNING "UUID"
+            """)
+    @GetGeneratedKeys
+    Set<UUID> deleteProjects(@Bind Collection<UUID> projectUuids);
+
+    @SqlQuery("""
+             WITH "CTE" AS (
+               SELECT "ID"
+                 FROM "PROJECT"
+                WHERE "INACTIVE_SINCE" < :retentionCutOff
+                ORDER BY "INACTIVE_SINCE"
+                LIMIT :batchSize
+             )
+             DELETE
+               FROM "PROJECT"
+              WHERE "ID" IN (SELECT "ID" FROM "CTE")
+              RETURNING "NAME", "VERSION", "INACTIVE_SINCE", "UUID"
+            """)
     @RegisterConstructorMapper(DeletedProject.class)
     List<DeletedProject> deleteInactiveProjectsForRetentionDuration(@Bind final Instant retentionCutOff, @Bind final int batchSize);
 
@@ -435,19 +581,19 @@ public interface ProjectDao extends SqlObject {
     }
 
     @SqlQuery("""
-           DELETE
-            FROM "PROJECT"
-            WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
-            AND "PROJECT"."NAME" = :projectName
-            AND "PROJECT"."ID" NOT IN (
-                SELECT "PROJECT"."ID" 
-                 FROM "PROJECT"
-                 WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
-                 AND "PROJECT"."NAME" = :projectName
-                 ORDER BY "PROJECT"."INACTIVE_SINCE" DESC
-                 LIMIT :versionCountThreshold
-                )
-            RETURNING "NAME", "VERSION", "INACTIVE_SINCE", "UUID"
+            DELETE
+             FROM "PROJECT"
+             WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
+             AND "PROJECT"."NAME" = :projectName
+             AND "PROJECT"."ID" NOT IN (
+                 SELECT "PROJECT"."ID" 
+                  FROM "PROJECT"
+                  WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
+                  AND "PROJECT"."NAME" = :projectName
+                  ORDER BY "PROJECT"."INACTIVE_SINCE" DESC
+                  LIMIT :versionCountThreshold
+                 )
+             RETURNING "NAME", "VERSION", "INACTIVE_SINCE", "UUID"
             """)
     @RegisterConstructorMapper(DeletedProject.class)
     List<DeletedProject> retainLastXInactiveProjects(@Bind final String projectName, @Bind final int versionCountThreshold);
@@ -462,10 +608,23 @@ public interface ProjectDao extends SqlObject {
             """)
     List<String> getDistinctProjects(@Bind final int versionCountThreshold, @Bind final int batchSize);
 
+    record ProjectInfoRow(long id, boolean isCollection) {
+    }
+
     @SqlQuery("""
-            SELECT "ID" FROM "PROJECT" WHERE "UUID" = :projectUuid
+            SELECT "ID"
+                 , "COLLECTION_LOGIC" IS NOT NULL AS is_collection
+              FROM "PROJECT"
+             WHERE "UUID" = :projectUuid
             """)
-    Long getProjectId(@Bind UUID projectUuid);
+    @RegisterConstructorMapper(ProjectInfoRow.class)
+    @Nullable
+    ProjectInfoRow getProjectInfo(@Bind UUID projectUuid);
+
+    default @Nullable Long getProjectId(UUID projectUuid) {
+        final ProjectInfoRow info = getProjectInfo(projectUuid);
+        return info != null ? info.id() : null;
+    }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
@@ -520,10 +679,22 @@ public interface ProjectDao extends SqlObject {
         }
     }
 
+    /**
+     * @since 5.7.0
+     */
+    @SqlUpdate("""
+            UPDATE "PROJECT"
+               SET "LAST_VULNERABILITY_ANALYSIS" = NOW()
+             WHERE "UUID" = :uuid
+            """)
+    void updateLastVulnAnalysis(@Bind UUID uuid);
+
     class ProjectListRowMapper implements RowMapper<ProjectListRow> {
 
-        private static final TypeReference<Set<Tag>> TAGS_TYPE_REF = new TypeReference<>() {};
-        private static final TypeReference<Set<Team>> TEAMS_TYPE_REF = new TypeReference<>() {};
+        private static final TypeReference<Set<Tag>> TAGS_TYPE_REF = new TypeReference<>() {
+        };
+        private static final TypeReference<Set<Team>> TEAMS_TYPE_REF = new TypeReference<>() {
+        };
 
         private final RowMapper<Project> projectMapper = BeanMapper.of(Project.class);
 

@@ -28,6 +28,7 @@ import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
 import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
 import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
@@ -112,8 +113,8 @@ final class GoModulesPackageMetadataResolver implements PackageMetadataResolver 
     private byte @Nullable [] fetchModule(
             String modulePath,
             PackageRepository repository) throws InterruptedException {
-        final String baseUrl = trimTrailingSlash(repository.url());
-        final String url = baseUrl + "/" + modulePath + "/@latest";
+        final String[] moduleSegments = modulePath.split("/");
+        final String url = UrlUtils.join(UrlUtils.join(repository.url(), moduleSegments), "@latest");
 
         final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -145,8 +146,9 @@ final class GoModulesPackageMetadataResolver implements PackageMetadataResolver 
             String modulePath,
             String version,
             PackageRepository repository) throws InterruptedException {
-        final String baseUrl = trimTrailingSlash(repository.url());
-        final String url = baseUrl + "/" + modulePath + "/@v/" + version + ".info";
+        final String[] moduleSegments = modulePath.split("/");
+        final String url = UrlUtils.join(
+                UrlUtils.join(repository.url(), moduleSegments), "@v", version + ".info");
 
         final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -190,10 +192,6 @@ final class GoModulesPackageMetadataResolver implements PackageMetadataResolver 
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private static String trimTrailingSlash(String url) {
-        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
 }

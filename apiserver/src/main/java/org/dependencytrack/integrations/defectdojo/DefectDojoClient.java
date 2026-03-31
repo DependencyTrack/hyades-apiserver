@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.dependencytrack.common.Mappers;
 import org.dependencytrack.common.MultipartBodyPublisher;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -53,7 +54,12 @@ public class DefectDojoClient {
         this.baseURL = baseURL;
     }
 
-    public void uploadDependencyTrackFindings(final String token, final String engagementId, final InputStream findingsJson, final Boolean verifyFindings) {
+    public void uploadDependencyTrackFindings(
+            final String token,
+            final String engagementId,
+            final InputStream findingsJson,
+            final Boolean verifyFindings,
+            final @Nullable String testTitle) {
         LOGGER.debug("Uploading Dependency-Track findings to DefectDojo");
 
         final var multipart = new MultipartBodyPublisher()
@@ -66,6 +72,9 @@ public class DefectDojoClient {
                 .addFormField("close_old_findings", "true")
                 .addFormField("push_to_jira", "false")
                 .addFormField("scan_date", DATE_FORMAT.format(new Date()));
+        if (testTitle != null) {
+            multipart.addFormField("test_title", testTitle);
+        }
 
         final var request = HttpRequest.newBuilder()
                 .uri(URI.create(baseURL + "/api/v2/import-scan/"))
@@ -142,12 +151,16 @@ public class DefectDojoClient {
         return new ArrayList<>();
     }
 
-    public String getDojoTestId(final String engagementID, final ArrayList<String> dojoTests) {
+    public String getDojoTestId(
+            final String engagementID,
+            final ArrayList<String> dojoTests,
+            final @Nullable String testTitle) {
         for (final String dojoTestJson : dojoTests) {
             try {
                 JsonNode dojoTest = Mappers.jsonMapper().readTree(dojoTestJson);
-                if (dojoTest.path("engagement").asText().equals(engagementID) &&
-                        dojoTest.path("scan_type").asText().equals("Dependency Track Finding Packaging Format (FPF) Export")) {
+                if (dojoTest.path("engagement").asText().equals(engagementID)
+                        && dojoTest.path("scan_type").asText().equals("Dependency Track Finding Packaging Format (FPF) Export")
+                        && (testTitle == null || dojoTest.path("title").asText("").equals(testTitle))) {
                     return dojoTest.path("id").asText();
                 }
             } catch (JsonProcessingException e) {
@@ -167,7 +180,14 @@ public class DefectDojoClient {
         return list;
     }
 
-    public void reimportDependencyTrackFindings(final String token, final String engagementId, final InputStream findingsJson, final String testId, final Boolean doNotReactivate, final Boolean verifyFindings) {
+    public void reimportDependencyTrackFindings(
+            final String token,
+            final String engagementId,
+            final InputStream findingsJson,
+            final String testId,
+            final Boolean doNotReactivate,
+            final Boolean verifyFindings,
+            final @Nullable String testTitle) {
         LOGGER.debug("Re-reimport Dependency-Track findings to DefectDojo per Engagement");
 
         final var multipart = new MultipartBodyPublisher()
@@ -182,6 +202,9 @@ public class DefectDojoClient {
                 .addFormField("do_not_reactivate", doNotReactivate.toString())
                 .addFormField("test", testId)
                 .addFormField("scan_date", DATE_FORMAT.format(new Date()));
+        if (testTitle != null) {
+            multipart.addFormField("test_title", testTitle);
+        }
 
         final var request = HttpRequest.newBuilder()
                 .uri(URI.create(baseURL + "/api/v2/reimport-scan/"))

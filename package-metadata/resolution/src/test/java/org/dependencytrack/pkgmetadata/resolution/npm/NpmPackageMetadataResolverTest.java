@@ -159,7 +159,7 @@ class NpmPackageMetadataResolverTest {
 
     @Test
     void shouldResolveScopedPackage(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
-        stubFor(get(urlPathEqualTo("/%40scope%2Fmypackage"))
+        stubFor(get(urlPathEqualTo("/@scope%2Fmypackage"))
                 .willReturn(aResponse().withStatus(200).withBody(ABBREVIATED_DOC)));
 
         final var purl = PackageURLBuilder.aPackageURL()

@@ -42,7 +42,12 @@ import org.dependencytrack.dex.engine.api.request.CreateTaskQueueRequest;
 import org.dependencytrack.dex.listener.DelayedBomProcessedNotificationEmitter;
 import org.dependencytrack.dex.listener.ProjectVulnAnalysisCompleteNotificationEmitter;
 import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.metrics.FetchProjectMetricsUpdateCandidatesActivity;
+import org.dependencytrack.metrics.RefreshGlobalPortfolioMetricsActivity;
+import org.dependencytrack.metrics.UpdatePortfolioMetricsWorkflow;
 import org.dependencytrack.metrics.UpdateProjectMetricsActivity;
+import org.dependencytrack.notification.ProcessScheduledNotificationRuleActivity;
+import org.dependencytrack.notification.ProcessScheduledNotificationsWorkflow;
 import org.dependencytrack.notification.PublishNotificationActivity;
 import org.dependencytrack.notification.PublishNotificationWorkflow;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
@@ -59,6 +64,7 @@ import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
 import org.dependencytrack.proto.internal.workflow.v1.DiscoverCsafProvidersArg;
 import org.dependencytrack.proto.internal.workflow.v1.EvalProjectPoliciesArg;
 import org.dependencytrack.proto.internal.workflow.v1.FetchPackageMetadataResolutionCandidatesRes;
+import org.dependencytrack.proto.internal.workflow.v1.FetchProjectMetricsUpdateCandidatesRes;
 import org.dependencytrack.proto.internal.workflow.v1.ImportBomArg;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerArg;
@@ -66,6 +72,8 @@ import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerRes;
 import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
 import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisArg;
 import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisRes;
+import org.dependencytrack.proto.internal.workflow.v1.ProcessScheduledNotificationRuleArg;
+import org.dependencytrack.proto.internal.workflow.v1.ProcessScheduledNotificationsWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationActivityArg;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
@@ -178,12 +186,22 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
+                new ProcessScheduledNotificationsWorkflow(),
+                protoConverter(ProcessScheduledNotificationsWorkflowArg.class),
+                voidConverter(),
+                Duration.ofMinutes(5));
+        engine.registerWorkflow(
                 new PublishNotificationWorkflow(),
                 protoConverter(PublishNotificationWorkflowArg.class),
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
                 new ResolvePackageMetadataWorkflow(),
+                voidConverter(),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerWorkflow(
+                new UpdatePortfolioMetricsWorkflow(),
                 voidConverter(),
                 voidConverter(),
                 Duration.ofMinutes(1));
@@ -222,6 +240,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 protoConverter(FetchPackageMetadataResolutionCandidatesRes.class),
                 Duration.ofMinutes(1));
         engine.registerActivity(
+                new FetchProjectMetricsUpdateCandidatesActivity(),
+                voidConverter(),
+                protoConverter(FetchProjectMetricsUpdateCandidatesRes.class),
+                Duration.ofMinutes(1));
+        engine.registerActivity(
                 new ImportCsafDocumentsActivity(),
                 protoConverter(ImportCsafDocumentsArg.class),
                 voidConverter(),
@@ -242,6 +265,14 @@ public final class DexEngineInitializer implements ServletContextListener {
                 protoConverter(PrepareVulnAnalysisRes.class),
                 Duration.ofMinutes(5));
         engine.registerActivity(
+                new ProcessScheduledNotificationRuleActivity(
+                        engine,
+                        fileStorage,
+                        config.getValue("dt.notification.outbox-relay.large-notification-threshold-bytes", int.class)),
+                protoConverter(ProcessScheduledNotificationRuleArg.class),
+                voidConverter(),
+                Duration.ofMinutes(5));
+        engine.registerActivity(
                 new PublishNotificationActivity(
                         pluginManager,
                         fileStorage,
@@ -256,6 +287,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                         pluginManager,
                         new CelVulnerabilityPolicyEvaluator()),
                 protoConverter(ReconcileVulnAnalysisResultsArg.class),
+                voidConverter(),
+                Duration.ofMinutes(5));
+        engine.registerActivity(
+                new RefreshGlobalPortfolioMetricsActivity(),
+                voidConverter(),
                 voidConverter(),
                 Duration.ofMinutes(5));
         engine.registerActivity(

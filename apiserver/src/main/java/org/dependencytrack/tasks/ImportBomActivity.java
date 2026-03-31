@@ -395,7 +395,7 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
         );
     }
 
-    private record ProcessedBom(
+    record ProcessedBom(
             Project project,
             Collection<Component> components,
             Collection<ServiceComponent> services
@@ -454,7 +454,8 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
                         processServices(qm, persistentProject, bom.services(), bom.identitiesByBomRef(), bom.bomRefsByIdentity());
 
                 LOGGER.info("Processing %d dependency graph entries".formatted(bom.dependencyGraph().asMap().size()));
-                processDependencyGraph(qm, persistentProject, bom.dependencyGraph(), persistentComponentsByIdentity, bom.identitiesByBomRef());
+                processDependencyGraph(qm, persistentProject, bom.dependencyGraph(), persistentComponentsByIdentity,
+                        bom.identitiesByBomRef(), bom.bomRefsByIdentity());
 
                 recordBomImport(ctx, qm, persistentProject);
 
@@ -738,7 +739,8 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
             final Project project,
             final MultiValuedMap<String, String> dependencyGraph,
             final Map<ComponentIdentity, Component> componentsByIdentity,
-            final Map<String, ComponentIdentity> identitiesByBomRef
+            final Map<String, ComponentIdentity> identitiesByBomRef,
+            final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity
     ) {
         assertPersistent(project, "Project must be persistent");
 
@@ -750,7 +752,10 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
                         is not one of them; Graph will be incomplete because it is not possible to determine its root\
                         """.formatted(dependencyGraph.size()));
             }
-            final String directDependenciesJson = resolveDirectDependenciesJson(project.getBomRef(), directDependencyBomRefs, identitiesByBomRef);
+            final String directDependenciesJson = resolveDependenciesJson(
+                    List.of(project.getBomRef()),
+                    sourceBomRef -> sourceBomRef.equals(project.getBomRef()) ? directDependencyBomRefs : null,
+                    identitiesByBomRef);
             if (!Objects.equals(directDependenciesJson, project.getDirectDependencies())) {
                 project.setDirectDependencies(directDependenciesJson);
                 qm.getPersistenceManager().flush();
@@ -763,25 +768,12 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
             }
         }
 
-        for (final Map.Entry<String, ComponentIdentity> entry : identitiesByBomRef.entrySet()) {
-            final String componentBomRef = entry.getKey();
-            final Collection<String> directDependencyBomRefs = dependencyGraph.get(componentBomRef);
-            final String directDependenciesJson = resolveDirectDependenciesJson(componentBomRef, directDependencyBomRefs, identitiesByBomRef);
-
-            final ComponentIdentity dependencyIdentity = identitiesByBomRef.get(entry.getKey());
-            final Component component = componentsByIdentity.get(dependencyIdentity);
-            // TODO: Check servicesByIdentity when persistentComponent is null
-            //   We do not currently store directDependencies for ServiceComponent
-            if (component != null) {
-                assertPersistent(component, "Component must be persistent");
-                if (!Objects.equals(directDependenciesJson, component.getDirectDependencies())) {
-                    component.setDirectDependencies(directDependenciesJson);
-                }
-            } else {
-                LOGGER.warn("""
-                        Unable to resolve component identity %s to a persistent component; \
-                        As a result, the dependency graph will likely be incomplete\
-                        """.formatted(dependencyIdentity.toJSON()));
+        for (final Component component : componentsByIdentity.values()) {
+            assertPersistent(component, "Component must be persistent");
+            final String mergedDirectDependenciesJson = resolveMergedDirectDependenciesJson(
+                    component, dependencyGraph, identitiesByBomRef, bomRefsByIdentity);
+            if (!Objects.equals(mergedDirectDependenciesJson, component.getDirectDependencies())) {
+                component.setDirectDependencies(mergedDirectDependenciesJson);
             }
         }
 
@@ -807,34 +799,63 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
         project.setLastBomImportFormat("%s %s".formatted(ctx.bomFormat.getFormatShortName(), ctx.bomSpecVersion));
     }
 
-    private String resolveDirectDependenciesJson(
-            final String dependencyBomRef,
-            final Collection<String> directDependencyBomRefs,
+    /**
+     * Builds {@code directDependencies} JSON for one component by merging direct dependency edges from every BOM ref
+     * that maps to the same deduplicated identity.
+     * <p>
+     * {@link #distinctComponentsByIdentity} records those refs under {@code bomRefsByIdentity} using identities from
+     * consumption (UUID usually unset). After persist, {@link ComponentIdentity#equals(Object)} includes UUID, so we
+     * look up with {@code new ComponentIdentity(component, true)} — same structural key as at consumption, same pattern
+     * as matching existing rows in {@link #processComponents}.
+     */
+    private @Nullable String resolveMergedDirectDependenciesJson(
+            final Component component,
+            final MultiValuedMap<String, String> dependencyGraph,
+            final Map<String, ComponentIdentity> identitiesByBomRef,
+            final MultiValuedMap<ComponentIdentity, String> bomRefsByIdentity
+    ) {
+        final Collection<String> sourceBomRefs = bomRefsByIdentity.get(
+                new ComponentIdentity(component, /* excludeUuid */ true));
+        if (sourceBomRefs == null || sourceBomRefs.isEmpty()) {
+            return null;
+        }
+
+        return resolveDependenciesJson(sourceBomRefs, dependencyGraph::get, identitiesByBomRef);
+    }
+
+    private @Nullable String resolveDependenciesJson(
+            final Collection<String> sourceBomRefs,
+            final Function<String, Collection<String>> directDependencyBomRefsProvider,
             final Map<String, ComponentIdentity> identitiesByBomRef
     ) {
-        if (directDependencyBomRefs == null || directDependencyBomRefs.isEmpty()) {
+        if (sourceBomRefs == null || sourceBomRefs.isEmpty()) {
             return null;
         }
 
         final var jsonDependencies = Mappers.jsonMapper().createArrayNode();
         final var directDependencyIdentitiesSeen = new HashSet<ComponentIdentity>();
-        for (final String directDependencyBomRef : directDependencyBomRefs) {
-            final ComponentIdentity directDependencyIdentity = identitiesByBomRef.get(directDependencyBomRef);
-            if (directDependencyIdentity != null) {
-                if (!directDependencyIdentitiesSeen.add(directDependencyIdentity)) {
-                    // It's possible that multiple direct dependencies of a project or component
-                    // fall victim to de-duplication. In that case, we can ironically end up with
-                    // duplicate component identities (i.e. duplicate BOM refs).
-                    LOGGER.debug("Omitting duplicate direct dependency %s for BOM ref %s"
-                            .formatted(directDependencyBomRef, dependencyBomRef));
-                    continue;
+
+        for (final String sourceBomRef : sourceBomRefs) {
+            final Collection<String> directDependencyBomRefs = directDependencyBomRefsProvider.apply(sourceBomRef);
+            if (directDependencyBomRefs == null || directDependencyBomRefs.isEmpty()) {
+                continue;
+            }
+
+            for (final String directDependencyBomRef : directDependencyBomRefs) {
+                final ComponentIdentity directDependencyIdentity = identitiesByBomRef.get(directDependencyBomRef);
+                if (directDependencyIdentity != null) {
+                    if (!directDependencyIdentitiesSeen.add(directDependencyIdentity)) {
+                        LOGGER.debug("Omitting duplicate direct dependency %s for BOM ref %s"
+                                .formatted(directDependencyBomRef, sourceBomRef));
+                        continue;
+                    }
+                    jsonDependencies.add(directDependencyIdentity.toJSON());
+                } else {
+                    LOGGER.warn("""
+                            Unable to resolve BOM ref %s to a component identity while processing direct \
+                            dependencies of BOM ref %s; As a result, the dependency graph will likely be incomplete\
+                            """.formatted(sourceBomRef, directDependencyBomRef));
                 }
-                jsonDependencies.add(directDependencyIdentity.toJSON());
-            } else {
-                LOGGER.warn("""
-                        Unable to resolve BOM ref %s to a component identity while processing direct \
-                        dependencies of BOM ref %s; As a result, the dependency graph will likely be incomplete\
-                        """.formatted(dependencyBomRef, directDependencyBomRef));
             }
         }
 

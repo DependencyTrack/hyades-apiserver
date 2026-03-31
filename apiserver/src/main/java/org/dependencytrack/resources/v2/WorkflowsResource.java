@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.util.JsonFormat;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.WorkflowsApi;
 import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponseItem;
@@ -48,6 +48,7 @@ import org.dependencytrack.dex.proto.event.v1.WorkflowEvent;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentArtifact;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentCommon;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentCsaf;
+import org.dependencytrack.proto.internal.workflow.v1.ArgumentMetrics;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentNotification;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentPackageMetadata;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentVulnanalysis;
@@ -63,7 +64,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-@Path("/")
+@Provider
 @NullMarked
 public class WorkflowsResource extends AbstractApiResource implements WorkflowsApi {
 
@@ -90,6 +91,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                                 .add(ArgumentArtifact.getDescriptor().getMessageTypes())
                                 .add(ArgumentCommon.getDescriptor().getMessageTypes())
                                 .add(ArgumentCsaf.getDescriptor().getMessageTypes())
+                                .add(ArgumentMetrics.getDescriptor().getMessageTypes())
                                 .add(ArgumentNotification.getDescriptor().getMessageTypes())
                                 .add(ArgumentPackageMetadata.getDescriptor().getMessageTypes())
                                 .add(ArgumentVulnanalysis.getDescriptor().getMessageTypes())

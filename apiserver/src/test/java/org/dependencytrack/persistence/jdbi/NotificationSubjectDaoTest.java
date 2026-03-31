@@ -23,19 +23,27 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Policy;
+import org.dependencytrack.model.PolicyCondition.Operator;
+import org.dependencytrack.model.PolicyCondition.Subject;
+import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
+import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityKey;
 import org.dependencytrack.notification.proto.v1.ComponentVulnAnalysisCompleteSubject;
 import org.dependencytrack.notification.proto.v1.NewVulnerabilitySubject;
 import org.dependencytrack.notification.proto.v1.NewVulnerableDependencySubject;
+import org.dependencytrack.notification.proto.v1.PolicyViolationSubject;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
+import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.query.GetProjectAuditChangeNotificationSubjectQuery;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -882,5 +890,190 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         assertThat(vulnerability.getSeverity()).isEqualTo("CRITICAL");
         assertThat(vulnerability.getCvssV3()).isEqualTo(9.8);
         assertThat(vulnerability.getCvssV3Vector()).isEqualTo("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H");
+    }
+
+    @Test
+    public void shouldGetForNewPolicyViolations() {
+        final var project = new Project();
+        project.setName("projectName");
+        project.setVersion("projectVersion");
+        project.setDescription("projectDescription");
+        project.setPurl("projectPurl");
+        qm.persist(project);
+        qm.bind(project, List.of(
+                qm.createTag("projectTagA"),
+                qm.createTag("projectTagB")
+        ));
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setGroup("componentGroup");
+        component.setName("componentName");
+        component.setVersion("componentVersion");
+        component.setPurl("componentPurl");
+        component.setMd5("componentMd5");
+        component.setSha1("componentSha1");
+        component.setSha256("componentSha256");
+        component.setSha512("componentSha512");
+        qm.persist(component);
+
+        final var policy = qm.createPolicy("testPolicy", Policy.Operator.ALL, Policy.ViolationState.FAIL);
+        final var condition = qm.createPolicyCondition(policy, Subject.VERSION, Operator.NUMERIC_EQUAL, "1.0");
+
+        final var violation = new PolicyViolation();
+        violation.setType(PolicyViolation.Type.OPERATIONAL);
+        violation.setComponent(component);
+        violation.setPolicyCondition(condition);
+        violation.setTimestamp(new Date());
+        qm.persist(violation);
+
+        final List<PolicyViolationSubject> subjects = withJdbiHandle(handle -> handle
+                .attach(NotificationSubjectDao.class)
+                .getForNewPolicyViolations(List.of(violation.getId())));
+
+        assertThat(subjects).satisfiesExactly(subject ->
+                assertThatJson(JsonFormat.printer().print(subject))
+                        .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                        .withMatcher("componentUuid", equalTo(component.getUuid().toString()))
+                        .withMatcher("violationUuid", equalTo(violation.getUuid().toString()))
+                        .withMatcher("conditionUuid", equalTo(condition.getUuid().toString()))
+                        .withMatcher("policyUuid", equalTo(policy.getUuid().toString()))
+                        .isEqualTo(/* language=JSON */ """
+                                {
+                                  "project": {
+                                    "uuid": "${json-unit.matches:projectUuid}",
+                                    "name": "projectName",
+                                    "version": "projectVersion",
+                                    "description": "projectDescription",
+                                    "purl": "projectPurl",
+                                    "isActive": true,
+                                    "tags": [
+                                      "projecttaga",
+                                      "projecttagb"
+                                    ]
+                                  },
+                                  "component": {
+                                    "uuid": "${json-unit.matches:componentUuid}",
+                                    "group": "componentGroup",
+                                    "name": "componentName",
+                                    "version": "componentVersion",
+                                    "purl": "componentPurl",
+                                    "md5": "componentmd5",
+                                    "sha1": "componentsha1",
+                                    "sha256": "componentsha256",
+                                    "sha512": "componentsha512"
+                                  },
+                                  "policyViolation": {
+                                    "uuid": "${json-unit.matches:violationUuid}",
+                                    "type": "OPERATIONAL",
+                                    "timestamp": "${json-unit.any-string}",
+                                    "condition": {
+                                      "uuid": "${json-unit.matches:conditionUuid}",
+                                      "subject": "VERSION",
+                                      "operator": "NUMERIC_EQUAL",
+                                      "value": "1.0",
+                                      "policy": {
+                                        "uuid": "${json-unit.matches:policyUuid}",
+                                        "name": "testPolicy",
+                                        "violationState": "FAIL"
+                                      }
+                                    }
+                                  }
+                                }
+                                """));
+    }
+
+    @Test
+    public void shouldFilterSuppressedViolationsForNewPolicyViolations() {
+        final var project = new Project();
+        project.setName("projectName");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("componentName");
+        qm.persist(component);
+
+        final var policy = qm.createPolicy("testPolicy", Policy.Operator.ALL, Policy.ViolationState.FAIL);
+        final var conditionA = qm.createPolicyCondition(policy, Subject.VERSION, Operator.NUMERIC_EQUAL, "1.0");
+        final var conditionB = qm.createPolicyCondition(policy, Subject.VERSION, Operator.NUMERIC_EQUAL, "2.0");
+
+        final var violationA = new PolicyViolation();
+        violationA.setType(PolicyViolation.Type.OPERATIONAL);
+        violationA.setComponent(component);
+        violationA.setPolicyCondition(conditionA);
+        violationA.setTimestamp(new Date());
+        qm.persist(violationA);
+
+        final var violationB = new PolicyViolation();
+        violationB.setType(PolicyViolation.Type.OPERATIONAL);
+        violationB.setComponent(component);
+        violationB.setPolicyCondition(conditionB);
+        violationB.setTimestamp(new Date());
+        qm.persist(violationB);
+
+        qm.makeViolationAnalysis(
+                new MakeViolationAnalysisCommand(component, violationB)
+                        .withState(ViolationAnalysisState.REJECTED)
+                        .withSuppress(true));
+
+        final List<PolicyViolationSubject> subjects = withJdbiHandle(handle -> handle
+                .attach(NotificationSubjectDao.class)
+                .getForNewPolicyViolations(List.of(violationA.getId(), violationB.getId())));
+
+        assertThat(subjects).singleElement()
+                .extracting(s -> s.getPolicyViolation().getUuid())
+                .isEqualTo(violationA.getUuid().toString());
+    }
+
+    @Test
+    public void shouldFilterApprovedViolationsForNewPolicyViolations() {
+        final var project = new Project();
+        project.setName("projectName");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("componentName");
+        qm.persist(component);
+
+        final var policy = qm.createPolicy("testPolicy", Policy.Operator.ALL, Policy.ViolationState.FAIL);
+        final var conditionA = qm.createPolicyCondition(policy, Subject.VERSION, Operator.NUMERIC_EQUAL, "1.0");
+        final var conditionB = qm.createPolicyCondition(policy, Subject.VERSION, Operator.NUMERIC_EQUAL, "2.0");
+
+        final var violationA = new PolicyViolation();
+        violationA.setType(PolicyViolation.Type.OPERATIONAL);
+        violationA.setComponent(component);
+        violationA.setPolicyCondition(conditionA);
+        violationA.setTimestamp(new Date());
+        qm.persist(violationA);
+
+        final var violationB = new PolicyViolation();
+        violationB.setType(PolicyViolation.Type.OPERATIONAL);
+        violationB.setComponent(component);
+        violationB.setPolicyCondition(conditionB);
+        violationB.setTimestamp(new Date());
+        qm.persist(violationB);
+
+        qm.makeViolationAnalysis(
+                new MakeViolationAnalysisCommand(component, violationB)
+                        .withState(ViolationAnalysisState.APPROVED));
+
+        final List<PolicyViolationSubject> subjects = withJdbiHandle(handle -> handle
+                .attach(NotificationSubjectDao.class)
+                .getForNewPolicyViolations(List.of(violationA.getId(), violationB.getId())));
+
+        assertThat(subjects).singleElement()
+                .extracting(s -> s.getPolicyViolation().getUuid())
+                .isEqualTo(violationA.getUuid().toString());
+    }
+
+    @Test
+    public void shouldReturnEmptyForNewPolicyViolationsWithEmptyInput() {
+        final List<PolicyViolationSubject> subjects = withJdbiHandle(handle -> handle
+                .attach(NotificationSubjectDao.class)
+                .getForNewPolicyViolations(List.of()));
+
+        assertThat(subjects).isEmpty();
     }
 }

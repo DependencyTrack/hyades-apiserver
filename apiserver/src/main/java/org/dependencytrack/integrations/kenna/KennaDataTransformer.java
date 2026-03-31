@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -86,7 +87,7 @@ public class KennaDataTransformer {
                     continue;
                 }
             }
-            final Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, (String)finding.getVulnerability().get("uuid"));
+            final Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, (UUID) finding.getVulnerability().get("uuid"));
             //final Component component = qm.getObjectByUuid(Component.class, (String)finding.getComponent().get("uuid"));
             final String stateString = (String)finding.getAnalysis().get("state");
             final AnalysisState analysisState = (stateString != null) ? AnalysisState.valueOf(stateString) : AnalysisState.NOT_SET;

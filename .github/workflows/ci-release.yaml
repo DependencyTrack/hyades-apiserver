@@ -52,7 +52,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # tag=v6.0.2
         with:
-          token: "${{ secrets.BOT_RELEASE_TOKEN }}"
           fetch-depth: 0
 
       - name: Set up JDK
@@ -64,19 +63,23 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config user.name "dependencytrack-bot"
-          git config user.email "106437498+dependencytrack-bot@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Perform Maven Release
+        env:
+          INPUT_RELEASE_VERSION: ${{ inputs.release-version }}
+          INPUT_DEVELOPMENT_VERSION: ${{ inputs.development-version }}
+          INPUT_DRY_RUN: ${{ inputs.dry-run }}
         run: |-
           MAVEN_ARGS="-B"
-          if [[ -n "${{ inputs.release-version }}" ]]; then
-            MAVEN_ARGS="${MAVEN_ARGS} -DreleaseVersion=${{ inputs.release-version }}"
+          if [[ -n "${INPUT_RELEASE_VERSION}" ]]; then
+            MAVEN_ARGS="${MAVEN_ARGS} -DreleaseVersion=${INPUT_RELEASE_VERSION}"
           fi
-          if [[ -n "${{ inputs.development-version }}" ]]; then
-            MAVEN_ARGS="${MAVEN_ARGS} -DdevelopmentVersion=${{ inputs.development-version }}"
+          if [[ -n "${INPUT_DEVELOPMENT_VERSION}" ]]; then
+            MAVEN_ARGS="${MAVEN_ARGS} -DdevelopmentVersion=${INPUT_DEVELOPMENT_VERSION}"
           fi
-          if [[ "${{ inputs.dry-run }}" == "true" ]]; then
+          if [[ "${INPUT_DRY_RUN}" == "true" ]]; then
             MAVEN_ARGS="${MAVEN_ARGS} -DdryRun=true"
           fi
           export MAVEN_ARGS
@@ -97,5 +100,6 @@ jobs:
           fi
 
           gh release create "${RELEASE_VERSION}" \
+            --draft \
             --generate-notes \
             ${PRERELEASE_FLAG}

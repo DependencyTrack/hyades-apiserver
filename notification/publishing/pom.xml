@@ -198,6 +198,18 @@
                             <targetPackage>org.dependencytrack.notification.publishing.kafka</targetPackage>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>config-webhook</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <sourcePaths>
+                                <sourcePath>${basedir}/src/main/resources/org/dependencytrack/notification/publishing/webhook/webhook-notification-publisher-rule-config-v1.schema.json</sourcePath>
+                            </sourcePaths>
+                            <targetPackage>org.dependencytrack.notification.publishing.webhook</targetPackage>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>

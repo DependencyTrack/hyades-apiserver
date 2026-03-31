@@ -275,6 +275,12 @@ public class VexResource extends AbstractApiResource {
     private Response process(QueryManager qm, Project project, String encodedVexData) {
         if (project != null) {
             requireAccess(qm, project);
+            if (project.getCollectionLogic() != null) {
+                return Response
+                        .status(Response.Status.BAD_REQUEST)
+                        .entity("VEX cannot be uploaded to a collection project.")
+                        .build();
+            }
             final byte[] decoded = Base64.getDecoder().decode(encodedVexData);
             BomResource.validate(decoded, project);
             final VexUploadEvent vexUploadEvent = new VexUploadEvent(project.getUuid(), decoded);
@@ -296,6 +302,12 @@ public class VexResource extends AbstractApiResource {
             final BodyPartEntity bodyPartEntity = (BodyPartEntity) artifactPart.getEntity();
             if (project != null) {
                 requireAccess(qm, project);
+                if (project.getCollectionLogic() != null) {
+                    return Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity("VEX cannot be uploaded to a collection project.")
+                            .build();
+                }
                 try (InputStream in = bodyPartEntity.getInputStream()) {
                     final byte[] content = IOUtils.toByteArray(new BOMInputStream((in)));
                     BomResource.validate(content, project);

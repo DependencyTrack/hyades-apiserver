@@ -47,8 +47,8 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tools;
+import org.dependencytrack.parser.spdx.expression.SpdxExpression;
 import org.dependencytrack.parser.spdx.expression.SpdxExpressionParser;
-import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -235,14 +235,13 @@ public class ModelConverterProto {
                 final String licenseExpression = licenseChoice.getExpression();
                 if (isNotBlank(licenseExpression)) {
                     // If the expression consists of just one license ID, add it as another option.
-                    final var expressionParser = new SpdxExpressionParser();
-                    final SpdxExpression expression = expressionParser.parse(licenseExpression);
-                    if (!SpdxExpression.INVALID.equals(expression)) {
+                    final SpdxExpression expression = SpdxExpressionParser.getInstance().tryParse(licenseExpression);
+                    if (expression != null) {
                         component.setLicenseExpression(trim(licenseExpression));
-                        if (expression.getSpdxLicenseId() != null) {
+                        if (expression instanceof SpdxExpression.Identifier(String id)) {
                             final var expressionLicense = new License();
-                            expressionLicense.setId(expression.getSpdxLicenseId());
-                            expressionLicense.setName(expression.getSpdxLicenseId());
+                            expressionLicense.setId(id);
+                            expressionLicense.setName(id);
                             licenseCandidates.add(expressionLicense);
                         }
                     } else {
