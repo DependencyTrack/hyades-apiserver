@@ -40,8 +40,7 @@ public class AuthorizationFeature implements DynamicFeature {
     @Override
     public void configure(ResourceInfo resourceInfo, FeatureContext context) {
         final Method method = resourceInfo.getResourceMethod();
-        if (method.isAnnotationPresent(PermissionRequired.class)
-                || method.isAnnotationPresent(ResourceAccessRequired.class)) {
+        if (method.isAnnotationPresent(PermissionRequired.class)) {
             context.register(AuthorizationFilter.class);
         }
     }

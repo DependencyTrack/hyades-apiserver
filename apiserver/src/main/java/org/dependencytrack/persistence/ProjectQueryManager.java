@@ -462,12 +462,11 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 query = pm.newQuery(Query.SQL, /* language=SQL */ """
                                 SELECT EXISTS(
                                   SELECT 1
-                                    FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" AS upep
+                                    FROM "PROJECT_ACCESS_USERS" AS pau
                                    INNER JOIN "PROJECT_HIERARCHY" AS ph
-                                      ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
+                                      ON ph."PARENT_PROJECT_ID" = pau."PROJECT_ID"
                                    WHERE ph."CHILD_PROJECT_ID" = ?
-                                     AND upep."USER_ID" = ?
-                                     AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+                                     AND pau."USER_ID" = ?
                                 )
                                 """)
                         .setParameters(project.getId(), user.getId());

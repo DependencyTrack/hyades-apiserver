@@ -18,9 +18,7 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.model.ManagedUser;
 import alpine.model.Team;
-import alpine.server.auth.PasswordService;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
@@ -39,9 +37,6 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class AccessControlResourceTest extends ResourceTest {
-
-    protected static final String TEST_PASSWORD_HASH = new String(
-            PasswordService.createHash("testuser".toCharArray()));
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
@@ -258,45 +253,4 @@ public class AccessControlResourceTest extends ResourceTest {
         Assertions.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 
-    @Test
-    public void retrieveUserProjectsTest() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_READ);
-
-        final var project1 = new Project();
-        project1.setName("Project 1");
-        qm.persist(project1);
-
-        final var project2 = new Project();
-        project2.setName("Project 2");
-        qm.persist(project2);
-
-        final ManagedUser user = qm.createManagedUser("user", TEST_PASSWORD_HASH);
-
-        final Response response = jersey.target(V1_ACL + "/user/" + user.getUsername())
-                .request()
-                .header(X_API_KEY, apiKey)
-                .get();
-
-        assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER)).isNotNull();
-        assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER).get(0)).isEqualTo("2");
-        assertThatJson(getPlainTextBody(response)).isArray().extracting("name").containsExactly("Project 1",
-                "Project 2");
-    }
-
-    @Test
-    public void retrieveUserProjectsNoContentTest() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_READ);
-
-        final ManagedUser user = qm.createManagedUser("user", TEST_PASSWORD_HASH);
-
-        final Response response = jersey.target(V1_ACL + "/user/" + user.getUsername())
-                .request()
-                .header(X_API_KEY, apiKey)
-                .get();
-
-        assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER)).isNotNull();
-        assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER).get(0)).isEqualTo("0");
-    }
 }
