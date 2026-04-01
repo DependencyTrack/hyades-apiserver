@@ -293,7 +293,8 @@ abstract class AbstractTaskWorker<T extends Task> implements TaskWorker {
                                 try {
                                     executeTask(polledTask, permitAcquiredLatch);
                                 } catch (RuntimeException e) {
-                                    logger.error("Unexpected error occurred during task execution", e);
+                                    logger.error("Unexpected error occurred during task execution; Abandoning task", e);
+                                    abandon(polledTask);
                                 }
                             }));
                 }
