@@ -201,6 +201,7 @@ public class CelCommonPolicyLibrary implements Library {
                 ),
                 EnvOption.types(
                         Component.getDefaultInstance(),
+                        Component.Property.getDefaultInstance(),
                         License.getDefaultInstance(),
                         License.Group.getDefaultInstance(),
                         Project.getDefaultInstance(),

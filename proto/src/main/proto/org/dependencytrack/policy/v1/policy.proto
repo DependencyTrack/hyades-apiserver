@@ -47,6 +47,9 @@ message Component {
   // Whether the component is internal to the organization.
   optional bool is_internal = 9;
 
+  // Properties of the component.
+  repeated Property properties = 10;
+
   optional string md5 = 20;
   optional string sha1 = 21;
   optional string sha256 = 22;
@@ -66,6 +69,13 @@ message Component {
   // When the component current version last modified.
   optional google.protobuf.Timestamp published_at = 53;
   optional string latest_version = 54;
+
+  message Property {
+    string group = 1;
+    string name = 2;
+    optional string value = 3;
+    string type = 4;
+  }
 }
 
 message License {

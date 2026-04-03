@@ -75,6 +75,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT_PROPERTY;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE_GROUP;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
@@ -181,26 +182,44 @@ public class CelPolicyEngine {
             licenseById = Collections.emptyMap();
         }
 
-        // Build final component protos, enriching with resolved licenses where applicable.
+        // Preload component properties for the entire project.
+        final Map<Long, List<Component.Property>> componentPropertiesById;
+        if (requirements.containsKey(TYPE_COMPONENT)
+                && requirements.get(TYPE_COMPONENT).contains("properties")) {
+            componentPropertiesById = withJdbiHandle(
+                    handle -> new CelPolicyDao(handle)
+                            .fetchAllComponentProperties(
+                                    projectId,
+                                    requirements.get(TYPE_COMPONENT_PROPERTY)));
+        } else {
+            componentPropertiesById = Collections.emptyMap();
+        }
+
+        // Build final component protos, enriching with resolved licenses and properties where applicable.
         final var componentsById = new HashMap<Long, Component>();
         for (final var entry : componentsWithLicense.entrySet()) {
             final long componentId = entry.getKey();
             final ComponentWithLicenseId cwl = entry.getValue();
+
+            final Component.Builder componentBuilder = cwl.component().toBuilder();
+
             if (cwl.resolvedLicenseId() != null && cwl.resolvedLicenseId() > 0) {
                 final License license = licenseById.get(cwl.resolvedLicenseId());
                 if (license != null) {
-                    componentsById.put(componentId, cwl.component().toBuilder()
-                            .setResolvedLicense(license)
-                            .build());
+                    componentBuilder.setResolvedLicense(license);
                 } else {
                     LOGGER.warn("""
                             Component with DB ID {} refers to license with ID {}, \
                             but no license with that ID was found""", componentId, cwl.resolvedLicenseId());
-                    componentsById.put(componentId, cwl.component());
                 }
-            } else {
-                componentsById.put(componentId, cwl.component());
             }
+
+            final List<Component.Property> properties = componentPropertiesById.get(componentId);
+            if (properties != null && !properties.isEmpty()) {
+                componentBuilder.addAllProperties(properties);
+            }
+
+            componentsById.put(componentId, componentBuilder.build());
         }
 
         // Preload vulnerabilities for the entire project,
