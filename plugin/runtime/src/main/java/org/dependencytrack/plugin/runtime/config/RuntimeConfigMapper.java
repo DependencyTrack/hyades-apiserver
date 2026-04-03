@@ -67,6 +67,7 @@ import static java.util.Objects.requireNonNull;
 public final class RuntimeConfigMapper {
 
     private static class CustomAnnotations {
+        private static final String I18N = "x-i18n";
         private static final String SECRET_REF = "x-secret-ref";
         private static final String UI_HINT = "x-ui-hint";
     }
@@ -95,6 +96,7 @@ public final class RuntimeConfigMapper {
                         new NonValidationKeyword("javaType")))
                 // Don't emit warning when encountering custom annotations.
                 .keywords(List.of(
+                        new NonValidationKeyword(CustomAnnotations.I18N),
                         new NonValidationKeyword(CustomAnnotations.SECRET_REF),
                         new NonValidationKeyword(CustomAnnotations.UI_HINT)))
                 .build();
