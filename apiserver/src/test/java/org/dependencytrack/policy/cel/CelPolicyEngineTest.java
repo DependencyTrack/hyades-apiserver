@@ -188,6 +188,14 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         component.setResolvedLicense(license);
         qm.persist(component);
 
+        qm.createComponentProperty(
+                component,
+                "componentPropertyGroup",
+                "componentPropertyName",
+                "componentPropertyValue",
+                IConfigProperty.PropertyType.STRING,
+                null);
+
         useJdbiHandle(handle -> {
             new PackageMetadataDao(handle).upsertAll(List.of(
                     new PackageMetadata(
@@ -291,6 +299,12 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
                          && licenseGroup.name == "licenseGroupName"
                      )
                   && component.published_at == timestamp("1970-01-01T00:00:00.222Z")
+                  && component.properties.all(property,
+                       property.group == "componentPropertyGroup"
+                         && property.name == "componentPropertyName"
+                         && property.value == "componentPropertyValue"
+                         && property.type == "STRING"
+                     )
                   && project.uuid == "__PROJECT_UUID__"
                   && project.group == "projectGroup"
                   && project.name == "projectName"
@@ -2189,6 +2203,59 @@ class CelPolicyEngineTest extends PersistenceCapableTest {
         final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
                 project.properties.size() == 2
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
+    }
+
+    @Test
+    void shouldEvaluateComponentPropertyFields() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        qm.createComponentProperty(component, "propertyGroup", "propertyName",
+                "propertyValue", IConfigProperty.PropertyType.STRING, null);
+
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                component.properties.exists(property,
+                  property.group == "propertyGroup"
+                    && property.name == "propertyName"
+                    && property.value == "propertyValue"
+                    && property.type == "STRING"
+                )
+                """, PolicyViolation.Type.OPERATIONAL);
+
+        new CelPolicyEngine().evaluateProject(project.getUuid());
+        assertThat(qm.getAllPolicyViolations(component)).hasSize(1);
+    }
+
+    @Test
+    void shouldEvaluateComponentPropertiesSize() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        qm.createComponentProperty(component, "groupA", "nameA",
+                "valueA", IConfigProperty.PropertyType.STRING, null);
+        qm.createComponentProperty(component, "groupB", "nameB",
+                "valueB", IConfigProperty.PropertyType.STRING, null);
+
+        final var policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.FAIL);
+        qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
+                component.properties.size() == 2
                 """, PolicyViolation.Type.OPERATIONAL);
 
         new CelPolicyEngine().evaluateProject(project.getUuid());

@@ -56,6 +56,12 @@ public final class CelPolicyFieldMappingRegistry {
             new FieldMapping("published_at", "pam.\"PUBLISHED_AT\""),
             new FieldMapping("latest_version", "pm.\"LATEST_VERSION\""));
 
+    static final List<FieldMapping> COMPONENT_PROPERTY_FIELDS = List.of(
+            new FieldMapping("group", "cp.\"GROUPNAME\""),
+            new FieldMapping("name", "cp.\"PROPERTYNAME\""),
+            new FieldMapping("value", "cp.\"PROPERTYVALUE\""),
+            new FieldMapping("type", "cp.\"PROPERTYTYPE\""));
+
     static final List<FieldMapping> VULNERABILITY_FIELDS = List.of(
             new FieldMapping("uuid", "v.\"UUID\""),
             new FieldMapping("id", "v.\"VULNID\""),
