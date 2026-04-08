@@ -148,7 +148,9 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
 
             if (command.source() != null && canUpdate) {
                 if (analysis.getSource() != command.source()) {
-                    auditTrailComments.add("Source: %s → %s".formatted(analysis.getSource(), command.source()));
+                    if (analysis.getSource() != null) {
+                        auditTrailComments.add("Source: %s → %s".formatted(analysis.getSource(), command.source()));
+                    }
                     analysis.setSource(command.source());
                 }
             }
