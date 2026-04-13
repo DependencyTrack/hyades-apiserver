@@ -95,6 +95,8 @@ tags:
   description: Endpoints related to task queue management
 - name: Teams
   description: Endpoints related to teams
+- name: Vulnerability Policies
+  description: Endpoints related to vulnerability policies
 - name: Workflows
   description: Endpoints related to workflows
 
@@ -147,6 +149,16 @@ paths:
     $ref: "./paths/secrets.yaml"
   /secrets/{name}:
     $ref: "./paths/secrets__name_.yaml"
+  /vuln-policies:
+    $ref: "./paths/vuln-policies.yaml"
+  /vuln-policies/{uuid}:
+    $ref: "./paths/vuln-policies__uuid_.yaml"
+  /vuln-policy-bundles:
+    $ref: "./paths/vuln-policy-bundles.yaml"
+  /vuln-policy-bundles/{uuid}:
+    $ref: "./paths/vuln-policy-bundles__uuid_.yaml"
+  /vuln-policy-bundles/{uuid}/sync:
+    $ref: "./paths/vuln-policy-bundles__uuid__sync.yaml"
   /teams:
     $ref: "./paths/teams.yaml"
   /teams/{name}:

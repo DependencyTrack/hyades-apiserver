@@ -38,7 +38,6 @@ import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
-import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
 import org.dependencytrack.event.maintenance.PackageMetadataMaintenanceEvent;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
@@ -49,18 +48,20 @@ import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.notification.ProcessScheduledNotificationsWorkflow;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ScheduledNotificationDao;
+import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.pkgmetadata.ResolvePackageMetadataWorkflow;
 import org.dependencytrack.plugin.NoSuchExtensionException;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.policy.vulnerability.SyncVulnPolicyBundleWorkflow;
 import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
 import org.dependencytrack.proto.internal.workflow.v1.ProcessScheduledNotificationsWorkflowArg;
+import org.dependencytrack.proto.internal.workflow.v1.SyncVulnPolicyBundleArg;
 import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.PackageMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
-import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 import org.dependencytrack.vulndatasource.MirrorVulnDataSourceWorkflow;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
@@ -239,9 +240,20 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         getCronScheduleForTask(VulnerabilityMetricsUpdateTask.class),
                         () -> Event.dispatch(new VulnerabilityMetricsUpdateEvent()))
                 .schedule(
-                        "Vulnerability Policy Sync",
-                        getCronScheduleForTask(VulnerabilityPolicyFetchTask.class),
-                        () -> Event.dispatch(new VulnerabilityPolicyFetchEvent()),
+                        "Vulnerability Policy Bundle Sync",
+                        getCronScheduleFromConfig(config, "dt.task.vulnerability-policy-bundle-sync.cron"),
+                        () -> {
+                            if (config.getOptionalValue("dt.vulnerability.policy.bundle.url", String.class).isEmpty()) {
+                                return;
+                            }
+
+                            dexEngine.createRun(
+                                    new CreateWorkflowRunRequest<>(SyncVulnPolicyBundleWorkflow.class)
+                                            .withWorkflowInstanceId("sync-vuln-policy-bundle:" + VulnerabilityPolicyDao.DEFAULT_BUNDLE_UUID)
+                                            .withArgument(SyncVulnPolicyBundleArg.newBuilder()
+                                                    .setBundleUuid(VulnerabilityPolicyDao.DEFAULT_BUNDLE_UUID.toString())
+                                                    .build()));
+                        },
                         /* triggerOnFirstRun */ true)
                 .schedule(
                         "Expired Session Cleanup",

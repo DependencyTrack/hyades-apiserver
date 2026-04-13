@@ -250,12 +250,8 @@ final class AnalysisReconciler {
                     desiredOwaspVector,
                     desiredOwaspScore);
 
-            if (policy.getConditions() != null && !policy.getConditions().isEmpty()) {
-                final var sb = new StringBuilder("Matched on condition(s):");
-                for (final String condition : policy.getConditions()) {
-                    sb.append("\n- ").append(condition);
-                }
-                comments.addFirst(sb.toString());
+            if (policy.getCondition() != null && !policy.getCondition().isEmpty()) {
+                comments.addFirst("Matched on condition: " + policy.getCondition());
             }
 
             return new Result(

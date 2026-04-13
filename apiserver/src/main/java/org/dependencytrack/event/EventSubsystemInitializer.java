@@ -47,7 +47,6 @@ import org.dependencytrack.tasks.maintenance.PackageMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
-import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 
@@ -105,7 +104,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.subscribe(DefectDojoUploadEventAbstract.class, new DefectDojoUploadTask(HttpClient.INSTANCE, secretManager));
         eventService.subscribe(KennaSecurityUploadEventAbstract.class, new KennaSecurityUploadTask(HttpClient.INSTANCE, secretManager));
         eventService.subscribe(InternalComponentIdentificationEvent.class, new InternalComponentIdentificationTask());
-        eventService.subscribe(VulnerabilityPolicyFetchEvent.class, new VulnerabilityPolicyFetchTask());
         eventService.subscribe(EpssMirrorEvent.class, new EpssMirrorTask(HttpClient.INSTANCE));
         // Execute maintenance tasks on the single-threaded event service.
         // This way, they are not blocked by, and don't block, actual processing tasks on the main event service.
@@ -134,7 +132,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.unsubscribe(KennaSecurityUploadTask.class);
         eventService.unsubscribe(InternalComponentIdentificationTask.class);
         eventService.unsubscribe(EpssMirrorTask.class);
-        eventService.unsubscribe(VulnerabilityPolicyFetchTask.class);
         try {
             eventService.shutdown(drainTimeout);
         } catch (TimeoutException e) {

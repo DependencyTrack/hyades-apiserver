@@ -38,10 +38,12 @@ import org.dependencytrack.e2e.api.model.EventProcessingResponse;
 import org.dependencytrack.e2e.api.model.Finding;
 import org.dependencytrack.e2e.api.model.NotificationPublisher;
 import org.dependencytrack.e2e.api.model.NotificationRule;
+import org.dependencytrack.e2e.api.model.Page;
 import org.dependencytrack.e2e.api.model.Project;
 import org.dependencytrack.e2e.api.model.Team;
 import org.dependencytrack.e2e.api.model.UpdateExtensionConfigRequest;
 import org.dependencytrack.e2e.api.model.UpdateNotificationRuleRequest;
+import org.dependencytrack.e2e.api.model.VulnPolicyBundleSyncStatus;
 import org.dependencytrack.e2e.api.model.VulnerabilityPolicy;
 import org.dependencytrack.e2e.api.model.WorkflowState;
 import org.dependencytrack.e2e.api.model.WorkflowTokenResponse;
@@ -143,16 +145,20 @@ public interface ApiClient {
     NotificationRule updateNotificationRule(UpdateNotificationRuleRequest request);
 
     @GET
-    @Path("/v1/policy/vulnerability")
+    @Path("/v2/vuln-policies")
     @Produces(MediaType.WILDCARD)
     @Consumes(MediaType.APPLICATION_JSON)
-    List<VulnerabilityPolicy> getAllVulnerabilityPolicies();
+    Page<VulnerabilityPolicy> getAllVulnerabilityPolicies();
 
     @POST
-    @Path("/v1/policy/vulnerability/bundle/sync")
-    @Produces(MediaType.WILDCARD)
+    @Path("/v2/vuln-policy-bundles/{uuid}/sync")
+    void triggerVulnPolicyBundleSync(@PathParam("uuid") UUID uuid);
+
+    @GET
+    @Path("/v2/vuln-policy-bundles/{uuid}/sync")
+    @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    WorkflowTokenResponse triggerVulnerabilityPolicyBundleSync();
+    VulnPolicyBundleSyncStatus getVulnPolicyBundleSyncStatus(@PathParam("uuid") UUID uuid);
 
     @GET
     @Path("/v1/analysis")

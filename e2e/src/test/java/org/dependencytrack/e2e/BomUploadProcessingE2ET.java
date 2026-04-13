@@ -119,7 +119,7 @@ class BomUploadProcessingE2ET extends AbstractE2ET {
         // Create an email alert for NEW_VULNERABILITY notifications and point it to GreenMail.
         final NotificationRule emailRule = apiClient.createNotificationRule(new CreateNotificationRuleRequest(
                 "email", "PORTFOLIO", "INFORMATIONAL", new Publisher(emailPublisher.uuid())));
-        apiClient.updateNotificationRule(new UpdateNotificationRuleRequest(emailRule.uuid(), emailRule.name(), true,
+        apiClient.updateNotificationRule(new UpdateNotificationRuleRequest(emailRule.uuid(), emailRule.name(), true, "PORTFOLIO",
                 "INFORMATIONAL", Set.of("NEW_VULNERABILITY"), /* language=JSON */ """
                 {
                   "recipientAddresses": [
@@ -131,7 +131,7 @@ class BomUploadProcessingE2ET extends AbstractE2ET {
         // Create a webhook alert for NEW_VULNERABILITY notifications and point it to WireMock.
         final NotificationRule webhookRule = apiClient.createNotificationRule(new CreateNotificationRuleRequest(
                 "foo", "PORTFOLIO", "INFORMATIONAL", new Publisher(webhookPublisher.uuid())));
-        apiClient.updateNotificationRule(new UpdateNotificationRuleRequest(webhookRule.uuid(), webhookRule.name(), true,
+        apiClient.updateNotificationRule(new UpdateNotificationRuleRequest(webhookRule.uuid(), webhookRule.name(), true, "PORTFOLIO",
                 "INFORMATIONAL", Set.of("NEW_VULNERABILITY"), /* language=JSON */ """
                 {
                   "destinationUrl": "http://host.testcontainers.internal:%d/notification"
@@ -141,7 +141,7 @@ class BomUploadProcessingE2ET extends AbstractE2ET {
         //Create notification rule for project vulnerability analysis complete
         final NotificationRule projectVulnAnalysisCompleteWebhookRule = apiClient.createNotificationRule(new CreateNotificationRuleRequest(
                 "projectVulnAnalysisCompleteWebhookRule", "PORTFOLIO", "INFORMATIONAL", new Publisher(webhookPublisher.uuid())));
-        apiClient.updateNotificationRule(new UpdateNotificationRuleRequest(projectVulnAnalysisCompleteWebhookRule.uuid(), projectVulnAnalysisCompleteWebhookRule.name(), true,
+        apiClient.updateNotificationRule(new UpdateNotificationRuleRequest(projectVulnAnalysisCompleteWebhookRule.uuid(), projectVulnAnalysisCompleteWebhookRule.name(), true, "PORTFOLIO",
                 "INFORMATIONAL", Set.of("PROJECT_VULN_ANALYSIS_COMPLETE"), /* language=JSON */ """
                 {
                   "destinationUrl": "http://host.testcontainers.internal:%d/notification"

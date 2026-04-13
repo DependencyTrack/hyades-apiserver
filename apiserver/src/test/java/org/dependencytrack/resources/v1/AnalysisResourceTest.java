@@ -43,6 +43,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
+import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao.VulnPolicyIdentityRow;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
 import org.dependencytrack.resources.v1.vo.AnalysisRequest;
@@ -979,14 +980,14 @@ class AnalysisResourceTest extends ResourceTest {
                         .withState(AnalysisState.NOT_AFFECTED)
                         .withSuppress(true));
 
-        final VulnerabilityPolicy vulnPolicy = withJdbiHandle(handle -> {
+        final VulnPolicyIdentityRow vulnPolicy = withJdbiHandle(handle -> {
             final var policyAnalysis = new VulnerabilityPolicyAnalysis();
             policyAnalysis.setState(VulnerabilityPolicyAnalysis.State.EXPLOITABLE);
 
             final var policy = new VulnerabilityPolicy();
             policy.setName("foo");
             policy.setAnalysis(policyAnalysis);
-            policy.setConditions(List.of("true"));
+            policy.setCondition("true");
             return handle.attach(VulnerabilityPolicyDao.class).create(policy);
         });
 
@@ -1000,7 +1001,7 @@ class AnalysisResourceTest extends ResourceTest {
                            SET "VULNERABILITY_POLICY_ID" = (SELECT "ID" FROM "VULN_POLICY")
                          WHERE "ID" = :analysisId
                         """)
-                .bind("policyName", vulnPolicy.getName())
+                .bind("policyName", vulnPolicy.name())
                 .bind("analysisId", analysisId)
                 .execute());
 

@@ -18,15 +18,11 @@
  */
 package org.dependencytrack.e2e.api.model;
 
-import java.util.Set;
-import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record UpdateNotificationRuleRequest(
-        UUID uuid,
-        String name,
-        boolean enabled,
-        String scope,
-        String notificationLevel,
-        Set<String> notifyOn,
-        String publisherConfig) {
+public record VulnPolicyBundleSyncStatus(
+        String status,
+        @JsonProperty("started_at") Long startedAt,
+        @JsonProperty("completed_at") Long completedAt,
+        @JsonProperty("failure_reason") String failureReason) {
 }

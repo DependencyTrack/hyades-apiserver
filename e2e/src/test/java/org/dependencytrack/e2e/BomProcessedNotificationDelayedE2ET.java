@@ -81,7 +81,7 @@ class BomProcessedNotificationDelayedE2ET extends AbstractE2ET {
         // Create a webhook alert for NEW_VULNERABILITY notifications and point it to WireMock.
         final NotificationRule webhookRule = apiClient.createNotificationRule(new CreateNotificationRuleRequest(
                 "foo", "PORTFOLIO", "INFORMATIONAL", new CreateNotificationRuleRequest.Publisher(webhookPublisher.uuid())));
-        apiClient.updateNotificationRule(new UpdateNotificationRuleRequest(webhookRule.uuid(), webhookRule.name(), true,
+        apiClient.updateNotificationRule(new UpdateNotificationRuleRequest(webhookRule.uuid(), webhookRule.name(), true, "PORTFOLIO",
                 "INFORMATIONAL", Set.of("BOM_PROCESSED", "PROJECT_VULN_ANALYSIS_COMPLETE"), /* language=JSON */ """
                 {
                   "destinationUrl": "http://host.testcontainers.internal:%d/notification"

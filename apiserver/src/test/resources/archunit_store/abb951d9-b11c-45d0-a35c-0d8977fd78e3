@@ -24,4 +24,3 @@ org.dependencytrack.persistence.jdbi.VulnerabilityDao.getVulnerabilitiesByCompon
 org.dependencytrack.persistence.jdbi.VulnerabilityDao.getVulnerabilitiesByProject(long, boolean) returns model class org.dependencytrack.model.Vulnerability
 org.dependencytrack.persistence.jdbi.VulnerabilityDao.getVulnerableComponents(long, java.util.List) returns model class org.dependencytrack.model.Component
 org.dependencytrack.persistence.jdbi.VulnerabilityDao.getVulnerableSoftwareByVulnId(long) returns model class org.dependencytrack.model.VulnerableSoftware
-org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao.unassignFromAnalysesByName(java.lang.String) returns model class org.dependencytrack.model.Analysis
