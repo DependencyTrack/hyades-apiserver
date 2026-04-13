@@ -42,11 +42,6 @@
                         <execId>copy-dependencies</execId>
                     </execIds>
                 </execution>
-                <execution artifactId="maven-surefire-plugin">
-                    <execIds>
-                        <execId>default-test</execId>
-                    </execIds>
-                </execution>
                 <execution artifactId="jacoco-maven-plugin">
                     <execIds>
                         <execId>report-aggregate</execId>
