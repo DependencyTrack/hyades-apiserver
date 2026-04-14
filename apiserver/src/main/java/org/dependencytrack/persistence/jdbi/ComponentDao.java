@@ -289,7 +289,6 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
         }
 
         final String cursorPrimary = decodedPageToken != null ? decodedPageToken.lastName() : null;
-        final String cursorSecondary = decodedPageToken != null ? decodedPageToken.lastVersion() : null;
         final Long cursorId = decodedPageToken != null ? decodedPageToken.lastId() : null;
         final boolean hasCursor = decodedPageToken != null;
         final String sortDirectionSql = sortDirection != null ? sortDirection.name() : "ASC";
@@ -307,7 +306,6 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
 
         final List<Component> rows = listComponents(whereConditions, queryParams, limit + 1,
                 cursorPrimary,
-                cursorSecondary,
                 cursorId,
                 sortByColumn, sortDirectionSql, hasCursor);
 
@@ -441,7 +439,6 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             @BindMap Map<String, Object> queryParams,
             @Bind int limit,
             @Bind String lastPrimaryValue,
-            @Bind String lastSecondaryValue,
             @Bind Long lastId,
             @Define SortBy sortByColumn,
             @Define String sortDirection,
