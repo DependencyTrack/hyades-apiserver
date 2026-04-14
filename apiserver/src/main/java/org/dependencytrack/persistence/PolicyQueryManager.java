@@ -165,20 +165,6 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * Returns a List of all Policy objects.
-     * This method if designed NOT to provide paginated results.
-     * @return a List of all Policy objects
-     */
-    @SuppressWarnings("unchecked")
-    public List<PolicyViolation> getAllPolicyViolations(final PolicyCondition policyCondition) {
-        final Query<PolicyViolation> query = pm.newQuery(PolicyViolation.class, "policyCondition.id == :pid");
-        if (orderBy == null) {
-            query.setOrdering("timestamp desc, project.name, project.version, component.name, component.version");
-        }
-        return (List<PolicyViolation>)query.execute(policyCondition.getId());
-    }
-
-    /**
      * Returns a List of all {@link PolicyViolation}s for a specific component.
      * @param component The component to fetch {@link PolicyViolation}s for
      * @return a List of {@link PolicyViolation}s

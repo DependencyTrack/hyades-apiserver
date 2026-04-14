@@ -107,63 +107,6 @@ final class LicenseQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * Creates a new License.
-     * @param license the License object to create
-     * @param commitIndex specifies if the search index should be committed (an expensive operation)
-     * @return a created License object
-     */
-    private License createLicense(License license, boolean commitIndex) {
-        final License result = persist(license);
-        return result;
-    }
-
-    /**
-     * Updates a license.
-     * @param transientLicense the license to update
-     * @param commitIndex specifies if the search index should be committed (an expensive operation)
-     * @return a License object
-     */
-    private License updateLicense(License transientLicense, boolean commitIndex) {
-        final License license;
-        if (transientLicense.getId() > 0) {
-            license = getObjectById(License.class, transientLicense.getId());
-        } else {
-            license = getLicense(transientLicense.getLicenseId());
-        }
-
-        if (license != null) {
-            license.setLicenseId(transientLicense.getLicenseId());
-            license.setName(transientLicense.getName());
-            license.setText(transientLicense.getText());
-            license.setHeader(transientLicense.getHeader());
-            license.setTemplate(transientLicense.getTemplate());
-            license.setOsiApproved(transientLicense.isOsiApproved());
-            license.setFsfLibre(transientLicense.isFsfLibre());
-            license.setDeprecatedLicenseId(transientLicense.isDeprecatedLicenseId());
-            license.setComment(transientLicense.getComment());
-            license.setSeeAlso(transientLicense.getSeeAlso());
-
-            final License result = persist(license);
-            return result;
-        }
-        return null;
-    }
-
-    /**
-     * Synchronize a License, updating it if it needs updating, or creating it if it doesn't exist.
-     * @param license the License object to synchronize
-     * @param commitIndex specifies if the search index should be committed (an expensive operation)
-     * @return a synchronize License object
-     */
-    License synchronizeLicense(License license, boolean commitIndex) {
-        License result = updateLicense(license, commitIndex);
-        if (result == null) {
-            result = createLicense(license, commitIndex);
-        }
-        return result;
-    }
-
-    /**
      * Creates a new custom license.
      * @param license the license to create
      * @param commitIndex specifies if the search index should be committed (an expensive operation)

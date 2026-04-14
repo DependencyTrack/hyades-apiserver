@@ -20,7 +20,6 @@ package org.dependencytrack.persistence;
 
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
-import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
@@ -55,18 +54,6 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
                 """);
         query.setParameters(project.getId());
         return executeAndCloseResultUnique(query, Boolean.class);
-    }
-
-    /**
-     * Returns a service component by matching its identity information.
-     * @param project the Project the component is a dependency of
-     * @param cid the identity values of the component
-     * @return a ServiceComponent object, or null if not found
-     */
-    public ServiceComponent matchServiceIdentity(final Project project, final ComponentIdentity cid) {
-        final Query<ServiceComponent> query = pm.newQuery(ServiceComponent.class, "project == :project && group == :group && name == :name && version == :version");
-        query.setRange(0, 1);
-        return singleResult(query.executeWithArray(project, cid.getGroup(), cid.getName(), cid.getVersion()));
     }
 
     /**
@@ -117,25 +104,6 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
             // TODO
         }
         return result;
-    }
-
-    public ServiceComponent cloneServiceComponent(ServiceComponent sourceService, Project destinationProject, boolean commitIndex) {
-        final ServiceComponent service = new ServiceComponent();
-        service.setProvider(sourceService.getProvider());
-        service.setGroup(sourceService.getGroup());
-        service.setName(sourceService.getName());
-        service.setVersion(sourceService.getVersion());
-        service.setDescription(sourceService.getDescription());
-        service.setEndpoints(sourceService.getEndpoints());
-        service.setAuthenticated(sourceService.getAuthenticated());
-        service.setCrossesTrustBoundary(sourceService.getCrossesTrustBoundary());
-        service.setData(sourceService.getData());
-        service.setExternalReferences(sourceService.getExternalReferences());
-        // TODO Add support for parent component and children components
-        service.setNotes(sourceService.getNotes());
-        service.setVulnerabilities(sourceService.getVulnerabilities());
-        service.setProject(destinationProject);
-        return createServiceComponent(service, commitIndex);
     }
 
     /**

@@ -27,7 +27,6 @@ import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.NotificationModelConverter;
@@ -62,18 +61,6 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
      */
     AnalysisQueryManager(final PersistenceManager pm, final AlpineRequest request) {
         super(pm, request);
-    }
-
-    /**
-     * Returns a List Analysis for the specified Project.
-     *
-     * @param project the Project
-     * @return a List of Analysis objects, or null if not found
-     */
-    @SuppressWarnings("unchecked")
-    List<Analysis> getAnalyses(Project project) {
-        final Query<Analysis> query = pm.newQuery(Analysis.class, "project == :project");
-        return (List<Analysis>) query.execute(project);
     }
 
     /**
