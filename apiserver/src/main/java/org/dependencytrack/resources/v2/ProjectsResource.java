@@ -39,6 +39,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao.ListProjectAdvisoriesRow;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.persistence.jdbi.query.ListAdvisoriesForProjectQuery;
@@ -51,6 +52,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapHashes;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapLicense;
 
@@ -130,6 +132,11 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
                             request.getIncludes().contains(CloneProjectInclude.PROPERTIES),
                             request.getIncludes().contains(CloneProjectInclude.SERVICES),
                             request.getIncludes().contains(CloneProjectInclude.TAGS)));
+        });
+
+        useJdbiTransaction(getAlpineRequest(), handle -> {
+            requireProjectAccess(handle, clonedProjectUuid);
+            handle.attach(MetricsDao.class).updateProjectMetrics(clonedProjectUuid);
         });
 
         return Response

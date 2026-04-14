@@ -27,13 +27,19 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.model.Severity;
+import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.util.Date;
 import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class ProjectsResourceTest extends ResourceTest {
@@ -315,6 +321,52 @@ public class ProjectsResourceTest extends ResourceTest {
                   "detail": "Target project version already exists: 1.0.0"
                 }
                 """);
+    }
+
+
+    @Test
+    public void cloneProjectShouldUpdateMetrics() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
+        final Project project = qm.createProject("Example Project 1", "Description 1", "1.0", null, null, null, null, false, false);
+
+        final Component comp = new Component();
+        comp.setId(111L);
+        comp.setName("name");
+        comp.setProject(project);
+        comp.setVersion("1.0");
+        comp.setCopyright("Copyright Acme");
+        qm.createComponent(comp, true);
+
+        final Vulnerability vuln = new Vulnerability();
+        vuln.setVulnId("INT-123");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln.setSeverity(Severity.HIGH);
+        qm.persist(vuln);
+
+        qm.addVulnerability(vuln, comp, "INTERNAL_ANALYZER", "Vuln1", "http://vuln.com/vuln1", new Date(1708559165229L));
+
+        final Response response = jersey.target("/projects/%s/clone".formatted(project.getUuid()))
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "version": "1.1.0",
+                          "includes": ["COMPONENTS", "FINDINGS"]
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+
+        final String clonedProjectUuid = parseJsonObject(response).getString("uuid");
+        final Project clonedProject = qm.getObjectByUuid(Project.class, clonedProjectUuid);
+        assertThat(clonedProject).isNotNull();
+
+        final ProjectMetrics metrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentProjectMetrics(clonedProject.getId()));
+        assertThat(metrics).isNotNull();
+        assertThat(metrics.getComponents()).isEqualTo(1);
+        assertThat(metrics.getHigh()).isEqualTo(1);
+        assertThat(metrics.getVulnerabilities()).isEqualTo(1);
     }
 
     private Project prepareProject() {

@@ -24,6 +24,7 @@ import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
@@ -37,6 +38,7 @@ import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.PROJECT_CLONE;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 public class CloneProjectTask implements Subscriber {
 
@@ -83,6 +85,9 @@ public class CloneProjectTask implements Subscriber {
                                             request.includeProperties(),
                                             request.includeServices(),
                                             request.includeTags())));
+
+                    useJdbiTransaction(handle ->
+                            handle.attach(MetricsDao.class).updateProjectMetrics(clonedProjectUuid));
 
                     qm.updateWorkflowStateToComplete(workflowState);
                     LOGGER.info("Cloned project for version %s into project %s".formatted(request.getVersion(), clonedProjectUuid));
