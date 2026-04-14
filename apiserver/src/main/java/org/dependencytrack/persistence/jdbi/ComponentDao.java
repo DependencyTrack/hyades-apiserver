@@ -51,7 +51,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.hasColumn;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
@@ -146,7 +145,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                         "C"."PURL",
                         "C"."GROUP",
                         "C"."INTERNAL",
-                        "C"."LAST_RISKSCORE" AS "lastInheritedRiskScore",
+                        "C"."LAST_RISKSCORE",
                         "C"."LICENSE" AS "componentLicenseName",
                         "C"."LICENSE_EXPRESSION" AS "licenseExpression",
                         "C"."LICENSE_URL" AS "licenseUrl",
@@ -302,7 +301,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             case "purl" -> SortBy.PURL;
             case "cpe" -> SortBy.CPE;
             case "swid_tag_id" -> SortBy.SWIDTAGID;
-            case "last_inherited_risk_score" -> SortBy.lastInheritedRiskScore;
+            case "last_inherited_risk_score" -> SortBy.LAST_RISKSCORE;
             case null, default -> null;
         };
 
@@ -326,7 +325,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                 case SortBy.PURL -> lastRow.getPurl();
                 case SortBy.CPE -> lastRow.getCpe();
                 case SortBy.SWIDTAGID -> lastRow.getSwidTagId();
-                case SortBy.lastInheritedRiskScore -> lastRow.getLastInheritedRiskScore();
+                case SortBy.LAST_RISKSCORE -> lastRow.getLastInheritedRiskScore();
                 case null -> lastRow.getName();
             };
             final String lastSecondary = sortByColumn == null ? lastRow.getVersion() : null;
@@ -342,8 +341,8 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
         if (includeMetrics) {
             final Map<Long, Component> componentById = resultRows.stream()
                     .collect(Collectors.toMap(Component::getId, Function.identity()));
-            final List<DependencyMetrics> metricsList = withJdbiHandle(
-                    handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(componentById.keySet()));
+            final List<DependencyMetrics> metricsList = getHandle().attach(MetricsDao.class)
+                    .getMostRecentDependencyMetrics(componentById.keySet());
             for (final DependencyMetrics metrics : metricsList) {
                 final var component = componentById.get(metrics.getComponentId());
                 if (component != null) {
@@ -371,7 +370,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                         "C"."PURL",
                         "C"."GROUP",
                         "C"."INTERNAL",
-                        "C"."LAST_RISKSCORE" AS "lastInheritedRiskScore",
+                        "C"."LAST_RISKSCORE",
                         "C"."LICENSE" AS "componentLicenseName",
                         "C"."LICENSE_EXPRESSION" AS "licenseExpression",
                         "C"."LICENSE_URL" AS "licenseUrl",
@@ -402,30 +401,29 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                     AND (
                         <#if sortDirection == "DESC">
                             ("C"."${sortByColumn}" <
-                                <#if sortByColumn == "lastInheritedRiskScore" > CAST(:lastPrimaryValue AS DOUBLE PRECISION)
+                                <#if sortByColumn == "LAST_RISKSCORE" > CAST(:lastPrimaryValue AS DOUBLE PRECISION)
                                 <#else> :lastPrimaryValue
                                 </#if>
                              OR ("C"."${sortByColumn}" =
-                                <#if sortByColumn == "lastInheritedRiskScore" > CAST(:lastPrimaryValue AS DOUBLE PRECISION)
+                                <#if sortByColumn == "LAST_RISKSCORE" > CAST(:lastPrimaryValue AS DOUBLE PRECISION)
                                 <#else> :lastPrimaryValue
                                 </#if>
                              AND "C"."ID" > :lastId))
                         <#else>
                             ("C"."${sortByColumn}" >
-                                <#if sortByColumn == "lastInheritedRiskScore" > CAST(:lastPrimaryValue AS DOUBLE PRECISION)
+                                <#if sortByColumn == "LAST_RISKSCORE" > CAST(:lastPrimaryValue AS DOUBLE PRECISION)
                                 <#else> :lastPrimaryValue
                                 </#if>
                              OR ("C"."${sortByColumn}" =
-                                <#if sortByColumn == "lastInheritedRiskScore" > CAST(:lastPrimaryValue AS DOUBLE PRECISION)
+                                <#if sortByColumn == "LAST_RISKSCORE" > CAST(:lastPrimaryValue AS DOUBLE PRECISION)
                                 <#else>:lastPrimaryValue
                                 </#if>
                              AND "C"."ID" > :lastId))
                         </#if>
                     )
-                <#elseif hasCursor && lastPrimaryValue?has_content && lastSecondaryValue?has_content && lastId?has_content>
+                <#elseif hasCursor && lastPrimaryValue?has_content && lastId?has_content>
                     AND ("C"."NAME" > :lastPrimaryValue
-                            OR ("C"."NAME" = :lastPrimaryValue AND "C"."VERSION" < :lastSecondaryValue)
-                            OR ("C"."NAME" = :lastPrimaryValue AND "C"."VERSION" = :lastSecondaryValue AND "C"."ID" > :lastId))
+                            OR ("C"."NAME" = :lastPrimaryValue AND "C"."ID" > :lastId))
                 </#if>
                 <#if sortByColumn?has_content>
                     ORDER BY "${sortByColumn}" ${sortDirection!"ASC"}, "ID" ASC
@@ -457,7 +455,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
         PURL,
         CPE,
         SWIDTAGID,
-        lastInheritedRiskScore
+        LAST_RISKSCORE
     }
 
     enum HashType {
@@ -490,6 +488,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                 component.setProject(project);
             }
             maybeSet(rs, "PURL", ResultSet::getString, component::setPurl);
+            maybeSet(rs, "LAST_RISKSCORE", ResultSet::getDouble, component::setLastInheritedRiskScore);
             if (hasColumn(rs, "licenseUuid") && rs.getString("licenseUuid") != null) {
                 final var license = new License();
                 license.setUuid(UUID.fromString(rs.getString("licenseUuid")));
