@@ -44,7 +44,7 @@ class S3FileStorageTest {
 
     @Container
     private static final S3MockContainer s3MockContainer =
-            new S3MockContainer("4.11.0")
+            new S3MockContainer("5.0.0")
                     .withInitialBuckets("test");
 
     @Test
@@ -141,7 +141,7 @@ class S3FileStorageTest {
 
         @Container
         private final S3MockContainer ephemeralContainer =
-                new S3MockContainer("4.11.0")
+                new S3MockContainer("5.0.0")
                         .withInitialBuckets("test");
 
         @Test
