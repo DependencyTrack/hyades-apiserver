@@ -39,26 +39,6 @@ public final class UuidUtil {
     private UuidUtil() { }
 
     /**
-     * Inserts hyphens in a valid 32 character UUID containing no hyphens.
-     * @param uuidWithoutHyphens a UUID without separating hyphens
-     * @return a UUID (as a String) containing hyphens
-     * @since 1.0.0
-     */
-    public static String insertHyphens(String uuidWithoutHyphens) {
-        return uuidWithoutHyphens.replaceFirst("(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}+)", "$1-$2-$3-$4-$5");
-    }
-
-    /**
-     * Removes hyphens from a 36 character UUID.
-     * @param uuid the UUID to strip hyphens from
-     * @return a String of the UUID without hyphens
-     * @since 1.0.0
-     */
-    public static String stripHyphens(String uuid) {
-        return uuid.replaceAll("-", "");
-    }
-
-    /**
      * Determines if the specified string is a valid UUID.
      * @param uuid the UUID to evaluate
      * @return true if UUID is valid, false if invalid

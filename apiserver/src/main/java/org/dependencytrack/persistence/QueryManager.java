@@ -565,11 +565,6 @@ public class QueryManager extends AlpineQueryManager {
         return getLicenseQueryManager().getLicenseByIdOrName(licenseIdOrName);
     }
 
-    License synchronizeLicense(License license, boolean commitIndex) {
-        return getLicenseQueryManager().synchronizeLicense(license, commitIndex);
-    }
-
-
     public License createCustomLicense(License license, boolean commitIndex) {
         return getLicenseQueryManager().createCustomLicense(license, commitIndex);
     }
@@ -697,15 +692,6 @@ public class QueryManager extends AlpineQueryManager {
             Component component,
             String analyzerIdentity,
             String alternateIdentifier,
-            String referenceUrl) {
-        getVulnerabilityQueryManager().addVulnerability(vulnerability, component, analyzerIdentity, alternateIdentifier, referenceUrl);
-    }
-
-    public void addVulnerability(
-            Vulnerability vulnerability,
-            Component component,
-            String analyzerIdentity,
-            String alternateIdentifier,
             String referenceUrl,
             Date attributedOn) {
         getVulnerabilityQueryManager().addVulnerability(vulnerability, component, analyzerIdentity, alternateIdentifier, referenceUrl, attributedOn);
@@ -802,10 +788,6 @@ public class QueryManager extends AlpineQueryManager {
         return getServiceComponentQueryManager().hasServiceComponents(project);
     }
 
-    public ServiceComponent matchServiceIdentity(final Project project, final ComponentIdentity cid) {
-        return getServiceComponentQueryManager().matchServiceIdentity(project, cid);
-    }
-
     public ServiceComponent createServiceComponent(ServiceComponent service, boolean commitIndex) {
         return getServiceComponentQueryManager().createServiceComponent(service, commitIndex);
     }
@@ -818,10 +800,6 @@ public class QueryManager extends AlpineQueryManager {
         return getServiceComponentQueryManager().getServiceComponents(project, includeMetrics);
     }
 
-    public ServiceComponent cloneServiceComponent(ServiceComponent sourceService, Project destinationProject, boolean commitIndex) {
-        return getServiceComponentQueryManager().cloneServiceComponent(sourceService, destinationProject, commitIndex);
-    }
-
     public ServiceComponent updateServiceComponent(ServiceComponent transientServiceComponent, boolean commitIndex) {
         return getServiceComponentQueryManager().updateServiceComponent(transientServiceComponent, commitIndex);
     }
@@ -830,20 +808,12 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerabilityQueryManager().getVulnerabilities();
     }
 
-    public PaginatedResult getVulnerabilities(Component component) {
-        return getVulnerabilityQueryManager().getVulnerabilities(component);
-    }
-
     public PaginatedResult getVulnerabilities(Component component, boolean includeSuppressed) {
         return getVulnerabilityQueryManager().getVulnerabilities(component, includeSuppressed);
     }
 
     public List<Component> getAllVulnerableComponents(Project project, Vulnerability vulnerability, boolean includeSuppressed) {
         return getVulnerabilityQueryManager().getAllVulnerableComponents(project, vulnerability, includeSuppressed);
-    }
-
-    public List<Vulnerability> getAllVulnerabilities(Component component) {
-        return getVulnerabilityQueryManager().getAllVulnerabilities(component);
     }
 
     public List<Vulnerability> getAllVulnerabilities(Component component, boolean includeSuppressed) {
@@ -856,10 +826,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<VulnerabilityAlias> getVulnerabilityAliases(Vulnerability vulnerability) {
         return getVulnerabilityQueryManager().getVulnerabilityAliases(vulnerability);
-    }
-
-    List<Analysis> getAnalyses(Project project) {
-        return getAnalysisQueryManager().getAnalyses(project);
     }
 
     public Analysis getAnalysis(Component component, Vulnerability vulnerability) {
@@ -884,10 +850,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public PaginatedResult getRepositories() {
         return getRepositoryQueryManager().getRepositories();
-    }
-
-    public List<Repository> getAllRepositories() {
-        return getRepositoryQueryManager().getAllRepositories();
     }
 
     public PaginatedResult getRepositories(RepositoryType type) {

@@ -74,18 +74,6 @@ public class RepositoryQueryManager extends QueryManager implements IQueryManage
     }
 
     /**
-     * Returns a list of all repositories
-     * This method if designed NOT to provide paginated results.
-     *
-     * @return a List of Repositories
-     */
-    public List<Repository> getAllRepositories() {
-        final Query<Repository> query = pm.newQuery(Repository.class);
-        query.setOrdering("type asc, identifier asc");
-        return query.executeList();
-    }
-
-    /**
      * Returns a list of repositories by it's type.
      *
      * @param type the type of repository (required)

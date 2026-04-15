@@ -43,24 +43,4 @@ public final class BooleanUtil {
         return (value != null) && (value.trim().equalsIgnoreCase("true") || value.trim().equals("1"));
     }
 
-    /**
-     * Determines if the specified object is null or not.
-     * @param o the object to evaluate
-     * @return true if null, false if not null
-     * @since 1.0.0
-     */
-    public static boolean isNull(Object o) {
-        return o == null;
-    }
-
-    /**
-     * Determines if the specified object is null or not.
-     * @param o the object to evaluate
-     * @return true if not null, false if null
-     * @since 1.0.0
-     */
-    public static boolean isNotNull(Object o) {
-        return o != null;
-    }
-
 }

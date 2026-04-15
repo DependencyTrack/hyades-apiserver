@@ -23,7 +23,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
 
 public final class DateUtil {
 
@@ -45,36 +44,6 @@ public final class DateUtil {
             return null;
         }
     }
-
-    /**
-     * Convenience method that parses a date in yyyyMMddHHmmss format and
-     * returns a Date object. If the parsing fails, null is returned.
-     * @param yyyyMMddHHmmss the date string to parse
-     * @return a Date object
-     * @since 3.1.0
-     */
-    public static Date parseDate(final String yyyyMMddHHmmss) {
-        final SimpleDateFormat format = new SimpleDateFormat("yyyyMMddHHmmss");
-        try {
-            return format.parse(yyyyMMddHHmmss);
-        } catch (ParseException e) {
-            return null;
-        }
-    }
-
-    /**
-     * Convenience method that returns the difference (in days) between
-     * two dates.
-     * @param start the first date
-     * @param end   the second date
-     * @return the difference in days
-     * @since 3.0.0
-     */
-    public static long diff(final Date start, final Date end) {
-        final long diff = end.getTime() - start.getTime();
-        return TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS);
-    }
-
 
     /**
      * Formats a Date object into ISO 8601 format.

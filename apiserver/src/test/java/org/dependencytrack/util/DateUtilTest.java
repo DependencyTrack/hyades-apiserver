@@ -40,26 +40,6 @@ public class DateUtilTest {
     }
 
     @Test
-    public void testParseDate() throws Exception {
-        Date date = DateUtil.parseDate("20191231153012");
-        LocalDateTime localDateTime = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-        Assertions.assertEquals(Month.DECEMBER, localDateTime.getMonth());
-        Assertions.assertEquals(31, localDateTime.getDayOfMonth());
-        Assertions.assertEquals(2019, localDateTime.getYear());
-        Assertions.assertEquals(15, localDateTime.getHour());
-        Assertions.assertEquals(30, localDateTime.getMinute());
-        Assertions.assertEquals(12, localDateTime.getSecond());
-    }
-
-    @Test
-    public void testDiff() {
-        LocalDate d1 =  LocalDate.of(2019, Month.JANUARY, 1);
-        LocalDate d2 =  LocalDate.of(2017, Month.JANUARY, 1);
-        long diff = DateUtil.diff(java.sql.Date.valueOf(d2), java.sql.Date.valueOf(d1));
-        Assertions.assertEquals(730, diff);
-    }
-
-    @Test
     public void testToISO8601() {
         Date date = Date.from(LocalDateTime.of(2019, Month.JANUARY, 31, 15, 30, 12).toInstant(ZoneOffset.UTC));
         String iso8601Date = DateUtil.toISO8601(date);
