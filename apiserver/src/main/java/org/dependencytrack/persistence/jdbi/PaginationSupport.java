@@ -68,10 +68,37 @@ public interface PaginationSupport extends SqlObject {
             String fromWhereClause,
             @Nullable Map<String, Object> whereParams,
             int threshold) {
+        return getBoundedTotalCount(fromWhereClause, whereParams, threshold, null);
+    }
+
+    /**
+     * Calculates a bounded total count while applying the API project ACL condition using the provided project ID column.
+     * The {@code fromWhereClause} must already contain a {@code WHERE} clause; this method simply appends
+     * {@code AND ${apiProjectAclCondition}} to it.
+     */
+    default TotalCount getBoundedTotalCountWithProjectAcl(
+            String fromWhereClause,
+            @Nullable Map<String, Object> whereParams,
+            int threshold,
+            String projectIdColumn) {
+        requireNonNull(projectIdColumn, "projectIdColumn must not be null");
+        return getBoundedTotalCount(fromWhereClause, whereParams, threshold, projectIdColumn);
+    }
+
+    private TotalCount getBoundedTotalCount(
+            String fromWhereClause,
+            @Nullable Map<String, Object> whereParams,
+            int threshold,
+            @Nullable String projectIdColumn) {
         requireNonNull(fromWhereClause, "fromWhereClause must not be null");
         if (threshold < 1) {
             throw new IllegalArgumentException("threshold must not be less than 1");
         }
+        if (projectIdColumn != null && projectIdColumn.isEmpty()) {
+            throw new IllegalArgumentException("ACL column must not be blank");
+        }
+
+        final boolean includeAcl = projectIdColumn != null;
 
         // NB: The limit is only effective when used on a subquery.
         // SELECT COUNT(*) ... LIMIT X is *not* sufficient:
@@ -79,18 +106,29 @@ public interface PaginationSupport extends SqlObject {
         final Query query = getHandle().createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="fromWhereClause" type="String" -->
                 <#-- @ftlvariable name="threshold" type="boolean" -->
+                <#-- @ftlvariable name="includeAcl" type="boolean" -->
                 SELECT COUNT(*)
                   FROM (
                     SELECT 1
                       ${fromWhereClause}
+                <#if includeAcl>
+                       AND ${apiProjectAclCondition}
+                </#if>
                      LIMIT (:threshold + 1)
                   ) AS t
                 """);
+
+        if (includeAcl) {
+            query.addCustomizer(new DefineApiProjectAclCondition.StatementCustomizer(
+                    JdbiAttributes.ATTRIBUTE_API_PROJECT_ACL_CONDITION,
+                    projectIdColumn));
+        }
 
         final long count = query
                 .bindMap(whereParams)
                 .bind("threshold", threshold)
                 .define("fromWhereClause", fromWhereClause)
+                .define("includeAcl", includeAcl)
                 .defineNamedBindings()
                 .mapTo(long.class)
                 .one();

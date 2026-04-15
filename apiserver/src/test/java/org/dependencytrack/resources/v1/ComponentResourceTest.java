@@ -248,7 +248,7 @@ public class ComponentResourceTest extends ResourceTest {
         componentB.setName("nameB");
         componentB.setVersion("versionB");
         componentB.setCpe("cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*");
-        componentA.setPurl("pkg:maven/groupB/nameB@versionB?baz=qux");
+        componentB.setPurl("pkg:maven/groupB/nameB@versionB?baz=qux");
         componentB = qm.createComponent(componentB, false);
 
         final Response response = jersey.target(V1_COMPONENT + "/identity")

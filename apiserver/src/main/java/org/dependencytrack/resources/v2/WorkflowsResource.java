@@ -64,6 +64,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapSortDirection;
+
 @Provider
 @NullMarked
 public class WorkflowsResource extends AbstractApiResource implements WorkflowsApi {
@@ -155,7 +157,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                             case "completed_at" -> ListWorkflowRunsRequest.SortBy.COMPLETED_AT;
                             case null, default -> null;
                         })
-                        .withSortDirection(convert(sortDirection))
+                        .withSortDirection(mapSortDirection(sortDirection))
                         .withPageToken(pageToken)
                         .withLimit(limit));
 
@@ -199,7 +201,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                 dexEngine.listRunHistory(
                         new ListWorkflowRunHistoryRequest(id)
                                 .withFromSequenceNumber(fromSequenceNumber)
-                                .withSortDirection(convert(sortDirection))
+                                .withSortDirection(mapSortDirection(sortDirection))
                                 .withPageToken(pageToken)
                                 .withLimit(limit));
 
@@ -279,14 +281,4 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                 .event(eventJsonMap)
                 .build();
     }
-
-    private static org.dependencytrack.common.pagination.@Nullable SortDirection convert(
-            @Nullable SortDirection sortDirection) {
-        return switch (sortDirection) {
-            case ASC -> org.dependencytrack.common.pagination.SortDirection.ASC;
-            case DESC -> org.dependencytrack.common.pagination.SortDirection.DESC;
-            case null -> null;
-        };
-    }
-
 }

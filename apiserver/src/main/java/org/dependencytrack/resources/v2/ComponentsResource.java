@@ -19,6 +19,9 @@
 package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
+import com.github.packageurl.MalformedPackageURLException;
+import com.github.packageurl.PackageURL;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.NotFoundException;
@@ -29,23 +32,37 @@ import jakarta.ws.rs.ext.Provider;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.api.v2.ComponentsApi;
 import org.dependencytrack.api.v2.model.CreateComponentRequest;
+import org.dependencytrack.api.v2.model.ListComponentsResponse;
+import org.dependencytrack.api.v2.model.ListComponentsResponseItem;
+import org.dependencytrack.api.v2.model.SortDirection;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.exception.ProjectAccessDeniedException;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ComponentDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
 import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import us.springett.parsers.cpe.CpeParser;
+import us.springett.parsers.cpe.exceptions.CpeParsingException;
 
 import java.util.UUID;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapDependencyMetrics;
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapHashes;
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapLicense;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapOrganizationalContacts;
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapProject;
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapSortDirection;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
 @Provider
@@ -62,7 +79,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
     public Response createComponent(final CreateComponentRequest request) {
         final UUID projectUuid = request.getProjectUuid();
         try (QueryManager qm = new QueryManager()) {
-            final Component componentCreated = qm.callInTransaction(() -> {
+            qm.callInTransaction(() -> {
                 final Project project = qm.getObjectByUuid(Project.class, projectUuid);
                 if (project == null) {
                     throw new NotFoundException();
@@ -87,6 +104,78 @@ public class ComponentsResource extends AbstractApiResource implements Component
             }
             throw e;
         }
+    }
+
+    @Override
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response listComponents(UUID projectUuid, String group, String name, String version, String purl, String cpe,
+                                   String swidTagId, String hashType, String hash, Integer limit, String pageToken, SortDirection sortDirection, String sortBy) {
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
+            Long projectId = null;
+            if (projectUuid != null) {
+                projectId = handle.attach(ProjectDao.class).getProjectId(projectUuid);
+                if (projectId == null) {
+                    throw new NotFoundException();
+                }
+                requireProjectAccess(handle, projectUuid);
+            }
+            PackageURL packageURL = null;
+            if (purl != null) {
+                try {
+                    packageURL = new PackageURL(StringUtils.trimToNull(purl));
+                } catch (MalformedPackageURLException e) {
+                    throw new BadRequestException("Invalid package URL: %s".formatted(purl));
+                }
+            }
+            if (cpe != null) {
+                try {
+                    CpeParser.parse(StringUtils.trimToNull(cpe));
+                } catch (CpeParsingException e) {
+                    throw new BadRequestException("Invalid CPE: %s".formatted(cpe));
+                }
+            }
+            ComponentDao.HashType hashTypeEnum = null;
+            if (hashType != null) {
+                try {
+                    hashTypeEnum = ComponentDao.HashType.valueOf(StringUtils.trimToNull(hashType).toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    throw new BadRequestException("Invalid Hash type: %s".formatted(hashType));
+                }
+            }
+            final Page<Component> componentsPage = handle.attach(ComponentDao.class)
+                    .listComponents(projectId, true, packageURL != null ? packageURL.canonicalize().toLowerCase() : null, StringUtils.trimToNull(cpe),
+                            StringUtils.trimToNull(swidTagId), StringUtils.trimToNull(group), StringUtils.trimToNull(name),
+                            StringUtils.trimToNull(version), hashTypeEnum, StringUtils.trimToNull(hash), limit, pageToken, sortBy, mapSortDirection(sortDirection));
+
+            final var response = ListComponentsResponse.builder()
+                    .items(componentsPage.items().stream()
+                            .<ListComponentsResponseItem>map(
+                                    componentRow -> ListComponentsResponseItem.builder()
+                                            .name(componentRow.getName())
+                                            .hashes(mapHashes(componentRow))
+                                            .classifier(componentRow.getClassifier() != null ? componentRow.getClassifier().name() : null)
+                                            .copyright(componentRow.getCopyright())
+                                            .cpe(componentRow.getCpe())
+                                            .group(componentRow.getGroup())
+                                            .internal(componentRow.isInternal())
+                                            .lastInheritedRiskScore(componentRow.getLastInheritedRiskScore())
+                                            .license(componentRow.getLicense())
+                                            .licenseExpression(componentRow.getLicenseExpression())
+                                            .licenseUrl(componentRow.getLicenseUrl())
+                                            .resolvedLicense(mapLicense(componentRow.getResolvedLicense()))
+                                            .purl(componentRow.getPurl() != null ? componentRow.getPurl().toString() : null)
+                                            .swidTagId(componentRow.getSwidTagId())
+                                            .uuid(componentRow.getUuid())
+                                            .version(componentRow.getVersion())
+                                            .project(mapProject(componentRow.getProject()))
+                                            .metrics(mapDependencyMetrics(componentRow.getMetrics()))
+                                            .build())
+                            .toList())
+                    .nextPageToken(componentsPage.nextPageToken())
+                    .total(convertTotalCount(componentsPage.totalCount()))
+                    .build();
+            return Response.ok(response).build();
+        });
     }
 
     private Component mapRequestToComponent(CreateComponentRequest request, QueryManager qm, Project project) {
