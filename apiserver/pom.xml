@@ -270,6 +270,11 @@
             <artifactId>cvss-calculator</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>jdbi-support</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi3-core</artifactId>
         </dependency>

@@ -28,6 +28,7 @@ import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.mapping.PackageMetadataRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.PurlColumnMapper;
+import org.dependencytrack.support.jdbi.exception.ExceptionTranslationPlugin;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.HandleCallback;
 import org.jdbi.v3.core.HandleConsumer;
@@ -172,6 +173,7 @@ public class JdbiFactory {
                 .installPlugin(new SqlObjectPlugin())
                 .installPlugin(new PostgresPlugin())
                 .installPlugin(new Jackson2Plugin())
+                .installPlugin(new ExceptionTranslationPlugin())
                 .setTemplateEngine(FreemarkerEngine.instance())
                 .setSqlLogger(new QueryTimingSqlLogger(Metrics.globalRegistry))
                 .registerArrayType(Date.class, "TIMESTAMPTZ")
