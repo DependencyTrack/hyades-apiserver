@@ -50,7 +50,7 @@ get:
   operationId: listComponents
   summary: List all components
   description: |-
-    Retrieves a list of all components that have the specified component identity. This resource accepts coordinates (group, name, version) or purl, cpe, or swidTagId.
+    Retrieves a list of all components that have the specified component identity. This resource accepts coordinates (group, name, version) , `purl`, `cpe`, `swidTagId`, `project_uuid`, or `hash`.
     
     ### Sortable fields
     

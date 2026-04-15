@@ -57,12 +57,12 @@ import us.springett.parsers.cpe.exceptions.CpeParsingException;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
-import static org.dependencytrack.resources.v2.WorkflowsResource.convert;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapDependencyMetrics;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapHashes;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapLicense;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapOrganizationalContacts;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapProject;
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapSortDirection;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
 @Provider
@@ -122,22 +122,30 @@ public class ComponentsResource extends AbstractApiResource implements Component
             PackageURL packageURL = null;
             if (purl != null) {
                 try {
-                    packageURL = new PackageURL(purl);
+                    packageURL = new PackageURL(StringUtils.trimToNull(purl));
                 } catch (MalformedPackageURLException e) {
                     throw new BadRequestException("Invalid package URL: %s".formatted(purl));
                 }
             }
             if (cpe != null) {
                 try {
-                    CpeParser.parse(cpe);
+                    CpeParser.parse(StringUtils.trimToNull(cpe));
                 } catch (CpeParsingException e) {
                     throw new BadRequestException("Invalid CPE: %s".formatted(cpe));
+                }
+            }
+            ComponentDao.HashType hashTypeEnum = null;
+            if (hashType != null) {
+                try {
+                    hashTypeEnum = ComponentDao.HashType.valueOf(StringUtils.trimToNull(hashType).toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    throw new BadRequestException("Invalid Hash type: %s".formatted(hashType));
                 }
             }
             final Page<Component> componentsPage = handle.attach(ComponentDao.class)
                     .listComponents(projectId, true, packageURL != null ? packageURL.canonicalize().toLowerCase() : null, StringUtils.trimToNull(cpe),
                             StringUtils.trimToNull(swidTagId), StringUtils.trimToNull(group), StringUtils.trimToNull(name),
-                            StringUtils.trimToNull(version), StringUtils.trimToNull(hashType), StringUtils.trimToNull(hash), limit, pageToken, sortBy, convert(sortDirection));
+                            StringUtils.trimToNull(version), hashTypeEnum, StringUtils.trimToNull(hash), limit, pageToken, sortBy, mapSortDirection(sortDirection));
 
             final var response = ListComponentsResponse.builder()
                     .items(componentsPage.items().stream()

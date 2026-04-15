@@ -23,7 +23,9 @@ import org.dependencytrack.api.v2.model.DependencyMetrics;
 import org.dependencytrack.api.v2.model.Hashes;
 import org.dependencytrack.api.v2.model.License;
 import org.dependencytrack.api.v2.model.OrganizationalContact;
+import org.dependencytrack.api.v2.model.SortDirection;
 import org.dependencytrack.model.Component;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
@@ -131,5 +133,14 @@ public class ModelMapper {
                 .blake2b512(component.getBlake2b_512())
                 .blake3(component.getBlake3())
                 .build();
+    }
+
+    public static org.dependencytrack.common.pagination.@Nullable SortDirection mapSortDirection(
+            @Nullable SortDirection sortDirection) {
+        return switch (sortDirection) {
+            case ASC -> org.dependencytrack.common.pagination.SortDirection.ASC;
+            case DESC -> org.dependencytrack.common.pagination.SortDirection.DESC;
+            case null -> null;
+        };
     }
 }

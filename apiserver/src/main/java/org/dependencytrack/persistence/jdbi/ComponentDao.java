@@ -214,7 +214,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             final String componentGroup,
             final String componentName,
             final String componentVersion,
-            final String componentHashType,
+            final HashType componentHashType,
             final String componentHash,
             final int limit,
             final String pageToken,
@@ -257,8 +257,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             queryParams.put("componentSwidTagId", componentSwidTagId);
         }
         if (componentHashType != null && componentHash != null) {
-            final HashType hashType = HashType.valueOf(componentHashType.toUpperCase());
-            final String hashColumn = switch (hashType) {
+            final String hashColumn = switch (componentHashType) {
                 case MD5 -> "\"C\".\"MD5\"";
                 case SHA1 -> "\"C\".\"SHA1\"";
                 case SHA_256 -> "\"C\".\"SHA_256\"";
