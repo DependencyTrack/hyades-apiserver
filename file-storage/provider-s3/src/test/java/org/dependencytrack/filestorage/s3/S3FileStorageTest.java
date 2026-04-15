@@ -186,9 +186,9 @@ class S3FileStorageTest {
                     Map.entry("dt.file-storage.s3.access.key", "foo"),
                     Map.entry("dt.file-storage.s3.secret.key", "bar"),
                     Map.entry("dt.file-storage.s3.bucket", "test"),
-                    Map.entry("dt.file-storage.s3.connect-timeout-ms", "500"),
-                    Map.entry("dt.file-storage.s3.read-timeout-ms", "500"),
-                    Map.entry("dt.file-storage.s3.write-timeout-ms", "500")));
+                    Map.entry("dt.file-storage.s3.connect-timeout-ms", "5000"),
+                    Map.entry("dt.file-storage.s3.read-timeout-ms", "5000"),
+                    Map.entry("dt.file-storage.s3.write-timeout-ms", "5000")));
         }
 
     }
