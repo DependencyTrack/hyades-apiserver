@@ -34,6 +34,12 @@ post:
   responses:
     "202":
       description: Discovery triggered
+      headers:
+        Location:
+          description: URL of the aggregator
+          schema:
+            type: string
+            format: uri
     "400":
       $ref: "../../components/responses/invalid-request-error.yaml"
     "401":

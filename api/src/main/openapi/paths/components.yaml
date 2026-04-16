@@ -29,6 +29,12 @@ post:
   responses:
     "201":
       description: Component Created
+      headers:
+        Location:
+          description: URL of the created component
+          schema:
+            type: string
+            format: uri
     "400":
       description: Bad Request
       content:

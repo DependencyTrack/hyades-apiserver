@@ -27,6 +27,7 @@ import org.dependencytrack.api.v2.AdvisoriesApi;
 import org.dependencytrack.api.v2.model.GetAdvisoryResponse;
 import org.dependencytrack.api.v2.model.ListAdvisoriesResponse;
 import org.dependencytrack.api.v2.model.ListAdvisoriesResponseItem;
+import org.dependencytrack.api.v2.model.UploadAdvisoryResponse;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.csaf.CsafModelConverter;
@@ -172,7 +173,16 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
                 persistentAdvisory.setVulnerabilities(persistentVulns);
             }
 
-            return Response.ok("File uploaded successfully: " + fileName).build();
+            final UploadAdvisoryResponse responseBody = UploadAdvisoryResponse.builder()
+                    .id(persistentAdvisory.getId())
+                    .build();
+            return Response
+                    .created(getUriInfo().getBaseUriBuilder()
+                            .path("/advisories")
+                            .path(persistentAdvisory.getId().toString())
+                            .build())
+                    .entity(responseBody)
+                    .build();
         });
     }
 

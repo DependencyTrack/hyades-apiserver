@@ -79,7 +79,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
     public Response createComponent(final CreateComponentRequest request) {
         final UUID projectUuid = request.getProjectUuid();
         try (QueryManager qm = new QueryManager()) {
-            qm.callInTransaction(() -> {
+            final Component component = qm.callInTransaction(() -> {
                 final Project project = qm.getObjectByUuid(Project.class, projectUuid);
                 if (project == null) {
                     throw new NotFoundException();
@@ -96,6 +96,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
             return Response
                     .created(uriInfo.getBaseUriBuilder()
                             .path("/components")
+                            .path(component.getUuid().toString())
                             .build())
                     .build();
         } catch (RuntimeException e) {

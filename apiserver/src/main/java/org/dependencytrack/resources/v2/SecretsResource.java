@@ -66,7 +66,12 @@ public class SecretsResource extends AbstractApiResource implements SecretsApi {
         }
 
         LOGGER.info(SecurityMarkers.SECURITY_AUDIT, "Created secret: {}", request.getName());
-        return Response.noContent().build();
+        return Response
+                .created(getUriInfo().getBaseUriBuilder()
+                        .path("/secrets")
+                        .path(request.getName())
+                        .build())
+                .build();
     }
 
     @Override

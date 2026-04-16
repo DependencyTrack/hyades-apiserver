@@ -83,12 +83,18 @@ post:
           required:
             - file
   responses:
-    "200":
+    "201":
       description: Advisory Uploaded
-      content:
-        text/plain:
+      headers:
+        Location:
+          description: URL of the created advisory
           schema:
             type: string
+            format: uri
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/upload-advisory-response.yaml"
     "400":
       $ref: "../components/responses/invalid-request-error.yaml"
     "401":

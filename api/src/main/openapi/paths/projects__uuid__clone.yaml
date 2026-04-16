@@ -36,6 +36,12 @@ post:
   responses:
     "201":
       description: Project cloned
+      headers:
+        Location:
+          description: URL of the cloned project
+          schema:
+            type: string
+            format: uri
       content:
         application/json:
           schema:

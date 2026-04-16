@@ -74,6 +74,12 @@ post:
   responses:
     "201":
       description: CSAF provider created
+      headers:
+        Location:
+          description: URL of the created provider
+          schema:
+            type: string
+            format: uri
       content:
         application/json:
           schema:
