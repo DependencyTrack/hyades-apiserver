@@ -18,14 +18,9 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import org.dependencytrack.common.pagination.Page;
-import org.dependencytrack.common.pagination.PageToken;
-import org.dependencytrack.common.pagination.PageTokenEncoder;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.ProjectMetrics;
-import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
-import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
@@ -47,53 +42,6 @@ import java.util.regex.Pattern;
 public interface MetricsDao extends SqlObject {
 
     Pattern VALID_TABLE_IDENTIFIER_PATTERN = Pattern.compile("^\"[A-Z][A-Z0-9_]+\"$");
-
-    record ListVulnerabilityMetricsPageToken(int year, int month) implements PageToken {
-    }
-
-    record ListVulnerabilityMetricsRow(int year, int month, int count, Instant measuredAt) {
-    }
-
-    default Page<ListVulnerabilityMetricsRow> getVulnerabilityMetrics(final int limit, final String pageToken) {
-        final PageTokenEncoder pageTokenEncoder =
-                getHandle().getConfig(PaginationConfig.class).getPageTokenEncoder();
-        final var decodedPageToken = pageTokenEncoder.decode(pageToken, ListVulnerabilityMetricsPageToken.class);
-
-        final Query query = getHandle().createQuery(/* language=InjectedFreeMarker */ """
-                    <#-- @ftlvariable name="year" type="Boolean" -->
-                    <#-- @ftlvariable name="month" type="Boolean" -->
-                    SELECT *
-                    FROM "VULNERABILITYMETRICS"
-                    WHERE TRUE
-                    <#if year && month>
-                        AND ("YEAR", "MONTH") > (:year, :month)
-                    </#if>
-                    ORDER BY "YEAR" ASC, "MONTH" ASC
-                    LIMIT :limit
-                """);
-
-        final List<ListVulnerabilityMetricsRow> rows = query
-                .bind("year", decodedPageToken != null
-                        ? decodedPageToken.year()
-                        : null)
-                .bind("month", decodedPageToken != null
-                        ? decodedPageToken.month()
-                        : null)
-                .bind("limit", limit + 1)
-                .defineNamedBindings()
-                .map(ConstructorMapper.of(ListVulnerabilityMetricsRow.class))
-                .list();
-
-        final List<ListVulnerabilityMetricsRow> resultRows = rows.size() > 1
-                ? rows.subList(0, Math.min(rows.size(), limit))
-                : rows;
-
-        final ListVulnerabilityMetricsPageToken nextPageToken = rows.size() > limit
-                ? new ListVulnerabilityMetricsPageToken(resultRows.getLast().year, resultRows.getLast().month)
-                : null;
-
-        return new Page<>(resultRows, pageTokenEncoder.encode(nextPageToken));
-    }
 
     /**
      * Compute the portfolio metrics for the projects accessible by the calling principal.

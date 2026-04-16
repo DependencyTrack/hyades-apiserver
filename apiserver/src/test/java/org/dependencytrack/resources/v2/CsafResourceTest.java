@@ -404,7 +404,8 @@ class CsafResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(null);
         assertThat(response.getStatus()).isEqualTo(202);
-        assertThat(getPlainTextBody(response)).isEmpty();
+        assertThat(response.getLocation()).isNotNull();
+        assertThat(response.getLocation().getPath()).endsWith("/csaf-aggregators/" + aggregator.getId());
 
         final CreateWorkflowRunRequest<?> createRunRequest = createRunCaptor.getValue();
         assertThat(createRunRequest.workflowName()).isEqualTo("discover-csaf-providers");

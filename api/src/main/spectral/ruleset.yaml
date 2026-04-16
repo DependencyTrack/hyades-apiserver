@@ -21,6 +21,7 @@ formats:
 - "oas3"
 functions:
 - paginated-response-uses-items
+- response-conventions
 rules:
   paginated-response-must-use-items-array:
     message: "{{error}}"
@@ -41,3 +42,79 @@ rules:
       function: pattern
       functionOptions:
         match: ^(?=((([\/a-z][a-z0-9\-\/]*)?({[^}]*})?)+))\1$
+
+  # Enforce consistent naming of operations, depending on their HTTP method.
+  operation-id-get-prefix:
+    message: GET operation IDs must start with "get" or "list"
+    severity: error
+    given: $.paths.*.get.operationId
+    then:
+      function: pattern
+      functionOptions:
+        match: ^(get|list)[A-Z]
+  operation-id-post-prefix:
+    message: POST operation IDs must not use prefixes reserved for other methods (get, list, delete, update)
+    severity: error
+    given: $.paths.*.post.operationId
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: ^(get|list|delete|update)[A-Z]
+  operation-id-put-prefix:
+    message: PUT operation IDs must start with "update"
+    severity: error
+    given: $.paths.*.put.operationId
+    then:
+      function: pattern
+      functionOptions:
+        match: ^update[A-Z]
+  operation-id-patch-prefix:
+    message: PATCH operation IDs must start with "update"
+    severity: error
+    given: $.paths.*.patch.operationId
+    then:
+      function: pattern
+      functionOptions:
+        match: ^update[A-Z]
+  operation-id-delete-prefix:
+    message: DELETE operation IDs must start with "delete"
+    severity: error
+    given: $.paths.*.delete.operationId
+    then:
+      function: pattern
+      functionOptions:
+        match: ^delete[A-Z]
+
+  # Enforce consistent response structure, depending on the operation's HTTP method.
+  response-conventions-post:
+    message: "{{error}}"
+    severity: error
+    given: "$.paths[?(!@property.match(/\\/test$/))].post.responses"
+    then:
+      function: response-conventions
+      functionOptions:
+        method: post
+  response-conventions-put:
+    message: "{{error}}"
+    severity: error
+    given: $.paths.*.put.responses
+    then:
+      function: response-conventions
+      functionOptions:
+        method: put
+  response-conventions-patch:
+    message: "{{error}}"
+    severity: error
+    given: $.paths.*.patch.responses
+    then:
+      function: response-conventions
+      functionOptions:
+        method: patch
+  response-conventions-delete:
+    message: "{{error}}"
+    severity: error
+    given: $.paths.*.delete.responses
+    then:
+      function: response-conventions
+      functionOptions:
+        method: delete

@@ -234,7 +234,13 @@ public class CsafResource extends AbstractApiResource implements CsafApi {
                 SecurityMarkers.SECURITY_AUDIT,
                 "Triggered provider discovery for CSAF aggregator '{}'",
                 aggregator.getNamespace());
-        return Response.accepted().build();
+        return Response
+                .accepted()
+                .location(getUriInfo().getBaseUriBuilder()
+                        .path("/csaf-aggregators")
+                        .path(id.toString())
+                        .build())
+                .build();
     }
 
     @Override

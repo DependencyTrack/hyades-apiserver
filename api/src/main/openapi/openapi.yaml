@@ -129,10 +129,6 @@ paths:
     $ref: "./paths/extension-points__name__extensions__name__config-schema.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/test:
     $ref: "./paths/extension-points__name__extensions__name__test.yaml"
-  /metrics/portfolio/current:
-    $ref: "./paths/metrics_portfolio_current.yaml"
-  /metrics/vulnerabilities:
-    $ref: "./paths/metrics_vulnerabilities.yaml"
   /projects/{uuid}/advisories:
     $ref: "./paths/projects__uuid__advisories.yaml"
   /projects/{uuid}/advisories/{advisoryId}/findings:
@@ -159,12 +155,6 @@ paths:
     $ref: "./paths/vuln-policy-bundles__uuid_.yaml"
   /vuln-policy-bundles/{uuid}/sync:
     $ref: "./paths/vuln-policy-bundles__uuid__sync.yaml"
-  /teams:
-    $ref: "./paths/teams.yaml"
-  /teams/{name}:
-    $ref: "./paths/teams__name_.yaml"
-  /team-memberships:
-    $ref: "./paths/team-memberships.yaml"
   /workflow-instances/{id}:
     $ref: "./paths/workflow-instances__id_.yaml"
   /workflow-runs:

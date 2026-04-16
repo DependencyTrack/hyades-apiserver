@@ -70,7 +70,7 @@ class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    void createSecretShouldCreateSecretAndReturnNoContent() {
+    void createSecretShouldCreateSecretAndReturnCreated() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_CREATE);
 
         final Response response = jersey
@@ -84,8 +84,9 @@ class SecretsResourceTest extends ResourceTest {
                           "value": "baz"
                         }
                         """));
-        assertThat(response.getStatus()).isEqualTo(204);
-        assertThat(getPlainTextBody(response)).isEmpty();
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThat(response.getLocation()).isNotNull();
+        assertThat(response.getLocation().getPath()).endsWith("/secrets/foo");
 
         verify(SECRET_MANAGER_MOCK).createSecret(eq("foo"), eq("bar"), eq("baz"));
     }
@@ -149,7 +150,7 @@ class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    void updateSecretShouldUpdateDescriptionAndReturnNoContent() {
+    void shouldUpdateDescriptionAndReturnNoContent() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_UPDATE);
 
         doReturn(true).when(SECRET_MANAGER_MOCK).updateSecret(eq("foo"), any(), any());
@@ -170,7 +171,7 @@ class SecretsResourceTest extends ResourceTest {
     }
 
     @Test
-    void updateSecretShouldUpdateValueAndReturnNoContent() {
+    void shouldUpdateValueAndReturnNoContent() {
         initializeWithPermissions(Permissions.SECRET_MANAGEMENT_UPDATE);
 
         doReturn(true).when(SECRET_MANAGER_MOCK).updateSecret(eq("foo"), any(), any());

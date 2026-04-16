@@ -66,6 +66,12 @@ post:
   responses:
     "201":
       description: CSAF aggregator created
+      headers:
+        Location:
+          description: URL of the created aggregator
+          schema:
+            type: string
+            format: uri
       content:
         application/json:
           schema:

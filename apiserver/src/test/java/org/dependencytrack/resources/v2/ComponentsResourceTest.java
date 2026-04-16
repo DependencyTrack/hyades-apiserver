@@ -71,7 +71,8 @@ public class ComponentsResourceTest extends ResourceTest {
                         }
                         """.formatted(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(201);
-        assertThat(response.getLocation()).hasPath("/components");
+        assertThat(response.getLocation()).isNotNull();
+        assertThat(response.getLocation().getPath()).matches("/components/.+");
         assertThat(getPlainTextBody(response)).isEmpty();
 
         qm.getPersistenceManager().evictAll();

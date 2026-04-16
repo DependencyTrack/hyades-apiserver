@@ -300,7 +300,7 @@ public class AdvisoriesResourceTest extends ResourceTest {
     }
 
     @Test
-    public void testUploadAdvisoryCsafValid_returns200() throws Exception {
+    public void testUploadAdvisoryCsafValid_returns201() throws Exception {
         initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT_CREATE);
 
         // Load a valid CSAF document from test resources
@@ -322,14 +322,15 @@ public class AdvisoriesResourceTest extends ResourceTest {
                      .header(X_API_KEY, apiKey)
                      .post(Entity.entity(multiPart, multiPart.getMediaType()))) {
 
-            // If not 200, print the error for debugging
-            if (response.getStatus() != 200) {
-                String errorBody = response.readEntity(String.class);
-                System.out.println("Error response: " + errorBody);
-            }
-
             // Assert successful upload
-            assertThat(response.getStatus()).isEqualTo(200);
+            assertThat(response.getStatus()).isEqualTo(201);
+            assertThat(response.getLocation()).isNotNull();
+            assertThat(response.getLocation().getPath()).matches("/advisories/.+");
+            assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                    {
+                      "id": "${json-unit.any-string}"
+                    }
+                    """);
         }
     }
 
