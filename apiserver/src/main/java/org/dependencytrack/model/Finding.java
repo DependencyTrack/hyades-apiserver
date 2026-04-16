@@ -70,6 +70,7 @@ public class Finding implements Serializable {
         optValue(vulnerability, "subtitle", findingRow.vulnSubtitle());
         optValue(vulnerability, "description", findingRow.vulnDescription());
         optValue(vulnerability, "recommendation", findingRow.vulnRecommendation());
+        optValue(vulnerability, "references", findingRow.vulnReferences());
         if (findingRow.vulnSeverity() != null) {
             final Severity severity = findingRow.vulnSeverity();
             optValue(vulnerability, "severity", severity.name());
