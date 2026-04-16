@@ -153,6 +153,9 @@ public class FindingResource extends AbstractApiResource {
                         handle.attach(FindingDao.class).getFindingsByProject(project.getId(), /* includeInactive */ false, suppressed, hasAnalysis));
                 final long totalCount = findingRows.isEmpty() ? 0 : findingRows.getFirst().totalCount();
                 List<Finding> findings = findingRows.stream().map(Finding::new).toList();
+                if (source != null) {
+                    findings = findings.stream().filter(finding -> source.equals(finding.getVulnerability().get("source"))).collect(Collectors.toList());
+                }
                 findings = mapComponentLatestVersion(findings);
                 if (acceptHeader != null && acceptHeader.contains(MEDIA_TYPE_SARIF_JSON)) {
                     try {
@@ -163,9 +166,6 @@ public class FindingResource extends AbstractApiResource {
                         LOGGER.error(ioException.getMessage(), ioException);
                         return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("An error occurred while generating SARIF file").build();
                     }
-                }
-                if (source != null) {
-                    findings = findings.stream().filter(finding -> source.name().equals(finding.getVulnerability().get("source"))).collect(Collectors.toList());
                 }
                 return Response.ok(findings).header(TOTAL_COUNT_HEADER, totalCount).build();
             } else {
