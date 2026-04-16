@@ -76,7 +76,7 @@ class TaskSchedulerInitializerTest extends PersistenceCapableTest {
                 "Telemetry Submission",
                 "Vulnerability Database Maintenance",
                 "Vulnerability Metrics Update",
-                "Vulnerability Policy Sync");
+                "Vulnerability Policy Bundle Sync");
 
         assertThat(scheduler.isRunning()).isTrue();
 

@@ -1878,4 +1878,65 @@
             EXECUTE FUNCTION prevent_direct_project_access_users_writes();
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-72" author="nscuro">
+        <!--
+            Add UUID column to VULNERABILITY_POLICY and VULNERABILITY_POLICY_BUNDLE
+            for stable API identification.
+        -->
+        <sql splitStatements="true">
+            ALTER TABLE "VULNERABILITY_POLICY" ADD COLUMN "UUID" UUID NOT NULL DEFAULT gen_random_uuid();
+            CREATE UNIQUE INDEX "VULNERABILITY_POLICY_UUID_IDX" ON "VULNERABILITY_POLICY" ("UUID");
+
+            ALTER TABLE "VULNERABILITY_POLICY_BUNDLE" ADD COLUMN "UUID" UUID NOT NULL DEFAULT gen_random_uuid();
+            CREATE UNIQUE INDEX "VULNERABILITY_POLICY_BUNDLE_UUID_IDX" ON "VULNERABILITY_POLICY_BUNDLE" ("UUID");
+
+            UPDATE "VULNERABILITY_POLICY_BUNDLE"
+               SET "UUID" = 'bc106cf4-3993-4e38-952d-d2f5f11412ed'
+             WHERE "ID" = (SELECT MIN("ID") FROM "VULNERABILITY_POLICY_BUNDLE");
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-73" author="nscuro">
+        <!-- Add PRIORITY column for controlling policy evaluation order. -->
+        <sql splitStatements="true">
+            ALTER TABLE "VULNERABILITY_POLICY" ADD COLUMN "PRIORITY" SMALLINT NOT NULL DEFAULT 0;
+            ALTER TABLE "VULNERABILITY_POLICY" ADD CONSTRAINT "VULNERABILITY_POLICY_PRIORITY_check" CHECK ("PRIORITY" >= 0 AND "PRIORITY" &lt;= 100);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-74" author="nscuro">
+        <!--
+            Add FK constraint to VULNERABILITY_POLICY_BUNDLE to distinguish bundle-managed
+            from user-managed policies. Backfill existing policies to the existing bundle.
+        -->
+        <sql splitStatements="true">
+            ALTER TABLE "VULNERABILITY_POLICY" ADD COLUMN "VULNERABILITY_POLICY_BUNDLE_ID" BIGINT;
+
+            UPDATE "VULNERABILITY_POLICY"
+               SET "VULNERABILITY_POLICY_BUNDLE_ID" = (SELECT "ID" FROM "VULNERABILITY_POLICY_BUNDLE" LIMIT 1)
+             WHERE EXISTS (SELECT 1 FROM "VULNERABILITY_POLICY_BUNDLE");
+
+            ALTER TABLE "VULNERABILITY_POLICY"
+            ADD CONSTRAINT "VULNERABILITY_POLICY_BUNDLE_FK"
+            FOREIGN KEY ("VULNERABILITY_POLICY_BUNDLE_ID")
+            REFERENCES "VULNERABILITY_POLICY_BUNDLE" ("ID");
+
+            CREATE INDEX "VULNERABILITY_POLICY_BUNDLE_ID_IDX"
+                ON "VULNERABILITY_POLICY" ("VULNERABILITY_POLICY_BUNDLE_ID");
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-75" author="nscuro">
+        <!-- Migrate multiple vulnerability policy conditions to a single condition. -->
+        <sql splitStatements="true">
+            ALTER TABLE "VULNERABILITY_POLICY" ADD COLUMN "CONDITION" TEXT;
+
+            UPDATE "VULNERABILITY_POLICY"
+               SET "CONDITION" = COALESCE("CONDITIONS"[1], 'false');
+
+            ALTER TABLE "VULNERABILITY_POLICY" ALTER COLUMN "CONDITION" SET NOT NULL;
+            ALTER TABLE "VULNERABILITY_POLICY" DROP COLUMN "CONDITIONS";
+        </sql>
+    </changeSet>
 </databaseChangeLog>

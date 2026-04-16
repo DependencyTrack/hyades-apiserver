@@ -67,7 +67,6 @@ import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityMetrics;
-import org.dependencytrack.model.VulnerabilityPolicyBundle;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
@@ -1228,12 +1227,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<Component> getComponentsByPurl(String purl) {
         return getComponentQueryManager().getComponentsByPurl(purl);
-    }
-
-    public VulnerabilityPolicyBundle getVulnerabilityPolicyBundle() {
-        final Query<VulnerabilityPolicyBundle> query = pm.newQuery(VulnerabilityPolicyBundle.class);
-        query.setRange(0, 1);
-        return singleResult(query.execute());
     }
 
     public Epss getEpssByCveId(String cveId) {

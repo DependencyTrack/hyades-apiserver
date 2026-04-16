@@ -16,17 +16,13 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.e2e.api.model;
+syntax = "proto3";
 
-import java.util.Set;
-import java.util.UUID;
+package org.dependencytrack.internal.workflow.v1;
 
-public record UpdateNotificationRuleRequest(
-        UUID uuid,
-        String name,
-        boolean enabled,
-        String scope,
-        String notificationLevel,
-        Set<String> notifyOn,
-        String publisherConfig) {
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.internal.workflow.v1";
+
+message SyncVulnPolicyBundleArg {
+  string bundle_uuid = 1;
 }

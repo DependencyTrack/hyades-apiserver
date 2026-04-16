@@ -18,15 +18,7 @@
  */
 package org.dependencytrack.e2e.api.model;
 
-import java.util.Set;
-import java.util.UUID;
+import java.util.List;
 
-public record UpdateNotificationRuleRequest(
-        UUID uuid,
-        String name,
-        boolean enabled,
-        String scope,
-        String notificationLevel,
-        Set<String> notifyOn,
-        String publisherConfig) {
+public record Page<T>(List<T> items) {
 }
