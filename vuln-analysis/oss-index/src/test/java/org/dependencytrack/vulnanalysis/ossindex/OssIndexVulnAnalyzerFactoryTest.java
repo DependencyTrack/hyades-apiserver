@@ -18,13 +18,210 @@
  */
 package org.dependencytrack.vulnanalysis.ossindex;
 
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.ExtensionTestCheck.Status;
+import org.dependencytrack.plugin.api.ExtensionTestResult;
 import org.dependencytrack.plugin.testing.AbstractExtensionFactoryTest;
+import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import java.net.URI;
+import java.util.Collections;
+import java.util.Map;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class OssIndexVulnAnalyzerFactoryTest extends AbstractExtensionFactoryTest<VulnAnalyzer, OssIndexVulnAnalyzerFactory> {
 
     OssIndexVulnAnalyzerFactoryTest() {
         super(OssIndexVulnAnalyzerFactory.class);
+    }
+
+    @Nested
+    @WireMockTest
+    class TestMethodTest {
+
+        @ParameterizedTest
+        @ValueSource(ints = {200, 402, 429})
+        void shouldPassForSuccessStatusCodes(int statusCode, WireMockRuntimeInfo wmRuntimeInfo) {
+            stubFor(post(urlPathEqualTo("/api/v3/component-report"))
+                    .willReturn(aResponse()
+                            .withStatus(statusCode)
+                            .withBody("[]")));
+
+            final OssIndexVulnAnalyzerFactory factory = createFactory();
+            final OssIndexVulnAnalyzerConfigV1 config = createConfig(wmRuntimeInfo);
+            final ExtensionTestResult result = factory.test(config);
+
+            assertThat(result.isFailed()).isFalse();
+            assertThat(result.checks()).satisfiesExactly(
+                    check -> {
+                        assertThat(check.name()).isEqualTo("connection");
+                        assertThat(check.status()).isEqualTo(Status.PASSED);
+                    },
+                    check -> {
+                        assertThat(check.name()).isEqualTo("authentication");
+                        assertThat(check.status()).isEqualTo(Status.PASSED);
+                    });
+        }
+
+        @Test
+        void shouldFailAuthenticationForStatus401(WireMockRuntimeInfo wmRuntimeInfo) {
+            stubFor(post(urlPathEqualTo("/api/v3/component-report"))
+                    .willReturn(aResponse().withStatus(401)));
+
+            final OssIndexVulnAnalyzerFactory factory = createFactory();
+            final OssIndexVulnAnalyzerConfigV1 config = createConfig(wmRuntimeInfo);
+            final ExtensionTestResult result = factory.test(config);
+
+            assertThat(result.isFailed()).isTrue();
+            assertThat(result.checks()).satisfiesExactly(
+                    check -> {
+                        assertThat(check.name()).isEqualTo("connection");
+                        assertThat(check.status()).isEqualTo(Status.PASSED);
+                    },
+                    check -> {
+                        assertThat(check.name()).isEqualTo("authentication");
+                        assertThat(check.status()).isEqualTo(Status.FAILED);
+                        assertThat(check.message()).contains("401");
+                    });
+        }
+
+        @Test
+        void shouldFailConnectionForUnexpectedStatusCode(WireMockRuntimeInfo wmRuntimeInfo) {
+            stubFor(post(urlPathEqualTo("/api/v3/component-report"))
+                    .willReturn(aResponse().withStatus(500)));
+
+            final OssIndexVulnAnalyzerFactory factory = createFactory();
+            final OssIndexVulnAnalyzerConfigV1 config = createConfig(wmRuntimeInfo);
+            final ExtensionTestResult result = factory.test(config);
+
+            assertThat(result.isFailed()).isTrue();
+            assertThat(result.checks()).satisfiesExactly(
+                    check -> {
+                        assertThat(check.name()).isEqualTo("connection");
+                        assertThat(check.status()).isEqualTo(Status.FAILED);
+                        assertThat(check.message()).contains("500");
+                    },
+                    check -> {
+                        assertThat(check.name()).isEqualTo("authentication");
+                        assertThat(check.status()).isEqualTo(Status.SKIPPED);
+                    });
+        }
+
+        @Test
+        void shouldSkipAllChecksWhenDisabled() {
+            final OssIndexVulnAnalyzerFactory factory = createFactory();
+            final var config = new OssIndexVulnAnalyzerConfigV1()
+                    .withEnabled(false);
+
+            final ExtensionTestResult result = factory.test(config);
+
+            assertThat(result.isFailed()).isFalse();
+            assertThat(result.checks()).satisfiesExactly(
+                    check -> {
+                        assertThat(check.name()).isEqualTo("connection");
+                        assertThat(check.status()).isEqualTo(Status.SKIPPED);
+                    },
+                    check -> {
+                        assertThat(check.name()).isEqualTo("authentication");
+                        assertThat(check.status()).isEqualTo(Status.SKIPPED);
+                    });
+        }
+
+        @Test
+        void shouldFailConnectionOnConnectionError() {
+            final var factory = new OssIndexVulnAnalyzerFactory();
+            final var configRegistry = new MockConfigRegistry(
+                    Map.of("allow-local-connections", "true"),
+                    factory.runtimeConfigSpec(),
+                    null,
+                    null);
+            factory.init(new ExtensionContext(configRegistry));
+
+            final var config = new OssIndexVulnAnalyzerConfigV1()
+                    .withEnabled(true)
+                    .withApiUrl(URI.create("http://127.0.0.1:1"))
+                    .withUsername("foo@example.com")
+                    .withApiToken("test-token");
+
+            final ExtensionTestResult result = factory.test(config);
+
+            assertThat(result.isFailed()).isTrue();
+            assertThat(result.checks()).satisfiesExactly(
+                    check -> {
+                        assertThat(check.name()).isEqualTo("connection");
+                        assertThat(check.status()).isEqualTo(Status.FAILED);
+                    },
+                    check -> {
+                        assertThat(check.name()).isEqualTo("authentication");
+                        assertThat(check.status()).isEqualTo(Status.SKIPPED);
+                    });
+        }
+
+        @Test
+        void shouldFailConnectionForLocalAddress() {
+            final var factory = new OssIndexVulnAnalyzerFactory();
+            final var configRegistry = new MockConfigRegistry(
+                    Collections.emptyMap(),
+                    factory.runtimeConfigSpec(),
+                    null,
+                    null);
+            factory.init(new ExtensionContext(configRegistry));
+
+            final var config = new OssIndexVulnAnalyzerConfigV1()
+                    .withEnabled(true)
+                    .withApiUrl(URI.create("http://127.0.0.1"))
+                    .withUsername("foo@example.com")
+                    .withApiToken("test-token");
+
+            final ExtensionTestResult result = factory.test(config);
+
+            assertThat(result.isFailed()).isTrue();
+            assertThat(result.checks()).satisfiesExactly(
+                    check -> {
+                        assertThat(check.name()).isEqualTo("connection");
+                        assertThat(check.status()).isEqualTo(Status.FAILED);
+                        assertThat(check.message()).contains("local address");
+                    },
+                    check -> {
+                        assertThat(check.name()).isEqualTo("authentication");
+                        assertThat(check.status()).isEqualTo(Status.SKIPPED);
+                    });
+        }
+
+        private OssIndexVulnAnalyzerFactory createFactory() {
+            final var factory = new OssIndexVulnAnalyzerFactory();
+
+            final var effectiveDeploymentConfigs = Map.of("allow-local-connections", "true");
+
+            final var configRegistry = new MockConfigRegistry(
+                    effectiveDeploymentConfigs,
+                    factory.runtimeConfigSpec(),
+                    null,
+                    null);
+            factory.init(new ExtensionContext(configRegistry));
+            return factory;
+        }
+
+        private OssIndexVulnAnalyzerConfigV1 createConfig(WireMockRuntimeInfo wmRuntimeInfo) {
+            return new OssIndexVulnAnalyzerConfigV1()
+                    .withEnabled(true)
+                    .withApiUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()))
+                    .withUsername("foo@example.com")
+                    .withApiToken("test-token");
+        }
+
     }
 
 }

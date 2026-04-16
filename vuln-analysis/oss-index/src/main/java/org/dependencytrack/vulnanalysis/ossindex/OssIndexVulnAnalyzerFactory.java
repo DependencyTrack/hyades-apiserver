@@ -21,17 +21,30 @@ package org.dependencytrack.vulnanalysis.ossindex;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.ExtensionTestResult;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
+import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzerFactory;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzerRequirement;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Base64;
 import java.util.EnumSet;
+import java.util.Set;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 import static java.util.Objects.requireNonNull;
@@ -41,10 +54,13 @@ import static java.util.Objects.requireNonNull;
  */
 final class OssIndexVulnAnalyzerFactory implements VulnAnalyzerFactory {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(OssIndexVulnAnalyzerFactory.class);
+
     private @Nullable ConfigRegistry configRegistry;
     private @Nullable CacheManager cacheManager;
     private @Nullable HttpClient httpClient;
     private @Nullable ObjectMapper objectMapper;
+    private boolean localConnectionsAllowed;
 
     @Override
     public String extensionName() {
@@ -63,6 +79,10 @@ final class OssIndexVulnAnalyzerFactory implements VulnAnalyzerFactory {
         httpClient = ctx.http().client();
         objectMapper = new ObjectMapper()
                 .disable(FAIL_ON_UNKNOWN_PROPERTIES);
+        localConnectionsAllowed = configRegistry
+                .getDeploymentConfig()
+                .getOptionalValue("allow-local-connections", boolean.class)
+                .orElse(false);
     }
 
     @Override
@@ -75,6 +95,15 @@ final class OssIndexVulnAnalyzerFactory implements VulnAnalyzerFactory {
         final var config = configRegistry.getRuntimeConfig(OssIndexVulnAnalyzerConfigV1.class);
         if (!config.isEnabled()) {
             throw new IllegalStateException("Analyzer is disabled");
+        }
+
+        if (!localConnectionsAllowed) {
+            final String host = config.getApiUrl().getHost();
+            if (host != null && isLocalHost(host)) {
+                throw new IllegalStateException("""
+                        API URL '%s' resolves to a local address, \
+                        but local connections are not allowed""".formatted(config.getApiUrl()));
+            }
         }
 
         return new OssIndexVulnAnalyzer(
@@ -118,6 +147,84 @@ final class OssIndexVulnAnalyzerFactory implements VulnAnalyzerFactory {
                         throw new InvalidRuntimeConfigException("No API token provided");
                     }
                 });
+    }
+
+    @Override
+    public ExtensionTestResult test(@Nullable RuntimeConfig runtimeConfig) {
+        requireNonNull(runtimeConfig, "runtimeConfig must not be null");
+        requireNonNull(httpClient, "httpClient must not be null");
+
+        final var config = (OssIndexVulnAnalyzerConfigV1) runtimeConfig;
+        final var testResult = ExtensionTestResult.ofChecks("connection", "authentication");
+
+        if (!config.isEnabled()) {
+            return testResult;
+        }
+
+        if (config.getApiUrl() == null) {
+            return testResult.fail("connection", "No API URL provided");
+        }
+        if (config.getUsername() == null || config.getApiToken() == null) {
+            return testResult.fail("authentication", "No credentials provided");
+        }
+
+        final String host = config.getApiUrl().getHost();
+        if (!localConnectionsAllowed && host != null && isLocalHost(host)) {
+            return testResult.fail("connection", """
+                    API URL '%s' resolves to a local address, \
+                    but local connections are not allowed""".formatted(config.getApiUrl()));
+        }
+
+        final String basicAuthCredentials = Base64.getEncoder().encodeToString(
+                "%s:%s".formatted(config.getUsername(), config.getApiToken())
+                        .getBytes(StandardCharsets.UTF_8));
+
+        final var request = HttpRequest.newBuilder()
+                .uri(config.getApiUrl().resolve("/api/v3/component-report"))
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Basic " + basicAuthCredentials)
+                .timeout(Duration.ofSeconds(10))
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        "{\"coordinates\":[\"pkg:maven/org.dependencytrack/noop@0.0.0\"]}"))
+                .build();
+
+        final int statusCode;
+        try {
+            final HttpResponse<Void> response = httpClient.send(
+                    request, HttpResponse.BodyHandlers.discarding());
+            statusCode = response.statusCode();
+        } catch (IOException e) {
+            LOGGER.error("Failed to connect to OSS Index at {}", request.uri(), e);
+            return testResult.fail("connection", "Connection failed, check logs for details");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return testResult.fail("connection", "Request was interrupted");
+        }
+
+        testResult.pass("connection");
+
+        if (Set.of(200, 402, 429).contains(statusCode)) {
+            testResult.pass("authentication");
+        } else if (statusCode == 401 || statusCode == 403) {
+            testResult.fail("authentication", "Authentication failed with status %d".formatted(statusCode));
+        } else {
+            testResult.fail("connection", "Unexpected response status %d".formatted(statusCode));
+        }
+
+        return testResult;
+    }
+
+    private boolean isLocalHost(String hostname) {
+        try {
+            final InetAddress hostAddress = InetAddress.getByName(hostname);
+            return hostAddress.isLoopbackAddress()
+                    || hostAddress.isLinkLocalAddress()
+                    || hostAddress.isSiteLocalAddress()
+                    || hostAddress.isAnyLocalAddress();
+        } catch (UnknownHostException e) {
+            return false;
+        }
     }
 
 }

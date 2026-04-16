@@ -29,6 +29,7 @@ import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.cache.memory.MemoryCacheProvider;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
+import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.junit.jupiter.api.AfterEach;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
@@ -64,7 +66,9 @@ class OssIndexVulnAnalyzerTest {
         analyzerFactory = new OssIndexVulnAnalyzerFactory();
 
         final var configRegistry = new MockConfigRegistry(
+                Map.of("allow-local-connections", "true"),
                 analyzerFactory.runtimeConfigSpec(),
+                RuntimeConfigMapper.getInstance(),
                 new OssIndexVulnAnalyzerConfigV1()
                         .withEnabled(true)
                         .withAliasSyncEnabled(true)
