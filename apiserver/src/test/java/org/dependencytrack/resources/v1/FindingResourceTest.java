@@ -780,6 +780,49 @@ public class FindingResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getAllFindingsFilteredBySeverity() {
+        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+
+        Project p1 = qm.createProject("Acme Example 1", null, "1.0", null, null, null, null, false);
+        Component c1 = createComponent(p1, "Component A", "1.0");
+        Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
+        Vulnerability v2 = createVulnerability("Vuln-2", Severity.MEDIUM);
+        Vulnerability v3 = createVulnerability("Vuln-3", Severity.HIGH);
+        Date date = new Date();
+        v1.setPublished(date);
+        v2.setPublished(date);
+        v3.setPublished(date);
+        qm.addVulnerability(v1, c1, "none");
+        qm.addVulnerability(v2, c1, "none");
+        qm.addVulnerability(v3, c1, "none");
+
+        // Filter by single severity
+        Response response = jersey.target(V1_FINDING)
+                .queryParam("severity", "CRITICAL")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertEquals(200, response.getStatus(), 0);
+        assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray json = parseJsonArray(response);
+        assertNotNull(json);
+        assertEquals(1, json.size());
+        assertEquals("CRITICAL", json.getJsonObject(0).getJsonObject("vulnerability").getString("severity"));
+
+        // Filter by multiple severities
+        response = jersey.target(V1_FINDING)
+                .queryParam("severity", "CRITICAL,HIGH")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertEquals(200, response.getStatus(), 0);
+        assertEquals(String.valueOf(2), response.getHeaderString(TOTAL_COUNT_HEADER));
+        json = parseJsonArray(response);
+        assertNotNull(json);
+        assertEquals(2, json.size());
+    }
+
+    @Test
     public void getAllFindingsWithAclEnabled() {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, null, false);

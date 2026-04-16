@@ -608,6 +608,9 @@ public interface FindingDao {
             String[] filters = filter.split(",");
             for (int i = 0, length = filters.length; i < length; i++) {
                 queryFilter.append(column).append(" = :").append(paramName).append(i);
+                if (paramName.equals("severity")) {
+                    queryFilter.append("::SEVERITY");
+                }
                 params.put(paramName + i, filters[i].toUpperCase());
                 if (filters[i].equals("NOT_SET") && (paramName.equals("analysisStatus") || paramName.equals("vendorResponse"))) {
                     queryFilter.append(" OR ").append(column).append(" IS NULL");
