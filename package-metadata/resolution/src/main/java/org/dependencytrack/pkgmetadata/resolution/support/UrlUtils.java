@@ -18,8 +18,11 @@
  */
 package org.dependencytrack.pkgmetadata.resolution.support;
 
+import org.jspecify.annotations.Nullable;
+
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayDeque;
 import java.util.regex.Pattern;
 
 public final class UrlUtils {
@@ -42,8 +45,57 @@ public final class UrlUtils {
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 
+    public static boolean hasSameOrigin(String url, String referenceUrl) {
+        final URI target = URI.create(url);
+        final URI reference = URI.create(referenceUrl);
+
+        return equalsIgnoreCaseNullable(target.getScheme(), reference.getScheme())
+                && equalsIgnoreCaseNullable(target.getHost(), reference.getHost())
+                && effectivePort(target) == effectivePort(reference);
+    }
+
+    public static @Nullable String resolve(String baseUrl, String path) {
+        if (path.isEmpty()) {
+            return null;
+        }
+
+        final String[] segments = path.split("/", -1);
+        final var normalized = new ArrayDeque<String>();
+        for (final String segment : segments) {
+            if (segment.isEmpty() || ".".equals(segment)) {
+                continue;
+            }
+            if ("..".equals(segment)) {
+                if (normalized.isEmpty()) {
+                    return null;
+                }
+                normalized.removeLast();
+            } else {
+                normalized.addLast(segment);
+            }
+        }
+
+        if (normalized.isEmpty()) {
+            return null;
+        }
+
+        return trimTrailingSlash(baseUrl) + "/" + String.join("/", normalized);
+    }
+
+    private static int effectivePort(URI uri) {
+        if (uri.getPort() != -1) {
+            return uri.getPort();
+        }
+
+        return "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
+    }
+
     private static String trimLeadingAndTrailingSlashes(String value) {
         return LEADING_TRAILING_SLASHES.matcher(value).replaceAll("");
+    }
+
+    private static boolean equalsIgnoreCaseNullable(@Nullable String a, @Nullable String b) {
+        return (a == null) ? b == null : a.equalsIgnoreCase(b);
     }
 
     private static String encodePathSegment(String segment) {
