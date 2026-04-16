@@ -21,15 +21,12 @@ package org.dependencytrack.resources.v2;
 import alpine.server.auth.PermissionRequired;
 import io.csaf.retrieval.RetrievedDocument;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.AdvisoriesApi;
 import org.dependencytrack.api.v2.model.GetAdvisoryResponse;
 import org.dependencytrack.api.v2.model.ListAdvisoriesResponse;
 import org.dependencytrack.api.v2.model.ListAdvisoriesResponseItem;
-import org.dependencytrack.api.v2.model.ListProjectAdvisoriesResponse;
-import org.dependencytrack.api.v2.model.ListProjectAdvisoriesResponseItem;
-import org.dependencytrack.api.v2.model.ListProjectAdvisoryFindingsResponseItem;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.csaf.CsafModelConverter;
@@ -39,9 +36,6 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao.AdvisoryDetailRow;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao.ListAdvisoriesRow;
-import org.dependencytrack.persistence.jdbi.AdvisoryDao.ListProjectAdvisoriesRow;
-import org.dependencytrack.persistence.jdbi.ProjectDao;
-import org.dependencytrack.persistence.jdbi.query.ListAdvisoriesForProjectQuery;
 import org.dependencytrack.persistence.jdbi.query.ListAdvisoriesQuery;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.owasp.security.logging.SecurityMarkers;
@@ -54,7 +48,6 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.HashSet;
-import java.util.List;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
@@ -67,7 +60,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
  * @author Christian Banse
  * @since 5.7.0
  */
-@Path("/")
+@Provider
 public class AdvisoriesResource extends AbstractApiResource implements AdvisoriesApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AdvisoriesResource.class);
@@ -252,78 +245,4 @@ public class AdvisoriesResource extends AbstractApiResource implements Advisorie
         return Response.ok(response).build();
     }
 
-    @Override
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
-    public Response listAdvisoriesForProject(UUID projectUuid, String pageToken, Integer limit) {
-        final Page<ListProjectAdvisoriesRow> projectAdvisories =
-                inJdbiTransaction(getAlpineRequest(), handle -> {
-                    requireProjectAccess(handle, projectUuid);
-
-                    final long projectId = handle.attach(ProjectDao.class).getProjectId(projectUuid);
-
-                    return handle.attach(AdvisoryDao.class).listForProject(
-                            new ListAdvisoriesForProjectQuery(projectId)
-                                    .withPageToken(pageToken)
-                                    .withLimit(limit));
-                });
-
-        final var responseItems = projectAdvisories.items().stream()
-                .<ListProjectAdvisoriesResponseItem>map(
-                        advisory -> ListProjectAdvisoriesResponseItem.builder()
-                                .id(advisory.id())
-                                .publisher(advisory.publisher())
-                                .name(advisory.name())
-                                .version(advisory.version())
-                                .url(advisory.url())
-                                .title(advisory.title())
-                                .format(advisory.format())
-                                .seenAt(advisory.seenAt() != null
-                                        ? advisory.seenAt().toEpochMilli()
-                                        : null)
-                                .lastFetched(advisory.lastFetched() != null
-                                        ? advisory.lastFetched().toEpochMilli()
-                                        : null)
-                                .findingsCount(advisory.findingsCount())
-                                .build())
-                .toList();
-
-        final var response = ListProjectAdvisoriesResponse.builder()
-                .items(responseItems)
-                .nextPageToken(projectAdvisories.nextPageToken())
-                .total(convertTotalCount(projectAdvisories.totalCount()))
-                .build();
-
-        return Response.ok(response).build();
-    }
-
-    // TODO: What is the purpose of this endpoint? Do we really need it?
-    //  Can we include this in a more general /findings endpoint and add a filter option
-    //  for advisories, e.g. `/findings?project_uuid=foo&advisory_id=bar`?
-    @Override
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
-    public Response getFindingsByProjectAdvisory(UUID projectUuid, UUID advisoryId) {
-        return inJdbiTransaction(getAlpineRequest(), handle -> {
-            requireProjectAccess(handle, projectUuid);
-
-            final long projectId = handle.attach(ProjectDao.class).getProjectId(projectUuid);
-
-            List<AdvisoryDao.ProjectAdvisoryFindingRow> advisoryRows = handle.attach(AdvisoryDao.class)
-                    .getFindingsByProjectAdvisory(projectId, advisoryId);
-            final long totalCount = advisoryRows.size();
-
-            final List<ListProjectAdvisoryFindingsResponseItem> responseItems = advisoryRows.stream()
-                    .<ListProjectAdvisoryFindingsResponseItem>map(
-                            row -> ListProjectAdvisoryFindingsResponseItem.builder()
-                                    .name(row.name())
-                                    .confidence((int) row.confidence())
-                                    .desc(row.desc())
-                                    .group(row.group())
-                                    .version(row.version())
-                                    .componentUuid(UUID.fromString(row.componentUuid()))
-                                    .build())
-                    .toList();
-
-            return Response.ok(responseItems).header(TOTAL_COUNT_HEADER, totalCount).build();
-        });
-    }
 }

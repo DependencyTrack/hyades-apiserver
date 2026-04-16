@@ -338,6 +338,7 @@ public class Component implements Serializable {
     @Persistent
     @Column(name = "LICENSE_EXPRESSION", jdbcType = "CLOB", allowsNull = "true")
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The license expression may only contain printable characters")
+    @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @ValidSpdxExpression
     private String licenseExpression;
 

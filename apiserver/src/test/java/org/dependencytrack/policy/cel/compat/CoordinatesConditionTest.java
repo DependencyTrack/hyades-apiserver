@@ -108,6 +108,10 @@ public class CoordinatesConditionTest extends PersistenceCapableTest {
                 new Object[]{PolicyCondition.Operator.NO_MATCH, "{\"version\": \"<=1.1.1\"}", "{\"version\": \"2.1.1\"}", true},
                 //Matches on version less than equal to
                 new Object[]{PolicyCondition.Operator.NO_MATCH, "{\"version\": \"<=1.1.1\"}", "{\"version\": \"1.1.1\"}", false},
+                //No match where component exactly matches condition
+                new Object[]{PolicyCondition.Operator.NO_MATCH, "{\"group\": \"Acme\", \"name\": \"Test Component\", \"version\": \"1.0.0\"}", "{\"group\": \"Acme\", \"name\": \"Test Component\", \"version\": \"1.0.0\"}", false},
+                //No match where version differs
+                new Object[]{PolicyCondition.Operator.NO_MATCH, "{\"group\": \"Acme\", \"name\": \"Test Component\", \"version\": \"1.0.0\"}", "{\"group\": \"Acme\", \"name\": \"Test Component\", \"version\": \"2.0.0\"}", true},
         };
     }
 

@@ -34,19 +34,4 @@ public class BooleanUtilTest {
         Assertions.assertFalse(BooleanUtil.valueOf(null));
     }
 
-    @Test
-    public void isNullTest() {
-        Object o = new Object();
-        Object n = null;
-        Assertions.assertFalse(BooleanUtil.isNull(o));
-        Assertions.assertTrue(BooleanUtil.isNull(n));
-    }
-
-    @Test
-    public void isNotNullTest() {
-        Object o = new Object();
-        Object n = null;
-        Assertions.assertTrue(BooleanUtil.isNotNull(o));
-        Assertions.assertFalse(BooleanUtil.isNotNull(n));
-    }
 }

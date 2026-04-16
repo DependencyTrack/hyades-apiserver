@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.persistence.PaginatedResult;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -39,6 +38,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.model.Cwe;
 import org.dependencytrack.parser.common.resolver.CweResolver;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 
 /**
@@ -53,7 +53,7 @@ import org.dependencytrack.resources.v1.openapi.PaginatedApi;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class CweResource extends AlpineResource {
+public class CweResource extends AbstractApiResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)

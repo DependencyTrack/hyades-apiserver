@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -28,6 +29,7 @@ import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
@@ -63,6 +65,7 @@ class NotificationPublisherResourceTest extends ResourceTest {
             new ResourceConfig(NotificationPublisherResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class)
                     .register(new AbstractBinder() {
                         @Override
                         protected void configure() {
@@ -89,6 +92,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void getAllNotificationPublishersTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
         new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
 
         final Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
@@ -184,6 +189,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void createNotificationPublisherTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE);
+
         final Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
@@ -211,6 +218,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void createNotificationPublisherWithExistingNameTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE);
+
         new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
 
         final Response response = jersey.target(V1_NOTIFICATION_PUBLISHER).request()
@@ -230,6 +239,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void updateNotificationPublisherTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         NotificationPublisher notificationPublisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
                 "slack", "template", "text/html",
@@ -253,6 +264,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void updateUnknownNotificationPublisherTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         NotificationPublisher notificationPublisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
                 "slack", "template", "text/html",
@@ -271,6 +284,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void updateExistingDefaultNotificationPublisherTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
 
         final NotificationPublisher slackPublisher = qm.getDefaultNotificationPublisherByName("Slack");
@@ -294,6 +309,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void updateNotificationPublisherWithNameOfAnotherNotificationPublisherTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
 
         final NotificationPublisher publisher = qm.createNotificationPublisher(
@@ -323,6 +340,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void updateNotificationPublisherWithInvalidExtensionNameTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
+
         new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
 
         final NotificationPublisher slackPublisher = qm.getNotificationPublisher("Slack");
@@ -347,6 +366,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void deleteNotificationPublisherWithNoRulesTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_DELETE);
+
         NotificationPublisher publisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
                 "slack", "template", "text/html",
@@ -361,6 +382,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void deleteNotificationPublisherWithLinkedNotificationRulesTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_DELETE);
+
         NotificationPublisher publisher = qm.createNotificationPublisher(
                 "Example Publisher", "Publisher description",
                 "slack", "template", "text/html",
@@ -379,6 +402,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void deleteUnknownNotificationPublisherTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_DELETE);
+
         Response response = jersey.target(V1_NOTIFICATION_PUBLISHER + "/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
@@ -387,6 +412,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void deleteDefaultNotificationPublisherTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_DELETE);
+
         new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
 
         final NotificationPublisher slackPublisher = qm.getNotificationPublisher("Slack");
@@ -402,6 +429,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void getNotificationPublisherConfigShouldReturnJsonSchema() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
+
         new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
 
         final NotificationPublisher slackPublisher = qm.getDefaultNotificationPublisherByName("Slack");
@@ -423,6 +452,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void testNotificationRuleTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+
         new DefaultNotificationPublisherInitializer().seedDefaultPublishers(pluginManager);
 
         NotificationPublisher slackPublisher = qm.getDefaultNotificationPublisherByName("Slack");
@@ -449,6 +480,8 @@ class NotificationPublisherResourceTest extends ResourceTest {
 
     @Test
     void testNotificationRuleNotFoundTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+
         final Response response = jersey.target(V1_NOTIFICATION_PUBLISHER + "/test/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .post(null);

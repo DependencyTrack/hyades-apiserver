@@ -26,6 +26,7 @@ import com.google.api.expr.v1alpha1.Type;
 import com.google.common.util.concurrent.Striped;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.MultiValuedMap;
+import org.dependencytrack.policy.cel.CelPolicyScriptSpdxExpressionValidationVisitor.SpdxExpressionValidationError;
 import org.dependencytrack.policy.cel.CelPolicyScriptVersValidationVisitor.VersValidationError;
 import org.dependencytrack.policy.cel.CelPolicyScriptVisitor.FunctionSignature;
 import org.projectnessie.cel.Ast;
@@ -44,8 +45,10 @@ import org.projectnessie.cel.tools.ScriptCreateException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
+import java.util.stream.Collectors;
 
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FIELD_EXPANSIONS;
 import static org.dependencytrack.policy.cel.CelCommonPolicyLibrary.FUNCTION_FIELD_REQUIREMENTS;
@@ -66,7 +69,7 @@ public class CelPolicyScriptHost {
     private final AbstractCacheManager cacheManager;
     private final Env environment;
 
-    public CelPolicyScriptHost(final AbstractCacheManager cacheManager, final CelPolicyType policyType) {
+    public CelPolicyScriptHost(AbstractCacheManager cacheManager, CelPolicyType policyType) {
         this.locks = Striped.lock(128);
         this.cacheManager = cacheManager;
         this.environment = Env.newCustomEnv(
@@ -75,7 +78,7 @@ public class CelPolicyScriptHost {
         );
     }
 
-    public static synchronized CelPolicyScriptHost getInstance(final CelPolicyType policyType) {
+    public static synchronized CelPolicyScriptHost getInstance(CelPolicyType policyType) {
         return INSTANCES.computeIfAbsent(policyType, ignored -> new CelPolicyScriptHost(CacheManager.getInstance(), policyType));
     }
 
@@ -87,7 +90,7 @@ public class CelPolicyScriptHost {
      * @return The compiled {@link CelPolicyScript}
      * @throws ScriptCreateException When compilation, type checking, or analysis failed
      */
-    public CelPolicyScript compile(final String scriptSrc, final CacheMode cacheMode) throws ScriptCreateException {
+    public CelPolicyScript compile(String scriptSrc, CacheMode cacheMode) throws ScriptCreateException {
         final String scriptDigest = DigestUtils.sha256Hex(scriptSrc);
 
         // Acquire a lock for the SHA256 digest of the script source.
@@ -127,10 +130,12 @@ public class CelPolicyScriptHost {
             final Ast ast = astIssuesTuple.getAst();
             final Program program = environment.program(ast);
             final var expr = CEL.astToCheckedExpr(ast);
-            final MultiValuedMap<Type, String> requirements = analyzeRequirements(expr);
-            validateVersRanges(expr, source);
+            final var analysis = analyze(expr);
+            final Set<String> usedFunctions = analysis.usedFunctions();
+            validateVersRanges(expr, source, usedFunctions);
+            validateSpdxExpressions(expr, source, usedFunctions);
 
-            script = new CelPolicyScript(program, requirements);
+            script = new CelPolicyScript(program, analysis.requirements());
             if (cacheMode == CacheMode.CACHE) {
                 cacheManager.put(scriptDigest, script);
             }
@@ -140,7 +145,10 @@ public class CelPolicyScriptHost {
         }
     }
 
-    private static MultiValuedMap<Type, String> analyzeRequirements(final CheckedExpr expr) {
+    private record AnalysisResult(MultiValuedMap<Type, String> requirements, Set<String> usedFunctions) {
+    }
+
+    private static AnalysisResult analyze(CheckedExpr expr) {
         final var visitor = new CelPolicyScriptVisitor(expr.getTypeMapMap());
         visitor.visit(expr.getExpr());
 
@@ -159,7 +167,8 @@ public class CelPolicyScriptHost {
             }
         }
 
-        for (final FunctionSignature funcSignature : visitor.getUsedFunctionSignatures()) {
+        final Set<FunctionSignature> functionSignatures = visitor.getUsedFunctionSignatures();
+        for (final FunctionSignature funcSignature : functionSignatures) {
             final Map<Type, List<String>> funcRequirements =
                     FUNCTION_FIELD_REQUIREMENTS.get(funcSignature.function());
             if (funcRequirements == null) {
@@ -172,11 +181,19 @@ public class CelPolicyScriptHost {
             }
         }
 
-        return requirements;
+        final Set<String> usedFunctions = functionSignatures.stream()
+                .map(FunctionSignature::function)
+                .collect(Collectors.toSet());
+
+        return new AnalysisResult(requirements, usedFunctions);
     }
 
-    private static void validateVersRanges(final CheckedExpr expr, final Source source) throws ScriptCreateException {
-        final var visitor = new CelPolicyScriptVersValidationVisitor(expr.getSourceInfo().getPositionsMap());
+    private static void validateVersRanges(
+            CheckedExpr expr,
+            Source source,
+            Set<String> usedFunctions) throws ScriptCreateException {
+        final var visitor = new CelPolicyScriptVersValidationVisitor(
+                expr.getSourceInfo().getPositionsMap(), usedFunctions);
         visitor.visit(expr.getExpr());
 
         final List<VersValidationError> validationErrors = visitor.getErrors();
@@ -191,7 +208,34 @@ public class CelPolicyScriptHost {
                 })
                 .toList();
 
-        throw new ScriptCreateException("Failed to check script", newIssues(new Errors(source).append(celErrors)));
+        throw new ScriptCreateException(
+                "Failed to check script",
+                newIssues(new Errors(source).append(celErrors)));
+    }
+
+    private static void validateSpdxExpressions(
+            CheckedExpr expr,
+            Source source,
+            Set<String> usedFunctions) throws ScriptCreateException {
+        final var visitor = new CelPolicyScriptSpdxExpressionValidationVisitor(
+                expr.getSourceInfo().getPositionsMap(), usedFunctions);
+        visitor.visit(expr.getExpr());
+
+        final List<SpdxExpressionValidationError> validationErrors = visitor.getErrors();
+        if (validationErrors.isEmpty()) {
+            return;
+        }
+
+        final List<CELError> celErrors = validationErrors.stream()
+                .map(spdxError -> {
+                    final Location location = source.offsetLocation(spdxError.position());
+                    return new CELError(null, location, spdxError.message());
+                })
+                .toList();
+
+        throw new ScriptCreateException(
+                "Failed to check script",
+                newIssues(new Errors(source).append(celErrors)));
     }
 
 }

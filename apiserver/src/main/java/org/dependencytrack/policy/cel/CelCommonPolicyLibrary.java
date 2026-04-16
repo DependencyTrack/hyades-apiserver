@@ -26,6 +26,7 @@ import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import jakarta.annotation.Nullable;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.parser.spdx.expression.SpdxExpressions;
 import org.dependencytrack.policy.cel.persistence.CelPolicyDao;
 import org.dependencytrack.proto.policy.v1.Component;
 import org.dependencytrack.proto.policy.v1.License;
@@ -42,8 +43,10 @@ import org.projectnessie.cel.ProgramOption;
 import org.projectnessie.cel.checker.Decls;
 import org.projectnessie.cel.common.types.BoolT;
 import org.projectnessie.cel.common.types.Err;
+import org.projectnessie.cel.common.types.IntT;
 import org.projectnessie.cel.common.types.Types;
 import org.projectnessie.cel.common.types.ref.Val;
+import org.projectnessie.cel.common.types.traits.Lister;
 import org.projectnessie.cel.interpreter.functions.Overload;
 
 import java.time.Instant;
@@ -83,6 +86,10 @@ public class CelCommonPolicyLibrary implements Library {
     static final String FUNC_MATCHES_RANGE = "matches_range";
     static final String FUNC_COMPARE_AGE = "compare_age";
     static final String FUNC_COMPARE_VERSION_DISTANCE = "version_distance";
+    static final String FUNC_SPDX_EXPR_ALLOWS = "spdx_expr_allows";
+    static final String FUNC_SPDX_EXPR_REQUIRES_ANY = "spdx_expr_requires_any";
+
+    private static final com.google.api.expr.v1alpha1.Type TYPE_STRING_LIST = Decls.newListType(Decls.String);
 
     static final Map<String, Map<Type, List<String>>> FUNCTION_FIELD_REQUIREMENTS = Map.ofEntries(
             Map.entry(FUNC_DEPENDS_ON, Map.of(TYPE_PROJECT, List.of("uuid"), TYPE_COMPONENT, List.of("uuid"))),
@@ -174,10 +181,27 @@ public class CelCommonPolicyLibrary implements Library {
                                         List.of(TYPE_COMPONENT, Decls.String, TYPE_VERSION_DISTANCE),
                                         Decls.Bool
                                 )
+                        ),
+                        Decls.newFunction(
+                                FUNC_SPDX_EXPR_ALLOWS,
+                                Decls.newOverload(
+                                        "spdx_expr_allows_string_list_bool",
+                                        List.of(Decls.String, TYPE_STRING_LIST),
+                                        Decls.Bool
+                                )
+                        ),
+                        Decls.newFunction(
+                                FUNC_SPDX_EXPR_REQUIRES_ANY,
+                                Decls.newOverload(
+                                        "spdx_expr_requires_any_string_list_bool",
+                                        List.of(Decls.String, TYPE_STRING_LIST),
+                                        Decls.Bool
+                                )
                         )
                 ),
                 EnvOption.types(
                         Component.getDefaultInstance(),
+                        Component.Property.getDefaultInstance(),
                         License.getDefaultInstance(),
                         License.Group.getDefaultInstance(),
                         Project.getDefaultInstance(),
@@ -215,10 +239,22 @@ public class CelCommonPolicyLibrary implements Library {
                                 FUNC_MATCHES_RANGE,
                                 CelCommonPolicyLibrary::matchesRangeFunc
                         ),
-                        Overload.function(FUNC_COMPARE_AGE,
-                                CelCommonPolicyLibrary::isComponentOldFunc),
-                        Overload.function(FUNC_COMPARE_VERSION_DISTANCE,
-                                CelCommonPolicyLibrary::matchesVersionDistanceFunc)
+                        Overload.function(
+                                FUNC_COMPARE_AGE,
+                                CelCommonPolicyLibrary::isComponentOldFunc
+                        ),
+                        Overload.function(
+                                FUNC_COMPARE_VERSION_DISTANCE,
+                                CelCommonPolicyLibrary::matchesVersionDistanceFunc
+                        ),
+                        Overload.binary(
+                                FUNC_SPDX_EXPR_ALLOWS,
+                                CelCommonPolicyLibrary::spdxExprAllowsFunc
+                        ),
+                        Overload.binary(
+                                FUNC_SPDX_EXPR_REQUIRES_ANY,
+                                CelCommonPolicyLibrary::spdxExprRequiresAnyFunc
+                        )
                 )
         );
     }
@@ -954,6 +990,32 @@ public class CelCommonPolicyLibrary implements Library {
         };
     }
 
+    private static Val spdxExprAllowsFunc(Val lhs, Val rhs) {
+        if (!(lhs.value() instanceof final String expr)) {
+            return Err.maybeNoSuchOverloadErr(lhs);
+        }
+
+        final List<String> ids = extractStringList(rhs);
+        if (ids == null) {
+            return Err.maybeNoSuchOverloadErr(rhs);
+        }
+
+        return Types.boolOf(SpdxExpressions.allows(expr, ids));
+    }
+
+    private static Val spdxExprRequiresAnyFunc(Val lhs, Val rhs) {
+        if (!(lhs.value() instanceof final String expr)) {
+            return Err.maybeNoSuchOverloadErr(lhs);
+        }
+
+        final List<String> ids = extractStringList(rhs);
+        if (ids == null) {
+            return Err.maybeNoSuchOverloadErr(rhs);
+        }
+
+        return Types.boolOf(SpdxExpressions.requiresAny(expr, ids));
+    }
+
     public record DependencyNode(@Nullable Long id, @Nullable String version,
                                  @Nullable Boolean found, @Nullable List<Long> path) {
     }
@@ -1104,6 +1166,24 @@ public class CelCommonPolicyLibrary implements Library {
         }
 
         return Objects.equals(lhs, rhs);
+    }
+
+    private static @Nullable List<String> extractStringList(Val val) {
+        if (!(val instanceof final Lister lister)) {
+            return null;
+        }
+
+        final int size = (int) lister.size().intValue();
+        final var list = new ArrayList<String>(size);
+        for (int i = 0; i < size; i++) {
+            final Val element = lister.get(IntT.intOf(i));
+            if (!(element.value() instanceof final String s)) {
+                return null;
+            }
+            list.add(s);
+        }
+
+        return list;
     }
 
 }

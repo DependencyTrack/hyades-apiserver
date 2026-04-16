@@ -21,7 +21,6 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
 import alpine.model.ManagedUser;
-import alpine.model.Permission;
 import alpine.server.auth.SessionTokenService;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
@@ -56,7 +55,6 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectProperty;
-import org.dependencytrack.model.Role;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
@@ -76,6 +74,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -133,8 +132,9 @@ class BomResourceTest extends ResourceTest {
                         }
                     }));
 
-    @Test
-    void exportProjectAsCycloneDxTest() {
+    @ParameterizedTest
+    @ValueSource(strings = {"1.2", "1.3", "1.4", "1.5", "1.6", ""})
+    void exportProjectAsCycloneDxTest(String version) {
         initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
 
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -143,13 +143,46 @@ class BomResourceTest extends ResourceTest {
         c.setName("sample-component");
         c.setVersion("1.0");
         Component component = qm.createComponent(c, false);
-        Response response = jersey.target(V1_BOM + "/cyclonedx/project/" + project.getUuid()).request()
+        Response response = jersey.target(V1_BOM + "/cyclonedx/project/" + project.getUuid())
+                .queryParam("version", version)
+                .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         Assertions.assertEquals(200, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
         Assertions.assertTrue(body.startsWith("{"));
+
+        String expectedCdxVersionSpec = version.isEmpty() ? "1.5" : version;
+        assertThatJson(body, json -> json.inPath("specVersion").isEqualTo("\"" + expectedCdxVersionSpec + "\""));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", ""})
+    void exportProjectAsCycloneDxXMLTest(String version) {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Component c = new Component();
+        c.setProject(project);
+        c.setName("sample-component");
+        c.setVersion("1.0");
+        Component component = qm.createComponent(c, false);
+
+        Response response = jersey.target(V1_BOM + "/cyclonedx/project/" + project.getUuid())
+                .queryParam("version", version)
+                .queryParam("format", "xml")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        String body = getPlainTextBody(response);
+        if (version.isEmpty()) {
+            version = "1.5"; // Expect 1.5 as default for null / not set parameter
+        }
+        Assertions.assertEquals(200, response.getStatus(), 0);
+        Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertTrue(body.startsWith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"));
+        Assertions.assertTrue(body.contains("version=\"1\" xmlns=\"http://cyclonedx.org/schema/bom/" + version + "\">"));
     }
 
     @Test
@@ -167,6 +200,7 @@ class BomResourceTest extends ResourceTest {
 
     @Test
     void exportProjectAsCycloneDxAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -201,6 +235,7 @@ class BomResourceTest extends ResourceTest {
         enablePortfolioAccessControl();
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        testUser.setPermissions(List.of(qm.createPermission(Permissions.VIEW_PORTFOLIO.name(), null)));
         final String sessionToken = new SessionTokenService().createSession(testUser.getId());
 
         final var project = new Project();
@@ -224,9 +259,8 @@ class BomResourceTest extends ResourceTest {
                 }
                 """);
 
-        final Permission permission = qm.createPermission("VIEW_PORTFOLIO", null);
-        final Role role = qm.createRole("Test Role", List.of(permission));
-        qm.addRoleToUser(testUser, role, project);
+        project.addAccessTeam(super.team);
+        qm.addUserToTeam(testUser, super.team);
 
         response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
@@ -976,8 +1010,9 @@ class BomResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(403);
     }
 
-    @Test
-    void exportComponentAsCycloneDx() {
+    @ParameterizedTest
+    @ValueSource(strings = {"1.2", "1.3", "1.4", "1.5", "1.6", ""})
+    void exportComponentAsCycloneDx(String version) {
         initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
 
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
@@ -986,13 +1021,40 @@ class BomResourceTest extends ResourceTest {
         c.setName("sample-component");
         c.setVersion("1.0");
         Component component = qm.createComponent(c, false);
-        Response response = jersey.target(V1_BOM + "/cyclonedx/component/" + component.getUuid()).request()
+        Response response = jersey.target(V1_BOM + "/cyclonedx/component/" + component.getUuid())
+                .queryParam("version", version)
+                .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         Assertions.assertEquals(200, response.getStatus(), 0);
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
         Assertions.assertTrue(body.startsWith("{"));
+
+        String expectedCdxVersionSpec = version.isEmpty() ? "1.5" : version;
+        assertThatJson(body).withMatcher("specVersion", equalTo(expectedCdxVersionSpec));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"99", "-15", "1.9", " 0.9", "invalidString"})
+    void exportComponentAsCycloneDxInvalidVersion(String version) {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
+        Component c = new Component();
+        c.setProject(project);
+        c.setName("sample-component");
+        c.setVersion("1.0");
+        Component component = qm.createComponent(c, false);
+
+        Response response = jersey.target(V1_BOM + "/cyclonedx/component/" + component.getUuid())
+                .queryParam("version", version)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        Assertions.assertEquals(400, response.getStatus(), 0);
+        String body = getPlainTextBody(response);
+        Assertions.assertEquals("Invalid BOM version specified.", body);
     }
 
     @Test
@@ -1010,6 +1072,7 @@ class BomResourceTest extends ResourceTest {
 
     @Test
     void exportComponentAsCycloneDxAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();

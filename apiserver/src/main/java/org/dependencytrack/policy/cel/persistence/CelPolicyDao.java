@@ -30,6 +30,7 @@ import org.dependencytrack.proto.policy.v1.Vulnerability;
 import org.jdbi.v3.core.Handle;
 import org.jspecify.annotations.Nullable;
 
+import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,12 +44,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_METADATA;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_PROPERTY;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
 import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.COMPONENT_FIELDS;
+import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.COMPONENT_PROPERTY_FIELDS;
 import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.LICENSE_FIELDS;
 import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.LICENSE_GROUP_FIELDS;
 import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.PROJECT_FIELDS;
@@ -126,6 +129,42 @@ public final class CelPolicyDao {
                                     new ComponentWithLicenseId(
                                             componentRowMapper.map(rs, ctx),
                                             licenseId));
+                            return accumulator;
+                        });
+    }
+
+    public Map<Long, List<Component.Property>> fetchAllComponentProperties(
+            long projectId,
+            Collection<String> propertyProtoFieldNames) {
+        final List<String> fetchColumns = new ArrayList<>(selectColumns(COMPONENT_PROPERTY_FIELDS, propertyProtoFieldNames));
+        if (fetchColumns.isEmpty()) {
+            fetchColumns.add("cp.\"ID\" AS \"_id\"");
+        }
+
+        return jdbiHandle
+                .createQuery(/* language=InjectedFreeMarker */ """
+                        <#-- @ftlvariable name="fetchColumns" type="java.util.Collection<String>" -->
+                        SELECT cp."COMPONENT_ID" AS component_id
+                             , ${fetchColumns?join(", ")}
+                          FROM "COMPONENT_PROPERTY" AS cp
+                         INNER JOIN "COMPONENT" AS c
+                            ON c."ID" = cp."COMPONENT_ID"
+                         WHERE c."PROJECT_ID" = :projectId
+                        """)
+                .define("fetchColumns", fetchColumns)
+                .bind("projectId", projectId)
+                .reduceResultSet(
+                        new HashMap<>(),
+                        (accumulator, rs, ctx) -> {
+                            final long componentId = rs.getLong("component_id");
+                            final Component.Property.Builder builder = Component.Property.newBuilder();
+                            maybeSet(rs, "group", ResultSet::getString, builder::setGroup);
+                            maybeSet(rs, "name", ResultSet::getString, builder::setName);
+                            maybeSet(rs, "value", ResultSet::getString, builder::setValue);
+                            maybeSet(rs, "type", ResultSet::getString, builder::setType);
+                            accumulator
+                                    .computeIfAbsent(componentId, k -> new ArrayList<>())
+                                    .add(builder.build());
                             return accumulator;
                         });
     }

@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_COMPONENTS_GROUPS_REGEX;
+import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_COMPONENTS_MATCH_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_COMPONENTS_NAMES_REGEX;
 
 /**
@@ -42,7 +43,7 @@ import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_COMPONE
 @NotThreadSafe
 public class InternalComponentIdentifier {
 
-    private record Patterns(Pattern groupPattern, Pattern namePattern) {
+    private record Patterns(Pattern groupPattern, Pattern namePattern, String matchMode) {
 
         private boolean hasPattern() {
             return groupPattern != null || namePattern != null;
@@ -72,6 +73,12 @@ public class InternalComponentIdentifier {
             matchesName = false;
         }
 
+        if ("AND".equalsIgnoreCase(patterns.matchMode())) {
+            final boolean groupOk = patterns.groupPattern() == null || matchesGroup;
+            final boolean nameOk = patterns.namePattern() == null || matchesName;
+            return groupOk && nameOk;
+        }
+
         return matchesGroup || matchesName;
     }
 
@@ -97,10 +104,18 @@ public class InternalComponentIdentifier {
                     INTERNAL_COMPONENTS_NAMES_REGEX.getGroupName(),
                     INTERNAL_COMPONENTS_NAMES_REGEX.getPropertyName()
             );
+            final ConfigProperty matchModeProperty = qm.getConfigProperty(
+                    INTERNAL_COMPONENTS_MATCH_MODE.getGroupName(),
+                    INTERNAL_COMPONENTS_MATCH_MODE.getPropertyName()
+            );
 
             return new Patterns(
                     tryCompilePattern(groupsRegexProperty).orElse(null),
-                    tryCompilePattern(namesRegexProperty).orElse(null)
+                    tryCompilePattern(namesRegexProperty).orElse(null),
+                    Optional.ofNullable(matchModeProperty)
+                            .map(ConfigProperty::getPropertyValue)
+                            .map(StringUtils::trimToNull)
+                            .orElse(INTERNAL_COMPONENTS_MATCH_MODE.getDefaultPropertyValue())
             );
         }
     }

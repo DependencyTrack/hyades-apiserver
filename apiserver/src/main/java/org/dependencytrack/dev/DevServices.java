@@ -104,13 +104,6 @@ public class DevServices implements AutoCloseable {
             throw new RuntimeException("Failed to launch containers", e);
         }
 
-        LOGGER.warn("""
-                Containers are not auto-discoverable by other services yet. \
-                If interaction with other services is required, please use \
-                the Docker Compose setup in the DependencyTrack/hyades repository. \
-                Auto-discovery is worked on in https://github.com/DependencyTrack/hyades/issues/1188.\
-                """);
-
         LOGGER.info("PostgreSQL is listening at localhost:%d".formatted(postgresPort));
         LOGGER.info("Frontend is listening at http://localhost:%d".formatted(frontendPort));
     }

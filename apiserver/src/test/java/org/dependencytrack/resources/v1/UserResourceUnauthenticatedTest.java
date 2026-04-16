@@ -21,6 +21,8 @@ package org.dependencytrack.resources.v1;
 import alpine.model.ManagedUser;
 import alpine.server.auth.PasswordService;
 import alpine.server.filters.ApiFilter;
+import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Form;
 import jakarta.ws.rs.core.MediaType;
@@ -38,7 +40,9 @@ public class UserResourceUnauthenticatedTest extends ResourceTest {
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(UserResource.class)
-                    .register(ApiFilter.class));
+                    .register(ApiFilter.class)
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     private ManagedUser testUser;
 

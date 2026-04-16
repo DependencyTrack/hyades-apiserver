@@ -31,7 +31,6 @@ import org.dependencytrack.model.DefaultRepository;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.Repository;
-import org.dependencytrack.model.Role;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -79,14 +78,6 @@ public class DatabaseSeedingInitTaskTest extends PersistenceCapableTest {
             assertThat(team.getName()).isNotBlank();
             assertThat(team.getUuid()).isNotNull();
             assertThat(team.getPermissions()).isNotEmpty();
-        });
-
-        final List<Role> roles = qm.getRoles();
-        assertThat(roles).isNotEmpty();
-        assertThat(roles).allSatisfy(role -> {
-            assertThat(role.getName()).isNotBlank();
-            assertThat(role.getUuid()).isNotNull();
-            assertThat(role.getPermissions()).isNotEmpty();
         });
 
         final List<ManagedUser> users = qm.getManagedUsers();

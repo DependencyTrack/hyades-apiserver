@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -28,6 +29,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -51,10 +53,13 @@ public class PolicyResourceTest extends ResourceTest {
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(PolicyResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     @Test
     public void getPoliciesTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_READ);
+
         for (int i = 0; i < 1000; i++) {
             qm.createPolicy("policy" + i, Policy.Operator.ANY, Policy.ViolationState.INFO);
         }
@@ -75,6 +80,8 @@ public class PolicyResourceTest extends ResourceTest {
 
     @Test
     public void getPolicyByUuidTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_READ);
+
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
 
         final Response response = jersey.target(V1_POLICY + "/" + policy.getUuid())
@@ -92,6 +99,8 @@ public class PolicyResourceTest extends ResourceTest {
 
     @Test
     public void createPolicyTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_CREATE);
+
         final Policy policy = new Policy();
         policy.setName("policy");
         policy.setOperator(Policy.Operator.ANY);
@@ -115,6 +124,8 @@ public class PolicyResourceTest extends ResourceTest {
 
     @Test
     public void createPolicySpecifyOperatorAndViolationStateTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_CREATE);
+
         final Policy policy = new Policy();
         policy.setName("policy");
         policy.setOperator(Policy.Operator.ALL);
@@ -138,6 +149,8 @@ public class PolicyResourceTest extends ResourceTest {
 
     @Test
     public void createPolicyUseDefaultValueTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_CREATE);
+
         final Policy policy = new Policy();
         policy.setName("policy");
 
@@ -159,6 +172,8 @@ public class PolicyResourceTest extends ResourceTest {
 
     @Test
     public void updatePolicyTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
 
         policy.setViolationState(Policy.ViolationState.FAIL);
@@ -180,6 +195,8 @@ public class PolicyResourceTest extends ResourceTest {
 
     @Test
     public void deletePolicyTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_DELETE);
+
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
 
         final Response response = jersey.target(V1_POLICY + "/" + policy.getUuid())
@@ -196,6 +213,8 @@ public class PolicyResourceTest extends ResourceTest {
      */
     @Test
     public void deletePolicyCascadingTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_DELETE);
+
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         Component component = new Component();
@@ -225,6 +244,8 @@ public class PolicyResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToPolicyTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
@@ -242,6 +263,8 @@ public class PolicyResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToPolicyProjectAlreadyAddedTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
@@ -258,6 +281,7 @@ public class PolicyResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToPolicyAclTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -294,6 +318,8 @@ public class PolicyResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromPolicyTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_DELETE);
+
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
@@ -310,6 +336,8 @@ public class PolicyResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromPolicyProjectAlreadyRemovedTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_DELETE);
+
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
@@ -323,6 +351,7 @@ public class PolicyResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromPolicyAclTest() {
+        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_DELETE);
         enablePortfolioAccessControl();
 
         final var project = new Project();

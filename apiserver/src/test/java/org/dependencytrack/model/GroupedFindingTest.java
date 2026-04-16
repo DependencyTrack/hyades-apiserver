@@ -58,9 +58,21 @@ public class GroupedFindingTest extends PersistenceCapableTest {
     }
 
     private GroupedFinding createTestFinding() {
-        FindingDao.GroupedFindingRow findingRow = new FindingDao.GroupedFindingRow(Vulnerability.Source.GITHUB,
-                "vuln-vulnId", "vuln-title", Severity.HIGH, BigDecimal.valueOf(8.5), BigDecimal.valueOf(8.4), BigDecimal.valueOf(8.4),
-                Instant.now(), null, "internal", 3, 1);
+        FindingDao.GroupedFindingRow findingRow = new FindingDao.GroupedFindingRow(
+                Vulnerability.Source.GITHUB,
+                "vuln-vulnId",
+                "vuln-title",
+                Severity.HIGH,
+                BigDecimal.valueOf(8.5),
+                BigDecimal.valueOf(8.4),
+                BigDecimal.valueOf(8.4),
+                BigDecimal.valueOf(0.4),
+                BigDecimal.valueOf(0.5),
+                Instant.now(),
+                null,
+                "internal",
+                3,
+                1);
         return new GroupedFinding(findingRow);
     }
 }

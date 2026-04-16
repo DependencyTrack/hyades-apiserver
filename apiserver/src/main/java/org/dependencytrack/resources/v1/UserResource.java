@@ -31,7 +31,6 @@ import alpine.server.auth.OidcAuthenticationService;
 import alpine.server.auth.PasswordService;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.auth.SessionTokenService;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -59,14 +58,11 @@ import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.IdentifiableObject;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Role;
 import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
-import org.dependencytrack.resources.v1.vo.ModifyUserProjectRoleRequest;
 import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
@@ -94,7 +90,7 @@ import static org.dependencytrack.notification.api.NotificationFactory.createUse
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class UserResource extends AlpineResource {
+public class UserResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(UserResource.class);
 
@@ -814,7 +810,7 @@ public class UserResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = User.class))),
             @ApiResponse(responseCode = "304", description = "The user is already a member of the specified team(s)"),
-            @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class))),
+            @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(schema = @Schema(implementation = ProblemDetails.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user or team(s) could not be found")
     })
@@ -844,13 +840,11 @@ public class UserResource extends AlpineResource {
                     final List<String> differences = requestedTeams.stream().map(Team::getUuid).map(UUID::toString).toList();
                     notFound.removeAll(differences);
 
-                    ProblemDetails problem = new AccessManagementProblemDetails(
+                    return new ProblemDetails(
                             Response.Status.BAD_REQUEST.getStatusCode(),
                             "Invalid team",
-                            "One or more teams could not be found",
-                            notFound);
-
-                    return problem.toResponse();
+                            "One or more teams could not be found: " + notFound
+                    ).toResponse();
                 }
 
                 final List<Team> currentUserTeams = Objects.requireNonNullElse(principal.getTeams(), List.<Team>of());
@@ -867,101 +861,6 @@ public class UserResource extends AlpineResource {
         }
     }
 
-    @SuppressWarnings("null")
-    @PUT
-    @Path("/role")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(
-            summary = "Assigns or updates a user's role for a project.",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "User with the specified role assigned or updated", content = @Content(schema = @Schema(implementation = User.class))),
-            @ApiResponse(responseCode = "304", description = "The user already has this role for the project."),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "The user, role, or project could not be found", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class)))
-    })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
-    public Response assignProjectRoleToUser(
-            @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
-        try (QueryManager qm = new QueryManager()) {
-            return qm.callInTransaction(() -> {
-                final Role role = qm.getObjectByUuid(Role.class, request.role());
-                final User user = qm.getUser(request.username());
-                final Project project = qm.getProject(request.project());
-
-                List<String> problems = new ArrayList<>();
-                if (role == null) problems.add("role");
-                if (user == null) problems.add("user");
-                if (project == null) problems.add("project");
-
-                if (!problems.isEmpty())
-                    return new AccessManagementProblemDetails(
-                            Response.Status.NOT_FOUND.getStatusCode(),
-                            "Invalid role, user or project",
-                            "One or more variables could not be found",
-                            problems).toResponse();
-
-                if (!qm.addRoleToUser(user, role, project))
-                    return Response.notModified().build();
-
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
-                        "Granted project role: user='%s', role='%s', project='%s'"
-                                .formatted(user.getUsername(), role.getName(), project.getName()));
-
-                return Response.ok(user).build();
-            });
-        }
-    }
-
-    @SuppressWarnings("null")
-    @DELETE
-    @Path("/role")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(
-            summary = "Removes a specific role for a user from a project.",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "The specified role was successfully removed from the user"),
-            @ApiResponse(responseCode = "304", description = "The user is not a member of the specified role for the project"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "The user, role, or project could not be found", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class)))
-    })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
-    public Response removeProjectRoleFromUser(
-            @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
-        try (QueryManager qm = new QueryManager()) {
-            return qm.callInTransaction(() -> {
-                final Role role = qm.getObjectByUuid(Role.class, request.role());
-                final User user = qm.getUser(request.username());
-                final Project project = qm.getProject(request.project());
-
-                final List<String> problems = new ArrayList<>();
-                if (role == null) problems.add("role");
-                if (user == null) problems.add("user");
-                if (project == null) problems.add("project");
-
-                if (!problems.isEmpty())
-                    return new AccessManagementProblemDetails(
-                            Response.Status.NOT_FOUND.getStatusCode(),
-                            "Invalid role, user or project",
-                            "One or more variables could not be found",
-                            problems).toResponse();
-
-                boolean removed = qm.removeRoleFromUser(user, role, project);
-                if (!removed) return Response.notModified().build();
-
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
-                        "Revoked project role: user='%s', role='%s', project='%s'"
-                                .formatted(user.getUsername(), role.getName(), project.getName()));
-
-                return Response.noContent().build();
-            });
-        }
-    }
 
     @POST
     @Path("logout")

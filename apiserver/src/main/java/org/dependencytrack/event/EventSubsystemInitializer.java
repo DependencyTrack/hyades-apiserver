@@ -33,7 +33,6 @@ import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
 import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.secret.management.SecretManager;
-import org.dependencytrack.tasks.CallbackTask;
 import org.dependencytrack.tasks.CloneProjectTask;
 import org.dependencytrack.tasks.DefectDojoUploadTask;
 import org.dependencytrack.tasks.EpssMirrorTask;
@@ -48,7 +47,6 @@ import org.dependencytrack.tasks.maintenance.PackageMetadataMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.ProjectMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
-import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 
@@ -106,8 +104,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.subscribe(DefectDojoUploadEventAbstract.class, new DefectDojoUploadTask(HttpClient.INSTANCE, secretManager));
         eventService.subscribe(KennaSecurityUploadEventAbstract.class, new KennaSecurityUploadTask(HttpClient.INSTANCE, secretManager));
         eventService.subscribe(InternalComponentIdentificationEvent.class, new InternalComponentIdentificationTask());
-        eventService.subscribe(CallbackEvent.class, new CallbackTask());
-        eventService.subscribe(VulnerabilityPolicyFetchEvent.class, new VulnerabilityPolicyFetchTask());
         eventService.subscribe(EpssMirrorEvent.class, new EpssMirrorTask(HttpClient.INSTANCE));
         // Execute maintenance tasks on the single-threaded event service.
         // This way, they are not blocked by, and don't block, actual processing tasks on the main event service.
@@ -135,9 +131,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.unsubscribe(DefectDojoUploadTask.class);
         eventService.unsubscribe(KennaSecurityUploadTask.class);
         eventService.unsubscribe(InternalComponentIdentificationTask.class);
-        eventService.unsubscribe(CallbackTask.class);
         eventService.unsubscribe(EpssMirrorTask.class);
-        eventService.unsubscribe(VulnerabilityPolicyFetchTask.class);
         try {
             eventService.shutdown(drainTimeout);
         } catch (TimeoutException e) {

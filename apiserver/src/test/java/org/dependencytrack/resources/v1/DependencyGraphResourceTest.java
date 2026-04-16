@@ -39,6 +39,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.github.packageurl.PackageURL;
 import jakarta.json.JsonArray;
@@ -47,6 +48,7 @@ import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -75,10 +77,13 @@ public class DependencyGraphResourceTest extends ResourceTest {
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(DependencyGraphResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     @Test
     public void getComponentsAndServicesByComponentUuidTests() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final int nbIteration = 100;
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
@@ -133,6 +138,8 @@ public class DependencyGraphResourceTest extends ResourceTest {
 
     @Test
     public void getComponentsAndServicesByComponentUuidWithRepositoryMetaTests() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final int nbIteration = 100;
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
@@ -208,6 +215,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
 
     @Test
     public void getComponentsAndServicesByComponentUuidAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -242,6 +250,8 @@ public class DependencyGraphResourceTest extends ResourceTest {
 
     @Test
     public void getComponentsAndServicesByProjectUuidTests() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final int nbIteration = 100;
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
@@ -290,6 +300,8 @@ public class DependencyGraphResourceTest extends ResourceTest {
 
     @Test
     public void getComponentsAndServicesByProjectUuidWithRepositoryMetaTests() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final int nbIteration = 100;
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
@@ -359,6 +371,8 @@ public class DependencyGraphResourceTest extends ResourceTest {
 
     @Test
     public void getComponentsAndServicesByProjectUuidWithComponentsWithoutPurlTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");
@@ -422,6 +436,7 @@ public class DependencyGraphResourceTest extends ResourceTest {
 
     @Test
     public void getComponentsAndServicesByProjectUuidAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();

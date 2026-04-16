@@ -124,7 +124,8 @@ final class WorkflowTaskWorker extends AbstractTaskWorker<WorkflowTask> {
             }
 
             if (eventsAdded == 0) {
-                logger.warn("No new events");
+                logger.warn("No new events; Abandoning task");
+                abandon(task);
                 return;
             }
 

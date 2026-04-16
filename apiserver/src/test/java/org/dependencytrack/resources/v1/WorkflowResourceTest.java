@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
@@ -70,6 +71,7 @@ public class WorkflowResourceTest extends ResourceTest {
             new ResourceConfig(WorkflowResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class)
                     .register(MultiPartFeature.class)
                     .register(new AbstractBinder() {
                         @Override
@@ -85,6 +87,8 @@ public class WorkflowResourceTest extends ResourceTest {
 
     @Test
     public void shouldReturnLegacyWorkflowStatesForCloneToken() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
         // Legacy fallback: token exists in WORKFLOW_STATE table (e.g. clone/policy-sync).
         UUID uuid = UUID.randomUUID();
         WorkflowState workflowState1 = new WorkflowState();
@@ -145,6 +149,8 @@ public class WorkflowResourceTest extends ResourceTest {
 
     @Test
     public void shouldReturnNotFoundForUnknownToken() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
         UUID randomUuid = UUID.randomUUID();
 
         doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadataById(randomUuid);

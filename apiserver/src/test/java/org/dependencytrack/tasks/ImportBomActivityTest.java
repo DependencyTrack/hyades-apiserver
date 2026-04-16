@@ -1328,6 +1328,86 @@ class ImportBomActivityTest extends PersistenceCapableTest {
     }
 
     @Test
+    void informWithDuplicateBomRefsMappedToSameIdentityMergesDirectDependencies() throws Exception {
+        final var project = new Project();
+        project.setName("acme-duplicate-bom-ref-app");
+        qm.persist(project);
+
+        final byte[] bomBytes = """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.6",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "bom-ref": "a1",
+                      "group": "com.example",
+                      "name": "a",
+                      "version": "1.0.0",
+                      "purl": "pkg:maven/com.example/a@1.0.0"
+                    },
+                    {
+                      "type": "library",
+                      "bom-ref": "a2",
+                      "group": "com.example",
+                      "name": "a",
+                      "version": "1.0.0",
+                      "purl": "pkg:maven/com.example/a@1.0.0"
+                    },
+                    {
+                      "type": "library",
+                      "bom-ref": "b1",
+                      "group": "com.example",
+                      "name": "b",
+                      "version": "1.0.0",
+                      "purl": "pkg:maven/com.example/b@1.0.0"
+                    }
+                  ],
+                  "dependencies": [
+                    {
+                      "ref": "a1",
+                      "dependsOn": ["b1"]
+                    },
+                    {
+                      "ref": "a2",
+                      "dependsOn": []
+                    },
+                    {
+                      "ref": "b1",
+                      "dependsOn": []
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        final var bomFileMetadata = storeBomFile(bomBytes);
+        final var bomUploadToken = UUID.randomUUID();
+        activity.execute(null, buildArg(project, bomFileMetadata, bomUploadToken));
+        assertBomProcessedNotification();
+
+        final List<Component> components = qm.getAllComponents(project);
+        assertThat(components).hasSize(2);
+
+        final Component aComponent = components.stream()
+                .filter(component -> component.getPurl() != null
+                        && "pkg:maven/com.example/a@1.0.0".equals(component.getPurl().canonicalize()))
+                .findFirst()
+                .orElseThrow();
+        final Component bComponent = components.stream()
+                .filter(component -> component.getPurl() != null
+                        && "pkg:maven/com.example/b@1.0.0".equals(component.getPurl().canonicalize()))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(aComponent.getDirectDependencies()).isNotNull();
+        final JsonArray directDependencies = Json.createReader(new StringReader(aComponent.getDirectDependencies())).readArray();
+        assertThat(directDependencies).hasSize(1);
+        assertThat(directDependencies.getJsonObject(0).getString("uuid"))
+                .isEqualTo(bComponent.getUuid().toString());
+    }
+
+    @Test
     void informWithExistingDuplicateComponentPropertiesAndBomWithDuplicateComponentProperties() throws Exception {
         final var project = new Project();
         project.setName("acme-app");

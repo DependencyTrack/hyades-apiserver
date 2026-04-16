@@ -79,12 +79,11 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
     static final String TEMPLATE_USER_PROJECT_ACL_CONDITION = /* language=SQL */ """
             EXISTS(
               SELECT 1
-                FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" AS upep
+                FROM "PROJECT_ACCESS_USERS" AS pau
                INNER JOIN "PROJECT_HIERARCHY" AS ph
-                  ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
+                  ON ph."PARENT_PROJECT_ID" = pau."PROJECT_ID"
                WHERE ph."CHILD_PROJECT_ID" = %s
-                 AND upep."USER_ID" = :projectAclUserId
-                 AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+                 AND pau."USER_ID" = :projectAclUserId
             )
             """;
 

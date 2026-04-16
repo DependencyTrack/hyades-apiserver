@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import com.github.packageurl.PackageURL;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
@@ -66,10 +67,12 @@ public class ComponentResourceTest extends ResourceTest {
     static JerseyTestExtension jersey = new JerseyTestExtension(
             new ResourceConfig(ComponentResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     @Test
     public void getComponentsDefaultRequestTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Response response = jersey.target(V1_COMPONENT).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -78,6 +81,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByUuidTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
@@ -94,6 +98,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByInvalidUuidTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Response response = jersey.target(V1_COMPONENT + "/" + UUID.randomUUID())
                 .request().header(X_API_KEY, apiKey).get(Response.class);
         Assertions.assertEquals(404, response.getStatus(), 0);
@@ -104,6 +109,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByUuidAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -139,6 +145,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByUuidWithRepositoryMetaDataTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
@@ -170,6 +177,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByUuidWithPublishedMetaDataTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
@@ -222,6 +230,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByIdentityWithCoordinatesTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, null, false);
         var componentA = new Component();
         componentA.setProject(projectA);
@@ -239,7 +248,7 @@ public class ComponentResourceTest extends ResourceTest {
         componentB.setName("nameB");
         componentB.setVersion("versionB");
         componentB.setCpe("cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*");
-        componentA.setPurl("pkg:maven/groupB/nameB@versionB?baz=qux");
+        componentB.setPurl("pkg:maven/groupB/nameB@versionB?baz=qux");
         componentB = qm.createComponent(componentB, false);
 
         final Response response = jersey.target(V1_COMPONENT + "/identity")
@@ -262,6 +271,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByIdentityAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var accessibleProject = new Project();
@@ -298,6 +308,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentTestWithRepositoryMetaData() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         Component component1 = new Component();
@@ -360,6 +371,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByIdentityWithPurlTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, null, false);
         var componentA = new Component();
         componentA.setProject(projectA);
@@ -398,6 +410,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByIdentityWithCpeTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, null, false);
         var componentA = new Component();
         componentA.setProject(projectA);
@@ -436,6 +449,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByIdentityWithProjectTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, null, false);
         var componentA = new Component();
         componentA.setProject(projectA);
@@ -473,6 +487,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByIdentityWithProjectWhenProjectDoesNotExistTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Response response = jersey.target(V1_COMPONENT + "/identity")
                 .queryParam("purl", "pkg:maven/group/name@version")
                 .queryParam("project", UUID.randomUUID())
@@ -486,6 +501,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByHashTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
@@ -503,6 +519,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByInvalidHashTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Response response = jersey.target(V1_COMPONENT + "/hash/c5a8829aa3da800216b933e265dd0b97eb6f9341")
                 .request().header(X_API_KEY, apiKey).get(Response.class);
         Assertions.assertEquals(200, response.getStatus(), 0);
@@ -511,6 +528,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void createComponentTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
@@ -538,6 +556,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void createComponentUpperCaseHashTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
@@ -574,6 +593,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void createComponentAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -608,6 +628,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void updateComponentTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
@@ -644,6 +665,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void shouldRejectUpdateWithEmptyName() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -668,6 +690,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void shouldRejectCreateWithEmptyName() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -685,6 +708,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void shouldUpdateComponentWithEmptyOptionalFields() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -748,6 +772,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void updateComponentInvalidLicenseExpressionTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -791,6 +816,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void updateComponentAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_UPDATE);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -830,6 +856,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void deleteComponentTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_DELETE);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
@@ -844,6 +871,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void deleteComponentInvalidUuidTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_DELETE);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
@@ -857,6 +885,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void deleteComponentAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_DELETE);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -891,6 +920,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void internalComponentIdentificationTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
         Response response = jersey.target(V1_COMPONENT + "/internal/identify")
                 .request().header(X_API_KEY, apiKey).get();
         Assertions.assertEquals(204, response.getStatus(), 0);
@@ -898,6 +928,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         Component component1 = new Component();
@@ -959,6 +990,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentInvalidProjectUuidTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
@@ -972,6 +1004,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentInvalidComponentUuidTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid() + "/dependencyGraph/" + UUID.randomUUID())
                 .request().header(X_API_KEY, apiKey).get();
@@ -980,6 +1013,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentNoDependencyGraphTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
@@ -995,6 +1029,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentIsNotComponentOfProject() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         Project projectWithComponent = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(projectWithComponent);
@@ -1017,6 +1052,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -1051,6 +1087,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getOccurrencesTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -1103,6 +1140,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getOccurrencesComponentNotFoundTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         final Response response = jersey.target(V1_COMPONENT + "/aa684b6f-de53-4249-a2b1-bf16ac458328/occurrence")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1119,6 +1157,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getOccurrencesAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();

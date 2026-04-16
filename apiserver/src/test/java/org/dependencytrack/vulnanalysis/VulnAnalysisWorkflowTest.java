@@ -511,7 +511,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         cvssV3Rating.setSeverity(VulnerabilityPolicyRating.Severity.LOW);
 
         createPolicy("testPolicy", "testAuthor",
-                List.of("has(component.name)", "project.version != \"\""),
+                "has(component.name) && project.version != \"\"",
                 policyAnalysis, List.of(cvssV3Rating));
 
         final UUID runId = workflowTest.getEngine().createRun(
@@ -534,10 +534,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
             assertThat(analysis.getAnalysisComments())
                     .extracting(AnalysisComment::getComment)
                     .containsExactly(
-                            """
-                                    Matched on condition(s):
-                                    - has(component.name)
-                                    - project.version != \"\"""",
+                            "Matched on condition: has(component.name) && project.version != \"\"",
                             "Analysis: NOT_SET → NOT_AFFECTED",
                             "Justification: NOT_SET → CODE_NOT_REACHABLE",
                             "Vendor Response: NOT_SET → WILL_NOT_FIX",
@@ -596,7 +593,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         cvssV4Rating.setSeverity(VulnerabilityPolicyRating.Severity.LOW);
 
         createPolicy("suppressPolicy", "testAuthor",
-                List.of("true"),
+                "true",
                 policyAnalysis, List.of(cvssV4Rating));
 
         final UUID runId = workflowTest.getEngine().createRun(
@@ -616,9 +613,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
             assertThat(analysis.getAnalysisComments())
                     .extracting(AnalysisComment::getComment)
                     .containsExactly(
-                            """
-                                    Matched on condition(s):
-                                    - true""",
+                            "Matched on condition: true",
                             "Analysis: NOT_SET → FALSE_POSITIVE",
                             "Suppressed",
                             "Severity: UNASSIGNED → LOW",
@@ -691,7 +686,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         cvssV3Rating.setSeverity(VulnerabilityPolicyRating.Severity.LOW);
 
         createPolicy("updatePolicy", "testAuthor",
-                List.of("has(component.name)"),
+                "has(component.name)",
                 policyAnalysis, List.of(cvssV3Rating));
 
         final UUID runId = workflowTest.getEngine().createRun(
@@ -714,9 +709,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
             assertThat(analysis.getAnalysisComments())
                     .extracting(AnalysisComment::getComment)
                     .containsExactly(
-                            """
-                                    Matched on condition(s):
-                                    - has(component.name)""",
+                            "Matched on condition: has(component.name)",
                             "Analysis: IN_TRIAGE → NOT_AFFECTED",
                             "Justification: NOT_SET → CODE_NOT_REACHABLE",
                             "Vendor Response: NOT_SET → WILL_NOT_FIX",
@@ -778,7 +771,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         policyAnalysis.setState(VulnerabilityPolicyAnalysis.State.NOT_AFFECTED);
 
         createPolicy("matchingPolicy", "testAuthor",
-                List.of("true"),
+                "true",
                 policyAnalysis, null);
 
         final UUID runId = workflowTest.getEngine().createRun(
@@ -831,7 +824,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
 
         final var futurePolicy = new VulnerabilityPolicy();
         futurePolicy.setName("futurePolicy");
-        futurePolicy.setConditions(List.of("true"));
+        futurePolicy.setCondition("true");
         futurePolicy.setAnalysis(futureAnalysis);
         futurePolicy.setValidFrom(ZonedDateTime.now().plusDays(30));
         withJdbiHandle(handle -> handle.attach(VulnerabilityPolicyDao.class).create(futurePolicy));
@@ -842,7 +835,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
 
         final var expiredPolicy = new VulnerabilityPolicy();
         expiredPolicy.setName("expiredPolicy");
-        expiredPolicy.setConditions(List.of("true"));
+        expiredPolicy.setCondition("true");
         expiredPolicy.setAnalysis(expiredAnalysis);
         expiredPolicy.setValidUntil(ZonedDateTime.now().minusDays(30));
         withJdbiHandle(handle -> handle.attach(VulnerabilityPolicyDao.class).create(expiredPolicy));
@@ -905,7 +898,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         policyAnalysis.setDetails("new details");
 
         createPolicy("detailsPolicy", "testAuthor",
-                List.of("true"),
+                "true",
                 policyAnalysis, null);
 
         final UUID runId = workflowTest.getEngine().createRun(
@@ -923,9 +916,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
             assertThat(analysis.getAnalysisComments())
                     .extracting(AnalysisComment::getComment)
                     .containsExactly(
-                            """
-                                    Matched on condition(s):
-                                    - true""",
+                            "Matched on condition: true",
                             "Details: new details");
         });
 
@@ -968,7 +959,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
 
         final var policy = new VulnerabilityPolicy();
         policy.setName("logPolicy");
-        policy.setConditions(List.of("true"));
+        policy.setCondition("true");
         policy.setAnalysis(policyAnalysis);
         policy.setOperationMode(VulnerabilityPolicyOperation.LOG);
         withJdbiHandle(handle -> handle.attach(VulnerabilityPolicyDao.class).create(policy));
@@ -1006,7 +997,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         policyAnalysis.setSuppress(true);
         final var policy = new VulnerabilityPolicy();
         policy.setName("Foo");
-        policy.setConditions(List.of("component.name == \"some-other-name\""));
+        policy.setCondition("component.name == \"some-other-name\"");
         policy.setAnalysis(policyAnalysis);
         policy.setOperationMode(VulnerabilityPolicyOperation.APPLY);
         withJdbiHandle(handle -> handle.attach(VulnerabilityPolicyDao.class).create(policy));
@@ -1287,13 +1278,13 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
     private static void createPolicy(
             String name,
             String author,
-            List<String> conditions,
+            String condition,
             VulnerabilityPolicyAnalysis analysis,
             List<VulnerabilityPolicyRating> ratings) {
         final var policy = new VulnerabilityPolicy();
         policy.setName(name);
         policy.setAuthor(author);
-        policy.setConditions(conditions);
+        policy.setCondition(condition);
         policy.setAnalysis(analysis);
         policy.setRatings(ratings);
         withJdbiHandle(handle -> handle.attach(VulnerabilityPolicyDao.class).create(policy));

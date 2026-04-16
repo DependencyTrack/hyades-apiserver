@@ -61,8 +61,8 @@ import org.dependencytrack.model.Tools;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
+import org.dependencytrack.parser.spdx.expression.SpdxExpression;
 import org.dependencytrack.parser.spdx.expression.SpdxExpressionParser;
-import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.VulnerabilityUtil;
 
@@ -268,15 +268,14 @@ public class ModelConverter {
             final Expression licenseExpression = cdxComponent.getLicenses().getExpression();
             if (licenseExpression != null && isNotBlank(licenseExpression.getValue())) {
                 // If the expression consists of just one license ID, add it as another option.
-                final var expressionParser = new SpdxExpressionParser();
-                final SpdxExpression expression = expressionParser.parse(licenseExpression.getValue());
-                if (!SpdxExpression.INVALID.equals(expression)) {
+                final SpdxExpression expression = SpdxExpressionParser.getInstance().tryParse(licenseExpression.getValue());
+                if (expression != null) {
                     component.setLicenseExpression(trim(licenseExpression.getValue()));
 
-                    if (expression.getSpdxLicenseId() != null) {
+                    if (expression instanceof SpdxExpression.Identifier(String id)) {
                         final var expressionLicense = new org.cyclonedx.model.License();
-                        expressionLicense.setId(expression.getSpdxLicenseId());
-                        expressionLicense.setName(expression.getSpdxLicenseId());
+                        expressionLicense.setId(id);
+                        expressionLicense.setName(id);
                         licenseCandidates.add(expressionLicense);
                     }
                 } else {

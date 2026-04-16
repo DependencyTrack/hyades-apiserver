@@ -38,10 +38,10 @@ class LegacyPropertyFallbackCustomizerTest {
 
     @Test
     void shouldFallBackToUnprefixedNameForNonAlpineProperties() {
-        final Config config = buildConfig(Map.of("vulnerability.policy.analysis.enabled", "true"));
+        final Config config = buildConfig(Map.of("vulnerability.policy.bundle.url", "http://example.com"));
 
-        assertThat(config.getOptionalValue("dt.vulnerability.policy.analysis.enabled", String.class))
-                .contains("true");
+        assertThat(config.getOptionalValue("dt.vulnerability.policy.bundle.url", String.class))
+                .contains("http://example.com");
     }
 
     @Test

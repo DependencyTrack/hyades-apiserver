@@ -173,4 +173,22 @@ class CelPolicyScriptHostTest {
                 project.matches_range("vers:generic/<1")
                 """, CacheMode.NO_CACHE));
     }
+
+    @Test
+    void shouldRejectInvalidSpdxExpressionLiteral() {
+        final var exception = assertThrows(ScriptCreateException.class,
+                () -> CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
+                        spdx_expr_allows("(MIT", ["MIT"])
+                        """, CacheMode.NO_CACHE));
+        assertThat(exception.getMessage()).contains("Invalid SPDX expression: Unexpected end of expression");
+    }
+
+    @Test
+    void shouldAcceptValidSpdxExpressionLiterals() {
+        assertDoesNotThrow(() -> CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile("""
+                spdx_expr_allows(component.license_expression, ["MIT", "Apache-2.0"])
+                    && spdx_expr_requires_any(component.license_expression, ["GPL-3.0-only"])
+                """, CacheMode.NO_CACHE));
+    }
+
 }

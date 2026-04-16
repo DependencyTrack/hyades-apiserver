@@ -22,17 +22,6 @@ import alpine.Config;
 
 public enum ConfigKey implements Config.Key {
 
-    WORKER_POOL_DRAIN_TIMEOUT_DURATION("dt.worker.pool.drain.timeout.duration", "PT30S"),
-
-    VULNERABILITY_POLICY_ANALYSIS_ENABLED("dt.vulnerability.policy.analysis.enabled", false),
-    VULNERABILITY_POLICY_BUNDLE_URL("dt.vulnerability.policy.bundle.url", null),
-    VULNERABILITY_POLICY_BUNDLE_SOURCE_TYPE("dt.vulnerability.policy.bundle.source.type", "NGINX"),
-    VULNERABILITY_POLICY_S3_ACCESS_KEY("dt.vulnerability.policy.s3.access.key", null),
-    VULNERABILITY_POLICY_S3_SECRET_KEY("dt.vulnerability.policy.s3.secret.key", null),
-    VULNERABILITY_POLICY_S3_BUCKET_NAME("dt.vulnerability.policy.s3.bucket.name", null),
-    VULNERABILITY_POLICY_S3_BUNDLE_NAME("dt.vulnerability.policy.s3.bundle.name", null),
-    VULNERABILITY_POLICY_S3_REGION("dt.vulnerability.policy.s3.region", null),
-
     DEV_SERVICES_IMAGE_FRONTEND("dt.dev.services.image.frontend", "ghcr.io/dependencytrack/hyades-frontend:snapshot"),
     DEV_SERVICES_IMAGE_POSTGRES("dt.dev.services.image.postgres", "postgres:14-alpine"),
     DEV_SERVICES_PORT_FRONTEND("dt.dev.services.port.frontend", 8081);

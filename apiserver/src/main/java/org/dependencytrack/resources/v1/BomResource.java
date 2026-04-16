@@ -21,7 +21,6 @@ package org.dependencytrack.resources.v1;
 import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.filters.ResourceAccessRequired;
 import com.fasterxml.uuid.Generators;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -54,6 +53,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.CycloneDxMediaType;
+import org.cyclonedx.Version;
 import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.dex.engine.api.DexEngine;
@@ -126,6 +126,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransactio
 public class BomResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(BomResource.class);
+    private static final String DEFAULT_EXPORT_VERSION = "1.5";
 
     @Inject
     private DexEngine dexEngine;
@@ -165,7 +166,6 @@ public class BomResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response exportProjectAsCycloneDx(
             @Parameter(description = "The UUID of the project to export", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -174,8 +174,17 @@ public class BomResource extends AbstractApiResource {
             @Parameter(description = "Specifies the CycloneDX variant to export. Value options are 'inventory' and 'withVulnerabilities'. (defaults to 'inventory')")
             @QueryParam("variant") String variant,
             @Parameter(description = "Force the resulting BOM to be downloaded as a file (defaults to 'false')")
-            @QueryParam("download") boolean download) {
+            @QueryParam("download") boolean download,
+            @Parameter(description = "The CycloneDX Spec variant exported (defaults to: '" + DEFAULT_EXPORT_VERSION + "')")
+            @QueryParam("version") String version
+    ) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
+            String versionParameter =  Objects.toString(StringUtils.trimToNull(version), DEFAULT_EXPORT_VERSION);
+            Version cdxOutputVersion = Version.fromVersionString(versionParameter);
+            if(cdxOutputVersion == null) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("Invalid BOM version specified.").build();
+            }
+
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
@@ -186,8 +195,7 @@ public class BomResource extends AbstractApiResource {
             if (StringUtils.trimToNull(variant) == null || variant.equalsIgnoreCase("inventory")) {
                 exporter = new CycloneDXExporter(CycloneDXExporter.Variant.INVENTORY, qm);
             } else if (variant.equalsIgnoreCase("withVulnerabilities")) {
-                final Set<String> permissions = qm.getEffectivePermissions(getPrincipal());
-                if (Collections.disjoint(permissions, Set.of(
+                if (Collections.disjoint(super.getEffectivePermissions(), Set.of(
                         Permissions.Constants.VIEW_VULNERABILITY,
                         Permissions.Constants.VULNERABILITY_ANALYSIS,
                         Permissions.Constants.VULNERABILITY_ANALYSIS_READ))) {
@@ -195,8 +203,7 @@ public class BomResource extends AbstractApiResource {
                 }
                 exporter = new CycloneDXExporter(CycloneDXExporter.Variant.INVENTORY_WITH_VULNERABILITIES, qm);
             } else if (variant.equalsIgnoreCase("vdr")) {
-                final Set<String> permissions = qm.getEffectivePermissions(getPrincipal());
-                if (Collections.disjoint(permissions, Set.of(
+                if (Collections.disjoint(super.getEffectivePermissions(), Set.of(
                         Permissions.Constants.VIEW_VULNERABILITY,
                         Permissions.Constants.VULNERABILITY_ANALYSIS,
                         Permissions.Constants.VULNERABILITY_ANALYSIS_READ))) {
@@ -210,18 +217,18 @@ public class BomResource extends AbstractApiResource {
             try {
                 if (StringUtils.trimToNull(format) == null || format.equalsIgnoreCase("JSON")) {
                     if (download) {
-                        return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.JSON), MediaType.APPLICATION_OCTET_STREAM)
+                        return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.JSON, cdxOutputVersion), MediaType.APPLICATION_OCTET_STREAM)
                                 .header("content-disposition", "attachment; filename=\"" + project.getUuid() + "-" + variant + ".cdx.json\"").build();
                     } else {
-                        return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.JSON),
+                        return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.JSON, cdxOutputVersion),
                                 CycloneDxMediaType.APPLICATION_CYCLONEDX_JSON).build();
                     }
                 } else if (format.equalsIgnoreCase("XML")) {
                     if (download) {
-                        return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.XML), MediaType.APPLICATION_OCTET_STREAM)
+                        return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.XML, cdxOutputVersion), MediaType.APPLICATION_OCTET_STREAM)
                                 .header("content-disposition", "attachment; filename=\"" + project.getUuid() + "-" + variant + ".cdx.xml\"").build();
                     } else {
-                        return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.XML),
+                        return Response.ok(exporter.export(exporter.create(project), CycloneDXExporter.Format.XML, cdxOutputVersion),
                                 CycloneDxMediaType.APPLICATION_CYCLONEDX_XML).build();
                     }
                 } else {
@@ -255,13 +262,21 @@ public class BomResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    @ResourceAccessRequired
     public Response exportComponentAsCycloneDx(
             @Parameter(description = "The UUID of the component to export", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             @Parameter(description = "The format to output (defaults to JSON)")
-            @QueryParam("format") String format) {
+            @QueryParam("format") String format,
+            @Parameter(description = "The CycloneDX Spec variant exported (defaults to: '" + DEFAULT_EXPORT_VERSION + "')")
+            @QueryParam("version") String version
+    ) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
+            String versionParameter = Objects.toString(StringUtils.trimToNull(version), DEFAULT_EXPORT_VERSION);
+            Version cdxOutputVersion = Version.fromVersionString(versionParameter);
+            if (cdxOutputVersion == null) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("Invalid BOM version specified.").build();
+            }
+
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
@@ -271,10 +286,10 @@ public class BomResource extends AbstractApiResource {
             final CycloneDXExporter exporter = new CycloneDXExporter(CycloneDXExporter.Variant.INVENTORY, qm);
             try {
                 if (StringUtils.trimToNull(format) == null || format.equalsIgnoreCase("JSON")) {
-                    return Response.ok(exporter.export(exporter.create(component), CycloneDXExporter.Format.JSON),
+                    return Response.ok(exporter.export(exporter.create(component), CycloneDXExporter.Format.JSON, cdxOutputVersion),
                             CycloneDxMediaType.APPLICATION_CYCLONEDX_JSON).build();
                 } else if (format.equalsIgnoreCase("XML")) {
-                    return Response.ok(exporter.export(exporter.create(component), CycloneDXExporter.Format.XML),
+                    return Response.ok(exporter.export(exporter.create(component), CycloneDXExporter.Format.XML, cdxOutputVersion),
                             CycloneDxMediaType.APPLICATION_CYCLONEDX_XML).build();
                 } else {
                     return Response.status(Response.Status.BAD_REQUEST).entity("Invalid BOM format specified.").build();
@@ -336,7 +351,6 @@ public class BomResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
-    @ResourceAccessRequired
     public Response uploadBom(@Parameter(required = true) BomSubmitRequest request) {
         final Validator validator = getValidator();
         final ProjectInfo projectInfo;

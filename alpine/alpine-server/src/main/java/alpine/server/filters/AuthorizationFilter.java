@@ -20,12 +20,9 @@ package alpine.server.filters;
 
 import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
-import alpine.model.ConfigProperty;
 import alpine.model.User;
 import alpine.persistence.AlpineQueryManager;
 import alpine.server.auth.PermissionRequired;
-import org.owasp.security.logging.SecurityMarkers;
-
 import jakarta.annotation.Priority;
 import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.Priorities;
@@ -34,6 +31,8 @@ import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.container.ResourceInfo;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
+import org.owasp.security.logging.SecurityMarkers;
+
 import java.security.Principal;
 import java.util.Collections;
 import java.util.Set;
@@ -52,8 +51,6 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     private static final Logger LOGGER = Logger.getLogger(AuthorizationFilter.class);
 
     public static final String EFFECTIVE_PERMISSIONS_PROPERTY = "effectivePermissions";
-    public static final String ACL_ENABLED_GROUP_NAME = "access-management";
-    public static final String ACL_ENABLED_PROPERTY_NAME = "acl.enabled";
 
     @Context
     private ResourceInfo resourceInfo;
@@ -67,17 +64,8 @@ public class AuthorizationFilter implements ContainerRequestFilter {
         }
 
         final Set<String> effectivePermissions;
-        final boolean isAclEnabled;
-
         try (final var qm = new AlpineQueryManager()) {
             effectivePermissions = qm.getEffectivePermissions(principal);
-            final ConfigProperty property = qm.getConfigProperty(ACL_ENABLED_GROUP_NAME, ACL_ENABLED_PROPERTY_NAME);
-            isAclEnabled = property != null && "true".equals(property.getPropertyValue());
-        }
-
-        if (isAclEnabled && resourceInfo.getResourceMethod().isAnnotationPresent(ResourceAccessRequired.class)) {
-            requestContext.setProperty(EFFECTIVE_PERMISSIONS_PROPERTY, effectivePermissions);
-            return;
         }
 
         final PermissionRequired annotation = resourceInfo.getResourceMethod().getDeclaredAnnotation(PermissionRequired.class);

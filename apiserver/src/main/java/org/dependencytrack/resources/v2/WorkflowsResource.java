@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.util.JsonFormat;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.WorkflowsApi;
 import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponseItem;
@@ -51,6 +51,8 @@ import org.dependencytrack.proto.internal.workflow.v1.ArgumentCsaf;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentMetrics;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentNotification;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentPackageMetadata;
+import org.dependencytrack.proto.internal.workflow.v1.ArgumentVulnDataSource;
+import org.dependencytrack.proto.internal.workflow.v1.ArgumentVulnPolicy;
 import org.dependencytrack.proto.internal.workflow.v1.ArgumentVulnanalysis;
 import org.dependencytrack.proto.internal.workflow.v1.ResultVulnanalysis;
 import org.dependencytrack.resources.AbstractApiResource;
@@ -64,7 +66,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-@Path("/")
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapSortDirection;
+
+@Provider
 @NullMarked
 public class WorkflowsResource extends AbstractApiResource implements WorkflowsApi {
 
@@ -95,6 +99,8 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                                 .add(ArgumentNotification.getDescriptor().getMessageTypes())
                                 .add(ArgumentPackageMetadata.getDescriptor().getMessageTypes())
                                 .add(ArgumentVulnanalysis.getDescriptor().getMessageTypes())
+                                .add(ArgumentVulnDataSource.getDescriptor().getMessageTypes())
+                                .add(ArgumentVulnPolicy.getDescriptor().getMessageTypes())
                                 .add(ResultVulnanalysis.getDescriptor().getMessageTypes())
                                 .build());
     }
@@ -155,7 +161,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                             case "completed_at" -> ListWorkflowRunsRequest.SortBy.COMPLETED_AT;
                             case null, default -> null;
                         })
-                        .withSortDirection(convert(sortDirection))
+                        .withSortDirection(mapSortDirection(sortDirection))
                         .withPageToken(pageToken)
                         .withLimit(limit));
 
@@ -199,7 +205,7 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                 dexEngine.listRunHistory(
                         new ListWorkflowRunHistoryRequest(id)
                                 .withFromSequenceNumber(fromSequenceNumber)
-                                .withSortDirection(convert(sortDirection))
+                                .withSortDirection(mapSortDirection(sortDirection))
                                 .withPageToken(pageToken)
                                 .withLimit(limit));
 
@@ -279,14 +285,4 @@ public class WorkflowsResource extends AbstractApiResource implements WorkflowsA
                 .event(eventJsonMap)
                 .build();
     }
-
-    private static org.dependencytrack.common.pagination.@Nullable SortDirection convert(
-            @Nullable SortDirection sortDirection) {
-        return switch (sortDirection) {
-            case ASC -> org.dependencytrack.common.pagination.SortDirection.ASC;
-            case DESC -> org.dependencytrack.common.pagination.SortDirection.DESC;
-            case null -> null;
-        };
-    }
-
 }

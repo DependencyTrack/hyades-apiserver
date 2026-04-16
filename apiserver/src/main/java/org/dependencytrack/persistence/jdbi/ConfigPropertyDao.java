@@ -24,11 +24,9 @@ import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindBean;
-import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
-import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -36,13 +34,6 @@ import java.util.Optional;
  * @since 5.6.0
  */
 public interface ConfigPropertyDao extends SqlObject {
-
-    @SqlBatch("""
-            INSERT INTO "CONFIGPROPERTY" ("GROUPNAME", "PROPERTYNAME", "PROPERTYTYPE", "DESCRIPTION", "PROPERTYVALUE")
-            VALUES (:groupName, :propertyName, :propertyType, :description, :propertyValue)
-            ON CONFLICT ("GROUPNAME", "PROPERTYNAME") DO NOTHING
-            """)
-    void maybeCreateAll(@BindBean Collection<ConfigProperty> property);
 
     @SqlQuery("""
             SELECT *

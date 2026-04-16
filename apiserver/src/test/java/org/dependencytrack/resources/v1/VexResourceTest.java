@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
@@ -44,6 +45,8 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Base64;
 import java.util.Collections;
@@ -65,6 +68,7 @@ public class VexResourceTest extends ResourceTest {
             new ResourceConfig(VexResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class)
                     .register(MultiPartFeature.class));
 
     @BeforeEach
@@ -75,6 +79,8 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
+
         var vulnA = new Vulnerability();
         vulnA.setVulnId("INT-001");
         vulnA.setSource(Vulnerability.Source.INTERNAL);
@@ -232,6 +238,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxAclTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -260,9 +267,55 @@ public class VexResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"1.4", "1.5", "1.6", ""})
+    void exportVexWithVersion(String version) {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
+
+        Project project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setClassifier(Classifier.APPLICATION);
+        qm.persist(project);
+
+        Response response = jersey.target("%s/cyclonedx/project/%s".formatted(V1_VEX, project.getUuid()))
+                .queryParam("version", version)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        final String jsonResponse = getPlainTextBody(response);
+        assertThatNoException().isThrownBy(() -> CycloneDxValidator.getInstance().validate(jsonResponse.getBytes()));
+
+        String expectedCdxVersionSpec = version.isEmpty() ? "1.5" : version;
+        assertThatJson(jsonResponse, json -> json.inPath("specVersion").isEqualTo("\"" + expectedCdxVersionSpec + "\""));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"99", "-15", "1.9", " 0.9", "invalidString"})
+    void exportVexWithInvalidVersionsStrings(String version) {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
+
+        Project project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setClassifier(Classifier.APPLICATION);
+        qm.persist(project);
+
+        Response response = jersey.target("%s/cyclonedx/project/%s".formatted(V1_VEX, project.getUuid()))
+                .queryParam("version", version)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(getPlainTextBody(response)).isEqualTo("Invalid CycloneDX version specified.");
+    }
+
     @Test
     public void uploadVexInvalidJsonTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
         final var project = new Project();
         project.setName("acme-app");
@@ -310,7 +363,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexInvalidXmlTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
         final var project = new Project();
         project.setName("acme-app");
@@ -355,6 +408,8 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexTooLargeViaPutTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
+
         final var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");
@@ -384,6 +439,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexAclTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -435,6 +491,8 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void exportVexWithSameVulnAnalysisValidJsonTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
+
         var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");
@@ -542,6 +600,8 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void exportVexWithDifferentVulnAnalysisValidJsonTest() {
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_READ);
+
         var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");
@@ -676,7 +736,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexWithValidationModeDisabledTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -721,7 +781,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexWithValidationModeEnabledForTagsTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -788,7 +848,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexWithValidationModeDisabledForTagsTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -855,7 +915,8 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     void shouldRejectVexUploadForCollectionProject() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS_UPDATE);
+
         final var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");

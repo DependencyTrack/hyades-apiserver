@@ -25,6 +25,7 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.analysis.AnalyzeProjectWorkflow;
 import org.dependencytrack.cache.api.CacheManager;
+import org.dependencytrack.common.HttpClient;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
 import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
@@ -59,6 +60,8 @@ import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.policy.EvalProjectPoliciesActivity;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
 import org.dependencytrack.policy.cel.CelVulnerabilityPolicyEvaluator;
+import org.dependencytrack.policy.vulnerability.SyncVulnPolicyBundleActivity;
+import org.dependencytrack.policy.vulnerability.SyncVulnPolicyBundleWorkflow;
 import org.dependencytrack.proto.internal.workflow.v1.AnalyzeProjectWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
 import org.dependencytrack.proto.internal.workflow.v1.DiscoverCsafProvidersArg;
@@ -78,6 +81,7 @@ import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationActivit
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.ReconcileVulnAnalysisResultsArg;
 import org.dependencytrack.proto.internal.workflow.v1.ResolvePackageMetadataActivityArg;
+import org.dependencytrack.proto.internal.workflow.v1.SyncVulnPolicyBundleArg;
 import org.dependencytrack.proto.internal.workflow.v1.UpdateProjectMetricsArg;
 import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
 import org.dependencytrack.secret.management.SecretManager;
@@ -201,6 +205,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
+                new SyncVulnPolicyBundleWorkflow(),
+                protoConverter(SyncVulnPolicyBundleArg.class),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerWorkflow(
                 new UpdatePortfolioMetricsWorkflow(),
                 voidConverter(),
                 voidConverter(),
@@ -299,6 +308,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 protoConverter(ResolvePackageMetadataActivityArg.class),
                 voidConverter(),
                 Duration.ofMinutes(10));
+        engine.registerActivity(
+                new SyncVulnPolicyBundleActivity(config, HttpClient.INSTANCE),
+                protoConverter(SyncVulnPolicyBundleArg.class),
+                voidConverter(),
+                Duration.ofMinutes(5));
         engine.registerActivity(
                 new UpdateProjectMetricsActivity(),
                 protoConverter(UpdateProjectMetricsArg.class),

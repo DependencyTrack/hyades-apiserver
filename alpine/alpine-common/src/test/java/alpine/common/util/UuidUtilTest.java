@@ -24,16 +24,6 @@ import org.junit.jupiter.api.Test;
 public class UuidUtilTest {
 
     @Test
-    public void insertHyphensTest() {
-        Assertions.assertEquals("9aa395cb-8e91-4e77-aeaf-1a41d85bffa8", UuidUtil.insertHyphens("9aa395cb8e914e77aeaf1a41d85bffa8"));
-    }
-
-    @Test
-    public void stripHyphensTest() {
-        Assertions.assertEquals("9aa395cb8e914e77aeaf1a41d85bffa8", UuidUtil.stripHyphens("9aa395cb-8e91-4e77-aeaf-1a41d85bffa8"));
-    }
-
-    @Test
     public void isValidUuidTest() {
         Assertions.assertFalse(UuidUtil.isValidUUID("9aa395cb8e914e77aeaf1a41d85bffa8"));
         Assertions.assertFalse(UuidUtil.isValidUUID("9AA395CB-8E91-4E77-AEAF-1A41D85BFFA8"));

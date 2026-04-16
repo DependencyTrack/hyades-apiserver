@@ -20,10 +20,11 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.AuthenticationNotRequired;
 import io.swagger.v3.oas.annotations.Operation;
-
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import org.dependencytrack.resources.AbstractApiResource;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -32,7 +33,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static java.util.Objects.requireNonNull;
 
 @Path("/openapi.yaml")
-public class OpenApiResource {
+public class OpenApiResource extends AbstractApiResource {
 
     private static final ReadWriteLock LOCK = new ReentrantReadWriteLock();
     private static String OPENAPI_YAML;
