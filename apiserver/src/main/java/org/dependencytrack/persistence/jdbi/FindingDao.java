@@ -61,6 +61,7 @@ public interface FindingDao {
             String vulnSubtitle,
             String vulnDescription,
             String vulnRecommendation,
+            String vulnReferences,
             Instant vulnPublished,
             Severity vulnSeverity,
             List<Integer> cwes,
@@ -127,6 +128,7 @@ public interface FindingDao {
                  , v."SUBTITLE" AS "vulnSubtitle"
                  , v."DESCRIPTION" AS "vulnDescription"
                  , v."RECOMMENDATION" AS "vulnRecommendation"
+                 , v."REFERENCES" AS "vulnReferences"
                  , v."PUBLISHED" AS "vulnPublished"
                  , CASE
                      WHEN a."SEVERITY" IS NOT NULL
@@ -279,6 +281,7 @@ public interface FindingDao {
                  , v."SUBTITLE" AS "vulnSubtitle"
                  , v."DESCRIPTION" AS "vulnDescription"
                  , v."RECOMMENDATION" AS "vulnRecommendation"
+                 , v."REFERENCES" AS "vulnReferences"
                  , v."PUBLISHED" AS "vulnPublished"
                  , CASE
                      WHEN a."SEVERITY" IS NOT NULL
