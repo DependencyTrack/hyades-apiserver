@@ -227,7 +227,7 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
         if (newSource == null || existingSource == null) {
             return true;
         }
-        return newSource.hasHigherOrEqualPrecedenceThan(existingSource);
+        return newSource.canOverwrite(existingSource);
     }
 
 }

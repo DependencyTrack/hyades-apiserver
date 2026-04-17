@@ -40,22 +40,7 @@ public enum RatingSource {
         return precedence;
     }
 
-    public boolean hasHigherPrecedenceThan(RatingSource other) {
-        return other == null || this.precedence > other.precedence;
-    }
-
-    public boolean hasHigherOrEqualPrecedenceThan(RatingSource other) {
-        return other == null || this.precedence >= other.precedence;
-    }
-
     public boolean canOverwrite(RatingSource other) {
-        return hasHigherOrEqualPrecedenceThan(other);
-    }
-
-    public static boolean shouldAllowUpdate(RatingSource currentSource, RatingSource newSource) {
-        if (newSource == null) {
-            return false;
-        }
-        return currentSource == null || newSource.hasHigherOrEqualPrecedenceThan(currentSource);
+        return other == null || this.precedence >= other.precedence;
     }
 }
