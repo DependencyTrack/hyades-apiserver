@@ -33,6 +33,7 @@ import org.dependencytrack.notification.proto.v1.PolicyViolationAnalysisDecision
 import org.dependencytrack.notification.proto.v1.PolicyViolationSubject;
 import org.dependencytrack.notification.proto.v1.Project;
 import org.dependencytrack.notification.proto.v1.ProjectVulnAnalysisCompleteSubject;
+import org.dependencytrack.notification.proto.v1.UserSubject;
 import org.dependencytrack.notification.proto.v1.VexConsumedOrProcessedSubject;
 import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.dependencytrack.notification.proto.v1.VulnerabilityRetractedSubject;
@@ -40,6 +41,7 @@ import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.jspecify.annotations.Nullable;
+import org.projectnessie.cel.Program;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -61,7 +63,6 @@ import static org.dependencytrack.common.MdcKeys.MDC_NOTIFICATION_ID;
 import static org.dependencytrack.common.MdcKeys.MDC_NOTIFICATION_LEVEL;
 import static org.dependencytrack.common.MdcKeys.MDC_NOTIFICATION_SCOPE;
 import static org.dependencytrack.notification.NotificationModelConverter.convert;
-import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 
 /**
  * @since 5.7.0
@@ -156,7 +157,8 @@ final class NotificationRouter {
             String name,
             boolean isNotifyChildProjects,
             @Nullable Set<String> limitToProjectUuids,
-            @Nullable Set<String> limitToTagNames) {
+            @Nullable Set<String> limitToTagNames,
+            @Nullable String filterExpression) {
 
         private boolean isLimitedToProjects() {
             return limitToProjectUuids != null && !limitToProjectUuids.isEmpty();
@@ -164,6 +166,10 @@ final class NotificationRouter {
 
         private boolean isLimitedToTags() {
             return limitToTagNames != null && !limitToTagNames.isEmpty();
+        }
+
+        private boolean hasFilterExpression() {
+            return filterExpression != null && !filterExpression.isBlank();
         }
 
     }
@@ -212,6 +218,7 @@ final class NotificationRouter {
                              ON "TAG"."ID" = "NOTIFICATIONRULE_TAGS"."TAG_ID"
                           WHERE "NOTIFICATIONRULE_ID" = rule."ID"
                        ) AS limit_to_tag_names
+                     , rule."FILTER_EXPRESSION"
                   FROM UNNEST(:indexes, :scopes, :levels, :groups)
                     AS t(index, scope, level, "group")
                  INNER JOIN "NOTIFICATIONRULE" AS rule
@@ -240,16 +247,13 @@ final class NotificationRouter {
     private List<RuleQueryResult> maybeFilterRules(
             Notification notification,
             List<RuleQueryResult> ruleCandidates) {
-        final Project projectSubject = getProjectSubject(notification);
-        if (projectSubject == null) {
-            LOGGER.debug("Notification can't be filtered; All rules are applicable");
-            return ruleCandidates;
-        }
+        final Object unpackedSubject = unpackSubject(notification);
+        final Project projectSubject = getProjectSubject(unpackedSubject);
 
         final var applicableRules = new ArrayList<RuleQueryResult>(ruleCandidates.size());
         for (final RuleQueryResult rule : ruleCandidates) {
             try (var ignoredMdcRuleName = MDC.putCloseable("notificationRuleName", rule.name())) {
-                if (isApplicable(rule, projectSubject)) {
+                if (isApplicable(rule, notification, projectSubject, unpackedSubject)) {
                     LOGGER.debug("Rule is applicable");
                     applicableRules.add(rule);
                 } else {
@@ -261,19 +265,34 @@ final class NotificationRouter {
         return applicableRules;
     }
 
-    private boolean isApplicable(RuleQueryResult rule, Project project) {
-        // TODO: It should be possible to allow for custom filtering using CEL.
-        //  This would address feature requests such as https://github.com/DependencyTrack/dependency-track/issues/3767.
-        //  Since notifications are already well-defined Protobuf messages,
-        //  it would be relatively easy to implement.
+    private boolean isApplicable(
+            RuleQueryResult rule,
+            Notification notification,
+            @Nullable Project project,
+            @Nullable Object subject) {
+        if (!isApplicableByProjectOrTag(rule, project)) {
+            return false;
+        }
 
+        if (!evaluateFilterExpression(rule, notification, subject)) {
+            LOGGER.debug("Notification did not match the rule's filter expression");
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean isApplicableByProjectOrTag(RuleQueryResult rule, @Nullable Project project) {
         if (!rule.isLimitedToProjects() && !rule.isLimitedToTags()) {
             LOGGER.debug("Rule is not limited to projects or tags");
             return true;
         }
 
-        // Tag matching is cheaper to perform since it doesn't require additional
-        // database interactions, so do it first.
+        if (project == null) {
+            LOGGER.debug("Notification has no project subject; Skipping project/tag filtering");
+            return true;
+        }
+
         if (rule.isLimitedToTags()) {
             LOGGER.debug("Rule is limited to tags: {}", rule.limitToTagNames());
 
@@ -313,46 +332,84 @@ final class NotificationRouter {
         return false;
     }
 
-    private @Nullable Project getProjectSubject(Notification notification) {
-        if (notification.getScope() != SCOPE_PORTFOLIO
-                || !notification.hasSubject()) {
+    private boolean evaluateFilterExpression(
+            RuleQueryResult rule,
+            Notification notification,
+            @Nullable Object subject) {
+        final String filterExpression = rule.filterExpression();
+        if (filterExpression == null || filterExpression.isBlank()) {
+            return true;
+        }
+
+        final var scriptHost = NotificationFilterScriptHost.getInstance();
+
+        try {
+            final Program program = scriptHost.compile(rule.filterExpression());
+            final boolean result = scriptHost.evaluate(program, notification, subject);
+            LOGGER.debug("Filter expression evaluated to {}", result);
+            return result;
+        } catch (RuntimeException e) {
+            LOGGER.warn("Failed to evaluate filter expression for rule {}; Failing open", rule.name(), e);
+            return true;
+        }
+    }
+
+    private @Nullable Project getProjectSubject(@Nullable Object subject) {
+        return switch (subject) {
+            case BomConsumedOrProcessedSubject it -> it.getProject();
+            case VulnerabilityRetractedSubject it -> it.getProject();
+            case BomProcessingFailedSubject it -> it.getProject();
+            case BomValidationFailedSubject it -> it.getProject();
+            case NewVulnerabilitySubject it -> it.getProject();
+            case NewVulnerableDependencySubject it -> it.getProject();
+            case PolicyViolationSubject it -> it.getProject();
+            case PolicyViolationAnalysisDecisionChangeSubject it -> it.getProject();
+            case VulnerabilityAnalysisDecisionChangeSubject it -> it.getProject();
+            case Project it -> it;
+            case ProjectVulnAnalysisCompleteSubject it -> it.getProject();
+            case VexConsumedOrProcessedSubject it -> it.getProject();
+            case null, default -> null;
+        };
+    }
+
+    private @Nullable Object unpackSubject(Notification notification) {
+        if (!notification.hasSubject()) {
             return null;
         }
 
         try {
             return switch (notification.getGroup()) {
                 case GROUP_BOM_CONSUMED, GROUP_BOM_PROCESSED -> notification.getSubject().unpack(
-                        BomConsumedOrProcessedSubject.class).getProject();
+                        BomConsumedOrProcessedSubject.class);
                 case GROUP_VULNERABILITY_RETRACTED -> notification.getSubject().unpack(
-                        VulnerabilityRetractedSubject.class).getProject();
+                        VulnerabilityRetractedSubject.class);
                 case GROUP_BOM_PROCESSING_FAILED -> notification.getSubject().unpack(
-                        BomProcessingFailedSubject.class).getProject();
+                        BomProcessingFailedSubject.class);
                 case GROUP_BOM_VALIDATION_FAILED -> notification.getSubject().unpack(
-                        BomValidationFailedSubject.class).getProject();
+                        BomValidationFailedSubject.class);
                 case GROUP_NEW_VULNERABILITY -> notification.getSubject().unpack(
-                        NewVulnerabilitySubject.class).getProject();
+                        NewVulnerabilitySubject.class);
                 case GROUP_NEW_VULNERABLE_DEPENDENCY -> notification.getSubject().unpack(
-                        NewVulnerableDependencySubject.class).getProject();
+                        NewVulnerableDependencySubject.class);
                 case GROUP_POLICY_VIOLATION -> notification.getSubject().unpack(
-                        PolicyViolationSubject.class).getProject();
+                        PolicyViolationSubject.class);
                 case GROUP_PROJECT_AUDIT_CHANGE -> {
-                    if (notification.getSubject().is(
-                            PolicyViolationAnalysisDecisionChangeSubject.class)) {
-                        yield notification.getSubject().unpack(
-                                PolicyViolationAnalysisDecisionChangeSubject.class).getProject();
-                    } else if (notification.getSubject().is(
-                            VulnerabilityAnalysisDecisionChangeSubject.class)) {
-                        yield notification.getSubject().unpack(
-                                VulnerabilityAnalysisDecisionChangeSubject.class).getProject();
+                    if (notification.getSubject().is(PolicyViolationAnalysisDecisionChangeSubject.class)) {
+                        yield notification.getSubject().unpack(PolicyViolationAnalysisDecisionChangeSubject.class);
+                    } else if (notification.getSubject().is(VulnerabilityAnalysisDecisionChangeSubject.class)) {
+                        yield notification.getSubject().unpack(VulnerabilityAnalysisDecisionChangeSubject.class);
                     }
-                    throw new IllegalStateException("Unexpected subject for group %s: %s".formatted(
-                            notification.getGroup(), notification.getSubject().getTypeUrl()));
+                    throw new IllegalStateException(
+                            "Unexpected subject for group %s: %s".formatted(
+                                    notification.getGroup(), notification.getSubject().getTypeUrl()));
                 }
                 case GROUP_PROJECT_CREATED -> notification.getSubject().unpack(Project.class);
                 case GROUP_PROJECT_VULN_ANALYSIS_COMPLETE -> notification.getSubject().unpack(
-                        ProjectVulnAnalysisCompleteSubject.class).getProject();
+                        ProjectVulnAnalysisCompleteSubject.class);
                 case GROUP_VEX_CONSUMED, GROUP_VEX_PROCESSED -> notification.getSubject().unpack(
-                        VexConsumedOrProcessedSubject.class).getProject();
+                        VexConsumedOrProcessedSubject.class);
+                case GROUP_USER_CREATED, GROUP_USER_DELETED -> notification.getSubject().unpack(
+                        UserSubject.class);
                 default -> null;
             };
         } catch (IOException e) {

@@ -65,6 +65,7 @@ public final class NotificationRuleRowMapper implements RowMapper<NotificationRu
         maybeSet(rs, "SCHEDULE_CRON", ResultSet::getString, rule::setScheduleCron);
         maybeSet(rs, "SCHEDULE_LAST_TRIGGERED_AT", ResultSet::getTimestamp, rule::setScheduleLastTriggeredAt);
         maybeSet(rs, "SCHEDULE_SKIP_UNCHANGED", ResultSet::getBoolean, rule::setScheduleSkipUnchanged);
+        maybeSet(rs, "FILTER_EXPRESSION", ResultSet::getString, rule::setFilterExpression);
         return rule;
     }
 
