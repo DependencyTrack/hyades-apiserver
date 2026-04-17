@@ -153,7 +153,8 @@ public class AnalysisResource extends AbstractApiResource {
                 validator.validateProperty(request, "analysisJustification"),
                 validator.validateProperty(request, "analysisResponse"),
                 validator.validateProperty(request, "analysisDetails"),
-                validator.validateProperty(request, "comment")
+                validator.validateProperty(request, "comment"),
+                validator.validateProperty(request, "owaspVector")
         );
         try (final var qm = new QueryManager(getAlpineRequest())) {
             return qm.callInTransaction(() -> {

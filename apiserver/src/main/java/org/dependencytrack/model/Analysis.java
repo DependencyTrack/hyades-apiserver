@@ -160,7 +160,7 @@ public class Analysis implements Serializable {
      * @since 5.8.0
      */
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "SOURCE", jdbcType = "VARCHAR")
+    @Column(name = "SOURCE", jdbcType = "VARCHAR", allowsNull = "true")
     @JsonProperty(value = "source")
     private RatingSource source;
 

@@ -23,6 +23,7 @@ import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.RatingSource;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.jdbi.v3.core.mapper.RowMapper;
@@ -63,6 +64,7 @@ public class AnalysisRowMapper implements RowMapper<Analysis> {
         maybeSet(rs, "CVSSV4SCORE", ResultSet::getBigDecimal, analysis::setCvssV4Score);
         maybeSet(rs, "OWASPVECTOR", ResultSet::getString, analysis::setOwaspVector);
         maybeSet(rs, "OWASPSCORE", ResultSet::getBigDecimal, analysis::setOwaspScore);
+        maybeSet(rs, "SOURCE", ResultSet::getString, value -> analysis.setSource(RatingSource.valueOf(value)));
         return analysis;
     }
 
