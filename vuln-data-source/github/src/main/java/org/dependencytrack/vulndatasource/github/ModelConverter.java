@@ -23,6 +23,7 @@ import com.github.packageurl.PackageURL;
 import com.github.packageurl.PackageURLBuilder;
 import com.google.protobuf.util.Timestamps;
 import io.github.jeremylong.openvulnerability.client.ghsa.CWEs;
+import io.github.jeremylong.openvulnerability.client.ghsa.Epss;
 import io.github.jeremylong.openvulnerability.client.ghsa.Identifier;
 import io.github.jeremylong.openvulnerability.client.ghsa.Package;
 import io.github.jeremylong.openvulnerability.client.ghsa.SecurityAdvisory;
@@ -74,6 +75,8 @@ final class ModelConverter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ModelConverter.class);
     private static final Source SOURCE = Source.newBuilder().setName("GITHUB").build();
     private static final String TITLE_PROPERTY_NAME = "dependency-track:vuln:title";
+    private static final String EPSS_SCORE_PROPERTY_NAME = "dependency-track:vuln:epss_score";
+    private static final String EPSS_PERCENTILE_PROPERTY_NAME = "dependency-track:vuln:epss_percentile";
 
     private ModelConverter() {
     }
@@ -112,6 +115,29 @@ final class ModelConverter {
                 .map(Instant::toEpochMilli)
                 .map(Timestamps::fromMillis)
                 .ifPresent(vulnBuilder::setRejected);
+
+        if (advisory.getEpss() != null) {
+            final Epss epss = advisory.getEpss();
+            // GitHub's GraphQL API (https://docs.github.com/en/graphql/reference/objects#securityadvisoryepss):
+            //   "percentage" = exploitation probability (EPSS score, 0.0-1.0)
+            //   "percentile" = relative rank compared to other CVEs (0.0-1.0)
+            //
+            // NOTE: the open-vulnerability-clients library Javadoc has these two fields documented
+            // with swapped semantics — trust the live API values, not the Javadoc.
+            // Verified against real API responses, e.g. GHSA-57j2-w4cx-62h2 (CVE-2020-36518):
+            //   percentage=0.00514 (0.514% exploitation probability)
+            //   percentile=0.66009 (ranked above 66% of all CVEs)
+            Optional.ofNullable(epss.getPercentage()).ifPresent(value ->
+                vulnBuilder.addProperties(Property.newBuilder()
+                        .setName(EPSS_SCORE_PROPERTY_NAME)
+                        .setValue(value.toString())
+                        .build()));
+            Optional.ofNullable(epss.getPercentile()).ifPresent(value ->
+                vulnBuilder.addProperties(Property.newBuilder()
+                        .setName(EPSS_PERCENTILE_PROPERTY_NAME)
+                        .setValue(value.toString())
+                        .build()));
+        }
 
         final var componentByPurl = new HashMap<String, Component>();
         final var vulnAffectsBuilderByBomRef = new HashMap<String, VulnerabilityAffects.Builder>();

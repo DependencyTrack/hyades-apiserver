@@ -303,4 +303,56 @@ class ModelConverterTest {
                          }
                         """);
     }
+
+    @Test
+    void shouldConvertEpss() throws IOException {
+
+        //given
+        var securityAdvisory = MAPPER.readValue(getClass().getResource("/advisory-04.json"), SecurityAdvisory.class);
+
+        Bom bom = ModelConverter.convert(securityAdvisory, true);
+
+        assertThatJson(JsonFormat.printer().print(bom))
+                .when(Option.IGNORING_ARRAY_ORDER)
+                .isEqualTo("""
+                        {
+                           "components": [{
+                             "bomRef": "9407f313-a355-3a52-a697-ab76c6641d89",
+                             "purl": "pkg:nuget/bootstrap"
+                           }],
+                           "vulnerabilities": [{
+                             "id": "GHSA-fxwm-579q-49qq",
+                             "source": {
+                               "name": "GITHUB"
+                             },
+                             "ratings": [{
+                               "method": "SCORE_METHOD_OTHER",
+                               "severity": "SEVERITY_CRITICAL",
+                               "source": {
+                                 "name": "GITHUB"
+                               }
+                             }],
+                             "description": "In Bootstrap 4 before 4.3.1 and Bootstrap 3 before 3.4.1, XSS is possible in the tooltip or popover data-template attribute. For more information, see: https://blog.getbootstrap.com/2019/02/13/bootstrap-4-3-1-and-3-4-1/",
+                             "published": "2026-02-22T20:54:40Z",
+                             "updated": "2026-12-03T14:54:43Z",
+                             "affects": [{
+                               "ref": "9407f313-a355-3a52-a697-ab76c6641d89",
+                               "versions": [{
+                                 "range": "vers:nuget/>=4.0.0|<4.3.1"
+                               }]
+                             }],
+                             "properties": [{
+                               "name": "dependency-track:vuln:title",
+                               "value": "Critical severity vulnerability that affects Bootstrap.Less, bootstrap, and bootstrap.sass"
+                             }, {
+                                "name":"dependency-track:vuln:epss_score",
+                                "value":"9.0"
+                             }, {
+                                "name":"dependency-track:vuln:epss_percentile",
+                                "value":"9.9"
+                             }]
+                           }]
+                         }
+                        """);
+    }
 }
