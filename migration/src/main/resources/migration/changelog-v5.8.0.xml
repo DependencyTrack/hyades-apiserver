@@ -12,13 +12,10 @@
     <!-- Higher-precedence sources prevent lower-precedence sources from overwriting -->
 
     <changeSet id="v5.8.0-1" author="fahedouch">
-        <comment>Add source and owaspSeverity columns to ANALYSIS table</comment>
+        <comment>Add source column to ANALYSIS table</comment>
 
         <addColumn tableName="ANALYSIS">
             <column name="SOURCE" type="VARCHAR(50)">
-                <constraints nullable="true"/>
-            </column>
-            <column name="OWASPSEVERITY" type="severity">
                 <constraints nullable="true"/>
             </column>
         </addColumn>

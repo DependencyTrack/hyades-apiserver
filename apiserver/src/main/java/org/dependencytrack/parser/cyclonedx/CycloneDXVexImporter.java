@@ -30,7 +30,6 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RatingSource;
-import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
@@ -41,7 +40,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertCdxSeverityToDtSeverity;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertCdxVulnAnalysisJustificationToDtAnalysisJustification;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertCdxVulnAnalysisStateToDtAnalysisState;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -192,23 +190,14 @@ public class CycloneDXVexImporter {
             if (cdxVuln.getRatings() != null && !cdxVuln.getRatings().isEmpty()) {
                 for (final org.cyclonedx.model.vulnerability.Vulnerability.Rating rating : cdxVuln.getRatings()) {
                     if (rating.getMethod() == org.cyclonedx.model.vulnerability.Vulnerability.Rating.Method.OWASP) {
-                        if (rating.getVector() == null && rating.getSeverity() == null) {
-                            LOGGER.warn("VEX rating has neither vector nor severity - skipping");
+                        if (rating.getVector() == null || rating.getScore() == null) {
+                            LOGGER.warn("VEX OWASP rating missing vector or score - skipping");
                             continue;
                         }
 
-                        if (rating.getVector() != null && rating.getScore() == null) {
-                            LOGGER.warn("VEX rating has vector but no score - skipping");
-                            continue;
-                        }
-
-                        final Severity severity = convertCdxSeverityToDtSeverity(rating.getSeverity());
-                        final String vector = rating.getVector();
-                        final java.math.BigDecimal score = rating.getScore() != null
-                                ? java.math.BigDecimal.valueOf(rating.getScore())
-                                : null;
-
-                        command = command.withOwasp(vector, score, severity);
+                        command = command.withOwasp(
+                                rating.getVector(),
+                                java.math.BigDecimal.valueOf(rating.getScore()));
                         break;
                     }
                 }

@@ -28,7 +28,6 @@ import jakarta.validation.constraints.Pattern;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.Severity;
 
 import java.math.BigDecimal;
 
@@ -77,8 +76,6 @@ public class AnalysisRequest {
 
     private final BigDecimal owaspScore;
 
-    private final Severity owaspSeverity;
-
     @JsonCreator
     public AnalysisRequest(@JsonProperty(value = "project") String project,
                            @JsonProperty(value = "component", required = true) String component,
@@ -90,8 +87,7 @@ public class AnalysisRequest {
                            @JsonProperty(value = "comment") String comment,
                            @JsonProperty(value = "isSuppressed") Boolean suppressed,
                            @JsonProperty(value = "owaspVector") String owaspVector,
-                           @JsonProperty(value = "owaspScore") BigDecimal owaspScore,
-                           @JsonProperty(value = "owaspSeverity") Severity owaspSeverity) {
+                           @JsonProperty(value = "owaspScore") BigDecimal owaspScore) {
         this.project = project;
         this.component = component;
         this.vulnerability = vulnerability;
@@ -103,7 +99,6 @@ public class AnalysisRequest {
         this.suppressed = suppressed;
         this.owaspVector = owaspVector;
         this.owaspScore = owaspScore;
-        this.owaspSeverity = owaspSeverity;
     }
 
     public String getProject() {
@@ -162,7 +157,4 @@ public class AnalysisRequest {
         return owaspScore;
     }
 
-    public Severity getOwaspSeverity() {
-        return owaspSeverity;
-    }
 }

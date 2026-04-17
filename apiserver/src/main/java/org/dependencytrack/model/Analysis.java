@@ -152,15 +152,6 @@ public class Analysis implements Serializable {
     @JsonProperty(value = "owaspScore")
     private BigDecimal owaspScore;
 
-    @Persistent(defaultFetchGroup = "true")
-    @Column(name = "OWASPSEVERITY")
-    @Extensions(value = {
-            @Extension(vendorName = "datanucleus", key = "insert-function", value = "CAST(? AS severity)"),
-            @Extension(vendorName = "datanucleus", key = "update-function", value = "CAST(? AS severity)")
-    })
-    @JsonProperty(value = "owaspSeverity")
-    private Severity owaspSeverity;
-
     /**
      * The source that owns this analysis.
      * Tracks whether the analysis was set by POLICY, VEX, MANUAL, or NVD.
@@ -325,14 +316,6 @@ public class Analysis implements Serializable {
 
     public void setOwaspScore(BigDecimal owaspScore) {
         this.owaspScore = owaspScore;
-    }
-
-    public Severity getOwaspSeverity() {
-        return owaspSeverity;
-    }
-
-    public void setOwaspSeverity(Severity owaspSeverity) {
-        this.owaspSeverity = owaspSeverity;
     }
 
     public RatingSource getSource() {

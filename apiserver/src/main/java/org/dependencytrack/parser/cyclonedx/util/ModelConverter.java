@@ -1123,20 +1123,6 @@ public class ModelConverter {
         }
     }
 
-    public static Severity convertCdxSeverityToDtSeverity(final org.cyclonedx.model.vulnerability.Vulnerability.Rating.Severity severity) {
-        if (severity == null) {
-            return null;
-        }
-        return switch (severity) {
-            case CRITICAL -> Severity.CRITICAL;
-            case HIGH -> Severity.HIGH;
-            case MEDIUM -> Severity.MEDIUM;
-            case LOW -> Severity.LOW;
-            case INFO -> Severity.INFO;
-            case NONE, UNKNOWN -> Severity.UNASSIGNED;
-        };
-    }
-
     private static org.cyclonedx.model.vulnerability.Vulnerability.Source convertDtVulnSourceToCdxVulnSource(final Vulnerability.Source vulnSource) {
         org.cyclonedx.model.vulnerability.Vulnerability.Source cdxSource = new org.cyclonedx.model.vulnerability.Vulnerability.Source();
         cdxSource.setName(vulnSource.name());

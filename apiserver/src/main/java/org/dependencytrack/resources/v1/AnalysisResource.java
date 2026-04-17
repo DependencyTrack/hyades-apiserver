@@ -184,8 +184,8 @@ public class AnalysisResource extends AbstractApiResource {
                         .withComment(request.getComment())
                         .withSource(RatingSource.MANUAL);
 
-                if (request.getOwaspVector() != null || request.getOwaspScore() != null || request.getOwaspSeverity() != null) {
-                    command = command.withOwasp(request.getOwaspVector(), request.getOwaspScore(), request.getOwaspSeverity());
+                if (request.getOwaspVector() != null || request.getOwaspScore() != null) {
+                    command = command.withOwasp(request.getOwaspVector(), request.getOwaspScore());
                 }
 
                 final long analysisId = qm.makeAnalysis(command);

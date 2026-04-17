@@ -128,7 +128,7 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
 
             final boolean canUpdate = canUpdateAnalysis(analysis.getSource(), command.source());
 
-            if (canUpdate && (command.owaspVector() != null || command.owaspScore() != null || command.owaspSeverity() != null)) {
+            if (canUpdate && (command.owaspVector() != null || command.owaspScore() != null)) {
                 if (command.owaspVector() != null && !command.owaspVector().equals(analysis.getOwaspVector())) {
                     auditTrailComments.add("OWASP RR Vector: %s → %s".formatted(
                             analysis.getOwaspVector(), command.owaspVector()));
@@ -138,11 +138,6 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
                     auditTrailComments.add("OWASP RR Score: %s → %s".formatted(
                             analysis.getOwaspScore(), command.owaspScore()));
                     analysis.setOwaspScore(command.owaspScore());
-                }
-                if (command.owaspSeverity() != null && command.owaspSeverity() != analysis.getOwaspSeverity()) {
-                    auditTrailComments.add("OWASP RR Severity: %s → %s".formatted(
-                            analysis.getOwaspSeverity(), command.owaspSeverity()));
-                    analysis.setOwaspSeverity(command.owaspSeverity());
                 }
             }
 
