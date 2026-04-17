@@ -26,7 +26,6 @@ import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -35,7 +34,6 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.common.Mappers;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.model.Analysis;
@@ -56,21 +54,25 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.resources.v1.FindingResource.MEDIA_TYPE_SARIF_JSON;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -80,6 +82,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static wiremock.org.apache.commons.io.IOUtils.resourceToString;
 
 public class FindingResourceTest extends ResourceTest {
 
@@ -1252,8 +1255,9 @@ public class FindingResourceTest extends ResourceTest {
         Assertions.assertEquals("Vuln-2", json.getJsonObject(0).getJsonObject("vulnerability").getString("vulnId"));
     }
 
-    @Test
-    public void getSARIFFindingsByProjectTest() throws Exception {
+    @ParameterizedTest
+    @MethodSource("getSARIFFindingsByProjectTestParameters")
+    public void getSARIFFindingsByProjectTest(String query, String expectedResponsePath) throws Exception {
         initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
 
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -1264,17 +1268,22 @@ public class FindingResourceTest extends ResourceTest {
         c1.setPurl("pkg:maven/org.acme/component1@1.1.4?type=jar");
         c2.setPurl("pkg:maven/com.xyz/component2@2.78.123?type=jar");
 
-        Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL, "Vuln Title 1", "This is a description", null, 80);
-        Vulnerability v2 = createVulnerability("Vuln-2", Severity.HIGH, "Vuln Title 2", "   Yet another description but with surrounding whitespaces   ", "", 46);
-        Vulnerability v3 = createVulnerability("Vuln-3", Severity.LOW, "Vuln Title 3", "A description-with-hyphens-(and parentheses)", "  Recommendation with whitespaces  ", 23);
+        Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL, "Vuln Title 1", "This is a description", null, 80, Vulnerability.Source.INTERNAL);
+        Vulnerability v2 = createVulnerability("Vuln-2", Severity.HIGH, "Vuln Title 2", "   Yet another description but with surrounding whitespaces   ", "", 46, Vulnerability.Source.INTERNAL);
+        Vulnerability v3 = createVulnerability("Vuln-3", Severity.LOW, "Vuln Title 3", "A description-with-hyphens-(and parentheses)", "  Recommendation with whitespaces  ", 23, Vulnerability.Source.INTERNAL);
+        Vulnerability v4 = createVulnerability("Vuln-4", Severity.MEDIUM, "Vuln Title 4", "This is a vulnerability that has GITHUB Advisory as a source", null, 20, Vulnerability.Source.GITHUB);
 
-        // Note: Same vulnerability added to multiple components to test whether "rules" field doesn't contain duplicates
         qm.addVulnerability(v1, c1, "none");
         qm.addVulnerability(v2, c1, "none");
         qm.addVulnerability(v3, c1, "none");
         qm.addVulnerability(v3, c2, "none");
+        qm.addVulnerability(v4, c2, "none");
 
-        Response response = jersey.target(V1_FINDING + "/project/" + project.getUuid().toString()).request()
+        var target = jersey.target(V1_FINDING + "/project/" + project.getUuid().toString());
+        if (query != null) {
+            target = target.queryParam("source", query);
+        }
+        Response response = target.request()
                 .header(HttpHeaders.ACCEPT, MEDIA_TYPE_SARIF_JSON)
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -1282,155 +1291,13 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals(200, response.getStatus(), 0);
         assertEquals(MEDIA_TYPE_SARIF_JSON, response.getHeaderString(HttpHeaders.CONTENT_TYPE));
         final String jsonResponse = getPlainTextBody(response);
-        JsonNode resultArray = Mappers.jsonMapper().readTree(jsonResponse).get("runs").get(0).get("results");
-
-        assertThatJson(jsonResponse)
-                .withMatcher("version", equalTo(new About().getVersion()))
-                .withMatcher("fullName", equalTo("OWASP Dependency-Track - " + new About().getVersion()));
-
-        assertThat(resultArray).hasSize(4);
-        assertThat(resultArray).satisfiesExactlyInAnyOrder(
-                vuln1 -> assertThatJson(vuln1).isEqualTo("""
-                        {
-                          "ruleId": "Vuln-1",
-                          "message": {
-                            "text": "This is a description"
-                          },
-                          "locations": [
-                            {
-                              "logicalLocations": [
-                                {
-                                  "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
-                                }
-                              ]
-                            }
-                          ],
-                          "level": "error",
-                          "properties": {
-                            "name": "Component 1",
-                            "group": "org.acme",
-                            "version": "1.1.4",
-                            "source": "INTERNAL",
-                            "cwes": [
-                                {
-                                    "cweId": "80",
-                                    "name": "Improper Neutralization of Script-Related HTML Tags in a Web Page (Basic XSS)"
-                                }
-                            ],
-                            "cvssV3BaseScore": "",
-                            "epssScore": "",
-                            "epssPercentile": "",
-                            "severityRank": "0",
-                            "recommendation": ""
-                          }
-                        }
-                """),
-                vuln2 -> assertThatJson(vuln2).isEqualTo("""
-                        {
-                           "ruleId": "Vuln-2",
-                           "message": {
-                             "text": "Yet another description but with surrounding whitespaces"
-                           },
-                           "locations": [
-                             {
-                               "logicalLocations": [
-                                 {
-                                   "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
-                                 }
-                               ]
-                             }
-                           ],
-                           "level": "error",
-                           "properties": {
-                             "name": "Component 1",
-                             "group": "org.acme",
-                             "version": "1.1.4",
-                             "source": "INTERNAL",
-                             "cwes": [
-                                {
-                                    "cweId": "46",
-                                    "name": "Path Equivalence: 'filename ' (Trailing Space)"
-                                }
-                             ],
-                             "cvssV3BaseScore": "",
-                             "epssScore": "",
-                             "epssPercentile": "",
-                             "severityRank": "1",
-                             "recommendation": ""
-                           }
-                        }
-                """),
-                vuln3 -> assertThatJson(vuln3).isEqualTo("""
-                        {
-                           "ruleId": "Vuln-3",
-                           "message": {
-                             "text": "A description-with-hyphens-(and parentheses)"
-                           },
-                           "locations": [
-                             {
-                               "logicalLocations": [
-                                 {
-                                   "fullyQualifiedName": "pkg:maven/org.acme/component1@1.1.4?type=jar"
-                                 }
-                               ]
-                             }
-                           ],
-                           "level": "note",
-                           "properties": {
-                             "name": "Component 1",
-                             "group": "org.acme",
-                             "version": "1.1.4",
-                             "source": "INTERNAL",
-                             "cwes": [
-                                {
-                                    "cweId": "23",
-                                    "name": "Relative Path Traversal"
-                                }
-                             ],
-                             "cvssV3BaseScore": "",
-                             "epssScore": "",
-                             "epssPercentile": "",
-                             "severityRank": "3",
-                             "recommendation": "Recommendation with whitespaces"
-                           }
-                        }
-                """),
-                vuln3 -> assertThatJson(vuln3).isEqualTo("""
-                        {
-                           "ruleId": "Vuln-3",
-                           "message": {
-                             "text": "A description-with-hyphens-(and parentheses)"
-                           },
-                           "locations": [
-                             {
-                               "logicalLocations": [
-                                 {
-                                   "fullyQualifiedName": "pkg:maven/com.xyz/component2@2.78.123?type=jar"
-                                 }
-                               ]
-                             }
-                           ],
-                           "level": "note",
-                           "properties": {
-                             "name": "Component 2",
-                             "group": "com.xyz",
-                             "version": "2.78.123",
-                             "source": "INTERNAL",
-                             "cwes": [
-                                {
-                                    "cweId": "23",
-                                    "name": "Relative Path Traversal"
-                                }
-                             ],
-                             "cvssV3BaseScore": "",
-                             "epssScore": "",
-                             "epssPercentile": "",
-                             "severityRank": "3",
-                             "recommendation": "Recommendation with whitespaces"
-                           }
-                        }
-                """)
-        );
+        final String version = new About().getVersion();
+        final String fullName = "OWASP Dependency-Track - " + version;
+        String expectedTemplate = resourceToString(expectedResponsePath, StandardCharsets.UTF_8);
+        String expected = expectedTemplate
+                .replace("{{VERSION}}", version)
+                .replace("{{FULL_NAME}}", fullName);
+        assertThatJson(jsonResponse).isEqualTo(expected);
     }
 
     @Test
@@ -1556,6 +1423,13 @@ public class FindingResourceTest extends ResourceTest {
 
     }
 
+    private static Stream<Arguments> getSARIFFindingsByProjectTestParameters() {
+        return Stream.of(
+                Arguments.of("INTERNAL", "/unit/sarif/expected-internal.sarif.json"),
+                Arguments.of(null, "/unit/sarif/expected-all.sarif.json")
+        );
+    }
+
     private Component createComponent(Project project, String name, String version) {
         Component component = new Component();
         component.setProject(project);
@@ -1573,10 +1447,10 @@ public class FindingResourceTest extends ResourceTest {
         return qm.createVulnerability(vulnerability, false);
     }
 
-    private Vulnerability createVulnerability(String vulnId, Severity severity, String title, String description, String recommendation, Integer cweId) {
+    private Vulnerability createVulnerability(String vulnId, Severity severity, String title, String description, String recommendation, Integer cweId, Vulnerability.Source source) {
         Vulnerability vulnerability = new Vulnerability();
         vulnerability.setVulnId(vulnId);
-        vulnerability.setSource(Vulnerability.Source.INTERNAL);
+        vulnerability.setSource(source);
         vulnerability.setSeverity(severity);
         vulnerability.setTitle(title);
         vulnerability.setDescription(description);

@@ -150,7 +150,8 @@ public class FindingResource extends AbstractApiResource {
             if (project != null) {
                 requireAccess(qm, project);
                 List<FindingDao.FindingRow> findingRows = withJdbiHandle(getAlpineRequest(), handle ->
-                        handle.attach(FindingDao.class).getFindingsByProject(project.getId(), /* includeInactive */ false, suppressed, hasAnalysis));
+                        handle.attach(FindingDao.class).getFindingsByProject(
+                                project.getId(), false, suppressed, hasAnalysis, source != null ? source.name() : null));
                 final long totalCount = findingRows.isEmpty() ? 0 : findingRows.getFirst().totalCount();
                 List<Finding> findings = findingRows.stream().map(Finding::new).toList();
                 findings = mapComponentLatestVersion(findings);
@@ -163,9 +164,6 @@ public class FindingResource extends AbstractApiResource {
                         LOGGER.error(ioException.getMessage(), ioException);
                         return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("An error occurred while generating SARIF file").build();
                     }
-                }
-                if (source != null) {
-                    findings = findings.stream().filter(finding -> source.name().equals(finding.getVulnerability().get("source"))).collect(Collectors.toList());
                 }
                 return Response.ok(findings).header(TOTAL_COUNT_HEADER, totalCount).build();
             } else {

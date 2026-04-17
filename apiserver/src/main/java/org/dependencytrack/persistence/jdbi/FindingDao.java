@@ -219,7 +219,10 @@ public interface FindingDao {
                AND c."PROJECT_ID" = a."PROJECT_ID"
               INNER JOIN "PROJECT" AS p
                 ON c."PROJECT_ID" = p."ID"
-             WHERE c."PROJECT_ID" = :projectId
+            WHERE c."PROJECT_ID" = :projectId
+            <#if source>
+               AND v."SOURCE" = :source
+            </#if>
             <#if !includeSuppressed>
                AND a."SUPPRESSED" IS DISTINCT FROM TRUE
             </#if>
@@ -243,15 +246,17 @@ public interface FindingDao {
             @AllowApiOrdering.Column(name = "attribution.id", queryName = "fa.\"ID\""),
             @AllowApiOrdering.Column(name = "attribution.attributedOn", queryName = "fa.\"ATTRIBUTED_ON\"")
     })
+    @DefineNamedBindings
     @RegisterConstructorMapper(FindingRow.class)
     List<FindingRow> getFindingsByProject(
             @Bind long projectId,
             @Define boolean includeInactive,
             @Define boolean includeSuppressed,
-            @Bind Boolean hasAnalysis);
+            @Bind Boolean hasAnalysis,
+            @Bind String source);
 
     default List<Finding> getFindings(final long projectId, final boolean includeSuppressed) {
-        List<FindingRow> findingRows = getFindingsByProject(projectId, /* includeInactive */ false, includeSuppressed, null);
+        List<FindingRow> findingRows = getFindingsByProject(projectId, /* includeInactive */ false, includeSuppressed, null, null);
         List<Finding> findings = findingRows.stream().map(Finding::new).toList();
         return mapComponentLatestVersion(findings);
     }

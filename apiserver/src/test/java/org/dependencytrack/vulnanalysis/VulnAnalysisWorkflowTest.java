@@ -318,6 +318,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
                                 projectId,
                                 /* includeInactive */ false,
                                 /* includeSuppressed */ false,
+                                null,
                                 null));
 
         List<FindingRow> findings = findingsSupplier.get();
@@ -1188,7 +1189,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
         final long projectId = project.getId();
         final List<FindingDao.FindingRow> findings = withJdbiHandle(
                 handle -> handle.attach(FindingDao.class)
-                        .getFindingsByProject(projectId, false, false, null));
+                        .getFindingsByProject(projectId, false, false, null, null));
         assertThat(findings).hasSize(1);
 
         assertThat(getAllAliasGroups()).satisfiesExactly(group ->
