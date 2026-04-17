@@ -150,12 +150,10 @@ public class FindingResource extends AbstractApiResource {
             if (project != null) {
                 requireAccess(qm, project);
                 List<FindingDao.FindingRow> findingRows = withJdbiHandle(getAlpineRequest(), handle ->
-                        handle.attach(FindingDao.class).getFindingsByProject(project.getId(), /* includeInactive */ false, suppressed, hasAnalysis));
+                        handle.attach(FindingDao.class).getFindingsByProject(
+                                project.getId(), false, suppressed, hasAnalysis, source != null ? source.name() : null));
                 final long totalCount = findingRows.isEmpty() ? 0 : findingRows.getFirst().totalCount();
                 List<Finding> findings = findingRows.stream().map(Finding::new).toList();
-                if (source != null) {
-                    findings = findings.stream().filter(finding -> source.equals(finding.getVulnerability().get("source"))).collect(Collectors.toList());
-                }
                 findings = mapComponentLatestVersion(findings);
                 if (acceptHeader != null && acceptHeader.contains(MEDIA_TYPE_SARIF_JSON)) {
                     try {
