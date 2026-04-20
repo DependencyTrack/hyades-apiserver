@@ -249,7 +249,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             queryParams.put("componentPurl", componentPurl);
         }
         if (componentCpe != null) {
-            whereConditions.add("LOWER(\"C\".\"CPE\") LIKE ('%' || LOWER(:componentCpe) || '%')");
+            whereConditions.add("LOWER(\"C\".\"CPE\") = LOWER(:componentCpe)");
             queryParams.put("componentCpe", componentCpe);
         }
         if (componentSwidTagId != null) {
@@ -298,7 +298,6 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             case "group" -> SortBy.GROUP;
             case "purl" -> SortBy.PURL;
             case "cpe" -> SortBy.CPE;
-            case "swid_tag_id" -> SortBy.SWIDTAGID;
             case "last_inherited_risk_score" -> SortBy.LAST_RISKSCORE;
             case null, default -> null;
         };
@@ -321,7 +320,6 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                 case SortBy.GROUP -> lastRow.getGroup();
                 case SortBy.PURL -> lastRow.getPurl();
                 case SortBy.CPE -> lastRow.getCpe();
-                case SortBy.SWIDTAGID -> lastRow.getSwidTagId();
                 case SortBy.LAST_RISKSCORE -> lastRow.getLastInheritedRiskScore();
                 case null -> lastRow.getName();
             };
@@ -450,7 +448,6 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
         GROUP,
         PURL,
         CPE,
-        SWIDTAGID,
         LAST_RISKSCORE
     }
 

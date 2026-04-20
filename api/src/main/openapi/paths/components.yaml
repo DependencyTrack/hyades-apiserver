@@ -56,90 +56,94 @@ get:
   operationId: listComponents
   summary: List all components
   description: |-
-    Retrieves a list of all components that have the specified component identity. This resource accepts coordinates (group, name, version) , `purl`, `cpe`, `swidTagId`, `project_uuid`, or `hash`.
-    
+    Retrieves a list of all components matching the provided filter criteria.
+
+    Text filters are case-insensitive.
+
     ### Sortable fields
-    
+
     Sorting is supported for the following fields:
-    
+
     * `name`
     * `version`
     * `group`
     * `purl`
     * `cpe`
-    * `swid_tag_id`
     * `last_inherited_risk_score`
-    
+
     Requires permission <strong>VIEW_PORTFOLIO</strong>
   tags:
-    - Components
+  - Components
   parameters:
-    - name: project_uuid
-      in: query
-      description: The UUID of the project to retrieve components for
-      schema:
-        type: string
-        format: uuid
-    - name: group
-      in: query
-      description: The group of the component
-      schema:
-        type: string
-    - name: name
-      in: query
-      description: The name of the component
-      schema:
-        type: string
-    - name: version
-      in: query
-      description: The version of the component
-      schema:
-        type: string
-    - name: purl
-      in: query
-      description: The PURL of the component
-      schema:
-        type: string
-    - name: cpe
-      in: query
-      description: The CPE of the component
-      schema:
-        type: string
-    - name: swid_tag_id
-      in: query
-      description: The SWID Tag ID of the component
-      schema:
-        type: string
-    - name: hash_type
-      in: query
-      description: The MD5, SHA1, SHA_256, SHA_384, SHA_512, SHA3_256, SHA3_384, SHA3_512, BLAKE2B_256, BLAKE2B_384, BLAKE2B_512, or BLAKE3 hash type of the component
-      schema:
-        type: string
-        enum:
-          - MD5
-          - SHA1
-          - SHA_256
-          - SHA_384
-          - SHA_512
-          - SHA3_256
-          - SHA3_384
-          - SHA3_512
-          - BLAKE2B_256
-          - BLAKE2B_384
-          - BLAKE2B_512
-          - BLAKE3
-    - name: hash
-      in: query
-      description: The hash value of the component
-      schema:
-        type: string
-    - $ref: "../components/parameters/pagination-limit.yaml"
-    - $ref: "../components/parameters/page-token.yaml"
-    - $ref: "../components/parameters/sort-direction.yaml"
-    - $ref: "../components/parameters/sort-by.yaml"
+  - name: group_contains
+    in: query
+    description: Filter by group (substring match)
+    schema:
+      type: string
+  - name: name_contains
+    in: query
+    description: Filter by name (substring match)
+    schema:
+      type: string
+  - name: version_contains
+    in: query
+    description: Filter by version (substring match)
+    schema:
+      type: string
+  - name: purl_prefix
+    in: query
+    description: |-
+      Filter by PURL (prefix match).
+      
+      Must be a valid PURL, with at least `pkg:<ecosystem>/<name>` populated.
+    schema:
+      type: string
+  - name: cpe
+    in: query
+    description: |-
+      Filter by CPE (exact match).
+      
+      Must be a valid CPE.
+    schema:
+      type: string
+  - name: swid_tag_id_contains
+    in: query
+    description: Filter by SWID Tag ID (substring match)
+    schema:
+      type: string
+  - name: hash_type
+    in: query
+    description: The hash type to filter by
+    schema:
+      type: string
+      enum:
+      - MD5
+      - SHA1
+      - SHA_256
+      - SHA_384
+      - SHA_512
+      - SHA3_256
+      - SHA3_384
+      - SHA3_512
+      - BLAKE2B_256
+      - BLAKE2B_384
+      - BLAKE2B_512
+      - BLAKE3
+  - name: hash
+    in: query
+    description: |-
+      Filter by hash value (exact match).
+      
+      Requires `hash_type` to be set.
+    schema:
+      type: string
+  - $ref: "../components/parameters/pagination-limit.yaml"
+  - $ref: "../components/parameters/page-token.yaml"
+  - $ref: "../components/parameters/sort-direction.yaml"
+  - $ref: "../components/parameters/sort-by.yaml"
   responses:
     "200":
-      description: A list of all components for a given identity
+      description: A list of components matching the provided filters
       content:
         application/json:
           schema:
@@ -150,13 +154,11 @@ get:
         application/problem+json:
           schema:
             anyOf:
-              - $ref: "../components/schemas/json-schema-validation-problem-details.yaml"
-              - $ref: "../components/schemas/problem-details.yaml"
+            - $ref: "../components/schemas/json-schema-validation-problem-details.yaml"
+            - $ref: "../components/schemas/problem-details.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":
       $ref: "../components/responses/generic-forbidden-error.yaml"
-    "404":
-      $ref: "../components/responses/generic-not-found-error.yaml"
     default:
       $ref: "../components/responses/generic-error.yaml"

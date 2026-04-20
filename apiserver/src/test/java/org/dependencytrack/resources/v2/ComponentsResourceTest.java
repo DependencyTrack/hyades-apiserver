@@ -31,8 +31,6 @@ import org.dependencytrack.model.Project;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.util.UUID;
-
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -302,9 +300,9 @@ public class ComponentsResourceTest extends ResourceTest {
     public void listComponentsWithCoordinatesTest() {
         prepareComponents();
         Response response = jersey.target("/components")
-                .queryParam("group", "B")
-                .queryParam("name", "B")
-                .queryParam("version", "versionB")
+                .queryParam("group_contains", "B")
+                .queryParam("name_contains", "B")
+                .queryParam("version_contains", "versionB")
                 .queryParam("limit", 2)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -341,7 +339,7 @@ public class ComponentsResourceTest extends ResourceTest {
     public void listComponentsWithPurlTest() {
         prepareComponents();
         Response response = jersey.target("/components")
-                .queryParam("purl", "pkg:maven/groupB/nameB@versionB")
+                .queryParam("purl_prefix", "pkg:maven/groupB/nameB@versionB")
                 .queryParam("limit", 2)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -424,62 +422,12 @@ public class ComponentsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listComponentsWithProjectTest() {
-        prepareComponents();
-        Response response = jersey.target("/components")
-                .queryParam("project_uuid", qm.getProject("projectA", "1.0").getUuid())
-                .queryParam("limit", 2)
-                .request()
-                .header(X_API_KEY, apiKey)
-                .get();
-        assertThat(response.getStatus()).isEqualTo(200);
-        final JsonObject responseJson = parseJsonObject(response);
-        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
-                {
-                  "items" : [ {
-                        "name": "nameA",
-                        "version": "versionA",
-                        "group": "groupA",
-                        "cpe": "cpe:2.3:a:groupA:nameA:versionA:*:*:*:*:*:*:*",
-                        "purl":"pkg:maven/groupA/nameA@versionA?foo=bar",
-                        "internal": false,
-                        "uuid": "${json-unit.any-string}",
-                        "project": {
-                            "name": "projectA",
-                            "version": "1.0",
-                            "uuid": "${json-unit.any-string}"
-                        }
-                      }
-                  ],
-                  "total": {
-                    "count": 1,
-                    "type": "EXACT"
-                  }
-                }
-                """);
-    }
-
-    @Test
-    public void listComponentsWithProjectWhenProjectDoesNotExistTest() {
-        prepareComponents();
-        Response response = jersey.target("/components")
-                .queryParam("project_uuid", UUID.randomUUID())
-                .queryParam("limit", 2)
-                .request()
-                .header(X_API_KEY, apiKey)
-                .get();
-        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_NOT_FOUND);
-        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
-        assertThat(getPlainTextBody(response)).contains("Not Found");
-    }
-
-    @Test
     public void listComponentsAclTest() {
         enablePortfolioAccessControl();
         initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         prepareComponents();
         Response response = jersey.target("/components")
-                .queryParam("name", "name")
+                .queryParam("name_contains", "name")
                 .queryParam("limit", 2)
                 .request()
                 .header(X_API_KEY, apiKey)
