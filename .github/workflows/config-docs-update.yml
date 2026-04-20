@@ -36,7 +36,8 @@ jobs:
       env:
         # NB: The default GITHUB_TOKEN is scoped to the repository where
         # the workflow is running, thus can't trigger workflows in other
-        # repos. Requires a PAT with `write` role to the target instead.
-        GH_TOKEN: "${{ secrets.BOT_RELEASE_TOKEN }}"
+        # repos. Requires a PAT with `Actions: Read / Write` permission
+        # on the target instead.
+        GH_TOKEN: "${{ secrets.CONFIG_DOCS_UPDATE_GITHUB_TOKEN }}"
       run: |-
         gh workflow run update-config-docs.yml -R DependencyTrack/hyades
