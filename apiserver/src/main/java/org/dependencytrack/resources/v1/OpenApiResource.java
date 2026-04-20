@@ -19,43 +19,98 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.server.auth.AuthenticationNotRequired;
-import io.swagger.v3.jaxrs2.integration.resources.BaseOpenApiResource;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.swagger.v3.oas.annotations.Operation;
-
-import jakarta.servlet.ServletConfig;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.Application;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 4.12.0
  */
 @Path("/openapi.{type:json|yaml}")
-public class OpenApiResource extends BaseOpenApiResource {
+public class OpenApiResource {
 
-    @Context
-    ServletConfig config;
-
-    @Context
-    Application app;
+    private static final ReadWriteLock LOCK = new ReentrantReadWriteLock();
+    private static String OPENAPI_JSON;
+    private static String OPENAPI_YAML;
 
     @GET
     @Produces({MediaType.APPLICATION_JSON, "application/yaml"})
     @Operation(hidden = true)
     @AuthenticationNotRequired
-    public Response getOpenApi(
-            @Context final HttpHeaders headers,
-            @Context final UriInfo uriInfo,
-            @PathParam("type") final String type
-    ) throws Exception {
-        return super.getOpenApi(headers, config, app, uriInfo, type);
+    public Response getOpenApi(@PathParam("type") final String type) throws IOException {
+        return switch (type) {
+            case "json" -> Response.ok(getJson(), MediaType.APPLICATION_JSON).build();
+            case "yaml" -> Response.ok(getYaml(), "application/yaml").build();
+            default -> Response.status(Response.Status.NOT_FOUND).build();
+        };
+    }
+
+    private String getYaml() throws IOException {
+        LOCK.readLock().lock();
+        try {
+            if (OPENAPI_YAML != null) {
+                return OPENAPI_YAML;
+            }
+        } finally {
+            LOCK.readLock().unlock();
+        }
+
+        LOCK.writeLock().lock();
+        try {
+            if (OPENAPI_YAML == null) {
+                OPENAPI_YAML = loadYamlFromClasspath();
+            }
+            return OPENAPI_YAML;
+        } finally {
+            LOCK.writeLock().unlock();
+        }
+    }
+
+    private String getJson() throws IOException {
+        LOCK.readLock().lock();
+        try {
+            if (OPENAPI_JSON != null) {
+                return OPENAPI_JSON;
+            }
+        } finally {
+            LOCK.readLock().unlock();
+        }
+
+        LOCK.writeLock().lock();
+        try {
+            if (OPENAPI_JSON == null) {
+                final var yamlMapper = new ObjectMapper(new YAMLFactory());
+                final var jsonMapper = new ObjectMapper();
+
+                final JsonNode spec = yamlMapper.readTree(getYaml());
+                OPENAPI_JSON = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(spec);
+            }
+            return OPENAPI_JSON;
+        } finally {
+            LOCK.writeLock().unlock();
+        }
+    }
+
+    private static String loadYamlFromClasspath() throws IOException {
+        try (final InputStream inputStream = OpenApiResource.class
+                .getResourceAsStream("/org/dependencytrack/api/v1/openapi.yaml")) {
+            requireNonNull(inputStream, "OpenAPI spec not found on classpath");
+            return new String(inputStream.readAllBytes());
+        }
     }
 
 }

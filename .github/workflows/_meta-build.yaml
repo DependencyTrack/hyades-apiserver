@@ -97,6 +97,7 @@ jobs:
           name: openapi-spec
           path: |-
             api/target/classes/**/openapi.yaml
+            apiserver/target/classes/org/dependencytrack/api/v1/openapi.yaml
 
   build-container:
     runs-on: ubuntu-latest

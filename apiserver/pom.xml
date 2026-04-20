@@ -351,10 +351,6 @@
         </dependency>
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
-            <artifactId>swagger-jaxrs2-jakarta</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-annotations-jakarta</artifactId>
         </dependency>
         <dependency>
@@ -608,6 +604,27 @@
                         <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
                     </systemPropertyVariables>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-maven-plugin-jakarta</artifactId>
+                <version>${lib.swagger.version}</version>
+                <executions>
+                    <execution>
+                        <id>resolve-openapi</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>resolve</goal>
+                        </goals>
+                        <configuration>
+                            <configurationFilePath>${project.build.outputDirectory}/openapi-configuration.yaml</configurationFilePath>
+                            <outputFileName>openapi</outputFileName>
+                            <outputFormat>YAML</outputFormat>
+                            <outputPath>${project.build.outputDirectory}/org/dependencytrack/api/v1</outputPath>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
