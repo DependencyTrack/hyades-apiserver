@@ -622,6 +622,7 @@
                             <outputFileName>openapi</outputFileName>
                             <outputFormat>YAML</outputFormat>
                             <outputPath>${project.build.outputDirectory}/org/dependencytrack/api/v1</outputPath>
+                            <sortOutput>true</sortOutput>
                         </configuration>
                     </execution>
                 </executions>
