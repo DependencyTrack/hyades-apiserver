@@ -91,13 +91,17 @@ jobs:
           path: |-
             apiserver/target/bom.json
 
+      - name: Extract OpenAPI Specs
+        run: |-
+          mkdir -p openapi-spec/v1 openapi-spec/v2
+          unzip -p api/target/api-*.jar org/dependencytrack/api/v2/openapi.yaml > openapi-spec/v2/openapi.yaml
+          unzip -p apiserver/target/dependency-track-apiserver.jar org/dependencytrack/api/v1/openapi.yaml > openapi-spec/v1/openapi.yaml
+
       - name: Upload OpenAPI Spec
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # tag=v7.0.0
         with:
           name: openapi-spec
-          path: |-
-            api/target/classes/**/openapi.yaml
-            apiserver/target/classes/org/dependencytrack/api/v1/openapi.yaml
+          path: openapi-spec/
 
   build-container:
     runs-on: ubuntu-latest
