@@ -46,12 +46,11 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # tag=v6.0.2
         with:
+          token: ${{ !inputs.dry-run && secrets.BOT_RELEASE_GITHUB_TOKEN || github.token }}
           fetch-depth: 0
 
       - name: Set up JDK
@@ -63,8 +62,8 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "dependencytrack-bot"
+          git config user.email "106437498+dependencytrack-bot@users.noreply.github.com"
 
       - name: Perform Maven Release
         env:
@@ -89,7 +88,7 @@ jobs:
       - name: Create GitHub Release
         if: ${{ !inputs.dry-run }}
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.BOT_RELEASE_GITHUB_TOKEN }}
         run: |
           RELEASE_VERSION=$(git describe --tags --abbrev=0)
           echo "Release version: ${RELEASE_VERSION}"
