@@ -44,7 +44,6 @@ import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
-import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
@@ -109,23 +108,15 @@ public class ComponentsResource extends AbstractApiResource implements Component
 
     @Override
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response listComponents(UUID projectUuid, String group, String name, String version, String purl, String cpe,
-                                   String swidTagId, String hashType, String hash, Integer limit, String pageToken, SortDirection sortDirection, String sortBy) {
+    public Response listComponents(String groupContains, String nameContains, String versionContains, String purlPrefix, String cpe,
+                                   String swidTagIdContains, String hashType, String hash, Integer limit, String pageToken, SortDirection sortDirection, String sortBy) {
         return inJdbiTransaction(getAlpineRequest(), handle -> {
-            Long projectId = null;
-            if (projectUuid != null) {
-                projectId = handle.attach(ProjectDao.class).getProjectId(projectUuid);
-                if (projectId == null) {
-                    throw new NotFoundException();
-                }
-                requireProjectAccess(handle, projectUuid);
-            }
             PackageURL packageURL = null;
-            if (purl != null) {
+            if (purlPrefix != null) {
                 try {
-                    packageURL = new PackageURL(StringUtils.trimToNull(purl));
+                    packageURL = new PackageURL(StringUtils.trimToNull(purlPrefix));
                 } catch (MalformedPackageURLException e) {
-                    throw new BadRequestException("Invalid package URL: %s".formatted(purl));
+                    throw new BadRequestException("Invalid package URL: %s".formatted(purlPrefix));
                 }
             }
             if (cpe != null) {
@@ -144,9 +135,9 @@ public class ComponentsResource extends AbstractApiResource implements Component
                 }
             }
             final Page<Component> componentsPage = handle.attach(ComponentDao.class)
-                    .listComponents(projectId, true, packageURL != null ? packageURL.canonicalize().toLowerCase() : null, StringUtils.trimToNull(cpe),
-                            StringUtils.trimToNull(swidTagId), StringUtils.trimToNull(group), StringUtils.trimToNull(name),
-                            StringUtils.trimToNull(version), hashTypeEnum, StringUtils.trimToNull(hash), limit, pageToken, sortBy, mapSortDirection(sortDirection));
+                    .listComponents(null, true, packageURL != null ? packageURL.canonicalize().toLowerCase() : null, StringUtils.trimToNull(cpe),
+                            StringUtils.trimToNull(swidTagIdContains), StringUtils.trimToNull(groupContains), StringUtils.trimToNull(nameContains),
+                            StringUtils.trimToNull(versionContains), hashTypeEnum, StringUtils.trimToNull(hash), limit, pageToken, sortBy, mapSortDirection(sortDirection));
 
             final var response = ListComponentsResponse.builder()
                     .items(componentsPage.items().stream()
