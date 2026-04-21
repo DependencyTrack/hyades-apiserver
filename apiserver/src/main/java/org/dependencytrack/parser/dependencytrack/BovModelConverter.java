@@ -35,6 +35,7 @@ import org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions;
 import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
 import org.cyclonedx.proto.v1_6.VulnerabilityRating;
 import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
@@ -77,6 +78,8 @@ public final class BovModelConverter {
     private static final Logger LOGGER = LoggerFactory.getLogger(BovModelConverter.class);
     private static final Pattern EFFECTIVELY_ZERO_PATTERN = Pattern.compile("^0(\\.0)*$");
     static final String TITLE_PROPERTY_NAME = "dependency-track:vuln:title";
+    static final String EPSS_SCORE_PROPERTY_NAME = "dependency-track:vuln:epss:score";
+    static final String EPSS_PERCENTILE_PROPERTY_NAME = "dependency-track:vuln:epss:percentile";
 
     private BovModelConverter() {
     }
@@ -94,11 +97,37 @@ public final class BovModelConverter {
             vuln.setSource(extractSource(cdxVuln.getId(), cdxVuln.getSource()));
         }
         vuln.setVulnId(cdxVuln.getId());
-        if (cdxVuln.getPropertiesCount() != 0) {
-            var titleProperty = cdxVuln.getProperties(0);
-            if (titleProperty.getName().equals(TITLE_PROPERTY_NAME) && titleProperty.hasValue()) {
-                vuln.setTitle(StringUtils.abbreviate(titleProperty.getValue(), 255));
+        var epssScore = (BigDecimal) null;
+        var epssPercentile = (BigDecimal) null;
+        for (final var property : cdxVuln.getPropertiesList()) {
+            if (!property.hasValue()) {
+                continue;
             }
+            switch (property.getName()) {
+                case TITLE_PROPERTY_NAME ->
+                        vuln.setTitle(StringUtils.abbreviate(property.getValue(), 255));
+                case EPSS_SCORE_PROPERTY_NAME -> {
+                    try {
+                        epssScore = BigDecimal.valueOf(Double.parseDouble(property.getValue()));
+                    } catch (NumberFormatException e) {
+                        LOGGER.warn("Failed to parse EPSS score value '{}'; Skipping", property.getValue(), e);
+                    }
+                }
+                case EPSS_PERCENTILE_PROPERTY_NAME -> {
+                    try {
+                        epssPercentile = BigDecimal.valueOf(Double.parseDouble(property.getValue()));
+                    } catch (NumberFormatException e) {
+                        LOGGER.warn("Failed to parse EPSS percentile value '{}'; Skipping", property.getValue(), e);
+                    }
+                }
+            }
+        }
+        if (epssScore != null || epssPercentile != null) {
+            final var epss = new Epss();
+            epss.setCve(cdxVuln.getId());
+            epss.setScore(epssScore);
+            epss.setPercentile(epssPercentile);
+            vuln.setEpss(epss);
         }
         if (cdxVuln.hasDescription()) {
             vuln.setDescription(cdxVuln.getDescription());
@@ -245,8 +274,6 @@ public final class BovModelConverter {
                     .map(alias -> convert(cdxVuln, alias)).toList());
         }
 
-        // EPSS is an additional enrichment that no scanner currently provides.
-        // TODO: Add mapping of EPSS score and percentile when needed.
 
         return vuln;
     }

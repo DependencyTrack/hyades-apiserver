@@ -508,6 +508,27 @@ class BovModelConverterTest {
                     });
         }
 
+        @Test
+        void testConvertEpssProperty() {
+            final Bom bovInput = Bom.newBuilder().addVulnerabilities(
+                    org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                            .setId("CVE-2021-44228")
+                            .setSource(Source.newBuilder().setName("NVD").build())
+                            .addProperties(Property.newBuilder()
+                                    .setName(BovModelConverter.EPSS_SCORE_PROPERTY_NAME)
+                                    .setValue("3.4").build())
+                            .addProperties(Property.newBuilder()
+                                    .setName(BovModelConverter.EPSS_PERCENTILE_PROPERTY_NAME)
+                                    .setValue("1.23").build())
+                            .build()).build();
+
+            final Vulnerability vuln = BovModelConverter.convert(bovInput, bovInput.getVulnerabilities(0), true);
+            assertThat(vuln.getVulnId()).isEqualTo("CVE-2021-44228");
+            assertThat(vuln.getSource()).isEqualTo(Vulnerability.Source.NVD.name());
+            assertThat(vuln.getEpssScore()).isEqualTo(BigDecimal.valueOf(3.4));
+            assertThat(vuln.getEpssPercentile()).isEqualTo(BigDecimal.valueOf(1.23));
+        }
+
         private static Bom createBovWithVersionRange(String versionRange) {
             final var component = org.cyclonedx.proto.v1_6.Component.newBuilder()
                     .setBomRef("test-component")
