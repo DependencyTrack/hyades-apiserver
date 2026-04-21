@@ -30,7 +30,9 @@ import org.dependencytrack.notification.proto.v1.Level;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.proto.v1.Scope;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.MutableServiceRegistry;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.config.RuntimeConfigMapper;
@@ -41,6 +43,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -76,7 +79,9 @@ public abstract class AbstractNotificationPublisherTest {
         customizeDeploymentConfig(deploymentConfig);
 
         RuntimeConfig globalConfig = null;
-        final RuntimeConfigSpec globalConfigSpec = publisherFactory.runtimeConfigSpec();
+        final RuntimeConfigSpec globalConfigSpec = publisherFactory instanceof RuntimeConfigurable rc
+                ? rc.runtimeConfigSpec()
+                : null;
         if (globalConfigSpec != null) {
             globalConfig = globalConfigSpec.defaultConfig();
             customizeGlobalConfig(globalConfig);
@@ -88,7 +93,10 @@ public abstract class AbstractNotificationPublisherTest {
                 RuntimeConfigMapper.getInstance(),
                 globalConfig);
 
-        publisherFactory.init(new ExtensionContext(configRegistry));
+        publisherFactory.init(
+                new MutableServiceRegistry()
+                        .register(ConfigRegistry.class, configRegistry)
+                        .register(HttpClient.class, HttpClient.newHttpClient()));
         publisher = publisherFactory.create();
 
         final var templateRendererFactory =

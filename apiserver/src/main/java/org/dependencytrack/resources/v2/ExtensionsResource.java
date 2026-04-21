@@ -36,6 +36,8 @@ import org.dependencytrack.api.v2.model.ListExtensionsResponse;
 import org.dependencytrack.api.v2.model.ListExtensionsResponseItem;
 import org.dependencytrack.api.v2.model.TestExtensionRequest;
 import org.dependencytrack.api.v2.model.TestExtensionResponse;
+import org.dependencytrack.api.v2.model.TotalCount;
+import org.dependencytrack.api.v2.model.TotalCountType;
 import org.dependencytrack.api.v2.model.UpdateExtensionConfigRequest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.MdcScope;
@@ -43,6 +45,8 @@ import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionTestCheck;
 import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.Testable;
 import org.dependencytrack.plugin.api.config.MutableConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
@@ -58,6 +62,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.SequencedCollection;
 
@@ -93,7 +98,7 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
                 pluginManager.getExtensionPoints();
 
         final var response = ListExtensionPointsResponse.builder()
-                .extensionPoints(
+                .items(
                         extensionPoints.stream()
                                 .map(ExtensionPointMetadata::name)
                                 .sorted()
@@ -102,6 +107,11 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
                                                 .name(name)
                                                 .build())
                                 .toList())
+                .total(
+                        TotalCount.builder()
+                                .count((long) extensionPoints.size())
+                                .type(TotalCountType.EXACT)
+                                .build())
                 .build();
 
         return Response.ok(response).build();
@@ -121,15 +131,21 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
                 pluginManager.getFactories(extensionPointClass);
 
         final var response = ListExtensionsResponse.builder()
-                .extensions(
+                .items(
                         extensionFactories.stream()
-                                .map(ExtensionFactory::extensionName)
-                                .sorted()
+                                .sorted(Comparator.comparing(ExtensionFactory::extensionName))
                                 .<ListExtensionsResponseItem>map(
-                                        extensionName -> ListExtensionsResponseItem.builder()
-                                                .name(extensionName)
+                                        extensionFactory -> ListExtensionsResponseItem.builder()
+                                                .name(extensionFactory.extensionName())
+                                                .configurable(extensionFactory instanceof RuntimeConfigurable)
+                                                .testable(extensionFactory instanceof Testable)
                                                 .build())
                                 .toList())
+                .total(
+                        TotalCount.builder()
+                                .count((long) extensionFactories.size())
+                                .type(TotalCountType.EXACT)
+                                .build())
                 .build();
 
         return Response.ok(response).build();
@@ -148,7 +164,8 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
         final ExtensionFactory<?> extensionFactory =
                 getExtensionFactory(extensionPointClass, extensionName);
 
-        if (extensionFactory.runtimeConfigSpec() == null) {
+        if (!(extensionFactory instanceof RuntimeConfigurable rc)
+                || rc.runtimeConfigSpec() == null) {
             throw new NotFoundException();
         }
 
@@ -189,7 +206,10 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
         final ExtensionFactory<?> extensionFactory =
                 getExtensionFactory(extensionPointClass, extensionName);
 
-        final RuntimeConfigSpec runtimeConfigSpec = extensionFactory.runtimeConfigSpec();
+        final RuntimeConfigSpec runtimeConfigSpec =
+                extensionFactory instanceof RuntimeConfigurable rc
+                        ? rc.runtimeConfigSpec()
+                        : null;
         if (runtimeConfigSpec == null) {
             throw new BadRequestException();
         }
@@ -235,7 +255,10 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
         final ExtensionFactory<?> extensionFactory =
                 getExtensionFactory(extensionPointClass, extensionName);
 
-        final RuntimeConfigSpec runtimeConfigSpec = extensionFactory.runtimeConfigSpec();
+        final RuntimeConfigSpec runtimeConfigSpec =
+                extensionFactory instanceof RuntimeConfigurable rc
+                        ? rc.runtimeConfigSpec()
+                        : null;
         if (runtimeConfigSpec == null) {
             return Response.noContent().build();
         }
@@ -267,7 +290,10 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
         }
 
         RuntimeConfig runtimeConfig = null;
-        final RuntimeConfigSpec runtimeConfigSpec = extensionFactory.runtimeConfigSpec();
+        final RuntimeConfigSpec runtimeConfigSpec =
+                extensionFactory instanceof RuntimeConfigurable rc
+                        ? rc.runtimeConfigSpec()
+                        : null;
         if (runtimeConfigSpec == null) {
             if (request.getConfig() != null) {
                 throw new BadRequestException("The extension does not support configuration");
@@ -281,12 +307,11 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
             }
         }
 
-        final ExtensionTestResult testResult;
-        try {
-            testResult = extensionFactory.test(runtimeConfig);
-        } catch (UnsupportedOperationException e) {
+        if (!(extensionFactory instanceof Testable testable)) {
             throw new BadRequestException("The extension does not support testing");
         }
+
+        final ExtensionTestResult testResult = testable.test(runtimeConfig);
 
         final var response = TestExtensionResponse.builder()
                 .checks(testResult.checks().stream()

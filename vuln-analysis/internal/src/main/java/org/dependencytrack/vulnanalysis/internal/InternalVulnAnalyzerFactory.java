@@ -19,7 +19,8 @@
 package org.dependencytrack.vulnanalysis.internal;
 
 import org.dependencytrack.common.datasource.DataSourceRegistry;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
@@ -36,7 +37,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * @since 5.7.0
  */
-final class InternalVulnAnalyzerFactory implements VulnAnalyzerFactory {
+final class InternalVulnAnalyzerFactory implements VulnAnalyzerFactory, RuntimeConfigurable {
 
     private final DataSourceRegistry dataSourceRegistry;
     private @Nullable ConfigRegistry configRegistry;
@@ -61,8 +62,8 @@ final class InternalVulnAnalyzerFactory implements VulnAnalyzerFactory {
     }
 
     @Override
-    public void init(ExtensionContext ctx) {
-        configRegistry = ctx.configRegistry();
+    public void init(ServiceRegistry serviceRegistry) {
+        configRegistry = serviceRegistry.require(ConfigRegistry.class);
 
         final String dataSourceName = configRegistry
                 .getDeploymentConfig()

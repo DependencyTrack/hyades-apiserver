@@ -18,7 +18,8 @@
  */
 package org.dependencytrack.vulnanalysis.trivy;
 
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
@@ -32,7 +33,7 @@ import java.util.EnumSet;
 
 import static java.util.Objects.requireNonNull;
 
-final class TrivyVulnAnalyzerFactory implements VulnAnalyzerFactory {
+final class TrivyVulnAnalyzerFactory implements VulnAnalyzerFactory, RuntimeConfigurable {
 
     private @Nullable ConfigRegistry configRegistry;
     private @Nullable HttpClient httpClient;
@@ -48,9 +49,9 @@ final class TrivyVulnAnalyzerFactory implements VulnAnalyzerFactory {
     }
 
     @Override
-    public void init(ExtensionContext ctx) {
-        configRegistry = ctx.configRegistry();
-        httpClient = ctx.http().client();
+    public void init(ServiceRegistry serviceRegistry) {
+        configRegistry = serviceRegistry.require(ConfigRegistry.class);
+        httpClient = serviceRegistry.require(HttpClient.class);
     }
 
     @Override

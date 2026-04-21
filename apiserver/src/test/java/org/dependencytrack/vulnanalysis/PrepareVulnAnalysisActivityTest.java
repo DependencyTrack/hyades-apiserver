@@ -399,7 +399,6 @@ class PrepareVulnAnalysisActivityTest extends PersistenceCapableTest {
                 secretName -> null,
                 JdbiFactory.createJdbi(),
                 HttpClient.newHttpClient(),
-                "Dependency-Track",
                 List.of(VulnAnalyzer.class));
         pluginManager.loadPlugins(List.of(
                 new MockVulnAnalyzerPlugin(bom -> Bom.getDefaultInstance(), requirements)));

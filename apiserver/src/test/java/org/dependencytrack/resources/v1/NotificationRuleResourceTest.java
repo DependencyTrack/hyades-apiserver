@@ -96,7 +96,6 @@ class NotificationRuleResourceTest extends ResourceTest {
                 secretName -> null,
                 JdbiFactory.createJdbi(),
                 HttpClient.newHttpClient(),
-                "Dependency-Track",
                 List.of(org.dependencytrack.notification.api.publishing.NotificationPublisher.class));
         pluginManager.loadPlugins(List.of(new DefaultNotificationPublishersPlugin()));
     }

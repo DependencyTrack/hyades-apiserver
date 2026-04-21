@@ -18,5 +18,13 @@ type: object
 properties:
   name:
     type: string
+  configurable:
+    type: boolean
+    description: Whether the extension supports runtime configuration.
+  testable:
+    type: boolean
+    description: Whether the extension can be tested.
 required:
 - name
+- configurable
+- testable

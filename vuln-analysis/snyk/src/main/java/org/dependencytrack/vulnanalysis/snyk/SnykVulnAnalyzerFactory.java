@@ -20,7 +20,8 @@ package org.dependencytrack.vulnanalysis.snyk;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dependencytrack.cache.api.CacheManager;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
@@ -39,7 +40,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * @since 5.7.0
  */
-final class SnykVulnAnalyzerFactory implements VulnAnalyzerFactory {
+final class SnykVulnAnalyzerFactory implements VulnAnalyzerFactory, RuntimeConfigurable {
 
     private static final String DEFAULT_API_VERSION = "2025-11-05";
 
@@ -59,10 +60,10 @@ final class SnykVulnAnalyzerFactory implements VulnAnalyzerFactory {
     }
 
     @Override
-    public void init(ExtensionContext ctx) {
-        configRegistry = ctx.configRegistry();
-        cacheManager = ctx.cacheManager();
-        httpClient = ctx.http().client();
+    public void init(ServiceRegistry serviceRegistry) {
+        configRegistry = serviceRegistry.require(ConfigRegistry.class);
+        cacheManager = serviceRegistry.require(CacheManager.class);
+        httpClient = serviceRegistry.require(HttpClient.class);
         objectMapper = new ObjectMapper()
                 .disable(FAIL_ON_UNKNOWN_PROPERTIES);
     }

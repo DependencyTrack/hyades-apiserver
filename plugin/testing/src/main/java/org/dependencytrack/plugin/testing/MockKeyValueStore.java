@@ -16,8 +16,11 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api.storage;
+package org.dependencytrack.plugin.testing;
 
+import org.dependencytrack.plugin.api.storage.CompareAndDeleteResult;
+import org.dependencytrack.plugin.api.storage.CompareAndPutResult;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
@@ -34,19 +37,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static java.util.Objects.requireNonNull;
 
 /**
- * An in-memory {@link ExtensionKVStore}.
+ * An in-memory {@link KeyValueStore}.
  *
  * @since 5.7.0
  */
-public final class InMemoryExtensionKVStore implements ExtensionKVStore {
+public final class MockKeyValueStore implements KeyValueStore {
 
     private final ConcurrentMap<String, Entry> kvMap;
 
-    InMemoryExtensionKVStore(final ConcurrentMap<String, Entry> kvMap) {
+    MockKeyValueStore(final ConcurrentMap<String, Entry> kvMap) {
         this.kvMap = kvMap;
     }
 
-    public InMemoryExtensionKVStore() {
+    public MockKeyValueStore() {
         this(new ConcurrentHashMap<>());
     }
 

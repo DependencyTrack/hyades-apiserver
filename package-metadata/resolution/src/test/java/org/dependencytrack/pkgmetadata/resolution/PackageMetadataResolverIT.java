@@ -19,6 +19,7 @@
 package org.dependencytrack.pkgmetadata.resolution;
 
 import com.github.packageurl.PackageURL;
+import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
@@ -36,11 +37,12 @@ import org.dependencytrack.pkgmetadata.resolution.nixpkgs.NixpkgsPackageMetadata
 import org.dependencytrack.pkgmetadata.resolution.npm.NpmPackageMetadataResolverFactory;
 import org.dependencytrack.pkgmetadata.resolution.nuget.NugetPackageMetadataResolverFactory;
 import org.dependencytrack.pkgmetadata.resolution.pypi.PypiPackageMetadataResolverFactory;
-import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.ExtensionHttpContext;
-import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
+import org.dependencytrack.plugin.api.MutableServiceRegistry;
+import org.dependencytrack.plugin.api.ServiceRegistry;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
-import org.jspecify.annotations.NonNull;
+import org.dependencytrack.plugin.testing.MockKeyValueStore;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -80,7 +82,7 @@ class PackageMetadataResolverIT {
             PackageMetadataResolverFactory factory,
             String repoUrl,
             String purlString) throws Exception {
-        factory.init(createExtensionContext());
+        factory.init(createServiceRegistry());
 
         try (factory) {
             final PackageMetadataResolver resolver = factory.create();
@@ -100,7 +102,7 @@ class PackageMetadataResolverIT {
         }
     }
 
-    private ExtensionContext createExtensionContext() {
+    private ServiceRegistry createServiceRegistry() {
         // NB: Nixpkgs needs redirects to be enabled b/c the Nix index
         // file uses them. Redirects are enabled in the HTTP client that
         // is used in production (org.dependencytrack.common.HttpClient).
@@ -108,28 +110,12 @@ class PackageMetadataResolverIT {
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
 
-        final var httpContext = new ExtensionHttpContext() {
-            @Override
-            public @NonNull HttpClient client() {
-                return httpClient;
-            }
-
-            @Override
-            public @NonNull String userAgent() {
-                return "Dependency-Track-IT";
-            }
-
-            @Override
-            public @NonNull ProxySelector proxySelector() {
-                return ProxySelector.getDefault();
-            }
-        };
-
-        return new ExtensionContext(
-                new MockConfigRegistry(Map.of(), null, null, null),
-                new NoopCacheManager(),
-                new InMemoryExtensionKVStore(),
-                httpContext);
+        return new MutableServiceRegistry()
+                .register(ConfigRegistry.class, new MockConfigRegistry(Map.of(), null, null, null))
+                .register(CacheManager.class, new NoopCacheManager())
+                .register(KeyValueStore.class, new MockKeyValueStore())
+                .register(HttpClient.class, httpClient)
+                .register(ProxySelector.class, ProxySelector.getDefault());
     }
 
 }

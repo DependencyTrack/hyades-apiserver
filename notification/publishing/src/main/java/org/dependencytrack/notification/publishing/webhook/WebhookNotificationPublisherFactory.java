@@ -21,7 +21,7 @@ package org.dependencytrack.notification.publishing.webhook;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.jspecify.annotations.Nullable;
@@ -50,8 +50,8 @@ public final class WebhookNotificationPublisherFactory implements NotificationPu
     }
 
     @Override
-    public void init(ExtensionContext ctx) {
-        this.httpClient = ctx.http().client();
+    public void init(ServiceRegistry serviceRegistry) {
+        this.httpClient = serviceRegistry.require(HttpClient.class);
     }
 
     @Override

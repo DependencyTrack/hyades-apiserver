@@ -27,8 +27,10 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
-import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.ServiceRegistry;
+import org.dependencytrack.plugin.api.Testable;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
@@ -69,7 +71,7 @@ import static org.apache.kafka.common.config.SslConfigs.SSL_TRUSTSTORE_TYPE_CONF
 /**
  * @since 5.7.0
  */
-public final class KafkaNotificationPublisherFactory implements NotificationPublisherFactory {
+public final class KafkaNotificationPublisherFactory implements NotificationPublisherFactory, RuntimeConfigurable, Testable {
 
     private record CachedProducer(
             ProducerConfig config,
@@ -94,8 +96,8 @@ public final class KafkaNotificationPublisherFactory implements NotificationPubl
     }
 
     @Override
-    public void init(ExtensionContext ctx) {
-        configRegistry = ctx.configRegistry();
+    public void init(ServiceRegistry serviceRegistry) {
+        configRegistry = serviceRegistry.require(ConfigRegistry.class);
         localConnectionsAllowed = configRegistry
                 .getDeploymentConfig()
                 .getOptionalValue("allow-local-connections", boolean.class)

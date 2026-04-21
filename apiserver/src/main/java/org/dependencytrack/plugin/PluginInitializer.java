@@ -83,7 +83,6 @@ public class PluginInitializer implements ServletContextListener {
                 secretManager::getSecretValue,
                 JdbiFactory.createJdbi(),
                 HttpClient.INSTANCE,
-                HttpClient.INSTANCE.userAgent(),
                 extensionPoints);
 
         LOGGER.info("Discovering plugins");

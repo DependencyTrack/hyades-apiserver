@@ -18,17 +18,19 @@
  */
 package org.dependencytrack.plugin.api;
 
-import org.junit.jupiter.api.Test;
+import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+/**
+ * Capability interface for {@link ExtensionFactory} implementations
+ * that support runtime configuration.
+ *
+ * @since 5.7.0
+ */
+public interface RuntimeConfigurable {
 
-class ExtensionContextTest {
-
-    @Test
-    void constructorShouldThrowWhenConfigRegistryIsNull() {
-        assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new ExtensionContext(null))
-                .withMessage("configRegistry must not be null");
-    }
+    /**
+     * @return The runtime config specification.
+     */
+    RuntimeConfigSpec runtimeConfigSpec();
 
 }

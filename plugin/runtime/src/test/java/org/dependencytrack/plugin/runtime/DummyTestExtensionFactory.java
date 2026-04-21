@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.plugin.runtime;
 
-import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.jspecify.annotations.NonNull;
 
@@ -43,8 +43,8 @@ class DummyTestExtensionFactory implements ExtensionFactory<@NonNull TestExtensi
     }
 
     @Override
-    public void init(final @NonNull ExtensionContext ctx) {
-        this.configRegistry = ctx.configRegistry();
+    public void init(@NonNull ServiceRegistry serviceRegistry) {
+        this.configRegistry = serviceRegistry.require(ConfigRegistry.class);
     }
 
     @Override

@@ -20,7 +20,7 @@ package org.dependencytrack.plugin.runtime;
 
 import org.dependencytrack.plugin.api.storage.CompareAndDeleteResult;
 import org.dependencytrack.plugin.api.storage.CompareAndPutResult;
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.junit.jupiter.api.Test;
 
@@ -33,21 +33,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-class ExtensionKVStoreImplTest extends AbstractDatabaseTest {
+class KeyValueStoreImplTest extends AbstractDatabaseTest {
 
-    private final ExtensionKVStore kvStore = new ExtensionKVStoreImpl(jdbi, "foo", "bar");
+    private final KeyValueStore kvStore = new KeyValueStoreImpl(jdbi, "foo", "bar");
 
     @Test
     void constructorShouldThrowWhenExtensionPointNameIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new ExtensionKVStoreImpl(jdbi, null, "extension"))
+                .isThrownBy(() -> new KeyValueStoreImpl(jdbi, null, "extension"))
                 .withMessage("extensionPointName must not be null");
     }
 
     @Test
     void constructorShouldThrowWhenExtensionNameIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new ExtensionKVStoreImpl(jdbi, "extensionPoint", null))
+                .isThrownBy(() -> new KeyValueStoreImpl(jdbi, "extensionPoint", null))
                 .withMessage("extensionName must not be null");
     }
 
@@ -110,7 +110,7 @@ class ExtensionKVStoreImplTest extends AbstractDatabaseTest {
         final var successResult = (CompareAndPutResult.Success) result;
         assertThat(successResult.newVersion()).isZero();
 
-        final ExtensionKVStore.Entry entry = kvStore.get("abc");
+        final KeyValueStore.Entry entry = kvStore.get("abc");
         assertThat(entry).isNotNull();
         assertThat(entry.value()).isEqualTo("def");
         assertThat(entry.createdAt()).isNotNull();
@@ -133,7 +133,7 @@ class ExtensionKVStoreImplTest extends AbstractDatabaseTest {
     void compareAndPutShouldReturnSuccessWhenVersionIsNotNullAndEntryExistsAndVersionMatches() {
         kvStore.put("abc", "def");
 
-        final ExtensionKVStore.Entry existingEntry = kvStore.get("abc");
+        final KeyValueStore.Entry existingEntry = kvStore.get("abc");
         assertThat(existingEntry).isNotNull();
 
         final CompareAndPutResult result = kvStore.compareAndPut("abc", "xyz", existingEntry.version());
@@ -142,7 +142,7 @@ class ExtensionKVStoreImplTest extends AbstractDatabaseTest {
         final var successResult = (CompareAndPutResult.Success) result;
         assertThat(successResult.newVersion()).isGreaterThan(0);
 
-        final ExtensionKVStore.Entry updatedEntry = kvStore.get("abc");
+        final KeyValueStore.Entry updatedEntry = kvStore.get("abc");
         assertThat(updatedEntry).isNotNull();
         assertThat(updatedEntry.value()).isEqualTo("xyz");
         assertThat(updatedEntry.createdAt()).isEqualTo(existingEntry.createdAt());
@@ -225,7 +225,7 @@ class ExtensionKVStoreImplTest extends AbstractDatabaseTest {
 
     @Test
     void getManyShouldReturnEmptyMapWhenKeysAreEmpty() {
-        final var kvStore = new ExtensionKVStoreImpl(jdbi, "foo", "bar");
+        final var kvStore = new KeyValueStoreImpl(jdbi, "foo", "bar");
 
         assertThat(kvStore.getMany(Collections.emptyList())).isEmpty();
     }
@@ -257,7 +257,7 @@ class ExtensionKVStoreImplTest extends AbstractDatabaseTest {
     void compareAndDeleteShouldReturnSuccessWhenEntryWasDeleted() {
         kvStore.put("abc", "def");
 
-        final ExtensionKVStore.Entry entry = kvStore.get("abc");
+        final KeyValueStore.Entry entry = kvStore.get("abc");
         assertThat(entry).isNotNull();
 
         final CompareAndDeleteResult result = kvStore.compareAndDelete("abc", entry.version());

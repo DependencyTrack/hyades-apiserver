@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.vulndatasource.github;
 
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
-import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
+import org.dependencytrack.plugin.testing.MockKeyValueStore;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -35,7 +35,7 @@ class WatermarkManagerTest {
     void createShouldInitializeWatermarkWhenAvailable() {
         final var watermark = Instant.ofEpochSecond(666);
 
-        final var keyValueStore = new InMemoryExtensionKVStore();
+        final var keyValueStore = new MockKeyValueStore();
         putWatermark(keyValueStore, watermark);
 
         final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), keyValueStore);
@@ -45,7 +45,7 @@ class WatermarkManagerTest {
 
     @Test
     void createShouldNotInitializeWatermarkWhenNotAvailable() {
-        final var keyValueStore = new InMemoryExtensionKVStore();
+        final var keyValueStore = new MockKeyValueStore();
 
         final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), keyValueStore);
         assertThat(watermarkManager).isNotNull();
@@ -54,7 +54,7 @@ class WatermarkManagerTest {
 
     @Test
     void shouldAdvanceWatermarkWhenInitialWatermarkIsEarlier() {
-        final var keyValueStore = new InMemoryExtensionKVStore();
+        final var keyValueStore = new MockKeyValueStore();
         putWatermark(keyValueStore, Instant.ofEpochSecond(666));
 
         final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), keyValueStore);
@@ -68,7 +68,7 @@ class WatermarkManagerTest {
 
     @Test
     void maybeCommitShouldNotCommitWhenLastCommitWasLessThanThreeSecondsBack() {
-        final var keyValueStore = new InMemoryExtensionKVStore();
+        final var keyValueStore = new MockKeyValueStore();
         putWatermark(keyValueStore, Instant.ofEpochSecond(111));
 
         final var clock = new MutableClock(Instant.ofEpochSecond(666));
@@ -85,7 +85,7 @@ class WatermarkManagerTest {
         assertThat(watermarkManager.getWatermark()).isEqualTo(Instant.ofEpochSecond(222));
     }
 
-    private void putWatermark(final ExtensionKVStore keyValueStore, final Instant instant) {
+    private void putWatermark(final KeyValueStore keyValueStore, final Instant instant) {
         keyValueStore.put("watermark", String.valueOf(instant.toEpochMilli()));
     }
 

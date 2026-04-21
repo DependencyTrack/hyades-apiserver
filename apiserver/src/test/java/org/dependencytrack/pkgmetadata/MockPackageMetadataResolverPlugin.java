@@ -23,10 +23,10 @@ import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolverFactory;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
-import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.Plugin;
+import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -83,7 +83,7 @@ final class MockPackageMetadataResolverPlugin implements Plugin {
         }
 
         @Override
-        public void init(@NonNull ExtensionContext ctx) {
+        public void init(@NonNull ServiceRegistry serviceRegistry) {
         }
 
         @Override

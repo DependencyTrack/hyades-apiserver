@@ -63,7 +63,6 @@ class EventSubsystemInitializerTest {
                 secretName -> null,
                 JdbiFactory.createJdbi(),
                 HttpClient.newHttpClient(),
-                "Dependency-Track",
                 Collections.emptyList());
         final var servletContextMock = mock(ServletContext.class);
 

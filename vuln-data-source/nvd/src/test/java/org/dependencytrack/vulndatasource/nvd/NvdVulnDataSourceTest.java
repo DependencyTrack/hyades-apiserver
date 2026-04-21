@@ -20,22 +20,25 @@ package org.dependencytrack.vulndatasource.nvd;
 
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.MutableServiceRegistry;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
+import org.dependencytrack.plugin.testing.MockKeyValueStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
-import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.net.http.HttpClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class NvdVulnDataSourceTest {
 
-    private VulnDataSourceFactory dataSourceFactory;
+    private NvdVulnDataSourceFactory dataSourceFactory;
     private VulnDataSource dataSource;
 
     @BeforeEach
@@ -48,7 +51,11 @@ class NvdVulnDataSourceTest {
 
         final var configRegistry = new MockConfigRegistry(dataSourceFactory.runtimeConfigSpec(), config);
 
-        dataSourceFactory.init(new ExtensionContext(configRegistry));
+        dataSourceFactory.init(
+                new MutableServiceRegistry()
+                        .register(ConfigRegistry.class, configRegistry)
+                        .register(HttpClient.class, HttpClient.newHttpClient())
+                        .register(KeyValueStore.class, new MockKeyValueStore()));
         dataSource = dataSourceFactory.create();
     }
 

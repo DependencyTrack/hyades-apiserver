@@ -28,9 +28,11 @@ import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
 import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
-import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
+import org.dependencytrack.plugin.api.MutableServiceRegistry;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
+import org.dependencytrack.plugin.testing.MockKeyValueStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,11 +64,12 @@ class ComposerPackageMetadataResolverTest {
         cacheManager = cacheProvider.create();
 
         resolverFactory = new ComposerPackageMetadataResolverFactory();
-        resolverFactory.init(new ExtensionContext(
-                new MockConfigRegistry(Map.of(), null, null, null),
-                cacheManager,
-                new InMemoryExtensionKVStore(),
-                null));
+        resolverFactory.init(
+                new MutableServiceRegistry()
+                        .register(ConfigRegistry.class, new MockConfigRegistry(Map.of(), null, null, null))
+                        .register(CacheManager.class, cacheManager)
+                        .register(HttpClient.class, HttpClient.newHttpClient())
+                        .register(KeyValueStore.class, new MockKeyValueStore()));
         resolver = resolverFactory.create();
     }
 

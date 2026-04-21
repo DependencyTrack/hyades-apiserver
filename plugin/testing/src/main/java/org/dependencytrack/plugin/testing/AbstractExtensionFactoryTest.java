@@ -20,7 +20,9 @@ package org.dependencytrack.plugin.testing;
 
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
+import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.config.RuntimeConfigMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,20 +82,24 @@ public abstract class AbstractExtensionFactoryTest<T extends ExtensionPoint, U e
 
         @Test
         void shouldDefineSchema() {
-            assumeThat(factory.runtimeConfigSpec()).isNotNull();
-            assertThat(factory.runtimeConfigSpec().schema()).isNotNull();
+            assumeThat(factory).isInstanceOf(RuntimeConfigurable.class);
+            final RuntimeConfigSpec runtimeConfigSpec = ((RuntimeConfigurable) factory).runtimeConfigSpec();
+            assertThat(runtimeConfigSpec).isNotNull();
+            assertThat(runtimeConfigSpec.schema()).isNotNull();
         }
 
         @Test
         void shouldDefineValidDefaultConfigWhenSpecIsDefined() {
-            assumeThat(factory.runtimeConfigSpec()).isNotNull();
+            assumeThat(factory).isInstanceOf(RuntimeConfigurable.class);
+            final RuntimeConfigSpec runtimeConfigSpec = ((RuntimeConfigurable) factory).runtimeConfigSpec();
+            assertThat(runtimeConfigSpec).isNotNull();
 
-            final RuntimeConfig defaultConfig = factory.runtimeConfigSpec().defaultConfig();
+            final RuntimeConfig defaultConfig = runtimeConfigSpec.defaultConfig();
             assertThat(defaultConfig).isNotNull();
 
             assertThatNoException()
                     .isThrownBy(() -> RuntimeConfigMapper.getInstance().validate(
-                            defaultConfig, factory.runtimeConfigSpec()));
+                            defaultConfig, runtimeConfigSpec));
         }
 
     }

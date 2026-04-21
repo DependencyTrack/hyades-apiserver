@@ -21,7 +21,7 @@ package org.dependencytrack.plugin.api.storage;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Result of a compare-and-delete operation of an {@link ExtensionKVStore}.
+ * Result of a compare-and-delete operation of an {@link KeyValueStore}.
  *
  * @since 5.7.0
  */

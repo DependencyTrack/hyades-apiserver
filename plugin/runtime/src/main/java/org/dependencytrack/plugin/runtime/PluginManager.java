@@ -20,16 +20,17 @@ package org.dependencytrack.plugin.runtime;
 
 import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.cache.api.NamespacedCacheManager;
-import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionPointSpec;
+import org.dependencytrack.plugin.api.MutableServiceRegistry;
 import org.dependencytrack.plugin.api.Plugin;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.MutableConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.dependencytrack.plugin.config.RuntimeConfigMapper;
 import org.eclipse.microprofile.config.Config;
 import org.jdbi.v3.core.Jdbi;
@@ -40,7 +41,6 @@ import org.slf4j.MDC;
 
 import java.io.Closeable;
 import java.lang.reflect.Modifier;
-import java.net.ProxySelector;
 import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -84,7 +84,6 @@ public class PluginManager implements Closeable {
     private final Function<String, @Nullable String> secretResolver;
     private final Jdbi jdbi;
     private final HttpClient httpClient;
-    private final String userAgent;
     private final SequencedMap<Class<? extends Plugin>, Plugin> loadedPluginByClass;
     private final Map<ExtensionIdentity, Plugin> pluginByExtensionIdentity;
     private final Map<Plugin, List<ExtensionFactory<?>>> factoriesByPlugin;
@@ -103,14 +102,12 @@ public class PluginManager implements Closeable {
             Function<String, @Nullable String> secretResolver,
             Jdbi jdbi,
             HttpClient httpClient,
-            String userAgent,
             Collection<Class<? extends ExtensionPoint>> extensionPointClasses) {
         this.config = config;
         this.cacheManager = cacheManager;
         this.secretResolver = secretResolver;
         this.jdbi = jdbi;
         this.httpClient = httpClient;
-        this.userAgent = userAgent;
         this.runtimeConfigMapper = RuntimeConfigMapper.getInstance();
         this.loadedPluginByClass = new LinkedHashMap<>();
         this.pluginByExtensionIdentity = new HashMap<>();
@@ -258,18 +255,7 @@ public class PluginManager implements Closeable {
         throw new IllegalStateException("Config registry is immutable");
     }
 
-    /**
-     * Get an {@link ExtensionKVStore} for a given extension.
-     *
-     * @param extensionPointClass Class of the extension point.
-     * @param extensionName       Name of the extension.
-     * @param <T>                 Type of the extension point.
-     * @return An {@link ExtensionKVStore} for the extension.
-     * @throws NoSuchExtensionPointException When the extension point does not exist.
-     * @throws NoSuchExtensionException      When the extension do not exist.
-     * @since 5.7.0
-     */
-    public <T extends ExtensionPoint> ExtensionKVStore getKVStore(
+    public <T extends ExtensionPoint> KeyValueStore getKVStore(
             Class<T> extensionPointClass,
             String extensionName) {
         final ExtensionPointMetadata extensionPointMetadata = requireKnownExtensionPoint(extensionPointClass);
@@ -279,7 +265,7 @@ public class PluginManager implements Closeable {
             throw new NoSuchExtensionException(extensionPointMetadata.name(), extensionName);
         }
 
-        return new ExtensionKVStoreImpl(jdbi, extensionPointMetadata.name(), extensionName);
+        return new KeyValueStoreImpl(jdbi, extensionPointMetadata.name(), extensionName);
     }
 
     public void loadPlugins(Collection<Plugin> plugins) {
@@ -377,16 +363,30 @@ public class PluginManager implements Closeable {
                             conflictingPlugin.getClass().getName()));
         }
 
+        if (extensionFactory.priority() < PRIORITY_HIGHEST) {
+            throw new IllegalStateException("""
+                    Extension %s from plugin %s has an invalid priority of %d; \
+                    Allowed range is [%d..%d] (highest to lowest priority)\
+                    """.formatted(MDC.get(MDC_EXTENSION), MDC.get(MDC_PLUGIN),
+                    extensionFactory.priority(), PRIORITY_HIGHEST, PRIORITY_LOWEST)
+            );
+        }
+
+        final @Nullable RuntimeConfigSpec runtimeConfigSpec =
+                extensionFactory instanceof final RuntimeConfigurable rc
+                        ? rc.runtimeConfigSpec()
+                        : null;
+
         final var configRegistry = new ConfigRegistryImpl(
                 jdbi,
                 config,
                 extensionPointMetadata.name(),
                 extensionIdentity.name(),
-                extensionFactory.runtimeConfigSpec(),
-                extensionFactory.runtimeConfigSpec() != null
+                runtimeConfigSpec,
+                runtimeConfigSpec != null
                         ? runtimeConfigMapper
                         : null,
-                extensionFactory.runtimeConfigSpec() != null
+                runtimeConfigSpec != null
                         ? secretResolver
                         : null);
         configRegistryByExtensionIdentity.put(extensionIdentity, configRegistry);
@@ -399,16 +399,6 @@ public class PluginManager implements Closeable {
             return;
         }
 
-        if (extensionFactory.priority() < PRIORITY_HIGHEST) {
-            throw new IllegalStateException("""
-                    Extension %s from plugin %s has an invalid priority of %d; \
-                    Allowed range is [%d..%d] (highest to lowest priority)\
-                    """.formatted(MDC.get(MDC_EXTENSION), MDC.get(MDC_PLUGIN),
-                    extensionFactory.priority(), PRIORITY_HIGHEST, PRIORITY_LOWEST)
-            );
-        }
-
-        final RuntimeConfigSpec runtimeConfigSpec = extensionFactory.runtimeConfigSpec();
         if (runtimeConfigSpec != null) {
             final RuntimeConfig defaultRuntimeConfig = runtimeConfigSpec.defaultConfig();
             if (defaultRuntimeConfig == null) {
@@ -427,8 +417,10 @@ public class PluginManager implements Closeable {
             }
         }
 
-        final var keyValueStore = new ExtensionKVStoreImpl(
-                jdbi, extensionPointMetadata.name(), extensionIdentity.name());
+        final var keyValueStore = new KeyValueStoreImpl(
+                jdbi,
+                extensionPointMetadata.name(),
+                extensionIdentity.name());
 
         final var extensionCacheManager = new NamespacedCacheManager(
                 this.cacheManager,
@@ -436,19 +428,16 @@ public class PluginManager implements Closeable {
                         extensionPointMetadata.name(),
                         extensionIdentity.name()));
 
-        final var extensionHttpContext = new ExtensionHttpContextImpl(
-                httpClient,
-                userAgent,
-                httpClient.proxy().orElse(ProxySelector.getDefault()));
+        final var serviceRegistry = new MutableServiceRegistry()
+                .register(ConfigRegistry.class, configRegistry)
+                .register(CacheManager.class, extensionCacheManager)
+                .register(KeyValueStore.class, keyValueStore)
+                .register(HttpClient.class, httpClient)
+                .freeze();
 
         LOGGER.debug("Initializing extension");
         try {
-            extensionFactory.init(
-                    new ExtensionContext(
-                            configRegistry,
-                            extensionCacheManager,
-                            keyValueStore,
-                            extensionHttpContext));
+            extensionFactory.init(serviceRegistry);
         } catch (RuntimeException e) {
             throw new IllegalStateException(
                     "Failed to initialize extension %s from plugin %s".formatted(

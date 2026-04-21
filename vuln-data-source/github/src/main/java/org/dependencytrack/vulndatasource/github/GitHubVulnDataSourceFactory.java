@@ -22,15 +22,17 @@ import io.github.jeremylong.openvulnerability.client.HttpAsyncClientSupplier;
 import io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityAdvisoryClient;
 import io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityAdvisoryClientBuilder;
 import org.apache.hc.client5.http.impl.async.HttpAsyncClients;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.time.Clock;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -40,10 +42,10 @@ import static io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityA
 /**
  * @since 5.7.0
  */
-final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
+final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory, RuntimeConfigurable {
 
     private ConfigRegistry configRegistry;
-    private ExtensionKVStore kvStore;
+    private KeyValueStore kvStore;
     private HttpAsyncClientSupplier httpClientSupplier;
 
     @Override
@@ -62,13 +64,13 @@ final class GitHubVulnDataSourceFactory implements VulnDataSourceFactory {
     }
 
     @Override
-    public void init(final ExtensionContext ctx) {
-        this.configRegistry = ctx.configRegistry();
-        this.kvStore = ctx.kvStore();
+    public void init(ServiceRegistry serviceRegistry) {
+        this.configRegistry = serviceRegistry.require(ConfigRegistry.class);
+        this.kvStore = serviceRegistry.require(KeyValueStore.class);
+        final var proxySelector = serviceRegistry.require(HttpClient.class).proxy().orElse(null);
         this.httpClientSupplier = () -> HttpAsyncClients.custom()
                 .setRetryStrategy(new GitHubHttpRequestRetryStrategy())
-                .setProxySelector(ctx.http().proxySelector())
-                .setUserAgent(ctx.http().userAgent())
+                .setProxySelector(proxySelector)
                 .build();
     }
 

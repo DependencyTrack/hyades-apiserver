@@ -47,7 +47,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @since 5.7.0
  */
-public interface ExtensionKVStore {
+public interface KeyValueStore {
 
     /**
      * An entry in the store.

@@ -129,7 +129,6 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
                 secretName -> null,
                 JdbiFactory.createJdbi(),
                 HttpClient.newHttpClient(),
-                "Dependency-Track",
                 List.of(VulnAnalyzer.class, VulnDataSource.class));
         pluginManager.loadPlugins(List.of(
                 new InternalVulnAnalyzerPlugin(),

@@ -20,7 +20,7 @@ package org.dependencytrack.plugin.runtime;
 
 import org.dependencytrack.plugin.api.storage.CompareAndDeleteResult;
 import org.dependencytrack.plugin.api.storage.CompareAndPutResult;
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.PreparedBatch;
@@ -39,13 +39,13 @@ import static java.util.Objects.requireNonNull;
 /**
  * @since 5.7.0
  */
-final class ExtensionKVStoreImpl implements ExtensionKVStore {
+final class KeyValueStoreImpl implements KeyValueStore {
 
     private final Jdbi jdbi;
     private final String extensionPointName;
     private final String extensionName;
 
-    ExtensionKVStoreImpl(
+    KeyValueStoreImpl(
             Jdbi jdbi,
             String extensionPointName,
             String extensionName) {

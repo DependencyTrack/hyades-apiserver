@@ -22,13 +22,15 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.ServiceRegistry;
+import org.dependencytrack.plugin.api.Testable;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 import org.jspecify.annotations.NullMarked;
@@ -52,12 +54,12 @@ import static java.util.Objects.requireNonNull;
  * @since 5.7.0
  */
 @NullMarked
-final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
+final class NvdVulnDataSourceFactory implements VulnDataSourceFactory, RuntimeConfigurable, Testable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NvdVulnDataSourceFactory.class);
 
     private @Nullable ConfigRegistry configRegistry;
-    private @Nullable ExtensionKVStore kvStore;
+    private @Nullable KeyValueStore kvStore;
     private @Nullable ObjectMapper objectMapper;
     private @Nullable HttpClient httpClient;
 
@@ -77,10 +79,10 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
     }
 
     @Override
-    public void init(final ExtensionContext ctx) {
-        this.configRegistry = ctx.configRegistry();
-        this.kvStore = ctx.kvStore();
-        this.httpClient = ctx.http().client();
+    public void init(ServiceRegistry serviceRegistry) {
+        this.configRegistry = serviceRegistry.require(ConfigRegistry.class);
+        this.kvStore = serviceRegistry.require(KeyValueStore.class);
+        this.httpClient = serviceRegistry.require(HttpClient.class);
         this.objectMapper = new ObjectMapper()
                 .configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, true)
                 .configure(JsonReadFeature.ALLOW_TRAILING_COMMA.mappedFeature(), true)

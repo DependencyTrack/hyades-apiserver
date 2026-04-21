@@ -21,17 +21,21 @@ package org.dependencytrack.vulndatasource.nvd;
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionTestCheck;
 import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.MutableServiceRegistry;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.dependencytrack.plugin.testing.AbstractExtensionFactoryTest;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
+import org.dependencytrack.plugin.testing.MockKeyValueStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -63,9 +67,11 @@ class NvdVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
                                     """)));
 
             factory.init(
-                    new ExtensionContext(
-                            new MockConfigRegistry(
-                                    Map.of("allow-local-connections", "true"))));
+                    new MutableServiceRegistry()
+                            .register(ConfigRegistry.class, new MockConfigRegistry(
+                                    Map.of("allow-local-connections", "true")))
+                            .register(HttpClient.class, HttpClient.newHttpClient())
+                            .register(KeyValueStore.class, new MockKeyValueStore()));
 
             final var runtimeConfig = new NvdVulnDataSourceConfigV1()
                     .withEnabled(true)
@@ -94,9 +100,11 @@ class NvdVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
                             .withFault(Fault.CONNECTION_RESET_BY_PEER)));
 
             factory.init(
-                    new ExtensionContext(
-                            new MockConfigRegistry(
-                                    Map.of("allow-local-connections", "true"))));
+                    new MutableServiceRegistry()
+                            .register(ConfigRegistry.class, new MockConfigRegistry(
+                                    Map.of("allow-local-connections", "true")))
+                            .register(HttpClient.class, HttpClient.newHttpClient())
+                            .register(KeyValueStore.class, new MockKeyValueStore()));
 
             final var runtimeConfig = new NvdVulnDataSourceConfigV1()
                     .withEnabled(true)
@@ -121,9 +129,11 @@ class NvdVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
         @Test
         void shouldReportConnectionFailureWhenLocalConnectionsAreDisallowed(WireMockRuntimeInfo wmRuntimeInfo) {
             factory.init(
-                    new ExtensionContext(
-                            new MockConfigRegistry(
-                                    Map.of("allow-local-connections", "false"))));
+                    new MutableServiceRegistry()
+                            .register(ConfigRegistry.class, new MockConfigRegistry(
+                                    Map.of("allow-local-connections", "false")))
+                            .register(HttpClient.class, HttpClient.newHttpClient())
+                            .register(KeyValueStore.class, new MockKeyValueStore()));
 
             final var runtimeConfig = new NvdVulnDataSourceConfigV1()
                     .withEnabled(true)
@@ -152,9 +162,11 @@ class NvdVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
                             .withBody("invalid")));
 
             factory.init(
-                    new ExtensionContext(
-                            new MockConfigRegistry(
-                                    Map.of("allow-local-connections", "true"))));
+                    new MutableServiceRegistry()
+                            .register(ConfigRegistry.class, new MockConfigRegistry(
+                                    Map.of("allow-local-connections", "true")))
+                            .register(HttpClient.class, HttpClient.newHttpClient())
+                            .register(KeyValueStore.class, new MockKeyValueStore()));
 
             final var runtimeConfig = new NvdVulnDataSourceConfigV1()
                     .withEnabled(true)
@@ -179,9 +191,11 @@ class NvdVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
         @Test
         void shouldReportAllChecksSkippedWhenDisabled(WireMockRuntimeInfo wmRuntimeInfo) {
             factory.init(
-                    new ExtensionContext(
-                            new MockConfigRegistry(
-                                    Map.of("allow-local-connections", "true"))));
+                    new MutableServiceRegistry()
+                            .register(ConfigRegistry.class, new MockConfigRegistry(
+                                    Map.of("allow-local-connections", "true")))
+                            .register(HttpClient.class, HttpClient.newHttpClient())
+                            .register(KeyValueStore.class, new MockKeyValueStore()));
 
             final var runtimeConfig = new NvdVulnDataSourceConfigV1()
                     .withEnabled(false)

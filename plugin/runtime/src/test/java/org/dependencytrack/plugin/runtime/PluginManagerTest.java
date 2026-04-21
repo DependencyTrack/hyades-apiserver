@@ -23,7 +23,7 @@ import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.Plugin;
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,7 +51,6 @@ class PluginManagerTest extends AbstractDatabaseTest {
                 secretName -> null,
                 jdbi,
                 HttpClient.newHttpClient(),
-                "Dependency-Track",
                 List.of(TestExtensionPoint.class));
         pluginManager.loadPlugins(List.of(new DummyPlugin()));
     }
@@ -79,7 +78,7 @@ class PluginManagerTest extends AbstractDatabaseTest {
 
         try (final var pluginManager = new PluginManager(
                 config, new NoopCacheManager(), secretName -> null,
-                jdbi, HttpClient.newHttpClient(), "Dependency-Track",
+                jdbi, HttpClient.newHttpClient(),
                 List.of(TestExtensionPoint.class))) {
             pluginManager.loadPlugins(List.of(new DummyPlugin()));
 
@@ -141,9 +140,9 @@ class PluginManagerTest extends AbstractDatabaseTest {
 
     @Test
     void testGetKVStore() {
-        final ExtensionKVStore kvStore =
+        final KeyValueStore kvStore =
                 pluginManager.getKVStore(TestExtensionPoint.class, "dummy");
-        assertThat(kvStore).isInstanceOf(ExtensionKVStoreImpl.class);
+        assertThat(kvStore).isInstanceOf(KeyValueStoreImpl.class);
     }
 
     @Test
@@ -173,7 +172,7 @@ class PluginManagerTest extends AbstractDatabaseTest {
 
         try (final var pluginManager = new PluginManager(
                 config, new NoopCacheManager(), secretName -> null,
-                jdbi, HttpClient.newHttpClient(), "Dependency-Track",
+                jdbi, HttpClient.newHttpClient(),
                 List.of(TestExtensionPoint.class))) {
             pluginManager.loadPlugins(List.of(new DummyPlugin()));
 
@@ -191,7 +190,7 @@ class PluginManagerTest extends AbstractDatabaseTest {
 
         try (final var pluginManager = new PluginManager(
                 config, new NoopCacheManager(), secretName -> null,
-                jdbi, HttpClient.newHttpClient(), "Dependency-Track",
+                jdbi, HttpClient.newHttpClient(),
                 List.of(TestExtensionPoint.class))) {
             assertThatExceptionOfType(NoSuchExtensionException.class)
                     .isThrownBy(() -> pluginManager.loadPlugins(List.of(new DummyPlugin())))
