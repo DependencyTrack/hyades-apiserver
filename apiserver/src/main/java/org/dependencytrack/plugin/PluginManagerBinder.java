@@ -21,6 +21,7 @@ package org.dependencytrack.plugin;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import jakarta.servlet.ServletContext;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.glassfish.hk2.api.Factory;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 

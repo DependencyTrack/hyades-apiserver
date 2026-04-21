@@ -44,7 +44,8 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publishing.DefaultNotificationPublishersPlugin;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -55,6 +56,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -92,6 +94,9 @@ class NotificationRuleResourceTest extends ResourceTest {
                 new SmallRyeConfigBuilder().build(),
                 new NoopCacheManager(),
                 secretName -> null,
+                JdbiFactory.createJdbi(),
+                HttpClient.newHttpClient(),
+                "Dependency-Track",
                 List.of(org.dependencytrack.notification.api.publishing.NotificationPublisher.class));
         pluginManager.loadPlugins(List.of(new DefaultNotificationPublishersPlugin()));
     }

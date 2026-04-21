@@ -30,7 +30,8 @@ import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.migration.MigrationExecutor;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStorage;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.secret.TestSecretManager;
 import org.dependencytrack.secret.management.SecretManager;
 import org.junit.jupiter.api.AfterEach;
@@ -43,6 +44,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.net.http.HttpClient;
 import java.util.Collections;
 import java.util.Map;
 
@@ -101,7 +103,9 @@ class DexEngineInitializerTest {
                 .when(servletContextMock).getAttribute(eq(CacheManager.class.getName()));
         doReturn(new MemoryFileStorage())
                 .when(servletContextMock).getAttribute(eq(FileStorage.class.getName()));
-        doReturn(new PluginManager(config, cacheManager, secretManager::getSecretValue, Collections.emptyList()))
+        doReturn(new PluginManager(config, cacheManager, secretManager::getSecretValue,
+                JdbiFactory.createJdbi(),
+                HttpClient.newHttpClient(), "Dependency-Track", Collections.emptyList()))
                 .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
         doReturn(secretManager)
                 .when(servletContextMock).getAttribute(eq(SecretManager.class.getName()));

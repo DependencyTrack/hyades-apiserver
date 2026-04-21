@@ -33,11 +33,12 @@ import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.dex.testing.WorkflowTestExtension;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.pkgmetadata.resolution.api.HashAlgorithm;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageArtifactMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.FetchPackageMetadataResolutionCandidatesRes;
 import org.dependencytrack.proto.internal.workflow.v1.ResolvePackageMetadataActivityArg;
 import org.dependencytrack.secret.TestSecretManager;
@@ -46,6 +47,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.net.http.HttpClient;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -77,6 +79,9 @@ class ResolvePackageMetadataWorkflowTest extends PersistenceCapableTest {
                 new SmallRyeConfigBuilder().build(),
                 new NoopCacheManager(),
                 secretName -> null,
+                JdbiFactory.createJdbi(),
+                HttpClient.newHttpClient(),
+                "Dependency-Track",
                 List.of(PackageMetadataResolver.class));
         pluginManager.loadPlugins(List.of(mockPlugin));
 

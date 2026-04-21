@@ -26,14 +26,16 @@ import org.dependencytrack.dex.api.ActivityContext;
 import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.runtime.PluginManager;
+import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.net.http.HttpClient;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -61,6 +63,9 @@ class MirrorVulnDataSourceActivityTest extends PersistenceCapableTest {
                 new SmallRyeConfigBuilder().build(),
                 new NoopCacheManager(),
                 secretName -> null,
+                JdbiFactory.createJdbi(),
+                HttpClient.newHttpClient(),
+                "Dependency-Track",
                 List.of(VulnDataSource.class));
         pluginManager.loadPlugins(List.of(
                 () -> List.of(new TestVulnDataSourceFactory(extensionName, () -> dataSource))));
@@ -73,6 +78,9 @@ class MirrorVulnDataSourceActivityTest extends PersistenceCapableTest {
                 new SmallRyeConfigBuilder().build(),
                 new NoopCacheManager(),
                 secretName -> null,
+                JdbiFactory.createJdbi(),
+                HttpClient.newHttpClient(),
+                "Dependency-Track",
                 List.of(VulnDataSource.class));
         pluginManager.loadPlugins(List.of());
 
@@ -92,6 +100,9 @@ class MirrorVulnDataSourceActivityTest extends PersistenceCapableTest {
                 new SmallRyeConfigBuilder().build(),
                 new NoopCacheManager(),
                 secretName -> null,
+                JdbiFactory.createJdbi(),
+                HttpClient.newHttpClient(),
+                "Dependency-Track",
                 List.of(VulnDataSource.class));
         pluginManager.loadPlugins(List.of(
                 () -> List.of(new DisabledVulnDataSourceFactory("nvd"))));

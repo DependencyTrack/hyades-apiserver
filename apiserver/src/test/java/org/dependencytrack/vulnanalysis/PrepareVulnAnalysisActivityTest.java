@@ -30,7 +30,8 @@ import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisArg;
 import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisRes;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
@@ -39,6 +40,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.net.http.HttpClient;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
@@ -395,6 +397,9 @@ class PrepareVulnAnalysisActivityTest extends PersistenceCapableTest {
                 new SmallRyeConfigBuilder().build(),
                 new NoopCacheManager(),
                 secretName -> null,
+                JdbiFactory.createJdbi(),
+                HttpClient.newHttpClient(),
+                "Dependency-Track",
                 List.of(VulnAnalyzer.class));
         pluginManager.loadPlugins(List.of(
                 new MockVulnAnalyzerPlugin(bom -> Bom.getDefaultInstance(), requirements)));

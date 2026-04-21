@@ -27,7 +27,8 @@ import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStorage;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.secret.TestSecretManager;
 import org.dependencytrack.secret.management.SecretManager;
 import org.eclipse.microprofile.config.Config;
@@ -35,6 +36,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Collections;
 
@@ -59,6 +61,9 @@ class EventSubsystemInitializerTest {
                 config,
                 new NoopCacheManager(),
                 secretName -> null,
+                JdbiFactory.createJdbi(),
+                HttpClient.newHttpClient(),
+                "Dependency-Track",
                 Collections.emptyList());
         final var servletContextMock = mock(ServletContext.class);
 

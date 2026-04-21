@@ -53,8 +53,9 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.dependencytrack.persistence.jdbi.FindingDao.FindingRow;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.policy.cel.CelVulnerabilityPolicyEvaluator;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -79,6 +80,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
+import java.net.http.HttpClient;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -125,6 +127,9 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
                         .build(),
                 new NoopCacheManager(),
                 secretName -> null,
+                JdbiFactory.createJdbi(),
+                HttpClient.newHttpClient(),
+                "Dependency-Track",
                 List.of(VulnAnalyzer.class, VulnDataSource.class));
         pluginManager.loadPlugins(List.of(
                 new InternalVulnAnalyzerPlugin(),

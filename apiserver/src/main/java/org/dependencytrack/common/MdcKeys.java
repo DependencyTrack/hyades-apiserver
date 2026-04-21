@@ -30,9 +30,7 @@ public final class MdcKeys {
     public static final String MDC_BOM_VERSION = "bomVersion";
     public static final String MDC_COMPONENT_UUID = "componentUuid";
     public static final String MDC_EVENT_TOKEN = "eventToken";
-    public static final String MDC_EXTENSION = "extension";
     public static final String MDC_EXTENSION_NAME = "extensionName";
-    public static final String MDC_EXTENSION_POINT = "extensionPoint";
     public static final String MDC_EXTENSION_POINT_NAME = "extensionPointName";
     public static final String MDC_NOTIFICATION_GROUP = "notificationGroup";
     public static final String MDC_NOTIFICATION_ID = "notificationId";
@@ -41,7 +39,6 @@ public final class MdcKeys {
     public static final String MDC_NOTIFICATION_SCOPE = "notificationScope";
     public static final String MDC_PKG_METADATA_RESOLVER_NAME = "pkgMetadataResolverName";
     public static final String MDC_PKG_REPOSITORY_IDENTIFIER = "pkgRepositoryIdentifier";
-    public static final String MDC_PLUGIN = "plugin";
     public static final String MDC_PURL = "purl";
     public static final String MDC_PROJECT_NAME = "projectName";
     public static final String MDC_PROJECT_UUID = "projectUuid";

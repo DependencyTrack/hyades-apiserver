@@ -112,6 +112,11 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>plugin-config</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>plugin-runtime</artifactId>
             <version>${project.version}</version>
         </dependency>

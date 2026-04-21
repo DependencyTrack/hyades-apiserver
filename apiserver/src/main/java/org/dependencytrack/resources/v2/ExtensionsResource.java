@@ -39,17 +39,17 @@ import org.dependencytrack.api.v2.model.TestExtensionResponse;
 import org.dependencytrack.api.v2.model.UpdateExtensionConfigRequest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.MdcScope;
-import org.dependencytrack.persistence.jdbi.ExtensionConfigDao;
-import org.dependencytrack.plugin.ExtensionPointMetadata;
-import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionTestCheck;
 import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.config.MutableConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
-import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
-import org.dependencytrack.plugin.runtime.config.UnresolvableSecretException;
+import org.dependencytrack.plugin.config.RuntimeConfigMapper;
+import org.dependencytrack.plugin.config.UnresolvableSecretException;
+import org.dependencytrack.plugin.runtime.ExtensionPointMetadata;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.secret.management.SecretManager;
 import org.owasp.security.logging.SecurityMarkers;
@@ -63,8 +63,6 @@ import java.util.SequencedCollection;
 
 import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION_NAME;
 import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION_POINT_NAME;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * @since 5.7.0
@@ -154,10 +152,9 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
             throw new NotFoundException();
         }
 
-        final String configJson = withJdbiHandle(
-                getAlpineRequest(),
-                handle -> handle.attach(ExtensionConfigDao.class).get(
-                        extensionPointName, extensionName));
+        final MutableConfigRegistry configRegistry =
+                pluginManager.getMutableConfigRegistry(extensionPointClass, extensionName);
+        final String configJson = configRegistry.getRawRuntimeConfig().orElse(null);
         if (configJson == null) {
             throw new NotFoundException();
         }
@@ -209,10 +206,9 @@ public class ExtensionsResource extends AbstractApiResource implements Extension
             runtimeConfigSpec.validator().validate(config);
         }
 
-        final boolean updated = inJdbiTransaction(
-                getAlpineRequest(),
-                handle -> handle.attach(ExtensionConfigDao.class).save(
-                        extensionPointName, extensionName, configJson));
+        final MutableConfigRegistry configRegistry =
+                pluginManager.getMutableConfigRegistry(extensionPointClass, extensionName);
+        final boolean updated = configRegistry.setRawRuntimeConfig(configJson);
         if (!updated) {
             return Response.notModified().build();
         }

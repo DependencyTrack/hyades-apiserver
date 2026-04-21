@@ -25,8 +25,6 @@ import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.cache.api.NoopCacheManager;
-import org.dependencytrack.persistence.jdbi.ExtensionConfigDao;
-import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
@@ -36,6 +34,7 @@ import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSchemaSource;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.secret.TestSecretManager;
 import org.dependencytrack.secret.management.SecretManager;
 import org.glassfish.jersey.inject.hk2.AbstractBinder;
@@ -47,6 +46,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.net.http.HttpClient;
 import java.util.List;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -81,6 +81,9 @@ class ExtensionsResourceTest extends ResourceTest {
                 new SmallRyeConfigBuilder().build(),
                 new NoopCacheManager(),
                 secretManager::getSecretValue,
+                org.dependencytrack.persistence.jdbi.JdbiFactory.createJdbi(),
+                HttpClient.newHttpClient(),
+                "Dependency-Track",
                 List.of(DummyExtensionPoint.class));
     }
 
@@ -166,13 +169,18 @@ class ExtensionsResourceTest extends ResourceTest {
 
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_READ);
 
-        useJdbiTransaction(
-                handle -> handle.attach(ExtensionConfigDao.class)
-                        .save("dummy", "dummy-extension", /* language=JSON */ """
-                                {
-                                  "requiredString": "yay!"
-                                }
-                                """));
+        useJdbiTransaction(handle -> handle.createUpdate("""
+                        INSERT INTO "EXTENSION_RUNTIME_CONFIG" ("EXTENSION_POINT", "EXTENSION", "CONFIG", "CREATED_AT")
+                        VALUES (:extensionPoint, :extension, CAST(:config AS JSONB), NOW())
+                        ON CONFLICT ("EXTENSION_POINT", "EXTENSION")
+                        DO UPDATE SET "CONFIG" = EXCLUDED."CONFIG", "UPDATED_AT" = NOW()
+                        """)
+                .bind("extensionPoint", "dummy")
+                .bind("extension", "dummy-extension")
+                .bind("config", /* language=JSON */ """
+                        {"requiredString": "yay!"}
+                        """)
+                .execute());
 
         final Response response = jersey
                 .target("/extension-points/dummy/extensions/dummy-extension/config")
@@ -231,8 +239,15 @@ class ExtensionsResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(204);
         assertThat(getPlainTextBody(response)).isEmpty();
 
-        final String savedConfig = withJdbiHandle(
-                handle -> handle.attach(ExtensionConfigDao.class).get("dummy", "dummy-extension"));
+        final String savedConfig = withJdbiHandle(handle -> handle.createQuery("""
+                        SELECT "CONFIG" FROM "EXTENSION_RUNTIME_CONFIG"
+                        WHERE "EXTENSION_POINT" = :extensionPoint AND "EXTENSION" = :extension
+                        """)
+                .bind("extensionPoint", "dummy")
+                .bind("extension", "dummy-extension")
+                .mapTo(String.class)
+                .findOne()
+                .orElse(null));
         assertThatJson(savedConfig).isEqualTo(/* language=JSON */ """
                 {
                   "requiredString": "foo",
@@ -248,15 +263,18 @@ class ExtensionsResourceTest extends ResourceTest {
 
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_UPDATE);
 
-        useJdbiTransaction(
-                handle -> handle
-                        .attach(ExtensionConfigDao.class)
-                        .save("dummy", "dummy-extension", /* language=JSON */ """
-                                {
-                                  "requiredString": "foo",
-                                  "optionalString": "bar"
-                                }
-                                """));
+        useJdbiTransaction(handle -> handle.createUpdate("""
+                        INSERT INTO "EXTENSION_RUNTIME_CONFIG" ("EXTENSION_POINT", "EXTENSION", "CONFIG", "CREATED_AT")
+                        VALUES (:extensionPoint, :extension, CAST(:config AS JSONB), NOW())
+                        ON CONFLICT ("EXTENSION_POINT", "EXTENSION")
+                        DO UPDATE SET "CONFIG" = EXCLUDED."CONFIG", "UPDATED_AT" = NOW()
+                        """)
+                .bind("extensionPoint", "dummy")
+                .bind("extension", "dummy-extension")
+                .bind("config", /* language=JSON */ """
+                        {"requiredString": "foo", "optionalString": "bar"}
+                        """)
+                .execute());
 
         final Response response = jersey
                 .target("/extension-points/dummy/extensions/dummy-extension/config")

@@ -34,13 +34,13 @@ import org.dependencytrack.notification.api.publishing.RetryablePublishException
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
-import org.dependencytrack.plugin.NoSuchExtensionException;
-import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
-import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
-import org.dependencytrack.plugin.runtime.config.UnresolvableSecretException;
+import org.dependencytrack.plugin.config.RuntimeConfigMapper;
+import org.dependencytrack.plugin.config.UnresolvableSecretException;
+import org.dependencytrack.plugin.runtime.NoSuchExtensionException;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationActivityArg;
 import org.jdbi.v3.core.statement.Query;
 import org.jspecify.annotations.Nullable;

@@ -56,7 +56,7 @@ import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.pkgmetadata.FetchPackageMetadataResolutionCandidatesActivity;
 import org.dependencytrack.pkgmetadata.ResolvePackageMetadataActivity;
 import org.dependencytrack.pkgmetadata.ResolvePackageMetadataWorkflow;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.policy.EvalProjectPoliciesActivity;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
 import org.dependencytrack.policy.cel.CelVulnerabilityPolicyEvaluator;

@@ -29,7 +29,7 @@ import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.cache.memory.MemoryCacheProvider;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
-import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
+import org.dependencytrack.plugin.config.RuntimeConfigMapper;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.junit.jupiter.api.AfterEach;

@@ -41,7 +41,8 @@ import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.publishing.DefaultNotificationPublishersPlugin;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationActivityArg;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
@@ -51,6 +52,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayInputStream;
+import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -79,6 +81,9 @@ class PublishNotificationWorkflowTest extends PersistenceCapableTest {
                 new SmallRyeConfigBuilder().build(),
                 new NoopCacheManager(),
                 secretName -> null,
+                JdbiFactory.createJdbi(),
+                HttpClient.newHttpClient(),
+                "Dependency-Track",
                 List.of(NotificationPublisher.class));
         pluginManager.loadPlugins(List.of(
                 new DefaultNotificationPublishersPlugin()));

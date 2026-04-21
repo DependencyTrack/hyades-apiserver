@@ -111,7 +111,7 @@ public class JdbiFactory {
      *
      * @return The global {@link Jdbi} instance
      */
-    static Jdbi createJdbi() {
+    public static Jdbi createJdbi() {
         return GLOBAL_INSTANCE_HOLDER
                 .updateAndGet(previous -> {
                     final DataSource dataSource = DataSourceRegistry.getInstance().getDefault();
