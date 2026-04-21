@@ -24,6 +24,7 @@ import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
@@ -66,23 +67,26 @@ public class CloneProjectTask implements Subscriber {
 
                 try {
                     LOGGER.info("Cloning project for version %s".formatted(request.getVersion()));
-                    final UUID clonedProjectUuid = inJdbiTransaction(
-                            handle -> handle.attach(ProjectDao.class).cloneProject(
-                                    new CloneProjectCommand(
-                                            UUID.fromString(request.getProject()),
-                                            request.getVersion(),
-                                            request.makeCloneLatest(),
-                                            request.includeACL(),
-                                            request.includeComponents(),
-                                            // NB: For legacy reasons, includeAuditHistory implies includeFindings.
-                                            /* includeFindings */ request.includeAuditHistory(),
-                                            /* includeFindingsAuditHistory */ request.includeAuditHistory(),
-                                            // NB: For legacy reasons, includePolicyViolations implies includePolicyViolationsAuditHistory.
-                                            request.includePolicyViolations(),
-                                            /* includePolicyViolationsAuditHistory */ request.includePolicyViolations(),
-                                            request.includeProperties(),
-                                            request.includeServices(),
-                                            request.includeTags())));
+                    final UUID clonedProjectUuid = inJdbiTransaction(handle -> {
+                        final UUID uuid = handle.attach(ProjectDao.class).cloneProject(
+                                new CloneProjectCommand(
+                                        UUID.fromString(request.getProject()),
+                                        request.getVersion(),
+                                        request.makeCloneLatest(),
+                                        request.includeACL(),
+                                        request.includeComponents(),
+                                        // NB: For legacy reasons, includeAuditHistory implies includeFindings.
+                                        /* includeFindings */ request.includeAuditHistory(),
+                                        /* includeFindingsAuditHistory */ request.includeAuditHistory(),
+                                        // NB: For legacy reasons, includePolicyViolations implies includePolicyViolationsAuditHistory.
+                                        request.includePolicyViolations(),
+                                        /* includePolicyViolationsAuditHistory */ request.includePolicyViolations(),
+                                        request.includeProperties(),
+                                        request.includeServices(),
+                                        request.includeTags()));
+                        handle.attach(MetricsDao.class).updateProjectMetrics(uuid);
+                        return uuid;
+                    });
 
                     qm.updateWorkflowStateToComplete(workflowState);
                     LOGGER.info("Cloned project for version %s into project %s".formatted(request.getVersion(), clonedProjectUuid));

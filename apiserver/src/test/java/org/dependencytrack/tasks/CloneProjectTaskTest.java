@@ -20,7 +20,12 @@ package org.dependencytrack.tasks;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.CloneProjectEvent;
+import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.model.Severity;
+import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +34,7 @@ import java.util.Date;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStep.PROJECT_CLONE;
@@ -87,5 +93,39 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
                     assertThat(state.getFailureReason()).contains("Target project version already exists");
                 });
+    }
+
+    @Test
+    public void testCloneProjectMetricUpdate() {
+        final Project project = qm.createProject("Example Project 1", "Description 1", "1.0", null, null, null, null, false, false);
+
+        final Component comp = new Component();
+        comp.setId(111L);
+        comp.setName("name");
+        comp.setProject(project);
+        comp.setVersion("1.0");
+        comp.setCopyright("Copyright Acme");
+        qm.createComponent(comp, true);
+
+        final Vulnerability vuln = new Vulnerability();
+        vuln.setVulnId("INT-123");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln.setSeverity(Severity.HIGH);
+        qm.persist(vuln);
+        qm.addVulnerability(vuln, comp, "INTERNAL_ANALYZER", "Vuln1", "http://vuln.com/vuln1", new Date(1708559165229L));
+
+        final CloneProjectRequest request = new CloneProjectRequest(project.getUuid().toString(), "1.1.0", false, false, false, true, false, true, false, false, false);
+        final var cloneProjectEvent = new CloneProjectEvent(request);
+        new CloneProjectTask().inform(cloneProjectEvent);
+
+        final Project clonedProject = qm.getProject("Example Project 1", "1.1.0");
+        assertThat(clonedProject).isNotNull();
+
+        final ProjectMetrics metrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentProjectMetrics(clonedProject.getId()));
+        assertThat(metrics).isNotNull();
+        assertThat(metrics.getComponents()).isEqualTo(1);
+        assertThat(metrics.getHigh()).isEqualTo(1);
+        assertThat(metrics.getVulnerabilities()).isEqualTo(1);
     }
 }

@@ -39,6 +39,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao;
 import org.dependencytrack.persistence.jdbi.AdvisoryDao.ListProjectAdvisoriesRow;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.persistence.jdbi.query.ListAdvisoriesForProjectQuery;
@@ -116,7 +117,7 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
                     projectUuid,
                     request.getVersion());
 
-            return handle.attach(ProjectDao.class).cloneProject(
+            final UUID uuid = handle.attach(ProjectDao.class).cloneProject(
                     new CloneProjectCommand(
                             projectUuid,
                             request.getVersion(),
@@ -130,6 +131,10 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
                             request.getIncludes().contains(CloneProjectInclude.PROPERTIES),
                             request.getIncludes().contains(CloneProjectInclude.SERVICES),
                             request.getIncludes().contains(CloneProjectInclude.TAGS)));
+
+            requireProjectAccess(handle, uuid);
+            handle.attach(MetricsDao.class).updateProjectMetrics(uuid);
+            return uuid;
         });
 
         return Response
