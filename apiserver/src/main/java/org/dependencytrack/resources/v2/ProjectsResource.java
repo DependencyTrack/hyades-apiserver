@@ -52,7 +52,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapHashes;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapLicense;
 
@@ -118,7 +117,7 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
                     projectUuid,
                     request.getVersion());
 
-            return handle.attach(ProjectDao.class).cloneProject(
+            final UUID uuid = handle.attach(ProjectDao.class).cloneProject(
                     new CloneProjectCommand(
                             projectUuid,
                             request.getVersion(),
@@ -132,11 +131,10 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
                             request.getIncludes().contains(CloneProjectInclude.PROPERTIES),
                             request.getIncludes().contains(CloneProjectInclude.SERVICES),
                             request.getIncludes().contains(CloneProjectInclude.TAGS)));
-        });
 
-        useJdbiTransaction(getAlpineRequest(), handle -> {
-            requireProjectAccess(handle, clonedProjectUuid);
-            handle.attach(MetricsDao.class).updateProjectMetrics(clonedProjectUuid);
+            requireProjectAccess(handle, uuid);
+            handle.attach(MetricsDao.class).updateProjectMetrics(uuid);
+            return uuid;
         });
 
         return Response
