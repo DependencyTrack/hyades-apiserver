@@ -18,10 +18,6 @@
  */
 package org.dependencytrack.plugin.api;
 
-import org.dependencytrack.plugin.api.config.RuntimeConfig;
-import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
-import org.jspecify.annotations.Nullable;
-
 import java.io.Closeable;
 
 /**
@@ -49,19 +45,11 @@ public interface ExtensionFactory<T extends ExtensionPoint> extends Closeable {
     int priority();
 
     /**
-     * @return A runtime config specification, or {@code null} when runtime configuration
-     * is not supported.
-     */
-    default @Nullable RuntimeConfigSpec runtimeConfigSpec() {
-        return null;
-    }
-
-    /**
      * Initialize the factory. This method is called <em>once</em> during application startup.
      *
-     * @param ctx The {@link ExtensionContext} the factory is initialized in.
+     * @param serviceRegistry The {@link ServiceRegistry} providing platform services to the extension.
      */
-    void init(ExtensionContext ctx);
+    void init(ServiceRegistry serviceRegistry);
 
     /**
      * Creates a new extension instance.
@@ -74,19 +62,6 @@ public interface ExtensionFactory<T extends ExtensionPoint> extends Closeable {
      * @throws IllegalStateException If an extension instance cannot be created.
      */
     T create();
-
-    /**
-     * Performs a test whether the extension is operational with the provided runtime config.
-     *
-     * @param runtimeConfig The runtime config to test with. {@code null} when the extension
-     *                      does not support runtime configuration (i.e. {@link #runtimeConfigSpec()}
-     *                      also returns {@code null}).
-     * @return The test result.
-     * @throws UnsupportedOperationException When the extension does not support testing.
-     */
-    default ExtensionTestResult test(@Nullable RuntimeConfig runtimeConfig) {
-        throw new UnsupportedOperationException();
-    }
 
     /**
      * {@inheritDoc}

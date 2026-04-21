@@ -81,7 +81,6 @@ class ResolvePackageMetadataWorkflowTest extends PersistenceCapableTest {
                 secretName -> null,
                 JdbiFactory.createJdbi(),
                 HttpClient.newHttpClient(),
-                "Dependency-Track",
                 List.of(PackageMetadataResolver.class));
         pluginManager.loadPlugins(List.of(mockPlugin));
 

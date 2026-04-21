@@ -16,8 +16,11 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api.storage;
+package org.dependencytrack.plugin.testing;
 
+import org.dependencytrack.plugin.api.storage.CompareAndDeleteResult;
+import org.dependencytrack.plugin.api.storage.CompareAndPutResult;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -31,10 +34,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-class InMemoryExtensionKVStoreTest {
+class MockKeyValueStoreTest {
 
-    private final ConcurrentMap<String, ExtensionKVStore.Entry> backingMap = new ConcurrentHashMap<>();
-    private final ExtensionKVStore kvStore = new InMemoryExtensionKVStore(backingMap);
+    private final ConcurrentMap<String, KeyValueStore.Entry> backingMap = new ConcurrentHashMap<>();
+    private final KeyValueStore kvStore = new MockKeyValueStore(backingMap);
 
     @Nested
     class PutManyTest {
@@ -99,7 +102,7 @@ class InMemoryExtensionKVStoreTest {
             final var successResult = (CompareAndPutResult.Success) result;
             assertThat(successResult.newVersion()).isZero();
 
-            final ExtensionKVStore.Entry entry = kvStore.get("abc");
+            final KeyValueStore.Entry entry = kvStore.get("abc");
             assertThat(entry).isNotNull();
             assertThat(entry.value()).isEqualTo("def");
             assertThat(entry.createdAt()).isNotNull();
@@ -122,7 +125,7 @@ class InMemoryExtensionKVStoreTest {
         void shouldReturnSuccessWhenVersionIsNotNullAndEntryExistsAndVersionMatches() {
             kvStore.put("abc", "def");
 
-            final ExtensionKVStore.Entry existingEntry = kvStore.get("abc");
+            final KeyValueStore.Entry existingEntry = kvStore.get("abc");
             assertThat(existingEntry).isNotNull();
 
             final CompareAndPutResult result = kvStore.compareAndPut("abc", "xyz", existingEntry.version());
@@ -131,7 +134,7 @@ class InMemoryExtensionKVStoreTest {
             final var successResult = (CompareAndPutResult.Success) result;
             assertThat(successResult.newVersion()).isGreaterThan(0);
 
-            final ExtensionKVStore.Entry updatedEntry = kvStore.get("abc");
+            final KeyValueStore.Entry updatedEntry = kvStore.get("abc");
             assertThat(updatedEntry).isNotNull();
             assertThat(updatedEntry.value()).isEqualTo("xyz");
             assertThat(updatedEntry.createdAt()).isEqualTo(existingEntry.createdAt());
@@ -264,7 +267,7 @@ class InMemoryExtensionKVStoreTest {
         void shouldReturnSuccessWhenEntryWasDeleted() {
             kvStore.put("abc", "def");
 
-            final ExtensionKVStore.Entry entry = kvStore.get("abc");
+            final KeyValueStore.Entry entry = kvStore.get("abc");
             assertThat(entry).isNotNull();
 
             final CompareAndDeleteResult result = kvStore.compareAndDelete("abc", entry.version());

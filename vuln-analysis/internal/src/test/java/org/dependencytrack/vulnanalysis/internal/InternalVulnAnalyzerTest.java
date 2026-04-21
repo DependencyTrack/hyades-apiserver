@@ -23,7 +23,8 @@ import io.smallrye.config.SmallRyeConfigBuilder;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Component;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.MutableServiceRegistry;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.dependencytrack.support.liquibase.MigrationExecutor;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
@@ -90,7 +91,7 @@ class InternalVulnAnalyzerTest {
                 Map.of("datasource.name", "default"));
 
         analyzerFactory = new InternalVulnAnalyzerFactory(dataSourceRegistry);
-        analyzerFactory.init(new ExtensionContext(configRegistry));
+        analyzerFactory.init(new MutableServiceRegistry().register(ConfigRegistry.class, configRegistry));
 
         analyzer = analyzerFactory.create();
     }

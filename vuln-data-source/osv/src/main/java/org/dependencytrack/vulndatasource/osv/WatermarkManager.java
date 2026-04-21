@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.vulndatasource.osv;
 
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.time.Instant;
@@ -48,7 +48,7 @@ final class WatermarkManager {
     // TODO: Just use constructor after upgrading to Java 25 (https://openjdk.org/jeps/513)
     static WatermarkManager create(
             final Collection<String> ecosystems,
-            final ExtensionKVStore kvStore) {
+            final KeyValueStore kvStore) {
         final var watermarkStore = new WatermarkStore(kvStore);
         final Map<String, WatermarkRecord> recordByEcosystem =
                 watermarkStore.getForEcosystems(ecosystems);

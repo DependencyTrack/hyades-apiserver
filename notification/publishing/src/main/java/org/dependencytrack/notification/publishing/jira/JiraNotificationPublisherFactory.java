@@ -21,7 +21,8 @@ package org.dependencytrack.notification.publishing.jira;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
@@ -35,7 +36,7 @@ import static org.dependencytrack.notification.api.publishing.NotificationPublis
 /**
  * @since 5.7.0
  */
-public final class JiraNotificationPublisherFactory implements NotificationPublisherFactory {
+public final class JiraNotificationPublisherFactory implements NotificationPublisherFactory, RuntimeConfigurable {
 
     private @Nullable ConfigRegistry configRegistry;
     private @Nullable HttpClient httpClient;
@@ -51,9 +52,9 @@ public final class JiraNotificationPublisherFactory implements NotificationPubli
     }
 
     @Override
-    public void init(ExtensionContext ctx) {
-        configRegistry = ctx.configRegistry();
-        httpClient = ctx.http().client();
+    public void init(ServiceRegistry serviceRegistry) {
+        configRegistry = serviceRegistry.require(ConfigRegistry.class);
+        httpClient = serviceRegistry.require(HttpClient.class);
     }
 
     @Override

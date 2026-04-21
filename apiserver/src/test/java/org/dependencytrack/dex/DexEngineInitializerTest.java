@@ -105,7 +105,7 @@ class DexEngineInitializerTest {
                 .when(servletContextMock).getAttribute(eq(FileStorage.class.getName()));
         doReturn(new PluginManager(config, cacheManager, secretManager::getSecretValue,
                 JdbiFactory.createJdbi(),
-                HttpClient.newHttpClient(), "Dependency-Track", Collections.emptyList()))
+                HttpClient.newHttpClient(), Collections.emptyList()))
                 .when(servletContextMock).getAttribute(eq(PluginManager.class.getName()));
         doReturn(secretManager)
                 .when(servletContextMock).getAttribute(eq(SecretManager.class.getName()));

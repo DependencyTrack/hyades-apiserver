@@ -19,7 +19,7 @@
 package org.dependencytrack.vulndatasource.nvd;
 
 import org.dependencytrack.plugin.api.storage.CompareAndPutResult;
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,13 +32,13 @@ final class WatermarkManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WatermarkManager.class);
 
-    private final ExtensionKVStore kvStore;
+    private final KeyValueStore kvStore;
     private Instant committedWatermark;
     private Instant pendingWatermark;
     private Long committedWatermarkVersion;
 
     private WatermarkManager(
-            final ExtensionKVStore kvStore,
+            final KeyValueStore kvStore,
             final Instant committedWatermark,
             final Long committedWatermarkVersion) {
         this.kvStore = kvStore;
@@ -47,8 +47,8 @@ final class WatermarkManager {
     }
 
     // TODO: Just use constructor after upgrading to Java 25: https://openjdk.org/jeps/513
-    static WatermarkManager create(final ExtensionKVStore kvStore) {
-        final ExtensionKVStore.Entry watermarkEntry = kvStore.get("watermark");
+    static WatermarkManager create(final KeyValueStore kvStore) {
+        final KeyValueStore.Entry watermarkEntry = kvStore.get("watermark");
         if (watermarkEntry != null) {
             try {
                 final Instant committedWatermark = Instant.ofEpochMilli(

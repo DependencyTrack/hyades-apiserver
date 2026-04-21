@@ -20,9 +20,13 @@ package org.dependencytrack.vulnanalysis.ossindex;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import io.smallrye.config.SmallRyeConfigBuilder;
+import org.dependencytrack.cache.api.CacheManager;
+import org.dependencytrack.cache.memory.MemoryCacheProvider;
 import org.dependencytrack.plugin.api.ExtensionTestCheck.Status;
 import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.MutableServiceRegistry;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.testing.AbstractExtensionFactoryTest;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
@@ -32,6 +36,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.util.Collections;
 import java.util.Map;
 
@@ -147,7 +152,7 @@ class OssIndexVulnAnalyzerFactoryTest extends AbstractExtensionFactoryTest<VulnA
                     factory.runtimeConfigSpec(),
                     null,
                     null);
-            factory.init(new ExtensionContext(configRegistry));
+            factory.init(createServiceRegistry(configRegistry));
 
             final var config = new OssIndexVulnAnalyzerConfigV1()
                     .withEnabled(true)
@@ -177,7 +182,7 @@ class OssIndexVulnAnalyzerFactoryTest extends AbstractExtensionFactoryTest<VulnA
                     factory.runtimeConfigSpec(),
                     null,
                     null);
-            factory.init(new ExtensionContext(configRegistry));
+            factory.init(createServiceRegistry(configRegistry));
 
             final var config = new OssIndexVulnAnalyzerConfigV1()
                     .withEnabled(true)
@@ -210,8 +215,16 @@ class OssIndexVulnAnalyzerFactoryTest extends AbstractExtensionFactoryTest<VulnA
                     factory.runtimeConfigSpec(),
                     null,
                     null);
-            factory.init(new ExtensionContext(configRegistry));
+            factory.init(createServiceRegistry(configRegistry));
             return factory;
+        }
+
+        private MutableServiceRegistry createServiceRegistry(ConfigRegistry configRegistry) {
+            final var cacheProvider = new MemoryCacheProvider(new SmallRyeConfigBuilder().build());
+            return new MutableServiceRegistry()
+                    .register(ConfigRegistry.class, configRegistry)
+                    .register(CacheManager.class, cacheProvider.create())
+                    .register(HttpClient.class, HttpClient.newHttpClient());
         }
 
         private OssIndexVulnAnalyzerConfigV1 createConfig(WireMockRuntimeInfo wmRuntimeInfo) {

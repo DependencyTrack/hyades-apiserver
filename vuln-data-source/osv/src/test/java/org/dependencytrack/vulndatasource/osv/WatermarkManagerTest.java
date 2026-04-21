@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.vulndatasource.osv;
 
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
-import org.dependencytrack.plugin.api.storage.InMemoryExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
+import org.dependencytrack.plugin.testing.MockKeyValueStore;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class WatermarkManagerTest {
 
-    private final ExtensionKVStore kvStore = new InMemoryExtensionKVStore();
+    private final KeyValueStore kvStore = new MockKeyValueStore();
 
     @Test
     void createShouldInitializeWatermarkWhenAvailable() {

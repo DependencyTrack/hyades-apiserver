@@ -20,8 +20,8 @@ package org.dependencytrack.vulnanalysis.vulndb;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dependencytrack.cache.api.CacheManager;
-import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.ExtensionHttpContext;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
@@ -31,6 +31,7 @@ import org.dependencytrack.vulnanalysis.api.VulnAnalyzerRequirement;
 import org.jspecify.annotations.Nullable;
 
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.util.EnumSet;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
@@ -39,11 +40,11 @@ import static java.util.Objects.requireNonNull;
 /**
  * @since 5.7.0
  */
-final class VulnDbVulnAnalyzerFactory implements VulnAnalyzerFactory {
+final class VulnDbVulnAnalyzerFactory implements VulnAnalyzerFactory, RuntimeConfigurable {
 
     private @Nullable ConfigRegistry configRegistry;
     private @Nullable CacheManager cacheManager;
-    private @Nullable ExtensionHttpContext httpContext;
+    private @Nullable HttpClient httpClient;
     private @Nullable ObjectMapper objectMapper;
 
     @Override
@@ -57,10 +58,10 @@ final class VulnDbVulnAnalyzerFactory implements VulnAnalyzerFactory {
     }
 
     @Override
-    public void init(ExtensionContext ctx) {
-        configRegistry = ctx.configRegistry();
-        cacheManager = ctx.cacheManager();
-        httpContext = ctx.http();
+    public void init(ServiceRegistry serviceRegistry) {
+        configRegistry = serviceRegistry.require(ConfigRegistry.class);
+        cacheManager = serviceRegistry.require(CacheManager.class);
+        httpClient = serviceRegistry.require(HttpClient.class);
         objectMapper = new ObjectMapper()
                 .disable(FAIL_ON_UNKNOWN_PROPERTIES);
     }
@@ -69,7 +70,7 @@ final class VulnDbVulnAnalyzerFactory implements VulnAnalyzerFactory {
     public VulnAnalyzer create() {
         requireNonNull(configRegistry);
         requireNonNull(cacheManager);
-        requireNonNull(httpContext);
+        requireNonNull(httpClient);
         requireNonNull(objectMapper);
 
         final var config = configRegistry.getRuntimeConfig(VulnDbVulnAnalyzerConfigV1.class);
@@ -77,9 +78,9 @@ final class VulnDbVulnAnalyzerFactory implements VulnAnalyzerFactory {
             throw new IllegalStateException("Analyzer is disabled");
         }
 
-        final var tokenManager = new VulnDbAccessTokenManager(httpContext.client(), objectMapper);
+        final var tokenManager = new VulnDbAccessTokenManager(httpClient, objectMapper);
         final var apiClient = new VulnDbApiClient(
-                httpContext.client(),
+                httpClient,
                 objectMapper,
                 tokenManager,
                 config.getOauth2ClientId(),

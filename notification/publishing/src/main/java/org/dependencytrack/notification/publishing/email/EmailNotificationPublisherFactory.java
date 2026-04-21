@@ -27,8 +27,10 @@ import jakarta.mail.Transport;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
-import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.ServiceRegistry;
+import org.dependencytrack.plugin.api.Testable;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
@@ -50,7 +52,7 @@ import static org.dependencytrack.notification.api.publishing.NotificationPublis
 /**
  * @since 5.7.0
  */
-public final class EmailNotificationPublisherFactory implements NotificationPublisherFactory {
+public final class EmailNotificationPublisherFactory implements NotificationPublisherFactory, RuntimeConfigurable, Testable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmailNotificationPublisherFactory.class);
 
@@ -81,8 +83,8 @@ public final class EmailNotificationPublisherFactory implements NotificationPubl
     }
 
     @Override
-    public void init(ExtensionContext ctx) {
-        configRegistry = ctx.configRegistry();
+    public void init(ServiceRegistry serviceRegistry) {
+        configRegistry = serviceRegistry.require(ConfigRegistry.class);
         localConnectionsAllowed = configRegistry
                 .getDeploymentConfig()
                 .getOptionalValue("allow-local-connections", boolean.class)

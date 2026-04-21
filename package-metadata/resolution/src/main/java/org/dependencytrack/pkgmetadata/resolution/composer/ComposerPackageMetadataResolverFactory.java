@@ -23,9 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.cache.api.Cache;
+import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolverFactory;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.jspecify.annotations.Nullable;
 
 import java.net.http.HttpClient;
@@ -75,11 +76,11 @@ public final class ComposerPackageMetadataResolverFactory implements PackageMeta
     }
 
     @Override
-    public void init(ExtensionContext ctx) {
-        httpClient = ctx.http().client();
+    public void init(ServiceRegistry serviceRegistry) {
+        httpClient = serviceRegistry.require(HttpClient.class);
         objectMapper = new ObjectMapper()
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        cache = ctx.cacheManager().getCache("responses");
+        cache = serviceRegistry.require(CacheManager.class).getCache("responses");
     }
 
     @Override

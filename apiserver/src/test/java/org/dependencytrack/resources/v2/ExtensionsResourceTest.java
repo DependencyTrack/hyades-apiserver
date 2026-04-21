@@ -25,11 +25,14 @@ import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.cache.api.NoopCacheManager;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionPointSpec;
 import org.dependencytrack.plugin.api.ExtensionTestResult;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.ServiceRegistry;
+import org.dependencytrack.plugin.api.Testable;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSchemaSource;
@@ -81,9 +84,8 @@ class ExtensionsResourceTest extends ResourceTest {
                 new SmallRyeConfigBuilder().build(),
                 new NoopCacheManager(),
                 secretManager::getSecretValue,
-                org.dependencytrack.persistence.jdbi.JdbiFactory.createJdbi(),
+                JdbiFactory.createJdbi(),
                 HttpClient.newHttpClient(),
-                "Dependency-Track",
                 List.of(DummyExtensionPoint.class));
     }
 
@@ -109,11 +111,15 @@ class ExtensionsResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "extension_points": [
+                  "items": [
                     {
                       "name": "dummy"
                     }
-                  ]
+                  ],
+                  "total": {
+                    "count": 1,
+                    "type": "EXACT"
+                  }
                 }
                 """);
     }
@@ -133,11 +139,17 @@ class ExtensionsResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "extensions":[
+                  "items":[
                     {
-                      "name": "dummy-extension"
+                      "name": "dummy-extension",
+                      "configurable": true,
+                      "testable": false
                     }
-                  ]
+                  ],
+                  "total": {
+                    "count": 1,
+                    "type": "EXACT"
+                  }
                 }
                 """);
     }
@@ -581,7 +593,7 @@ class ExtensionsResourceTest extends ResourceTest {
             String optionalString) implements RuntimeConfig {
     }
 
-    private static class DummyExtensionFactory implements ExtensionFactory<DummyExtensionPoint> {
+    private static class DummyExtensionFactory implements ExtensionFactory<DummyExtensionPoint>, RuntimeConfigurable {
 
         @Override
         public @NonNull String extensionName() {
@@ -627,7 +639,7 @@ class ExtensionsResourceTest extends ResourceTest {
         }
 
         @Override
-        public void init(@NonNull ExtensionContext ctx) {
+        public void init(ServiceRegistry serviceRegistry) {
         }
 
         @Override
@@ -655,7 +667,7 @@ class ExtensionsResourceTest extends ResourceTest {
         }
 
         @Override
-        public void init(ExtensionContext ctx) {
+        public void init(ServiceRegistry serviceRegistry) {
         }
 
         @Override
@@ -668,7 +680,7 @@ class ExtensionsResourceTest extends ResourceTest {
     private record TestableRuntimeConfig(String outcome) implements RuntimeConfig {
     }
 
-    private static class TestableExtensionFactory implements ExtensionFactory<DummyExtensionPoint> {
+    private static class TestableExtensionFactory implements ExtensionFactory<DummyExtensionPoint>, RuntimeConfigurable, Testable {
 
         @Override
         public @NonNull String extensionName() {
@@ -686,7 +698,7 @@ class ExtensionsResourceTest extends ResourceTest {
         }
 
         @Override
-        public void init(ExtensionContext ctx) {
+        public void init(ServiceRegistry serviceRegistry) {
         }
 
         @Override
@@ -730,7 +742,7 @@ class ExtensionsResourceTest extends ResourceTest {
 
     }
 
-    private static class ExtensionWithValidatorFactory implements ExtensionFactory<DummyExtensionPoint> {
+    private static class ExtensionWithValidatorFactory implements ExtensionFactory<DummyExtensionPoint>, RuntimeConfigurable, Testable {
 
         @Override
         public String extensionName() {
@@ -748,7 +760,7 @@ class ExtensionsResourceTest extends ResourceTest {
         }
 
         @Override
-        public void init(ExtensionContext ctx) {
+        public void init(ServiceRegistry serviceRegistry) {
         }
 
         @Override
@@ -778,6 +790,11 @@ class ExtensionsResourceTest extends ResourceTest {
                             throw new InvalidRuntimeConfigException("Boom!");
                         }
                     });
+        }
+
+        @Override
+        public ExtensionTestResult test(@Nullable RuntimeConfig runtimeConfig) {
+            return ExtensionTestResult.ofChecks("name").pass("name");
         }
 
         @Override

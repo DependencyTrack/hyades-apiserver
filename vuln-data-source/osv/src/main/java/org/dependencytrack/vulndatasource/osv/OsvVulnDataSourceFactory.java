@@ -20,11 +20,12 @@ package org.dependencytrack.vulndatasource.osv;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.RuntimeConfigurable;
+import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.api.VulnDataSourceFactory;
 import org.jspecify.annotations.Nullable;
@@ -36,10 +37,10 @@ import java.util.Set;
 /**
  * @since 5.7.0
  */
-final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
+final class OsvVulnDataSourceFactory implements VulnDataSourceFactory, RuntimeConfigurable {
 
     private ConfigRegistry configRegistry;
-    private ExtensionKVStore kvStore;
+    private KeyValueStore kvStore;
     private ObjectMapper objectMapper;
     private HttpClient httpClient;
 
@@ -59,10 +60,10 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
     }
 
     @Override
-    public void init(ExtensionContext ctx) {
-        this.configRegistry = ctx.configRegistry();
-        this.kvStore = ctx.kvStore();
-        this.httpClient = ctx.http().client();
+    public void init(ServiceRegistry serviceRegistry) {
+        this.configRegistry = serviceRegistry.require(ConfigRegistry.class);
+        this.kvStore = serviceRegistry.require(KeyValueStore.class);
+        this.httpClient = serviceRegistry.require(HttpClient.class);
         this.objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule());
     }

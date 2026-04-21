@@ -83,7 +83,6 @@ class PublishNotificationWorkflowTest extends PersistenceCapableTest {
                 secretName -> null,
                 JdbiFactory.createJdbi(),
                 HttpClient.newHttpClient(),
-                "Dependency-Track",
                 List.of(NotificationPublisher.class));
         pluginManager.loadPlugins(List.of(
                 new DefaultNotificationPublishersPlugin()));

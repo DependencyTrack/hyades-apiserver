@@ -19,7 +19,7 @@
 package org.dependencytrack.vulndatasource.osv;
 
 import org.dependencytrack.plugin.api.storage.CompareAndPutResult;
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,9 +38,9 @@ final class WatermarkStore {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WatermarkStore.class);
 
-    private final ExtensionKVStore kvStore;
+    private final KeyValueStore kvStore;
 
-    WatermarkStore(final ExtensionKVStore kvStore) {
+    WatermarkStore(final KeyValueStore kvStore) {
         this.kvStore = kvStore;
     }
 
@@ -50,15 +50,15 @@ final class WatermarkStore {
                         WatermarkStore::getKey,
                         Function.identity()));
 
-        final Map<String, ExtensionKVStore.Entry> kvEntryByKey = kvStore.getMany(ecosystemByKey.keySet());
+        final Map<String, KeyValueStore.Entry> kvEntryByKey = kvStore.getMany(ecosystemByKey.keySet());
         if (kvEntryByKey.isEmpty()) {
             return Collections.emptyMap();
         }
 
         final var result = new HashMap<String, WatermarkRecord>(kvEntryByKey.size());
-        for (final Map.Entry<String, ExtensionKVStore.Entry> mapEntry : kvEntryByKey.entrySet()) {
+        for (final Map.Entry<String, KeyValueStore.Entry> mapEntry : kvEntryByKey.entrySet()) {
             final String kvKey = mapEntry.getKey();
-            final ExtensionKVStore.Entry kvEntry = mapEntry.getValue();
+            final KeyValueStore.Entry kvEntry = mapEntry.getValue();
             final String ecosystem = ecosystemByKey.get(kvKey);
 
             final Instant watermark;

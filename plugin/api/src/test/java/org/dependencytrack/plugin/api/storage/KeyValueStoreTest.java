@@ -30,7 +30,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-class ExtensionKVStoreTest {
+class KeyValueStoreTest {
 
     @Test
     void putShouldThrowWhenKeyIsNull() {
@@ -74,40 +74,40 @@ class ExtensionKVStoreTest {
         @Test
         void shouldThrowWhenKeyIsNull() {
             assertThatExceptionOfType(NullPointerException.class)
-                    .isThrownBy(() -> new ExtensionKVStore.Entry(null, "value", Instant.now(), Instant.now(), 0))
+                    .isThrownBy(() -> new KeyValueStore.Entry(null, "value", Instant.now(), Instant.now(), 0))
                     .withMessage("key must not be null");
         }
 
         @Test
         void shouldThrowWhenValueIsNull() {
             assertThatExceptionOfType(NullPointerException.class)
-                    .isThrownBy(() -> new ExtensionKVStore.Entry("key", null, Instant.now(), Instant.now(), 0))
+                    .isThrownBy(() -> new KeyValueStore.Entry("key", null, Instant.now(), Instant.now(), 0))
                     .withMessage("value must not be null");
         }
 
         @Test
         void shouldThrowWhenCreatedAtIsNull() {
             assertThatExceptionOfType(NullPointerException.class)
-                    .isThrownBy(() -> new ExtensionKVStore.Entry("key", "value", null, Instant.now(), 0))
+                    .isThrownBy(() -> new KeyValueStore.Entry("key", "value", null, Instant.now(), 0))
                     .withMessage("createdAt must not be null");
         }
 
         @Test
         void shouldNotThrowWhenUpdatedAtIsNull() {
             assertThatNoException()
-                    .isThrownBy(() -> new ExtensionKVStore.Entry("key", "value", Instant.now(), null, 0));
+                    .isThrownBy(() -> new KeyValueStore.Entry("key", "value", Instant.now(), null, 0));
         }
 
         @Test
         void shouldThrowWhenVersionIsNegative() {
             assertThatExceptionOfType(IllegalArgumentException.class)
-                    .isThrownBy(() -> new ExtensionKVStore.Entry("key", "value", Instant.now(), Instant.now(), -1))
+                    .isThrownBy(() -> new KeyValueStore.Entry("key", "value", Instant.now(), Instant.now(), -1))
                     .withMessage("version must not be negative");
         }
 
     }
 
-    private static class DummyKVStore implements ExtensionKVStore {
+    private static class DummyKVStore implements KeyValueStore {
 
         @Override
         public void putMany(final @NonNull Map<String, String> kvPairs) {

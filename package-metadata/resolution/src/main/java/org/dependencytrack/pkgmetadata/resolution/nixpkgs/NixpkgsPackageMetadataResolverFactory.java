@@ -22,10 +22,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.cache.api.Cache;
+import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolverFactory;
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.jspecify.annotations.Nullable;
+
+import java.net.http.HttpClient;
 
 import static com.github.packageurl.PackageURLBuilder.aPackageURL;
 
@@ -70,9 +73,9 @@ public final class NixpkgsPackageMetadataResolverFactory implements PackageMetad
     }
 
     @Override
-    public void init(ExtensionContext ctx) {
-        packageIndex = new NixpkgsPackageIndex(ctx.http().client(), new ObjectMapper().getFactory());
-        cache = ctx.cacheManager().getCache("responses");
+    public void init(ServiceRegistry serviceRegistry) {
+        packageIndex = new NixpkgsPackageIndex(serviceRegistry.require(HttpClient.class), new ObjectMapper().getFactory());
+        cache = serviceRegistry.require(CacheManager.class).getCache("responses");
     }
 
     @Override

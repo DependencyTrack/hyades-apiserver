@@ -19,7 +19,7 @@
 package org.dependencytrack.vulndatasource.github;
 
 import org.dependencytrack.plugin.api.storage.CompareAndPutResult;
-import org.dependencytrack.plugin.api.storage.ExtensionKVStore;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +38,7 @@ final class WatermarkManager {
     private static final Duration MIN_COMMIT_INTERVAL = Duration.ofSeconds(3);
 
     private final Clock clock;
-    private final ExtensionKVStore kvStore;
+    private final KeyValueStore kvStore;
     private Instant committedWatermark;
     private Long committedWatermarkVersion;
     private Instant pendingWatermark;
@@ -46,7 +46,7 @@ final class WatermarkManager {
 
     private WatermarkManager(
             final Clock clock,
-            final ExtensionKVStore kvStore,
+            final KeyValueStore kvStore,
             final Instant committedWatermark,
             final Long committedWatermarkVersion) {
         this.clock = clock;
@@ -57,11 +57,11 @@ final class WatermarkManager {
         this.lastCommittedAt = Instant.now(clock);
     }
 
-    static WatermarkManager create(final Clock clock, final ExtensionKVStore kvStore) {
+    static WatermarkManager create(final Clock clock, final KeyValueStore kvStore) {
         requireNonNull(clock, "clock must not be null");
         requireNonNull(kvStore, "kvStore must not be null");
 
-        final ExtensionKVStore.Entry watermarkEntry = kvStore.get("watermark");
+        final KeyValueStore.Entry watermarkEntry = kvStore.get("watermark");
         if (watermarkEntry != null) {
             try {
                 final Instant committedWatermark = Instant.ofEpochMilli(Long.parseLong(watermarkEntry.value()));

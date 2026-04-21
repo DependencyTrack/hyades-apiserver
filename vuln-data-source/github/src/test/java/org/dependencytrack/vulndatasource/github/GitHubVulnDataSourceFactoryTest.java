@@ -18,14 +18,19 @@
  */
 package org.dependencytrack.vulndatasource.github;
 
-import org.dependencytrack.plugin.api.ExtensionContext;
+import org.dependencytrack.plugin.api.MutableServiceRegistry;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.storage.KeyValueStore;
 import org.dependencytrack.plugin.testing.AbstractExtensionFactoryTest;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
+import org.dependencytrack.plugin.testing.MockKeyValueStore;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.net.http.HttpClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -55,7 +60,11 @@ class GitHubVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonN
 
         final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
 
-        factory.init(new ExtensionContext(configRegistry));
+        factory.init(
+                new MutableServiceRegistry()
+                        .register(ConfigRegistry.class, configRegistry)
+                        .register(HttpClient.class, HttpClient.newHttpClient())
+                        .register(KeyValueStore.class, new MockKeyValueStore()));
         assertThat(factory.isDataSourceEnabled()).isEqualTo(isEnabled);
     }
 
@@ -66,7 +75,11 @@ class GitHubVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonN
 
         final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
 
-        factory.init(new ExtensionContext(configRegistry));
+        factory.init(
+                new MutableServiceRegistry()
+                        .register(ConfigRegistry.class, configRegistry)
+                        .register(HttpClient.class, HttpClient.newHttpClient())
+                        .register(KeyValueStore.class, new MockKeyValueStore()));
 
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(factory::create);
@@ -80,7 +93,11 @@ class GitHubVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonN
 
         final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
 
-        factory.init(new ExtensionContext(configRegistry));
+        factory.init(
+                new MutableServiceRegistry()
+                        .register(ConfigRegistry.class, configRegistry)
+                        .register(HttpClient.class, HttpClient.newHttpClient())
+                        .register(KeyValueStore.class, new MockKeyValueStore()));
 
         final VulnDataSource dataSource = factory.create();
         assertThat(dataSource).isNotNull();
