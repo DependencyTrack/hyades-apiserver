@@ -25,6 +25,8 @@ import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.notification.publishing.DefaultNotificationPublishersPlugin;
 import org.dependencytrack.pkgmetadata.resolution.DefaultPackageMetadataResolutionPlugin;
+import org.dependencytrack.plugin.runtime.ExtensionPointMetadata;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.secret.TestSecretManager;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.vulnanalysis.internal.InternalVulnAnalyzerPlugin;

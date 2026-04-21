@@ -21,7 +21,7 @@ package org.dependencytrack.notification.publishing;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
-import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
+import org.dependencytrack.plugin.config.RuntimeConfigMapper;
 import org.dependencytrack.plugin.testing.AbstractExtensionFactoryTest;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

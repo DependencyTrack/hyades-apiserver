@@ -30,7 +30,7 @@ import org.dependencytrack.notification.publishing.AbstractNotificationPublisher
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
-import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
+import org.dependencytrack.plugin.config.RuntimeConfigMapper;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

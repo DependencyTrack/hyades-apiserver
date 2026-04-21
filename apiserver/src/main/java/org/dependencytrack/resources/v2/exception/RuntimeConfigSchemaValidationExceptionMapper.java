@@ -22,7 +22,7 @@ import com.networknt.schema.ValidationMessage;
 import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.model.JsonSchemaValidationError;
 import org.dependencytrack.api.v2.model.JsonSchemaValidationProblemDetails;
-import org.dependencytrack.plugin.runtime.config.RuntimeConfigSchemaValidationException;
+import org.dependencytrack.plugin.config.RuntimeConfigSchemaValidationException;
 
 import java.util.ArrayList;
 

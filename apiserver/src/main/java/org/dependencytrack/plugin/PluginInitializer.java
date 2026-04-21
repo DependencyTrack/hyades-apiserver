@@ -21,9 +21,12 @@ package org.dependencytrack.plugin;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.cache.api.CacheManager;
-import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
+import org.dependencytrack.common.HttpClient;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
+import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.plugin.api.Plugin;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
@@ -78,6 +81,9 @@ public class PluginInitializer implements ServletContextListener {
                 config,
                 cacheManager,
                 secretManager::getSecretValue,
+                JdbiFactory.createJdbi(),
+                HttpClient.INSTANCE,
+                HttpClient.INSTANCE.userAgent(),
                 extensionPoints);
 
         LOGGER.info("Discovering plugins");

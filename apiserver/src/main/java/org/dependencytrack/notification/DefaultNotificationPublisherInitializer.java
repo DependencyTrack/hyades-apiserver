@@ -24,7 +24,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.notification.api.publishing.NotificationPublisher;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.notification.api.templating.NotificationTemplate;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.jdbi.v3.core.statement.PreparedBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

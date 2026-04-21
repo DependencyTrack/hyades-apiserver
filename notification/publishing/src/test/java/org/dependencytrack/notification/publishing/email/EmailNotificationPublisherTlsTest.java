@@ -28,7 +28,7 @@ import org.dependencytrack.notification.api.templating.NotificationTemplateRende
 import org.dependencytrack.notification.proto.v1.Notification;
 import org.dependencytrack.notification.templating.pebble.PebbleNotificationTemplateRendererFactory;
 import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
+import org.dependencytrack.plugin.config.RuntimeConfigMapper;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

@@ -43,7 +43,7 @@ import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityAliasDao;
 import org.dependencytrack.persistence.jdbi.query.GetProjectAuditChangeNotificationSubjectQuery;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyEvaluator;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyOperation;

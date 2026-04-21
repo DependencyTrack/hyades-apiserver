@@ -23,7 +23,7 @@ import org.dependencytrack.plugin.api.config.DeploymentConfig;
 import org.dependencytrack.plugin.api.config.MutableConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
-import org.dependencytrack.plugin.runtime.config.RuntimeConfigMapper;
+import org.dependencytrack.plugin.config.RuntimeConfigMapper;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Collections;
@@ -87,6 +87,26 @@ public final class MockConfigRegistry implements MutableConfigRegistry {
     @Override
     public Optional<@Nullable RuntimeConfig> getOptionalRuntimeConfig() {
         return Optional.ofNullable(runtimeConfig);
+    }
+
+    @Override
+    public Optional<String> getRawRuntimeConfig() {
+        if (runtimeConfig == null || runtimeConfigMapper == null || runtimeConfigSpec == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of(runtimeConfigMapper.serialize(runtimeConfig));
+    }
+
+    @Override
+    public boolean setRawRuntimeConfig(String configJson) {
+        requireNonNull(runtimeConfigSpec, "runtimeConfigSpec is not initialized");
+        requireNonNull(runtimeConfigMapper, "runtimeConfigMapper is not initialized");
+        requireNonNull(configJson, "configJson must not be null");
+
+        final var configNode = runtimeConfigMapper.validateJson(configJson, runtimeConfigSpec);
+        final RuntimeConfig config = runtimeConfigMapper.convert(configNode, runtimeConfigSpec.configClass());
+        return setRuntimeConfig(config);
     }
 
     @Override

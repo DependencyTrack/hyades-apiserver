@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.plugin.api.config;
 
+import java.util.Optional;
+
 /**
  * A {@link ConfigRegistry} that supports runtime config modification.
  *
@@ -32,5 +34,16 @@ public interface MutableConfigRegistry extends ConfigRegistry {
      * @throws IllegalArgumentException When the given config doesn't match the expected type.
      */
     boolean setRuntimeConfig(RuntimeConfig config);
+
+    /**
+     * @return The raw JSON runtime config, if present.
+     */
+    Optional<String> getRawRuntimeConfig();
+
+    /**
+     * @param configJson The raw JSON config to persist.
+     * @return {@code true} when the config was updated, {@code false} when it wasn't.
+     */
+    boolean setRawRuntimeConfig(String configJson);
 
 }

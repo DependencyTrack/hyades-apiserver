@@ -23,7 +23,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.dex.engine.api.DexEngine;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.runtime.PluginManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Test;

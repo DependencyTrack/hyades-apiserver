@@ -43,7 +43,7 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>plugin-runtime</artifactId>
+            <artifactId>plugin-config</artifactId>
             <version>${project.version}</version>
         </dependency>
 
