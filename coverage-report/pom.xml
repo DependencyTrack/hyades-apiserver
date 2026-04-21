@@ -241,6 +241,12 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>vuln-analyzer-osv</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>vuln-analyzer-snyk</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>

@@ -157,6 +157,11 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>vuln-analyzer-osv</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>vuln-analyzer-snyk</artifactId>
             <version>${project.version}</version>
         </dependency>

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dependencytrack.org/schemas/osv-vuln-analyzer-config-v1.schema.json",
+  "type": "object",
+  "javaInterfaces": [
+    "org.dependencytrack.plugin.api.config.RuntimeConfig"
+  ],
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Enabled",
+      "description": "Whether the OSV vulnerability analyzer should be enabled.",
+      "existingJavaType": "boolean"
+    },
+    "aliasSyncEnabled": {
+      "type": "boolean",
+      "title": "Alias Synchronization Enabled",
+      "description": "Whether to include alias information in vulnerability data.",
+      "existingJavaType": "boolean"
+    },
+    "apiUrl": {
+      "type": "string",
+      "title": "API URL",
+      "description": "URL of OSS Index' REST API.",
+      "format": "uri",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "enabled"
+  ]
+}

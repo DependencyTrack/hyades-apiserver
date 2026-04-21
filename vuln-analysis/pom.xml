@@ -36,6 +36,7 @@
         <module>api</module>
         <module>internal</module>
         <module>oss-index</module>
+        <module>osv</module>
         <module>snyk</module>
         <module>trivy</module>
         <module>vuln-db</module>
