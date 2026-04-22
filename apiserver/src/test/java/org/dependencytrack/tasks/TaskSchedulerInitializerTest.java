@@ -54,7 +54,6 @@ class TaskSchedulerInitializerTest extends PersistenceCapableTest {
         initializer.contextInitialized(new ServletContextEvent(servletContextMock));
 
         assertThat(scheduler.scheduledTaskIds()).containsExactlyInAnyOrder(
-                "CSAF Document Import",
                 "Defect Dojo Upload",
                 "EPSS Mirror",
                 "Expired Session Cleanup",

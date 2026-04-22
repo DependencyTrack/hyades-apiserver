@@ -322,11 +322,6 @@
         </dependency>
 
         <dependency>
-            <groupId>io.csaf</groupId>
-            <artifactId>csaf-retrieval-jvm</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>jakarta.activation</groupId>
             <artifactId>jakarta.activation-api</artifactId>
         </dependency>
