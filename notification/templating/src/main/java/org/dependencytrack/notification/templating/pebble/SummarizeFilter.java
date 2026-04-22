@@ -53,16 +53,12 @@ final class SummarizeFilter implements Filter {
     }
 
     private static String summarize(Project project) {
-        if (!project.getPurl().isBlank()) {
-            return project.getPurl();
-        } else {
-            final var sb = new StringBuilder();
-            sb.append(project.getName());
-            if (!project.getVersion().isBlank()) {
-                sb.append(" : ").append(project.getVersion());
-            }
-            return sb.toString();
+        final var sb = new StringBuilder();
+        sb.append(project.getName());
+        if (!project.getVersion().isBlank()) {
+            sb.append(" : ").append(project.getVersion());
         }
+        return sb.toString();
     }
 
     private static String summarize(Component component) {

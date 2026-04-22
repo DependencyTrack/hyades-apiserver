@@ -141,7 +141,7 @@ class MsTeamsNotificationPublisherTest extends AbstractNotificationPublisherTest
                                 },
                                 {
                                   "name": "Project",
-                                  "value": "pkg:maven/org.acme/projectName@projectVersion"
+                                  "value": "projectName : projectVersion"
                                 },
                                 {
                                   "name": "Project URL",
@@ -246,7 +246,7 @@ class MsTeamsNotificationPublisherTest extends AbstractNotificationPublisherTest
                               "facts": [
                                 {
                                   "name": "Project",
-                                  "value": "pkg:maven/org.acme/projectName@projectVersion"
+                                  "value": "projectName : projectVersion"
                                 },
                                 {
                                   "name": "Component",
