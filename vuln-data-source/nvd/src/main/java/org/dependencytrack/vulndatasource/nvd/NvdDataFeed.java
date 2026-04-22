@@ -23,10 +23,22 @@ package org.dependencytrack.vulndatasource.nvd;
  */
 sealed interface NvdDataFeed {
 
+    String name();
+
     record ModifiedDataFeed() implements NvdDataFeed {
+
+        @Override
+        public String name() {
+            return "modified";
+        }
     }
 
     record YearDataFeed(int year) implements NvdDataFeed {
+
+        @Override
+        public String name() {
+            return String.valueOf(year);
+        }
     }
 
 }
