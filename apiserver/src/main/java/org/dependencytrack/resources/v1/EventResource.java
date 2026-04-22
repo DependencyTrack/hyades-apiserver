@@ -40,7 +40,6 @@ import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
 import org.dependencytrack.dex.engine.api.request.ExistsWorkflowRunRequest;
 import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
 
@@ -48,7 +47,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_BOM_UPLOAD_TOKEN;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing Events
@@ -107,12 +105,7 @@ public class EventResource extends AbstractApiResource {
         } else if (hasNonTerminalDexRun(token)) {
             isProcessing = true;
         } else {
-            // TODO: Remove once clone and policy sync are migrated to dex.
-            isProcessing = withJdbiHandle(
-                    getAlpineRequest(),
-                    handle -> handle
-                            .attach(WorkflowDao.class)
-                            .existsWithNonTerminalStatus(token));
+            isProcessing = false;
         }
 
         final var response = new IsTokenBeingProcessedResponse();

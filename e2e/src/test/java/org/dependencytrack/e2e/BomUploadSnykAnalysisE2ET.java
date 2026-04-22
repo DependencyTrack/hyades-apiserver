@@ -20,10 +20,10 @@ package org.dependencytrack.e2e;
 
 import org.dependencytrack.e2e.api.model.BomUploadRequest;
 import org.dependencytrack.e2e.api.model.EventProcessingResponse;
+import org.dependencytrack.e2e.api.model.EventTokenResponse;
 import org.dependencytrack.e2e.api.model.Finding;
 import org.dependencytrack.e2e.api.model.Project;
 import org.dependencytrack.e2e.api.model.UpdateExtensionConfigRequest;
-import org.dependencytrack.e2e.api.model.WorkflowTokenResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
@@ -86,7 +86,7 @@ class BomUploadSnykAnalysisE2ET extends AbstractE2ET {
         final String bomBase64 = Base64.getEncoder().encodeToString(bomBytes);
 
         // Upload the BOM
-        final WorkflowTokenResponse response = apiClient.uploadBom(new BomUploadRequest("foo", "bar", true, bomBase64));
+        final EventTokenResponse response = apiClient.uploadBom(new BomUploadRequest("foo", "bar", true, bomBase64));
         assertThat(response.token()).isNotEmpty();
 
         // Wait up to 15sec for the BOM processing to complete.

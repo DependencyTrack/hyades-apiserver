@@ -1964,4 +1964,8 @@
              WHERE "SOURCE" = 'CSAF';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-79" author="nscuro">
+        <dropTable tableName="WORKFLOW_STATE"/>
+    </changeSet>
 </databaseChangeLog>

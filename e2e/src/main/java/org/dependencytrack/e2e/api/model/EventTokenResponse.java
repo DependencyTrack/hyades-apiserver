@@ -16,25 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.model;
+package org.dependencytrack.e2e.api.model;
 
-public enum WorkflowStatus {
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-    PENDING(false),
-    TIMED_OUT(false),
-    COMPLETED(true),
-    FAILED(true),
-    CANCELLED(true),
-    NOT_APPLICABLE(true);
-
-    private final boolean terminal;
-
-    WorkflowStatus(final boolean terminal) {
-        this.terminal = terminal;
-    }
-
-    public boolean isTerminal() {
-        return terminal;
-    }
-
+@JsonIgnoreProperties(ignoreUnknown = true)
+public record EventTokenResponse(String token) {
 }

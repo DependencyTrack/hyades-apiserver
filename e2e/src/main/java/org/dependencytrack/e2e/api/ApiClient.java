@@ -35,6 +35,7 @@ import org.dependencytrack.e2e.api.model.CreateNotificationRuleRequest;
 import org.dependencytrack.e2e.api.model.CreateTeamRequest;
 import org.dependencytrack.e2e.api.model.CreateVulnerabilityRequest;
 import org.dependencytrack.e2e.api.model.EventProcessingResponse;
+import org.dependencytrack.e2e.api.model.EventTokenResponse;
 import org.dependencytrack.e2e.api.model.Finding;
 import org.dependencytrack.e2e.api.model.NotificationPublisher;
 import org.dependencytrack.e2e.api.model.NotificationRule;
@@ -45,8 +46,6 @@ import org.dependencytrack.e2e.api.model.UpdateExtensionConfigRequest;
 import org.dependencytrack.e2e.api.model.UpdateNotificationRuleRequest;
 import org.dependencytrack.e2e.api.model.VulnPolicyBundleSyncStatus;
 import org.dependencytrack.e2e.api.model.VulnerabilityPolicy;
-import org.dependencytrack.e2e.api.model.WorkflowState;
-import org.dependencytrack.e2e.api.model.WorkflowTokenResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -96,7 +95,7 @@ public interface ApiClient {
     @Path("/v1/bom")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    WorkflowTokenResponse uploadBom(BomUploadRequest request);
+    EventTokenResponse uploadBom(BomUploadRequest request);
 
     @GET
     @Path("/v1/event/token/{token}")
@@ -173,11 +172,7 @@ public interface ApiClient {
     @Path("/v1/finding/project/{uuid}/analyze")
     @Produces(MediaType.WILDCARD)
     @Consumes(MediaType.APPLICATION_JSON)
-    WorkflowTokenResponse analyzeProject(@PathParam("uuid") UUID projectUuid);
-
-    @GET
-    @Path("/v1/workflow/token/{token}/status")
-    List<WorkflowState> getWorkflowStatus(@PathParam("token") String token);
+    EventTokenResponse analyzeProject(@PathParam("uuid") UUID projectUuid);
 
     @PUT
     @Path("/v2/extension-points/{extensionPoint}/extensions/{extension}/config")
