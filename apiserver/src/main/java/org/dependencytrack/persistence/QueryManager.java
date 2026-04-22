@@ -67,8 +67,6 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerableSoftware;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.proto.v1.Notification;
@@ -122,7 +120,6 @@ public class QueryManager extends AlpineQueryManager {
     private ServiceComponentQueryManager serviceComponentQueryManager;
     private VulnerabilityQueryManager vulnerabilityQueryManager;
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
-    private WorkflowStateQueryManager workflowStateQueryManager;
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
 
@@ -388,13 +385,6 @@ public class QueryManager extends AlpineQueryManager {
             notificationQueryManager = (request == null) ? new NotificationQueryManager(getPersistenceManager()) : new NotificationQueryManager(getPersistenceManager(), request);
         }
         return notificationQueryManager;
-    }
-
-    private WorkflowStateQueryManager getWorkflowStateQueryManager() {
-        if (workflowStateQueryManager == null) {
-            workflowStateQueryManager = (request == null) ? new WorkflowStateQueryManager(getPersistenceManager()) : new WorkflowStateQueryManager(getPersistenceManager(), request);
-        }
-        return workflowStateQueryManager;
     }
 
     /**
@@ -1186,26 +1176,6 @@ public class QueryManager extends AlpineQueryManager {
         } finally {
             query.closeAll();
         }
-    }
-
-    public List<WorkflowState> getAllWorkflowStatesForAToken(UUID token) {
-        return getWorkflowStateQueryManager().getAllWorkflowStatesForAToken(token);
-    }
-
-    public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep workflowStep) {
-        return getWorkflowStateQueryManager().getWorkflowStateByTokenAndStep(token, workflowStep);
-    }
-
-    public WorkflowState updateStartTimeIfWorkflowStateExists(UUID token, WorkflowStep workflowStep) {
-        return getWorkflowStateQueryManager().updateStartTimeIfWorkflowStateExists(token, workflowStep);
-    }
-
-    public void updateWorkflowStateToComplete(WorkflowState workflowState) {
-        getWorkflowStateQueryManager().updateWorkflowStateToComplete(workflowState);
-    }
-
-    public void updateWorkflowStateToFailed(WorkflowState workflowState, String failureReason) {
-        getWorkflowStateQueryManager().updateWorkflowStateToFailed(workflowState, failureReason);
     }
 
     public List<Component> getComponentsByPurl(String purl) {
