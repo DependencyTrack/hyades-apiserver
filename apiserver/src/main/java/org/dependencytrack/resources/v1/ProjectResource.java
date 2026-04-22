@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.event.framework.Event;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.User;
@@ -53,20 +52,18 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectCollectionLogic;
 import org.dependencytrack.model.Tag;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.WorkflowStatus;
-import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
+import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.persistence.jdbi.query.ListProjectsConciseQuery;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
@@ -81,7 +78,6 @@ import javax.jdo.FetchGroup;
 import java.security.Principal;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1012,7 +1008,7 @@ public class ProjectResource extends AbstractApiResource {
                 validator.validateProperty(jsonRequest, "version")
         );
         try (final var qm = new QueryManager()) {
-            final CloneProjectEvent cloneEvent = qm.callInTransaction(() -> {
+            qm.runInTransaction(() -> {
                 final Project sourceProject = qm.getObjectByUuid(Project.class, jsonRequest.getProject(), Project.FetchGroup.ALL.name());
                 if (sourceProject == null) {
                     throw new ClientErrorException(Response
@@ -1036,19 +1032,33 @@ public class ProjectResource extends AbstractApiResource {
                 }
 
                 LOGGER.info("Project " + sourceProject + " is being cloned by " + super.getPrincipal().getName());
-                final var event = new CloneProjectEvent(jsonRequest);
-                final var workflowState = new WorkflowState();
-                workflowState.setStep(WorkflowStep.PROJECT_CLONE);
-                workflowState.setStatus(WorkflowStatus.PENDING);
-                workflowState.setToken(event.getChainIdentifier());
-                workflowState.setUpdatedAt(new Date());
-                qm.persist(workflowState);
-
-                return event;
             });
 
-            Event.dispatch(cloneEvent);
-            return Response.accepted(Map.of("token", cloneEvent.getChainIdentifier())).build();
+            final UUID sourceProjectUuid = UUID.fromString(jsonRequest.getProject());
+            inJdbiTransaction(handle -> {
+                final UUID clonedProjectUuid = handle.attach(ProjectDao.class).cloneProject(
+                        new CloneProjectCommand(
+                                sourceProjectUuid,
+                                jsonRequest.getVersion(),
+                                jsonRequest.makeCloneLatest(),
+                                jsonRequest.includeACL(),
+                                jsonRequest.includeComponents(),
+                                // NB: For legacy reasons, includeAuditHistory implies includeFindings.
+                                /* includeFindings */ jsonRequest.includeAuditHistory(),
+                                /* includeFindingsAuditHistory */ jsonRequest.includeAuditHistory(),
+                                // NB: For legacy reasons, includePolicyViolations implies includePolicyViolationsAuditHistory.
+                                jsonRequest.includePolicyViolations(),
+                                /* includePolicyViolationsAuditHistory */ jsonRequest.includePolicyViolations(),
+                                jsonRequest.includeProperties(),
+                                jsonRequest.includeServices(),
+                                jsonRequest.includeTags()));
+                handle.attach(MetricsDao.class).updateProjectMetrics(clonedProjectUuid);
+                return clonedProjectUuid;
+            });
+
+            // NB: For legacy reasons, we still return an event token.
+            // At the time when clients get this, the clone has already succeeded.
+            return Response.accepted(Map.of("token", UUID.randomUUID())).build();
         }
     }
 
