@@ -18,22 +18,33 @@
  */
 package org.dependencytrack.vulndatasource.nvd;
 
+import org.jspecify.annotations.Nullable;
+
 import java.time.Instant;
+import java.util.Locale;
 
 /**
  * @since 5.7.0
  */
-record NvdDataFeedMetadata(Instant lastModifiedAt) {
+record NvdDataFeedMetadata(Instant lastModifiedAt, @Nullable String sha256) {
 
     static NvdDataFeedMetadata of(final String metadataString) {
-        final Instant lastModifiedAt = metadataString.lines()
-                .filter(line -> line.startsWith("lastModifiedDate:"))
-                .map(line -> line.substring("lastModifiedDate:".length()))
-                .map(Instant::parse)
-                .findAny()
-                .orElseThrow();
+        Instant lastModifiedAt = null;
+        String sha256 = null;
 
-        return new NvdDataFeedMetadata(lastModifiedAt);
+        for (final String line : metadataString.lines().toList()) {
+            if (line.startsWith("lastModifiedDate:")) {
+                lastModifiedAt = Instant.parse(line.substring("lastModifiedDate:".length()));
+            } else if (line.startsWith("sha256:")) {
+                sha256 = line.substring("sha256:".length()).strip().toLowerCase(Locale.ROOT);
+            }
+        }
+
+        if (lastModifiedAt == null) {
+            throw new IllegalArgumentException("Missing lastModifiedDate in metadata");
+        }
+
+        return new NvdDataFeedMetadata(lastModifiedAt, sha256);
     }
 
 }

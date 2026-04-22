@@ -47,6 +47,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -121,9 +126,18 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory, RuntimeCo
             throw new IllegalStateException("Vulnerability data source is disabled and cannot be created");
         }
 
-        final var watermarkManager = WatermarkManager.create(kvStore);
+        final List<NvdDataFeed> feeds = IntStream
+                .range(2002, LocalDate.now().getYear() + 1)
+                .boxed()
+                .sorted(Comparator.reverseOrder())
+                .map(NvdDataFeed.YearDataFeed::new)
+                .collect(Collectors.toList());
+        feeds.add(new NvdDataFeed.ModifiedDataFeed());
 
-        return new NvdVulnDataSource(watermarkManager, objectMapper, httpClient, config.getCveFeedsUrl().toString());
+        final List<String> feedNames = feeds.stream().map(NvdDataFeed::name).toList();
+        final var watermarkManager = WatermarkManager.create(kvStore, feedNames);
+
+        return new NvdVulnDataSource(watermarkManager, objectMapper, httpClient, config.getCveFeedsUrl().toString(), feeds);
     }
 
     @Override
