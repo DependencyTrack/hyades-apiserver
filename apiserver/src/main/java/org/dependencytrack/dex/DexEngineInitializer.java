@@ -29,10 +29,6 @@ import org.dependencytrack.common.HttpClient;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
 import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
-import org.dependencytrack.csaf.DiscoverCsafProvidersActivity;
-import org.dependencytrack.csaf.DiscoverCsafProvidersWorkflow;
-import org.dependencytrack.csaf.ImportCsafDocumentsActivity;
-import org.dependencytrack.csaf.ImportCsafDocumentsWorkflow;
 import org.dependencytrack.dex.activity.DeleteFilesActivity;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.DexEngineConfig;
@@ -64,12 +60,10 @@ import org.dependencytrack.policy.vulnerability.SyncVulnPolicyBundleActivity;
 import org.dependencytrack.policy.vulnerability.SyncVulnPolicyBundleWorkflow;
 import org.dependencytrack.proto.internal.workflow.v1.AnalyzeProjectWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.DeleteFilesArgument;
-import org.dependencytrack.proto.internal.workflow.v1.DiscoverCsafProvidersArg;
 import org.dependencytrack.proto.internal.workflow.v1.EvalProjectPoliciesArg;
 import org.dependencytrack.proto.internal.workflow.v1.FetchPackageMetadataResolutionCandidatesRes;
 import org.dependencytrack.proto.internal.workflow.v1.FetchProjectMetricsUpdateCandidatesRes;
 import org.dependencytrack.proto.internal.workflow.v1.ImportBomArg;
-import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerRes;
 import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
@@ -170,16 +164,6 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
-                new DiscoverCsafProvidersWorkflow(),
-                protoConverter(DiscoverCsafProvidersArg.class),
-                voidConverter(),
-                Duration.ofMinutes(1));
-        engine.registerWorkflow(
-                new ImportCsafDocumentsWorkflow(),
-                protoConverter(ImportCsafDocumentsArg.class),
-                voidConverter(),
-                Duration.ofMinutes(1));
-        engine.registerWorkflow(
                 new ImportBomWorkflow(),
                 protoConverter(ImportBomArg.class),
                 voidConverter(),
@@ -234,11 +218,6 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerActivity(
-                new DiscoverCsafProvidersActivity(),
-                protoConverter(DiscoverCsafProvidersArg.class),
-                voidConverter(),
-                Duration.ofMinutes(5));
-        engine.registerActivity(
                 new EvalProjectPoliciesActivity(new CelPolicyEngine()),
                 protoConverter(EvalProjectPoliciesArg.class),
                 voidConverter(),
@@ -253,11 +232,6 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 protoConverter(FetchProjectMetricsUpdateCandidatesRes.class),
                 Duration.ofMinutes(1));
-        engine.registerActivity(
-                new ImportCsafDocumentsActivity(),
-                protoConverter(ImportCsafDocumentsArg.class),
-                voidConverter(),
-                Duration.ofMinutes(5));
         engine.registerActivity(
                 new InvokeVulnAnalyzerActivity(fileStorage, pluginManager),
                 protoConverter(InvokeVulnAnalyzerArg.class),

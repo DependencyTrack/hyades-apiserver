@@ -1945,4 +1945,23 @@
             <column name="FILTER_EXPRESSION" type="TEXT"/>
         </addColumn>
     </changeSet>
+
+    <changeSet id="v5.7.0-77" author="nscuro">
+        <dropTable tableName="ADVISORIES_VULNERABILITIES"/>
+        <dropTable tableName="ADVISORY"/>
+        <dropTable tableName="CSAF_PROVIDER"/>
+        <dropTable tableName="CSAF_AGGREGATOR"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-78" author="nscuro">
+        <sql splitStatements="true">
+            DELETE
+              FROM "VULNERABILITY_ALIAS_ASSERTION"
+             WHERE "VULN_SOURCE" = 'CSAF';
+
+            DELETE
+              FROM "VULNERABILITY_ALIAS"
+             WHERE "SOURCE" = 'CSAF';
+        </sql>
+    </changeSet>
 </databaseChangeLog>

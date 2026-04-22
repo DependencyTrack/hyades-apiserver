@@ -25,10 +25,6 @@ import alpine.server.tasks.LdapSyncTask;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.common.HttpClient;
-import org.dependencytrack.common.pagination.PageIterator;
-import org.dependencytrack.csaf.CsafProviderDao;
-import org.dependencytrack.csaf.ImportCsafDocumentsWorkflow;
-import org.dependencytrack.csaf.ListCsafProvidersQuery;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.event.DefectDojoUploadEventAbstract;
@@ -53,7 +49,6 @@ import org.dependencytrack.pkgmetadata.ResolvePackageMetadataWorkflow;
 import org.dependencytrack.plugin.runtime.NoSuchExtensionException;
 import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.policy.vulnerability.SyncVulnPolicyBundleWorkflow;
-import org.dependencytrack.proto.internal.workflow.v1.ImportCsafDocumentsArg;
 import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
 import org.dependencytrack.proto.internal.workflow.v1.ProcessScheduledNotificationsWorkflowArg;
 import org.dependencytrack.proto.internal.workflow.v1.SyncVulnPolicyBundleArg;
@@ -70,7 +65,6 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
@@ -122,24 +116,6 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         "Package Metadata Maintenance",
                         getCronScheduleForTask(PackageMetadataMaintenanceTask.class),
                         () -> Event.dispatch(new PackageMetadataMaintenanceEvent()))
-                .schedule(
-                        "CSAF Document Import",
-                        getCronScheduleFromConfig(config, "dt.task.csaf.document.import.cron"),
-                        () -> {
-                            final List<? extends CreateWorkflowRunRequest<?>> requests =
-                                    withJdbiHandle(handle -> PageIterator.stream(
-                                                    pageToken -> handle.attach(CsafProviderDao.class).list(
-                                                            new ListCsafProvidersQuery()
-                                                                    .withEnabled(true)
-                                                                    .withPageToken(pageToken)))
-                                            .map(provider -> new CreateWorkflowRunRequest<>(ImportCsafDocumentsWorkflow.class)
-                                                    .withWorkflowInstanceId("import-csaf-documents:" + provider.getId())
-                                                    .withArgument(ImportCsafDocumentsArg.newBuilder()
-                                                            .setProviderId(provider.getId().toString())
-                                                            .build()))
-                                            .toList());
-                            dexEngine.createRuns(requests);
-                        })
                 .schedule(
                         "Defect Dojo Upload",
                         getCronScheduleForTask(DefectDojoUploadTask.class),

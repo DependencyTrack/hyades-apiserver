@@ -79,8 +79,6 @@ security:
 servers:
 - url: /api/v2
 tags:
-- name: Advisories
-  description: Endpoints related to advisories
 - name: Components
   description: Endpoints related to components
 - name: Extensions
@@ -97,24 +95,8 @@ tags:
   description: Endpoints related to workflows
 
 paths:
-  /advisories:
-    $ref: "./paths/advisories.yaml"
-  /advisories/{id}:
-    $ref: "./paths/advisories__id_.yaml"
-  /advisories/{id}/mark-seen:
-    $ref: "./paths/advisories__id__mark-seen.yaml"
   /components:
     $ref: "./paths/components.yaml"
-  /csaf-aggregators:
-    $ref: "./paths/csaf/aggregators.yaml"
-  /csaf-aggregators/{id}:
-    $ref: "./paths/csaf/aggregators__id_.yaml"
-  /csaf-aggregators/{id}/provider-discovery:
-    $ref: "./paths/csaf/aggregators__id__provider-discovery.yaml"
-  /csaf-providers:
-    $ref: "./paths/csaf/providers.yaml"
-  /csaf-providers/{id}:
-    $ref: "./paths/csaf/providers__id_.yaml"
   /extension-points:
     $ref: "./paths/extension-points.yaml"
   /extension-points/{extensionPointName}/extensions:
@@ -125,10 +107,6 @@ paths:
     $ref: "./paths/extension-points__name__extensions__name__config-schema.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/test:
     $ref: "./paths/extension-points__name__extensions__name__test.yaml"
-  /projects/{uuid}/advisories:
-    $ref: "./paths/projects__uuid__advisories.yaml"
-  /projects/{uuid}/advisories/{advisoryId}/findings:
-    $ref: "./paths/projects__uuid__advisories__advisoryId__findings.yaml"
   /projects/{uuid}/clone:
     $ref: "./paths/projects__uuid__clone.yaml"
   /projects/{uuid}/components:
