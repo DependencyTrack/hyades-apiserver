@@ -20,9 +20,9 @@ package org.dependencytrack.policy.cel.persistence;
 
 import alpine.model.IConfigProperty.PropertyType;
 import com.github.packageurl.PackageURL;
-import com.google.api.expr.v1alpha1.Type;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.util.JsonFormat;
+import dev.cel.common.types.CelType;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.dependencytrack.PersistenceCapableTest;
@@ -53,14 +53,14 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE_GROUP;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_METADATA;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_PROPERTY;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY_ALIAS;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_LICENSE;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_LICENSE_GROUP;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_PROJECT;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_PROJECT_METADATA;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_PROJECT_PROPERTY;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_VULNERABILITY;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_VULNERABILITY_ALIAS;
 import static org.hamcrest.Matchers.equalTo;
 
 public class CelPolicyDaoTest extends PersistenceCapableTest {
@@ -91,7 +91,7 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
         bom.setImported(new Date());
         qm.persist(bom);
 
-        final var requirements = new HashSetValuedHashMap<Type, String>();
+        final var requirements = new HashSetValuedHashMap<CelType, String>();
         requirements.putAll(TYPE_PROJECT, org.dependencytrack.proto.policy.v1.Project.getDescriptor().getFields().stream()
                 .map(Descriptors.FieldDescriptor::getName)
                 .toList());
@@ -205,7 +205,7 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
                         Instant.now()))));
 
 
-        final var requirements = new HashSetValuedHashMap<Type, String>();
+        final var requirements = new HashSetValuedHashMap<CelType, String>();
         requirements.putAll(TYPE_COMPONENT, org.dependencytrack.proto.policy.v1.Component.getDescriptor().getFields().stream()
                 .map(Descriptors.FieldDescriptor::getName)
                 .toList());
@@ -289,7 +289,7 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
         epss.setPercentile(BigDecimal.valueOf(0.2));
         qm.persist(epss);
 
-        final var requirements = new HashSetValuedHashMap<Type, String>();
+        final var requirements = new HashSetValuedHashMap<CelType, String>();
         requirements.putAll(TYPE_VULNERABILITY, org.dependencytrack.proto.policy.v1.Vulnerability.getDescriptor().getFields().stream()
                 .map(Descriptors.FieldDescriptor::getName)
                 .toList());

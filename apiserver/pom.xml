@@ -266,8 +266,12 @@
         </dependency>
         <!-- Common Expression Language (CEL) -->
         <dependency>
-            <groupId>org.projectnessie.cel</groupId>
-            <artifactId>cel-tools</artifactId>
+            <groupId>dev.cel</groupId>
+            <artifactId>cel</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.cel</groupId>
+            <artifactId>extensions</artifactId>
         </dependency>
         <!-- CVSS Calculator -->
         <dependency>

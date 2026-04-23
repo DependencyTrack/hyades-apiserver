@@ -19,6 +19,8 @@
 package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
+import dev.cel.common.CelIssue;
+import dev.cel.common.CelValidationException;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
@@ -58,8 +60,8 @@ import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao.ListVulnPolic
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao.VulnPolicyBundleRow;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao.VulnPolicyDetailRow;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao.VulnPolicyIdentityRow;
-import org.dependencytrack.policy.cel.CelPolicyScriptHost;
-import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
+import org.dependencytrack.policy.cel.CelPolicyCompiler;
+import org.dependencytrack.policy.cel.CelPolicyCompiler.CacheMode;
 import org.dependencytrack.policy.cel.CelPolicyType;
 import org.dependencytrack.policy.vulnerability.SyncVulnPolicyBundleWorkflow;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
@@ -70,8 +72,6 @@ import org.dependencytrack.proto.internal.workflow.v1.SyncVulnPolicyBundleArg;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v2.exception.ProblemDetailsException;
 import org.owasp.security.logging.SecurityMarkers;
-import org.projectnessie.cel.common.CELError;
-import org.projectnessie.cel.tools.ScriptCreateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -406,16 +406,16 @@ public final class VulnPoliciesResource extends AbstractApiResource implements V
     }
 
     private static void validateCelCondition(String condition) {
-        final var scriptHost = CelPolicyScriptHost.getInstance(CelPolicyType.VULNERABILITY);
+        final var policyCompiler = CelPolicyCompiler.getInstance(CelPolicyType.VULNERABILITY);
         try {
-            scriptHost.compile(condition, CacheMode.NO_CACHE);
-        } catch (ScriptCreateException e) {
+            policyCompiler.compile(condition, CacheMode.NO_CACHE);
+        } catch (CelValidationException e) {
             final var errors = new ArrayList<VulnPolicyConditionError>();
-            for (final CELError error : e.getIssues().getErrors()) {
+            for (final CelIssue issue : e.getErrors()) {
                 errors.add(VulnPolicyConditionError.builder()
-                        .line(error.getLocation().line())
-                        .column(error.getLocation().column())
-                        .message(error.getMessage())
+                        .line(issue.getSourceLocation().getLine())
+                        .column(issue.getSourceLocation().getColumn())
+                        .message(issue.getMessage())
                         .build());
             }
 

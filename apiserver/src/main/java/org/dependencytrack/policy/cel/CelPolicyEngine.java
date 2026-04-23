@@ -18,9 +18,11 @@
  */
 package org.dependencytrack.policy.cel;
 
-import com.google.api.expr.v1alpha1.Type;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
+import dev.cel.common.CelValidationException;
+import dev.cel.common.types.CelType;
+import dev.cel.runtime.CelEvaluationException;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
@@ -31,7 +33,7 @@ import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.notification.JdbiNotificationEmitter;
 import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
-import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
+import org.dependencytrack.policy.cel.CelPolicyCompiler.CacheMode;
 import org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.ComponentAgeCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.ComponentHashCelPolicyScriptSourceBuilder;
@@ -53,8 +55,6 @@ import org.dependencytrack.proto.policy.v1.Component;
 import org.dependencytrack.proto.policy.v1.License;
 import org.dependencytrack.proto.policy.v1.Project;
 import org.dependencytrack.proto.policy.v1.Vulnerability;
-import org.projectnessie.cel.tools.ScriptCreateException;
-import org.projectnessie.cel.tools.ScriptException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,14 +74,14 @@ import static org.dependencytrack.notification.api.NotificationFactory.createPol
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT_PROPERTY;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_LICENSE_GROUP;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_COMPONENT_PROPERTY;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_LICENSE;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_LICENSE_GROUP;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_PROJECT;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_VULNERABILITY;
 
-public class CelPolicyEngine {
+public final class CelPolicyEngine {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CelPolicyEngine.class);
     private static final Map<Subject, CelPolicyScriptSourceBuilder> SCRIPT_BUILDERS;
@@ -105,13 +105,13 @@ public class CelPolicyEngine {
         SCRIPT_BUILDERS.put(Subject.EPSS, new EpssCelPolicyScriptSourceBuilder());
     }
 
-    private final CelPolicyScriptHost scriptHost;
+    private final CelPolicyCompiler scriptHost;
 
     public CelPolicyEngine() {
-        this(CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT));
+        this(CelPolicyCompiler.getInstance(CelPolicyType.COMPONENT));
     }
 
-    CelPolicyEngine(final CelPolicyScriptHost scriptHost) {
+    CelPolicyEngine(final CelPolicyCompiler scriptHost) {
         this.scriptHost = scriptHost;
     }
 
@@ -149,7 +149,7 @@ public class CelPolicyEngine {
             return;
         }
 
-        final MultiValuedMap<Type, String> requirements = determineScriptRequirements(policiesWithScripts);
+        final MultiValuedMap<CelType, String> requirements = determineScriptRequirements(policiesWithScripts);
         final long conditionCount = policiesWithScripts.stream().mapToLong(pws -> pws.conditionScripts().size()).sum();
         LOGGER.debug("Requirements for {} policy conditions: {}", conditionCount, requirements);
 
@@ -285,7 +285,7 @@ public class CelPolicyEngine {
         }
     }
 
-    record ConditionScript(PolicyCondition condition, CelPolicyScript script) {
+    record ConditionScript(PolicyCondition condition, CelPolicyProgram script) {
     }
 
     record PolicyWithScripts(Policy policy, List<ConditionScript> conditionScripts) {
@@ -297,7 +297,7 @@ public class CelPolicyEngine {
             final var conditionScripts = new ArrayList<ConditionScript>();
 
             for (final PolicyCondition condition : policy.getPolicyConditions()) {
-                final CelPolicyScript script = compileCondition(condition);
+                final CelPolicyProgram script = compileCondition(condition);
                 if (script != null) {
                     conditionScripts.add(new ConditionScript(condition, script));
                 }
@@ -311,9 +311,9 @@ public class CelPolicyEngine {
         return result;
     }
 
-    private MultiValuedMap<Type, String> determineScriptRequirements(
+    private MultiValuedMap<CelType, String> determineScriptRequirements(
             Collection<PolicyWithScripts> policiesWithScripts) {
-        final var requirements = new HashSetValuedHashMap<Type, String>();
+        final var requirements = new HashSetValuedHashMap<CelType, String>();
 
         for (final PolicyWithScripts policyWithScripts : policiesWithScripts) {
             for (final ConditionScript conditionScript : policyWithScripts.conditionScripts()) {
@@ -324,7 +324,7 @@ public class CelPolicyEngine {
         return requirements;
     }
 
-    private CelPolicyScript compileCondition(PolicyCondition policyCondition) {
+    private CelPolicyProgram compileCondition(PolicyCondition policyCondition) {
         final CelPolicyScriptSourceBuilder scriptBuilder = SCRIPT_BUILDERS.get(policyCondition.getSubject());
         if (scriptBuilder == null) {
             LOGGER.warn("""
@@ -343,7 +343,7 @@ public class CelPolicyEngine {
 
         try {
             return scriptHost.compile(scriptSrc, CacheMode.CACHE);
-        } catch (ScriptCreateException e) {
+        } catch (CelValidationException e) {
             LOGGER.warn(
                     "Failed to compile script for condition {}; Condition will be skipped",
                     policyCondition.getUuid(), e);
@@ -365,7 +365,7 @@ public class CelPolicyEngine {
                     if (cs.script().execute(scriptArgs)) {
                         violatedConditions.add(cs.condition());
                     }
-                } catch (ScriptException e) {
+                } catch (CelEvaluationException e) {
                     LOGGER.warn("Failed to execute script for condition {}", cs.condition().getUuid(), e);
                 }
             }

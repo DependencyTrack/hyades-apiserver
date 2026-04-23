@@ -19,6 +19,8 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.server.auth.PermissionRequired;
+import dev.cel.common.CelIssue;
+import dev.cel.common.CelValidationException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -46,13 +48,11 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.policy.cel.CelPolicyScriptHost;
-import org.dependencytrack.policy.cel.CelPolicyScriptHost.CacheMode;
+import org.dependencytrack.policy.cel.CelPolicyCompiler;
+import org.dependencytrack.policy.cel.CelPolicyCompiler.CacheMode;
 import org.dependencytrack.policy.cel.CelPolicyType;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.vo.CelExpressionError;
-import org.projectnessie.cel.common.CELError;
-import org.projectnessie.cel.tools.ScriptCreateException;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -202,11 +202,14 @@ public class PolicyConditionResource extends AbstractApiResource {
         }
 
         try {
-            CelPolicyScriptHost.getInstance(CelPolicyType.COMPONENT).compile(policyCondition.getValue(), CacheMode.NO_CACHE);
-        } catch (ScriptCreateException e) {
+            CelPolicyCompiler.getInstance(CelPolicyType.COMPONENT).compile(policyCondition.getValue(), CacheMode.NO_CACHE);
+        } catch (CelValidationException e) {
             final var celErrors = new ArrayList<CelExpressionError>();
-            for (final CELError error : e.getIssues().getErrors()) {
-                celErrors.add(new CelExpressionError(error.getLocation().line(), error.getLocation().column(), error.getMessage()));
+            for (final CelIssue issue : e.getErrors()) {
+                celErrors.add(new CelExpressionError(
+                        issue.getSourceLocation().getLine(),
+                        issue.getSourceLocation().getColumn(),
+                        issue.getMessage()));
             }
 
             throw new BadRequestException(Response.status(Response.Status.BAD_REQUEST).entity(Map.of("celErrors", celErrors)).build());
