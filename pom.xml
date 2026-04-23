@@ -142,7 +142,7 @@
         <lib.mockito.version>5.23.0</lib.mockito.version>
         <lib.okhttp.version>5.3.2</lib.okhttp.version>
         <lib.open-feign.version>13.11</lib.open-feign.version>
-        <lib.open-vulnerability-clients.version>9.0.4</lib.open-vulnerability-clients.version>
+        <lib.open-vulnerability-clients.version>9.0.5</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.pebble.version>4.1.1</lib.pebble.version>
         <lib.postgresql.version>42.7.10</lib.postgresql.version>
