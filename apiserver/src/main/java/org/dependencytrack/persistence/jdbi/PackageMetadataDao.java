@@ -45,6 +45,7 @@ public final class PackageMetadataDao {
                 .createQuery(/* language=SQL */ """
                         SELECT "PURL"
                              , "LATEST_VERSION"
+                             , "LATEST_VERSION_PUBLISHED_AT"
                              , "RESOLVED_AT"
                              , "RESOLVED_FROM"
                              , "RESOLVED_BY"
@@ -66,6 +67,7 @@ public final class PackageMetadataDao {
                 .createQuery(/* language=SQL */ """
                         SELECT "PURL"
                              , "LATEST_VERSION"
+                             , "LATEST_VERSION_PUBLISHED_AT"
                              , "RESOLVED_AT"
                              , "RESOLVED_FROM"
                              , "RESOLVED_BY"
@@ -84,6 +86,7 @@ public final class PackageMetadataDao {
 
         final var purls = new String[metadata.size()];
         final var latestVersions = new String[metadata.size()];
+        final var latestVersionPublishedAts = new Timestamp[metadata.size()];
         final var resolvedAts = new Timestamp[metadata.size()];
         final var resolvedFroms = new String[metadata.size()];
         final var resolvedBys = new String[metadata.size()];
@@ -92,6 +95,7 @@ public final class PackageMetadataDao {
         for (final PackageMetadata pm : metadata) {
             purls[i] = pm.purl().canonicalize();
             latestVersions[i] = pm.latestVersion();
+            latestVersionPublishedAts[i] = Timestamp.from(pm.latestVersionPublishedAt());
             resolvedAts[i] = Timestamp.from(pm.resolvedAt());
             resolvedFroms[i] = pm.resolvedFrom();
             resolvedBys[i] = pm.resolvedBy();
@@ -103,6 +107,7 @@ public final class PackageMetadataDao {
                         INSERT INTO "PACKAGE_METADATA" AS pm (
                           "PURL"
                         , "LATEST_VERSION"
+                        , "LATEST_VERSION_PUBLISHED_AT"
                         , "RESOLVED_AT"
                         , "RESOLVED_FROM"
                         , "RESOLVED_BY"
@@ -111,6 +116,7 @@ public final class PackageMetadataDao {
                           FROM UNNEST(
                             :purls
                           , :latestVersions
+                          , :latestVersionPublishedAts
                           , :resolvedAts
                           , :resolvedFroms
                           , :resolvedBys
@@ -118,6 +124,7 @@ public final class PackageMetadataDao {
                          ORDER BY 1
                         ON CONFLICT ("PURL") DO UPDATE
                         SET "LATEST_VERSION" = COALESCE(EXCLUDED."LATEST_VERSION", pm."LATEST_VERSION")
+                           , "LATEST_VERSION_PUBLISHED_AT" = COALESCE(EXCLUDED."LATEST_VERSION_PUBLISHED_AT", pm."LATEST_VERSION_PUBLISHED_AT")
                            , "RESOLVED_AT" = EXCLUDED."RESOLVED_AT"
                            , "RESOLVED_FROM" = COALESCE(EXCLUDED."RESOLVED_FROM", pm."RESOLVED_FROM")
                            , "RESOLVED_BY" = COALESCE(EXCLUDED."RESOLVED_BY", pm."RESOLVED_BY")
@@ -125,6 +132,7 @@ public final class PackageMetadataDao {
                         """)
                 .bind("purls", purls)
                 .bind("latestVersions", latestVersions)
+                .bind("latestVersionPublishedAts", latestVersionPublishedAts)
                 .bind("resolvedAts", resolvedAts)
                 .bind("resolvedFroms", resolvedFroms)
                 .bind("resolvedBys", resolvedBys)

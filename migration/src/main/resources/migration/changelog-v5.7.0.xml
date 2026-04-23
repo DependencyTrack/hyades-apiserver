@@ -1945,4 +1945,10 @@
             <column name="FILTER_EXPRESSION" type="TEXT"/>
         </addColumn>
     </changeSet>
+
+    <changeSet id="v5.7.0-77" author="sahibamittal">
+        <addColumn tableName="PACKAGE_METADATA">
+            <column name="LATEST_VERSION_PUBLISHED_AT" type="TIMESTAMPTZ(3)"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
