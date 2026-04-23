@@ -53,7 +53,7 @@ import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.NotificationTriggerType;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.notification.NotificationFilterScriptHost;
+import org.dependencytrack.notification.NotificationFilterExpressionEnv;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.api.publishing.NotificationPublisherFactory;
 import org.dependencytrack.persistence.QueryManager;
@@ -285,7 +285,7 @@ public class NotificationRuleResource extends AbstractApiResource {
     })
     public Response updateNotificationRule(@Valid UpdateNotificationRuleRequest request) {
         if (request.filterExpression() != null && !request.filterExpression().isBlank()) {
-            NotificationFilterScriptHost.getInstance().compile(request.filterExpression());
+            NotificationFilterExpressionEnv.getInstance().compile(request.filterExpression());
         }
 
         final NotificationRule updatedRule;

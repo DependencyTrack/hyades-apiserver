@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.notification;
 
+import dev.cel.runtime.CelRuntime;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -41,7 +42,6 @@ import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.jspecify.annotations.Nullable;
-import org.projectnessie.cel.Program;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -341,14 +341,14 @@ final class NotificationRouter {
             return true;
         }
 
-        final var scriptHost = NotificationFilterScriptHost.getInstance();
+        final var expressionEnv = NotificationFilterExpressionEnv.getInstance();
 
         try {
-            final Program program = scriptHost.compile(rule.filterExpression());
-            final boolean result = scriptHost.evaluate(program, notification, subject);
+            final CelRuntime.Program program = expressionEnv.compile(rule.filterExpression());
+            final boolean result = expressionEnv.evaluate(program, notification, subject);
             LOGGER.debug("Filter expression evaluated to {}", result);
             return result;
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             LOGGER.warn("Failed to evaluate filter expression for rule {}; Failing open", rule.name(), e);
             return true;
         }

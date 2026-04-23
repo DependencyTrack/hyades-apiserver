@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.notification;
 
-import org.projectnessie.cel.common.CELError;
+import dev.cel.common.CelIssue;
 
 import java.util.List;
 
@@ -32,11 +32,19 @@ public final class InvalidNotificationFilterExpressionException extends RuntimeE
 
     private final List<Error> errors;
 
-    public InvalidNotificationFilterExpressionException(String message, List<CELError> celErrors) {
+    public InvalidNotificationFilterExpressionException(String message, List<CelIssue> celIssues) {
         super(message);
-        this.errors = celErrors.stream()
-                .map(e -> new Error(e.getLocation().line(), e.getLocation().column(), e.getMessage()))
+        this.errors = celIssues.stream()
+                .map(e -> new Error(
+                        e.getSourceLocation().getLine(),
+                        e.getSourceLocation().getColumn(),
+                        e.getMessage()))
                 .toList();
+    }
+
+    public InvalidNotificationFilterExpressionException(String message, String errorDetail) {
+        super(message);
+        this.errors = List.of(new Error(0, 0, errorDetail));
     }
 
     public List<Error> getErrors() {
