@@ -19,11 +19,13 @@
 package org.dependencytrack.pkgmetadata.resolution.cargo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
 record CargoCrateMetadata(
         Instant resolvedAt,
-        String latestVersion) {
+        String latestVersion,
+        @Nullable Instant latestVersionPublishedAt) {
 }

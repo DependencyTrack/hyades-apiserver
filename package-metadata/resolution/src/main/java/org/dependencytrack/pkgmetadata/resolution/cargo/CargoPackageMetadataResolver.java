@@ -100,10 +100,9 @@ final class CargoPackageMetadataResolver implements PackageMetadataResolver {
         }
 
         final var resolvedAt = Instant.now();
-        final var crateMetadata = new CargoCrateMetadata(resolvedAt, latestVersion);
+        Instant latestVersionPublishedAt = null;
         final var entriesToCache = new HashMap<String, byte[]>(
                 1 + (crateDoc.versions() != null ? crateDoc.versions().size() : 0));
-        entriesToCache.put(crateMetadataCacheKey, serialize(crateMetadata));
 
         CargoCrateVersionMetadata requestedVersionMetadata = null;
         if (crateDoc.versions() != null) {
@@ -122,8 +121,14 @@ final class CargoPackageMetadataResolver implements PackageMetadataResolver {
                 if (crateVersion.num().equals(purl.getVersion())) {
                     requestedVersionMetadata = versionMetadata;
                 }
+                if (crateVersion.num().equals(latestVersion)) {
+                    latestVersionPublishedAt = versionMetadata.publishedAt();
+                }
             }
         }
+
+        final var crateMetadata = new CargoCrateMetadata(resolvedAt, latestVersion, latestVersionPublishedAt);
+        entriesToCache.put(crateMetadataCacheKey, serialize(crateMetadata));
 
         cache.putMany(entriesToCache);
 
@@ -191,6 +196,7 @@ final class CargoPackageMetadataResolver implements PackageMetadataResolver {
 
         return new PackageMetadata(
                 crateMetadata.latestVersion(),
+                crateMetadata.latestVersionPublishedAt(),
                 crateMetadata.resolvedAt(),
                 artifactMetadata);
     }
