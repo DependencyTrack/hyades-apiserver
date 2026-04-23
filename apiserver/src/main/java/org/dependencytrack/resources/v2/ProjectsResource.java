@@ -28,27 +28,20 @@ import org.dependencytrack.api.v2.ProjectsApi;
 import org.dependencytrack.api.v2.model.CloneProjectInclude;
 import org.dependencytrack.api.v2.model.CloneProjectRequest;
 import org.dependencytrack.api.v2.model.CloneProjectResponse;
-import org.dependencytrack.api.v2.model.ListProjectAdvisoriesResponse;
-import org.dependencytrack.api.v2.model.ListProjectAdvisoriesResponseItem;
-import org.dependencytrack.api.v2.model.ListProjectAdvisoryFindingsResponseItem;
 import org.dependencytrack.api.v2.model.ListProjectComponentsResponse;
 import org.dependencytrack.api.v2.model.ListProjectComponentsResponseItem;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.persistence.jdbi.AdvisoryDao;
-import org.dependencytrack.persistence.jdbi.AdvisoryDao.ListProjectAdvisoriesRow;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
-import org.dependencytrack.persistence.jdbi.query.ListAdvisoriesForProjectQuery;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
@@ -146,78 +139,6 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
                         .uuid(clonedProjectUuid)
                         .build())
                 .build();
-    }
-
-    @Override
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
-    public Response listAdvisoriesForProject(UUID uuid, String pageToken, Integer limit) {
-        final Page<ListProjectAdvisoriesRow> projectAdvisories =
-                inJdbiTransaction(getAlpineRequest(), handle -> {
-                    requireProjectAccess(handle, uuid);
-
-                    final long projectId = handle.attach(ProjectDao.class).getProjectId(uuid);
-
-                    return handle.attach(AdvisoryDao.class).listForProject(
-                            new ListAdvisoriesForProjectQuery(projectId)
-                                    .withPageToken(pageToken)
-                                    .withLimit(limit));
-                });
-
-        final var responseItems = projectAdvisories.items().stream()
-                .<ListProjectAdvisoriesResponseItem>map(
-                        advisory -> ListProjectAdvisoriesResponseItem.builder()
-                                .id(advisory.id())
-                                .publisher(advisory.publisher())
-                                .name(advisory.name())
-                                .version(advisory.version())
-                                .url(advisory.url())
-                                .title(advisory.title())
-                                .format(advisory.format())
-                                .seenAt(advisory.seenAt() != null
-                                        ? advisory.seenAt().toEpochMilli()
-                                        : null)
-                                .lastFetched(advisory.lastFetched() != null
-                                        ? advisory.lastFetched().toEpochMilli()
-                                        : null)
-                                .findingsCount(advisory.findingsCount())
-                                .build())
-                .toList();
-
-        final var response = ListProjectAdvisoriesResponse.builder()
-                .items(responseItems)
-                .nextPageToken(projectAdvisories.nextPageToken())
-                .total(convertTotalCount(projectAdvisories.totalCount()))
-                .build();
-
-        return Response.ok(response).build();
-    }
-
-    @Override
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
-    public Response getFindingsByProjectAdvisory(UUID uuid, UUID advisoryId) {
-        return inJdbiTransaction(getAlpineRequest(), handle -> {
-            requireProjectAccess(handle, uuid);
-
-            final long projectId = handle.attach(ProjectDao.class).getProjectId(uuid);
-
-            List<AdvisoryDao.ProjectAdvisoryFindingRow> advisoryRows = handle.attach(AdvisoryDao.class)
-                    .getFindingsByProjectAdvisory(projectId, advisoryId);
-            final long totalCount = advisoryRows.size();
-
-            final List<ListProjectAdvisoryFindingsResponseItem> responseItems = advisoryRows.stream()
-                    .<ListProjectAdvisoryFindingsResponseItem>map(
-                            row -> ListProjectAdvisoryFindingsResponseItem.builder()
-                                    .name(row.name())
-                                    .confidence((int) row.confidence())
-                                    .desc(row.desc())
-                                    .group(row.group())
-                                    .version(row.version())
-                                    .componentUuid(UUID.fromString(row.componentUuid()))
-                                    .build())
-                    .toList();
-
-            return Response.ok(responseItems).header(TOTAL_COUNT_HEADER, totalCount).build();
-        });
     }
 
 }

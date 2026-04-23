@@ -18,35 +18,85 @@
  */
 package org.dependencytrack.policy.cel;
 
-import org.projectnessie.cel.EnvOption;
-import org.projectnessie.cel.Library;
-import org.projectnessie.cel.extension.StringsLib;
-
-import java.util.List;
+import com.google.protobuf.Descriptors.Descriptor;
+import dev.cel.common.CelVarDecl;
+import dev.cel.compiler.CelCompiler;
+import dev.cel.compiler.CelCompilerFactory;
+import dev.cel.extensions.CelExtensions;
+import dev.cel.parser.CelStandardMacro;
+import dev.cel.runtime.CelRuntime;
+import dev.cel.runtime.CelRuntimeFactory;
+import org.dependencytrack.proto.policy.v1.Component;
+import org.dependencytrack.proto.policy.v1.License;
+import org.dependencytrack.proto.policy.v1.Project;
+import org.dependencytrack.proto.policy.v1.Tools;
+import org.dependencytrack.proto.policy.v1.VersionDistance;
+import org.dependencytrack.proto.policy.v1.Vulnerability;
 
 public enum CelPolicyType {
 
-    COMPONENT(List.of(
-            Library.StdLib(),
-            Library.Lib(new StringsLib()),
-            Library.Lib(new CelComponentPolicyLibrary()),
-            Library.Lib(new CelCommonPolicyLibrary())
-    )),
-    VULNERABILITY(List.of(
-            Library.StdLib(),
-            Library.Lib(new StringsLib()),
-            Library.Lib(new CelVulnerabilityPolicyLibrary()),
-            Library.Lib(new CelCommonPolicyLibrary())
-    ));
+    COMPONENT(
+            CelPolicyVariable.COMPONENT,
+            CelPolicyVariable.PROJECT,
+            CelPolicyVariable.VULNS,
+            CelPolicyVariable.NOW),
+    VULNERABILITY(
+            CelPolicyVariable.COMPONENT,
+            CelPolicyVariable.PROJECT,
+            CelPolicyVariable.VULN,
+            CelPolicyVariable.NOW);
 
-    private final List<EnvOption> envOptions;
+    private final CelCompiler compiler;
+    private final CelRuntime runtime;
 
-    CelPolicyType(final List<EnvOption> envOptions) {
-        this.envOptions = envOptions;
+    CelPolicyType(CelPolicyVariable... variables) {
+        final var library = new CelPolicyLibrary();
+
+        // NB: Message types must be registered directly on the builders,
+        // not inside CelRuntimeLibrary#setRuntimeOptions, because the runtime's build()
+        // creates the descriptor pool before invoking library callbacks.
+        final var compilerBuilder = CelCompilerFactory
+                .standardCelCompilerBuilder()
+                .setStandardMacros(CelStandardMacro.STANDARD_MACROS)
+                .addLibraries(CelExtensions.strings(), library)
+                .addMessageTypes(messageTypes());
+        for (final CelPolicyVariable variable : variables) {
+            compilerBuilder.addVarDeclarations(
+                    CelVarDecl.newVarDeclaration(
+                            variable.variableName(),
+                            variable.celType()));
+        }
+        this.compiler = compilerBuilder.build();
+
+        this.runtime = CelRuntimeFactory
+                .standardCelRuntimeBuilder()
+                .addLibraries(CelExtensions.strings(), library)
+                .addMessageTypes(messageTypes())
+                .build();
     }
 
-    List<EnvOption> envOptions() {
-        return envOptions;
+    private static Descriptor[] messageTypes() {
+        return new Descriptor[]{
+                Component.getDescriptor(),
+                Component.Property.getDescriptor(),
+                License.getDescriptor(),
+                License.Group.getDescriptor(),
+                Project.getDescriptor(),
+                Project.Metadata.getDescriptor(),
+                Project.Property.getDescriptor(),
+                Tools.getDescriptor(),
+                Vulnerability.getDescriptor(),
+                Vulnerability.Alias.getDescriptor(),
+                VersionDistance.getDescriptor(),
+        };
+    }
+
+    CelCompiler compiler() {
+        return compiler;
+    }
+
+    CelRuntime runtime() {
+        return runtime;
     }
 
 }

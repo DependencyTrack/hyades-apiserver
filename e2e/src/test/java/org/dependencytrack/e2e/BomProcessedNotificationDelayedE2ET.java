@@ -22,10 +22,10 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.dependencytrack.e2e.api.model.BomUploadRequest;
 import org.dependencytrack.e2e.api.model.CreateNotificationRuleRequest;
 import org.dependencytrack.e2e.api.model.CreateVulnerabilityRequest;
+import org.dependencytrack.e2e.api.model.EventTokenResponse;
 import org.dependencytrack.e2e.api.model.NotificationPublisher;
 import org.dependencytrack.e2e.api.model.NotificationRule;
 import org.dependencytrack.e2e.api.model.UpdateNotificationRuleRequest;
-import org.dependencytrack.e2e.api.model.WorkflowTokenResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -102,7 +102,7 @@ class BomProcessedNotificationDelayedE2ET extends AbstractE2ET {
         final String bomBase64 = Base64.getEncoder().encodeToString(bomBytes);
 
         // Upload the BOM
-        final WorkflowTokenResponse response = apiClient.uploadBom(new BomUploadRequest("foo", "bar", true, bomBase64));
+        final EventTokenResponse response = apiClient.uploadBom(new BomUploadRequest("foo", "bar", true, bomBase64));
         assertThat(response.token()).isNotEmpty();
 
         // Wait up to 15sec for the BOM processing to complete.

@@ -33,7 +33,6 @@ import org.dependencytrack.event.maintenance.TagMaintenanceEvent;
 import org.dependencytrack.event.maintenance.VulnerabilityDatabaseMaintenanceEvent;
 import org.dependencytrack.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.secret.management.SecretManager;
-import org.dependencytrack.tasks.CloneProjectTask;
 import org.dependencytrack.tasks.DefectDojoUploadTask;
 import org.dependencytrack.tasks.EpssMirrorTask;
 import org.dependencytrack.tasks.FortifySscUploadTask;
@@ -99,7 +98,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
                 PortfolioVulnerabilityAnalysisEvent.class,
                 new VulnerabilityAnalysisTask(dexEngine));
         eventService.subscribe(VulnerabilityMetricsUpdateEvent.class, new VulnerabilityMetricsUpdateTask());
-        eventService.subscribe(CloneProjectEvent.class, new CloneProjectTask());
         eventService.subscribe(FortifySscUploadEventAbstract.class, new FortifySscUploadTask(HttpClient.INSTANCE, secretManager));
         eventService.subscribe(DefectDojoUploadEventAbstract.class, new DefectDojoUploadTask(HttpClient.INSTANCE, secretManager));
         eventService.subscribe(KennaSecurityUploadEventAbstract.class, new KennaSecurityUploadTask(HttpClient.INSTANCE, secretManager));
@@ -126,7 +124,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         eventService.unsubscribe(LdapSyncTaskWrapper.class);
         eventService.unsubscribe(VulnerabilityAnalysisTask.class);
         eventService.unsubscribe(VulnerabilityMetricsUpdateTask.class);
-        eventService.unsubscribe(CloneProjectTask.class);
         eventService.unsubscribe(FortifySscUploadTask.class);
         eventService.unsubscribe(DefectDojoUploadTask.class);
         eventService.unsubscribe(KennaSecurityUploadTask.class);

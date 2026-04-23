@@ -31,7 +31,6 @@
     <class>alpine.model.Permission</class>
     <class>alpine.model.Team</class>
     <class>alpine.model.User</class>
-    <class>org.dependencytrack.model.Advisory</class>
     <class>org.dependencytrack.model.AffectedVersionAttribution</class>
     <class>org.dependencytrack.model.Analysis</class>
     <class>org.dependencytrack.model.AnalysisComment</class>
@@ -52,7 +51,6 @@
     <class>org.dependencytrack.model.ProjectMetadata</class>
     <class>org.dependencytrack.model.ProjectProperty</class>
     <class>org.dependencytrack.model.Repository</class>
-
     <class>org.dependencytrack.model.ServiceComponent</class>
     <class>org.dependencytrack.model.Tag</class>
     <class>org.dependencytrack.model.Vex</class>
@@ -62,7 +60,6 @@
     <class>org.dependencytrack.model.Vulnerability</class>
     <class>org.dependencytrack.model.VulnerabilityMetrics</class>
     <class>org.dependencytrack.model.VulnerableSoftware</class>
-    <class>org.dependencytrack.model.WorkflowState</class>
     <exclude-unlisted-classes>true</exclude-unlisted-classes>
     <shared-cache-mode>NONE</shared-cache-mode>
   </persistence-unit>

@@ -22,7 +22,7 @@
     <groupId>org.dependencytrack</groupId>
     <artifactId>dependency-track-parent</artifactId>
     <packaging>pom</packaging>
-    <version>5.7.0-alpha.3-SNAPSHOT</version>
+    <version>5.7.0-alpha.4-SNAPSHOT</version>
 
     <modules>
         <module>common</module>
@@ -108,16 +108,16 @@
         <lib.assertj.version>3.27.7</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.caffeine.version>3.2.3</lib.caffeine.version>
-        <lib.cel-java.version>0.6.0</lib.cel-java.version>
+        <lib.cel-java.version>0.12.0</lib.cel-java.version>
+        <lib.cel-extensions.version>0.4.1</lib.cel-extensions.version>
         <lib.commons-lang3.version>3.20.0</lib.commons-lang3.version>
         <lib.cpe-parser.version>3.0.1</lib.cpe-parser.version>
-        <lib.csaf-retrieval.version>0.5.1</lib.csaf-retrieval.version>
         <lib.cvss-calculator.version>1.5.1</lib.cvss-calculator.version>
         <lib.datanucleus-api-jdo.version>6.0.5</lib.datanucleus-api-jdo.version>
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
-        <lib.flyway.version>12.3.0</lib.flyway.version>
+        <lib.flyway.version>12.4.0</lib.flyway.version>
         <lib.eclipse-angus.version>2.0.5</lib.eclipse-angus.version>
         <lib.greenmail.version>2.1.8</lib.greenmail.version>
         <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
@@ -125,7 +125,7 @@
         <lib.jakarta-ee.version>11.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.2.0</lib.java-uuid-generator.version>
         <lib.jackson.version>2.21.2</lib.jackson.version>
-        <lib.jdbi.version>3.52.0</lib.jdbi.version>
+        <lib.jdbi.version>3.52.1</lib.jdbi.version>
         <lib.jersey.version>4.0.2</lib.jersey.version>
         <lib.jetty.version>12.1.8</lib.jetty.version>
         <lib.json-schema-validator.version>1.5.9</lib.json-schema-validator.version>
@@ -143,7 +143,7 @@
         <lib.mockito.version>5.23.0</lib.mockito.version>
         <lib.okhttp.version>5.3.2</lib.okhttp.version>
         <lib.open-feign.version>13.11</lib.open-feign.version>
-        <lib.open-vulnerability-clients.version>9.0.4</lib.open-vulnerability-clients.version>
+        <lib.open-vulnerability-clients.version>9.0.5</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.pebble.version>4.1.1</lib.pebble.version>
         <lib.postgresql.version>42.7.10</lib.postgresql.version>
@@ -151,7 +151,7 @@
         <lib.resilience4j.version>2.4.0</lib.resilience4j.version>
         <lib.s3mock.version>5.0.0</lib.s3mock.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
-        <lib.smallrye-config.version>3.16.0</lib.smallrye-config.version>
+        <lib.smallrye-config.version>3.17.0</lib.smallrye-config.version>
         <lib.swagger.version>2.2.48</lib.swagger.version>
         <lib.system-stubs.version>2.1.8</lib.system-stubs.version>
         <lib.testcontainers.version>2.0.4</lib.testcontainers.version>
@@ -198,11 +198,14 @@
             </dependency>
 
             <dependency>
-                <groupId>org.projectnessie.cel</groupId>
-                <artifactId>cel-bom</artifactId>
+                <groupId>dev.cel</groupId>
+                <artifactId>cel</artifactId>
                 <version>${lib.cel-java.version}</version>
-                <scope>import</scope>
-                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>dev.cel</groupId>
+                <artifactId>extensions</artifactId>
+                <version>${lib.cel-extensions.version}</version>
             </dependency>
 
             <dependency>
@@ -215,18 +218,6 @@
                 <groupId>us.springett</groupId>
                 <artifactId>cpe-parser</artifactId>
                 <version>${lib.cpe-parser.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.csaf</groupId>
-                <artifactId>csaf-retrieval-jvm</artifactId>
-                <version>${lib.csaf-retrieval.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-jdk14</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
 
             <dependency>

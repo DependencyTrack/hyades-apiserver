@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.util.UuidUtil;
-import alpine.event.framework.EventService;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.ManagedUser;
 import alpine.model.Team;
@@ -42,7 +41,6 @@ import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.Mappers;
-import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -69,9 +67,6 @@ import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisComment;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.WorkflowStatus;
-import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.MetricsTestDao;
@@ -79,16 +74,13 @@ import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao.VulnPolicyIdentityRow;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
-import org.dependencytrack.tasks.CloneProjectTask;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.hamcrest.CoreMatchers;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -105,7 +97,6 @@ import java.util.stream.Stream;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.notification.NotificationTestUtil.createCatchAllNotificationRule;
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_PROJECT_CREATED;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
@@ -124,11 +115,6 @@ class ProjectResourceTest extends ResourceTest {
                     .register(AuthenticationFeature.class)
                     .register(AuthorizationFeature.class)
                     .register(GlobalExceptionHandler.class));
-
-    @AfterEach
-    void afterEach() {
-        EventService.getInstance().unsubscribe(CloneProjectTask.class);
-    }
 
     @Test
     void getProjectsDefaultRequestTest() {
@@ -2895,7 +2881,6 @@ class ProjectResourceTest extends ResourceTest {
     @Test
     void cloneProjectTest() {
         initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
-        EventService.getInstance().subscribe(CloneProjectEvent.class, new CloneProjectTask());
 
         final var projectManufacturer = new OrganizationalEntity();
         projectManufacturer.setName("projectManufacturer");
@@ -3061,27 +3046,9 @@ class ProjectResourceTest extends ResourceTest {
                         """.formatted(project.getUuid())));
 
         assertThat(response.getStatus()).isEqualTo(202);
-        JsonObject json = parseJsonObject(response);
-        Assertions.assertNotNull(json);
-        Assertions.assertNotNull(json.getString("token"));
-        Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
-        UUID uuid = UUID.fromString(json.getString("token"));
-
-        await("Cloning completion")
-                .atMost(Duration.ofSeconds(15))
-                .pollInterval(Duration.ofMillis(50))
-                .untilAsserted(() -> {
-                    qm.getPersistenceManager().evictAll(false, WorkflowState.class);
-                    assertThat(qm.getAllWorkflowStatesForAToken(uuid)).satisfiesExactly(
-                            workflowState -> {
-                                assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.PROJECT_CLONE);
-                                assertThat(workflowState.getToken()).isEqualTo(uuid);
-                                assertThat(workflowState.getParent()).isNull();
-                                assertThat(workflowState.getStatus()).isEqualTo(WorkflowStatus.COMPLETED);
-                                assertThat(workflowState.getStartedAt()).isNotNull();
-                                assertThat(workflowState.getUpdatedAt()).isNotNull();
-                            });
-                });
+        final JsonObject json = parseJsonObject(response);
+        assertThat(json.getString("token")).isNotNull();
+        assertThat(UuidUtil.isValidUUID(json.getString("token"))).isTrue();
 
         final Project clonedProject = qm.getProject("acme-app", "1.1.0");
         assertThat(clonedProject).isNotNull();
@@ -3381,7 +3348,6 @@ class ProjectResourceTest extends ResourceTest {
     @Test // https://github.com/DependencyTrack/dependency-track/issues/4413
     void cloneProjectWithBrokenDependencyGraphTest() {
         initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
-        EventService.getInstance().subscribe(CloneProjectEvent.class, new CloneProjectTask());
 
         final var project = new Project();
         project.setName("acme-app");
@@ -3408,15 +3374,8 @@ class ProjectResourceTest extends ResourceTest {
                         """.formatted(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(202);
 
-        await("Cloning completion")
-                .atMost(Duration.ofSeconds(15))
-                .pollInterval(Duration.ofMillis(50))
-                .untilAsserted(() -> {
-                    final Project clonedProject = qm.getProject("acme-app", "1.1.0");
-                    assertThat(clonedProject).isNotNull();
-                });
-
         final Project clonedProject = qm.getProject("acme-app", "1.1.0");
+        assertThat(clonedProject).isNotNull();
         assertThat(clonedProject.getDirectDependencies()).isEqualTo(
                 "[{\"uuid\": \"d6b6f140-f547-4fe2-a98c-f4942ad51f86\"}]");
 
@@ -3835,8 +3794,6 @@ class ProjectResourceTest extends ResourceTest {
     void cloneProjectAsLatestTest() {
         initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
 
-        EventService.getInstance().subscribe(CloneProjectEvent.class, new CloneProjectTask());
-
         final var project = new Project();
         project.setName("acme-app-a");
         project.setVersion("1.0.0");
@@ -3853,23 +3810,13 @@ class ProjectResourceTest extends ResourceTest {
                         }
                         """.formatted(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(202);
-        JsonObject json = parseJsonObject(response);
-        Assertions.assertNotNull(json);
-        Assertions.assertNotNull(json.getString("token"));
-        Assertions.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
 
-        await("Cloning completion")
-                .atMost(Duration.ofSeconds(15))
-                .pollInterval(Duration.ofMillis(50))
-                .untilAsserted(() -> {
-                    final Project clonedProject = qm.getProject("acme-app-a", "1.1.0");
-                    assertThat(clonedProject).isNotNull();
-                    assertThat(clonedProject.isLatest()).isTrue();
+        final Project clonedProject = qm.getProject("acme-app-a", "1.1.0");
+        assertThat(clonedProject).isNotNull();
+        assertThat(clonedProject.isLatest()).isTrue();
 
-                    // ensure source is no longer latest
-                    qm.getPersistenceManager().refresh(project);
-                    assertThat(project.isLatest()).isFalse();
-                });
+        qm.getPersistenceManager().refresh(project);
+        assertThat(project.isLatest()).isFalse();
     }
 
     @Test
@@ -4601,8 +4548,6 @@ class ProjectResourceTest extends ResourceTest {
     void shouldCloneCollectionProject() {
         initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
 
-        EventService.getInstance().subscribe(CloneProjectEvent.class, new CloneProjectTask());
-
         final Tag prodTag = qm.createTag("prod");
 
         final var project = new Project();
@@ -4622,21 +4567,6 @@ class ProjectResourceTest extends ResourceTest {
                         }
                         """.formatted(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(202);
-        final JsonObject json = parseJsonObject(response);
-        assertThat(json.getString("token")).isNotNull();
-        final UUID token = UUID.fromString(json.getString("token"));
-
-        await("Cloning completion")
-                .atMost(Duration.ofSeconds(15))
-                .pollInterval(Duration.ofMillis(50))
-                .untilAsserted(() -> {
-                    qm.getPersistenceManager().evictAll(false, WorkflowState.class);
-                    assertThat(qm.getAllWorkflowStatesForAToken(token)).satisfiesExactly(
-                            workflowState -> {
-                                assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.PROJECT_CLONE);
-                                assertThat(workflowState.getStatus()).isEqualTo(WorkflowStatus.COMPLETED);
-                            });
-                });
 
         final Project clonedProject = qm.getProject("acme-collection", "2.0");
         assertThat(clonedProject).isNotNull();

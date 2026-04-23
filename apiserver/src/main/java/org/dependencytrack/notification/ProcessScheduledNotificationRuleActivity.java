@@ -23,6 +23,7 @@ import com.asahaf.javacron.Schedule;
 import com.fasterxml.uuid.Generators;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.Timestamps;
+import dev.cel.runtime.CelRuntime;
 import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityContext;
 import org.dependencytrack.dex.api.ActivitySpec;
@@ -49,7 +50,6 @@ import org.dependencytrack.persistence.jdbi.ScheduledNotificationDao.NewPolicyVi
 import org.dependencytrack.proto.internal.workflow.v1.ProcessScheduledNotificationRuleArg;
 import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflowArg;
 import org.jspecify.annotations.Nullable;
-import org.projectnessie.cel.Program;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -491,14 +491,14 @@ public final class ProcessScheduledNotificationRuleActivity
         }
 
         final Object subject = unpackSubject(notification, group);
-        final var scriptHost = NotificationFilterScriptHost.getInstance();
+        final var expressionEnv = NotificationFilterExpressionEnv.getInstance();
 
         try {
-            final Program program = scriptHost.compile(filterExpression);
-            final boolean result = scriptHost.evaluate(program, notification, subject);
+            final CelRuntime.Program program = expressionEnv.compile(filterExpression);
+            final boolean result = expressionEnv.evaluate(program, notification, subject);
             LOGGER.debug("Filter expression evaluated to {}", result);
             return result;
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             LOGGER.warn("Failed to evaluate filter expression for rule {}; Failing open", rule.getName(), e);
             return true;
         }

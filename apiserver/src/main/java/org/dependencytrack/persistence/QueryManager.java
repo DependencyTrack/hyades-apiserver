@@ -37,7 +37,6 @@ import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import org.apache.commons.lang3.ClassUtils;
 import org.datanucleus.api.jdo.JDOQuery;
-import org.dependencytrack.model.Advisory;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.Bom;
@@ -68,8 +67,6 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.VulnerableSoftware;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationLevel;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.proto.v1.Notification;
@@ -123,10 +120,8 @@ public class QueryManager extends AlpineQueryManager {
     private ServiceComponentQueryManager serviceComponentQueryManager;
     private VulnerabilityQueryManager vulnerabilityQueryManager;
     private VulnerableSoftwareQueryManager vulnerableSoftwareQueryManager;
-    private WorkflowStateQueryManager workflowStateQueryManager;
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
-    private AdvisoryQueryManager advisoryQueryManager;
 
     /**
      * Default constructor.
@@ -369,17 +364,6 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-     * Lazy instantiation of AdvisoryQueryManager.
-     * @return an AdvisoryQueryManager object
-     */
-    private AdvisoryQueryManager getAdvisoryQueryManager() {
-        if (advisoryQueryManager == null) {
-            advisoryQueryManager = (request == null) ? new AdvisoryQueryManager(getPersistenceManager()) : new AdvisoryQueryManager(getPersistenceManager(), request);
-        }
-        return advisoryQueryManager;
-    }
-
-    /**
      * Lazy instantiation of RepositoryQueryManager.
      *
      * @return a RepositoryQueryManager object
@@ -401,13 +385,6 @@ public class QueryManager extends AlpineQueryManager {
             notificationQueryManager = (request == null) ? new NotificationQueryManager(getPersistenceManager()) : new NotificationQueryManager(getPersistenceManager(), request);
         }
         return notificationQueryManager;
-    }
-
-    private WorkflowStateQueryManager getWorkflowStateQueryManager() {
-        if (workflowStateQueryManager == null) {
-            workflowStateQueryManager = (request == null) ? new WorkflowStateQueryManager(getPersistenceManager()) : new WorkflowStateQueryManager(getPersistenceManager(), request);
-        }
-        return workflowStateQueryManager;
     }
 
     /**
@@ -843,10 +820,6 @@ public class QueryManager extends AlpineQueryManager {
         getMetricsQueryManager().synchronizeVulnerabilityMetrics(metrics);
     }
 
-    public Advisory synchronizeAdvisory(Advisory advisory) {
-        return getAdvisoryQueryManager().synchronizeAdvisory(advisory);
-    }
-
     public PaginatedResult getRepositories() {
         return getRepositoryQueryManager().getRepositories();
     }
@@ -1205,26 +1178,6 @@ public class QueryManager extends AlpineQueryManager {
         }
     }
 
-    public List<WorkflowState> getAllWorkflowStatesForAToken(UUID token) {
-        return getWorkflowStateQueryManager().getAllWorkflowStatesForAToken(token);
-    }
-
-    public WorkflowState getWorkflowStateByTokenAndStep(UUID token, WorkflowStep workflowStep) {
-        return getWorkflowStateQueryManager().getWorkflowStateByTokenAndStep(token, workflowStep);
-    }
-
-    public WorkflowState updateStartTimeIfWorkflowStateExists(UUID token, WorkflowStep workflowStep) {
-        return getWorkflowStateQueryManager().updateStartTimeIfWorkflowStateExists(token, workflowStep);
-    }
-
-    public void updateWorkflowStateToComplete(WorkflowState workflowState) {
-        getWorkflowStateQueryManager().updateWorkflowStateToComplete(workflowState);
-    }
-
-    public void updateWorkflowStateToFailed(WorkflowState workflowState, String failureReason) {
-        getWorkflowStateQueryManager().updateWorkflowStateToFailed(workflowState, failureReason);
-    }
-
     public List<Component> getComponentsByPurl(String purl) {
         return getComponentQueryManager().getComponentsByPurl(purl);
     }
@@ -1354,24 +1307,6 @@ public class QueryManager extends AlpineQueryManager {
         }
 
         return "OFFSET %d FETCH NEXT %d ROWS ONLY".formatted(pagination.getOffset(), pagination.getLimit());
-    }
-
-    /**
-     * @param lockName Name of the lock to acquire.
-     * @return {@code true} when the lock was acquired, otherwise {@code false}.
-     * @see <a href="https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS">Advisory lock docs</a>
-     * @since 5.6.0
-     */
-    public boolean tryAcquireAdvisoryLock(final String lockName) {
-        if (!pm.currentTransaction().isActive()) {
-            throw new IllegalStateException("Advisory lock can only be acquired in a transaction");
-        }
-
-        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
-                SELECT pg_try_advisory_xact_lock(?)
-                """);
-        query.setParameters(lockName.hashCode());
-        return executeAndCloseResultUnique(query, Boolean.class);
     }
 
 }

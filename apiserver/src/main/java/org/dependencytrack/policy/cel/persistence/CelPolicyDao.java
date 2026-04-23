@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.policy.cel.persistence;
 
-import com.google.api.expr.v1alpha1.Type;
+import dev.cel.common.types.CelType;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
@@ -45,11 +45,11 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_METADATA;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT_PROPERTY;
-import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VULNERABILITY;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_COMPONENT;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_PROJECT;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_PROJECT_METADATA;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_PROJECT_PROPERTY;
+import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_VULNERABILITY;
 import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.COMPONENT_FIELDS;
 import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.COMPONENT_PROPERTY_FIELDS;
 import static org.dependencytrack.policy.cel.persistence.CelPolicyFieldMappingRegistry.LICENSE_FIELDS;
@@ -513,7 +513,7 @@ public final class CelPolicyDao {
                 .set();
     }
 
-    public Project loadRequiredFields(long projectId, MultiValuedMap<Type, String> requirements) {
+    public Project loadRequiredFields(long projectId, MultiValuedMap<CelType, String> requirements) {
         final Collection<String> projectRequirements = requirements.get(TYPE_PROJECT);
         if (projectRequirements.isEmpty()) {
             return Project.getDefaultInstance();
@@ -617,7 +617,7 @@ public final class CelPolicyDao {
 
     public Map<Long, Component> loadRequiredComponentFields(
             Collection<Long> componentIds,
-            MultiValuedMap<Type, String> requirements) {
+            MultiValuedMap<CelType, String> requirements) {
         if (componentIds.isEmpty()) {
             return Map.of();
         }
@@ -670,7 +670,7 @@ public final class CelPolicyDao {
 
     public Map<Long, Vulnerability> loadRequiredVulnerabilityFields(
             Collection<Long> vulnIds,
-            MultiValuedMap<Type, String> requirements) {
+            MultiValuedMap<CelType, String> requirements) {
         if (vulnIds.isEmpty()) {
             return Map.of();
         }

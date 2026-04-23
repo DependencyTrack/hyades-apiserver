@@ -26,6 +26,7 @@ import io.github.jeremylong.openvulnerability.client.nvd.DefCveItem;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,12 +42,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.zip.GZIPInputStream;
 
 import static java.util.Objects.requireNonNull;
@@ -64,6 +61,7 @@ final class NvdVulnDataSource implements VulnDataSource {
     private final ObjectMapper objectMapper;
     private final List<NvdDataFeed> feeds;
     private NvdDataFeed currentFeed;
+    private @Nullable String currentFeedSha256;
     private int currentFeedIndex = 0;
     private InputStream currentFileInputStream;
     private JsonParser currentJsonParser;
@@ -75,16 +73,13 @@ final class NvdVulnDataSource implements VulnDataSource {
             final WatermarkManager watermarkManager,
             final ObjectMapper objectMapper,
             final HttpClient httpClient,
-            final String feedsUrl) {
+            final String feedsUrl,
+            final List<NvdDataFeed> feeds) {
         this.watermarkManager = watermarkManager;
         this.objectMapper = objectMapper;
         this.httpClient = httpClient;
         this.feedsUrl = feedsUrl;
-        this.feeds = IntStream.range(2002, LocalDate.now().getYear() + 1).boxed()
-                .sorted(Comparator.reverseOrder()) // Process newer feeds first.
-                .map(NvdDataFeed.YearDataFeed::new)
-                .collect(Collectors.toList());
-        this.feeds.add(new NvdDataFeed.ModifiedDataFeed());
+        this.feeds = feeds;
     }
 
     @Override
@@ -102,6 +97,7 @@ final class NvdVulnDataSource implements VulnDataSource {
                 return true;
             }
 
+            recordCurrentFeedDigest();
             closeCurrentFeed();
             currentFeedIndex++;
         }
@@ -114,6 +110,7 @@ final class NvdVulnDataSource implements VulnDataSource {
                     nextItem = item;
                     return true;
                 }
+                recordCurrentFeedDigest();
                 closeCurrentFeed();
             }
             currentFeedIndex++;
@@ -142,7 +139,7 @@ final class NvdVulnDataSource implements VulnDataSource {
         if (bov.getVulnerabilitiesCount() != 1) {
             throw new IllegalArgumentException(
                     "BOV must have exactly one vulnerability, but has "
-                    + bov.getVulnerabilitiesCount());
+                            + bov.getVulnerabilitiesCount());
         }
 
         final Vulnerability vuln = bov.getVulnerabilities(0);
@@ -161,6 +158,12 @@ final class NvdVulnDataSource implements VulnDataSource {
             // have been successfully processed.
             watermarkManager.maybeCommit();
         }
+
+        // Commit digests for all feeds that were fully iterated,
+        // regardless of whether all feeds completed successfully.
+        // This enables skipping already-processed feeds on retry.
+        watermarkManager.commitFeedDigests();
+
         closeCurrentFeed();
     }
 
@@ -173,12 +176,24 @@ final class NvdVulnDataSource implements VulnDataSource {
         LOGGER.info("Opening {}", currentFeed);
 
         final NvdDataFeedMetadata feedMetadata = retrieveFeedMetadata(currentFeed);
+
+        if (feedMetadata.sha256() != null) {
+            final String committedDigest = watermarkManager.getFeedDigest(currentFeed.name());
+            if (feedMetadata.sha256().equals(committedDigest)) {
+                LOGGER.info("Skipping {}: Digest unchanged", currentFeed);
+                currentFeedIndex++;
+                return openNextFeed();
+            }
+        }
+
         if (watermarkManager.getWatermark() != null
-            && !watermarkManager.getWatermark().isBefore(feedMetadata.lastModifiedAt())) {
+                && !watermarkManager.getWatermark().isBefore(feedMetadata.lastModifiedAt())) {
             LOGGER.info("Skipping {}: Below watermark", currentFeed);
             currentFeedIndex++;
             return openNextFeed();
         }
+
+        currentFeedSha256 = feedMetadata.sha256();
 
         final Path feedFilePath = downloadFeedFile(currentFeed);
 
@@ -245,6 +260,12 @@ final class NvdVulnDataSource implements VulnDataSource {
         return ModelConverter.convert(defCveItem);
     }
 
+    private void recordCurrentFeedDigest() {
+        if (currentFeed != null && currentFeedSha256 != null) {
+            watermarkManager.recordFeedDigest(currentFeed.name(), currentFeedSha256);
+        }
+    }
+
     private void closeCurrentFeed() {
         try {
             if (currentJsonParser != null) {
@@ -260,16 +281,12 @@ final class NvdVulnDataSource implements VulnDataSource {
         }
 
         currentFeed = null;
+        currentFeedSha256 = null;
     }
 
     private NvdDataFeedMetadata retrieveFeedMetadata(final NvdDataFeed feed) {
         final var feedMetadataUri = URI.create(
-                "%s/json/cve/2.0/nvdcve-2.0-%s.meta".formatted(
-                        feedsUrl,
-                        switch (feed) {
-                            case NvdDataFeed.ModifiedDataFeed ignored -> "modified";
-                            case NvdDataFeed.YearDataFeed it -> String.valueOf(it.year());
-                        }));
+                "%s/json/cve/2.0/nvdcve-2.0-%s.meta".formatted(feedsUrl, feed.name()));
 
         final HttpRequest request = HttpRequest.newBuilder()
                 .uri(feedMetadataUri)
@@ -299,12 +316,7 @@ final class NvdVulnDataSource implements VulnDataSource {
 
     private Path downloadFeedFile(final NvdDataFeed feed) {
         final var feedFileUri = URI.create(
-                "%s/json/cve/2.0/nvdcve-2.0-%s.json.gz".formatted(
-                        feedsUrl,
-                        switch (feed) {
-                            case NvdDataFeed.ModifiedDataFeed ignored -> "modified";
-                            case NvdDataFeed.YearDataFeed it -> String.valueOf(it.year());
-                        }));
+                "%s/json/cve/2.0/nvdcve-2.0-%s.json.gz".formatted(feedsUrl, feed.name()));
 
         final HttpRequest request = HttpRequest.newBuilder()
                 .uri(feedFileUri)
