@@ -53,6 +53,9 @@ public final class PackageMetadataRowMapper implements RowMapper<PackageMetadata
         return new PackageMetadata(
                 purlColumnMapper.map(rs, "PURL", ctx),
                 rs.getString("LATEST_VERSION"),
+                rs.getTimestamp("LATEST_VERSION_PUBLISHED_AT") != null
+                        ? rs.getTimestamp("LATEST_VERSION_PUBLISHED_AT").toInstant()
+                        : null,
                 rs.getTimestamp("RESOLVED_AT").toInstant(),
                 rs.getString("RESOLVED_FROM"),
                 rs.getString("RESOLVED_BY"));

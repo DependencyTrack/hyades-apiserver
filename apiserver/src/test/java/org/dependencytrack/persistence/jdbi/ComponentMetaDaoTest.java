@@ -188,6 +188,7 @@ public class ComponentMetaDaoTest extends PersistenceCapableTest {
                 new PackageMetadata(
                         new PackageURL(purl),
                         "1.0.0",
+                        null,
                         Instant.now(),
                         null,
                         null))));

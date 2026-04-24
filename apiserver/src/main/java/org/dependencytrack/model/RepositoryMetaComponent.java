@@ -33,6 +33,8 @@ public class RepositoryMetaComponent {
     private String latestVersion;
     @Schema(type = "integer", format = "int64", description = "UNIX epoch timestamp in milliseconds")
     private Date lastCheck;
+    @Schema(type = "integer", format = "int64", description = "UNIX epoch timestamp in milliseconds")
+    private Date latestVersionPublishedAt;
 
     public static @Nullable RepositoryMetaComponent of(PackageMetadata packageMetadata) {
         if (packageMetadata == null) {
@@ -45,6 +47,7 @@ public class RepositoryMetaComponent {
         metaComponent.name = packageMetadata.purl().getName();
         metaComponent.latestVersion = packageMetadata.latestVersion();
         metaComponent.lastCheck = Date.from(packageMetadata.resolvedAt());
+        metaComponent.latestVersionPublishedAt = Date.from(packageMetadata.latestVersionPublishedAt());
         return metaComponent;
     }
 
@@ -86,5 +89,9 @@ public class RepositoryMetaComponent {
 
     public void setLastCheck(Date lastCheck) {
         this.lastCheck = lastCheck;
+    }
+
+    public Date getLatestVersionPublishedAt() {
+        return latestVersionPublishedAt;
     }
 }

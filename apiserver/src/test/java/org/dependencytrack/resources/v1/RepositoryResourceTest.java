@@ -136,6 +136,7 @@ public class RepositoryResourceTest extends ResourceTest {
                 new PackageMetadata(
                         new PackageURL("pkg:maven/org.acme/example-component"),
                         "2.0.0",
+                        null,
                         resolvedAt.toInstant(),
                         null,
                         null))));
@@ -161,6 +162,7 @@ public class RepositoryResourceTest extends ResourceTest {
                 new PackageMetadata(
                         new PackageURL("pkg:maven/org.acme/example-component"),
                         "2.0.0",
+                        null,
                         Instant.now(),
                         null,
                         null))));
@@ -179,6 +181,7 @@ public class RepositoryResourceTest extends ResourceTest {
                 new PackageMetadata(
                         new PackageURL("pkg:maven/org.acme/example-component"),
                         "2.0.0",
+                        null,
                         Instant.now(),
                         null,
                         null))));
