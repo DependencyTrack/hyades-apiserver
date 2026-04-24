@@ -82,10 +82,11 @@ final class GithubPackageMetadataResolver implements PackageMetadataResolver {
         }
 
         final var resolvedAt = Instant.now();
+        final var latestVersionPublishedAt = extractPublishedAt(root);
 
         PackageArtifactMetadata artifactMetadata = null;
         if (purl.getVersion() != null && purl.getVersion().equals(tagName)) {
-            artifactMetadata = extractArtifactMetadata(root, resolvedAt);
+            artifactMetadata = new PackageArtifactMetadata(resolvedAt, latestVersionPublishedAt, Map.of());
         } else if (purl.getVersion() != null) {
             final String versionCacheKey = CacheKeys.build(
                     repository, purl.getNamespace(), purl.getName(), purl.getVersion());
@@ -98,11 +99,11 @@ final class GithubPackageMetadataResolver implements PackageMetadataResolver {
                 }
             }
             if (versionBody != null) {
-                artifactMetadata = extractArtifactMetadata(parseJson(versionBody), resolvedAt);
+                artifactMetadata = new PackageArtifactMetadata(resolvedAt, extractPublishedAt(parseJson(versionBody)), Map.of());
             }
         }
 
-        return new PackageMetadata(tagName, resolvedAt, artifactMetadata);
+        return new PackageMetadata(tagName, latestVersionPublishedAt, resolvedAt, artifactMetadata);
     }
 
     private byte @Nullable [] fetchLatestRelease(
@@ -182,15 +183,14 @@ final class GithubPackageMetadataResolver implements PackageMetadataResolver {
         return response.body();
     }
 
-    private static @Nullable PackageArtifactMetadata extractArtifactMetadata(JsonNode root, Instant resolvedAt) {
+    private static @Nullable Instant extractPublishedAt(JsonNode root) {
         final String publishedAtStr = root.path("published_at").asText(null);
         if (publishedAtStr == null) {
             return null;
         }
 
         try {
-            final Instant publishedAt = Instant.parse(publishedAtStr);
-            return new PackageArtifactMetadata(resolvedAt, publishedAt, Map.of());
+            return Instant.parse(publishedAtStr);
         } catch (DateTimeParseException e) {
             return null;
         }

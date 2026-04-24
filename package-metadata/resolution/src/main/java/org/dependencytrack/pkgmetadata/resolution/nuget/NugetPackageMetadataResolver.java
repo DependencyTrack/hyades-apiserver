@@ -90,9 +90,20 @@ final class NugetPackageMetadataResolver implements PackageMetadataResolver {
 
         if (latestVersionBytes != null && (versionKey == null || versionMetaBytes != null)) {
             final var packageMeta = deserialize(latestVersionBytes, NugetPackageMetadata.class);
+
+            final String latestVersionMetaKey = packageMeta.latestVersion() != null
+                    ? cacheKeyBase + VERSION_CACHE_KEY_SUFFIX + packageMeta.latestVersion()
+                    : null;
+            final byte[] latestVersionMetaBytes = latestVersionMetaKey != null ? cached.get(latestVersionMetaKey) : null;
+            final var latestVersionMeta = latestVersionMetaBytes != null
+                    ? deserialize(latestVersionMetaBytes, NugetVersionMetadata.class) : null;
+
             final var versionMeta = versionMetaBytes != null
                     ? deserialize(versionMetaBytes, NugetVersionMetadata.class) : null;
-            return buildResult(packageMeta.latestVersion(), packageMeta.resolvedAt(),
+
+            return buildResult(packageMeta.latestVersion(),
+                    latestVersionMeta != null ? latestVersionMeta.publishedAt() : null,
+                    packageMeta.resolvedAt(),
                     versionMeta != null ? versionMeta.publishedAt() : null);
         }
 
@@ -126,6 +137,7 @@ final class NugetPackageMetadataResolver implements PackageMetadataResolver {
                 serialize(new NugetPackageMetadata(resolvedAt, latestVersion)));
 
         Instant requestedVersionPublishedAt = null;
+        Instant latestVersionPublishedAt = null;
         for (final JsonNode page : items) {
             final JsonNode pageItems = page.path("items");
             if (!pageItems.isArray()) {
@@ -146,6 +158,9 @@ final class NugetPackageMetadataResolver implements PackageMetadataResolver {
                     if (purl.getVersion() != null && version.equals(purl.getVersion())) {
                         requestedVersionPublishedAt = publishedAt;
                     }
+                    if (latestVersion != null && version.equals(latestVersion)) {
+                        latestVersionPublishedAt = publishedAt;
+                    }
                 }
             }
         }
@@ -154,7 +169,7 @@ final class NugetPackageMetadataResolver implements PackageMetadataResolver {
             cache.putMany(entriesToCache);
         }
 
-        return buildResult(latestVersion, resolvedAt, requestedVersionPublishedAt);
+        return buildResult(latestVersion, latestVersionPublishedAt, resolvedAt, requestedVersionPublishedAt);
     }
 
     private @Nullable JsonNode fetchDocument(
@@ -213,13 +228,14 @@ final class NugetPackageMetadataResolver implements PackageMetadataResolver {
 
     private static @Nullable PackageMetadata buildResult(
             String latestVersion,
+            Instant latestVersionPublishedAt,
             Instant resolvedAt,
             @Nullable Instant publishedAt) {
         final PackageArtifactMetadata artifactMetadata = publishedAt != null
                 ? new PackageArtifactMetadata(resolvedAt, publishedAt, Map.of())
                 : null;
 
-        return new PackageMetadata(latestVersion, resolvedAt, artifactMetadata);
+        return new PackageMetadata(latestVersion, latestVersionPublishedAt, resolvedAt, artifactMetadata);
     }
 
     private byte[] serialize(Object value) {
