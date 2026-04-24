@@ -349,7 +349,7 @@ class SlackNotificationPublisherTest extends AbstractNotificationPublisherTest {
                                 },
                                 {
                                   "type": "plain_text",
-                                  "text": "pkg:maven/org.acme/projectName@projectVersion"
+                                  "text": "projectName : projectVersion"
                                 }
                               ]
                             },
