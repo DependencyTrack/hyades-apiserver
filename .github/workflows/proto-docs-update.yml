@@ -14,14 +14,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
-name: Update Config Documentation
+name: Update Proto Documentation
 
 on:
   push:
     branches:
     - main
     paths:
-    - apiserver/src/main/resources/application.properties
+    - notification/api/src/main/proto/org/dependencytrack/notification/**/*.proto
+    - proto/src/main/proto/org/dependencytrack/policy/**/*.proto
 
 permissions: { }
 
@@ -30,7 +31,7 @@ jobs:
     name: Trigger Update
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: "${{ github.repository_owner == 'DependencyTrack' }}"
+    if: ${{ github.repository_owner == 'DependencyTrack' }}
     steps:
     - name: Dispatch Update Event
       env:
@@ -40,4 +41,4 @@ jobs:
         # on the target instead.
         GH_TOKEN: "${{ secrets.CONFIG_DOCS_UPDATE_GITHUB_TOKEN }}"
       run: |-
-        gh workflow run update-config-docs.yml -R DependencyTrack/docs
+        gh workflow run update-proto-docs.yml -R DependencyTrack/docs
