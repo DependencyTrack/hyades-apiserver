@@ -104,6 +104,7 @@ class NugetPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("2.0.0");
+        assertThat(result.latestVersionPublishedAt()).isEqualTo("2024-01-01T12:00:00Z");
         assertThat(result.artifactMetadata()).isNotNull();
         assertThat(result.artifactMetadata().publishedAt()).isNotNull();
         assertThat(result.artifactMetadata().publishedAt().getEpochSecond())
@@ -127,6 +128,7 @@ class NugetPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("2.0.0");
+        assertThat(result.latestVersionPublishedAt()).isEqualTo("2024-01-01T12:00:00Z");
         assertThat(result.artifactMetadata()).isNull();
     }
 

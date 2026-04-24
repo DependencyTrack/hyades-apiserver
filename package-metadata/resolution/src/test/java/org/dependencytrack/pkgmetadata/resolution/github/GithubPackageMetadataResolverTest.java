@@ -100,6 +100,8 @@ class GithubPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("v1.5.0");
+        assertThat(result.latestVersionPublishedAt())
+                .isEqualTo(Instant.parse("2024-03-15T12:00:00Z"));
         assertThat(result.artifactMetadata()).isNotNull();
         assertThat(result.artifactMetadata().publishedAt())
                 .isEqualTo(Instant.parse("2024-02-10T08:00:00Z"));
@@ -127,6 +129,8 @@ class GithubPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("v1.5.0");
+        assertThat(result.latestVersionPublishedAt())
+                .isEqualTo(Instant.parse("2024-03-15T12:00:00Z"));
         assertThat(result.artifactMetadata()).isNotNull();
         assertThat(result.artifactMetadata().publishedAt())
                 .isEqualTo(Instant.parse("2024-03-15T12:00:00Z"));
@@ -159,6 +163,8 @@ class GithubPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("v1.5.0");
+        assertThat(result.latestVersionPublishedAt())
+                .isEqualTo(Instant.parse("2024-03-15T12:00:00Z"));
         assertThat(result.artifactMetadata()).isNull();
     }
 
@@ -183,6 +189,8 @@ class GithubPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("v1.5.0");
+        assertThat(result.latestVersionPublishedAt())
+                .isEqualTo(Instant.parse("2024-03-15T12:00:00Z"));
         assertThat(result.artifactMetadata()).isNull();
     }
 

@@ -242,7 +242,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
                     new PackageMetadata(
                             new PackageURL("pkg:maven/a/b"),
                             "2.0",
-                            null,
+                            Instant.ofEpochMilli(220),
                             Instant.ofEpochMilli(222),
                             null,
                             null)));

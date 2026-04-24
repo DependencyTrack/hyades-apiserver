@@ -338,21 +338,21 @@ public class ComponentResourceTest extends ResourceTest {
                 new PackageMetadata(
                         new PackageURL("pkg:maven/org.acme/component1"),
                         "2.0.0",
-                        null,
+                        Instant.now(),
                         Instant.now(),
                         null,
                         null),
                 new PackageMetadata(
                         new PackageURL("pkg:maven/org.acme/component1_1"),
                         "3.0.0",
-                        null,
+                        Instant.now(),
                         Instant.now(),
                         null,
                         null),
                 new PackageMetadata(
                         new PackageURL("pkg:maven/org.acme/component1_1_1"),
                         "4.0.0",
-                        null,
+                        Instant.now(),
                         Instant.now(),
                         null,
                         null))));

@@ -136,7 +136,7 @@ public class RepositoryResourceTest extends ResourceTest {
                 new PackageMetadata(
                         new PackageURL("pkg:maven/org.acme/example-component"),
                         "2.0.0",
-                        null,
+                        resolvedAt.toInstant(),
                         resolvedAt.toInstant(),
                         null,
                         null))));
@@ -154,6 +154,7 @@ public class RepositoryResourceTest extends ResourceTest {
         Assertions.assertEquals("example-component", json.getString("name"));
         Assertions.assertEquals("2.0.0", json.getString("latestVersion"));
         Assertions.assertEquals(resolvedAt.getTime(), json.getJsonNumber("lastCheck").longValue());
+        Assertions.assertEquals(resolvedAt.getTime(), json.getJsonNumber("latestVersionPublishedAt").longValue());
     }
 
     @Test

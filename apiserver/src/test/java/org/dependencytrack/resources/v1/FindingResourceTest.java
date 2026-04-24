@@ -444,21 +444,21 @@ public class FindingResourceTest extends ResourceTest {
                 new PackageMetadata(
                         new com.github.packageurl.PackageURL("pkg:maven/org.acme/component-a"),
                         "2.0.0",
-                        null,
+                        Instant.now(),
                         Instant.now(),
                         null,
                         null),
                 new PackageMetadata(
                         new com.github.packageurl.PackageURL("pkg:maven/org.acme/component-b"),
                         "3.0.0",
-                        null,
+                        Instant.now(),
                         Instant.now(),
                         null,
                         null),
                 new PackageMetadata(
                         new com.github.packageurl.PackageURL("pkg:maven/org.acme/component-e"),
                         "4.0.0",
-                        null,
+                        Instant.now(),
                         Instant.now(),
                         null,
                         null))));

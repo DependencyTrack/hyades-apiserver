@@ -90,6 +90,8 @@ class GemPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("7.1.3");
+        assertThat(result.latestVersionPublishedAt())
+                .isEqualTo(Instant.parse("2024-01-15T10:30:00Z"));
         assertThat(result.artifactMetadata()).isNotNull();
         assertThat(result.artifactMetadata().publishedAt())
                 .isEqualTo(Instant.parse("2024-01-15T10:30:00Z"));
@@ -146,6 +148,8 @@ class GemPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("7.1.3");
+        assertThat(result.latestVersionPublishedAt())
+                .isEqualTo(Instant.parse("2024-01-15T10:30:00Z"));
         assertThat(result.artifactMetadata()).isNotNull();
         assertThat(result.artifactMetadata().publishedAt())
                 .isEqualTo(Instant.parse("2023-12-01T08:00:00Z"));
@@ -173,6 +177,8 @@ class GemPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("7.1.3");
+        assertThat(result.latestVersionPublishedAt())
+                .isEqualTo(Instant.parse("2024-01-15T10:30:00Z"));
         assertThat(result.artifactMetadata()).isNull();
     }
 

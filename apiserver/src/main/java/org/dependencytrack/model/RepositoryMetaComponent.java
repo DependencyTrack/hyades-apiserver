@@ -47,7 +47,9 @@ public class RepositoryMetaComponent {
         metaComponent.name = packageMetadata.purl().getName();
         metaComponent.latestVersion = packageMetadata.latestVersion();
         metaComponent.lastCheck = Date.from(packageMetadata.resolvedAt());
-        metaComponent.latestVersionPublishedAt = Date.from(packageMetadata.latestVersionPublishedAt());
+        metaComponent.latestVersionPublishedAt = packageMetadata.latestVersionPublishedAt() != null
+            ? Date.from(packageMetadata.latestVersionPublishedAt())
+            : null;
         return metaComponent;
     }
 
