@@ -35,7 +35,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.http.HttpClient;
-import java.time.Instant;
 import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
