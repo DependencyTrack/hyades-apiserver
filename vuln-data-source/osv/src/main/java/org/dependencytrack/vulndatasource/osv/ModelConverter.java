@@ -165,6 +165,10 @@ final class ModelConverter {
             severity = parseSeverity(osvAffectedArray);
         }
 
+        if (isOsvMalwareIdentifier(osv.getId())) {
+            severity = SEVERITY_CRITICAL;
+        }
+
         // CVSS ratings
         vulnerability.addAllRatings(parseCvssRatings(osv, severity));
 
@@ -506,6 +510,12 @@ final class ModelConverter {
             return SEVERITY_UNKNOWN;
         }
     }
+
+    
+    private static boolean isOsvMalwareIdentifier(final String osvId) {
+        return osvId != null && osvId.startsWith("MAL-");
+    }
+
 
     private static List<VulnerabilityRating> parseCvssRatings(Osv osv, Severity severity) {
         List<VulnerabilityRating> ratings = new ArrayList<>();
