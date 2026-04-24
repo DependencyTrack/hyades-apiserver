@@ -40,6 +40,9 @@ import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.dex.engine.api.WorkflowRunStatus;
+import org.dependencytrack.dex.engine.api.request.ExistsWorkflowRunRequest;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.model.AnalysisResponse;
@@ -69,6 +72,7 @@ import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -111,11 +115,15 @@ import static org.dependencytrack.notification.proto.v1.Group.GROUP_BOM_VALIDATI
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 
 class BomResourceTest extends ResourceTest {
 
     private static final FileStorage fileStorage = new MemoryFileStorage();
+    private static final DexEngine DEX_ENGINE_MOCK = mock(DexEngine.class);
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
@@ -128,9 +136,14 @@ class BomResourceTest extends ResourceTest {
                         @Override
                         protected void configure() {
                             bindFactory(() -> fileStorage).to(FileStorage.class);
-                            bindFactory(() -> mock(DexEngine.class)).to(DexEngine.class);
+                            bind(DEX_ENGINE_MOCK).to(DexEngine.class);
                         }
                     }));
+
+    @AfterEach
+    void afterEach() {
+        reset(DEX_ENGINE_MOCK);
+    }
 
     @ParameterizedTest
     @ValueSource(strings = {"1.2", "1.3", "1.4", "1.5", "1.6", ""})
@@ -2196,6 +2209,71 @@ class BomResourceTest extends ResourceTest {
         assertThat(project.getTags()).satisfiesExactlyInAnyOrder(
                 tag -> assertThat(tag.getName()).isEqualTo("foo"),
                 tag -> assertThat(tag.getName()).isEqualTo("bar"));
+    }
+
+    @Test
+    void shouldReportTokenBeingProcessedWhenDexRunExistsByLabel() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
+        doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadataById(any());
+        doReturn(true).when(DEX_ENGINE_MOCK).existsRun(any(ExistsWorkflowRunRequest.class));
+
+        final Response response = jersey
+                .target(V1_BOM + "/token/2ff20ad6-587c-4db6-8788-cca7a9b0dc1b")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "processing": true
+                }
+                """);
+    }
+
+    @Test
+    void shouldReportTokenBeingProcessedWhenDexRunExistsById() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
+        final var runId = UUID.fromString("6214c0c2-660c-4615-8b3a-174a64e4abe4");
+        final var runMetadata = new WorkflowRunMetadata(
+                runId, "import-bom", 1, null, "default",
+                WorkflowRunStatus.RUNNING, null, 0, null, null,
+                java.time.Instant.now(), java.time.Instant.now(), null, null);
+        doReturn(false).when(DEX_ENGINE_MOCK).existsRun(any(ExistsWorkflowRunRequest.class));
+        doReturn(runMetadata).when(DEX_ENGINE_MOCK).getRunMetadataById(runId);
+
+        final Response response = jersey
+                .target(V1_BOM + "/token/" + runId)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "processing": true
+                }
+                """);
+    }
+
+    @Test
+    void shouldReportTokenNotBeingProcessed() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
+        doReturn(null).when(DEX_ENGINE_MOCK).getRunMetadataById(any());
+        doReturn(false).when(DEX_ENGINE_MOCK).existsRun(any(ExistsWorkflowRunRequest.class));
+
+        final Response response = jersey
+                .target(V1_BOM + "/token/089dcdbe-31cf-489a-a8f3-0743ea7f3cc5")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "processing": false
+                }
+                """);
     }
 
 }

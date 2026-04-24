@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.event.framework.Event;
 import alpine.model.About;
 import alpine.server.auth.PermissionRequired;
 import com.github.packageurl.PackageURL;
@@ -50,7 +49,6 @@ import org.dependencytrack.analysis.AnalyzeProjectWorkflow;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
-import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.integrations.FindingPackagingFormat;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.GroupedFinding;
@@ -209,29 +207,6 @@ public class FindingResource extends AbstractApiResource {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
         }
-    }
-
-    @POST
-    @Path("/portfolio/analyze")
-    @Operation(
-            summary = "Triggers Vulnerability Analysis for the entire portfolio",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Analysis triggered successfully"),
-            @ApiResponse(responseCode = "304", description = "Analysis is already in progress"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE}) // Require admin privileges due to system impact
-    public Response analyzePortfolio() {
-        LOGGER.info("Portfolio analysis requested by " + super.getPrincipal().getName());
-        if (Event.isEventBeingProcessed(PortfolioVulnerabilityAnalysisEvent.CHAIN_IDENTIFIER)) {
-            LOGGER.info("Another portfolio analysis event is already being processed; Dropping");
-            return Response.status(Response.Status.NOT_MODIFIED).build();
-        }
-
-        Event.dispatch(new PortfolioVulnerabilityAnalysisEvent());
-        return Response.ok().build();
     }
 
     @POST
