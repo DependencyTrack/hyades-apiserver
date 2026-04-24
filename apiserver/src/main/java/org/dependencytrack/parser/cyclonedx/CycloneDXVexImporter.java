@@ -190,14 +190,15 @@ public class CycloneDXVexImporter {
             if (cdxVuln.getRatings() != null && !cdxVuln.getRatings().isEmpty()) {
                 for (final org.cyclonedx.model.vulnerability.Vulnerability.Rating rating : cdxVuln.getRatings()) {
                     if (rating.getMethod() == org.cyclonedx.model.vulnerability.Vulnerability.Rating.Method.OWASP) {
-                        if (rating.getVector() == null || rating.getScore() == null) {
-                            LOGGER.warn("VEX OWASP rating missing vector or score - skipping");
+                        if (rating.getVector() == null && rating.getScore() == null) {
+                            LOGGER.warn("VEX OWASP rating has neither vector nor score - skipping");
                             continue;
                         }
 
-                        command = command.withOwasp(
-                                rating.getVector(),
-                                java.math.BigDecimal.valueOf(rating.getScore()));
+                        final java.math.BigDecimal score = rating.getScore() != null
+                                ? java.math.BigDecimal.valueOf(rating.getScore())
+                                : null;
+                        command = command.withOwasp(rating.getVector(), score);
                         break;
                     }
                 }

@@ -103,32 +103,32 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
             boolean stateChanged = false;
             boolean suppressionChanged = false;
 
-            if (command.state() != null && command.state() != analysis.getAnalysisState()) {
-                auditTrailComments.add("Analysis: %s → %s".formatted(analysis.getAnalysisState(), command.state()));
-                analysis.setAnalysisState(command.state());
-                stateChanged = true;
-            }
-            if (command.justification() != null && command.justification() != analysis.getAnalysisJustification()) {
-                auditTrailComments.add("Justification: %s → %s".formatted(analysis.getAnalysisJustification(), command.justification()));
-                analysis.setAnalysisJustification(command.justification());
-            }
-            if (command.response() != null && command.response() != analysis.getAnalysisResponse()) {
-                auditTrailComments.add("Vendor Response: %s → %s".formatted(analysis.getAnalysisResponse(), command.response()));
-                analysis.setAnalysisResponse(command.response());
-            }
-            if (command.details() != null && !command.details().equals(analysis.getAnalysisDetails())) {
-                auditTrailComments.add("Details: %s".formatted(command.details()));
-                analysis.setAnalysisDetails(command.details());
-            }
-            if (command.suppress() != null && command.suppress() != analysis.isSuppressed()) {
-                auditTrailComments.add(command.suppress() ? "Suppressed" : "Unsuppressed");
-                analysis.setSuppressed(command.suppress());
-                suppressionChanged = true;
-            }
-
             final boolean canUpdate = canUpdateAnalysis(analysis.getSource(), command.source());
 
-            if (canUpdate && (command.owaspVector() != null || command.owaspScore() != null)) {
+            if (canUpdate) {
+                if (command.state() != null && command.state() != analysis.getAnalysisState()) {
+                    auditTrailComments.add("Analysis: %s → %s".formatted(analysis.getAnalysisState(), command.state()));
+                    analysis.setAnalysisState(command.state());
+                    stateChanged = true;
+                }
+                if (command.justification() != null && command.justification() != analysis.getAnalysisJustification()) {
+                    auditTrailComments.add("Justification: %s → %s".formatted(analysis.getAnalysisJustification(), command.justification()));
+                    analysis.setAnalysisJustification(command.justification());
+                }
+                if (command.response() != null && command.response() != analysis.getAnalysisResponse()) {
+                    auditTrailComments.add("Vendor Response: %s → %s".formatted(analysis.getAnalysisResponse(), command.response()));
+                    analysis.setAnalysisResponse(command.response());
+                }
+                if (command.details() != null && !command.details().equals(analysis.getAnalysisDetails())) {
+                    auditTrailComments.add("Details: %s".formatted(command.details()));
+                    analysis.setAnalysisDetails(command.details());
+                }
+                if (command.suppress() != null && command.suppress() != analysis.isSuppressed()) {
+                    auditTrailComments.add(command.suppress() ? "Suppressed" : "Unsuppressed");
+                    analysis.setSuppressed(command.suppress());
+                    suppressionChanged = true;
+                }
+
                 if (command.owaspVector() != null && !command.owaspVector().equals(analysis.getOwaspVector())) {
                     auditTrailComments.add("OWASP RR Vector: %s → %s".formatted(
                             analysis.getOwaspVector(), command.owaspVector()));
@@ -139,10 +139,8 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
                             analysis.getOwaspScore(), command.owaspScore()));
                     analysis.setOwaspScore(command.owaspScore());
                 }
-            }
 
-            if (command.source() != null && canUpdate) {
-                if (analysis.getSource() != command.source()) {
+                if (command.source() != null && analysis.getSource() != command.source()) {
                     if (analysis.getSource() != null) {
                         auditTrailComments.add("Source: %s → %s".formatted(analysis.getSource(), command.source()));
                     }
