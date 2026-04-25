@@ -1980,4 +1980,13 @@
             DROP FUNCTION IF EXISTS has_user_project_access(BIGINT, BIGINT);
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-81" author="nscuro">
+        <!-- Delete unused VIEW_BADGES permission. -->
+        <sql>
+            DELETE
+              FROM "PERMISSION"
+             WHERE "NAME" = 'VIEW_BADGES';
+        </sql>
+    </changeSet>
 </databaseChangeLog>

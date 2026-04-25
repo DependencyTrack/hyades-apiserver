@@ -72,9 +72,7 @@ public final class DatabaseSeedingInitTask implements InitTask {
                     Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE),
             "Automation", List.of(
                     Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.BOM_UPLOAD),
-            "Badge Viewers", List.of(
-                    Permissions.Constants.VIEW_BADGES));
+                    Permissions.Constants.BOM_UPLOAD));
 
     @Override
     public int priority() {
