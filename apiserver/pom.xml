@@ -560,7 +560,6 @@
                 <includes>
                     <include>META-INF/MANIFEST.MF</include>
                     <include>application.version</include>
-                    <include>openapi-configuration.yaml</include>
                 </includes>
             </resource>
         </resources>
