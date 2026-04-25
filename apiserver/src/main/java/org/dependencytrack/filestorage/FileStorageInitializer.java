@@ -20,6 +20,7 @@ package org.dependencytrack.filestorage;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.ConfigKeys;
 import org.dependencytrack.common.ProxySelector;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.api.FileStorageProvider;
@@ -53,7 +54,7 @@ public final class FileStorageInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
-        final String providerName = config.getValue("dt.file-storage.provider", String.class);
+        final String providerName = config.getValue(ConfigKeys.FILE_STORAGE_PROVIDER, String.class);
         LOGGER.info("Initializing file storage for provider '{}'", providerName);
 
         final FileStorageProvider fileStorageProvider =

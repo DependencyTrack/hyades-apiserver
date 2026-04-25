@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.integrations;
 
-import alpine.Config;
+import alpine.config.AlpineConfigKeys;
 import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.AnalysisState;
@@ -28,6 +28,7 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.jdbi.FindingDao;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -52,8 +53,8 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         );
 
         assertThatJson(fpf.getDocument())
-                .withMatcher("appName", equalTo(Config.getInstance().getApplicationName()))
-                .withMatcher("appVersion", equalTo(Config.getInstance().getApplicationVersion()))
+                .withMatcher("appName", equalTo(ConfigProvider.getConfig().getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_NAME, String.class)))
+                .withMatcher("appVersion", equalTo(ConfigProvider.getConfig().getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_VERSION, String.class)))
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
                 .isEqualTo(/* language=JSON */ """
                         {

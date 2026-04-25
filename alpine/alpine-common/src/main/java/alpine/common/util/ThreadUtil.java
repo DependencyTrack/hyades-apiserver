@@ -18,7 +18,8 @@
  */
 package alpine.common.util;
 
-import alpine.Config;
+import alpine.config.AlpineConfigKeys;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 /**
  * A collection of useful Thread utilities.
@@ -29,9 +30,6 @@ import alpine.Config;
 @SuppressWarnings("unused")
 public final class ThreadUtil {
 
-    /**
-     * Default constructor
-     */
     private ThreadUtil() { }
 
     /**
@@ -40,18 +38,19 @@ public final class ThreadUtil {
      * @since 1.0.0
      */
     public static int determineNumberOfWorkerThreads() {
-        final int threads = Config.getInstance().getPropertyAsInt(Config.AlpineKey.WORKER_THREADS);
+        final var config = ConfigProvider.getConfig();
+        final int threads = config.getValue(AlpineConfigKeys.WORKER_THREADS, Integer.class);
         if (threads > 0) {
             return threads;
         } else if (threads == 0) {
             final int cores = SystemUtil.getCpuCores();
-            final int multiplier = Config.getInstance().getPropertyAsInt(Config.AlpineKey.WORKER_THREAD_MULTIPLIER);
+            final int multiplier = config.getValue(AlpineConfigKeys.WORKER_THREAD_MULTIPLIER, Integer.class);
             if (multiplier > 0) {
                 return cores * multiplier;
             } else {
                 return cores;
             }
         }
-        return 1; // We have to have a minimum of 1 thread
+        return 1;
     }
 }

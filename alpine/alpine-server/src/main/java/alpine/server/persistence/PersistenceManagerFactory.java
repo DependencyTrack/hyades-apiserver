@@ -18,18 +18,19 @@
  */
 package alpine.server.persistence;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.persistence.IPersistenceManagerFactory;
 import alpine.persistence.JdoProperties;
 import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
+import io.smallrye.config.SmallRyeConfig;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 import javax.jdo.JDOHelper;
 import javax.jdo.PersistenceManager;
@@ -85,7 +86,7 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
      * @return a PersistenceManager
      */
     public static PersistenceManager createPersistenceManager() {
-        if (pmf == null && Config.isUnitTestsEnabled()) {
+        if (pmf == null && ConfigProvider.getConfig().unwrap(SmallRyeConfig.class).getProfiles().contains("test")) {
             pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(JdoProperties.unit(), "Alpine");
         }
         if (pmf == null) {

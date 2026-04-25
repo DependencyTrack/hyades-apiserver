@@ -19,6 +19,7 @@
 package org.dependencytrack.plugin.runtime;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
 import org.dependencytrack.plugin.api.config.RuntimeConfig;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSchemaSource;
@@ -30,7 +31,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.mockito.Mockito.mock;
 
 class ConfigRegistryImplTest extends AbstractDatabaseTest {
 
@@ -71,6 +71,8 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
                 }
             });
 
+    private static final Config CONFIG = new SmallRyeConfigBuilder().build();
+
     private final RuntimeConfigMapper runtimeConfigMapper = RuntimeConfigMapper.getInstance();
 
     record TestConfig(
@@ -81,7 +83,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
     @Test
     void shouldReturnEmptyWhenNoRuntimeConfigSpecProvided() {
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 null, null, null);
 
         assertThat(registry.getOptionalRuntimeConfig()).isEmpty();
@@ -90,7 +92,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
     @Test
     void shouldReturnEmptyWhenNoConfigExistsInDatabase() {
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         assertThat(registry.getOptionalRuntimeConfig()).isEmpty();
@@ -103,7 +105,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
                 """);
 
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         final var config = registry.getOptionalRuntimeConfig(TestConfig.class);
@@ -118,7 +120,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
                 """);
 
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper,
                 secretName -> "my-secret".equals(secretName) ? "resolved-value" : null);
 
@@ -134,7 +136,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
                 """);
 
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 VALIDATING_CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         assertThatExceptionOfType(InvalidRuntimeConfigException.class)
@@ -145,7 +147,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
     @Test
     void shouldSetRuntimeConfig() {
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         final boolean created = registry.setRuntimeConfig(new TestConfig("https://example.com", null));
@@ -159,7 +161,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
     @Test
     void shouldReturnFalseWhenSettingIdenticalRuntimeConfig() {
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         assertThat(registry.setRuntimeConfig(new TestConfig("https://example.com", null))).isTrue();
@@ -172,7 +174,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
         }
 
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         assertThatExceptionOfType(IllegalArgumentException.class)
@@ -182,7 +184,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
     @Test
     void shouldValidateSchemaWhenSettingRuntimeConfig() {
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         assertThatExceptionOfType(RuntimeConfigSchemaValidationException.class)
@@ -192,7 +194,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
     @Test
     void shouldInvokeValidatorWhenSettingRuntimeConfig() {
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 VALIDATING_CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         assertThatExceptionOfType(InvalidRuntimeConfigException.class)
@@ -208,7 +210,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
                 """);
 
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         final var rawConfig = registry.getRawRuntimeConfig();
@@ -219,7 +221,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
     @Test
     void shouldReturnEmptyRawRuntimeConfigWhenNoneExists() {
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         assertThat(registry.getRawRuntimeConfig()).isEmpty();
@@ -228,7 +230,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
     @Test
     void shouldSetRawRuntimeConfig() {
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         final boolean created = registry.setRawRuntimeConfig(/* language=JSON */ """
@@ -242,7 +244,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
     @Test
     void shouldReturnFalseWhenSettingIdenticalRawRuntimeConfig() {
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         final String configJson = /* language=JSON */ """
@@ -255,7 +257,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
     @Test
     void shouldReportHasRuntimeConfigFalseWhenNoSpec() {
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 null, null, null);
 
         assertThat(registry.hasRuntimeConfig()).isFalse();
@@ -264,7 +266,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
     @Test
     void shouldReportHasRuntimeConfigFalseWhenNoneExists() {
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         assertThat(registry.hasRuntimeConfig()).isFalse();
@@ -277,7 +279,7 @@ class ConfigRegistryImplTest extends AbstractDatabaseTest {
                 """);
 
         final var registry = new ConfigRegistryImpl(
-                jdbi, mock(Config.class), EXTENSION_POINT, EXTENSION,
+                jdbi, CONFIG, EXTENSION_POINT, EXTENSION,
                 CONFIG_SPEC, runtimeConfigMapper, secretName -> null);
 
         assertThat(registry.hasRuntimeConfig()).isTrue();

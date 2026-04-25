@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.Config;
+import alpine.config.AlpineConfigKeys;
 import alpine.model.About;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
@@ -48,6 +48,7 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.PackageMetadataDao;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.AfterEach;
@@ -330,8 +331,8 @@ public class FindingResourceTest extends ResourceTest {
         assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonObject json = parseJsonObject(response);
         assertNotNull(json);
-        assertEquals(Config.getInstance().getApplicationName(), json.getJsonObject("meta").getString("application"));
-        assertEquals(Config.getInstance().getApplicationVersion(), json.getJsonObject("meta").getString("version"));
+        assertEquals(ConfigProvider.getConfig().getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_NAME, String.class), json.getJsonObject("meta").getString("application"));
+        assertEquals(ConfigProvider.getConfig().getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_VERSION, String.class), json.getJsonObject("meta").getString("version"));
         assertNotNull(json.getJsonObject("meta").getString("timestamp"));
         assertEquals("Acme Example", json.getJsonObject("project").getString("name"));
         assertEquals("1.0", json.getJsonObject("project").getString("version"));

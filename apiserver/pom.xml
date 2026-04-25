@@ -258,12 +258,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>alpine-test</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
         <!-- Common Expression Language (CEL) -->
         <dependency>
             <groupId>dev.cel</groupId>
@@ -507,6 +501,12 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>smallrye-config-source-memory</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

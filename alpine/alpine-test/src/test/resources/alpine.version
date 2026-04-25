@@ -1,4 +1,0 @@
-name=${project.name}
-version=${project.version}
-timestamp=${timestamp}
-uuid=${project.build.uuid}

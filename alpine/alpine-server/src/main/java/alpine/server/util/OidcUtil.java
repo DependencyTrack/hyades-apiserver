@@ -19,9 +19,11 @@
 
 package alpine.server.util;
 
-import alpine.Config;
+import alpine.config.AlpineConfigKeys;
 import alpine.server.auth.OidcConfiguration;
 import alpine.server.auth.OidcConfigurationResolver;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 /**
  * @since 1.8.0
@@ -41,11 +43,11 @@ public final class OidcUtil {
      * @return {@code true} when OpenID Connect is available, otherwise {@code false}
      */
     public static boolean isOidcAvailable() {
-        return isOidcAvailable(Config.getInstance(), OidcConfigurationResolver.getInstance().resolve());
+        return isOidcAvailable(ConfigProvider.getConfig(), OidcConfigurationResolver.getInstance().resolve());
     }
 
     public static boolean isOidcAvailable(final Config config, final OidcConfiguration oidcConfiguration) {
-        return config.getPropertyAsBoolean(Config.AlpineKey.OIDC_ENABLED)
+        return config.getValue(AlpineConfigKeys.OIDC_ENABLED, Boolean.class)
                 && oidcConfiguration != null;
     }
 

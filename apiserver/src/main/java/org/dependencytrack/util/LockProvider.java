@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.util;
 
-import alpine.Config;
 import alpine.event.framework.Subscriber;
 import net.javacrumbs.shedlock.core.DefaultLockingTaskExecutor;
 import net.javacrumbs.shedlock.core.LockConfiguration;
@@ -30,30 +29,25 @@ import org.dependencytrack.common.datasource.DataSourceRegistry;
 
 public class LockProvider {
 
-    private static JdbcLockProvider instance;
-
     /**
      * @since 5.6.0
      */
     public static void executeWithLock(final LockConfiguration lockConfiguration, final Runnable runnable) {
-        final LockingTaskExecutor executor = getLockingTaskExecutorInstance();
-        executor.executeWithLock(runnable, lockConfiguration);
+        newLockingTaskExecutor().executeWithLock(runnable, lockConfiguration);
     }
 
     /**
      * @since 5.6.0
      */
     public static void executeWithLock(final LockConfiguration lockConfiguration, final Task task) throws Throwable {
-        final LockingTaskExecutor executor = getLockingTaskExecutorInstance();
-        executor.executeWithLock(task, lockConfiguration);
+        newLockingTaskExecutor().executeWithLock(task, lockConfiguration);
     }
 
     /**
      * @since 5.6.0
      */
     public static <T> T executeWithLock(final LockConfiguration lockConfiguration, final TaskWithResult<T> task) throws Throwable {
-        final LockingTaskExecutor executor = getLockingTaskExecutorInstance();
-        return executor.executeWithLock(task, lockConfiguration).getResult();
+        return newLockingTaskExecutor().executeWithLock(task, lockConfiguration).getResult();
     }
 
     /**
@@ -64,16 +58,9 @@ public class LockProvider {
         return cumulativeDurationInMillis >= (lockConfiguration.getLockAtMostFor().minus(lockConfiguration.getLockAtLeastFor())).toMillis();
     }
 
-    private static JdbcLockProvider getJdbcLockProviderInstance() {
-        if (instance == null || Config.isUnitTestsEnabled()) {
-            instance = new JdbcLockProvider(DataSourceRegistry.getInstance().getDefault());
-        }
-        return instance;
-    }
-
-    private static LockingTaskExecutor getLockingTaskExecutorInstance() {
-        final JdbcLockProvider jdbcLockProvider = getJdbcLockProviderInstance();
-        return new DefaultLockingTaskExecutor(jdbcLockProvider);
+    private static LockingTaskExecutor newLockingTaskExecutor() {
+        return new DefaultLockingTaskExecutor(
+                new JdbcLockProvider(DataSourceRegistry.getInstance().getDefault()));
     }
 
 }

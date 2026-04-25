@@ -118,7 +118,7 @@ public class SecretManagerInitializerTest {
         final var secretManagerMock = mock(SecretManager.class);
         SecretManagerInitializer.secretManager = secretManagerMock;
 
-        new SecretManagerInitializer(mock(Config.class))
+        new SecretManagerInitializer(new SmallRyeConfigBuilder().build())
                 .contextDestroyed(new ServletContextEvent(mock(ServletContext.class)));
 
         verify(secretManagerMock).close();

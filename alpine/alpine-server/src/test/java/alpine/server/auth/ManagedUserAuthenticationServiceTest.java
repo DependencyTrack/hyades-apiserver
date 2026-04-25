@@ -18,13 +18,11 @@
  */
 package alpine.server.auth;
 
-import alpine.Config;
 import alpine.persistence.AlpineQueryManager;
 import alpine.server.persistence.PersistenceManagerFactory;
 import org.assertj.core.api.SoftAssertionsProvider.ThrowingRunnable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -33,11 +31,6 @@ import java.time.Duration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ManagedUserAuthenticationServiceTest {
-
-    @BeforeAll
-    public static void setUpClass() {
-        Config.enableUnitTests();
-    }
 
     @AfterEach
     public void tearDown() {

@@ -18,21 +18,24 @@
  */
 package org.dependencytrack.plugin.runtime;
 
+import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.plugin.api.config.DeploymentConfig;
 import org.eclipse.microprofile.config.Config;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 class DeploymentConfigImplTest {
 
-    private final Config delegateConfigMock = mock(Config.class);
+    private final Config delegateConfig = new SmallRyeConfigBuilder()
+            .withDefaultValue("dt.extension-point-name.extension-name.foo", "bar")
+            .build();
     private final DeploymentConfig deploymentConfig =
             new DeploymentConfigImpl(
-                    delegateConfigMock, "extension-point-name", "extension-name");
+                    delegateConfig, "extension-point-name", "extension-name");
 
     @Test
     void shouldThrowWhenDelegateIsNull() {
@@ -43,21 +46,16 @@ class DeploymentConfigImplTest {
     }
 
     @Test
-    void shouldDelegateGetValue() {
-        deploymentConfig.getValue("foo", String.class);
-
-        verify(delegateConfigMock).getValue(
-                eq("dt.extension-point-name.extension-name.foo"),
-                eq(String.class));
+    void shouldResolveGetValueAgainstNamespacedKey() {
+        assertThat(deploymentConfig.getValue("foo", String.class)).isEqualTo("bar");
     }
 
     @Test
-    void shouldDelegateGetOptionalValue() {
-        deploymentConfig.getOptionalValue("foo", String.class);
-
-        verify(delegateConfigMock).getOptionalValue(
-                eq("dt.extension-point-name.extension-name.foo"),
-                eq(String.class));
+    void shouldResolveGetOptionalValueAgainstNamespacedKey() {
+        assertThat(deploymentConfig.getOptionalValue("foo", String.class))
+                .isEqualTo(Optional.of("bar"));
+        assertThat(deploymentConfig.getOptionalValue("missing", String.class))
+                .isEmpty();
     }
 
 }
