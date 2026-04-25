@@ -34,6 +34,8 @@ jobs:
     timeout-minutes: 5
     if: >-
       ${{ github.repository_owner == 'DependencyTrack'
+        && github.event.workflow_run.event == 'push'
+        && github.event.workflow_run.head_branch == 'main'
         && github.event.workflow_run.conclusion == 'success' }}
     steps:
     - name: Dispatch Update Event
