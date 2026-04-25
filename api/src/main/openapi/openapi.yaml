@@ -82,6 +82,47 @@ info:
     }
     ```
 
+    ## Authentication
+
+    Two credential types are accepted:
+
+    - **API key** via the `X-Api-Key` request header. API keys are
+      long-lived and intended for machine-to-machine integrations.
+    - **Bearer token** via the `Authorization: Bearer <token>` request
+      header. Bearer tokens are short-lived, user-bound, and opaque
+      server-issued session tokens.
+
+    Bearer tokens are obtained from one of the following endpoints:
+
+    - `POST /api/v1/user/login`
+    - `POST /api/v1/user/oidc/login`
+
+    API v2 does not yet provide its own login endpoints; clients use
+    the v1 endpoints above to acquire tokens and then call v2 with them.
+
+    Tokens are valid for 8 hours by default and **cannot be refreshed**.
+    Clients must re-authenticate once a token expires.
+
+    Requests with missing or invalid credentials are rejected with
+    `401 Unauthorized`.
+
+    ## Authorization
+
+    Access is gated by named permissions. Operations document
+    the permission(s) they require; operations without a documented
+    permission requirement only require authentication.
+
+    When the *Portfolio Access Control* feature is enabled
+    (disabled by default), project-scoped operations additionally enforce
+    per-project access via team membership. The `PORTFOLIO_ACCESS_CONTROL_BYPASS`
+    permission grants access to all projects regardless of team mappings.
+    When the feature is disabled, all authenticated callers holding the required
+    permission can access all projects.
+
+    Authenticated requests that lack the required permission, or that
+    target a project the caller cannot access, are rejected with
+    `403 Forbidden`.
+
     ## HTTP Methods
 
     | Method   | Semantics                  |
