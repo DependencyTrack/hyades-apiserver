@@ -20,12 +20,6 @@
     <changeSet id="procedure_update-project-metrics" author="nscuro@protonmail.com" runOnChange="true">
         <createProcedure path="procedures/procedure_update-project-metrics.sql" relativeToChangelogFile="true"/>
     </changeSet>
-    <changeSet id="function_has-project-access" author="nscuro" runOnChange="true">
-        <createProcedure path="procedures/function_has-project-access.sql" relativeToChangelogFile="true"/>
-    </changeSet>
-    <changeSet id="function_has-user-project-access" author="jhoward-lm" runOnChange="true">
-        <createProcedure path="procedures/function_has-user-project-access.sql" relativeToChangelogFile="true"/>
-    </changeSet>
     <changeSet id="function_clone-project" author="nscuro" runOnChange="true">
         <createProcedure path="procedures/function_clone-project.sql" relativeToChangelogFile="true"/>
     </changeSet>
