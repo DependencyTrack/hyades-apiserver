@@ -1,9 +1,51 @@
 openAPI:
   info:
-    version: "${project.version}"
+    version: "1.0.0"
     title: OWASP Dependency-Track
     description: |-
       REST API of OWASP Dependency-Track
+
+      > **Note:** This API version is in maintenance mode and will be
+      > superseded by v2, available under `/api/v2`, which follows a
+      > spec-first approach. New operations will be added there.
+      >
+      > This specification is generated and may not always accurately
+      > reflect the actual response content of every operation. When
+      > in doubt, treat observed runtime behavior as authoritative.
+
+      ## Pagination
+
+      Collection endpoints support page-based pagination via the
+      following query parameters:
+
+      | Parameter    | Description                              | Default |
+      |--------------|------------------------------------------|---------|
+      | `pageNumber` | The page to retrieve (1-based).          | `1`     |
+      | `pageSize`   | The maximum number of items per page.    | `100`   |
+
+      The total number of items in the collection across all pages is
+      returned in the `X-Total-Count` response header.
+
+      ## HTTP Methods
+
+      | Method   | Semantics                                |
+      |----------|------------------------------------------|
+      | `GET`    | Retrieve a resource.                     |
+      | `PUT`    | **Create** a new resource.               |
+      | `POST`   | **Update** an existing resource.         |
+      | `DELETE` | Delete a resource.                       |
+
+      Note that the use of `PUT` for create and `POST` for update is
+      the inverse of the convention followed by most other REST APIs,
+      including API v2.
+
+      ## Response Conventions
+
+      Create (`PUT`) and update (`POST`) operations typically return
+      the full resource representation in the response body, with
+      status `201 Created` and `200 OK` respectively.
+
+      Delete (`DELETE`) operations typically return `204 No Content`.
 
       ## Deprecations
 
