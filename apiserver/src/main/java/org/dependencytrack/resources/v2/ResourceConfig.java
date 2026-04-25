@@ -30,6 +30,7 @@ import org.dependencytrack.cache.CacheManagerBinder;
 import org.dependencytrack.common.Mappers;
 import org.dependencytrack.dex.DexEngineBinder;
 import org.dependencytrack.filestorage.FileStorageBinder;
+import org.dependencytrack.filters.DeprecationResponseFilter;
 import org.dependencytrack.filters.JerseyMetricsApplicationEventListener;
 import org.dependencytrack.plugin.PluginManagerBinder;
 import org.dependencytrack.secret.SecretManagerBinder;
@@ -65,6 +66,7 @@ public final class ResourceConfig extends org.glassfish.jersey.server.ResourceCo
         register(ApiFilter.class);
         register(AuthenticationFeature.class);
         register(AuthorizationFeature.class);
+        register(DeprecationResponseFilter.class);
         register(HeaderFilter.class);
         register(JacksonFeature.withoutExceptionMappers());
         register(JerseyMetricsApplicationEventListener.class);
