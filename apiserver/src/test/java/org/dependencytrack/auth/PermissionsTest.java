@@ -51,7 +51,6 @@ import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATIO
 import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE;
 import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT;
 import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT_DELETE;
-import static org.dependencytrack.auth.Permissions.Constants.VIEW_BADGES;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_POLICY_VIOLATION;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_PORTFOLIO;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_VULNERABILITY;
@@ -69,7 +68,7 @@ public class PermissionsTest {
 
     @Test
     public void testPermissionEnums() {
-        Assertions.assertEquals(43, Permissions.values().length);
+        Assertions.assertEquals(42, Permissions.values().length);
         Assertions.assertEquals("BOM_UPLOAD", Permissions.BOM_UPLOAD.name());
         Assertions.assertEquals("VIEW_PORTFOLIO", Permissions.VIEW_PORTFOLIO.name());
         Assertions.assertEquals("PORTFOLIO_ACCESS_CONTROL_BYPASS", Permissions.PORTFOLIO_ACCESS_CONTROL_BYPASS.name());
@@ -112,7 +111,6 @@ public class PermissionsTest {
         Assertions.assertEquals("POLICY_MANAGEMENT_DELETE", Permissions.POLICY_MANAGEMENT_DELETE.name());
         Assertions.assertEquals("TAG_MANAGEMENT", Permissions.TAG_MANAGEMENT.name());
         Assertions.assertEquals("TAG_MANAGEMENT_DELETE", Permissions.TAG_MANAGEMENT_DELETE.name());
-        Assertions.assertEquals("VIEW_BADGES", Permissions.VIEW_BADGES.name());
     }
 
     @Test
@@ -159,6 +157,5 @@ public class PermissionsTest {
         Assertions.assertEquals("POLICY_MANAGEMENT_DELETE", POLICY_MANAGEMENT_DELETE);
         Assertions.assertEquals("TAG_MANAGEMENT", TAG_MANAGEMENT);
         Assertions.assertEquals("TAG_MANAGEMENT_DELETE", TAG_MANAGEMENT_DELETE);
-        Assertions.assertEquals("VIEW_BADGES", VIEW_BADGES);
     }
 }
