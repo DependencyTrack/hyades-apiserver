@@ -1,6 +1,6 @@
-| Status   | Date       | Author(s)                            |
-|:---------|:-----------|:-------------------------------------|
-| Proposed | 2025-01-19 | [@nscuro](https://github.com/nscuro) |
+| Status                                              | Date       | Author(s)                            |
+|:----------------------------------------------------|:-----------|:-------------------------------------|
+| Superseded by [ADR-011](011-notification-outbox.md) | 2025-01-19 | [@nscuro](https://github.com/nscuro) |
 
 ## Context
 
