@@ -19,13 +19,15 @@
 
 package alpine.server.auth;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
+import alpine.config.AlpineConfigKeys;
 import alpine.model.OidcUser;
 import alpine.persistence.AlpineQueryManager;
 import alpine.server.util.OidcUtil;
 
 import jakarta.annotation.Nonnull;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 import java.security.Principal;
 import java.util.List;
@@ -53,7 +55,7 @@ public class OidcAuthenticationService implements AuthenticationService {
      */
     @Deprecated
     public OidcAuthenticationService(final String accessToken) {
-        this(Config.getInstance(), OidcConfigurationResolver.getInstance().resolve(), null, accessToken);
+        this(ConfigProvider.getConfig(), OidcConfigurationResolver.getInstance().resolve(), null, accessToken);
     }
 
     /**
@@ -62,14 +64,14 @@ public class OidcAuthenticationService implements AuthenticationService {
      * @since 1.10.0
      */
     public OidcAuthenticationService(final String idToken, final String accessToken) {
-        this(Config.getInstance(), OidcConfigurationResolver.getInstance().resolve(), idToken, accessToken);
+        this(ConfigProvider.getConfig(), OidcConfigurationResolver.getInstance().resolve(), idToken, accessToken);
     }
 
     /**
      * Constructor for unit tests
      */
     OidcAuthenticationService(final Config config, final OidcConfiguration oidcConfiguration, final String idToken, final String accessToken) {
-        this(config, oidcConfiguration, new OidcIdTokenAuthenticator(oidcConfiguration, config.getProperty(Config.AlpineKey.OIDC_CLIENT_ID)), new OidcUserInfoAuthenticator(oidcConfiguration), idToken, accessToken);
+        this(config, oidcConfiguration, new OidcIdTokenAuthenticator(oidcConfiguration, config.getOptionalValue(AlpineConfigKeys.OIDC_CLIENT_ID, String.class).orElse(null)), new OidcUserInfoAuthenticator(oidcConfiguration), idToken, accessToken);
     }
 
     /**
@@ -90,7 +92,7 @@ public class OidcAuthenticationService implements AuthenticationService {
         this.idToken = idToken;
         this.accessToken = accessToken;
 
-        String customizerClassName = Config.getInstance().getProperty(Config.AlpineKey.OIDC_AUTH_CUSTOMIZER);
+        final String customizerClassName = config.getValue(AlpineConfigKeys.OIDC_AUTH_CUSTOMIZER, String.class);
         this.customizer = ServiceLoader.load(OidcAuthenticationCustomizer.class)
                 .stream()
                 .filter(provider -> provider.type().getName().equals(customizerClassName))
@@ -123,14 +125,14 @@ public class OidcAuthenticationService implements AuthenticationService {
     @Nonnull
     @Override
     public Principal authenticate() throws AlpineAuthenticationException {
-        final String usernameClaimName = config.getProperty(Config.AlpineKey.OIDC_USERNAME_CLAIM);
+        final String usernameClaimName = config.getOptionalValue(AlpineConfigKeys.OIDC_USERNAME_CLAIM, String.class).orElse(null);
         if (usernameClaimName == null) {
             LOGGER.error("No username claim has been configured");
             throw new AlpineAuthenticationException(AlpineAuthenticationException.CauseType.OTHER);
         }
 
-        final boolean teamSyncEnabled = config.getPropertyAsBoolean(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION);
-        final String teamsClaimName = config.getProperty(Config.AlpineKey.OIDC_TEAMS_CLAIM);
+        final boolean teamSyncEnabled = config.getValue(AlpineConfigKeys.OIDC_TEAM_SYNCHRONIZATION, Boolean.class);
+        final String teamsClaimName = config.getOptionalValue(AlpineConfigKeys.OIDC_TEAMS_CLAIM, String.class).orElse(null);
         if (teamSyncEnabled && teamsClaimName == null) {
             LOGGER.error("Team synchronization is enabled, but no teams claim has been configured");
             throw new AlpineAuthenticationException(AlpineAuthenticationException.CauseType.OTHER);
@@ -199,7 +201,7 @@ public class OidcAuthenticationService implements AuthenticationService {
                     user = qm.updateOidcUser(user);
                 }
 
-                if (config.getPropertyAsBoolean(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION)) {
+                if (config.getValue(AlpineConfigKeys.OIDC_TEAM_SYNCHRONIZATION, Boolean.class)) {
                     return customizer.onAuthenticationSuccess(
                             qm.synchronizeTeamMembership(user, profile.getGroups()),
                             profile,
@@ -208,7 +210,7 @@ public class OidcAuthenticationService implements AuthenticationService {
                 }
 
                 return customizer.onAuthenticationSuccess(user, profile, idToken, accessToken);
-            } else if (config.getPropertyAsBoolean(Config.AlpineKey.OIDC_USER_PROVISIONING)) {
+            } else if (config.getValue(AlpineConfigKeys.OIDC_USER_PROVISIONING, Boolean.class)) {
                 LOGGER.debug("The user (" + profile.getUsername() + ") authenticated successfully but the account has not been provisioned");
                 return autoProvision(qm, profile);
             } else {
@@ -225,7 +227,7 @@ public class OidcAuthenticationService implements AuthenticationService {
         user.setEmail(profile.getEmail());
         user = qm.persist(user);
 
-        if (config.getPropertyAsBoolean(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION)) {
+        if (config.getValue(AlpineConfigKeys.OIDC_TEAM_SYNCHRONIZATION, Boolean.class)) {
             LOGGER.debug("Synchronizing teams for user " + user.getUsername());
             return customizer.onAuthenticationSuccess(
                     qm.synchronizeTeamMembership(user, profile.getGroups()),
@@ -234,7 +236,11 @@ public class OidcAuthenticationService implements AuthenticationService {
                     accessToken);
         }
 
-        final List<String> defaultTeams = config.getPropertyAsList(Config.AlpineKey.OIDC_TEAMS_DEFAULT);
+        final List<String> defaultTeams = config.getOptionalValues(AlpineConfigKeys.OIDC_TEAMS_DEFAULT, String.class)
+                .orElse(List.of()).stream()
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
         if (!defaultTeams.isEmpty()) {
             LOGGER.debug("Assigning default teams %s to user %s".formatted(defaultTeams, user.getUsername()));
             return customizer.onAuthenticationSuccess(

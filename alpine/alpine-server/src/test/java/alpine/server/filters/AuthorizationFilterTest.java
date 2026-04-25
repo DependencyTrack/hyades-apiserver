@@ -18,7 +18,6 @@
  */
 package alpine.server.filters;
 
-import alpine.Config;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
@@ -40,7 +39,6 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
 import org.glassfish.jersey.test.TestProperties;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -62,11 +60,6 @@ public class AuthorizationFilterTest extends JerseyTest {
                     getAlpineRequest().getEffectivePermissions())).build();
         }
 
-    }
-
-    @BeforeAll
-    static void setUpClass() {
-        Config.enableUnitTests();
     }
 
     @AfterEach

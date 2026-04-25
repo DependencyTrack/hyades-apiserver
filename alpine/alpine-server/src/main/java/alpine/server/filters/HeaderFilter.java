@@ -18,15 +18,16 @@
  */
 package alpine.server.filters;
 
-import alpine.Config;
-import org.apache.commons.lang3.StringUtils;
-
+import alpine.config.AlpineConfigKeys;
 import jakarta.annotation.Priority;
 import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerResponseContext;
 import jakarta.ws.rs.container.ContainerResponseFilter;
 import jakarta.ws.rs.core.HttpHeaders;
+import org.apache.commons.lang3.StringUtils;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 /**
  * Adds Powered-By and cache-control headers.
@@ -37,15 +38,28 @@ import jakarta.ws.rs.core.HttpHeaders;
 @Priority(Priorities.HEADER_DECORATOR)
 public class HeaderFilter implements ContainerResponseFilter {
 
-    private static final String APP_NAME = Config.getInstance().getApplicationName();
-    private static final String APP_VERSION = Config.getInstance().getApplicationVersion();
-    private static final boolean CORS_ENABLED = Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.CORS_ENABLED);
-    private static final String CORS_ALLOW_ORIGIN = Config.getInstance().getProperty(Config.AlpineKey.CORS_ALLOW_ORIGIN);
-    private static final String CORS_ALLOW_METHODS = Config.getInstance().getProperty(Config.AlpineKey.CORS_ALLOW_METHODS);
-    private static final String CORS_ALLOW_HEADERS = Config.getInstance().getProperty(Config.AlpineKey.CORS_ALLOW_HEADERS);
-    private static final String CORS_EXPOSE_HEADERS = Config.getInstance().getProperty(Config.AlpineKey.CORS_EXPOSE_HEADERS);
-    private static final boolean CORS_ALLOW_CREDENTIALS = Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.CORS_ALLOW_CREDENTIALS);
-    private static final int CORS_MAX_AGE = Config.getInstance().getPropertyAsInt(Config.AlpineKey.CORS_MAX_AGE);
+    private static final String APP_NAME;
+    private static final String APP_VERSION;
+    private static final boolean CORS_ENABLED;
+    private static final String CORS_ALLOW_ORIGIN;
+    private static final String CORS_ALLOW_METHODS;
+    private static final String CORS_ALLOW_HEADERS;
+    private static final String CORS_EXPOSE_HEADERS;
+    private static final boolean CORS_ALLOW_CREDENTIALS;
+    private static final int CORS_MAX_AGE;
+
+    static {
+        final Config config = ConfigProvider.getConfig();
+        APP_NAME = config.getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_NAME, String.class);
+        APP_VERSION = config.getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_VERSION, String.class);
+        CORS_ENABLED = config.getValue(AlpineConfigKeys.CORS_ENABLED, Boolean.class);
+        CORS_ALLOW_ORIGIN = config.getOptionalValue(AlpineConfigKeys.CORS_ALLOW_ORIGIN, String.class).orElse(null);
+        CORS_ALLOW_METHODS = config.getOptionalValue(AlpineConfigKeys.CORS_ALLOW_METHODS, String.class).orElse(null);
+        CORS_ALLOW_HEADERS = config.getOptionalValue(AlpineConfigKeys.CORS_ALLOW_HEADERS, String.class).orElse(null);
+        CORS_EXPOSE_HEADERS = config.getOptionalValue(AlpineConfigKeys.CORS_EXPOSE_HEADERS, String.class).orElse(null);
+        CORS_ALLOW_CREDENTIALS = config.getValue(AlpineConfigKeys.CORS_ALLOW_CREDENTIALS, Boolean.class);
+        CORS_MAX_AGE = config.getValue(AlpineConfigKeys.CORS_MAX_AGE, Integer.class);
+    }
 
     @Override
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) {

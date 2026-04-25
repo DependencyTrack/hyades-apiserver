@@ -18,7 +18,9 @@
  */
 package alpine.common.util;
 
-import alpine.Config;
+import alpine.config.AlpineConfigKeys;
+import io.smallrye.config.SmallRyeConfigBuilder;
+import org.eclipse.microprofile.config.Config;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -26,25 +28,23 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 public class ProxyUtilTest {
 
     @Test
     public void fromConfigTest() {
         Assertions.assertNull(ProxyUtil.fromConfig(null));
-        Assertions.assertNull(ProxyUtil.fromConfig(mock(Config.class)));
+        Assertions.assertNull(ProxyUtil.fromConfig(emptyConfig()));
 
-        var configMock = mock(Config.class);
-        when(configMock.getProperty(eq(Config.AlpineKey.HTTP_PROXY_ADDRESS))).thenReturn("proxy.http.example.com");
-        when(configMock.getPropertyAsInt(eq(Config.AlpineKey.HTTP_PROXY_PORT))).thenReturn(6666);
-        when(configMock.getProperty(eq(Config.AlpineKey.HTTP_PROXY_USERNAME))).thenReturn("domain\\username");
-        when(configMock.getPropertyOrFile(eq(Config.AlpineKey.HTTP_PROXY_PASSWORD))).thenReturn("pa$%word");
-        when(configMock.getProperty(eq(Config.AlpineKey.NO_PROXY))).thenReturn("acme.com,foo.bar:1234");
+        final Config config = new SmallRyeConfigBuilder()
+                .withDefaultValues(Map.of(
+                        AlpineConfigKeys.HTTP_PROXY_ADDRESS, "proxy.http.example.com",
+                        AlpineConfigKeys.HTTP_PROXY_PORT, "6666",
+                        AlpineConfigKeys.HTTP_PROXY_USERNAME, "domain\\username",
+                        AlpineConfigKeys.HTTP_PROXY_PASSWORD, "pa$%word",
+                        AlpineConfigKeys.NO_PROXY, "acme.com,foo.bar:1234"))
+                .build();
 
-        final var proxyCfg = ProxyUtil.fromConfig(configMock);
+        final var proxyCfg = ProxyUtil.fromConfig(config);
         Assertions.assertNotNull(proxyCfg);
         Assertions.assertEquals("proxy.http.example.com", proxyCfg.getHost());
         Assertions.assertEquals(6666, proxyCfg.getPort());
@@ -85,6 +85,10 @@ public class ProxyUtilTest {
         Assertions.assertEquals("username", proxyCfg.getUsername());
         Assertions.assertEquals("pa$%word", proxyCfg.getPassword());
         Assertions.assertNull(proxyCfg.getNoProxy());
+    }
+
+    private static Config emptyConfig() {
+        return new SmallRyeConfigBuilder().build();
     }
 
 }

@@ -30,6 +30,7 @@
         <module>support/datanucleus-plugin</module>
         <module>support/jdbi</module>
         <module>support/liquibase</module>
+        <module>support/smallrye-config-secret-handler-file</module>
         <module>support/smallrye-config-source-memory</module>
         <module>api</module>
         <module>alpine</module>

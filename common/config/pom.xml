@@ -66,6 +66,13 @@
             <groupId>io.smallrye.config</groupId>
             <artifactId>smallrye-config-core</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>smallrye-config-secret-handler-file</artifactId>
+            <version>${project.version}</version>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
 </project>

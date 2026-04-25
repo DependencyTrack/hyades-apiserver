@@ -30,26 +30,26 @@ public final class ConfigBuilderCustomizer implements SmallRyeConfigBuilderCusto
 
     @Override
     public void configBuilder(final SmallRyeConfigBuilder builder) {
-        builder
-                // Always redirect Alpine build info properties to the respective
-                // alpine.version and application.version property files.
-                .withInterceptorFactories(
-                        new PropertyFileConfigSourceInterceptorFactory(
-                                Thread.currentThread().getContextClassLoader().getResource("alpine.version"),
-                                Map.ofEntries(
-                                        Map.entry("alpine.build-info.framework.name", "name"),
-                                        Map.entry("alpine.build-info.framework.version", "version"),
-                                        Map.entry("alpine.build-info.framework.uuid", "uuid"),
-                                        Map.entry("alpine.build-info.framework.timestamp", "timestamp"))),
-                        new PropertyFileConfigSourceInterceptorFactory(
-                                Thread.currentThread().getContextClassLoader().getResource("application.version"),
-                                Map.ofEntries(
-                                        Map.entry("alpine.build-info.application.name", "name"),
-                                        Map.entry("alpine.build-info.application.version", "version"),
-                                        Map.entry("alpine.build-info.application.uuid", "uuid"),
-                                        Map.entry("alpine.build-info.application.timestamp", "timestamp"))))
-                // Add declarative mapping for Alpine configuration.
-                .withMapping(BuildInfoConfig.class);
+        // Default values for alpine framework properties live in
+        // META-INF/microprofile-config.properties (ordinal 100), which apiserver's
+        // application.properties (ordinal 250) overrides where it differs.
+        // Always redirect Alpine build info properties to the respective
+        // alpine.version and application.version property files.
+        builder.withInterceptorFactories(
+                new PropertyFileConfigSourceInterceptorFactory(
+                        Thread.currentThread().getContextClassLoader().getResource("alpine.version"),
+                        Map.ofEntries(
+                                Map.entry("alpine.build-info.framework.name", "name"),
+                                Map.entry("alpine.build-info.framework.version", "version"),
+                                Map.entry("alpine.build-info.framework.uuid", "uuid"),
+                                Map.entry("alpine.build-info.framework.timestamp", "timestamp"))),
+                new PropertyFileConfigSourceInterceptorFactory(
+                        Thread.currentThread().getContextClassLoader().getResource("application.version"),
+                        Map.ofEntries(
+                                Map.entry("alpine.build-info.application.name", "name"),
+                                Map.entry("alpine.build-info.application.version", "version"),
+                                Map.entry("alpine.build-info.application.uuid", "uuid"),
+                                Map.entry("alpine.build-info.application.timestamp", "timestamp"))));
     }
 
 }

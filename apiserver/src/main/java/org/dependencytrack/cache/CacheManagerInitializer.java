@@ -22,6 +22,7 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.cache.api.CacheProvider;
+import org.dependencytrack.common.ConfigKeys;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jspecify.annotations.Nullable;
@@ -52,7 +53,7 @@ public final class CacheManagerInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
-        final String providerName = config.getValue("dt.cache.provider", String.class);
+        final String providerName = config.getValue(ConfigKeys.CACHE_PROVIDER, String.class);
         LOGGER.info("Initializing cache manager for provider '{}'", providerName);
 
         final CacheProvider cacheProvider =

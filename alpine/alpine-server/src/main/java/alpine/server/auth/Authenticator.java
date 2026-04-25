@@ -18,8 +18,9 @@
  */
 package alpine.server.auth;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
+import alpine.config.AlpineConfigKeys;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 import java.security.Principal;
 
@@ -36,7 +37,7 @@ import java.security.Principal;
 public class Authenticator {
 
     private static final Logger LOGGER = Logger.getLogger(Authenticator.class);
-    private static final boolean LDAP_ENABLED = Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.LDAP_ENABLED);
+    private static final boolean LDAP_ENABLED = ConfigProvider.getConfig().getValue(AlpineConfigKeys.LDAP_ENABLED, Boolean.class);
 
     private final String username;
     private final String password;

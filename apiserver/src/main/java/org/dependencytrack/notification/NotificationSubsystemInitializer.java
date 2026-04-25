@@ -22,6 +22,7 @@ import io.micrometer.core.instrument.Metrics;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.ConfigKeys;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.eclipse.microprofile.config.Config;
@@ -44,7 +45,7 @@ public final class NotificationSubsystemInitializer implements ServletContextLis
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
-        if (!config.getValue("dt.notification.outbox-relay.enabled", boolean.class)) {
+        if (!config.getValue(ConfigKeys.NOTIFICATION_OUTBOX_RELAY_ENABLED, boolean.class)) {
             LOGGER.info("Not starting outbox relay because it is disabled");
             return;
         }
@@ -63,9 +64,9 @@ public final class NotificationSubsystemInitializer implements ServletContextLis
                 fileStorage,
                 handle -> new NotificationRouter(handle, Metrics.globalRegistry),
                 Metrics.globalRegistry,
-                config.getValue("dt.notification.outbox-relay.poll-interval-ms", long.class),
-                config.getValue("dt.notification.outbox-relay.batch-size", int.class),
-                config.getValue("dt.notification.outbox-relay.large-notification-threshold-bytes", int.class));
+                config.getValue(ConfigKeys.NOTIFICATION_OUTBOX_RELAY_POLL_INTERVAL_MS, long.class),
+                config.getValue(ConfigKeys.NOTIFICATION_OUTBOX_RELAY_BATCH_SIZE, int.class),
+                config.getValue(ConfigKeys.NOTIFICATION_OUTBOX_RELAY_LARGE_NOTIFICATION_THRESHOLD_BYTES, int.class));
         relay.start();
     }
 

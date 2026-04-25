@@ -18,11 +18,13 @@
  */
 package alpine.server.auth;
 
-import alpine.Config;
+import alpine.config.AlpineConfigKeys;
 import alpine.model.OidcUser;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSet;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONObject;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -37,8 +39,15 @@ public class DefaultOidcAuthenticationCustomizer implements OidcAuthenticationCu
 
     @SuppressWarnings("unused") // Used by ServiceLoader.
     public DefaultOidcAuthenticationCustomizer() {
-        this(Config.getInstance().getProperty(Config.AlpineKey.OIDC_USERNAME_CLAIM),
-                Config.getInstance().getProperty(Config.AlpineKey.OIDC_TEAMS_CLAIM));
+        this(usernameClaim(ConfigProvider.getConfig()), teamsClaim(ConfigProvider.getConfig()));
+    }
+
+    private static String usernameClaim(final Config config) {
+        return config.getOptionalValue(AlpineConfigKeys.OIDC_USERNAME_CLAIM, String.class).orElse(null);
+    }
+
+    private static String teamsClaim(final Config config) {
+        return config.getOptionalValue(AlpineConfigKeys.OIDC_TEAMS_CLAIM, String.class).orElse(null);
     }
 
     DefaultOidcAuthenticationCustomizer(final String usernameClaimName, final String teamsClaimName) {

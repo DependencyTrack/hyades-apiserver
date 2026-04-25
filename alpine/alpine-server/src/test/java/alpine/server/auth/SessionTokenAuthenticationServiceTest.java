@@ -18,14 +18,12 @@
  */
 package alpine.server.auth;
 
-import alpine.Config;
 import alpine.model.ManagedUser;
 import alpine.persistence.AlpineQueryManager;
 import alpine.server.persistence.PersistenceManagerFactory;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import org.glassfish.jersey.server.ContainerRequest;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.security.Principal;
@@ -38,11 +36,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class SessionTokenAuthenticationServiceTest {
-
-    @BeforeAll
-    static void setUpClass() {
-        Config.enableUnitTests();
-    }
 
     @AfterEach
     void tearDown() {

@@ -18,7 +18,6 @@
  */
 package org.dependencytrack;
 
-import alpine.Config;
 import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
 import alpine.model.Permission;
@@ -103,7 +102,6 @@ public abstract class ResourceTest {
 
     @BeforeAll
     public static void init() {
-        Config.enableUnitTests();
         TestDatabaseManager.initialize();
     }
 
