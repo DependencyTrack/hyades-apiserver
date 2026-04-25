@@ -18,17 +18,13 @@
  */
 package org.dependencytrack.support.datanucleus.method;
 
-import org.datanucleus.store.query.expression.Expression;
 import org.datanucleus.store.rdbms.mapping.java.JavaTypeMapping;
 import org.datanucleus.store.rdbms.sql.SQLStatement;
 import org.datanucleus.store.rdbms.sql.expression.ArrayLiteral;
 import org.datanucleus.store.rdbms.sql.expression.BooleanExpression;
-import org.datanucleus.store.rdbms.sql.expression.BooleanLiteral;
 import org.datanucleus.store.rdbms.sql.expression.IntegerLiteral;
 import org.datanucleus.store.rdbms.sql.expression.ObjectExpression;
 import org.datanucleus.store.rdbms.sql.expression.SQLExpression;
-import org.datanucleus.store.rdbms.sql.expression.StringExpression;
-import org.datanucleus.store.rdbms.sql.expression.StringLiteral;
 import org.datanucleus.store.rdbms.sql.method.SQLMethod;
 
 import java.util.List;
@@ -90,35 +86,26 @@ public class ProjectIsAccessibleByMethod implements SQLMethod {
                             Long[].class.getName(), arrayLiteralArg.getValue().getClass().getName()));
 
         final JavaTypeMapping booleanTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(Boolean.class);
-        final JavaTypeMapping stringTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(String.class);
 
-        // Transform the array literal to have the correct type for Postgres.
-        // Will result in the following expression: cast('{1,2,3}' as bigint[])
+        // Inline the team IDs as a Postgres bigint[] literal so the planner sees
+        // concrete values instead of an opaque parameter or function call.
         final StringJoiner joiner = new StringJoiner(",", "{", "}");
         for (final Long teamId : teamIds) {
             joiner.add(String.valueOf(teamId));
         }
-        final var teamIdsLiteral = new StringLiteral(
-                stmt, stringTypeMapping, joiner.toString(), null);
-        final var teamIdsExpr = new StringExpression(
-                stmt, stringTypeMapping, "cast", List.of(teamIdsLiteral), List.of("bigint[]"));
+        final String teamIdsLiteralSql = "cast('" + joiner + "' as bigint[])";
 
-        // TODO: This should not rely on a SQL function, as functions yield a
-        //  suboptimal query plan (https://github.com/DependencyTrack/hyades/issues/1801).
-        //  Instead, a SQLExpression equivalent to the function content should be assembled.
+        final String sql = /* language=SQL */ """
+                EXISTS (\
+                SELECT 1 \
+                FROM "PROJECT_ACCESS_TEAMS" pat \
+                INNER JOIN "PROJECT_HIERARCHY" ph \
+                ON ph."PARENT_PROJECT_ID" = pat."PROJECT_ID" \
+                WHERE pat."TEAM_ID" = ANY (%s) \
+                AND ph."CHILD_PROJECT_ID" = %s\
+                )""".formatted(teamIdsLiteralSql, objectExpr.toSQLText().toSQL());
 
-        // NB: objectExpr will compile to a reference of the object table's ID column, e.g.:
-        //   * "A0"."ID"
-        //   * "B0"."PROJECT_ID"
-        final var hasProjectAccessFunctionExpr = new StringExpression(
-                stmt, stringTypeMapping, "has_project_access", List.of(objectExpr, teamIdsExpr));
-
-        // Wrap the function call in a boolean expression. Final result(s) will be:
-        //   * has_project_access("A0"."ID", cast('{1,2,3}' as bigint[])) = TRUE
-        //   * has_project_access("B0"."PROJECT_ID", cast('{1,2,3}' as bigint[])) = TRUE
-        final var booleanTrueLiteral = new BooleanLiteral(stmt, booleanTypeMapping, Boolean.TRUE, null);
-
-        return new BooleanExpression(hasProjectAccessFunctionExpr, Expression.OP_EQ, booleanTrueLiteral);
+        return new BooleanExpression(stmt, booleanTypeMapping, sql);
     }
 
     private SQLExpression getUserExpression(final SQLStatement stmt, final ObjectExpression objectExpr, final IntegerLiteral userIdArg) {
@@ -128,23 +115,18 @@ public class ProjectIsAccessibleByMethod implements SQLMethod {
                             Long.class.getName(), userIdArg.getValue().getClass().getName()));
 
         final JavaTypeMapping booleanTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(Boolean.class);
-        final JavaTypeMapping stringTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(String.class);
-        final JavaTypeMapping integerTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(Long.class);
 
-        final var userIdLiteral = new IntegerLiteral(stmt, integerTypeMapping, userId, "userId");
+        final String sql = /* language=SQL */ """
+                EXISTS (\
+                SELECT 1 \
+                FROM "PROJECT_ACCESS_USERS" pau \
+                INNER JOIN "PROJECT_HIERARCHY" ph \
+                ON ph."PARENT_PROJECT_ID" = pau."PROJECT_ID" \
+                WHERE ph."CHILD_PROJECT_ID" = %s \
+                AND pau."USER_ID" = %d\
+                )""".formatted(objectExpr.toSQLText().toSQL(), userId);
 
-        // NB: objectExpr will compile to a reference of the object table's ID column, e.g.:
-        //   * "A0"."ID"
-        //   * "B0"."PROJECT_ID"
-        final var hasProjectAccessFunctionExpr = new StringExpression(
-                stmt, stringTypeMapping, "has_user_project_access", List.of(objectExpr, userIdLiteral));
-
-        // Wrap the function call in a boolean expression. Final result(s) will be:
-        //   * has_user_project_access("A0"."ID", 1) = TRUE
-        //   * has_user_project_access("B0"."PROJECT_ID", 1) = TRUE
-        final var booleanTrueLiteral = new BooleanLiteral(stmt, booleanTypeMapping, Boolean.TRUE, null);
-
-        return new BooleanExpression(hasProjectAccessFunctionExpr, Expression.OP_EQ, booleanTrueLiteral);
+        return new BooleanExpression(stmt, booleanTypeMapping, sql);
     }
 
 }
