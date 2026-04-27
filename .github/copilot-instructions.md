@@ -6,7 +6,7 @@ These instructions steer GitHub Copilot's automatic PR reviews. They complement 
 
 Dependency-Track is an intelligent component analysis platform that allows organizations to identify and reduce risk in the software supply chain.
 The repo is a multi-module Maven project. Relevant modules: `apiserver` (main application),
-`api` (OpenAPI v2 spec, spec-first), `alpine` (legacy framework being dissolved), `cache`, `common`, `dex` (durable execution),
+`api` (REST API v2, OpenAPI v3, spec-first), `alpine` (legacy framework being dissolved), `cache`, `common`, `dex` (durable execution),
 `migration` (Liquibase), `notification`, `plugin`, `proto`.
 
 ## Review priorities
