@@ -23,6 +23,23 @@ functions:
 - paginated-response-uses-items
 - response-conventions
 rules:
+  # Built-in Spectral rules for tag presence and validity, raised to error.
+  operation-tags: error
+  operation-tag-defined: error
+
+  # Every operation must declare exactly one tag. Combined with
+  # operation-tag-defined (above), this guarantees the tag is from the
+  # canonical list in openapi.yaml.
+  operation-must-have-exactly-one-tag:
+    message: "Operations must declare exactly one tag"
+    severity: error
+    given: "$.paths.*[get,post,put,patch,delete].tags"
+    then:
+      function: length
+      functionOptions:
+        min: 1
+        max: 1
+
   paginated-response-must-use-items-array:
     message: "{{error}}"
     severity: error

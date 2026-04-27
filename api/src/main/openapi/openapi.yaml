@@ -183,47 +183,47 @@ tags:
 
 paths:
   /components:
-    $ref: "./paths/components.yaml"
+    $ref: "./resources/components/components.yaml"
   /extension-points:
-    $ref: "./paths/extension-points.yaml"
+    $ref: "./resources/extensions/extension-points.yaml"
   /extension-points/{extensionPointName}/extensions:
-    $ref: "./paths/extension-points__name__extensions.yaml"
+    $ref: "./resources/extensions/extensions.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/config:
-    $ref: "./paths/extension-points__name__extensions__name__config.yaml"
+    $ref: "./resources/extensions/extension-config.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/config-schema:
-    $ref: "./paths/extension-points__name__extensions__name__config-schema.yaml"
+    $ref: "./resources/extensions/extension-config-schema.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/test:
-    $ref: "./paths/extension-points__name__extensions__name__test.yaml"
+    $ref: "./resources/extensions/extension-test.yaml"
   /projects/{uuid}/clone:
-    $ref: "./paths/projects__uuid__clone.yaml"
+    $ref: "./resources/projects/project-clone.yaml"
   /projects/{uuid}/components:
-    $ref: "./paths/projects_uuid_components.yaml"
-  /task-queues/{type}:
-    $ref: "./paths/task-queues__type_.yaml"
-  /task-queues/{type}/{name}:
-    $ref: "./paths/task-queues__type___name_.yaml"
+    $ref: "./resources/projects/project-components.yaml"
   /secrets:
-    $ref: "./paths/secrets.yaml"
+    $ref: "./resources/secrets/secrets.yaml"
   /secrets/{name}:
-    $ref: "./paths/secrets__name_.yaml"
+    $ref: "./resources/secrets/secret.yaml"
+  /task-queues/{type}:
+    $ref: "./resources/task-queues/task-queues.yaml"
+  /task-queues/{type}/{name}:
+    $ref: "./resources/task-queues/task-queue.yaml"
   /vuln-policies:
-    $ref: "./paths/vuln-policies.yaml"
+    $ref: "./resources/vuln-policies/vuln-policies.yaml"
   /vuln-policies/{uuid}:
-    $ref: "./paths/vuln-policies__uuid_.yaml"
+    $ref: "./resources/vuln-policies/vuln-policy.yaml"
   /vuln-policy-bundles:
-    $ref: "./paths/vuln-policy-bundles.yaml"
+    $ref: "./resources/vuln-policies/vuln-policy-bundles.yaml"
   /vuln-policy-bundles/{uuid}:
-    $ref: "./paths/vuln-policy-bundles__uuid_.yaml"
+    $ref: "./resources/vuln-policies/vuln-policy-bundle.yaml"
   /vuln-policy-bundles/{uuid}/sync:
-    $ref: "./paths/vuln-policy-bundles__uuid__sync.yaml"
+    $ref: "./resources/vuln-policies/vuln-policy-bundle-sync.yaml"
   /workflow-instances/{id}:
-    $ref: "./paths/workflow-instances__id_.yaml"
+    $ref: "./resources/workflows/workflow-instance.yaml"
   /workflow-runs:
-    $ref: "./paths/workflow-runs.yaml"
+    $ref: "./resources/workflows/workflow-runs.yaml"
   /workflow-runs/{id}:
-    $ref: "./paths/workflow-runs__id_.yaml"
+    $ref: "./resources/workflows/workflow-run.yaml"
   /workflow-runs/{id}/events:
-    $ref: "./paths/workflow-runs__id__events.yaml"
+    $ref: "./resources/workflows/workflow-run-events.yaml"
 
 components:
   securitySchemes:
