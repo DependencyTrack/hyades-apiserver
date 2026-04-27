@@ -32,7 +32,7 @@ If Maven needs to be invoked directly, only do so from the repository root.
 * Favor strong cohesion, loose coupling.
 * Prefer raw SQL + JDBI for new persistence code. JDO/DataNucleus is legacy; avoid touching unless necessary.
 * Legacy `apiserver` reuses persistence models as REST DTOs. New endpoints must separate API from persistence.
-* Substantial changes need an ADR under `docs/adr/` (*Accepted* before merge). Triggers: plugin extension points, cross-module APIs, schema/persistence changes, breaking REST contract changes, new runtime deps/integrations, or shifts in concurrency/consistency/scalability. See `docs/adr/000-template.md` and `CONTRIBUTING.md`.
+* Substantial changes need an ADR under `docs/adr/` (*Accepted* before merge). For the canonical trigger criteria, see `CONTRIBUTING.md#architecture-decision-records`. See also `docs/adr/000-template.md`.
 
 ## GitHub Issues and PRs
 
