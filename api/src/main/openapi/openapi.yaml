@@ -65,6 +65,93 @@ info:
     
     Note that if no sortable fields are documented for an operation,
     sorting is not supported *at all*.
+
+    ## Errors
+
+    All error responses use the `application/problem+json` media type
+    as defined in [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html).
+
+    Example:
+
+    ```json
+    {
+      "type": "about:blank",
+      "status": 404,
+      "title": "Resource Not Found",
+      "detail": "No project with UUID 0976ef46-e4a0-4be4-8b0e-00e9d3625c1f exists"
+    }
+    ```
+
+    ## Authentication
+
+    Two credential types are accepted:
+
+    - **API key** via the `X-Api-Key` request header. API keys are
+      long-lived and intended for machine-to-machine integrations.
+    - **Bearer token** via the `Authorization: Bearer <token>` request
+      header. Bearer tokens are short-lived, user-bound, and opaque
+      server-issued session tokens.
+
+    Bearer tokens are obtained from one of the following endpoints:
+
+    - `POST /api/v1/user/login`
+    - `POST /api/v1/user/oidc/login`
+
+    API v2 does not yet provide its own login endpoints; clients use
+    the v1 endpoints above to acquire tokens and then call v2 with them.
+
+    Tokens are valid for 8 hours by default and **cannot be refreshed**.
+    Clients must re-authenticate once a token expires.
+
+    Requests with missing or invalid credentials are rejected with
+    `401 Unauthorized`.
+
+    ## Authorization
+
+    Access is gated by named permissions. Operations document
+    the permission(s) they require; operations without a documented
+    permission requirement only require authentication.
+
+    When the *Portfolio Access Control* feature is enabled
+    (disabled by default), project-scoped operations additionally enforce
+    per-project access via team membership. The `PORTFOLIO_ACCESS_CONTROL_BYPASS`
+    permission grants access to all projects regardless of team mappings.
+    When the feature is disabled, all authenticated callers holding the required
+    permission can access all projects.
+
+    Authenticated requests that lack the required permission, or that
+    target a project the caller cannot access, are rejected with
+    `403 Forbidden`.
+
+    ## HTTP Methods
+
+    | Method   | Semantics                  |
+    |----------|----------------------------|
+    | `GET`    | Retrieve a resource        |
+    | `POST`   | Create a new resource      |
+    | `PUT`    | Update a resource          |
+    | `PATCH`  | Partially update a resource|
+    | `DELETE` | Delete a resource          |
+
+    ## Response Conventions
+
+    Create and update operations (`POST`, `PUT`, `PATCH`) do not return
+    the full resource in the response. They return either no body,
+    or only server-generated identifiers (e.g. a UUID).
+    `POST` responses may include a `Location` header linking to the
+    created resource.
+
+    Delete operations return `204 No Content` with no body.
+
+    ## Deprecations
+
+    Operations may be removed or replaced over time. When a response
+    carries the `X-API-Deprecated: true` header, the operation that
+    produced it is deprecated and may be removed in a future release.
+    Clients should check for this header on every response and surface
+    it (e.g. via a log warning) so that operators are aware of upcoming
+    breakages. The respective operation's description points out which
+    alternative operation(s) to use.
   version: 2.0.0
   contact:
     name: The Dependency-Track Authors
@@ -96,47 +183,47 @@ tags:
 
 paths:
   /components:
-    $ref: "./paths/components.yaml"
+    $ref: "./resources/components/components.yaml"
   /extension-points:
-    $ref: "./paths/extension-points.yaml"
+    $ref: "./resources/extensions/extension-points.yaml"
   /extension-points/{extensionPointName}/extensions:
-    $ref: "./paths/extension-points__name__extensions.yaml"
+    $ref: "./resources/extensions/extensions.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/config:
-    $ref: "./paths/extension-points__name__extensions__name__config.yaml"
+    $ref: "./resources/extensions/extension-config.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/config-schema:
-    $ref: "./paths/extension-points__name__extensions__name__config-schema.yaml"
+    $ref: "./resources/extensions/extension-config-schema.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/test:
-    $ref: "./paths/extension-points__name__extensions__name__test.yaml"
+    $ref: "./resources/extensions/extension-test.yaml"
   /projects/{uuid}/clone:
-    $ref: "./paths/projects__uuid__clone.yaml"
+    $ref: "./resources/projects/project-clone.yaml"
   /projects/{uuid}/components:
-    $ref: "./paths/projects_uuid_components.yaml"
-  /task-queues/{type}:
-    $ref: "./paths/task-queues__type_.yaml"
-  /task-queues/{type}/{name}:
-    $ref: "./paths/task-queues__type___name_.yaml"
+    $ref: "./resources/projects/project-components.yaml"
   /secrets:
-    $ref: "./paths/secrets.yaml"
+    $ref: "./resources/secrets/secrets.yaml"
   /secrets/{name}:
-    $ref: "./paths/secrets__name_.yaml"
+    $ref: "./resources/secrets/secret.yaml"
+  /task-queues/{type}:
+    $ref: "./resources/task-queues/task-queues.yaml"
+  /task-queues/{type}/{name}:
+    $ref: "./resources/task-queues/task-queue.yaml"
   /vuln-policies:
-    $ref: "./paths/vuln-policies.yaml"
+    $ref: "./resources/vuln-policies/vuln-policies.yaml"
   /vuln-policies/{uuid}:
-    $ref: "./paths/vuln-policies__uuid_.yaml"
+    $ref: "./resources/vuln-policies/vuln-policy.yaml"
   /vuln-policy-bundles:
-    $ref: "./paths/vuln-policy-bundles.yaml"
+    $ref: "./resources/vuln-policies/vuln-policy-bundles.yaml"
   /vuln-policy-bundles/{uuid}:
-    $ref: "./paths/vuln-policy-bundles__uuid_.yaml"
+    $ref: "./resources/vuln-policies/vuln-policy-bundle.yaml"
   /vuln-policy-bundles/{uuid}/sync:
-    $ref: "./paths/vuln-policy-bundles__uuid__sync.yaml"
+    $ref: "./resources/vuln-policies/vuln-policy-bundle-sync.yaml"
   /workflow-instances/{id}:
-    $ref: "./paths/workflow-instances__id_.yaml"
+    $ref: "./resources/workflows/workflow-instance.yaml"
   /workflow-runs:
-    $ref: "./paths/workflow-runs.yaml"
+    $ref: "./resources/workflows/workflow-runs.yaml"
   /workflow-runs/{id}:
-    $ref: "./paths/workflow-runs__id_.yaml"
+    $ref: "./resources/workflows/workflow-run.yaml"
   /workflow-runs/{id}/events:
-    $ref: "./paths/workflow-runs__id__events.yaml"
+    $ref: "./resources/workflows/workflow-run-events.yaml"
 
 components:
   securitySchemes:

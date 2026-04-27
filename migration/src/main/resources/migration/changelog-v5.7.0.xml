@@ -1969,7 +1969,28 @@
         <dropTable tableName="WORKFLOW_STATE"/>
     </changeSet>
 
-    <changeSet id="v5.7.0-80" author="sahibamittal">
+    <changeSet id="v5.7.0-80" author="nscuro">
+        <!--
+            ProjectIsAccessibleByMethod now emits inline EXISTS subqueries instead of
+            invoking these functions. The functions produced suboptimal query plans
+            (https://github.com/DependencyTrack/hyades/issues/1801).
+        -->
+        <sql splitStatements="true">
+            DROP FUNCTION IF EXISTS has_project_access(BIGINT, BIGINT[]);
+            DROP FUNCTION IF EXISTS has_user_project_access(BIGINT, BIGINT);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-81" author="nscuro">
+        <!-- Delete unused VIEW_BADGES permission. -->
+        <sql>
+            DELETE
+              FROM "PERMISSION"
+             WHERE "NAME" = 'VIEW_BADGES';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-82" author="sahibamittal">
         <addColumn tableName="PACKAGE_METADATA">
             <column name="LATEST_VERSION_PUBLISHED_AT" type="TIMESTAMPTZ(3)"/>
         </addColumn>

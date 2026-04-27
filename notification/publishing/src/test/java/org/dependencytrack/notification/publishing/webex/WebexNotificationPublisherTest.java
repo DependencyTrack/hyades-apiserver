@@ -122,7 +122,7 @@ class WebexNotificationPublisherTest extends AbstractNotificationPublisherTest {
                 .withHeader("Content-Type", equalTo("application/json"))
                 .withRequestBody(equalToJson(/* language=JSON */ """
                         {
-                          "markdown": "**Vulnerable Dependency Introduced on Project: [projectName : projectVersion]**\\n**Project:** pkg:maven/org.acme/projectName@projectVersion\\n**Component:** componentName : componentVersion\\n**Actions:**\\n[View Project](https://example.com/projects/?uuid=c9c9539a-e381-4b36-ac52-6a7ab83b2c95)\\n[View Component](https://example.com/component/?uuid=94f87321-a5d1-4c2f-b2fe-95165debebc6)\\n**Description:** A dependency was introduced that contains 1 known vulnerability"
+                          "markdown": "**Vulnerable Dependency Introduced on Project: [projectName : projectVersion]**\\n**Project:** projectName : projectVersion\\n**Component:** componentName : componentVersion\\n**Actions:**\\n[View Project](https://example.com/projects/?uuid=c9c9539a-e381-4b36-ac52-6a7ab83b2c95)\\n[View Component](https://example.com/component/?uuid=94f87321-a5d1-4c2f-b2fe-95165debebc6)\\n**Description:** A dependency was introduced that contains 1 known vulnerability"
                         }
                         """)));
     }

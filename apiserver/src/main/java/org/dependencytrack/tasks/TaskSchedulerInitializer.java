@@ -24,6 +24,7 @@ import alpine.server.auth.SessionTokenService;
 import alpine.server.tasks.LdapSyncTask;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.ConfigKeys;
 import org.dependencytrack.common.HttpClient;
 import org.dependencytrack.dex.engine.api.DexEngine;
 import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
@@ -97,7 +98,7 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
-        if (!config.getOptionalValue("dt.task-scheduler.enabled", boolean.class).orElse(true)) {
+        if (!config.getOptionalValue(ConfigKeys.TASK_SCHEDULER_ENABLED, boolean.class).orElse(true)) {
             LOGGER.info("Not starting task scheduler because it is disabled");
             return;
         }
@@ -219,7 +220,7 @@ public final class TaskSchedulerInitializer implements ServletContextListener {
                         "Vulnerability Policy Bundle Sync",
                         getCronScheduleFromConfig(config, "dt.task.vulnerability-policy-bundle-sync.cron"),
                         () -> {
-                            if (config.getOptionalValue("dt.vulnerability.policy.bundle.url", String.class).isEmpty()) {
+                            if (config.getOptionalValue(ConfigKeys.VULNERABILITY_POLICY_BUNDLE_URL, String.class).isEmpty()) {
                                 return;
                             }
 

@@ -18,52 +18,46 @@
  */
 package org.dependencytrack.common;
 
-import alpine.Config;
 import alpine.model.ConfigProperty;
+import io.smallrye.config.SmallRyeConfig;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 import javax.jdo.Query;
 import java.util.UUID;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static java.util.Objects.requireNonNull;
 
 public final class ClusterInfo {
 
-    private static final ReadWriteLock LOCK = new ReentrantReadWriteLock();
-    private static String clusterId;
+    private static final ReentrantLock LOCK = new ReentrantLock();
+    private static volatile String clusterId;
 
     public static String getClusterId() {
-        LOCK.readLock().lock();
+        if (ConfigProvider.getConfig().unwrap(SmallRyeConfig.class).getProfiles().contains("test")) {
+            return UUID.randomUUID().toString();
+        }
+
+        String local = clusterId;
+        if (local != null) {
+            return local;
+        }
+
+        LOCK.lock();
         try {
             if (clusterId == null) {
-                LOCK.readLock().unlock();
-
-                LOCK.writeLock().lock();
-                try {
-                    if (clusterId == null) {
-                        clusterId = loadClusterId();
-                    }
-
-                    LOCK.readLock().lock();
-                } finally {
-                    LOCK.writeLock().unlock();
-                }
+                clusterId = loadClusterId();
             }
 
             return clusterId;
         } finally {
-            LOCK.readLock().unlock();
+            LOCK.unlock();
         }
     }
 
     private static String loadClusterId() {
-        if (Config.isUnitTestsEnabled()) {
-            return UUID.randomUUID().toString();
-        }
-
         try (final var qm = new QueryManager()) {
             final Query<ConfigProperty> query = qm.getPersistenceManager().newQuery(ConfigProperty.class);
             query.setFilter("groupName == :groupName && propertyName == :propertyName");

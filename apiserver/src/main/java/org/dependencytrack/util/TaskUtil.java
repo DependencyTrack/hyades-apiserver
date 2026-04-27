@@ -18,12 +18,13 @@
  */
 package org.dependencytrack.util;
 
-import alpine.Config;
 import alpine.event.framework.Subscriber;
 import com.asahaf.javacron.InvalidExpressionException;
 import com.asahaf.javacron.Schedule;
 import com.google.common.base.CaseFormat;
 import net.javacrumbs.shedlock.core.LockConfiguration;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -45,16 +46,15 @@ public final class TaskUtil {
 
     public static LockConfiguration getLockConfigForTask(final Class<? extends Subscriber> taskClass) {
         final String taskName = getTaskConfigName(taskClass);
+        final Config config = ConfigProvider.getConfig();
 
-        final String maxLockDurationString = Config.getInstance().getProperty(new TaskConfigKey(taskName, PROPERTY_LOCK_MAX_DURATION));
-        if (maxLockDurationString == null) {
-            throw new NoSuchElementException("No max lock duration configured for task %s".formatted(taskName));
-        }
+        final String maxLockDurationString = config
+                .getOptionalValue(taskPropertyName(taskName, PROPERTY_LOCK_MAX_DURATION), String.class)
+                .orElseThrow(() -> new NoSuchElementException("No max lock duration configured for task %s".formatted(taskName)));
 
-        final String minLockDurationString = Config.getInstance().getProperty(new TaskConfigKey(taskName, PROPERTY_LOCK_MIN_DURATION));
-        if (minLockDurationString == null) {
-            throw new NoSuchElementException("No min lock duration configured for task %s".formatted(taskName));
-        }
+        final String minLockDurationString = config
+                .getOptionalValue(taskPropertyName(taskName, PROPERTY_LOCK_MIN_DURATION), String.class)
+                .orElseThrow(() -> new NoSuchElementException("No min lock duration configured for task %s".formatted(taskName)));
 
         return new LockConfiguration(
                 Instant.now(),
@@ -66,10 +66,9 @@ public final class TaskUtil {
     public static Schedule getCronScheduleForTask(final Class<? extends Subscriber> taskClass) {
         final String taskName = getTaskConfigName(taskClass);
 
-        final String cronExpression = Config.getInstance().getProperty(new TaskConfigKey(taskName, PROPERTY_CRON));
-        if (cronExpression == null) {
-            throw new NoSuchElementException("No cron expression configured for task %s".formatted(taskName));
-        }
+        final String cronExpression = ConfigProvider.getConfig()
+                .getOptionalValue(taskPropertyName(taskName, PROPERTY_CRON), String.class)
+                .orElseThrow(() -> new NoSuchElementException("No cron expression configured for task %s".formatted(taskName)));
 
         try {
             return Schedule.create(cronExpression);
@@ -78,9 +77,7 @@ public final class TaskUtil {
         }
     }
 
-    public static Schedule getCronScheduleFromConfig(
-            org.eclipse.microprofile.config.Config config,
-            String configName) {
+    public static Schedule getCronScheduleFromConfig(final Config config, final String configName) {
         try {
             return Schedule.create(config.getValue(configName, String.class));
         } catch (InvalidExpressionException e) {
@@ -91,24 +88,13 @@ public final class TaskUtil {
     private static String getTaskConfigName(final Class<? extends Subscriber> taskClass) {
         requireNonNull(taskClass);
 
-        // e.g. SomeFancyTask -> some.fancy
         return CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, taskClass.getSimpleName())
                 .replaceAll("_", ".")
                 .replaceAll("\\.task$", "");
     }
 
-    private record TaskConfigKey(String taskName, String property) implements Config.Key {
-
-        @Override
-        public String getPropertyName() {
-            return "dt.task.%s.%s".formatted(taskName, property);
-        }
-
-        @Override
-        public Object getDefaultValue() {
-            return null;
-        }
-
+    private static String taskPropertyName(final String taskName, final String property) {
+        return "dt.task.%s.%s".formatted(taskName, property);
     }
 
 }

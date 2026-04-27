@@ -19,23 +19,26 @@
 
 package alpine.server.auth;
 
-import alpine.Config;
+import alpine.config.AlpineConfigKeys;
 import alpine.model.MappedOidcGroup;
 import alpine.model.OidcGroup;
 import alpine.model.OidcUser;
 import alpine.model.Team;
 import alpine.persistence.AlpineQueryManager;
 import alpine.server.persistence.PersistenceManagerFactory;
+import io.smallrye.config.SmallRyeConfigBuilder;
 import org.assertj.core.api.Assertions;
+import org.eclipse.microprofile.config.Config;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,24 +48,15 @@ public class OidcAuthenticationServiceTest {
     private static final String ID_TOKEN = "idToken";
     private static final String ACCESS_TOKEN = "accessToken";
 
-    private Config configMock;
     private OidcConfiguration oidcConfigurationMock;
     private OidcIdTokenAuthenticator idTokenAuthenticatorMock;
     private OidcUserInfoAuthenticator userInfoAuthenticatorMock;
 
-    @BeforeAll
-    public static void setUpClass() {
-        Config.enableUnitTests();
-    }
-
     @BeforeEach
     public void setUp() {
-        configMock = Mockito.mock(Config.class);
         oidcConfigurationMock = Mockito.mock(OidcConfiguration.class);
         idTokenAuthenticatorMock = Mockito.mock(OidcIdTokenAuthenticator.class);
         userInfoAuthenticatorMock = Mockito.mock(OidcUserInfoAuthenticator.class);
-
-        Mockito.when(configMock.getProperty(ArgumentMatchers.eq(Config.AlpineKey.OIDC_USERNAME_CLAIM))).thenReturn(USERNAME_CLAIM_NAME);
     }
 
     @AfterEach
@@ -70,38 +64,52 @@ public class OidcAuthenticationServiceTest {
         PersistenceManagerFactory.tearDown();
     }
 
+    /**
+     * Builds a {@link Config} with sensible defaults for OIDC tests, applying the given overrides on top.
+     * Pass an empty string value to make a property appear unset (per MP Config spec, empty string converts
+     * to {@link java.util.Optional#empty()} for {@code getOptionalValue}).
+     */
+    private static Config configWith(final Map<String, String> overrides) {
+        final var values = new HashMap<String, String>();
+        values.put(AlpineConfigKeys.OIDC_AUTH_CUSTOMIZER, DefaultOidcAuthenticationCustomizer.class.getName());
+        values.put(AlpineConfigKeys.OIDC_USERNAME_CLAIM, USERNAME_CLAIM_NAME);
+        values.put(AlpineConfigKeys.OIDC_ENABLED, "true");
+        values.put(AlpineConfigKeys.OIDC_USER_PROVISIONING, "false");
+        values.put(AlpineConfigKeys.OIDC_TEAM_SYNCHRONIZATION, "false");
+        values.putAll(overrides);
+        return new SmallRyeConfigBuilder().withDefaultValues(values).build();
+    }
+
+    private static Config defaultConfig() {
+        return configWith(Map.of());
+    }
+
     @Test
     public void isSpecifiedShouldReturnFalseWhenOidcIsDisabled() {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_ENABLED))).thenReturn(false);
+        final Config config = configWith(Map.of(AlpineConfigKeys.OIDC_ENABLED, "false"));
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, ID_TOKEN, ACCESS_TOKEN);
+        final var authService = new OidcAuthenticationService(config, oidcConfigurationMock, ID_TOKEN, ACCESS_TOKEN);
 
         assertThat(authService.isSpecified()).isFalse();
     }
 
     @Test
     public void isSpecifiedShouldReturnFalseWhenAccessTokenAndIdTokenIsNull() {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_ENABLED))).thenReturn(true);
-
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, null, null);
+        final var authService = new OidcAuthenticationService(defaultConfig(), oidcConfigurationMock, null, null);
 
         assertThat(authService.isSpecified()).isFalse();
     }
 
     @Test
     public void isSpecifiedShouldReturnFalseWhenOidcConfigurationIsNull() {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_ENABLED))).thenReturn(true);
-
-        final var authService = new OidcAuthenticationService(configMock, null, ID_TOKEN, ACCESS_TOKEN);
+        final var authService = new OidcAuthenticationService(defaultConfig(), null, ID_TOKEN, ACCESS_TOKEN);
 
         assertThat(authService.isSpecified()).isFalse();
     }
 
     @Test
     public void isSpecifiedShouldReturnTrueWhenOidcIsEnabledAndOidcConfigurationIsNotNullAndAccessTokenIsNotNull() {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_ENABLED))).thenReturn(true);
-
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, ID_TOKEN, ACCESS_TOKEN);
+        final var authService = new OidcAuthenticationService(defaultConfig(), oidcConfigurationMock, ID_TOKEN, ACCESS_TOKEN);
 
         assertThat(authService.isSpecified()).isTrue();
     }
@@ -121,7 +129,7 @@ public class OidcAuthenticationServiceTest {
         profile.setUsername(existingUser.getUsername());
         Mockito.when(idTokenAuthenticatorMock.authenticate(ArgumentMatchers.eq(ID_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(profile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
+        final var authService = new OidcAuthenticationService(defaultConfig(), oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
 
         final var authenticatedUser = (OidcUser) authService.authenticate();
         Assertions.assertThat(authenticatedUser.getId()).isEqualTo(existingUser.getId());
@@ -145,7 +153,7 @@ public class OidcAuthenticationServiceTest {
         profile.setUsername(existingUser.getUsername());
         Mockito.when(userInfoAuthenticatorMock.authenticate(ArgumentMatchers.eq(ACCESS_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(profile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, null, userInfoAuthenticatorMock, null, ACCESS_TOKEN);
+        final var authService = new OidcAuthenticationService(defaultConfig(), oidcConfigurationMock, null, userInfoAuthenticatorMock, null, ACCESS_TOKEN);
 
         final var authenticatedUser = (OidcUser) authService.authenticate();
         Assertions.assertThat(authenticatedUser.getId()).isEqualTo(existingUser.getId());
@@ -156,9 +164,9 @@ public class OidcAuthenticationServiceTest {
 
     @Test
     public void authenticateShouldThrowWhenUsernameClaimIsNotConfigured() {
-        Mockito.when(configMock.getProperty(ArgumentMatchers.eq(Config.AlpineKey.OIDC_USERNAME_CLAIM))).thenReturn(null);
+        final Config config = configWith(Map.of(AlpineConfigKeys.OIDC_USERNAME_CLAIM, ""));
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, ID_TOKEN, ACCESS_TOKEN);
+        final var authService = new OidcAuthenticationService(config, oidcConfigurationMock, ID_TOKEN, ACCESS_TOKEN);
 
         Assertions.assertThatExceptionOfType(AlpineAuthenticationException.class)
                 .isThrownBy(authService::authenticate);
@@ -166,10 +174,9 @@ public class OidcAuthenticationServiceTest {
 
     @Test
     public void authenticateShouldThrowWhenTeamSyncIsEnabledAndTeamsClaimIsNotConfigured() {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION))).thenReturn(true);
-        Mockito.when(configMock.getProperty(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAMS_CLAIM))).thenReturn(null);
+        final Config config = configWith(Map.of(AlpineConfigKeys.OIDC_TEAM_SYNCHRONIZATION, "true"));
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, ID_TOKEN, ACCESS_TOKEN);
+        final var authService = new OidcAuthenticationService(config, oidcConfigurationMock, ID_TOKEN, ACCESS_TOKEN);
 
         Assertions.assertThatExceptionOfType(AlpineAuthenticationException.class)
                 .isThrownBy(authService::authenticate);
@@ -177,8 +184,9 @@ public class OidcAuthenticationServiceTest {
 
     @Test
     public void authenticateShouldSynchronizeTeamsWhenUserAlreadyExistsAndTeamSynchronizationIsEnabled() throws Exception {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION))).thenReturn(true);
-        Mockito.when(configMock.getProperty(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAMS_CLAIM))).thenReturn("groups");
+        final Config config = configWith(Map.of(
+                AlpineConfigKeys.OIDC_TEAM_SYNCHRONIZATION, "true",
+                AlpineConfigKeys.OIDC_TEAMS_CLAIM, "groups"));
 
         OidcUser existingUser;
         try (final var qm = new AlpineQueryManager()) {
@@ -207,7 +215,7 @@ public class OidcAuthenticationServiceTest {
         profile.setGroups(List.of("groupName"));
         Mockito.when(idTokenAuthenticatorMock.authenticate(ArgumentMatchers.eq(ID_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(profile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
+        final var authService = new OidcAuthenticationService(config, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
 
         final var authenticatedUser = (OidcUser) authService.authenticate();
         Assertions.assertThat(authenticatedUser.getId()).isEqualTo(existingUser.getId());
@@ -217,9 +225,10 @@ public class OidcAuthenticationServiceTest {
 
     @Test
     public void authenticateShouldSourceProfileFromIdTokenAndUserInfoIfAvailable() throws Exception {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_USER_PROVISIONING))).thenReturn(true);
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION))).thenReturn(true);
-        Mockito.when(configMock.getProperty(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAMS_CLAIM))).thenReturn("groups");
+        final Config config = configWith(Map.of(
+                AlpineConfigKeys.OIDC_USER_PROVISIONING, "true",
+                AlpineConfigKeys.OIDC_TEAM_SYNCHRONIZATION, "true",
+                AlpineConfigKeys.OIDC_TEAMS_CLAIM, "groups"));
 
         try (final var qm = new AlpineQueryManager()) {
             var group = new OidcGroup();
@@ -247,7 +256,7 @@ public class OidcAuthenticationServiceTest {
         userInfoProfile.setGroups(List.of("groupName"));
         Mockito.when(userInfoAuthenticatorMock.authenticate(ArgumentMatchers.eq(ACCESS_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(userInfoProfile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, userInfoAuthenticatorMock, ID_TOKEN, ACCESS_TOKEN);
+        final var authService = new OidcAuthenticationService(config, oidcConfigurationMock, idTokenAuthenticatorMock, userInfoAuthenticatorMock, ID_TOKEN, ACCESS_TOKEN);
 
         final var provisionedUser = (OidcUser) authService.authenticate();
         Assertions.assertThat(provisionedUser.getUsername()).isEqualTo("username");
@@ -259,9 +268,10 @@ public class OidcAuthenticationServiceTest {
 
     @Test
     public void authenticateShouldThrowWhenUnableToAssembleCompleteProfile() throws Exception {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_USER_PROVISIONING))).thenReturn(true);
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION))).thenReturn(true);
-        Mockito.when(configMock.getProperty(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAMS_CLAIM))).thenReturn("groups");
+        final Config config = configWith(Map.of(
+                AlpineConfigKeys.OIDC_USER_PROVISIONING, "true",
+                AlpineConfigKeys.OIDC_TEAM_SYNCHRONIZATION, "true",
+                AlpineConfigKeys.OIDC_TEAMS_CLAIM, "groups"));
 
         final var idTokenProfile = new OidcProfile();
         idTokenProfile.setSubject("subject");
@@ -274,7 +284,7 @@ public class OidcAuthenticationServiceTest {
         userInfoProfile.setUsername("username");
         Mockito.when(userInfoAuthenticatorMock.authenticate(ArgumentMatchers.eq(ACCESS_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(userInfoProfile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, userInfoAuthenticatorMock, ID_TOKEN, ACCESS_TOKEN);
+        final var authService = new OidcAuthenticationService(config, oidcConfigurationMock, idTokenAuthenticatorMock, userInfoAuthenticatorMock, ID_TOKEN, ACCESS_TOKEN);
 
         Assertions.assertThatExceptionOfType(AlpineAuthenticationException.class)
                 .isThrownBy(authService::authenticate)
@@ -284,14 +294,12 @@ public class OidcAuthenticationServiceTest {
 
     @Test
     public void authenticateShouldThrowWhenUserDoesNotExistAndProvisioningIsDisabled() throws Exception {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_USER_PROVISIONING))).thenReturn(false);
-
         final var profile = new OidcProfile();
         profile.setSubject("subject");
         profile.setUsername("username");
         Mockito.when(idTokenAuthenticatorMock.authenticate(ArgumentMatchers.eq(ID_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(profile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
+        final var authService = new OidcAuthenticationService(defaultConfig(), oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
 
         Assertions.assertThatExceptionOfType(AlpineAuthenticationException.class)
                 .isThrownBy(authService::authenticate)
@@ -301,7 +309,7 @@ public class OidcAuthenticationServiceTest {
 
     @Test
     public void authenticateShouldProvisionAndReturnNewUserWhenUserDoesNotExistAndProvisioningIsEnabled() throws Exception {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_USER_PROVISIONING))).thenReturn(true);
+        final Config config = configWith(Map.of(AlpineConfigKeys.OIDC_USER_PROVISIONING, "true"));
 
         final var profile = new OidcProfile();
         profile.setSubject("subject");
@@ -309,7 +317,7 @@ public class OidcAuthenticationServiceTest {
         profile.setEmail("username@example.com");
         Mockito.when(idTokenAuthenticatorMock.authenticate(ArgumentMatchers.eq(ID_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(profile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
+        final var authService = new OidcAuthenticationService(config, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
 
         final var provisionedUser = (OidcUser) authService.authenticate();
         Assertions.assertThat(provisionedUser).isNotNull();
@@ -322,8 +330,9 @@ public class OidcAuthenticationServiceTest {
 
     @Test
     public void authenticateShouldProvisionAndApplyDefaultTeamsAndReturnNewUserWhenUserDoesNotExistAndProvisioningIsEnabled() throws Exception {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_USER_PROVISIONING))).thenReturn(true);
-        Mockito.when(configMock.getPropertyAsList(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAMS_DEFAULT))).thenReturn(List.of("teamName"));
+        final Config config = configWith(Map.of(
+                AlpineConfigKeys.OIDC_USER_PROVISIONING, "true",
+                AlpineConfigKeys.OIDC_TEAMS_DEFAULT, "teamName"));
 
         try (final var qm = new AlpineQueryManager()) {
             var teamToAssign = new Team();
@@ -337,7 +346,7 @@ public class OidcAuthenticationServiceTest {
         profile.setEmail("username@example.com");
         Mockito.when(idTokenAuthenticatorMock.authenticate(ArgumentMatchers.eq(ID_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(profile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
+        final var authService = new OidcAuthenticationService(config, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
 
         final var provisionedUser = (OidcUser) authService.authenticate();
         Assertions.assertThat(provisionedUser).isNotNull();
@@ -351,9 +360,10 @@ public class OidcAuthenticationServiceTest {
 
     @Test
     public void authenticateShouldProvisionAndSyncTeamsAndReturnNewUserWhenUserDoesNotExistAndProvisioningAndTeamSyncIsEnabled() throws Exception {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_USER_PROVISIONING))).thenReturn(true);
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION))).thenReturn(true);
-        Mockito.when(configMock.getProperty(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAMS_CLAIM))).thenReturn("groups");
+        final Config config = configWith(Map.of(
+                AlpineConfigKeys.OIDC_USER_PROVISIONING, "true",
+                AlpineConfigKeys.OIDC_TEAM_SYNCHRONIZATION, "true",
+                AlpineConfigKeys.OIDC_TEAMS_CLAIM, "groups"));
 
         try (final var qm = new AlpineQueryManager()) {
             var group = new OidcGroup();
@@ -377,7 +387,7 @@ public class OidcAuthenticationServiceTest {
         profile.setEmail("username@example.com");
         Mockito.when(idTokenAuthenticatorMock.authenticate(ArgumentMatchers.eq(ID_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(profile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
+        final var authService = new OidcAuthenticationService(config, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
 
         final var provisionedUser = (OidcUser) authService.authenticate();
         Assertions.assertThat(provisionedUser).isNotNull();
@@ -401,7 +411,7 @@ public class OidcAuthenticationServiceTest {
         profile.setEmail("username@example.com");
         Mockito.when(idTokenAuthenticatorMock.authenticate(ArgumentMatchers.eq(ID_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(profile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
+        final var authService = new OidcAuthenticationService(defaultConfig(), oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
 
         final var provisionedUser = (OidcUser) authService.authenticate();
         Assertions.assertThat(provisionedUser).isNotNull();
@@ -427,7 +437,7 @@ public class OidcAuthenticationServiceTest {
         profile.setEmail("username666@example.com");
         Mockito.when(idTokenAuthenticatorMock.authenticate(ArgumentMatchers.eq(ID_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(profile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
+        final var authService = new OidcAuthenticationService(defaultConfig(), oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
 
         final var provisionedUser = (OidcUser) authService.authenticate();
         Assertions.assertThat(provisionedUser).isNotNull();
@@ -459,7 +469,7 @@ public class OidcAuthenticationServiceTest {
         profile.setEmail("username@example.com");
         Mockito.when(idTokenAuthenticatorMock.authenticate(ArgumentMatchers.eq(ID_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(profile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
+        final var authService = new OidcAuthenticationService(defaultConfig(), oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
 
         Assertions.assertThatExceptionOfType(AlpineAuthenticationException.class)
                 .isThrownBy(authService::authenticate)
@@ -469,8 +479,9 @@ public class OidcAuthenticationServiceTest {
 
     @Test
     public void synchronizeTeamsShouldRemoveOutdatedTeamMemberships() throws Exception {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION))).thenReturn(true);
-        Mockito.when(configMock.getProperty(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAMS_CLAIM))).thenReturn("groups");
+        final Config config = configWith(Map.of(
+                AlpineConfigKeys.OIDC_TEAM_SYNCHRONIZATION, "true",
+                AlpineConfigKeys.OIDC_TEAMS_CLAIM, "groups"));
 
         try (final var qm = new AlpineQueryManager()) {
             var oidcUser = new OidcUser();
@@ -499,7 +510,7 @@ public class OidcAuthenticationServiceTest {
         profile.setGroups(Collections.emptyList());
         Mockito.when(idTokenAuthenticatorMock.authenticate(ArgumentMatchers.eq(ID_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(profile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
+        final var authService = new OidcAuthenticationService(config, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
 
         final var authenticatedUser = (OidcUser) authService.authenticate();
         Assertions.assertThat(authenticatedUser.getTeams()).isNullOrEmpty();
@@ -507,8 +518,9 @@ public class OidcAuthenticationServiceTest {
 
     @Test
     public void authenticateShouldRemoveMembershipsOfUnmappedTeams() throws Exception {
-        Mockito.when(configMock.getPropertyAsBoolean(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION))).thenReturn(true);
-        Mockito.when(configMock.getProperty(ArgumentMatchers.eq(Config.AlpineKey.OIDC_TEAMS_CLAIM))).thenReturn("groups");
+        final Config config = configWith(Map.of(
+                AlpineConfigKeys.OIDC_TEAM_SYNCHRONIZATION, "true",
+                AlpineConfigKeys.OIDC_TEAMS_CLAIM, "groups"));
 
         try (final var qm = new AlpineQueryManager()) {
             var oidcUser = new OidcUser();
@@ -528,7 +540,7 @@ public class OidcAuthenticationServiceTest {
         profile.setGroups(List.of("groupName"));
         Mockito.when(idTokenAuthenticatorMock.authenticate(ArgumentMatchers.eq(ID_TOKEN), ArgumentMatchers.any(OidcProfileCreator.class))).thenReturn(profile);
 
-        final var authService = new OidcAuthenticationService(configMock, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
+        final var authService = new OidcAuthenticationService(config, oidcConfigurationMock, idTokenAuthenticatorMock, null, ID_TOKEN, null);
 
         final var authenticatedUser = (OidcUser) authService.authenticate();
         Assertions.assertThat(authenticatedUser.getTeams()).isNullOrEmpty();

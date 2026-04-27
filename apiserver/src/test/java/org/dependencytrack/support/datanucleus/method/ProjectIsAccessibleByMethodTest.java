@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.support.datanucleus.method;
 
+import alpine.model.ManagedUser;
 import alpine.model.Team;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
@@ -189,6 +190,81 @@ class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
         final List<Component> components = query.executeList();
         assertThat(components).hasSize(1);
+    }
+
+    @Test
+    @SuppressWarnings("resource")
+    void shouldEvaluateToTrueWhenProjectIsAccessibleByUser() {
+        final var team = new Team();
+        team.setName("team");
+        qm.persist(team);
+
+        final ManagedUser user = qm.createManagedUser("user", TEST_PASSWORD_HASH);
+        qm.addUserToTeam(user, team);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setAccessTeams(Set.of(team));
+        qm.persist(project);
+
+        final Query<Project> query = qm.getPersistenceManager().newQuery(Project.class);
+        query.setFilter("this.isAccessibleBy(:userId)");
+        query.setNamedParameters(Map.of("userId", user.getId()));
+
+        final List<Project> projects = query.executeList();
+        assertThat(projects).hasSize(1);
+    }
+
+    @Test
+    @SuppressWarnings("resource")
+    void shouldEvaluateToTrueWhenProjectParentIsAccessibleByUser() {
+        final var team = new Team();
+        team.setName("team");
+        qm.persist(team);
+
+        final ManagedUser user = qm.createManagedUser("user", TEST_PASSWORD_HASH);
+        qm.addUserToTeam(user, team);
+
+        final var parentProject = new Project();
+        parentProject.setName("acme-app-parent");
+        parentProject.setAccessTeams(Set.of(team));
+        qm.persist(parentProject);
+
+        final var project = new Project();
+        project.setParent(parentProject);
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Query<Project> query = qm.getPersistenceManager().newQuery(Project.class);
+        query.setFilter("name == 'acme-app' && this.isAccessibleBy(:userId)");
+        query.setNamedParameters(Map.of("userId", user.getId()));
+
+        final List<Project> projects = query.executeList();
+        assertThat(projects).hasSize(1);
+    }
+
+    @Test
+    @SuppressWarnings("resource")
+    void shouldEvaluateToFalseWhenProjectIsNotAccessibleByUser() {
+        final var team = new Team();
+        team.setName("team");
+        qm.persist(team);
+
+        final ManagedUser memberUser = qm.createManagedUser("member", TEST_PASSWORD_HASH);
+        qm.addUserToTeam(memberUser, team);
+        final ManagedUser outsiderUser = qm.createManagedUser("outsider", TEST_PASSWORD_HASH);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setAccessTeams(Set.of(team));
+        qm.persist(project);
+
+        final Query<Project> query = qm.getPersistenceManager().newQuery(Project.class);
+        query.setFilter("this.isAccessibleBy(:userId)");
+        query.setNamedParameters(Map.of("userId", outsiderUser.getId()));
+
+        final List<Project> projects = query.executeList();
+        assertThat(projects).isEmpty();
     }
 
     @Test

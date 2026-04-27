@@ -20,6 +20,7 @@ package org.dependencytrack.secret;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import org.dependencytrack.common.ConfigKeys;
 import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretManagerProvider;
@@ -53,7 +54,7 @@ public final class SecretManagerInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
-        final String providerName = config.getValue("dt.secret-management.provider", String.class);
+        final String providerName = config.getValue(ConfigKeys.SECRET_MANAGEMENT_PROVIDER, String.class);
         LOGGER.info("Initializing secret manager for provider '{}'", providerName);
 
         final var secretManagerProvider =

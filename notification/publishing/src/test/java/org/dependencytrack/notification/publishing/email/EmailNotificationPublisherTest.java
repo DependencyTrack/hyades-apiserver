@@ -208,7 +208,7 @@ class EmailNotificationPublisherTest extends AbstractNotificationPublisherTest {
                 
                 --------------------------------------------------------------------------------
                 
-                Project:           pkg:maven/org.acme/projectName@projectVersion
+                Project:           projectName : projectVersion
                 Project URL:       https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95
                 Component:         componentName : componentVersion
                 Component URL:     https://example.com/component/?uuid=94f87321-a5d1-4c2f-b2fe-95165debebc6

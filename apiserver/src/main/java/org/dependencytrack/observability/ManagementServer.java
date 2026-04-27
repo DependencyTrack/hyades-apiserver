@@ -20,6 +20,7 @@ package org.dependencytrack.observability;
 
 import com.sun.net.httpserver.HttpServer;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
+import org.dependencytrack.common.ConfigKeys;
 import org.dependencytrack.common.health.HealthCheckRegistry;
 import org.eclipse.microprofile.config.Config;
 import org.jspecify.annotations.Nullable;
@@ -60,13 +61,13 @@ public final class ManagementServer implements Closeable {
         this.healthCheckRegistry = requireNonNull(healthCheckRegistry, "healthCheckRegistry must not be null");
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry must not be null");
         this.metricsEnabled = config
-                .getOptionalValue("dt.metrics.enabled", boolean.class)
+                .getOptionalValue(ConfigKeys.METRICS_ENABLED, boolean.class)
                 .orElse(false);
         this.basicAuthUsername = config
-                .getOptionalValue("dt.metrics.auth.username", String.class)
+                .getOptionalValue(ConfigKeys.METRICS_AUTH_USERNAME, String.class)
                 .orElse(null);
         this.basicAuthPassword = config
-                .getOptionalValue("dt.metrics.auth.password", String.class)
+                .getOptionalValue(ConfigKeys.METRICS_AUTH_PASSWORD, String.class)
                 .orElse(null);
     }
 

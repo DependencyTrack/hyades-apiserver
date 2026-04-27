@@ -18,8 +18,7 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.common.config.BuildInfoConfig;
-import alpine.common.config.BuildInfoConfig.ApplicationBuildInfo;
+import alpine.config.AlpineConfigKeys;
 import alpine.server.auth.PasswordService;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -49,7 +48,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static alpine.common.config.ConfigUtil.getConfigMapping;
 import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_DEFAULT_OBJECTS_VERSION;
 
 /**
@@ -72,9 +70,7 @@ public final class DatabaseSeedingInitTask implements InitTask {
                     Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE),
             "Automation", List.of(
                     Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.BOM_UPLOAD),
-            "Badge Viewers", List.of(
-                    Permissions.Constants.VIEW_BADGES));
+                    Permissions.Constants.BOM_UPLOAD));
 
     @Override
     public int priority() {
@@ -93,9 +89,8 @@ public final class DatabaseSeedingInitTask implements InitTask {
         jdbi.useTransaction(handle -> {
             final var configPropertyDao = handle.attach(ConfigPropertyDao.class);
 
-            final ApplicationBuildInfo appBuildInfo =
-                    getConfigMapping(ctx.config(), BuildInfoConfig.class).application();
-            final String appBuildUuid = appBuildInfo.uuid();
+            final String appBuildUuid = ctx.config().getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_UUID, String.class);
+            final String appBuildTimestamp = ctx.config().getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_TIMESTAMP, String.class);
             final String defaultObjectsVersion = configPropertyDao
                     .getOptionalValue(INTERNAL_DEFAULT_OBJECTS_VERSION)
                     .orElse(null);
@@ -103,7 +98,7 @@ public final class DatabaseSeedingInitTask implements InitTask {
                 LOGGER.info(
                         "Default objects already populated for build {} (timestamp: {}); Skipping",
                         appBuildUuid,
-                        appBuildInfo.timestamp());
+                        appBuildTimestamp);
                 return;
             }
 

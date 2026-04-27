@@ -18,11 +18,12 @@
  */
 package alpine.model;
 
-import alpine.Config;
 import alpine.common.AboutProvider;
+import alpine.config.AlpineConfigKeys;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -41,18 +42,17 @@ public class About implements Serializable {
 
     private static final long serialVersionUID = -7573425245706188307L;
 
-    private static final String APPLICATION = Config.getInstance().getApplicationName();
-    private static final String VERSION = Config.getInstance().getApplicationVersion();
-    private static final String TIMESTAMP = Config.getInstance().getApplicationBuildTimestamp();
-    private static final String UUID = Config.getInstance().getApplicationBuildUuid();
+    private static final org.eclipse.microprofile.config.Config CONFIG = ConfigProvider.getConfig();
 
-    private static final String FRAMEWORK_NAME = Config.getInstance().getFrameworkName();
-    private static final String FRAMEWORK_VERSION = Config.getInstance().getFrameworkVersion();
-    private static final String FRAMEWORK_TIMESTAMP = Config.getInstance().getFrameworkBuildTimestamp();
-    private static final String FRAMEWORK_UUID = Config.getInstance().getFrameworkBuildUuid();
+    private static final String APPLICATION = CONFIG.getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_NAME, String.class);
+    private static final String VERSION = CONFIG.getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_VERSION, String.class);
+    private static final String TIMESTAMP = CONFIG.getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_TIMESTAMP, String.class);
+    private static final String UUID = CONFIG.getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_UUID, String.class);
 
-    private static final String SYSTEM_UUID = Config.getInstance().getSystemUuid();
-
+    private static final String FRAMEWORK_NAME = CONFIG.getValue(AlpineConfigKeys.BUILD_INFO_FRAMEWORK_NAME, String.class);
+    private static final String FRAMEWORK_VERSION = CONFIG.getValue(AlpineConfigKeys.BUILD_INFO_FRAMEWORK_VERSION, String.class);
+    private static final String FRAMEWORK_TIMESTAMP = CONFIG.getValue(AlpineConfigKeys.BUILD_INFO_FRAMEWORK_TIMESTAMP, String.class);
+    private static final String FRAMEWORK_UUID = CONFIG.getValue(AlpineConfigKeys.BUILD_INFO_FRAMEWORK_UUID, String.class);
 
     public String getApplication() {
         return APPLICATION;
@@ -91,10 +91,6 @@ public class About implements Serializable {
         public String getUuid() {
             return FRAMEWORK_UUID;
         }
-    }
-
-    public String getSystemUuid() {
-        return SYSTEM_UUID;
     }
 
     /**

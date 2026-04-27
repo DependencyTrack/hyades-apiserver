@@ -18,14 +18,12 @@
  */
 package alpine.server.filters;
 
-import alpine.Config;
 import alpine.model.ManagedUser;
 import alpine.model.UserSession;
 import alpine.persistence.AlpineQueryManager;
 import alpine.server.auth.SessionTokenService;
 import alpine.server.persistence.PersistenceManagerFactory;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -37,11 +35,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 class SessionUsageTrackerTest {
-
-    @BeforeAll
-    static void setUpClass() {
-        Config.enableUnitTests();
-    }
 
     @AfterEach
     void tearDown() {

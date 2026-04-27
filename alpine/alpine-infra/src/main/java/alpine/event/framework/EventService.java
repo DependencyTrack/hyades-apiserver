@@ -33,8 +33,8 @@ import java.util.concurrent.Semaphore;
  * This class will use virtual threads with a semaphore-based concurrency limit
  * when processing events.
  *
- * @see alpine.Config.AlpineKey#WORKER_THREADS
- * @see alpine.Config.AlpineKey#WORKER_THREAD_MULTIPLIER
+ * @see alpine.config.AlpineConfigKeys#WORKER_THREADS
+ * @see alpine.config.AlpineConfigKeys#WORKER_THREAD_MULTIPLIER
  * @see ThreadUtil#determineNumberOfWorkerThreads()
  *
  * @author Steve Springett

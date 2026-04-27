@@ -84,7 +84,7 @@ class MattermostNotificationPublisherTest extends AbstractNotificationPublisherT
                         {
                           "username": "Dependency Track",
                           "icon_url": "https://raw.githubusercontent.com/DependencyTrack/branding/master/dt-logo-symbol-blue-background.png",
-                          "text": "#### Bill of Materials Consumed\\nA CycloneDX BOM was consumed and will be processed\\n**Project**: pkg:maven/org.acme/projectName@projectVersion\\n[View Project](https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95)"
+                          "text": "#### Bill of Materials Consumed\\nA CycloneDX BOM was consumed and will be processed\\n**Project**: projectName : projectVersion\\n[View Project](https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95)"
                         }
                         """)));
     }
@@ -132,7 +132,7 @@ class MattermostNotificationPublisherTest extends AbstractNotificationPublisherT
                         {
                           "username": "Dependency Track",
                           "icon_url": "https://raw.githubusercontent.com/DependencyTrack/branding/master/dt-logo-symbol-blue-background.png",
-                          "text": "#### Vulnerable Dependency Introduced on Project: [projectName : projectVersion]\\nA dependency was introduced that contains 1 known vulnerability\\n**Project**: pkg:maven/org.acme/projectName@projectVersion\\n**Component**: componentName : componentVersion\\n[View Project](https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95) - [View Component](https://example.com/components/94f87321-a5d1-4c2f-b2fe-95165debebc6)"
+                          "text": "#### Vulnerable Dependency Introduced on Project: [projectName : projectVersion]\\nA dependency was introduced that contains 1 known vulnerability\\n**Project**: projectName : projectVersion\\n**Component**: componentName : componentVersion\\n[View Project](https://example.com/projects/c9c9539a-e381-4b36-ac52-6a7ab83b2c95) - [View Component](https://example.com/components/94f87321-a5d1-4c2f-b2fe-95165debebc6)"
                         }
                         """)));
     }

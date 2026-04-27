@@ -18,7 +18,6 @@
  */
 package alpine.server.auth;
 
-import alpine.Config;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.persistence.AlpineQueryManager;
@@ -27,7 +26,6 @@ import alpine.security.ApiKeyGenerator;
 import alpine.server.persistence.PersistenceManagerFactory;
 import org.glassfish.jersey.server.ContainerRequest;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import javax.naming.AuthenticationException;
@@ -40,11 +38,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class ApiKeyAuthenticationServiceTest {
-
-    @BeforeAll
-    public static void setUpClass() {
-        Config.enableUnitTests();
-    }
 
     @AfterEach
     public void tearDown() {

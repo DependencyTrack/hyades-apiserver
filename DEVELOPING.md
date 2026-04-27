@@ -2,6 +2,10 @@
 
 > Please also read [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md).
 
+> [!IMPORTANT]
+> Substantial changes must be accompanied by an [Architecture Decision Record](./docs/adr/).
+> See the [criteria in `CONTRIBUTING.md`](./CONTRIBUTING.md#architecture-decision-records) before starting work.
+
 ## Prerequisites
 
 * JDK 21+ ([Temurin](https://adoptium.net/temurin/releases) distribution recommended)

@@ -34,6 +34,8 @@ jobs:
     timeout-minutes: 5
     if: >-
       ${{ github.repository_owner == 'DependencyTrack'
+        && github.event.workflow_run.event == 'push'
+        && github.event.workflow_run.head_branch == 'main'
         && github.event.workflow_run.conclusion == 'success' }}
     steps:
     - name: Dispatch Update Event
@@ -44,4 +46,4 @@ jobs:
         # on the target instead.
         GH_TOKEN: "${{ secrets.CONFIG_DOCS_UPDATE_GITHUB_TOKEN }}"
       run: |-
-        gh workflow run update-openapi-docs.yml -R DependencyTrack/hyades
+        gh workflow run update-openapi-docs.yml -R DependencyTrack/docs

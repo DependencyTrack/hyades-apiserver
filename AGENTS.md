@@ -24,6 +24,16 @@ If Maven needs to be invoked directly, only do so from the repository root.
 > In this mode, a zero exit code is sufficient to confirm success; do not re-run tests or investigate
 > further solely because the output is empty. When invoking Maven directly or running `make` without `AGENT=1`, normal Maven output will be shown.
 
+## Architectural Constraints
+
+* Prefer simple, pragmatic solutions over speculative future-proofing.
+* Optimize for throughput over latency; batch to minimize network round trips.
+* Strong consistency by default unless stated otherwise.
+* Favor strong cohesion, loose coupling.
+* Prefer raw SQL + JDBI for new persistence code. JDO/DataNucleus is legacy; avoid touching unless necessary.
+* Legacy `apiserver` reuses persistence models as REST DTOs. New endpoints must separate API from persistence.
+* Substantial changes need an ADR under `docs/adr/` (*Accepted* before merge). For the canonical trigger criteria, see `CONTRIBUTING.md#architecture-decision-records`. See also `docs/adr/000-template.md`.
+
 ## GitHub Issues and PRs
 
 * Never create an issue.

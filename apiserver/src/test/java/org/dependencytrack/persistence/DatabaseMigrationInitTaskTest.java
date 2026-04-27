@@ -18,15 +18,13 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.test.config.ConfigPropertyExtension;
-import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.init.InitTaskContext;
+import org.dependencytrack.support.config.source.memory.MemoryConfigSource;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jdbi.v3.core.Jdbi;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -37,9 +35,6 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class DatabaseMigrationInitTaskTest {
-
-    @RegisterExtension
-    private static final ConfigPropertyExtension configProperties = new ConfigPropertyExtension();
 
     private PostgreSQLContainer postgresContainer;
     private PGSimpleDataSource dataSource;
@@ -57,41 +52,40 @@ public class DatabaseMigrationInitTaskTest {
         dataSource.setUser(postgresContainer.getUsername());
         dataSource.setPassword(postgresContainer.getPassword());
 
-        configProperties.setProperty("testcontainers.postgresql.jdbc-url", postgresContainer.getJdbcUrl());
-        configProperties.setProperty("testcontainers.postgresql.username", postgresContainer.getUsername());
-        configProperties.setProperty("testcontainers.postgresql.password", postgresContainer.getPassword());
+        MemoryConfigSource.setProperty("testcontainers.postgresql.jdbc-url", postgresContainer.getJdbcUrl());
+        MemoryConfigSource.setProperty("testcontainers.postgresql.username", postgresContainer.getUsername());
+        MemoryConfigSource.setProperty("testcontainers.postgresql.password", postgresContainer.getPassword());
 
         jdbi = Jdbi.create(dataSource);
     }
 
     @AfterEach
     public void tearDown() {
+        MemoryConfigSource.clear();
         if (postgresContainer != null) {
             postgresContainer.stop();
         }
     }
 
     @Test
-    @WithConfigProperty(value = {
-            "dt.database.url=${testcontainers.postgresql.jdbc-url}",
-            "dt.database.username=${testcontainers.postgresql.username}",
-            "dt.database.password=${testcontainers.postgresql.password}"
-    })
     public void test() throws Exception {
+        MemoryConfigSource.setProperty("dt.database.url", "${testcontainers.postgresql.jdbc-url}");
+        MemoryConfigSource.setProperty("dt.database.username", "${testcontainers.postgresql.username}");
+        MemoryConfigSource.setProperty("dt.database.password", "${testcontainers.postgresql.password}");
+
         new DatabaseMigrationInitTask().execute(new InitTaskContext(ConfigProvider.getConfig(), dataSource));
 
         assertMigrationExecuted(/* expectExecuted */ true);
     }
 
     @Test
-    @WithConfigProperty(value = {
-            "dt.database.url=${testcontainers.postgresql.jdbc-url}",
-            "dt.database.username=username",
-            "dt.database.password=password",
-            "dt.init.tasks.database.username=${testcontainers.postgresql.username}",
-            "dt.init.tasks.database.password=${testcontainers.postgresql.password}"
-    })
     public void testWithMigrationCredentials() throws Exception {
+        MemoryConfigSource.setProperty("dt.database.url", "${testcontainers.postgresql.jdbc-url}");
+        MemoryConfigSource.setProperty("dt.database.username", "username");
+        MemoryConfigSource.setProperty("dt.database.password", "password");
+        MemoryConfigSource.setProperty("dt.init.tasks.database.username", "${testcontainers.postgresql.username}");
+        MemoryConfigSource.setProperty("dt.init.tasks.database.password", "${testcontainers.postgresql.password}");
+
         new DatabaseMigrationInitTask().execute(new InitTaskContext(ConfigProvider.getConfig(), dataSource));
 
         assertMigrationExecuted(/* expectExecuted */ true);

@@ -80,13 +80,6 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>alpine-test</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
             <artifactId>apiserver</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -141,6 +134,12 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>secret-management</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>smallrye-config-secret-handler-file</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>

@@ -40,4 +40,4 @@ jobs:
         # on the target instead.
         GH_TOKEN: "${{ secrets.CONFIG_DOCS_UPDATE_GITHUB_TOKEN }}"
       run: |-
-        gh workflow run update-config-docs.yml -R DependencyTrack/hyades
+        gh workflow run update-config-docs.yml -R DependencyTrack/docs

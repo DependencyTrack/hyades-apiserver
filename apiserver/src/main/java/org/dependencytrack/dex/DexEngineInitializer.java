@@ -25,6 +25,7 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.analysis.AnalyzeProjectWorkflow;
 import org.dependencytrack.cache.api.CacheManager;
+import org.dependencytrack.common.ConfigKeys;
 import org.dependencytrack.common.HttpClient;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
@@ -251,7 +252,7 @@ public final class DexEngineInitializer implements ServletContextListener {
                 new ProcessScheduledNotificationRuleActivity(
                         engine,
                         fileStorage,
-                        config.getValue("dt.notification.outbox-relay.large-notification-threshold-bytes", int.class)),
+                        config.getValue(ConfigKeys.NOTIFICATION_OUTBOX_RELAY_LARGE_NOTIFICATION_THRESHOLD_BYTES, int.class)),
                 protoConverter(ProcessScheduledNotificationRuleArg.class),
                 voidConverter(),
                 Duration.ofMinutes(5));

@@ -59,6 +59,13 @@ lint-java:
 .PHONY: lint-java
 
 lint-openapi:
+	@dups=$$(find api/src/main/openapi -path '*/schemas/*.yaml' -exec basename {} \; \
+		| sort | uniq -d); \
+	if [ -n "$$dups" ]; then \
+		echo "Duplicate schema basenames (must be globally unique):"; \
+		echo "$$dups"; \
+		exit 1; \
+	fi
 	docker run --rm -i -w /work \
 		--platform linux/amd64 \
 		-v "$(CURDIR)/api:/work" \

@@ -18,9 +18,10 @@
  */
 package alpine.server.auth;
 
-import alpine.Config;
 import alpine.common.util.ByteUtil;
+import alpine.config.AlpineConfigKeys;
 import alpine.model.ManagedUser;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.security.MessageDigest;
@@ -49,7 +50,7 @@ import java.security.NoSuchAlgorithmException;
  */
 public final class PasswordService {
 
-    private static final int ROUNDS = Config.getInstance().getPropertyAsInt(Config.AlpineKey.BCRYPT_ROUNDS);
+    private static final int ROUNDS = ConfigProvider.getConfig().getValue(AlpineConfigKeys.BCRYPT_ROUNDS, Integer.class);
 
     /**
      * Private constructor
@@ -60,7 +61,7 @@ public final class PasswordService {
      * Given a password to hash, this method will first prehash the password using SHA-512 thus creating
      * a 128 character HEX representation of the password, which is then sent to BCrypt where a unique
      * salt is generated and the prehashed password is properly hashed using the configured BCrypt
-     * work factor (determined by {@link Config.AlpineKey#BCRYPT_ROUNDS}.
+     * work factor (determined by {@link AlpineConfigKeys#BCRYPT_ROUNDS}.
      *
      * @param password the password to hash
      * @return a hashed password
@@ -76,7 +77,7 @@ public final class PasswordService {
      * Given a password to hash, this method will first prehash the password using SHA-512 thus creating
      * a 128 character HEX representation of the password, which is then sent to BCrypt where the prehashed
      * password is properly hashed using the specified salt and uses the configured BCrypt work factor
-     * (determined by {@link Config.AlpineKey#BCRYPT_ROUNDS}.
+     * (determined by {@link AlpineConfigKeys#BCRYPT_ROUNDS}.
      *
      * @param password the password to hash
      * @param salt the salt to use when hashing this password

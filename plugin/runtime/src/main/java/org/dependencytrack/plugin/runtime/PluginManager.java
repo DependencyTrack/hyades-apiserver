@@ -391,14 +391,6 @@ public class PluginManager implements Closeable {
                         : null);
         configRegistryByExtensionIdentity.put(extensionIdentity, configRegistry);
 
-        final boolean isEnabled = configRegistry.getDeploymentConfig()
-                .getOptionalValue("enabled", boolean.class)
-                .orElse(true);
-        if (!isEnabled) {
-            LOGGER.debug("Extension is disabled; Skipping");
-            return;
-        }
-
         if (runtimeConfigSpec != null) {
             final RuntimeConfig defaultRuntimeConfig = runtimeConfigSpec.defaultConfig();
             if (defaultRuntimeConfig == null) {

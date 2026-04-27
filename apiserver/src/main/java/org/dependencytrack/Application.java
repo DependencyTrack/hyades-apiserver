@@ -18,12 +18,14 @@
  */
 package org.dependencytrack;
 
+import alpine.config.AlpineConfigKeys;
 import alpine.server.AlpineServlet;
 import alpine.server.filters.WhitelistUrlFilter;
 import alpine.server.persistence.PersistenceManagerFactory;
 import ch.qos.logback.classic.LoggerContext;
 import io.github.mweirauch.micrometer.jvm.extras.ProcessMemoryMetrics;
 import io.github.mweirauch.micrometer.jvm.extras.ProcessThreadMetrics;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -41,6 +43,7 @@ import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import jakarta.servlet.DispatcherType;
 import org.dependencytrack.cache.CacheManagerBinder;
 import org.dependencytrack.cache.CacheManagerInitializer;
+import org.dependencytrack.common.ConfigKeys;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.health.HealthCheckRegistry;
 import org.dependencytrack.dev.DevServices;
@@ -86,6 +89,7 @@ import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import java.net.URL;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Set;
 
 import static org.glassfish.jersey.server.ServerProperties.BV_SEND_ERROR_IN_RESPONSE;
@@ -113,6 +117,8 @@ public final class Application {
         final Config config = ConfigProvider.getConfig();
         new LoggingConfiguration(config).apply((LoggerContext) LoggerFactory.getILoggerFactory());
 
+        failOnLegacyFileSecretProperties(config);
+
         // Start dev services (if enabled) before anything else.
         final var devServices = new DevServices();
         devServices.start();
@@ -130,10 +136,10 @@ public final class Application {
 
         // Start management server so health and metrics are available during init.
         final String managementHost = config
-                .getOptionalValue("dt.management.host", String.class)
+                .getOptionalValue(ConfigKeys.MANAGEMENT_HOST, String.class)
                 .orElse("0.0.0.0");
         final int managementPort = config
-                .getOptionalValue("dt.management.port", int.class)
+                .getOptionalValue(ConfigKeys.MANAGEMENT_PORT, int.class)
                 .orElse(9000);
         final var managementServer = new ManagementServer(
                 managementHost,
@@ -150,17 +156,17 @@ public final class Application {
 
         // Execute init tasks.
         final var dataSourceRegistry = DataSourceRegistry.getInstance();
-        if (config.getValue("dt.init.tasks.enabled", boolean.class)) {
-            final String dataSourceName = config.getValue("dt.init.tasks.datasource.name", String.class);
+        if (config.getValue(ConfigKeys.INIT_TASKS_ENABLED, boolean.class)) {
+            final String dataSourceName = config.getValue(ConfigKeys.INIT_TASKS_DATASOURCE_NAME, String.class);
             final var initTaskExecutor = new InitTaskExecutor(
                     config, dataSourceRegistry.get(dataSourceName),
                     initTasksHealthCheck);
             initTaskExecutor.execute();
 
-            if (config.getValue("dt.init.tasks.datasource.close-after-use", boolean.class)) {
+            if (config.getValue(ConfigKeys.INIT_TASKS_DATASOURCE_CLOSE_AFTER_USE, boolean.class)) {
                 dataSourceRegistry.close(dataSourceName);
             }
-            if (config.getValue("dt.init.and.exit", boolean.class)) {
+            if (config.getValue(ConfigKeys.INIT_AND_EXIT, boolean.class)) {
                 LOGGER.info("Exiting because dt.init.and.exit is enabled");
                 System.exit(0);
             }
@@ -287,6 +293,31 @@ public final class Application {
         }
     }
 
+    private static final Set<String> LEGACY_FILE_SECRET_PROPERTIES = Set.of(
+            "alpine.database.password.file",
+            "alpine.http.proxy.password.file",
+            "alpine.ldap.bind.password.file",
+            "dt.database.password.file",
+            "dt.http.proxy.password.file",
+            "dt.ldap.bind.password.file");
+
+    private static void failOnLegacyFileSecretProperties(Config config) {
+        final var presentPropertyNames = new HashSet<String>();
+        LEGACY_FILE_SECRET_PROPERTIES.forEach(name -> {
+            if (config.getOptionalValue(name, String.class).isPresent()) {
+                presentPropertyNames.add(name);
+            }
+        });
+        if (presentPropertyNames.isEmpty()) {
+            return;
+        }
+
+        throw new IllegalStateException("""
+                Legacy file-secret properties are no longer supported: %s; \
+                Replace each <key>.file=/path with <key>=${file::/path}\
+                """.formatted(presentPropertyNames));
+    }
+
     private static final Set<String> HISTOGRAM_METER_NAMES = Set.of(
             "alpine_event_processing",
             "dt.notification.router.rule.query.latency",
@@ -300,7 +331,7 @@ public final class Application {
 
     private static void configureMeterRegistry(Config config, MeterRegistry meterRegistry) {
         final boolean metricsEnabled = config
-                .getOptionalValue("dt.metrics.enabled", boolean.class)
+                .getOptionalValue(ConfigKeys.METRICS_ENABLED, boolean.class)
                 .orElse(false);
         if (!metricsEnabled) {
             return;
@@ -321,6 +352,13 @@ public final class Application {
             }
         });
 
+        Gauge
+                .builder("dt.info", () -> 1)
+                .description("Metadata about the Dependency-Track application")
+                .tag("version", config.getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_VERSION, String.class))
+                .tag("built_at", config.getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_TIMESTAMP, String.class))
+                .strongReference(true)
+                .register(meterRegistry);
         new ClassLoaderMetrics().bindTo(meterRegistry);
         new JvmGcMetrics().bindTo(meterRegistry);
         new JvmInfoMetrics().bindTo(meterRegistry);

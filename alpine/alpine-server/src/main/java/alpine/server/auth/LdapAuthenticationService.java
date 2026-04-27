@@ -18,8 +18,8 @@
  */
 package alpine.server.auth;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
+import alpine.config.AlpineConfigKeys;
 import alpine.model.LdapUser;
 import alpine.persistence.AlpineQueryManager;
 
@@ -125,7 +125,7 @@ public class LdapAuthenticationService implements AuthenticationService {
                     user = qm.synchronizeTeamMembership(user, groupDNs);
                 }
             } else {
-                LOGGER.warn("Could not find '" + username + "' in the directory while provisioning the user. Ensure '" + Config.AlpineKey.LDAP_ATTRIBUTE_NAME.getPropertyName() + "' is defined correctly");
+                LOGGER.warn("Could not find '" + username + "' in the directory while provisioning the user. Ensure '" + AlpineConfigKeys.LDAP_ATTRIBUTE_NAME + "' is defined correctly");
                 throw new AlpineAuthenticationException(AlpineAuthenticationException.CauseType.UNMAPPED_ACCOUNT);
             }
         } catch (NamingException e) {
