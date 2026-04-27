@@ -18,9 +18,10 @@
  */
 package alpine.server.auth;
 
-import alpine.common.logging.Logger;
 import alpine.model.ManagedUser;
 import alpine.persistence.AlpineQueryManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.Principal;
 
@@ -32,7 +33,7 @@ import java.security.Principal;
  */
 public class ManagedUserAuthenticationService implements AuthenticationService {
 
-    private static final Logger LOGGER = Logger.getLogger(ManagedUserAuthenticationService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ManagedUserAuthenticationService.class);
     private final String username;
     private final String password;
 
@@ -68,7 +69,7 @@ public class ManagedUserAuthenticationService implements AuthenticationService {
      * @since 1.0.0
      */
     public Principal authenticate() throws AlpineAuthenticationException {
-        LOGGER.debug("Attempting to authenticate user: " + username);
+        LOGGER.debug("Attempting to authenticate user: {}", username);
         try (AlpineQueryManager qm = new AlpineQueryManager()) {
             final ManagedUser user = qm.getManagedUser(username);
             if (user != null) {

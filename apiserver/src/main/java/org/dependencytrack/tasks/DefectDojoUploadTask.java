@@ -18,17 +18,18 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import org.dependencytrack.event.DefectDojoUploadEventAbstract;
 import org.dependencytrack.integrations.defectdojo.DefectDojoUploader;
 import org.dependencytrack.secret.management.SecretManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.http.HttpClient;
 
 public class DefectDojoUploadTask extends VulnerabilityManagementUploadTask {
 
-    private static final Logger LOGGER = Logger.getLogger(DefectDojoUploadTask.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefectDojoUploadTask.class);
 
     private final HttpClient httpClient;
     private final SecretManager secretManager;

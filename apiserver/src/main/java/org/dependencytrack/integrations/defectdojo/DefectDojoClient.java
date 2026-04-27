@@ -18,12 +18,13 @@
  */
 package org.dependencytrack.integrations.defectdojo;
 
-import alpine.common.logging.Logger;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.dependencytrack.common.Mappers;
 import org.dependencytrack.common.MultipartBodyPublisher;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,7 +40,7 @@ import java.util.Date;
 
 public class DefectDojoClient {
 
-    private static final Logger LOGGER = Logger.getLogger(DefectDojoClient.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefectDojoClient.class);
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     private final HttpClient httpClient;
     private final DefectDojoUploader uploader;
@@ -121,7 +122,7 @@ public class DefectDojoClient {
 
                 while (dojoObj.hasNonNull("next") && !dojoObj.get("next").asText().isBlank()) {
                     final String nextUrl = dojoObj.get("next").asText();
-                    LOGGER.debug("Making the subsequent pagination call on " + nextUrl);
+                    LOGGER.debug("Making the subsequent pagination call on {}", nextUrl);
                     request = HttpRequest.newBuilder()
                             .uri(URI.create(nextUrl))
                             .header("Accept", "application/json")
@@ -139,8 +140,7 @@ public class DefectDojoClient {
                 LOGGER.debug("Successfully retrieved the test list ");
                 return dojoTests;
             } else {
-                LOGGER.warn("DefectDojo Client did not receive expected response while attempting to retrieve tests list "
-                        + response.statusCode());
+                LOGGER.warn("DefectDojo Client did not receive expected response while attempting to retrieve tests list {}", response.statusCode());
             }
         } catch (IOException ex) {
             uploader.handleException(LOGGER, ex);

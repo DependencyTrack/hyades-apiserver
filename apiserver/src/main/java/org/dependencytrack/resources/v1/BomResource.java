@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
 import alpine.server.auth.PermissionRequired;
 import com.fasterxml.uuid.Generators;
@@ -88,6 +87,8 @@ import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -128,7 +129,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransactio
 })
 public class BomResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(BomResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BomResource.class);
     private static final String DEFAULT_EXPORT_VERSION = "1.5";
 
     @Inject
@@ -464,7 +465,7 @@ public class BomResource extends AbstractApiResource {
              final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
             bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
         } catch (IOException e) {
-            LOGGER.error("An unexpected error occurred while decoding BOM uploaded to project: " + projectInfo.uuid(), e);
+            LOGGER.error("An unexpected error occurred while decoding BOM uploaded to project: {}", projectInfo.uuid(), e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
 
@@ -673,7 +674,7 @@ public class BomResource extends AbstractApiResource {
                     "bom-upload/%s".formatted(bomUploadToken),
                     new ByteArrayInputStream(bomBytes));
         } catch (IOException e) {
-            LOGGER.error("Failed to store BOM for project: " + project.uuid(), e);
+            LOGGER.error("Failed to store BOM for project: {}", project.uuid(), e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
 

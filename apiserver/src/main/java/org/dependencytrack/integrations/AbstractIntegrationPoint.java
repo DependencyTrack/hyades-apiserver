@@ -18,9 +18,9 @@
  */
 package org.dependencytrack.integrations;
 
-import alpine.common.logging.Logger;
 import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.persistence.QueryManager;
+import org.slf4j.Logger;
 
 import static org.dependencytrack.notification.api.NotificationFactory.createIntegrationErrorNotification;
 

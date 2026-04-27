@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.common.logging.Logger;
 import alpine.common.util.BooleanUtil;
 import alpine.common.validation.RegexSequence;
 import alpine.model.ApiKey;
@@ -74,6 +73,8 @@ import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.jspecify.annotations.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
@@ -107,7 +108,7 @@ public class QueryManager extends AlpineQueryManager {
 
     protected AlpineRequest request;
 
-    private static final Logger LOGGER = Logger.getLogger(QueryManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(QueryManager.class);
     private BomQueryManager bomQueryManager;
     private ComponentQueryManager componentQueryManager;
     private AnalysisQueryManager analysisQueryManager;

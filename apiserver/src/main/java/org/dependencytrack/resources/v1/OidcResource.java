@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.model.MappedOidcGroup;
 import alpine.model.OidcGroup;
 import alpine.model.Team;
@@ -52,6 +51,8 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.vo.MappedOidcGroupRequest;
 import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -69,7 +70,7 @@ import java.util.stream.Collectors;
 })
 public class OidcResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(OidcResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OidcResource.class);
 
     @GET
     @Path("/available")

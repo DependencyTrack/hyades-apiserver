@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.model.MappedLdapGroup;
 import alpine.model.Team;
 import alpine.server.auth.LdapConnectionWrapper;
@@ -49,6 +48,8 @@ import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.vo.MappedLdapGroupRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.naming.NamingException;
 import javax.naming.SizeLimitExceededException;
@@ -71,7 +72,7 @@ import java.util.stream.Collectors;
 })
 public class LdapResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(LdapResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LdapResource.class);
 
     @GET
     @Path("/groups")

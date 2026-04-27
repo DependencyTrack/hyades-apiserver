@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.parser.cyclonedx.util;
 
-import alpine.common.logging.Logger;
 import alpine.config.AlpineConfigKeys;
 import alpine.model.IConfigProperty;
 import com.github.packageurl.MalformedPackageURLException;
@@ -68,6 +67,8 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.VulnerabilityUtil;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -93,7 +94,7 @@ import static org.dependencytrack.util.PurlUtil.silentPurlCoordinatesOnly;
 
 public class ModelConverter {
 
-    private static final Logger LOGGER = Logger.getLogger(ModelConverter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ModelConverter.class);
 
     /**
      * Private Constructor.

@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.User;
@@ -73,6 +72,8 @@ import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.dependencytrack.resources.v1.vo.ConciseProject;
 import org.jdbi.v3.core.Handle;
 import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.FetchGroup;
 import java.security.Principal;
@@ -110,7 +111,7 @@ import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolati
 })
 public class ProjectResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(ProjectResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProjectResource.class);
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -597,7 +598,7 @@ public class ProjectResource extends AbstractApiResource {
                 return project;
             });
 
-            LOGGER.info("Project " + createdProject + " created by " + super.getPrincipal().getName());
+            LOGGER.info("Project {} created by {}", createdProject, super.getPrincipal().getName());
             return Response.status(Response.Status.CREATED).entity(createdProject).build();
         }
     }
@@ -705,7 +706,7 @@ public class ProjectResource extends AbstractApiResource {
                 }
             });
 
-            LOGGER.info("Project " + updatedProject + " updated by " + super.getPrincipal().getName());
+            LOGGER.info("Project {} updated by {}", updatedProject, super.getPrincipal().getName());
             return Response.ok(updatedProject).build();
         } catch (RuntimeException e) {
             if (isUniqueConstraintViolation(e)) {
@@ -865,7 +866,7 @@ public class ProjectResource extends AbstractApiResource {
                 return Response.notModified().build();
             }
 
-            LOGGER.info("Project " + updatedProject + " updated by " + super.getPrincipal().getName());
+            LOGGER.info("Project {} updated by {}", updatedProject, super.getPrincipal().getName());
             return Response.ok(updatedProject).build();
         }
     }
@@ -935,7 +936,7 @@ public class ProjectResource extends AbstractApiResource {
                 }
                 requireAccess(qm, project);
 
-                LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
+                LOGGER.info("Project {} deletion request by {}", project, super.getPrincipal().getName());
 
                 try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
                     final var projectDao = jdbiHandle.attach(ProjectDao.class);
@@ -1031,7 +1032,7 @@ public class ProjectResource extends AbstractApiResource {
                     }
                 }
 
-                LOGGER.info("Project " + sourceProject + " is being cloned by " + super.getPrincipal().getName());
+                LOGGER.info("Project {} is being cloned by {}", sourceProject, super.getPrincipal().getName());
             });
 
             final UUID sourceProjectUuid = UUID.fromString(jsonRequest.getProject());

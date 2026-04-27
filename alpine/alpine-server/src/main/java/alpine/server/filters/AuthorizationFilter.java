@@ -18,7 +18,6 @@
  */
 package alpine.server.filters;
 
-import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.User;
 import alpine.persistence.AlpineQueryManager;
@@ -32,6 +31,8 @@ import jakarta.ws.rs.container.ResourceInfo;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.Principal;
 import java.util.Collections;
@@ -48,7 +49,7 @@ import java.util.Set;
 @Priority(Priorities.AUTHORIZATION)
 public class AuthorizationFilter implements ContainerRequestFilter {
 
-    private static final Logger LOGGER = Logger.getLogger(AuthorizationFilter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthorizationFilter.class);
 
     public static final String EFFECTIVE_PERMISSIONS_PROPERTY = "effectivePermissions";
 

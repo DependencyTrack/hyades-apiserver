@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.common.logging.Logger;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
@@ -53,6 +52,8 @@ import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowContex
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import javax.jdo.PersistenceManager;
@@ -139,7 +140,7 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
 
     }
 
-    private static final Logger LOGGER = Logger.getLogger(ImportBomActivity.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportBomActivity.class);
 
     private final DexEngine dexEngine;
     private final FileStorage fileStorage;

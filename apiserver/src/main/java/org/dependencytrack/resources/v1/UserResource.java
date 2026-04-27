@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
@@ -65,6 +64,8 @@ import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.Query;
 import java.security.Principal;
@@ -92,7 +93,7 @@ import static org.dependencytrack.notification.api.NotificationFactory.createUse
 })
 public class UserResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(UserResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserResource.class);
 
     private final SessionTokenService sessionTokenService = new SessionTokenService();
 

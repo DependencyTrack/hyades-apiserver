@@ -18,10 +18,11 @@
  */
 package alpine.server.auth;
 
-import alpine.common.logging.Logger;
 import alpine.config.AlpineConfigKeys;
 import alpine.model.LdapUser;
 import alpine.persistence.AlpineQueryManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.naming.NamingException;
 import javax.naming.directory.DirContext;
@@ -38,7 +39,7 @@ import java.util.List;
  */
 public class LdapAuthenticationService implements AuthenticationService {
 
-    private static final Logger LOGGER = Logger.getLogger(LdapAuthenticationService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LdapAuthenticationService.class);
 
     private final String username;
     private final String password;
@@ -77,18 +78,18 @@ public class LdapAuthenticationService implements AuthenticationService {
      * @since 1.0.0
      */
     public Principal authenticate() throws AlpineAuthenticationException {
-        LOGGER.debug("Attempting to authenticate user: " + username);
+        LOGGER.debug("Attempting to authenticate user: {}", username);
         if (validateCredentials()) {
             try (AlpineQueryManager qm = new AlpineQueryManager()) {
                 final LdapUser user = qm.getLdapUser(username);
                 if (user != null) {
-                    LOGGER.debug("Attempting to authenticate user: " + username);
+                    LOGGER.debug("Attempting to authenticate user: {}", username);
                     return user;
                 } else if (LdapConnectionWrapper.USER_PROVISIONING) {
-                    LOGGER.debug("The user (" + username + ") authenticated successfully but the account has not been provisioned");
+                    LOGGER.debug("The user ({}) authenticated successfully but the account has not been provisioned", username);
                     return autoProvision(qm);
                 } else {
-                    LOGGER.debug("The user (" + username + ") is unmapped and user provisioning is not enabled");
+                    LOGGER.debug("The user ({}) is unmapped and user provisioning is not enabled", username);
                     throw new AlpineAuthenticationException(AlpineAuthenticationException.CauseType.UNMAPPED_ACCOUNT);
                 }
             }
@@ -106,7 +107,7 @@ public class LdapAuthenticationService implements AuthenticationService {
      * @since 1.4.0
      */
     private LdapUser autoProvision(final AlpineQueryManager qm) throws AlpineAuthenticationException {
-        LOGGER.debug("Provisioning: " + username);
+        LOGGER.debug("Provisioning: {}", username);
         LdapUser user = null;
         final LdapConnectionWrapper ldap = new LdapConnectionWrapper();
         DirContext dirContext = null;
@@ -125,7 +126,7 @@ public class LdapAuthenticationService implements AuthenticationService {
                     user = qm.synchronizeTeamMembership(user, groupDNs);
                 }
             } else {
-                LOGGER.warn("Could not find '" + username + "' in the directory while provisioning the user. Ensure '" + AlpineConfigKeys.LDAP_ATTRIBUTE_NAME + "' is defined correctly");
+                LOGGER.warn("Could not find '{}' in the directory while provisioning the user. Ensure '{}' is defined correctly", username, AlpineConfigKeys.LDAP_ATTRIBUTE_NAME);
                 throw new AlpineAuthenticationException(AlpineAuthenticationException.CauseType.UNMAPPED_ACCOUNT);
             }
         } catch (NamingException e) {
@@ -145,7 +146,7 @@ public class LdapAuthenticationService implements AuthenticationService {
      * @since 1.0.0
      */
     private boolean validateCredentials() {
-        LOGGER.debug("Validating credentials for: " + username);
+        LOGGER.debug("Validating credentials for: {}", username);
         final LdapConnectionWrapper ldap = new LdapConnectionWrapper();
         DirContext dirContext = null;
         LdapContext ldapContext = null;
@@ -153,14 +154,14 @@ public class LdapAuthenticationService implements AuthenticationService {
             final LdapUser ldapUser = qm.getLdapUser(username);
             if (ldapUser != null && ldapUser.getDN() != null && ldapUser.getDN().contains("=")) {
                 ldapContext = ldap.createLdapContext(ldapUser.getDN(), password);
-                LOGGER.debug("The supplied credentials are valid for: " + username);
+                LOGGER.debug("The supplied credentials are valid for: {}", username);
                 return true;
             } else {
                 dirContext = ldap.createDirContext();
                 final SearchResult result = ldap.searchForSingleUsername(dirContext, username);
                 if (result != null ) {
                     ldapContext = ldap.createLdapContext(result.getNameInNamespace(), password);
-                    LOGGER.debug("The supplied credentials are invalid for: " + username);
+                    LOGGER.debug("The supplied credentials are invalid for: {}", username);
                     return true;
                 }
             }

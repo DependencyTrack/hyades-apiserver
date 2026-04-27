@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -58,6 +57,8 @@ import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.vo.CreateNotificationPublisherRequest;
 import org.dependencytrack.resources.v1.vo.UpdateNotificationPublisherRequest;
 import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Objects;
@@ -84,7 +85,7 @@ import static org.dependencytrack.notification.proto.v1.Level.LEVEL_WARNING;
 })
 public class NotificationPublisherResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(NotificationPublisherResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NotificationPublisherResource.class);
 
     private final PluginManager pluginManager;
 

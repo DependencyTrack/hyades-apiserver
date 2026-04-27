@@ -18,8 +18,9 @@
  */
 package org.dependencytrack.model;
 
-import alpine.common.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -55,7 +56,7 @@ import java.util.regex.Pattern;
  * @since 4.9.0
  */
 public class VersionDistance implements Comparable<VersionDistance>, Serializable {
-    private static final Logger LOGGER = Logger.getLogger(VersionDistance.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(VersionDistance.class);
 
 
     private static final long serialVersionUID = 1L;

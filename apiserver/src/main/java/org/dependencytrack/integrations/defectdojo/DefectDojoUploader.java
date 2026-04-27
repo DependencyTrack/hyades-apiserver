@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.integrations.defectdojo;
 
-import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
@@ -29,6 +28,8 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.secret.management.SecretManager;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -46,7 +47,7 @@ import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_URL;
 
 public class DefectDojoUploader extends AbstractIntegrationPoint implements ProjectFindingUploader {
 
-    private static final Logger LOGGER = Logger.getLogger(DefectDojoUploader.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefectDojoUploader.class);
     private static final String ENGAGEMENTID_PROPERTY = "defectdojo.engagementId";
     private static final String REIMPORT_PROPERTY = "defectdojo.reimport";
     private static final String DO_NOT_REACTIVATE_PROPERTY = "defectdojo.doNotReactivate";
@@ -152,7 +153,7 @@ public class DefectDojoUploader extends AbstractIntegrationPoint implements Proj
             if (isReimportConfigured(project) || globalReimportEnabled) {
                 final ArrayList<String> testsIds = client.getDojoTestIds(apiKeyValue, engagementId.getPropertyValue());
                 final String testId = client.getDojoTestId(engagementId.getPropertyValue(), testsIds, testTitle);
-                LOGGER.debug("Found existing test Id: " + testId);
+                LOGGER.debug("Found existing test Id: {}", testId);
                 if (testId.equals("")) {
                     client.uploadDependencyTrackFindings(
                             apiKeyValue,

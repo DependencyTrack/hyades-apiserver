@@ -18,17 +18,18 @@
  */
 package alpine.server.filters;
 
-import alpine.common.logging.Logger;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import alpine.model.ApiKey;
 import alpine.persistence.AlpineQueryManager;
+import jakarta.ws.rs.ext.Provider;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.glassfish.jersey.server.monitoring.ApplicationEvent;
 import org.glassfish.jersey.server.monitoring.ApplicationEventListener;
 import org.glassfish.jersey.server.monitoring.RequestEvent;
 import org.glassfish.jersey.server.monitoring.RequestEventListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import jakarta.ws.rs.ext.Provider;
 import javax.jdo.PersistenceManager;
 import javax.jdo.PersistenceManagerFactory;
 import javax.jdo.datastore.JDOConnection;
@@ -53,7 +54,7 @@ public class ApiKeyUsageTracker implements ApplicationEventListener {
     private record ApiKeyUsedEvent(long keyId, long timestamp) {
     }
 
-    private static final Logger LOGGER = Logger.getLogger(ApiKeyUsageTracker.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiKeyUsageTracker.class);
     private static final BlockingQueue<ApiKeyUsedEvent> EVENT_QUEUE = new ArrayBlockingQueue<>(10_000);
 
     private final ScheduledExecutorService flushExecutor;

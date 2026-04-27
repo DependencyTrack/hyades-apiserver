@@ -18,7 +18,8 @@
  */
 package alpine.common.util;
 
-import alpine.common.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class contains a collection of commonly used static methods which
@@ -32,7 +33,7 @@ import alpine.common.logging.Logger;
 public final class SystemUtil {
 
     private static final Runtime.Version JAVA_VERSION = Runtime.version();
-    private static final Logger LOGGER = Logger.getLogger(SystemUtil.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SystemUtil.class);
 
     /**
      * Private constructor

@@ -18,9 +18,10 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.common.logging.Logger;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.AttributeConverter;
 
@@ -35,7 +36,7 @@ import javax.jdo.AttributeConverter;
  */
 public class PackageURLStringConverter implements AttributeConverter<PackageURL, String> {
 
-    private static final Logger LOGGER = Logger.getLogger(PackageURLStringConverter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PackageURLStringConverter.class);
 
     /**
      * {@inheritDoc}
@@ -48,7 +49,7 @@ public class PackageURLStringConverter implements AttributeConverter<PackageURL,
         try {
             return new PackageURL(str.trim());
         } catch (MalformedPackageURLException e) {
-            LOGGER.warn("A persisted object with a PackageURL string in the datastore failed validation and is not valid. Returning null for: " + str);
+            LOGGER.warn("A persisted object with a PackageURL string in the datastore failed validation and is not valid. Returning null for: {}", str);
         }
         return null;
     }

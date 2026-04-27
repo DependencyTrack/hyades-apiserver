@@ -18,12 +18,13 @@
  */
 package org.dependencytrack.tasks.maintenance;
 
-import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -41,7 +42,7 @@ import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
 public class ProjectMaintenanceTask implements Subscriber {
 
-    private static final Logger LOGGER = Logger.getLogger(ProjectMaintenanceTask.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProjectMaintenanceTask.class);
 
     @Override
     public void inform(final Event event) {

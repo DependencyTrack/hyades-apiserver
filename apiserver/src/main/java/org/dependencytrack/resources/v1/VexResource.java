@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.server.auth.PermissionRequired;
 import io.swagger.v3.oas.annotations.Operation;
@@ -61,6 +60,8 @@ import org.dependencytrack.resources.v1.vo.VexSubmitRequest;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -82,7 +83,7 @@ import java.util.Objects;
 })
 public class VexResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(VexResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(VexResource.class);
     private static final String DEFAULT_EXPORT_VERSION = "1.5";
 
     @GET

@@ -18,7 +18,6 @@
  */
 package alpine.server.filters;
 
-import alpine.common.logging.Logger;
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import alpine.persistence.AlpineQueryManager;
 import jakarta.ws.rs.ext.Provider;
@@ -26,6 +25,8 @@ import org.glassfish.jersey.server.monitoring.ApplicationEvent;
 import org.glassfish.jersey.server.monitoring.ApplicationEventListener;
 import org.glassfish.jersey.server.monitoring.RequestEvent;
 import org.glassfish.jersey.server.monitoring.RequestEventListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.datastore.JDOConnection;
@@ -50,7 +51,7 @@ public class SessionUsageTracker implements ApplicationEventListener {
     private record SessionUsedEvent(String tokenHash, long timestamp) {
     }
 
-    private static final Logger LOGGER = Logger.getLogger(SessionUsageTracker.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SessionUsageTracker.class);
     static final BlockingQueue<SessionUsedEvent> EVENT_QUEUE = new ArrayBlockingQueue<>(10_000);
 
     private final ScheduledExecutorService flushExecutor;

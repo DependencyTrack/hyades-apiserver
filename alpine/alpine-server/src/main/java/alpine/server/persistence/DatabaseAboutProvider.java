@@ -19,7 +19,8 @@
 package alpine.server.persistence;
 
 import alpine.common.AboutProvider;
-import alpine.common.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.datastore.JDOConnection;
@@ -38,7 +39,7 @@ import static alpine.server.persistence.PersistenceManagerFactory.createPersiste
  */
 public class DatabaseAboutProvider implements AboutProvider {
 
-    private static final Logger LOGGER = Logger.getLogger(DatabaseAboutProvider.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseAboutProvider.class);
 
     @Override
     public String name() {
