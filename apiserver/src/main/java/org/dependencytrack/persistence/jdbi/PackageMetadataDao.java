@@ -126,7 +126,11 @@ public final class PackageMetadataDao {
                          ORDER BY 1
                         ON CONFLICT ("PURL") DO UPDATE
                         SET "LATEST_VERSION" = COALESCE(EXCLUDED."LATEST_VERSION", pm."LATEST_VERSION")
-                           , "LATEST_VERSION_PUBLISHED_AT" = COALESCE(EXCLUDED."LATEST_VERSION_PUBLISHED_AT", pm."LATEST_VERSION_PUBLISHED_AT")
+                           , "LATEST_VERSION_PUBLISHED_AT" = CASE
+                                WHEN EXCLUDED."LATEST_VERSION" IS DISTINCT FROM pm."LATEST_VERSION"
+                                    THEN EXCLUDED."LATEST_VERSION_PUBLISHED_AT"
+                                ELSE COALESCE(EXCLUDED."LATEST_VERSION_PUBLISHED_AT", pm."LATEST_VERSION_PUBLISHED_AT")
+                                END
                            , "RESOLVED_AT" = EXCLUDED."RESOLVED_AT"
                            , "RESOLVED_FROM" = COALESCE(EXCLUDED."RESOLVED_FROM", pm."RESOLVED_FROM")
                            , "RESOLVED_BY" = COALESCE(EXCLUDED."RESOLVED_BY", pm."RESOLVED_BY")

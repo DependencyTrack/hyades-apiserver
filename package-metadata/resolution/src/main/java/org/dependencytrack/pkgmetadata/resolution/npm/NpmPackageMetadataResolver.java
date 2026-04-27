@@ -95,11 +95,14 @@ final class NpmPackageMetadataResolver implements PackageMetadataResolver {
             final PackageInfo latest = deserialize(latestVersionBytes, PackageInfo.class);
             final VersionInfo versionInfo = deserialize(versionMetaBytes, VersionInfo.class);
 
-            final String latestVersionInfoKey = cacheKeyBase + VERSION_CACHE_KEY_SUFFIX + latest.version();
-            final byte[] latestVersionMetaBytes = cached.get(latestVersionInfoKey);
-            final VersionInfo latestVersionInfo = deserialize(latestVersionMetaBytes, VersionInfo.class);
+            final byte[] latestVersionMetaBytes = latest != null
+                    ? cache.get(cacheKeyBase + VERSION_CACHE_KEY_SUFFIX + latest.version())
+                    : null;
+            final var latestVersionPublishedAt = latestVersionMetaBytes != null
+                    ? deserialize(latestVersionMetaBytes, VersionInfo.class).publishedAt()
+                    : null;
 
-            return buildResult(latest.version(), latestVersionInfo.publishedAt(), latest.resolvedAt(), versionInfo);
+            return buildResult(latest.version(), latestVersionPublishedAt, latest.resolvedAt(), versionInfo);
         }
 
         final NpmPackageDocument doc = fetchAndParseDocument(packageName, repository);

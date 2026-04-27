@@ -94,7 +94,7 @@ final class NugetPackageMetadataResolver implements PackageMetadataResolver {
             final String latestVersionMetaKey = packageMeta.latestVersion() != null
                     ? cacheKeyBase + VERSION_CACHE_KEY_SUFFIX + packageMeta.latestVersion()
                     : null;
-            final byte[] latestVersionMetaBytes = latestVersionMetaKey != null ? cached.get(latestVersionMetaKey) : null;
+            final byte[] latestVersionMetaBytes = latestVersionMetaKey != null ? cache.get(latestVersionMetaKey) : null;
             final var latestVersionMeta = latestVersionMetaBytes != null
                     ? deserialize(latestVersionMetaBytes, NugetVersionMetadata.class) : null;
 

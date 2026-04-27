@@ -379,14 +379,14 @@ final class ComposerPackageMetadataResolver implements PackageMetadataResolver {
             }
 
             try {
-                if (requestedLatest.equals(VersionFactory.forScheme(SCHEME_COMPOSER, entryVersion))) {
+                if (requestedLatest != null && requestedLatest.equals(VersionFactory.forScheme(SCHEME_COMPOSER, entryVersion))) {
                     latestVersionPublishedAt = extractPublishedAt(entry);
                 }
             } catch (InvalidVersionException ignored) {
             }
 
             try {
-                if (requested.equals(VersionFactory.forScheme(SCHEME_COMPOSER, entryVersion))) {
+                if (requested != null && requested.equals(VersionFactory.forScheme(SCHEME_COMPOSER, entryVersion))) {
                     artifactMetadata = extractArtifactMetadata(entry, resolvedAt);
                     if (latestVersionPublishedAt != null) {
                         break;

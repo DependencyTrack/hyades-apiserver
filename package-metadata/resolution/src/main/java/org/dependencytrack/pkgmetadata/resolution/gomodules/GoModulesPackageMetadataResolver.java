@@ -104,7 +104,10 @@ final class GoModulesPackageMetadataResolver implements PackageMetadataResolver 
                 }
             }
             if (versionBody != null) {
-                artifactMetadata = new PackageArtifactMetadata(resolvedAt, extractPublishedAt(parseJson(versionBody)), Map.of());
+                final var publishedAt = extractPublishedAt(parseJson(versionBody));
+                artifactMetadata = publishedAt != null
+                        ? new PackageArtifactMetadata(resolvedAt, extractPublishedAt(parseJson(versionBody)), Map.of())
+                : null;
             }
         }
 
