@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.parser.cyclonedx;
 
-import alpine.common.logging.Logger;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -30,6 +29,8 @@ import org.cyclonedx.parsers.JsonParser;
 import org.cyclonedx.parsers.Parser;
 import org.cyclonedx.parsers.XmlParser;
 import org.cyclonedx.proto.v1_6.Bom;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.XMLConstants;
 import javax.xml.stream.XMLInputFactory;
@@ -62,7 +63,7 @@ import static org.cyclonedx.Version.VERSION_16;
  */
 public class CycloneDxValidator {
 
-    private static final Logger LOGGER = Logger.getLogger(CycloneDxValidator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CycloneDxValidator.class);
     private static final CycloneDxValidator INSTANCE = new CycloneDxValidator();
 
     private final JsonMapper jsonMapper = new JsonMapper();

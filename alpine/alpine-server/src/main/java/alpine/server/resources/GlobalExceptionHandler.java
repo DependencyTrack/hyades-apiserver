@@ -18,15 +18,16 @@
  */
 package alpine.server.resources;
 
-import alpine.common.logging.Logger;
 
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Provider
 public class GlobalExceptionHandler implements ExceptionMapper<Exception> {
-    private static final Logger LOGGER = Logger.getLogger(GlobalExceptionHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @Override
     public Response toResponse(Exception exception) {

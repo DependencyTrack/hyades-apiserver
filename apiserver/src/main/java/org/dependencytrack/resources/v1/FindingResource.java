@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.model.About;
 import alpine.server.auth.PermissionRequired;
 import com.github.packageurl.PackageURL;
@@ -67,6 +66,8 @@ import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.util.PurlUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -98,7 +99,7 @@ import static org.dependencytrack.proto.internal.workflow.v1.AnalysisTrigger.ANA
 })
 public class FindingResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(FindingResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FindingResource.class);
     public static final String MEDIA_TYPE_SARIF_JSON = "application/sarif+json";
 
     private final DexEngine dexEngine;

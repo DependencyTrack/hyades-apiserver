@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.User;
 import alpine.persistence.NotSortableException;
@@ -33,6 +32,8 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -54,7 +55,7 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
     private static final Comparator<Tag> TAG_COMPARATOR = Comparator.comparingInt(
             (Tag tag) -> tag.getProjects().size()).reversed();
 
-    private static final Logger LOGGER = Logger.getLogger(ProjectQueryManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProjectQueryManager.class);
 
     /**
      * Constructs a new QueryManager.
@@ -587,7 +588,7 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
     @Override
     public PaginatedResult getTagsForPolicy(String policyUuid) {
 
-        LOGGER.debug("Retrieving tags under policy " + policyUuid);
+        LOGGER.debug("Retrieving tags under policy {}", policyUuid);
 
         Policy policy = getObjectByUuid(Policy.class, policyUuid);
         List<Project> projects = policy.getProjects();

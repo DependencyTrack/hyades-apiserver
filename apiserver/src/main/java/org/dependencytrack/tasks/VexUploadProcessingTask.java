@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.cyclonedx.parsers.BomParserFactory;
@@ -33,6 +32,8 @@ import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.parser.cyclonedx.CycloneDXVexImporter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.CompressUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Date;
 import java.util.List;
@@ -48,7 +49,7 @@ import static org.dependencytrack.notification.api.NotificationFactory.createVex
  */
 public class VexUploadProcessingTask implements Subscriber {
 
-    private static final Logger LOGGER = Logger.getLogger(VexUploadProcessingTask.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(VexUploadProcessingTask.class);
 
     /**
      * {@inheritDoc}
@@ -67,7 +68,7 @@ public class VexUploadProcessingTask implements Subscriber {
 
                 if (BomParserFactory.looksLikeCycloneDX(vexBytes)) {
                     if (qm.isEnabled(ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX)) {
-                        LOGGER.info("Processing CycloneDX VEX uploaded to project: " + event.getProjectUuid());
+                        LOGGER.info("Processing CycloneDX VEX uploaded to project: {}", event.getProjectUuid());
                         vex.setVexFormat(Vex.Format.CYCLONEDX);
                         final Parser parser = BomParserFactory.createParser(vexBytes);
                         final org.cyclonedx.model.Bom cycloneDxBom = parser.parse(vexBytes);
@@ -76,7 +77,7 @@ public class VexUploadProcessingTask implements Subscriber {
                         vex.setSerialNumber(cycloneDxBom.getSerialNumber());
                         final CycloneDXVexImporter vexImporter = new CycloneDXVexImporter();
                         vexImporter.applyVex(qm, cycloneDxBom, project);
-                        LOGGER.info("Completed processing of CycloneDX VEX for project: " + event.getProjectUuid());
+                        LOGGER.info("Completed processing of CycloneDX VEX for project: {}", event.getProjectUuid());
                     } else {
                         LOGGER.warn("A CycloneDX VEX was uploaded but accepting CycloneDX format is disabled. Aborting");
                         return;

@@ -18,10 +18,11 @@
  */
 package org.dependencytrack.integrations.fortifyssc;
 
-import alpine.common.logging.Logger;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.dependencytrack.common.Mappers;
 import org.dependencytrack.common.MultipartBodyPublisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,7 +36,7 @@ import java.util.Base64;
 
 public class FortifySscClient {
 
-    private static final Logger LOGGER = Logger.getLogger(FortifySscClient.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FortifySscClient.class);
 
     private final HttpClient httpClient;
     private final FortifySscUploader uploader;

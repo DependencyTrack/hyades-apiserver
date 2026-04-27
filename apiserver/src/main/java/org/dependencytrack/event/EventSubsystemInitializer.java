@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.event;
 
-import alpine.common.logging.Logger;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.EventService;
 import alpine.event.framework.SingleThreadedEventService;
@@ -49,6 +48,8 @@ import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.concurrent.TimeoutException;
@@ -63,7 +64,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class EventSubsystemInitializer implements ServletContextListener {
 
-    private static final Logger LOGGER = Logger.getLogger(EventSubsystemInitializer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventSubsystemInitializer.class);
 
     private final Config config;
     private final EventService eventService;

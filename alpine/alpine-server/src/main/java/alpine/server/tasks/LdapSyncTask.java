@@ -18,13 +18,14 @@
  */
 package alpine.server.tasks;
 
-import alpine.common.logging.Logger;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import alpine.model.LdapUser;
 import alpine.persistence.AlpineQueryManager;
 import alpine.server.auth.LdapConnectionWrapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.naming.NamingException;
 import javax.naming.directory.DirContext;
@@ -40,7 +41,7 @@ import java.util.List;
  */
 public class LdapSyncTask implements Subscriber {
 
-    private static final Logger LOGGER = Logger.getLogger(LdapSyncTask.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LdapSyncTask.class);
 
     @Override
     public void inform(final Event e) {
@@ -88,7 +89,7 @@ public class LdapSyncTask implements Subscriber {
      */
     private void sync(final DirContext ctx, final AlpineQueryManager qm, final LdapConnectionWrapper ldap,
                       LdapUser user) throws NamingException {
-        LOGGER.debug("Syncing: " + user.getUsername());
+        LOGGER.debug("Syncing: {}", user.getUsername());
         final SearchResult result = ldap.searchForSingleUsername(ctx, user.getUsername());
         if (result != null) {
             user.setDN(result.getNameInNamespace());

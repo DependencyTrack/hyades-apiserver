@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,6 +45,8 @@ import org.dependencytrack.model.License;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -63,7 +64,7 @@ import java.util.List;
 })
 public class LicenseResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(LicenseResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LicenseResource.class);
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -164,7 +165,7 @@ public class LicenseResource extends AbstractApiResource {
                 License license = qm.getLicense(jsonLicense.getLicenseId());
                 if (license == null) {
                     license = qm.createCustomLicense(jsonLicense, true);
-                    LOGGER.info("License " + license.getName() + " created by " + super.getPrincipal().getName());
+                    LOGGER.info("License {} created by {}", license.getName(), super.getPrincipal().getName());
                     return Response.status(Response.Status.CREATED).entity(license).build();
                 } else {
                     return Response.status(Response.Status.CONFLICT).entity("A license with the specified name already exists.").build();
@@ -195,7 +196,7 @@ public class LicenseResource extends AbstractApiResource {
                 final License license = qm.getLicense(licenseId);
                 if (license != null) {
                     if (Boolean.TRUE.equals(license.isCustomLicense())) {
-                        LOGGER.info("License " + license + " deletion request by " + super.getPrincipal().getName());
+                        LOGGER.info("License {} deletion request by {}", license, super.getPrincipal().getName());
                         qm.deleteLicense(license, true);
                         return Response.status(Response.Status.NO_CONTENT).build();
                     } else {

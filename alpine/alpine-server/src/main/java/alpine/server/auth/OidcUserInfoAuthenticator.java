@@ -19,13 +19,14 @@
 
 package alpine.server.auth;
 
-import alpine.common.logging.Logger;
 import alpine.common.util.ProxyConfig;
 import alpine.common.util.ProxyUtil;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import com.nimbusds.openid.connect.sdk.UserInfoResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -34,7 +35,7 @@ import java.io.IOException;
  */
 class OidcUserInfoAuthenticator {
 
-    private static final Logger LOGGER = Logger.getLogger(OidcUserInfoAuthenticator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OidcUserInfoAuthenticator.class);
 
     private final OidcConfiguration configuration;
 
@@ -63,12 +64,12 @@ class OidcUserInfoAuthenticator {
 
         if (!userInfoResponse.indicatesSuccess()) {
             final var error = userInfoResponse.toErrorResponse().getErrorObject();
-            LOGGER.error("UserInfo request failed (Code:" + error.getCode() + ", Description: " + error.getDescription() + ")");
+            LOGGER.error("UserInfo request failed (Code:{}, Description: {})", error.getCode(), error.getDescription());
             throw new AlpineAuthenticationException(AlpineAuthenticationException.CauseType.INVALID_CREDENTIALS);
         }
 
         final var userInfo = userInfoResponse.toSuccessResponse().getUserInfo();
-        LOGGER.debug("UserInfo response: " + userInfo.toJSONString());
+        LOGGER.debug("UserInfo response: {}", userInfo.toJSONString());
 
         return profileCreator.create(userInfo);
     }

@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.policy.cel;
 
-import alpine.common.logging.Logger;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import dev.cel.common.CelAbstractSyntaxTree;
@@ -34,6 +33,8 @@ import org.apache.commons.collections4.MultiValuedMap;
 import org.dependencytrack.policy.cel.CelPolicyAstAnalyzer.FunctionSignature;
 import org.dependencytrack.policy.cel.CelPolicySpdxExpressionValidator.SpdxExpressionValidationError;
 import org.dependencytrack.policy.cel.CelPolicyVersValidator.VersValidationError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -53,7 +54,7 @@ public final class CelPolicyCompiler {
         NO_CACHE
     }
 
-    private static final Logger LOGGER = Logger.getLogger(CelPolicyCompiler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CelPolicyCompiler.class);
     private static final ConcurrentHashMap<CelPolicyType, CelPolicyCompiler> INSTANCES = new ConcurrentHashMap<>();
     private final Cache<String, CelPolicyProgram> cache;
     private final CelPolicyType policyType;

@@ -18,7 +18,6 @@
  */
 package alpine.server.resources;
 
-import alpine.common.logging.Logger;
 import alpine.common.validation.ValidationException;
 import alpine.common.validation.ValidationTask;
 import alpine.model.ApiKey;
@@ -40,6 +39,7 @@ import jakarta.ws.rs.core.UriInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.glassfish.jersey.server.validation.ValidationError;
 import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
 import org.slf4j.Marker;
 
 import java.security.Principal;

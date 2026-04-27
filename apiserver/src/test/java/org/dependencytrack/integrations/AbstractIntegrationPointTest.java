@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.integrations;
 
-import alpine.common.logging.Logger;
 import org.dependencytrack.PersistenceCapableTest;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.slf4j.LoggerFactory;
 
 public class AbstractIntegrationPointTest extends PersistenceCapableTest {
 
@@ -32,7 +32,7 @@ public class AbstractIntegrationPointTest extends PersistenceCapableTest {
                 Mockito.CALLS_REAL_METHODS
         );
         extension.setQueryManager(qm);
-        extension.handleException(Logger.getLogger(this.getClass()), new Exception());
-        extension.handleUnexpectedHttpResponse(Logger.getLogger(this.getClass()), "http://localhost", 400, "very very bad");
+        extension.handleException(LoggerFactory.getLogger(this.getClass()), new Exception());
+        extension.handleUnexpectedHttpResponse(LoggerFactory.getLogger(this.getClass()), "http://localhost", 400, "very very bad");
     }
 }

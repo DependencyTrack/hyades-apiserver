@@ -19,7 +19,6 @@
 
 package alpine.server.auth;
 
-import alpine.common.logging.Logger;
 import alpine.common.util.ProxyUtil;
 import alpine.server.cache.CacheManager;
 import com.nimbusds.jose.JOSEException;
@@ -30,6 +29,8 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
@@ -40,7 +41,7 @@ import java.text.ParseException;
  */
 class OidcIdTokenAuthenticator {
 
-    private static final Logger LOGGER = Logger.getLogger(OidcIdTokenAuthenticator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OidcIdTokenAuthenticator.class);
     static final String JWK_SET_CACHE_KEY = "OIDC_JWK_SET";
 
     private final OidcConfiguration configuration;
@@ -75,7 +76,7 @@ class OidcIdTokenAuthenticator {
         final IDTokenClaimsSet claimsSet;
         try {
             claimsSet = idTokenValidator.validate(parsedIdToken, null);
-            LOGGER.debug("ID token claims: " + claimsSet.toJSONString());
+            LOGGER.debug("ID token claims: {}", claimsSet.toJSONString());
         } catch (BadJOSEException | JOSEException e) {
             LOGGER.error("ID token validation failed", e);
             throw new AlpineAuthenticationException(AlpineAuthenticationException.CauseType.INVALID_CREDENTIALS);
@@ -91,7 +92,7 @@ class OidcIdTokenAuthenticator {
             return jwkSet;
         }
 
-        LOGGER.debug("Fetching JWK set from " + configuration.getJwksUri());
+        LOGGER.debug("Fetching JWK set from {}", configuration.getJwksUri());
         final URL jwksUrl = configuration.getJwksUri().toURL();
 
         final var proxyCfg = ProxyUtil.getProxyConfig();

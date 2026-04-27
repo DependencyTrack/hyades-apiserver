@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.integrations.kenna;
 
-import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.commons.lang3.StringUtils;
@@ -30,6 +29,8 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.secret.management.SecretManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import javax.jdo.Query;
@@ -52,7 +53,7 @@ import static org.dependencytrack.model.ConfigPropertyConstants.KENNA_TOKEN;
 
 public class KennaSecurityUploader extends AbstractIntegrationPoint implements PortfolioFindingUploader {
 
-    private static final Logger LOGGER = Logger.getLogger(KennaSecurityUploader.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(KennaSecurityUploader.class);
     private static final String ASSET_EXTID_PROPERTY = "kenna.asset.external_id";
 
     private final HttpClient httpClient;

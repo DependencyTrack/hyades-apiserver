@@ -18,13 +18,14 @@
  */
 package alpine.server.auth;
 
-import alpine.common.logging.Logger;
 import alpine.common.validation.LdapStringSanitizer;
 import alpine.config.AlpineConfigKeys;
 import alpine.model.LdapUser;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.naming.CommunicationException;
 import javax.naming.Context;
@@ -51,7 +52,7 @@ import java.util.List;
  */
 public class LdapConnectionWrapper {
 
-    private static final Logger LOGGER = Logger.getLogger(LdapConnectionWrapper.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LdapConnectionWrapper.class);
 
     private static final String BIND_USERNAME;
     private static final String BIND_PASSWORD;
@@ -105,7 +106,7 @@ public class LdapConnectionWrapper {
      * @since 1.4.0
      */
     public LdapContext createLdapContext(final String userDn, final String password) throws NamingException {
-        LOGGER.debug("Creating LDAP context for: " +userDn);
+        LOGGER.debug("Creating LDAP context for: {}", userDn);
         if (StringUtils.isEmpty(userDn) || StringUtils.isEmpty(password)) {
             throw new NamingException("Username or password cannot be empty or null");
         }
@@ -158,7 +159,7 @@ public class LdapConnectionWrapper {
      * @since 1.4.0
      */
     public List<String> getGroups(final DirContext dirContext, final LdapUser ldapUser) throws NamingException {
-        LOGGER.debug("Retrieving groups for: " + ldapUser.getDN());
+        LOGGER.debug("Retrieving groups for: {}", ldapUser.getDN());
         final List<String> groupDns = new ArrayList<>();
         final String searchFilter = variableSubstitution(USER_GROUPS_FILTER, ldapUser);
         final SearchControls sc = new SearchControls();
@@ -167,7 +168,7 @@ public class LdapConnectionWrapper {
         while (hasMoreEnum(ne)) {
             final SearchResult result = ne.next();
             groupDns.add(result.getNameInNamespace());
-            LOGGER.debug("Found group: " + result.getNameInNamespace() + " for user: " + ldapUser.getDN());
+            LOGGER.debug("Found group: {} for user: {}", result.getNameInNamespace(), ldapUser.getDN());
         }
         closeQuietly(ne);
         return groupDns;
@@ -189,7 +190,7 @@ public class LdapConnectionWrapper {
         while (hasMoreEnum(ne)) {
             final SearchResult result = ne.next();
             groupDns.add(result.getNameInNamespace());
-            LOGGER.debug("Found group: " + result.getNameInNamespace());
+            LOGGER.debug("Found group: {}", result.getNameInNamespace());
         }
         closeQuietly(ne);
         return groupDns;
@@ -231,17 +232,17 @@ public class LdapConnectionWrapper {
      * @since 1.5.0
      */
     public List<String> search(final DirContext dirContext, final String filter, final String searchTerm) throws NamingException {
-        LOGGER.debug("Searching / filter: " + filter + " searchTerm: " + searchTerm);
+        LOGGER.debug("Searching / filter: {} searchTerm: {}", filter, searchTerm);
         final List<String> entityDns = new ArrayList<>();
         final SearchControls sc = new SearchControls();
         sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
         final String searchFor = searchTermSubstitution(filter, searchTerm);
-        LOGGER.debug("Searching for: " + searchFor);
+        LOGGER.debug("Searching for: {}", searchFor);
         final NamingEnumeration<SearchResult> ne = dirContext.search(LdapConnectionWrapper.BASE_DN, searchFor, sc);
         while (hasMoreEnum(ne)) {
             final SearchResult result = ne.next();
             entityDns.add(result.getNameInNamespace());
-            LOGGER.debug("Found: " + result.getNameInNamespace());
+            LOGGER.debug("Found: {}", result.getNameInNamespace());
         }
         closeQuietly(ne);
         return entityDns;
@@ -257,12 +258,12 @@ public class LdapConnectionWrapper {
      * @since 1.4.0
      */
     public List<SearchResult> searchForUsername(final DirContext ctx, final String username) throws NamingException {
-        LOGGER.debug("Performing a directory search for: " + username);
+        LOGGER.debug("Performing a directory search for: {}", username);
         final SearchControls sc = new SearchControls();
         sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
         final String searchFor = LdapConnectionWrapper.ATTRIBUTE_NAME + "=" +
                 LdapStringSanitizer.sanitize(formatPrincipal(username));
-        LOGGER.debug("Searching for: " + searchFor);
+        LOGGER.debug("Searching for: {}", searchFor);
         return Collections.list(ctx.search(LdapConnectionWrapper.BASE_DN, searchFor, sc));
     }
 
@@ -278,10 +279,10 @@ public class LdapConnectionWrapper {
     public SearchResult searchForSingleUsername(final DirContext ctx, final String username) throws NamingException {
         final List<SearchResult> results = searchForUsername(ctx, username);
         if (results == null || results.size() == 0) {
-            LOGGER.debug("Search for (" + username + ") did not produce any results");
+            LOGGER.debug("Search for ({}) did not produce any results", username);
             return null;
         } else if (results.size() == 1) {
-            LOGGER.debug("Search for (" + username + ") produced a result");
+            LOGGER.debug("Search for ({}) produced a result", username);
             return results.get(0);
         } else {
             throw new NamingException("Multiple entries in the directory contain the same username. This scenario is not supported");
@@ -391,7 +392,7 @@ public class LdapConnectionWrapper {
             }
         } catch (PartialResultException e) {
             hasMore = false;
-            LOGGER.warn("Partial results returned. If this is an Active Directory server, try using port 3268 or 3269 in " + AlpineConfigKeys.LDAP_SERVER_URL);
+            LOGGER.warn("Partial results returned. If this is an Active Directory server, try using port 3268 or 3269 in {}", AlpineConfigKeys.LDAP_SERVER_URL);
         }
         return hasMore;
     }
