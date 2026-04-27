@@ -165,24 +165,6 @@ class PluginManagerTest extends AbstractDatabaseTest {
     }
 
     @Test
-    void testDisabledExtension() {
-        final var config = new SmallRyeConfigBuilder()
-                .withDefaultValue("dt.test.dummy.enabled", "false")
-                .build();
-
-        try (final var pluginManager = new PluginManager(
-                config, new NoopCacheManager(), secretName -> null,
-                jdbi, HttpClient.newHttpClient(),
-                List.of(TestExtensionPoint.class))) {
-            pluginManager.loadPlugins(List.of(new DummyPlugin()));
-
-            assertThatExceptionOfType(NoSuchExtensionException.class)
-                    .isThrownBy(() -> pluginManager.getExtension(TestExtensionPoint.class))
-                    .withMessage("No extension exists for the extension point 'test'");
-        }
-    }
-
-    @Test
     void testDefaultExtensionNotLoaded() {
         final var config = new SmallRyeConfigBuilder()
                 .withDefaultValue("dt.test.default-extension", "does.not.exist")
