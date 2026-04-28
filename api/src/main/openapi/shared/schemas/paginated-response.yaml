@@ -22,6 +22,8 @@ properties:
       Token to retrieve the next page. Absent when no more items exist.
   total:
     $ref: "./total-count.yaml"
+required:
+  - total
 # Enable inheritance for schemas that extend this object via allOf.
 # https://github.com/OpenAPITools/openapi-generator/pull/14172
 x-parent: true

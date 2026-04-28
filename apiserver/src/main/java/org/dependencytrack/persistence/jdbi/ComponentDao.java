@@ -110,6 +110,39 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                 getHandle().getConfig(PaginationConfig.class).getPageTokenEncoder();
         final var decodedPageToken = pageTokenEncoder.decode(pageToken, ListComponentPageToken.class);
 
+        final TotalCount totalCount;
+        if (decodedPageToken != null) {
+            totalCount = decodedPageToken.totalCount();
+        } else {
+            final var countWhere = new StringBuilder("\"C\".\"PROJECT_ID\" = :projectId");
+            final var countParams = new HashMap<String, Object>();
+            countParams.put("projectId", projectId);
+            if (Boolean.TRUE.equals(onlyOutdated)) {
+                countWhere.append("""
+                        AND EXISTS (
+                         SELECT 1
+                           FROM "PACKAGE_ARTIFACT_METADATA" "PAM"
+                           JOIN "PACKAGE_METADATA" "PM" ON "PM"."PURL" = "PAM"."PACKAGE_PURL"
+                          WHERE "PAM"."PURL" = "C"."PURL"
+                            AND "PM"."LATEST_VERSION" != "C"."VERSION"
+                        )""");
+            }
+            if (Boolean.TRUE.equals(onlyDirect)) {
+                countWhere.append("""
+                        AND EXISTS (
+                         SELECT 1
+                           FROM "PROJECT"
+                          WHERE "PROJECT"."ID" = "C"."PROJECT_ID"
+                            AND "PROJECT"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "C"."UUID"))
+                        )""");
+            }
+            totalCount = getBoundedTotalCountWithProjectAcl(
+                    "FROM \"COMPONENT\" \"C\" WHERE " + countWhere,
+                    countParams,
+                    10000,
+                    "\"C\".\"PROJECT_ID\"");
+        }
+
         final List<Component> rows = listProjectComponents(projectId, limit + 1, onlyOutdated, onlyDirect,
                 decodedPageToken != null ? decodedPageToken.lastName() : null,
                 decodedPageToken != null ? decodedPageToken.lastVersion() : null,
@@ -120,13 +153,17 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                 : rows;
 
         final ListComponentPageToken nextPageToken = rows.size() > limit
-                ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion(), resultRows.getLast().getId(), null)
+                ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion(), resultRows.getLast().getId(), totalCount)
                 : null;
 
-        return new Page<>(resultRows, pageTokenEncoder.encode(nextPageToken));
+        return new Page<>(resultRows, pageTokenEncoder.encode(nextPageToken), totalCount);
     }
 
-    record ListComponentPageToken(String lastName, String lastVersion, Long lastId, TotalCount totalCount) implements PageToken {
+    record ListComponentPageToken(
+            String lastName,
+            String lastVersion,
+            Long lastId,
+            TotalCount totalCount) implements PageToken {
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """

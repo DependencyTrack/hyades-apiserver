@@ -133,6 +133,27 @@ class SessionTokenAuthenticationServiceTest {
     }
 
     @Test
+    void shouldAuthenticateRegardlessOfBearerSchemeCasing() throws Exception {
+        final ManagedUser user;
+        final String rawToken;
+        try (final var qm = new AlpineQueryManager()) {
+            user = qm.createManagedUser("testuser", "password");
+            rawToken = new SessionTokenService().createSession(user.getId());
+        }
+
+        for (final String prefix : List.of("Bearer ", "bearer ", "BEARER ", "BeArEr ")) {
+            final var request = mock(ContainerRequest.class);
+            when(request.getRequestHeader("Authorization")).thenReturn(List.of(prefix + rawToken));
+            final var authService = new SessionTokenAuthenticationService(request);
+
+            assertThat(authService.isSpecified()).isTrue();
+            final Principal principal = authService.authenticate();
+            assertThat(principal).isNotNull();
+            assertThat(principal.getName()).isEqualTo("testuser");
+        }
+    }
+
+    @Test
     void shouldReturnNullWhenBearerValueIsEmpty() throws Exception {
         final var request = mock(ContainerRequest.class);
         when(request.getRequestHeader("Authorization")).thenReturn(List.of("Bearer "));

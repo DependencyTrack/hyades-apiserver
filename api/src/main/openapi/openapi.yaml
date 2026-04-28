@@ -176,7 +176,7 @@ tags:
   description: Endpoints related to secrets
 - name: Task Queues
   description: Endpoints related to task queue management
-- name: Vulnerability Policies
+- name: Vuln Policies
   description: Endpoints related to vulnerability policies
 - name: Workflows
   description: Endpoints related to workflows
@@ -186,13 +186,13 @@ paths:
     $ref: "./resources/components/components.yaml"
   /extension-points:
     $ref: "./resources/extensions/extension-points.yaml"
-  /extension-points/{extensionPointName}/extensions:
+  /extension-points/{extension_point_name}/extensions:
     $ref: "./resources/extensions/extensions.yaml"
-  /extension-points/{extensionPointName}/extensions/{extensionName}/config:
+  /extension-points/{extension_point_name}/extensions/{extension_name}/config:
     $ref: "./resources/extensions/extension-config.yaml"
-  /extension-points/{extensionPointName}/extensions/{extensionName}/config-schema:
+  /extension-points/{extension_point_name}/extensions/{extension_name}/config-schema:
     $ref: "./resources/extensions/extension-config-schema.yaml"
-  /extension-points/{extensionPointName}/extensions/{extensionName}/test:
+  /extension-points/{extension_point_name}/extensions/{extension_name}/test:
     $ref: "./resources/extensions/extension-test.yaml"
   /projects/{uuid}/clone:
     $ref: "./resources/projects/project-clone.yaml"
@@ -229,10 +229,14 @@ components:
   securitySchemes:
     apiKeyAuth:
       name: X-Api-Key
-      description: Authentication via API key
+      description: Authentication via API key.
       type: apiKey
       in: header
     bearerAuth:
-      description: Authentication via Bearer token
+      description: |-
+        Authentication via opaque server-issued session token.
+        Tokens are obtained from `POST /api/v1/user/login` or
+        `POST /api/v1/user/oidc/login`.
       type: http
-      scheme: Bearer
+      scheme: bearer
+      bearerFormat: Opaque

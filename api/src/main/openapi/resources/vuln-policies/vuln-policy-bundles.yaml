@@ -22,7 +22,7 @@ get:
 
     Requires permission `POLICY_MANAGEMENT` or `POLICY_MANAGEMENT_READ`.
   tags:
-    - Vulnerability Policies
+    - Vuln Policies
   responses:
     "200":
       description: List of vulnerability policy bundles
