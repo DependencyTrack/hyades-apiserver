@@ -284,7 +284,7 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void addMappingShouldIndicateConflictWhenMappingAlreadyExists() {
+    public void putMappingShouldBeIdempotent() {
         initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
 
         final Team team = qm.createTeam("teamName");
@@ -298,7 +298,7 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
 
-        assertThat(response.getStatus()).isEqualTo(409);
+        assertThat(response.getStatus()).isEqualTo(200);
     }
 
     @Test
