@@ -24,13 +24,13 @@ get:
   tags:
     - Extensions
   parameters:
-    - name: extensionPointName
+    - name: extension_point_name
       description: Name of the extension point
       in: path
       required: true
       schema:
         type: string
-    - name: extensionName
+    - name: extension_name
       description: Name of the extension
       in: path
       required: true
@@ -66,13 +66,13 @@ put:
   tags:
     - Extensions
   parameters:
-    - name: extensionPointName
+    - name: extension_point_name
       description: Name of the extension point
       in: path
       required: true
       schema:
         type: string
-    - name: extensionName
+    - name: extension_name
       description: Name of the extension
       in: path
       required: true

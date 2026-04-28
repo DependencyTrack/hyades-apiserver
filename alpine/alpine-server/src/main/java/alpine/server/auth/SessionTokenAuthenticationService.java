@@ -85,8 +85,8 @@ public final class SessionTokenAuthenticationService implements AuthenticationSe
         final List<String> header = headers.getRequestHeader("Authorization");
         if (header != null && !header.isEmpty()) {
             final String bearer = header.getFirst();
-            if (bearer != null && bearer.startsWith("Bearer ")) {
-                return bearer.substring("Bearer ".length());
+            if (bearer != null && bearer.regionMatches(true, 0, "Bearer ", 0, 7)) {
+                return bearer.substring(7);
             }
         }
 

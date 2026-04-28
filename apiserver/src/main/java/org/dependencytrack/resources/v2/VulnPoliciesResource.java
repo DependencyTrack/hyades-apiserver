@@ -26,7 +26,7 @@ import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
-import org.dependencytrack.api.v2.VulnerabilityPoliciesApi;
+import org.dependencytrack.api.v2.VulnPoliciesApi;
 import org.dependencytrack.api.v2.model.CreateVulnPolicy201Response;
 import org.dependencytrack.api.v2.model.CreateVulnPolicyRequest;
 import org.dependencytrack.api.v2.model.GetVulnPolicyResponse;
@@ -93,7 +93,7 @@ import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolati
  * @since 5.7.0
  */
 @Provider
-public final class VulnPoliciesResource extends AbstractApiResource implements VulnerabilityPoliciesApi {
+public final class VulnPoliciesResource extends AbstractApiResource implements VulnPoliciesApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VulnPoliciesResource.class);
 

@@ -25,7 +25,7 @@ get:
 
     Requires permission `POLICY_MANAGEMENT` or `POLICY_MANAGEMENT_READ`.
   tags:
-    - Vulnerability Policies
+    - Vuln Policies
   parameters:
     - $ref: "../../shared/parameters/pagination-limit.yaml"
     - $ref: "../../shared/parameters/page-token.yaml"
@@ -61,7 +61,7 @@ post:
 
     Requires permission `POLICY_MANAGEMENT` or `POLICY_MANAGEMENT_CREATE`.
   tags:
-    - Vulnerability Policies
+    - Vuln Policies
   requestBody:
     required: true
     content:

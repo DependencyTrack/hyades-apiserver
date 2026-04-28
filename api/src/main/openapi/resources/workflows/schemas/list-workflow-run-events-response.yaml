@@ -23,5 +23,4 @@ properties:
     items:
       $ref: "./list-workflow-run-events-response-item.yaml"
 required:
-- total
 - items
