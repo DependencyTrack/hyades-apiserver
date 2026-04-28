@@ -612,6 +612,7 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
                 applyIfChanged(persistentComponent, component, Component::getLicenseExpression, persistentComponent::setLicenseExpression);
                 applyIfChanged(persistentComponent, component, Component::isInternal, persistentComponent::setInternal);
                 applyIfChanged(persistentComponent, component, Component::getExternalReferences, persistentComponent::setExternalReferences);
+                applyIfChanged(persistentComponent, component, Component::getScope, persistentComponent::setScope);
 
                 qm.synchronizeComponentOccurrences(persistentComponent, component.getOccurrences());
                 qm.synchronizeComponentProperties(persistentComponent, component.getProperties());

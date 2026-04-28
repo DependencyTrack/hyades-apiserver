@@ -52,6 +52,7 @@ public class ComponentIdentity {
     private final String name;
     private final String version;
     private UUID uuid;
+    private Scope scope;
 
     public ComponentIdentity(final PackageURL purl, final String cpe, final String swidTagId,
                              final String group, final String name, final String version) {
@@ -75,6 +76,7 @@ public class ComponentIdentity {
         this.version = component.getVersion();
         this.uuid = component.getUuid();
         this.objectType = ObjectType.COMPONENT;
+        this.scope = component.getScope();
     }
 
     public ComponentIdentity(final Component component, final boolean excludeUuid) {
@@ -97,6 +99,7 @@ public class ComponentIdentity {
         this.name = component.getName();
         this.version = component.getVersion();
         this.objectType = ObjectType.COMPONENT;
+        this.scope = Scope.getMappedScope(component.getScope());
     }
 
     public ComponentIdentity(final ServiceComponent service) {
@@ -157,6 +160,10 @@ public class ComponentIdentity {
 
     public UUID getUuid() {
         return uuid;
+    }
+
+    public Scope getScope() {
+        return scope;
     }
 
     @Override

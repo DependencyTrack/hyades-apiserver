@@ -1989,4 +1989,13 @@
              WHERE "NAME" = 'VIEW_BADGES';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-82" author="sahibamittal">
+        <addColumn tableName="COMPONENT">
+            <column name="SCOPE" type="TEXT"/>
+        </addColumn>
+        <createIndex tableName="COMPONENT" indexName="COMPONENT_SCOPE_IDX">
+            <column name="SCOPE"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>

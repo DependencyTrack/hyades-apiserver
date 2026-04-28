@@ -53,6 +53,7 @@ public interface FindingDao {
             String componentVersion,
             String componentPurl,
             String componentCpe,
+            String componentScope,
             boolean componentHasOccurrences,
             UUID vulnUuid,
             Vulnerability.Source vulnSource,
@@ -120,6 +121,7 @@ public interface FindingDao {
                  , c."VERSION" AS "componentVersion"
                  , c."PURL" AS "componentPurl"
                  , c."CPE" AS "componentCpe"
+                 , c."SCOPE" AS "componentScope"
                  , EXISTS(SELECT 1 FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = c."ID") AS "componentHasOccurrences"
                  , v."UUID" AS "vulnUuid"
                  , v."SOURCE" AS "vulnSource"
@@ -278,6 +280,7 @@ public interface FindingDao {
                  , c."VERSION" AS "componentVersion"
                  , c."PURL" AS "componentPurl"
                  , c."CPE" AS "componentCpe"
+                 , c."SCOPE" AS "componentScope"
                  , EXISTS(SELECT 1 FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = c."ID") AS "componentHasOccurrences"
                  , v."UUID" AS "vulnUuid"
                  , v."SOURCE" AS "vulnSource"
