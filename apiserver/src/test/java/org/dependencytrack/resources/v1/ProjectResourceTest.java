@@ -80,6 +80,9 @@ import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -2070,16 +2073,21 @@ class ProjectResourceTest extends ResourceTest {
         assertThat(getPlainTextBody(response)).isEqualTo("An inactive Parent cannot be selected as parent");
     }
 
-    @Test
-    void createProjectEmptyTest() {
+    @ParameterizedTest
+    @MethodSource("projectValidationTestData")
+    void createProjectValidationTest(String testCase, String json, String expectedError) {
         initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT_CREATE);
-        Project project = new Project();
-        project.setName(" ");
         Response response = jersey.target(V1_PROJECT)
                 .request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.entity(project, MediaType.APPLICATION_JSON));
-        Assertions.assertEquals(400, response.getStatus(), 0);
+                .put(Entity.json(json));
+        Assertions.assertEquals(400, response.getStatus(), "Test case: " + testCase);
+        Assertions.assertEquals(expectedError, parseJsonArray(response).getJsonObject(0).getString("message"), "Test case: " + testCase);
+    }
+
+    static Stream<Arguments> projectValidationTestData() {
+        return Stream.of(Arguments.of("Blank name", "{\"name\": \" \"}", "must not be blank"),
+                Arguments.of("Too long description", "{\"name\": \"Valid Project Name\", \"description\": \"" + "a".repeat(256) + "\"}", "size must be between 0 and 255"));
     }
 
     @Test
