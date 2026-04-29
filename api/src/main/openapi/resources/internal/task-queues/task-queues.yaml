@@ -15,38 +15,35 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 get:
-  operationId: getWorkflowRun
-  summary: Get a workflow run
+  operationId: listTaskQueues
+  summary: List task queues
   description: |-
-    Returns metadata of a given workflow run.
-
-    **Note:** This is an internal API endpoint and may change without notice.
+    Returns a paginated list of task queues of the given type.
 
     Requires the `SYSTEM_CONFIGURATION` or `SYSTEM_CONFIGURATION_READ` permission.
   tags:
-    - Workflows
+    - Task Queues
   parameters:
-    - name: id
-      description: ID of the workflow run
+    - name: type
+      description: Type of task queues to list
       in: path
-      schema:
-        type: string
-        format: uuid
       required: true
+      schema:
+        $ref: "./schemas/task-queue-type.yaml"
+    - $ref: "../../../shared/parameters/pagination-limit.yaml"
+    - $ref: "../../../shared/parameters/page-token.yaml"
   responses:
     "200":
-      description: Workflow run metadata
+      description: Paginated list of task queues
       content:
         application/json:
           schema:
-            $ref: "./schemas/workflow-run-metadata.yaml"
+            $ref: "./schemas/list-task-queues-response.yaml"
     "400":
-      $ref: "../../shared/responses/invalid-request-error.yaml"
+      $ref: "../../../shared/responses/invalid-request-error.yaml"
     "401":
-      $ref: "../../shared/responses/generic-unauthorized-error.yaml"
+      $ref: "../../../shared/responses/generic-unauthorized-error.yaml"
     "403":
-      $ref: "../../shared/responses/generic-forbidden-error.yaml"
-    "404":
-      $ref: "../../shared/responses/generic-not-found-error.yaml"
+      $ref: "../../../shared/responses/generic-forbidden-error.yaml"
     default:
-      $ref: "../../shared/responses/generic-error.yaml"
+      $ref: "../../../shared/responses/generic-error.yaml"

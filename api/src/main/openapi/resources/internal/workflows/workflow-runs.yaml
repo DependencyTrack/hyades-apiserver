@@ -28,8 +28,6 @@ get:
     * `created_at`
     * `completed_at`
 
-    **Note:** This is an internal API endpoint and may change without notice.
-
     Requires the `SYSTEM_CONFIGURATION` or `SYSTEM_CONFIGURATION_READ` permission.
   tags:
     - Workflows
@@ -61,26 +59,26 @@ get:
       description: Filter runs created on or after this timestamp.
       in: query
       schema:
-        $ref: "../../shared/schemas/timestamp.yaml"
+        $ref: "../../../shared/schemas/timestamp.yaml"
     - name: created_at_to
       description: Filter runs created before this timestamp.
       in: query
       schema:
-        $ref: "../../shared/schemas/timestamp.yaml"
+        $ref: "../../../shared/schemas/timestamp.yaml"
     - name: completed_at_from
       description: Filter runs completed on or after this timestamp.
       in: query
       schema:
-        $ref: "../../shared/schemas/timestamp.yaml"
+        $ref: "../../../shared/schemas/timestamp.yaml"
     - name: completed_at_to
       description: Filter runs completed before this timestamp.
       in: query
       schema:
-        $ref: "../../shared/schemas/timestamp.yaml"
-    - $ref: "../../shared/parameters/pagination-limit.yaml"
-    - $ref: "../../shared/parameters/page-token.yaml"
-    - $ref: "../../shared/parameters/sort-direction.yaml"
-    - $ref: "../../shared/parameters/sort-by.yaml"
+        $ref: "../../../shared/schemas/timestamp.yaml"
+    - $ref: "../../../shared/parameters/pagination-limit.yaml"
+    - $ref: "../../../shared/parameters/page-token.yaml"
+    - $ref: "../../../shared/parameters/sort-direction.yaml"
+    - $ref: "../../../shared/parameters/sort-by.yaml"
   responses:
     "200":
       description: Paginated list of workflow runs
@@ -89,10 +87,10 @@ get:
           schema:
             $ref: "./schemas/list-workflow-runs-response.yaml"
     "400":
-      $ref: "../../shared/responses/invalid-request-error.yaml"
+      $ref: "../../../shared/responses/invalid-request-error.yaml"
     "401":
-      $ref: "../../shared/responses/generic-unauthorized-error.yaml"
+      $ref: "../../../shared/responses/generic-unauthorized-error.yaml"
     "403":
-      $ref: "../../shared/responses/generic-forbidden-error.yaml"
+      $ref: "../../../shared/responses/generic-forbidden-error.yaml"
     default:
-      $ref: "../../shared/responses/generic-error.yaml"
+      $ref: "../../../shared/responses/generic-error.yaml"
