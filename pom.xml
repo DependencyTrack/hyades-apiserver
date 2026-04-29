@@ -138,7 +138,7 @@
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.logback.version>1.5.32</lib.logback.version>
         <lib.micrometer.version>1.16.5</lib.micrometer.version>
-        <lib.microprofile-config.version>3.1</lib.microprofile-config.version>
+        <lib.microprofile-config.version>3.1.1</lib.microprofile-config.version>
         <lib.microprofile-health.version>4.0.1</lib.microprofile-health.version>
         <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.23.0</lib.mockito.version>
