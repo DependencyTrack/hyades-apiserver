@@ -42,7 +42,6 @@ import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.security.Principal;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -142,14 +141,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
             apiKey.setCreated(new Date());
             apiKey.setTeams(List.of(team));
             return pm.makePersistent(apiKey);
-        });
-    }
-
-    public ApiKey updateApiKey(final ApiKey transientApiKey) {
-        return callInTransaction(() -> {
-            final ApiKey apiKey = getObjectById(ApiKey.class, transientApiKey.getId());
-            apiKey.setComment(transientApiKey.getComment());
-            return apiKey;
         });
     }
 
@@ -719,21 +710,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Retrieves a list of {@link Permission}s having the given {@code names}.
-     * @param names The permission names
-     * @return a list of {@link Permission}s
-     * @since 5.6.0
-     */
-    public List<Permission> getPermissionsByName(final Collection<String> names) {
-        final Query<Permission> query = pm.newQuery(Permission.class)
-                .filter(":permissions.contains(name)")
-                .setNamedParameters(Map.of("permissions", names))
-                .orderBy("name ASC");
-
-        return executeAndCloseList(query);
-    }
-
-    /**
      * Returns a list of all Permissions defined in the system.
      * @return a List of Permission objects
      * @since 1.1.0
@@ -964,18 +940,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Retrieves a List of MappedOidcGroup objects for the specified Team.
-     * @param team The team to retrieve mappings for
-     * @return a List of MappedOidcGroup objects
-     * @since 1.8.0
-     */
-    public List<MappedOidcGroup> getMappedOidcGroups(final Team team) {
-        final Query<MappedOidcGroup> query = pm.newQuery(MappedOidcGroup.class, "team == :team");
-        query.setParameters(team);
-        return executeAndCloseList(query);
-    }
-
-    /**
      * Retrieves a List of MappedOidcGroup objects for the specified group.
      * @param group The group to retrieve mappings for
      * @return a List of MappedOidcGroup objects
@@ -985,17 +949,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         final Query<MappedOidcGroup> query = pm.newQuery(MappedOidcGroup.class, "group == :group");
         query.setParameters(group);
         return executeAndCloseList(query);
-    }
-
-    /**
-     * Determines if the specified Team is mapped to the specified OpenID Connect group.
-     * @param team a Team object
-     * @param group a OidcGroup object
-     * @return true if a mapping exists, false if not
-     * @since 1.8.0
-     */
-    public boolean isOidcGroupMapped(final Team team, final OidcGroup group) {
-        return getMappedOidcGroup(team, group) != null;
     }
 
     /**
@@ -1009,19 +962,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         final Query<ConfigProperty> query = pm.newQuery(ConfigProperty.class, "groupName == :groupName && propertyName == :propertyName");
         query.setParameters(groupName, propertyName);
         return executeAndCloseUnique(query);
-    }
-
-    /**
-     * Returns a list of ConfigProperty objects with the specified groupName.
-     * @param groupName the group name of the properties
-     * @return a List of ConfigProperty objects
-     * @since 1.3.0
-     */
-    public List<ConfigProperty> getConfigProperties(final String groupName) {
-        final Query<ConfigProperty> query = pm.newQuery(ConfigProperty.class, "groupName == :groupName");
-        query.setParameters(groupName);
-        query.setOrdering("propertyName asc");
-        return executeAndCloseList(query);
     }
 
     /**

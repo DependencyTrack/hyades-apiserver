@@ -97,7 +97,8 @@ public class LdapResource extends AbstractApiResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
     public Response retrieveLdapGroups() {
-        if (!LdapConnectionWrapper.LDAP_CONFIGURED) {
+        final LdapConnectionWrapper ldap = new LdapConnectionWrapper();
+        if (!ldap.isLdapConfigured()) {
             return Response.ok().build();
         }
         if (getAlpineRequest().getFilter() == null) {
@@ -105,7 +106,6 @@ public class LdapResource extends AbstractApiResource {
         }
         List<String> groups = CacheManager.getInstance().get(ArrayList.class, "ldap-group-search:" + getAlpineRequest().getFilter());
         if (groups == null) {
-            final LdapConnectionWrapper ldap = new LdapConnectionWrapper();
             DirContext dirContext = null;
             try {
                 dirContext = ldap.createDirContext();
