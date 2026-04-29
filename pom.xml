@@ -105,6 +105,7 @@
         <project.parentBaseDir>.</project.parentBaseDir>
 
         <!-- Dependency versions -->
+        <lib.ae-security.version>0.154.0</lib.ae-security.version>
         <lib.archunit.version>1.4.1</lib.archunit.version>
         <lib.assertj.version>3.27.7</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
@@ -113,7 +114,6 @@
         <lib.cel-extensions.version>0.4.1</lib.cel-extensions.version>
         <lib.commons-lang3.version>3.20.0</lib.commons-lang3.version>
         <lib.cpe-parser.version>3.0.1</lib.cpe-parser.version>
-        <lib.cvss-calculator.version>1.5.1</lib.cvss-calculator.version>
         <lib.datanucleus-api-jdo.version>6.0.5</lib.datanucleus-api-jdo.version>
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
@@ -175,6 +175,12 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>org.metaeffekt.core</groupId>
+                <artifactId>ae-security</artifactId>
+                <version>${lib.ae-security.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>com.tngtech.archunit</groupId>
                 <artifactId>archunit-junit5</artifactId>
                 <version>${lib.archunit.version}</version>
@@ -219,12 +225,6 @@
                 <groupId>us.springett</groupId>
                 <artifactId>cpe-parser</artifactId>
                 <version>${lib.cpe-parser.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>us.springett</groupId>
-                <artifactId>cvss-calculator</artifactId>
-                <version>${lib.cvss-calculator.version}</version>
             </dependency>
 
             <dependency>

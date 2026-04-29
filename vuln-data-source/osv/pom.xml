@@ -54,8 +54,8 @@
         </dependency>
 
         <dependency>
-            <groupId>us.springett</groupId>
-            <artifactId>cvss-calculator</artifactId>
+            <groupId>org.metaeffekt.core</groupId>
+            <artifactId>ae-security</artifactId>
         </dependency>
 
         <dependency>

@@ -41,10 +41,10 @@ import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.util.VulnerabilityUtil;
+import org.metaeffekt.core.security.cvss.CvssVector;
+import org.metaeffekt.core.security.cvss.processor.BakedCvssVectorScores;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import us.springett.cvss.Cvss;
-import us.springett.cvss.Score;
 import us.springett.owasp.riskrating.MissingFactorException;
 import us.springett.owasp.riskrating.OwaspRiskRating;
 import us.springett.parsers.cpe.Cpe;
@@ -160,10 +160,13 @@ public final class BovModelConverter {
                 vuln.setCvssV4Vector(trimToNull(rating.getVector()));
                 vuln.setCvssV4Score(BigDecimal.valueOf(rating.getScore()));
                 if (rating.hasVector()) {
-                    final Cvss cvss = Cvss.fromVector(rating.getVector());
-                    final Score score = cvss.calculateScore();
-                    if (rating.getScore() == 0.0) {
-                        vuln.setCvssV4Score(BigDecimal.valueOf(score.getBaseScore()));
+                    final CvssVector cvss = CvssVector.parseVector(rating.getVector(), true);
+                    if (cvss != null && cvss.isBaseFullyDefined()) {
+                        if (rating.getScore() == 0.0) {
+                            vuln.setCvssV4Score(BigDecimal.valueOf(cvss.getBakedScores().getBaseScore()));
+                        }
+                    } else {
+                        LOGGER.debug("Skipping CVSSv4 score derivation: vector '{}' could not be parsed or has incomplete base metrics", rating.getVector());
                     }
                 }
                 appliedMethods.add(SCORE_METHOD_CVSSV4);
@@ -174,12 +177,16 @@ public final class BovModelConverter {
                 vuln.setCvssV3Vector(trimToNull(rating.getVector()));
                 vuln.setCvssV3BaseScore(BigDecimal.valueOf(rating.getScore()));
                 if (rating.hasVector()) {
-                    final Cvss cvss = Cvss.fromVector(rating.getVector());
-                    final Score score = cvss.calculateScore();
-                    vuln.setCvssV3ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
-                    vuln.setCvssV3ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
-                    if (rating.getScore() == 0.0) {
-                        vuln.setCvssV3BaseScore(BigDecimal.valueOf(score.getBaseScore()));
+                    final CvssVector cvss = CvssVector.parseVector(rating.getVector(), true);
+                    if (cvss != null && cvss.isBaseFullyDefined()) {
+                        final BakedCvssVectorScores scores = cvss.getBakedScores();
+                        vuln.setCvssV3ImpactSubScore(BigDecimal.valueOf(scores.getImpactScore()));
+                        vuln.setCvssV3ExploitabilitySubScore(BigDecimal.valueOf(scores.getExploitabilityScore()));
+                        if (rating.getScore() == 0.0) {
+                            vuln.setCvssV3BaseScore(BigDecimal.valueOf(scores.getBaseScore()));
+                        }
+                    } else {
+                        LOGGER.debug("Skipping CVSSv3 sub-score derivation: vector '{}' could not be parsed or has incomplete base metrics", rating.getVector());
                     }
                 }
                 appliedMethods.add(SCORE_METHOD_CVSSV3);
@@ -188,12 +195,16 @@ public final class BovModelConverter {
                 vuln.setCvssV2Vector(trimToNull(rating.getVector()));
                 vuln.setCvssV2BaseScore(BigDecimal.valueOf(rating.getScore()));
                 if (rating.hasVector()) {
-                    final Cvss cvss = Cvss.fromVector(rating.getVector());
-                    final Score score = cvss.calculateScore();
-                    vuln.setCvssV2ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
-                    vuln.setCvssV2ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
-                    if (rating.getScore() == 0.0) {
-                        vuln.setCvssV2BaseScore(BigDecimal.valueOf(score.getBaseScore()));
+                    final CvssVector cvss = CvssVector.parseVector(rating.getVector(), true);
+                    if (cvss != null && cvss.isBaseFullyDefined()) {
+                        final BakedCvssVectorScores scores = cvss.getBakedScores();
+                        vuln.setCvssV2ImpactSubScore(BigDecimal.valueOf(scores.getImpactScore()));
+                        vuln.setCvssV2ExploitabilitySubScore(BigDecimal.valueOf(scores.getExploitabilityScore()));
+                        if (rating.getScore() == 0.0) {
+                            vuln.setCvssV2BaseScore(BigDecimal.valueOf(scores.getBaseScore()));
+                        }
+                    } else {
+                        LOGGER.debug("Skipping CVSSv2 sub-score derivation: vector '{}' could not be parsed or has incomplete base metrics", rating.getVector());
                     }
                 }
                 appliedMethods.add(SCORE_METHOD_CVSSV2);

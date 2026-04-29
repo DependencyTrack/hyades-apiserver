@@ -267,10 +267,9 @@
             <groupId>dev.cel</groupId>
             <artifactId>extensions</artifactId>
         </dependency>
-        <!-- CVSS Calculator -->
         <dependency>
-            <groupId>us.springett</groupId>
-            <artifactId>cvss-calculator</artifactId>
+            <groupId>org.metaeffekt.core</groupId>
+            <artifactId>ae-security</artifactId>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
