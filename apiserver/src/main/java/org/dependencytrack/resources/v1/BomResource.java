@@ -86,7 +86,6 @@ import org.dependencytrack.tasks.ImportBomWorkflow;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -469,7 +468,7 @@ public class BomResource extends AbstractApiResource {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
 
-        return processUpload(projectInfo, bomBytes, null);
+        return processUpload(projectInfo, bomBytes);
     }
 
     @POST
@@ -487,7 +486,7 @@ public class BomResource extends AbstractApiResource {
                       or <strong>PROJECT_CREATION_UPLOAD</strong> permission.
                     </p>
                     <p>
-                      MediaType supported for BOM artifact is 'application/xml', 'application/json' or 'application/x.vnd.cyclonedx+protobuf'.
+                      MediaType supported for BOM artifact is 'application/xml' or 'application/json'.
                       The BOM will be validated against the CycloneDX schema. If schema validation fails,
                       a response with problem details in RFC 9457 format will be returned. In this case,
                       the response's content type will be <code>application/problem+json</code>.
@@ -637,9 +636,8 @@ public class BomResource extends AbstractApiResource {
             LOGGER.error("An unexpected error occurred while reading BOM from upload", e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
-        final MediaType mediaType = firstPart.getMediaType();
 
-        return processUpload(projectInfo, bomBytes, mediaType);
+        return processUpload(projectInfo, bomBytes);
     }
 
     private record ProjectInfo(UUID uuid, String name, String version, List<String> tagNames) {
@@ -657,8 +655,8 @@ public class BomResource extends AbstractApiResource {
 
     // todo: make option to combine all the bom data so components are reconciled in a single pass.
     // todo: https://github.com/DependencyTrack/dependency-track/issues/130
-    private Response processUpload(ProjectInfo project, byte[] bomBytes, @Nullable MediaType mediaType) {
-        validateBom(bomBytes, project.tagNames(), mediaType, project.uuid());
+    private Response processUpload(ProjectInfo project, byte[] bomBytes) {
+        validateBom(bomBytes, project.tagNames(), project.uuid());
 
         final UUID bomUploadToken = Generators.timeBasedEpochRandomGenerator().generate();
 
@@ -667,7 +665,6 @@ public class BomResource extends AbstractApiResource {
             // TODO: Provide mediaType to FileStorage#store. Should be any of:
             //   * application/vnd.cyclonedx+json
             //   * application/vnd.cyclonedx+xml
-            //   * application/x.vnd.cyclonedx+protobuf
             //  Consider also attaching the detected version, i.e. application/vnd.cyclonedx+xml; version=1.6
             //  See https://cyclonedx.org/specification/overview/ -> Media Types.
             bomFileMetadata = fileStorage.store(
@@ -708,27 +705,22 @@ public class BomResource extends AbstractApiResource {
     }
 
     static void validate(byte[] bomBytes, Project project) {
-        validate(bomBytes, project, null);
-    }
-
-    static void validate(byte[] bomBytes, Project project, @Nullable MediaType mediaType) {
         final List<String> tagNames = project.getTags() != null
                 ? project.getTags().stream().map(org.dependencytrack.model.Tag::getName).toList()
                 : List.of();
-        validateBom(bomBytes, tagNames, mediaType, project.getUuid());
+        validateBom(bomBytes, tagNames, project.getUuid());
     }
 
     private static void validateBom(
             byte[] bomBytes,
             List<String> projectTagNames,
-            @Nullable MediaType mediaType,
             UUID projectUuid) {
         if (!shouldValidate(projectTagNames)) {
             return;
         }
 
         try {
-            CycloneDxValidator.getInstance().validate(bomBytes, mediaType);
+            CycloneDxValidator.getInstance().validate(bomBytes);
         } catch (InvalidBomException e) {
             final var problemDetails = new InvalidBomProblemDetails();
             problemDetails.setStatus(400);
