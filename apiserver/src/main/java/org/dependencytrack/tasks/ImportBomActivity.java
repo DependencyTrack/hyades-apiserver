@@ -274,9 +274,9 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
 
     }
 
-    private org.cyclonedx.proto.v1_6.Bom parseBomProtobuf(byte[] cdxBomBytes) {
+    private org.cyclonedx.proto.v1_7.Bom parseBomProtobuf(byte[] cdxBomBytes) {
         try {
-            return org.cyclonedx.proto.v1_6.Bom.parseFrom(cdxBomBytes);
+            return org.cyclonedx.proto.v1_7.Bom.parseFrom(cdxBomBytes);
         } catch (InvalidProtocolBufferException e) {
             return null;
         }
@@ -343,7 +343,7 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
         );
     }
 
-    private ConsumedBom consumeBom(final org.cyclonedx.proto.v1_6.Bom cdxBom) {
+    private ConsumedBom consumeBom(final org.cyclonedx.proto.v1_7.Bom cdxBom) {
         // Keep track of which BOM ref points to which component identity.
         // During component and service de-duplication, we'll potentially drop
         // some BOM refs, which can break the dependency graph.

@@ -19,7 +19,7 @@
 package org.dependencytrack.vulndatasource;
 
 import com.google.protobuf.util.Timestamps;
-import org.cyclonedx.proto.v1_6.Bom;
+import org.cyclonedx.proto.v1_7.Bom;
 import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityContext;

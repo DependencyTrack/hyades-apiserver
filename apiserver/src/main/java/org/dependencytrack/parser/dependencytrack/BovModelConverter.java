@@ -27,14 +27,14 @@ import io.github.nscuro.versatile.VersException;
 import io.github.nscuro.versatile.spi.InvalidVersionException;
 import io.github.nscuro.versatile.spi.Version;
 import org.apache.commons.lang3.StringUtils;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Component;
-import org.cyclonedx.proto.v1_6.ScoreMethod;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
-import org.cyclonedx.proto.v1_6.VulnerabilityRating;
-import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Component;
+import org.cyclonedx.proto.v1_7.ScoreMethod;
+import org.cyclonedx.proto.v1_7.Source;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffectedVersions;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_7.VulnerabilityRating;
+import org.cyclonedx.proto.v1_7.VulnerabilityReference;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
@@ -66,11 +66,11 @@ import java.util.regex.Pattern;
 
 import static io.github.nscuro.versatile.version.KnownVersioningSchemes.SCHEME_GENERIC;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV2;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV31;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV4;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_OWASP;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV2;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV3;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV4;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_OWASP;
 
 public final class BovModelConverter {
 
@@ -83,7 +83,7 @@ public final class BovModelConverter {
 
     public static Vulnerability convert(
             final Bom bov,
-            final org.cyclonedx.proto.v1_6.Vulnerability cdxVuln,
+            final org.cyclonedx.proto.v1_7.Vulnerability cdxVuln,
             final boolean isAliasSyncEnabled) {
         if (cdxVuln == null) {
             return null;
@@ -263,7 +263,7 @@ public final class BovModelConverter {
     }
 
     public static List<VulnerableSoftware> extractVulnerableSoftware(final Bom bov) {
-        final org.cyclonedx.proto.v1_6.Vulnerability vuln = bov.getVulnerabilities(0);
+        final org.cyclonedx.proto.v1_7.Vulnerability vuln = bov.getVulnerabilities(0);
         if (vuln.getAffectsCount() == 0) {
             return Collections.emptyList();
         }
@@ -300,7 +300,7 @@ public final class BovModelConverter {
                 .toList();
     }
 
-    private static VulnerabilityAlias convert(final org.cyclonedx.proto.v1_6.Vulnerability cycloneVuln,
+    private static VulnerabilityAlias convert(final org.cyclonedx.proto.v1_7.Vulnerability cycloneVuln,
                                               final VulnerabilityReference cycloneAlias) {
         final var alias = new VulnerabilityAlias();
         switch (cycloneVuln.getSource().getName()) {

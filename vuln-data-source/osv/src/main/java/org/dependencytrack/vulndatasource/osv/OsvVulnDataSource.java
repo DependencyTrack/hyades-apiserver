@@ -20,9 +20,9 @@ package org.dependencytrack.vulndatasource.osv;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.util.Timestamps;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.Vulnerability;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.Vulnerability;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.osv.schema.Osv;
 import org.slf4j.Logger;
