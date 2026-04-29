@@ -152,6 +152,13 @@ info:
     it (e.g. via a log warning) so that operators are aware of upcoming
     breakages. The respective operation's description points out which
     alternative operation(s) to use.
+
+    ## Internal operations
+
+    Operations under the `/internal` path prefix expose system internals
+    and are reserved for first-party use. They are **not** part of the
+    stable v2 API contract and may change or be removed without notice.
+    Third-party clients should not depend on them.
   version: 2.0.0
   contact:
     name: The Dependency-Track Authors
@@ -202,10 +209,6 @@ paths:
     $ref: "./resources/secrets/secrets.yaml"
   /secrets/{name}:
     $ref: "./resources/secrets/secret.yaml"
-  /task-queues/{type}:
-    $ref: "./resources/task-queues/task-queues.yaml"
-  /task-queues/{type}/{name}:
-    $ref: "./resources/task-queues/task-queue.yaml"
   /vuln-policies:
     $ref: "./resources/vuln-policies/vuln-policies.yaml"
   /vuln-policies/{uuid}:
@@ -216,14 +219,18 @@ paths:
     $ref: "./resources/vuln-policies/vuln-policy-bundle.yaml"
   /vuln-policy-bundles/{uuid}/sync:
     $ref: "./resources/vuln-policies/vuln-policy-bundle-sync.yaml"
-  /workflow-instances/{id}:
-    $ref: "./resources/workflows/workflow-instance.yaml"
-  /workflow-runs:
-    $ref: "./resources/workflows/workflow-runs.yaml"
-  /workflow-runs/{id}:
-    $ref: "./resources/workflows/workflow-run.yaml"
-  /workflow-runs/{id}/events:
-    $ref: "./resources/workflows/workflow-run-events.yaml"
+  /internal/task-queues/{type}:
+    $ref: "./resources/internal/task-queues/task-queues.yaml"
+  /internal/task-queues/{type}/{name}:
+    $ref: "./resources/internal/task-queues/task-queue.yaml"
+  /internal/workflow-instances/{id}:
+    $ref: "./resources/internal/workflows/workflow-instance.yaml"
+  /internal/workflow-runs:
+    $ref: "./resources/internal/workflows/workflow-runs.yaml"
+  /internal/workflow-runs/{id}:
+    $ref: "./resources/internal/workflows/workflow-run.yaml"
+  /internal/workflow-runs/{id}/events:
+    $ref: "./resources/internal/workflows/workflow-run-events.yaml"
 
 components:
   securitySchemes:

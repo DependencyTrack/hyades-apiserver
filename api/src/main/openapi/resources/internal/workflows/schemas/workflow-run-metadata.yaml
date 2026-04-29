@@ -44,13 +44,13 @@ properties:
     additionalProperties:
       type: string
   created_at:
-    $ref: "../../../shared/schemas/timestamp.yaml"
+    $ref: "../../../../shared/schemas/timestamp.yaml"
   updated_at:
-    $ref: "../../../shared/schemas/timestamp.yaml"
+    $ref: "../../../../shared/schemas/timestamp.yaml"
   started_at:
-    $ref: "../../../shared/schemas/timestamp.yaml"
+    $ref: "../../../../shared/schemas/timestamp.yaml"
   completed_at:
-    $ref: "../../../shared/schemas/timestamp.yaml"
+    $ref: "../../../../shared/schemas/timestamp.yaml"
 required:
 - id
 - workflow_name

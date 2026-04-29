@@ -99,7 +99,7 @@ class WorkflowsResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).getRunMetadataByInstanceId(eq("foo"));
 
         final Response response = jersey
-                .target("/workflow-instances/foo")
+                .target("/internal/workflow-instances/foo")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -132,7 +132,7 @@ class WorkflowsResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).getRunMetadataByInstanceId(eq("foo"));
 
         final Response response = jersey
-                .target("/workflow-instances/foo")
+                .target("/internal/workflow-instances/foo")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -172,7 +172,7 @@ class WorkflowsResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).getRunMetadataById(eq(runId));
 
         final Response response = jersey
-                .target("/workflow-runs/%s".formatted(runId))
+                .target("/internal/workflow-runs/%s".formatted(runId))
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -207,7 +207,7 @@ class WorkflowsResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).getRunMetadataById(eq(runId));
 
         final Response response = jersey
-                .target("/workflow-runs/%s".formatted(runId))
+                .target("/internal/workflow-runs/%s".formatted(runId))
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -245,7 +245,9 @@ class WorkflowsResourceTest extends ResourceTest {
         doReturn(new Page<>(List.of(workflowRunMetadata), null).withTotalCount(1, TotalCount.Type.EXACT))
                 .when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
 
-        final Response response = jersey.target("/workflow-runs").request()
+        final Response response = jersey
+                .target("/internal/workflow-runs")
+                .request()
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
@@ -285,7 +287,8 @@ class WorkflowsResourceTest extends ResourceTest {
         doReturn(Page.empty())
                 .when(DEX_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
 
-        final Response response = jersey.target("/workflow-runs")
+        final Response response = jersey
+                .target("/internal/workflow-runs")
                 .queryParam("workflow_name", "testWorkflow")
                 .queryParam("workflow_version", 42)
                 .queryParam("workflow_instance_id", "instance-123")
@@ -339,7 +342,7 @@ class WorkflowsResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).listRunHistory(any(ListWorkflowRunHistoryRequest.class));
 
         final Response response = jersey
-                .target("/workflow-runs/de10c1ec-959e-486d-a031-deb97963ff7c/events")
+                .target("/internal/workflow-runs/de10c1ec-959e-486d-a031-deb97963ff7c/events")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -382,7 +385,7 @@ class WorkflowsResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).listRunHistory(any(ListWorkflowRunHistoryRequest.class));
 
         final Response response = jersey
-                .target("/workflow-runs/de10c1ec-959e-486d-a031-deb97963ff7c/events")
+                .target("/internal/workflow-runs/de10c1ec-959e-486d-a031-deb97963ff7c/events")
                 .queryParam("from_sequence_number", 42)
                 .queryParam("limit", 25)
                 .queryParam("sort_direction", "DESC")

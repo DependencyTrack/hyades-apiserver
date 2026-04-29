@@ -86,7 +86,7 @@ class TaskQueuesResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).listTaskQueues(any(ListTaskQueuesRequest.class));
 
         final Response response = jersey
-                .target("/task-queues/ACTIVITY")
+                .target("/internal/task-queues/ACTIVITY")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -128,7 +128,7 @@ class TaskQueuesResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).listTaskQueues(any(ListTaskQueuesRequest.class));
 
         final Response response = jersey
-                .target("/task-queues/WORKFLOW")
+                .target("/internal/task-queues/WORKFLOW")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -160,7 +160,7 @@ class TaskQueuesResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).listTaskQueues(any(ListTaskQueuesRequest.class));
 
         final Response response = jersey
-                .target("/task-queues/ACTIVITY")
+                .target("/internal/task-queues/ACTIVITY")
                 .queryParam("limit", 25)
                 .queryParam("page_token", "nextToken")
                 .request()
@@ -185,7 +185,7 @@ class TaskQueuesResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).updateTaskQueue(any(UpdateTaskQueueRequest.class));
 
         final Response response = jersey
-                .target("/task-queues/ACTIVITY/test-queue")
+                .target("/internal/task-queues/ACTIVITY/test-queue")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .method("PATCH", Entity.json(/* language=JSON */ """
@@ -213,7 +213,7 @@ class TaskQueuesResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).updateTaskQueue(any(UpdateTaskQueueRequest.class));
 
         final Response response = jersey
-                .target("/task-queues/WORKFLOW/wf-queue")
+                .target("/internal/task-queues/WORKFLOW/wf-queue")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .method("PATCH", Entity.json(/* language=JSON */ """
@@ -241,7 +241,7 @@ class TaskQueuesResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).updateTaskQueue(any(UpdateTaskQueueRequest.class));
 
         final Response response = jersey
-                .target("/task-queues/ACTIVITY/nonexistent")
+                .target("/internal/task-queues/ACTIVITY/nonexistent")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .method("PATCH", Entity.json(/* language=JSON */ """
@@ -260,7 +260,7 @@ class TaskQueuesResourceTest extends ResourceTest {
                 .when(DEX_ENGINE_MOCK).updateTaskQueue(any(UpdateTaskQueueRequest.class));
 
         final Response response = jersey
-                .target("/task-queues/ACTIVITY/test-queue")
+                .target("/internal/task-queues/ACTIVITY/test-queue")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .method("PATCH", Entity.json(/* language=JSON */ """
