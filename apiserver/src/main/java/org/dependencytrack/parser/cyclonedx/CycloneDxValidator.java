@@ -28,7 +28,7 @@ import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.parsers.JsonParser;
 import org.cyclonedx.parsers.Parser;
 import org.cyclonedx.parsers.XmlParser;
-import org.cyclonedx.proto.v1_6.Bom;
+import org.cyclonedx.proto.v1_7.Bom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

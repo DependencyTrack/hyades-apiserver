@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.vulndatasource.nvd;
 
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Vulnerability;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Vulnerability;
 import org.dependencytrack.plugin.api.MutableServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.storage.KeyValueStore;

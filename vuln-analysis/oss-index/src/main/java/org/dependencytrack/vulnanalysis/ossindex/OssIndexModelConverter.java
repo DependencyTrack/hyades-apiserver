@@ -18,12 +18,12 @@
  */
 package org.dependencytrack.vulnanalysis.ossindex;
 
-import org.cyclonedx.proto.v1_6.Advisory;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.cyclonedx.proto.v1_6.VulnerabilityRating;
-import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import org.cyclonedx.proto.v1_7.Advisory;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.Source;
+import org.cyclonedx.proto.v1_7.Vulnerability;
+import org.cyclonedx.proto.v1_7.VulnerabilityRating;
+import org.cyclonedx.proto.v1_7.VulnerabilityReference;
 import org.jspecify.annotations.Nullable;
 import org.metaeffekt.core.security.cvss.CvssVector;
 import org.metaeffekt.core.security.cvss.v2.Cvss2;
@@ -36,10 +36,10 @@ import org.slf4j.LoggerFactory;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV2;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV31;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV4;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV2;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV3;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV4;
 
 /**
  * @since 5.7.0

@@ -26,15 +26,15 @@ import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.model.ExternalReference.Type;
 import org.cyclonedx.model.License;
-import org.cyclonedx.proto.v1_6.Classification;
-import org.cyclonedx.proto.v1_6.DataFlow;
-import org.cyclonedx.proto.v1_6.DataFlowDirection;
-import org.cyclonedx.proto.v1_6.Dependency;
-import org.cyclonedx.proto.v1_6.ExternalReferenceType;
-import org.cyclonedx.proto.v1_6.Metadata;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.Service;
-import org.cyclonedx.proto.v1_6.Tool;
+import org.cyclonedx.proto.v1_7.Classification;
+import org.cyclonedx.proto.v1_7.DataFlow;
+import org.cyclonedx.proto.v1_7.DataFlowDirection;
+import org.cyclonedx.proto.v1_7.Dependency;
+import org.cyclonedx.proto.v1_7.ExternalReferenceType;
+import org.cyclonedx.proto.v1_7.Metadata;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.Service;
+import org.cyclonedx.proto.v1_7.Tool;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentProperty;
@@ -91,7 +91,7 @@ public class ModelConverterProto {
             if (cdxMetadata.getTools().hasName() && cdxMetadata.getTools().hasVersion()) {
                 toolComponents.add(convert(cdxMetadata.getTools()));
             }
-            if(cdxMetadata.getTools().getComponentsCount() > 0) {
+            if (cdxMetadata.getTools().getComponentsCount() > 0) {
                 cdxMetadata.getTools().getComponentsList().stream().map(ModelConverterProto::convertComponent).forEach(toolComponents::add);
                 cdxMetadata.getTools().getServicesList().stream().map(ModelConverterProto::convertService).forEach(toolServices::add);
             }
@@ -116,7 +116,7 @@ public class ModelConverterProto {
         return null;
     }
 
-    public static Project convertToProject(final org.cyclonedx.proto.v1_6.Component cdxComponent) {
+    public static Project convertToProject(final org.cyclonedx.proto.v1_7.Component cdxComponent) {
         final var project = new Project();
         project.setBomRef(useOrGenerateRandomBomRef(cdxComponent.getBomRef()));
         project.setPublisher(trimToNull(cdxComponent.getPublisher()));
@@ -135,7 +135,7 @@ public class ModelConverterProto {
                 setName(cdxComponent.getAuthor());
             }});
         }
-        if(cdxComponent.getAuthorsCount() > 0){
+        if (cdxComponent.getAuthorsCount() > 0) {
             contacts.addAll(convertCdxContacts(cdxComponent.getAuthorsList()));
         }
         project.setAuthors(contacts);
@@ -156,7 +156,7 @@ public class ModelConverterProto {
         return project;
     }
 
-    public static List<Component> convertComponents(final List<org.cyclonedx.proto.v1_6.Component> cdxComponents) {
+    public static List<Component> convertComponents(final List<org.cyclonedx.proto.v1_7.Component> cdxComponents) {
         if (cdxComponents.isEmpty()) {
             return Collections.emptyList();
         }
@@ -164,7 +164,7 @@ public class ModelConverterProto {
         return cdxComponents.stream().map(ModelConverterProto::convertComponent).toList();
     }
 
-    public static Component convertComponent(final org.cyclonedx.proto.v1_6.Component cdxComponent) {
+    public static Component convertComponent(final org.cyclonedx.proto.v1_7.Component cdxComponent) {
         final var component = new Component();
         component.setBomRef(useOrGenerateRandomBomRef(cdxComponent.getBomRef()));
         component.setPublisher(trimToNull(cdxComponent.getPublisher()));
@@ -206,7 +206,7 @@ public class ModelConverterProto {
         }
 
         if (cdxComponent.getHashesCount() > 0) {
-            for (final org.cyclonedx.proto.v1_6.Hash cdxHash : cdxComponent.getHashesList()) {
+            for (final org.cyclonedx.proto.v1_7.Hash cdxHash : cdxComponent.getHashesList()) {
                 final Consumer<String> hashSetter = switch (cdxHash.getAlg()) {
                     case HASH_ALG_MD_5 -> component::setMd5;
                     case HASH_ALG_SHA_1 -> component::setSha1;
@@ -247,9 +247,9 @@ public class ModelConverterProto {
                         }
                     } else {
                         LOGGER.warn("""
-                            Encountered invalid license expression "%s" for \
-                            Component{group=%s, name=%s, version=%s, bomRef=%s}; Skipping\
-                            """.formatted(licenseExpression, component.getGroup(),
+                                Encountered invalid license expression "%s" for \
+                                Component{group=%s, name=%s, version=%s, bomRef=%s}; Skipping\
+                                """.formatted(licenseExpression, component.getGroup(),
                                 component.getName(), component.getVersion(), component.getBomRef()));
                     }
                 }
@@ -259,7 +259,7 @@ public class ModelConverterProto {
 
         if (cdxComponent.getComponentsCount() > 0) {
             final var children = new ArrayList<Component>();
-            for (final org.cyclonedx.proto.v1_6.Component cdxChildComponent : cdxComponent.getComponentsList()) {
+            for (final org.cyclonedx.proto.v1_7.Component cdxChildComponent : cdxComponent.getComponentsList()) {
                 children.add(convertComponent(cdxChildComponent));
             }
             component.setChildren(children);
@@ -268,9 +268,9 @@ public class ModelConverterProto {
         return component;
     }
 
-    public static List<License> convertLicences(List<org.cyclonedx.proto.v1_6.LicenseChoice> cdxLicensesList) {
+    public static List<License> convertLicences(List<org.cyclonedx.proto.v1_7.LicenseChoice> cdxLicensesList) {
         List<License> licences = new ArrayList<>();
-        for (org.cyclonedx.proto.v1_6.LicenseChoice licenseChoice : cdxLicensesList) {
+        for (org.cyclonedx.proto.v1_7.LicenseChoice licenseChoice : cdxLicensesList) {
             final var cdxLicense = licenseChoice.getLicense();
             var license = new License();
             if (isNotBlank(cdxLicense.getId()) || isNotBlank(cdxLicense.getName())) {
@@ -295,7 +295,7 @@ public class ModelConverterProto {
         component.setExternalReferences(convertExternalReferences(tools.getExternalReferencesList()));
 
         if (tools.getHashesCount() > 0) {
-            for (final org.cyclonedx.proto.v1_6.Hash cdxHash : tools.getHashesList()) {
+            for (final org.cyclonedx.proto.v1_7.Hash cdxHash : tools.getHashesList()) {
                 final Consumer<String> hashSetter = switch (cdxHash.getAlg()) {
                     case HASH_ALG_MD_5 -> component::setMd5;
                     case HASH_ALG_SHA_1 -> component::setSha1;
@@ -320,7 +320,7 @@ public class ModelConverterProto {
         return component;
     }
 
-    public static OrganizationalEntity convert(final org.cyclonedx.proto.v1_6.OrganizationalEntity cdxEntity) {
+    public static OrganizationalEntity convert(final org.cyclonedx.proto.v1_7.OrganizationalEntity cdxEntity) {
         final var dtEntity = new OrganizationalEntity();
         dtEntity.setName(trimToNull(cdxEntity.getName()));
         if (!cdxEntity.getContactList().isEmpty()) {
@@ -332,11 +332,11 @@ public class ModelConverterProto {
         return dtEntity;
     }
 
-    public static List<OrganizationalContact> convertCdxContacts(final List<org.cyclonedx.proto.v1_6.OrganizationalContact> cdxContacts) {
+    public static List<OrganizationalContact> convertCdxContacts(final List<org.cyclonedx.proto.v1_7.OrganizationalContact> cdxContacts) {
         return cdxContacts.stream().map(ModelConverterProto::convert).toList();
     }
 
-    private static OrganizationalContact convert(final org.cyclonedx.proto.v1_6.OrganizationalContact cdxContact) {
+    private static OrganizationalContact convert(final org.cyclonedx.proto.v1_7.OrganizationalContact cdxContact) {
         final var dtContact = new OrganizationalContact();
         dtContact.setName(trimToNull(cdxContact.getName()));
         dtContact.setEmail(trimToNull(cdxContact.getEmail()));
@@ -440,20 +440,20 @@ public class ModelConverterProto {
 
     private static Optional<Classifier> convertClassifier(final Classification cdxComponentType) {
         var classifier = switch (cdxComponentType) {
-                case CLASSIFICATION_APPLICATION -> Classifier.APPLICATION;
-                case CLASSIFICATION_FRAMEWORK -> Classifier.FRAMEWORK;
-                case CLASSIFICATION_LIBRARY -> Classifier.LIBRARY;
-                case CLASSIFICATION_OPERATING_SYSTEM -> Classifier.OPERATING_SYSTEM;
-                case CLASSIFICATION_DEVICE -> Classifier.DEVICE;
-                case CLASSIFICATION_FILE -> Classifier.FILE;
-                case CLASSIFICATION_CONTAINER -> Classifier.CONTAINER;
-                case CLASSIFICATION_FIRMWARE -> Classifier.FIRMWARE;
-                case CLASSIFICATION_DEVICE_DRIVER -> Classifier.DEVICE_DRIVER;
-                case CLASSIFICATION_PLATFORM -> Classifier.PLATFORM;
-                case CLASSIFICATION_MACHINE_LEARNING_MODEL -> Classifier.MACHINE_LEARNING_MODEL;
-                case CLASSIFICATION_DATA -> Classifier.DATA;
-                default -> null;
-            };
+            case CLASSIFICATION_APPLICATION -> Classifier.APPLICATION;
+            case CLASSIFICATION_FRAMEWORK -> Classifier.FRAMEWORK;
+            case CLASSIFICATION_LIBRARY -> Classifier.LIBRARY;
+            case CLASSIFICATION_OPERATING_SYSTEM -> Classifier.OPERATING_SYSTEM;
+            case CLASSIFICATION_DEVICE -> Classifier.DEVICE;
+            case CLASSIFICATION_FILE -> Classifier.FILE;
+            case CLASSIFICATION_CONTAINER -> Classifier.CONTAINER;
+            case CLASSIFICATION_FIRMWARE -> Classifier.FIRMWARE;
+            case CLASSIFICATION_DEVICE_DRIVER -> Classifier.DEVICE_DRIVER;
+            case CLASSIFICATION_PLATFORM -> Classifier.PLATFORM;
+            case CLASSIFICATION_MACHINE_LEARNING_MODEL -> Classifier.MACHINE_LEARNING_MODEL;
+            case CLASSIFICATION_DATA -> Classifier.DATA;
+            default -> null;
+        };
         return Optional.ofNullable(classifier);
     }
 
@@ -474,7 +474,7 @@ public class ModelConverterProto {
         };
     }
 
-    private static List<ExternalReference> convertExternalReferences(final List<org.cyclonedx.proto.v1_6.ExternalReference> cdxExternalReferences) {
+    private static List<ExternalReference> convertExternalReferences(final List<org.cyclonedx.proto.v1_7.ExternalReference> cdxExternalReferences) {
         if (cdxExternalReferences.isEmpty()) {
             return null;
         }
@@ -492,7 +492,13 @@ public class ModelConverterProto {
 
     private static Type mapExternalReferenceType(ExternalReferenceType cdxExtReferenceType) {
         return switch (cdxExtReferenceType) {
-            case EXTERNAL_REFERENCE_TYPE_OTHER -> Type.OTHER;
+            case EXTERNAL_REFERENCE_TYPE_OTHER,
+                 EXTERNAL_REFERENCE_TYPE_POAM,
+                 EXTERNAL_REFERENCE_TYPE_RELEASE_NOTES,
+                 EXTERNAL_REFERENCE_TYPE_CITATION,
+                 EXTERNAL_REFERENCE_TYPE_PATENT,
+                 EXTERNAL_REFERENCE_TYPE_PATENT_ASSERTION,
+                 EXTERNAL_REFERENCE_TYPE_PATENT_FAMILY -> Type.OTHER;
             case EXTERNAL_REFERENCE_TYPE_VCS -> Type.VCS;
             case EXTERNAL_REFERENCE_TYPE_ISSUE_TRACKER -> Type.ISSUE_TRACKER;
             case EXTERNAL_REFERENCE_TYPE_WEBSITE -> Type.WEBSITE;
@@ -525,7 +531,6 @@ public class ModelConverterProto {
             case EXTERNAL_REFERENCE_TYPE_QUALITY_METRICS -> Type.QUALITY_METRICS;
             case EXTERNAL_REFERENCE_TYPE_CODIFIED_INFRASTRUCTURE -> Type.CODIFIED_INFRASTRUCTURE;
             case EXTERNAL_REFERENCE_TYPE_MODEL_CARD -> Type.MODEL_CARD;
-            case EXTERNAL_REFERENCE_TYPE_POAM -> Type.OTHER;
             case EXTERNAL_REFERENCE_TYPE_LOG -> Type.LOG;
             case EXTERNAL_REFERENCE_TYPE_CONFIGURATION -> Type.CONFIGURATION;
             case EXTERNAL_REFERENCE_TYPE_EVIDENCE -> Type.EVIDENCE;
@@ -538,7 +543,7 @@ public class ModelConverterProto {
         };
     }
 
-    public static OrganizationalEntity convertOrganizationalEntity(final org.cyclonedx.proto.v1_6.OrganizationalEntity cdxEntity) {
+    public static OrganizationalEntity convertOrganizationalEntity(final org.cyclonedx.proto.v1_7.OrganizationalEntity cdxEntity) {
 
         final var entity = new OrganizationalEntity();
         entity.setName(cdxEntity.getName());
@@ -549,7 +554,7 @@ public class ModelConverterProto {
 
         if (cdxEntity.getContactCount() > 0) {
             final var contacts = new ArrayList<OrganizationalContact>();
-            for (final org.cyclonedx.proto.v1_6.OrganizationalContact cdxContact : cdxEntity.getContactList()) {
+            for (final org.cyclonedx.proto.v1_7.OrganizationalContact cdxContact : cdxEntity.getContactList()) {
                 final var contact = new OrganizationalContact();
                 contact.setName(cdxContact.getName());
                 contact.setEmail(cdxContact.getEmail());

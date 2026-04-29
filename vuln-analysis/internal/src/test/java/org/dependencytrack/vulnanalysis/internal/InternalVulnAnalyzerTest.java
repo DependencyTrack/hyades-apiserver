@@ -20,8 +20,8 @@ package org.dependencytrack.vulnanalysis.internal;
 
 import com.github.packageurl.PackageURL;
 import io.smallrye.config.SmallRyeConfigBuilder;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Component;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Component;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.plugin.api.MutableServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;

@@ -24,15 +24,15 @@ import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
-import org.cyclonedx.proto.v1_6.Classification;
-import org.cyclonedx.proto.v1_6.Dependency;
-import org.cyclonedx.proto.v1_6.ExternalReference;
-import org.cyclonedx.proto.v1_6.ExternalReferenceType;
-import org.cyclonedx.proto.v1_6.Metadata;
-import org.cyclonedx.proto.v1_6.OrganizationalContact;
-import org.cyclonedx.proto.v1_6.OrganizationalEntity;
-import org.cyclonedx.proto.v1_6.Service;
-import org.cyclonedx.proto.v1_6.Tool;
+import org.cyclonedx.proto.v1_7.Classification;
+import org.cyclonedx.proto.v1_7.Dependency;
+import org.cyclonedx.proto.v1_7.ExternalReference;
+import org.cyclonedx.proto.v1_7.ExternalReferenceType;
+import org.cyclonedx.proto.v1_7.Metadata;
+import org.cyclonedx.proto.v1_7.OrganizationalContact;
+import org.cyclonedx.proto.v1_7.OrganizationalEntity;
+import org.cyclonedx.proto.v1_7.Service;
+import org.cyclonedx.proto.v1_7.Tool;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.dex.engine.api.DexEngine;
@@ -1730,10 +1730,10 @@ class ImportBomActivityTest extends PersistenceCapableTest {
                 .setName("Foo Jr.")
                 .setEmail("foojr@bar.com")
                 .setPhone("123-456-7890").build();
-        final org.cyclonedx.proto.v1_6.Bom bomTest = org.cyclonedx.proto.v1_6.Bom
+        final org.cyclonedx.proto.v1_7.Bom bomTest = org.cyclonedx.proto.v1_7.Bom
                 .newBuilder()
                 .setSpecVersion("1.6")
-                .addComponents(org.cyclonedx.proto.v1_6.Component.newBuilder()
+                .addComponents(org.cyclonedx.proto.v1_7.Component.newBuilder()
                         .setName("acme-test")
                         .setPublisher("publisher")
                         .setPurl("pkg:npm/packageurl-js@1.0.0")
@@ -1743,7 +1743,7 @@ class ImportBomActivityTest extends PersistenceCapableTest {
                         .setRef("dependency-ref").build())
                 .setMetadata(Metadata.newBuilder()
                         .addAuthors(cdxContact)
-                        .setComponent(org.cyclonedx.proto.v1_6.Component.newBuilder()
+                        .setComponent(org.cyclonedx.proto.v1_7.Component.newBuilder()
                                 .setName("acme-test")
                                 .setPublisher("publisher")
                                 .setPurl("pkg:npm/packageurl-js@1.0.0")
@@ -1756,7 +1756,7 @@ class ImportBomActivityTest extends PersistenceCapableTest {
                                         .setType(ExternalReferenceType.EXTERNAL_REFERENCE_TYPE_BOM).build())
                                 .build())
                         .setTools(Tool.newBuilder()
-                                .addComponents(org.cyclonedx.proto.v1_6.Component.newBuilder().build())
+                                .addComponents(org.cyclonedx.proto.v1_7.Component.newBuilder().build())
                                 .addServices(Service.newBuilder().setName("service").build())
                                 .build())
                         .setSupplier(OrganizationalEntity.newBuilder().addContact(cdxContact).build()))

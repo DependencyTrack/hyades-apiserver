@@ -20,12 +20,12 @@ package org.dependencytrack.vulnanalysis.trivy;
 
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Classification;
-import org.cyclonedx.proto.v1_6.Component;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Classification;
+import org.cyclonedx.proto.v1_7.Component;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.Vulnerability;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffects;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
