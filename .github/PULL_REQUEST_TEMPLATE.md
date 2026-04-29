@@ -42,5 +42,5 @@
 [ADR]: ../docs/adr/
 [ADR criteria]: ../CONTRIBUTING.md#architecture-decision-records
 [contributing guidelines]: ../CONTRIBUTING.md#pull-requests
-[documentation]: https://dependencytrack.github.io/hyades/latest/development/documentation/
-[migration changelog]: https://dependencytrack.github.io/hyades/latest/development/database-migrations/
+[documentation]: https://github.com/DependencyTrack/docs
+[migration changelog]: ../DEVELOPING.md#database-migrations
