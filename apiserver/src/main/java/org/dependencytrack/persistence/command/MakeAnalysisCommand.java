@@ -22,9 +22,11 @@ import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.RatingSource;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.proto.v1.Group;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Set;
 
@@ -38,9 +40,12 @@ import static java.util.Objects.requireNonNull;
  * @param response      The vendor response to set
  * @param details       The details to set
  * @param suppress      Whether to suppress the finding
- * @param commenter     Name of the principal on which behalf audit trail entries will be created
- * @param comment       The comment to add to the audit trail
- * @param options       Additional options
+ * @param source        The source that owns this analysis (POLICY, VEX, MANUAL, NVD)
+ * @param commenter      Name of the principal on which behalf audit trail entries will be created
+ * @param comment        The comment to add to the audit trail
+ * @param owaspVector    OWASP RR vector to set
+ * @param owaspScore     OWASP RR score to set
+ * @param options        Additional options
  * @since 5.7.0
  */
 public record MakeAnalysisCommand(
@@ -51,8 +56,11 @@ public record MakeAnalysisCommand(
         AnalysisResponse response,
         String details,
         Boolean suppress,
+        RatingSource source,
         String commenter,
         String comment,
+        String owaspVector,
+        BigDecimal owaspScore,
         Set<Option> options) {
 
     public enum Option {
@@ -77,39 +85,48 @@ public record MakeAnalysisCommand(
     }
 
     public MakeAnalysisCommand(final Component component, final Vulnerability vulnerability) {
-        this(component, vulnerability, null, null, null, null, null, null, null, Collections.emptySet());
+        this(component, vulnerability, null, null, null, null, null, null, null, null,
+             null, null, Collections.emptySet());
     }
 
     public MakeAnalysisCommand withState(final AnalysisState state) {
-        return new MakeAnalysisCommand(this.component, this.vulnerability, state, this.justification, this.response, this.details, this.suppress, this.commenter, this.comment, this.options);
+        return new MakeAnalysisCommand(this.component, this.vulnerability, state, this.justification, this.response, this.details, this.suppress, this.source, this.commenter, this.comment, this.owaspVector, this.owaspScore, this.options);
     }
 
     public MakeAnalysisCommand withJustification(final AnalysisJustification justification) {
-        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, justification, this.response, this.details, this.suppress, this.commenter, this.comment, this.options);
+        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, justification, this.response, this.details, this.suppress, this.source, this.commenter, this.comment, this.owaspVector, this.owaspScore, this.options);
     }
 
     public MakeAnalysisCommand withResponse(final AnalysisResponse response) {
-        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, response, this.details, this.suppress, this.commenter, this.comment, this.options);
+        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, response, this.details, this.suppress, this.source, this.commenter, this.comment, this.owaspVector, this.owaspScore, this.options);
     }
 
     public MakeAnalysisCommand withDetails(final String detail) {
-        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, this.response, detail, this.suppress, this.commenter, this.comment, this.options);
+        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, this.response, detail, this.suppress, this.source, this.commenter, this.comment, this.owaspVector, this.owaspScore, this.options);
     }
 
     public MakeAnalysisCommand withSuppress(final Boolean suppress) {
-        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, this.response, this.details, suppress, this.commenter, this.comment, this.options);
+        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, this.response, this.details, suppress, this.source, this.commenter, this.comment, this.owaspVector, this.owaspScore, this.options);
+    }
+
+    public MakeAnalysisCommand withSource(final RatingSource source) {
+        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, this.response, this.details, this.suppress, source, this.commenter, this.comment, this.owaspVector, this.owaspScore, this.options);
     }
 
     public MakeAnalysisCommand withCommenter(final String commenter) {
-        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, this.response, this.details, this.suppress, commenter, this.comment, this.options);
+        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, this.response, this.details, this.suppress, this.source, commenter, this.comment, this.owaspVector, this.owaspScore, this.options);
     }
 
     public MakeAnalysisCommand withComment(final String comment) {
-        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, this.response, this.details, this.suppress, this.commenter, comment, this.options);
+        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, this.response, this.details, this.suppress, this.source, this.commenter, comment, this.owaspVector, this.owaspScore, this.options);
+    }
+
+    public MakeAnalysisCommand withOwasp(final String vector, final BigDecimal score) {
+        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, this.response, this.details, this.suppress, this.source, this.commenter, this.comment, vector, score, this.options);
     }
 
     public MakeAnalysisCommand withOptions(final Set<Option> options) {
-        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, this.response, this.details, this.suppress, this.commenter, this.comment, options);
+        return new MakeAnalysisCommand(this.component, this.vulnerability, this.state, this.justification, this.response, this.details, this.suppress, this.source, this.commenter, this.comment, this.owaspVector, this.owaspScore, options);
     }
 
 }

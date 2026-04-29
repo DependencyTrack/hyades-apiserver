@@ -29,6 +29,8 @@ import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 
+import java.math.BigDecimal;
+
 /**
  * Defines a custom request object used when updating analysis decisions.
  *
@@ -68,6 +70,12 @@ public class AnalysisRequest {
 
     private final Boolean suppressed; // Optional. If not specified, we do not want to set value to false, thus using Boolean object rather than primitive.
 
+    @JsonDeserialize(using = TrimmedStringDeserializer.class)
+    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS_PLUS, message = "The OWASP vector may only contain printable characters")
+    private final String owaspVector;
+
+    private final BigDecimal owaspScore;
+
     @JsonCreator
     public AnalysisRequest(@JsonProperty(value = "project") String project,
                            @JsonProperty(value = "component", required = true) String component,
@@ -77,7 +85,9 @@ public class AnalysisRequest {
                            @JsonProperty(value = "analysisResponse") AnalysisResponse analysisResponse,
                            @JsonProperty(value = "analysisDetails") String analysisDetails,
                            @JsonProperty(value = "comment") String comment,
-                           @JsonProperty(value = "isSuppressed") Boolean suppressed) {
+                           @JsonProperty(value = "isSuppressed") Boolean suppressed,
+                           @JsonProperty(value = "owaspVector") String owaspVector,
+                           @JsonProperty(value = "owaspScore") BigDecimal owaspScore) {
         this.project = project;
         this.component = component;
         this.vulnerability = vulnerability;
@@ -87,6 +97,8 @@ public class AnalysisRequest {
         this.analysisDetails = analysisDetails;
         this.comment = comment;
         this.suppressed = suppressed;
+        this.owaspVector = owaspVector;
+        this.owaspScore = owaspScore;
     }
 
     public String getProject() {
@@ -136,4 +148,13 @@ public class AnalysisRequest {
     public Boolean isSuppressed() {
         return suppressed;
     }
+
+    public String getOwaspVector() {
+        return owaspVector;
+    }
+
+    public BigDecimal getOwaspScore() {
+        return owaspScore;
+    }
+
 }
