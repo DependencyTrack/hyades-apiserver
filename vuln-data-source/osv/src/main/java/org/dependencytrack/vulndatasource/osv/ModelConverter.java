@@ -48,15 +48,13 @@ import org.dependencytrack.vulndatasource.osv.schema.Osv;
 import org.dependencytrack.vulndatasource.osv.schema.Package;
 import org.dependencytrack.vulndatasource.osv.schema.Range;
 import org.dependencytrack.vulndatasource.osv.schema.Reference;
+import org.metaeffekt.core.security.cvss.CvssVector;
+import org.metaeffekt.core.security.cvss.v2.Cvss2;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P0;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P1;
+import org.metaeffekt.core.security.cvss.v4P0.Cvss4P0;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import us.springett.cvss.Cvss;
-import us.springett.cvss.CvssV2;
-import us.springett.cvss.CvssV3;
-import us.springett.cvss.CvssV3_1;
-import us.springett.cvss.CvssV4;
-import us.springett.cvss.MalformedVectorException;
-import us.springett.cvss.Score;
 
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
@@ -443,14 +441,11 @@ final class ModelConverter {
         String severity = null;
         if (databaseSpecific != null) {
             if (databaseSpecific.getAdditionalProperties().get("cvss") instanceof final String cvssVector) {
-                try {
-                    Cvss cvss = Cvss.fromVector(cvssVector);
-                    if (cvss != null) {
-                        Score score = cvss.calculateScore();
-                        severity = String.valueOf(normalizedCvssV3Score(score.getBaseScore()));
-                    }
-                } catch (MalformedVectorException e) {
-                    LOGGER.warn("Failed to parse severity: CVSS vector {} is malformed; Skipping", cvssVector, e);
+                final CvssVector cvss = CvssVector.parseVector(cvssVector, true);
+                if (cvss != null && cvss.isBaseFullyDefined()) {
+                    severity = String.valueOf(normalizedCvssV3Score(cvss.getBakedScores().getBaseScore()));
+                } else {
+                    LOGGER.warn("Failed to parse severity: CVSS vector {} is malformed; Skipping", cvssVector);
                 }
             }
         }
@@ -534,38 +529,33 @@ final class ModelConverter {
                 return;
             }
 
-            final Cvss cvss;
-            try {
-                cvss = Cvss.fromVector(vector);
-            } catch (MalformedVectorException e) {
-                LOGGER.warn("Failed to parse CVSS vector: {}", vector, e);
-                return;
-            }
-            if (cvss == null) {
+            final CvssVector cvss = CvssVector.parseVector(vector, true);
+            if (cvss == null || !cvss.isBaseFullyDefined()) {
+                LOGGER.warn("Failed to parse CVSS vector: {}", vector);
                 return;
             }
 
-            double score = cvss.calculateScore().getBaseScore();
+            final double score = cvss.getBakedScores().getBaseScore();
 
-            var rating = VulnerabilityRating.newBuilder();
+            final var rating = VulnerabilityRating.newBuilder();
 
-            rating.setVector(vector);
+            rating.setVector(cvss instanceof Cvss2 ? "(" + cvss + ")" : cvss.toString());
             rating.setScore(Double.parseDouble(NumberFormat.getInstance(Locale.US).format(score)));
 
             switch (cvss) {
-                case CvssV4 ignored -> {
+                case Cvss4P0 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV4);
                     rating.setSeverity(normalizedCvssV4Score(score));
                 }
-                case CvssV3_1 ignored -> {
+                case Cvss3P1 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV31);
                     rating.setSeverity(normalizedCvssV3Score(score));
                 }
-                case CvssV3 ignored -> {
+                case Cvss3P0 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV3);
                     rating.setSeverity(normalizedCvssV3Score(score));
                 }
-                case CvssV2 ignored -> {
+                case Cvss2 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV2);
                     rating.setSeverity(normalizedCvssV2Score(score));
                 }

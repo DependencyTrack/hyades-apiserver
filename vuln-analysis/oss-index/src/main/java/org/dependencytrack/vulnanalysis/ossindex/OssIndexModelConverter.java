@@ -25,15 +25,13 @@ import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.cyclonedx.proto.v1_6.VulnerabilityRating;
 import org.cyclonedx.proto.v1_6.VulnerabilityReference;
 import org.jspecify.annotations.Nullable;
+import org.metaeffekt.core.security.cvss.CvssVector;
+import org.metaeffekt.core.security.cvss.v2.Cvss2;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P0;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P1;
+import org.metaeffekt.core.security.cvss.v4P0.Cvss4P0;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import us.springett.cvss.Cvss;
-import us.springett.cvss.CvssV2;
-import us.springett.cvss.CvssV3;
-import us.springett.cvss.CvssV3_1;
-import us.springett.cvss.CvssV4;
-import us.springett.cvss.MalformedVectorException;
-import us.springett.cvss.Score;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -130,38 +128,36 @@ final class OssIndexModelConverter {
             return null;
         }
 
-        final Cvss cvss;
-        try {
-            cvss = Cvss.fromVector(cvssVector);
-        } catch (MalformedVectorException e) {
+        final CvssVector cvss = CvssVector.parseVector(cvssVector, true);
+        if (cvss == null || !cvss.isBaseFullyDefined()) {
             LOGGER.warn("Failed to parse cvss vector '{}'; Ignoring", cvssVector);
             return null;
         }
 
-        final Score score = cvss.calculateScore();
+        final double score = cvss.getBakedScores().getBaseScore();
         return switch (cvss) {
-            case CvssV4 it -> VulnerabilityRating.newBuilder()
+            case Cvss4P0 it -> VulnerabilityRating.newBuilder()
                     .setMethod(SCORE_METHOD_CVSSV4)
-                    .setVector(it.getVector())
-                    .setScore(score.getBaseScore())
+                    .setVector(it.toString())
+                    .setScore(score)
                     .setSource(SOURCE_OSSINDEX)
                     .build();
-            case CvssV3_1 it -> VulnerabilityRating.newBuilder()
+            case Cvss3P1 it -> VulnerabilityRating.newBuilder()
                     .setMethod(SCORE_METHOD_CVSSV31)
-                    .setVector(it.getVector())
-                    .setScore(score.getBaseScore())
+                    .setVector(it.toString())
+                    .setScore(score)
                     .setSource(SOURCE_OSSINDEX)
                     .build();
-            case CvssV3 it -> VulnerabilityRating.newBuilder()
+            case Cvss3P0 it -> VulnerabilityRating.newBuilder()
                     .setMethod(SCORE_METHOD_CVSSV3)
-                    .setVector(it.getVector())
-                    .setScore(score.getBaseScore())
+                    .setVector(it.toString())
+                    .setScore(score)
                     .setSource(SOURCE_OSSINDEX)
                     .build();
-            case CvssV2 it -> VulnerabilityRating.newBuilder()
+            case Cvss2 it -> VulnerabilityRating.newBuilder()
                     .setMethod(SCORE_METHOD_CVSSV2)
-                    .setVector(it.getVector())
-                    .setScore(score.getBaseScore())
+                    .setVector("(" + it + ")")
+                    .setScore(score)
                     .setSource(SOURCE_OSSINDEX)
                     .build();
             default -> null;

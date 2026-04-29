@@ -565,7 +565,7 @@ public class ModelConverterTest {
                                   "score": 2.6,
                                   "severity": "SEVERITY_LOW",
                                   "method": "SCORE_METHOD_CVSSV2",
-                                  "vector": "AV:N/AC:H/Au:N/C:P/I:N/A:N"
+                                  "vector": "(AV:N/AC:H/Au:N/C:P/I:N/A:N)"
                                 }
                               ],
                               "properties": [

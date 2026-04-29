@@ -34,9 +34,8 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.resources.AbstractApiResource;
-import us.springett.cvss.Cvss;
-import us.springett.cvss.MalformedVectorException;
-import us.springett.cvss.Score;
+import org.dependencytrack.resources.v1.vo.CvssScoreResponse;
+import org.metaeffekt.core.security.cvss.CvssVector;
 import us.springett.owasp.riskrating.MissingFactorException;
 import us.springett.owasp.riskrating.OwaspRiskRating;
 
@@ -62,21 +61,20 @@ public class CalculatorResource extends AbstractApiResource {
             @ApiResponse(
                     responseCode = "200",
                     description = "The calculated scores",
-                    content = @Content(schema = @Schema(implementation = Score.class))
+                    content = @Content(schema = @Schema(implementation = CvssScoreResponse.class))
             ),
+            @ApiResponse(responseCode = "400", description = "An invalid CVSS vector was submitted"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     public Response getCvssScores(
-            @Parameter(description = "A valid CVSSv2 or CVSSv3 vector", required = true)
+            @Parameter(description = "A valid CVSSv2, CVSSv3 or CVSSv4 vector", required = true)
             @QueryParam("vector") String vector) {
-        try {
-            final Cvss cvss = Cvss.fromVector(vector);
-            final Score score = cvss.calculateScore();
-            return Response.ok(score).build();
-        } catch (MalformedVectorException | NullPointerException e) {
-            final String invalidVector = "An invalid CVSSv2 or CVSSv3 vector submitted.";
-            return Response.status(Response.Status.BAD_REQUEST).entity(invalidVector).build();
+        final CvssVector cvss = CvssVector.parseVector(vector, true);
+        if (cvss == null || !cvss.isBaseFullyDefined()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("An invalid CVSS vector was submitted.").build();
         }
+        return Response.ok(CvssScoreResponse.from(cvss.getBakedScores())).build();
     }
 
     @GET
