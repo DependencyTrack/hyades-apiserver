@@ -83,7 +83,7 @@ final class HackagePackageMetadataResolver implements PackageMetadataResolver {
             return null;
         }
 
-        return new PackageMetadata(latestVersion, Instant.now(), null);
+        return new PackageMetadata(latestVersion, null, Instant.now(), null);
     }
 
     private byte @Nullable [] fetchPreferredVersions(String name, PackageRepository repository)

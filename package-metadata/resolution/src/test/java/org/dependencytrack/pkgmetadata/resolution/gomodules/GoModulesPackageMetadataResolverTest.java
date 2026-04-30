@@ -90,6 +90,8 @@ class GoModulesPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("v0.21.0");
+        assertThat(result.latestVersionPublishedAt())
+                .isEqualTo(Instant.parse("2024-10-01T12:00:00Z"));
         assertThat(result.artifactMetadata()).isNotNull();
         assertThat(result.artifactMetadata().publishedAt())
                 .isEqualTo(Instant.parse("2024-10-01T12:00:00Z"));
@@ -125,6 +127,8 @@ class GoModulesPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("v0.21.0");
+        assertThat(result.latestVersionPublishedAt())
+                .isEqualTo(Instant.parse("2024-10-01T12:00:00Z"));
         assertThat(result.artifactMetadata()).isNotNull();
         assertThat(result.artifactMetadata().publishedAt())
                 .isEqualTo(Instant.parse("2024-06-15T08:00:00Z"));

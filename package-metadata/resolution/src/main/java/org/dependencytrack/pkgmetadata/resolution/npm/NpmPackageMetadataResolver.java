@@ -94,7 +94,15 @@ final class NpmPackageMetadataResolver implements PackageMetadataResolver {
         if (latestVersionBytes != null && versionMetaBytes != null) {
             final PackageInfo latest = deserialize(latestVersionBytes, PackageInfo.class);
             final VersionInfo versionInfo = deserialize(versionMetaBytes, VersionInfo.class);
-            return buildResult(latest.version(), latest.resolvedAt(), versionInfo);
+
+            final byte[] latestVersionMetaBytes = latest != null
+                    ? cache.get(cacheKeyBase + VERSION_CACHE_KEY_SUFFIX + latest.version())
+                    : null;
+            final var latestVersionPublishedAt = latestVersionMetaBytes != null
+                    ? deserialize(latestVersionMetaBytes, VersionInfo.class).publishedAt()
+                    : null;
+
+            return buildResult(latest.version(), latestVersionPublishedAt, latest.resolvedAt(), versionInfo);
         }
 
         final NpmPackageDocument doc = fetchAndParseDocument(packageName, repository);
@@ -120,7 +128,11 @@ final class NpmPackageMetadataResolver implements PackageMetadataResolver {
         }
 
         final VersionInfo versionInfo = doc.versions().get(purl.getVersion());
-        return buildResult(doc.latestVersion(), resolvedAt, versionInfo);
+        final VersionInfo latestVersionInfo = doc.versions().get(doc.latestVersion());
+        return buildResult(doc.latestVersion(),
+                latestVersionInfo != null ? latestVersionInfo.publishedAt() : null,
+                resolvedAt,
+                versionInfo);
     }
 
     private static String formatPackageName(PackageURL purl) {
@@ -183,8 +195,8 @@ final class NpmPackageMetadataResolver implements PackageMetadataResolver {
 
     private static @Nullable PackageMetadata buildResult(
             @Nullable String latestVersion,
-            Instant resolvedAt,
-            @Nullable VersionInfo versionInfo) {
+            @Nullable Instant latestVersionPublishedAt,
+            Instant resolvedAt, @Nullable VersionInfo versionInfo) {
         Instant publishedAt = null;
         var hashes = new EnumMap<HashAlgorithm, String>(HashAlgorithm.class);
 
@@ -213,6 +225,7 @@ final class NpmPackageMetadataResolver implements PackageMetadataResolver {
 
         return new PackageMetadata(
                 latestVersion,
+                latestVersionPublishedAt,
                 resolvedAt,
                 artifactMetadata);
     }

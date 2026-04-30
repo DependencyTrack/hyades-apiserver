@@ -1989,4 +1989,10 @@
              WHERE "NAME" = 'VIEW_BADGES';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-82" author="sahibamittal">
+        <addColumn tableName="PACKAGE_METADATA">
+            <column name="LATEST_VERSION_PUBLISHED_AT" type="TIMESTAMPTZ(3)"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

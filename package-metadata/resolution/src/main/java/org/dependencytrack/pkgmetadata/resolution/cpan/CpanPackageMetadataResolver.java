@@ -86,14 +86,16 @@ final class CpanPackageMetadataResolver implements PackageMetadataResolver {
 
         // The /v1/release/{name} endpoint returns the latest release only.
         // Version metadata is only available when the queried version matches the latest.
+        // Published date is available for latest version.
         final var resolvedAt = Instant.now();
-
+        final var publishedAt = getPublishedAt(root);
         PackageArtifactMetadata artifactMetadata = null;
+
         if (purl.getVersion() != null && purl.getVersion().equals(latestVersion)) {
-            artifactMetadata = extractArtifactMetadata(root, resolvedAt);
+            artifactMetadata = extractArtifactMetadata(root, resolvedAt, publishedAt);
         }
 
-        return new PackageMetadata(latestVersion, resolvedAt, artifactMetadata);
+        return new PackageMetadata(latestVersion, publishedAt, resolvedAt, artifactMetadata);
     }
 
     private byte @Nullable [] fetchRelease(String name, PackageRepository repository)
@@ -126,7 +128,19 @@ final class CpanPackageMetadataResolver implements PackageMetadataResolver {
         return response.body();
     }
 
-    private static @Nullable PackageArtifactMetadata extractArtifactMetadata(JsonNode root, Instant resolvedAt) {
+    private static @Nullable PackageArtifactMetadata extractArtifactMetadata(JsonNode root, Instant resolvedAt, Instant publishedAt) {
+        final var hashes = new EnumMap<HashAlgorithm, String>(HashAlgorithm.class);
+        final String sha256 = root.path("checksum_sha256").asText(null);
+        if (sha256 != null && HashAlgorithm.SHA256.isValid(sha256)) {
+            hashes.put(HashAlgorithm.SHA256, sha256.toLowerCase());
+        }
+        if (publishedAt == null && hashes.isEmpty()) {
+            return null;
+        }
+        return new PackageArtifactMetadata(resolvedAt, publishedAt, hashes);
+    }
+
+    private static @Nullable Instant getPublishedAt(JsonNode root) {
         Instant publishedAt = null;
         final String date = root.path("date").asText(null);
         if (date != null) {
@@ -136,18 +150,7 @@ final class CpanPackageMetadataResolver implements PackageMetadataResolver {
             } catch (DateTimeParseException ignored) {
             }
         }
-
-        final var hashes = new EnumMap<HashAlgorithm, String>(HashAlgorithm.class);
-        final String sha256 = root.path("checksum_sha256").asText(null);
-        if (sha256 != null && HashAlgorithm.SHA256.isValid(sha256)) {
-            hashes.put(HashAlgorithm.SHA256, sha256.toLowerCase());
-        }
-
-        if (publishedAt == null && hashes.isEmpty()) {
-            return null;
-        }
-
-        return new PackageArtifactMetadata(resolvedAt, publishedAt, hashes);
+        return publishedAt;
     }
 
     private JsonNode parseJson(byte[] body) {

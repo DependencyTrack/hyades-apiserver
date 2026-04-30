@@ -89,10 +89,11 @@ final class GoModulesPackageMetadataResolver implements PackageMetadataResolver 
         }
 
         final var resolvedAt = Instant.now();
+        final var latestVersionPublishedAt = extractPublishedAt(root);
 
         PackageArtifactMetadata artifactMetadata = null;
         if (purl.getVersion().equals(latestVersion)) {
-            artifactMetadata = extractArtifactMetadata(root, resolvedAt);
+            artifactMetadata = new PackageArtifactMetadata(resolvedAt, latestVersionPublishedAt, Map.of());
         } else {
             final String versionCacheKey = CacheKeys.build(repository, modulePath, purl.getVersion());
             byte[] versionBody = cache.get(versionCacheKey);
@@ -103,11 +104,14 @@ final class GoModulesPackageMetadataResolver implements PackageMetadataResolver 
                 }
             }
             if (versionBody != null) {
-                artifactMetadata = extractArtifactMetadata(parseJson(versionBody), resolvedAt);
+                final var publishedAt = extractPublishedAt(parseJson(versionBody));
+                artifactMetadata = publishedAt != null
+                        ? new PackageArtifactMetadata(resolvedAt, extractPublishedAt(parseJson(versionBody)), Map.of())
+                : null;
             }
         }
 
-        return new PackageMetadata(latestVersion, resolvedAt, artifactMetadata);
+        return new PackageMetadata(latestVersion, latestVersionPublishedAt, resolvedAt, artifactMetadata);
     }
 
     private byte @Nullable [] fetchModule(
@@ -172,15 +176,14 @@ final class GoModulesPackageMetadataResolver implements PackageMetadataResolver 
         return response.body();
     }
 
-    private static @Nullable PackageArtifactMetadata extractArtifactMetadata(JsonNode root, Instant resolvedAt) {
+    private static @Nullable Instant extractPublishedAt(JsonNode root) {
         final String time = root.path("Time").asText(null);
         if (time == null) {
             return null;
         }
 
         try {
-            final Instant publishedAt = Instant.parse(time);
-            return new PackageArtifactMetadata(resolvedAt, publishedAt, Map.of());
+            return Instant.parse(time);
         } catch (DateTimeParseException e) {
             return null;
         }

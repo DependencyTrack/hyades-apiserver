@@ -217,7 +217,7 @@ final class PypiPackageMetadataResolver implements PackageMetadataResolver {
             artifactMetadata = new PackageArtifactMetadata(resolvedAt, null, hashes);
         }
 
-        return new PackageMetadata(latestVersion, resolvedAt, artifactMetadata);
+        return new PackageMetadata(latestVersion, null, resolvedAt, artifactMetadata);
     }
 
     private byte[] serialize(Object value) {

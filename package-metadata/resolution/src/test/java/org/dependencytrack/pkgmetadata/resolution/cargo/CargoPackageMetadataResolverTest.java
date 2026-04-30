@@ -101,6 +101,8 @@ class CargoPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("1.0.200");
+        assertThat(result.latestVersionPublishedAt())
+                .isEqualTo(Instant.parse("2024-01-15T10:30:00Z"));
         assertThat(result.artifactMetadata()).isNotNull();
         assertThat(result.artifactMetadata().publishedAt())
                 .isEqualTo(Instant.parse("2024-01-15T10:30:00Z"));
@@ -141,6 +143,8 @@ class CargoPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("1.0.200");
+        assertThat(result.latestVersionPublishedAt())
+                .isEqualTo(Instant.parse("2024-01-15T10:30:00Z"));
         assertThat(result.artifactMetadata()).isNotNull();
         assertThat(result.artifactMetadata().publishedAt())
                 .isEqualTo(Instant.parse("2023-06-01T12:00:00Z"));
@@ -172,6 +176,8 @@ class CargoPackageMetadataResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("1.0.200");
+        assertThat(result.latestVersionPublishedAt())
+                .isEqualTo(Instant.parse("2024-01-15T10:30:00Z"));
         assertThat(result.artifactMetadata()).isNull();
     }
 
