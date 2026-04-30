@@ -1994,8 +1994,9 @@
         <addColumn tableName="COMPONENT">
             <column name="SCOPE" type="TEXT"/>
         </addColumn>
-        <createIndex tableName="COMPONENT" indexName="COMPONENT_SCOPE_IDX">
-            <column name="SCOPE"/>
-        </createIndex>
+        <sql>
+            ALTER TABLE "COMPONENT" ADD CONSTRAINT "COMPONENT_SCOPE_check"
+                CHECK ("SCOPE" IS NULL OR "SCOPE"::TEXT = ANY(ARRAY['REQUIRED', 'OPTIONAL', 'EXCLUDED']));
+        </sql>
     </changeSet>
 </databaseChangeLog>

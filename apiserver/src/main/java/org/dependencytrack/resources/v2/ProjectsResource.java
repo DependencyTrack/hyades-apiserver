@@ -75,6 +75,7 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
                                             .name(componentRow.getName())
                                             .hashes(mapHashes(componentRow))
                                             .classifier(componentRow.getClassifier() != null ? componentRow.getClassifier().name() : null)
+                                            .scope(componentRow.getScope() != null ? componentRow.getScope().name() : null)
                                             .copyright(componentRow.getCopyright())
                                             .cpe(componentRow.getCpe())
                                             .group(componentRow.getGroup())

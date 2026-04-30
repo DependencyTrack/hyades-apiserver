@@ -28,6 +28,9 @@ properties:
   classifier:
     type: string
     maxLength: 255
+  scope:
+    type: string
+    maxLength: 255
   hashes:
     $ref: "../../../shared/schemas/hashes.yaml"
   cpe:
