@@ -67,6 +67,27 @@ class NugetPackageMetadataResolverTest {
             }
             """;
 
+    private static final String NUGET_INDEX_PRERELEASE_ONLY_RESPONSE = /* language=JSON */ """
+            {
+              "items": [{
+                "items": [
+                  {
+                    "catalogEntry": {
+                      "version": "1.0.0-beta.1",
+                      "published": "2023-06-15T10:30:00Z"
+                    }
+                  },
+                  {
+                    "catalogEntry": {
+                      "version": "1.0.0-rc.1",
+                      "published": "2024-01-01T12:00:00Z"
+                    }
+                  }
+                ]
+              }]
+            }
+            """;
+
     private NugetPackageMetadataResolverFactory factory;
     private NugetPackageMetadataResolver resolver;
 
@@ -128,6 +149,25 @@ class NugetPackageMetadataResolverTest {
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("2.0.0");
         assertThat(result.artifactMetadata()).isNull();
+    }
+
+    @Test
+    void shouldResolveLatestVersionWhenOnlyPrereleaseVersionsExist(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        stubFor(get(urlPathEqualTo("/v3/registration5-gz-semver2/mypackage/index.json"))
+                .willReturn(aResponse().withStatus(200).withBody(NUGET_INDEX_PRERELEASE_ONLY_RESPONSE)));
+
+        final var purl = PackageURLBuilder.aPackageURL()
+                .withType("nuget")
+                .withName("MyPackage")
+                .withVersion("1.0.0-beta.1")
+                .build();
+
+        final var repo = new PackageRepository("test", wmRuntimeInfo.getHttpBaseUrl(), null, null);
+        final PackageMetadata result = resolver.resolve(purl, repo);
+
+        assertThat(result).isNotNull();
+        assertThat(result.latestVersion()).isEqualTo("1.0.0-rc.1");
+        assertThat(result.artifactMetadata()).isNotNull();
     }
 
     @Test
