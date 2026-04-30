@@ -60,7 +60,6 @@ public class Finding implements Serializable {
             optValue(component, "purl", findingRow.componentPurl());
         }
         optValue(component, "cpe", findingRow.componentCpe());
-        optValue(component, "scope", findingRow.componentScope());
         optValue(component, "project", findingRow.projectUuid());
         optValue(component, "hasOccurrences", findingRow.componentHasOccurrences(), false);
         optValue(component, "scope", findingRow.componentScope());

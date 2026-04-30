@@ -171,12 +171,12 @@ public class ComponentIdentity {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         final ComponentIdentity that = (ComponentIdentity) o;
-        return objectType == that.objectType && Objects.equals(purl, that.purl) && Objects.equals(purlCoordinates, that.purlCoordinates) && Objects.equals(cpe, that.cpe) && Objects.equals(swidTagId, that.swidTagId) && Objects.equals(group, that.group) && Objects.equals(name, that.name) && Objects.equals(version, that.version) && Objects.equals(uuid, that.uuid);
+        return objectType == that.objectType && Objects.equals(purl, that.purl) && Objects.equals(purlCoordinates, that.purlCoordinates) && Objects.equals(cpe, that.cpe) && Objects.equals(swidTagId, that.swidTagId) && Objects.equals(group, that.group) && Objects.equals(name, that.name) && Objects.equals(version, that.version) && Objects.equals(uuid, that.uuid) && Objects.equals(scope, that.scope);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(objectType, purl, purlCoordinates, cpe, swidTagId, group, name, version, uuid);
+        return Objects.hash(objectType, purl, purlCoordinates, cpe, swidTagId, group, name, version, uuid, scope);
     }
 
     public ObjectNode toJSON() {

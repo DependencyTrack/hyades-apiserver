@@ -1992,7 +1992,7 @@
 
     <changeSet id="v5.7.0-82" author="sahibamittal">
         <addColumn tableName="COMPONENT">
-            <column name="SCOPE" type="TEXT"/>
+            <column name="SCOPE" type="VARCHAR(255)"/>
         </addColumn>
         <sql>
             ALTER TABLE "COMPONENT" ADD CONSTRAINT "COMPONENT_SCOPE_check"
