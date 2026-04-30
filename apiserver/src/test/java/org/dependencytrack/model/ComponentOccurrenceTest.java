@@ -39,6 +39,7 @@ public class ComponentOccurrenceTest extends PersistenceCapableTest {
         occ.setComponent(component);
         occ.setLocation("a".repeat(300));
         qm.persist(occ);
+        qm.getPersistenceManager().evictAll();
 
         final var persistedOccurrence = qm.getObjectById(ComponentOccurrence.class, occ.getId());
         Assertions.assertEquals(300, persistedOccurrence.getLocation().length());
