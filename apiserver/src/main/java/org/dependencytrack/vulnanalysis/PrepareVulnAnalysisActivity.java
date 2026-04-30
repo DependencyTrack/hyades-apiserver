@@ -268,6 +268,7 @@ public final class PrepareVulnAnalysisActivity implements Activity<PrepareVulnAn
             case PLATFORM -> Classification.CLASSIFICATION_PLATFORM;
             case MACHINE_LEARNING_MODEL -> Classification.CLASSIFICATION_MACHINE_LEARNING_MODEL;
             case DATA -> Classification.CLASSIFICATION_DATA;
+            case CRYPTOGRAPHIC_ASSET -> Classification.CLASSIFICATION_CRYPTOGRAPHIC_ASSET;
         };
     }
 

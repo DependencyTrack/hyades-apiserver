@@ -1989,4 +1989,13 @@
              WHERE "NAME" = 'VIEW_BADGES';
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-82" author="sahibamittal">
+        <modifyDataType tableName="COMPONENT_OCCURRENCE" columnName="LOCATION" newDataType="VARCHAR(1024)"/>
+        <sql>
+            ALTER TABLE "COMPONENT" DROP CONSTRAINT "COMPONENT_CLASSIFIER_check";
+            ALTER TABLE "COMPONENT" ADD CONSTRAINT "COMPONENT_CLASSIFIER_check"
+                CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'CRYPTOGRAPHIC_ASSET', 'DATA', 'DEVICE', 'DEVICE_DRIVER', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'MACHINE_LEARNING_MODEL', 'OPERATING_SYSTEM', 'PLATFORM']));
+        </sql>
+    </changeSet>
 </databaseChangeLog>

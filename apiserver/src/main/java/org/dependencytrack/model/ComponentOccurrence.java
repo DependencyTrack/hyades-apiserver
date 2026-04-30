@@ -21,6 +21,7 @@ package org.dependencytrack.model;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import jakarta.validation.constraints.Size;
 import org.datanucleus.api.jdo.annotations.CreateTimestamp;
 
 import javax.jdo.annotations.Column;
@@ -74,7 +75,8 @@ public class ComponentOccurrence {
     private Component component;
 
     @Persistent
-    @Column(name = "LOCATION")
+    @Column(name = "LOCATION", jdbcType = "VARCHAR", length = 1024)
+    @Size(max = 1024)
     private String location;
 
     @Persistent
