@@ -453,7 +453,7 @@ public class ModelConverterTest {
                               },
                               "ratings": [
                                 {
-                                  "severity": "SEVERITY_UNKNOWN"
+                                  "severity": "SEVERITY_CRITICAL"
                                 }
                               ],
                               "affects": [
@@ -468,8 +468,8 @@ public class ModelConverterTest {
                               ],
                               "properties": [
                                 {
-                                    "name": "internal:osv:ecosystem",
-                                    "value": "maven"
+                                  "name": "internal:osv:ecosystem",
+                                  "value": "maven"
                                 }]
                             }
                           ]
