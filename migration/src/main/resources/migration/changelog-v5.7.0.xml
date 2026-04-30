@@ -1991,7 +1991,6 @@
     </changeSet>
 
     <changeSet id="v5.7.0-82" author="sahibamittal">
-        <modifyDataType tableName="COMPONENT_OCCURRENCE" columnName="LOCATION" newDataType="VARCHAR(1024)"/>
         <sql>
             ALTER TABLE "COMPONENT" DROP CONSTRAINT "COMPONENT_CLASSIFIER_check";
             ALTER TABLE "COMPONENT" ADD CONSTRAINT "COMPONENT_CLASSIFIER_check"
