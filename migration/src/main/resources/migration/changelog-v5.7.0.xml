@@ -2001,4 +2001,14 @@
                 CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'CRYPTOGRAPHIC_ASSET', 'DATA', 'DEVICE', 'DEVICE_DRIVER', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'MACHINE_LEARNING_MODEL', 'OPERATING_SYSTEM', 'PLATFORM']));
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-83" author="sahibamittal">
+        <addColumn tableName="COMPONENT">
+            <column name="SCOPE" type="VARCHAR(255)"/>
+        </addColumn>
+        <sql>
+            ALTER TABLE "COMPONENT" ADD CONSTRAINT "COMPONENT_SCOPE_check"
+            CHECK ("SCOPE" IS NULL OR "SCOPE"::TEXT = ANY(ARRAY['REQUIRED', 'OPTIONAL', 'EXCLUDED']));
+        </sql>
+    </changeSet>
 </databaseChangeLog>

@@ -59,6 +59,8 @@ properties:
     type: integer
     format: int64
     minimum: 0
+  scope:
+    $ref: "../../../shared/schemas/scope.yaml"
   last_inherited_risk_score:
     type: number
     format: double

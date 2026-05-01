@@ -61,6 +61,7 @@ import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapHashes;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapLicense;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapOrganizationalContacts;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapProject;
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapScope;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapSortDirection;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
@@ -146,6 +147,7 @@ public class ComponentsResource extends AbstractApiResource implements Component
                                             .name(componentRow.getName())
                                             .hashes(mapHashes(componentRow))
                                             .classifier(componentRow.getClassifier() != null ? componentRow.getClassifier().name() : null)
+                                            .scope(mapScope(componentRow.getScope()))
                                             .copyright(componentRow.getCopyright())
                                             .cpe(componentRow.getCpe())
                                             .group(componentRow.getGroup())
