@@ -58,7 +58,7 @@ class GitHubVulnDataSourceTest {
     @Test
     void test() throws Exception {
         final var advisory = objectMapper.readValue(
-                getClass().getResource("/advisory.json"), SecurityAdvisory.class);
+                getClass().getResourceAsStream("/advisory.json"), SecurityAdvisory.class);
 
         when(advisoryClientMock.hasNext())
                 .thenReturn(true)

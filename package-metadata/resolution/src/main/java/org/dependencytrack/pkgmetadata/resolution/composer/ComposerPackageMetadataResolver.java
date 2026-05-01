@@ -276,14 +276,12 @@ final class ComposerPackageMetadataResolver implements PackageMetadataResolver {
     }
 
     private static void mergePackages(ObjectNode target, JsonNode source) {
-        final Iterator<Map.Entry<String, JsonNode>> fields = source.fields();
-        while (fields.hasNext()) {
-            final Map.Entry<String, JsonNode> field = fields.next();
+        for (final Map.Entry<String, JsonNode> field : source.properties()) {
             final String name = field.getKey();
             final JsonNode sourceValue = field.getValue();
             if (target.has(name) && target.get(name).isObject() && sourceValue.isObject()) {
                 final ObjectNode targetVersions = (ObjectNode) target.get(name);
-                sourceValue.fields().forEachRemaining(e -> targetVersions.set(e.getKey(), e.getValue()));
+                sourceValue.properties().forEach(e -> targetVersions.set(e.getKey(), e.getValue()));
             } else {
                 target.set(name, sourceValue);
             }

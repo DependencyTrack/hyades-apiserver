@@ -315,7 +315,7 @@ public class BomResource extends AbstractApiResource {
                       then the <code>projectName</code> and <code>projectVersion</code> must be specified.
                       Optionally, if <code>autoCreate</code> is specified and <code>true</code> and the project does not exist,
                       the project will be created. In this scenario, the principal making the request will
-                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>, 
+                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>,
                       or <strong>PROJECT_CREATION_UPLOAD</strong> permission.
                     </p>
                     <p>
@@ -461,7 +461,7 @@ public class BomResource extends AbstractApiResource {
         final byte[] bomBytes;
         try (final var encodedInputStream = new ByteArrayInputStream(request.getBom().getBytes(StandardCharsets.UTF_8));
              final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
-             final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
+             final var byteOrderMarkInputStream = BOMInputStream.builder().setInputStream(decodedInputStream).get()) {
             bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
         } catch (IOException e) {
             LOGGER.error("An unexpected error occurred while decoding BOM uploaded to project: {}", projectInfo.uuid(), e);
@@ -482,7 +482,7 @@ public class BomResource extends AbstractApiResource {
                       then the <code>projectName</code> and <code>projectVersion</code> must be specified.
                       Optionally, if <code>autoCreate</code> is specified and <code>true</code> and the project does not exist,
                       the project will be created. In this scenario, the principal making the request will
-                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>, 
+                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>,
                       or <strong>PROJECT_CREATION_UPLOAD</strong> permission.
                     </p>
                     <p>
@@ -630,7 +630,7 @@ public class BomResource extends AbstractApiResource {
         final FormDataBodyPart firstPart = artifactParts.getFirst();
         final byte[] bomBytes;
         try (final var inputStream = ((BodyPartEntity) firstPart.getEntity()).getInputStream();
-             final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
+             final var byteOrderMarkInputStream = BOMInputStream.builder().setInputStream(inputStream).get()) {
             bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
         } catch (IOException e) {
             LOGGER.error("An unexpected error occurred while reading BOM from upload", e);

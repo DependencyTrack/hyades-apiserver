@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -149,7 +149,7 @@ public class DefectDojoUploader extends AbstractIntegrationPoint implements Proj
                 return;
             }
             final String testTitle = getTestTitle(project);
-            final DefectDojoClient client = new DefectDojoClient(httpClient, this, new URL(defectDojoUrl.getPropertyValue()));
+            final DefectDojoClient client = new DefectDojoClient(httpClient, this, URI.create(defectDojoUrl.getPropertyValue()).toURL());
             if (isReimportConfigured(project) || globalReimportEnabled) {
                 final ArrayList<String> testsIds = client.getDojoTestIds(apiKeyValue, engagementId.getPropertyValue());
                 final String testId = client.getDojoTestId(engagementId.getPropertyValue(), testsIds, testTitle);

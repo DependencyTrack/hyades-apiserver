@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -98,7 +98,7 @@ public class FortifySscUploader extends AbstractIntegrationPoint implements Proj
             return;
         }
         try {
-            final FortifySscClient client = new FortifySscClient(httpClient, this, new URL(sscUrl.getPropertyValue()));
+            final FortifySscClient client = new FortifySscClient(httpClient, this, URI.create(sscUrl.getPropertyValue()).toURL());
             final String tokenValue = secretManager.getSecretValue(tokenSecretName);
             if (tokenValue == null) {
                 LOGGER.warn("Fortify SSC secret '%s' could not be resolved. Aborting".formatted(tokenSecretName));

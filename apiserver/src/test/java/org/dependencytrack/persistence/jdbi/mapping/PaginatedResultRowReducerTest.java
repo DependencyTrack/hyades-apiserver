@@ -28,6 +28,8 @@ import org.jdbi.v3.sqlobject.statement.UseRowReducer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
@@ -77,7 +79,7 @@ public class PaginatedResultRowReducerTest extends PersistenceCapableTest {
                 .getProjectNamesPage(null));
 
         assertThat(result.getTotal()).isEqualTo(10);
-        assertThat(result.getObjects()).hasSize(10);
+        assertThat((Collection<?>) result.getObjects()).hasSize(10);
     }
 
     @Test
@@ -88,7 +90,7 @@ public class PaginatedResultRowReducerTest extends PersistenceCapableTest {
                 .getProjectNamesPage(5));
 
         assertThat(result.getTotal()).isEqualTo(10);
-        assertThat(result.getObjects()).hasSize(5);
+        assertThat((Collection<?>) result.getObjects()).hasSize(5);
     }
 
     @Test

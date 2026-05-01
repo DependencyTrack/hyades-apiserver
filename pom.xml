@@ -578,6 +578,7 @@
                             <arg>-Xlint:all</arg>
                             <arg>-Xlint:-processing</arg>
                             <arg>-Xlint:-serial</arg>
+                            <arg>-Xlint:-try</arg>
                             <arg>-parameters</arg>
                         </compilerArgs>
                         <!--

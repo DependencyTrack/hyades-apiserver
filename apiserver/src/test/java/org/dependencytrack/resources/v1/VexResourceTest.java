@@ -53,6 +53,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentMatchers;
 
 import java.util.Base64;
 import java.util.Collections;
@@ -67,7 +68,6 @@ import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_M
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -96,7 +96,7 @@ public class VexResourceTest extends ResourceTest {
     @BeforeEach
     void beforeEach() {
         stubbedRunId = UUID.randomUUID();
-        doReturn(stubbedRunId).when(DEX_ENGINE_MOCK).createRun(any(CreateWorkflowRunRequest.class));
+        doReturn(stubbedRunId).when(DEX_ENGINE_MOCK).createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any());
     }
 
     @AfterEach

@@ -26,7 +26,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.util.Map;
 
-public class PostgresTestContainer extends PostgreSQLContainer {
+public final class PostgresTestContainer extends PostgreSQLContainer {
 
     @SuppressWarnings("resource")
     public PostgresTestContainer() {

@@ -25,6 +25,7 @@ import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
+import com.networknt.schema.serialization.DefaultJsonNodeReader;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -42,7 +43,9 @@ public class PolicySchemaValidationTest {
         ObjectMapper objMapper = new ObjectMapper(new YAMLFactory());
         final String jsonSchemaContent = resourceToString("/schema/vulnerability-policy-v1.schema.json", StandardCharsets.UTF_8);
         final String policyContent = resourceToString("/unit/policy/vulnerability-policy-v1-valid.yaml", StandardCharsets.UTF_8);
-        JsonSchemaFactory factory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)).jsonMapper(objMapper).build();
+        JsonSchemaFactory factory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012))
+                .jsonNodeReader(DefaultJsonNodeReader.builder().jsonMapper(objMapper).build())
+                .build();
         JsonSchema schema = factory.getSchema(jsonSchemaContent);
         JsonNode jsonNode = objMapper.readTree(policyContent);
         Set<ValidationMessage> validateMsg = schema.validate(jsonNode);
@@ -54,7 +57,9 @@ public class PolicySchemaValidationTest {
         ObjectMapper objMapper = new ObjectMapper(new YAMLFactory());
         final String jsonSchemaContent = resourceToString("/schema/vulnerability-policy-v1.schema.json", StandardCharsets.UTF_8);
         final String policyContent = resourceToString("/unit/policy/vulnerability-policy-v1-invalid.yaml", StandardCharsets.UTF_8);
-        JsonSchemaFactory factory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)).jsonMapper(objMapper).build();
+        JsonSchemaFactory factory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012))
+                .jsonNodeReader(DefaultJsonNodeReader.builder().jsonMapper(objMapper).build())
+                .build();
         JsonSchema schema = factory.getSchema(jsonSchemaContent);
         JsonNode jsonNode = objMapper.readTree(policyContent);
         Set<ValidationMessage> validateMsg = schema.validate(jsonNode);

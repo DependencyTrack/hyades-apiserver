@@ -34,7 +34,7 @@ public class VersionDistanceCelScriptBuilder implements CelPolicyScriptSourceBui
     public String apply(PolicyCondition policyCondition) {
         return """
                 component.version_distance("%s", %s)
-                    """.formatted(comparator(policyCondition.getOperator()), toProtoString(policyCondition.getValue()));
+                """.formatted(comparator(policyCondition.getOperator()), toProtoString(policyCondition.getValue()));
     }
 
 

@@ -59,7 +59,6 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -153,8 +152,9 @@ final class ModelConverter {
         }
 
         Optional.ofNullable(mapCredits(osv.getCredits())).ifPresent(vulnerability::setCredits);
-        Optional.ofNullable(mapReferences(osv.getReferences()).get("ADVISORY")).ifPresent(vulnerability::addAllAdvisories);
-        Optional.ofNullable(mapReferences(osv.getReferences()).get("EXTERNAL")).ifPresent(cyclonedxBom::addAllExternalReferences);
+        final OsvReferences osvReferences = mapReferences(osv.getReferences());
+        vulnerability.addAllAdvisories(osvReferences.advisories());
+        cyclonedxBom.addAllExternalReferences(osvReferences.externalReferences());
 
         //affected ranges
         List<Affected> osvAffectedArray = osv.getAffected();
@@ -281,9 +281,12 @@ final class ModelConverter {
         return vulnerabilityCredits.build();
     }
 
-    private static Map<String, List> mapReferences(List<Reference> references) {
+    private record OsvReferences(List<Advisory> advisories, List<ExternalReference> externalReferences) {
+    }
+
+    private static OsvReferences mapReferences(List<Reference> references) {
         if (references == null) {
-            return Collections.emptyMap();
+            return new OsvReferences(List.of(), List.of());
         }
         List<ExternalReference> externalReferences = new ArrayList<>();
         List<Advisory> advisories = new ArrayList<>();
@@ -299,7 +302,7 @@ final class ModelConverter {
                 externalReferences.add(externalReference);
             }
         });
-        return Map.of("ADVISORY", advisories, "EXTERNAL", externalReferences);
+        return new OsvReferences(advisories, externalReferences);
     }
 
     private static List<VulnerabilityAffects> parseAffectedRanges(final String vulnId, List<Affected> osvAffectedArray, Bom.Builder bom) {

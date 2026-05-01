@@ -26,6 +26,6 @@ public class ComponentAgeCelPolicyScriptSourceBuilder implements CelPolicyScript
 
         return """
                 component.compare_age("%s", "%s")
-                    """.formatted(policyCondition.getOperator(), CelPolicyScriptSourceBuilder.escapeQuotes(policyCondition.getValue()));
+                """.formatted(policyCondition.getOperator(), CelPolicyScriptSourceBuilder.escapeQuotes(policyCondition.getValue()));
     }
 }

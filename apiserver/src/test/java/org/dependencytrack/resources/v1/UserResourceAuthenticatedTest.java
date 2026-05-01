@@ -724,17 +724,17 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         TEST_USER_PASSWORD_HASH, false, false, false).getUsername();
         String endpoint = V1_USER + "/membership";
         List<Team> teamSet1 = List.of(
-            qm.createTeam("Pirates", false),
-            qm.createTeam("Penguins", false),
-            qm.createTeam("Steelers", false),
-            qm.createTeam("Red Sox", false),
-            qm.createTeam("Cubs", false)
+            qm.createTeam("Pirates"),
+            qm.createTeam("Penguins"),
+            qm.createTeam("Steelers"),
+            qm.createTeam("Red Sox"),
+            qm.createTeam("Cubs")
         );
 
         List<Team> teamSet2 = List.of(
-            qm.createTeam("Yankees", false),
-            qm.createTeam("Dodgers", false),
-            qm.createTeam("Giants", false)
+            qm.createTeam("Yankees"),
+            qm.createTeam("Dodgers"),
+            qm.createTeam("Giants")
         );
 
         JsonObject teamRequest1 = Json.createObjectBuilder()
@@ -783,7 +783,7 @@ class UserResourceAuthenticatedTest extends ResourceTest {
         String endpoint = V1_USER + "/membership";
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
                 TEST_USER_PASSWORD_HASH, false, false, false);
-        UUID teamUuid = qm.createTeam("Pirates", false).getUuid();
+        UUID teamUuid = qm.createTeam("Pirates").getUuid();
 
         JsonObject badTeamBody = Json.createObjectBuilder()
             .add("username", "blackbeard")
