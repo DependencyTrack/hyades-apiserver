@@ -58,8 +58,8 @@ import org.slf4j.MDC;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.ByteArrayInputStream;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -168,7 +168,7 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
             final byte[] cdxBomBytes;
             try (final InputStream cdxBomStream = fileStorage.get(arg.getBomFileMetadata())) {
                 cdxBomBytes = cdxBomStream.readAllBytes();
-            } catch (FileNotFoundException e) {
+            } catch (NoSuchFileException e) {
                 throw new TerminalApplicationFailureException(e);
             }
 

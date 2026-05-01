@@ -47,10 +47,10 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.nio.file.NoSuchFileException;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -184,7 +184,7 @@ public final class PublishNotificationActivity implements Activity<PublishNotifi
 
             try (final InputStream fileInputStream = fileStorage.get(argument.getNotificationFileMetadata())) {
                 return Notification.parseFrom(fileInputStream);
-            } catch (FileNotFoundException e) {
+            } catch (NoSuchFileException e) {
                 throw new TerminalApplicationFailureException("Notification file not found", e);
             } catch (IOException e) {
                 throw new UncheckedIOException("Failed to get notification file", e);

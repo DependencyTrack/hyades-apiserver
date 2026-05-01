@@ -65,6 +65,7 @@ import org.dependencytrack.proto.internal.workflow.v1.EvalProjectPoliciesArg;
 import org.dependencytrack.proto.internal.workflow.v1.FetchPackageMetadataResolutionCandidatesRes;
 import org.dependencytrack.proto.internal.workflow.v1.FetchProjectMetricsUpdateCandidatesRes;
 import org.dependencytrack.proto.internal.workflow.v1.ImportBomArg;
+import org.dependencytrack.proto.internal.workflow.v1.ImportVexArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerArg;
 import org.dependencytrack.proto.internal.workflow.v1.InvokeVulnAnalyzerRes;
 import org.dependencytrack.proto.internal.workflow.v1.MirrorVulnDataSourceArg;
@@ -82,6 +83,8 @@ import org.dependencytrack.proto.internal.workflow.v1.VulnAnalysisWorkflowArg;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.tasks.ImportBomActivity;
 import org.dependencytrack.tasks.ImportBomWorkflow;
+import org.dependencytrack.tasks.ImportVexActivity;
+import org.dependencytrack.tasks.ImportVexWorkflow;
 import org.dependencytrack.vulnanalysis.InvokeVulnAnalyzerActivity;
 import org.dependencytrack.vulnanalysis.PrepareVulnAnalysisActivity;
 import org.dependencytrack.vulnanalysis.ReconcileVulnAnalysisResultsActivity;
@@ -170,6 +173,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                 voidConverter(),
                 Duration.ofMinutes(1));
         engine.registerWorkflow(
+                new ImportVexWorkflow(),
+                protoConverter(ImportVexArg.class),
+                voidConverter(),
+                Duration.ofMinutes(1));
+        engine.registerWorkflow(
                 new MirrorVulnDataSourceWorkflow(),
                 protoConverter(MirrorVulnDataSourceArg.class),
                 voidConverter(),
@@ -211,6 +219,11 @@ public final class DexEngineInitializer implements ServletContextListener {
                         engine,
                         config.getOptionalValue("dt.tmp.delay.bom.processed.notification", boolean.class).orElse(false)),
                 protoConverter(ImportBomArg.class),
+                voidConverter(),
+                Duration.ofMinutes(5));
+        engine.registerActivity(
+                new ImportVexActivity(fileStorage),
+                protoConverter(ImportVexArg.class),
                 voidConverter(),
                 Duration.ofMinutes(5));
         engine.registerActivity(

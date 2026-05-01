@@ -38,9 +38,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.NoSuchFileException;
 import java.util.Map;
 
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
@@ -104,7 +104,7 @@ public final class InvokeVulnAnalyzerActivity implements Activity<InvokeVulnAnal
     private Bom getBom(FileMetadata fileMetadata) throws IOException {
         try (final InputStream bomInputStream = fileStorage.get(fileMetadata)) {
             return Bom.parseFrom(bomInputStream);
-        } catch (FileNotFoundException | NoSuchExtensionException e) {
+        } catch (NoSuchFileException | NoSuchExtensionException e) {
             throw new TerminalApplicationFailureException(e);
         }
     }

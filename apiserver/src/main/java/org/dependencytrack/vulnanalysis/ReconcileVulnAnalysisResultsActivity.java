@@ -57,8 +57,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -156,7 +156,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                     final Bom vdr;
                     try (final InputStream vdrInputStream = fileStorage.get(result.getVdrFileMetadata())) {
                         vdr = Bom.parseFrom(vdrInputStream);
-                    } catch (FileNotFoundException e) {
+                    } catch (NoSuchFileException e) {
                         LOGGER.warn("Could not find VDR file from analyzer; Considering it to have failed", e);
                         failedAnalyzers.add(analyzerName);
                         continue;
