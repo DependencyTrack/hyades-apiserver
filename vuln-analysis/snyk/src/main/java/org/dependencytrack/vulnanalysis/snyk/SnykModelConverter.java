@@ -19,22 +19,21 @@
 package org.dependencytrack.vulnanalysis.snyk;
 
 import com.google.protobuf.util.Timestamps;
-import org.cyclonedx.proto.v1_6.Advisory;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.ScoreMethod;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.cyclonedx.proto.v1_6.VulnerabilityRating;
-import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import org.cyclonedx.proto.v1_7.Advisory;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.ScoreMethod;
+import org.cyclonedx.proto.v1_7.Source;
+import org.cyclonedx.proto.v1_7.Vulnerability;
+import org.cyclonedx.proto.v1_7.VulnerabilityRating;
+import org.cyclonedx.proto.v1_7.VulnerabilityReference;
 import org.jspecify.annotations.Nullable;
+import org.metaeffekt.core.security.cvss.CvssVector;
+import org.metaeffekt.core.security.cvss.v2.Cvss2;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P0;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P1;
+import org.metaeffekt.core.security.cvss.v4P0.Cvss4P0;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import us.springett.cvss.Cvss;
-import us.springett.cvss.CvssV2;
-import us.springett.cvss.CvssV3;
-import us.springett.cvss.CvssV3_1;
-import us.springett.cvss.CvssV4;
-import us.springett.cvss.MalformedVectorException;
 
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -46,11 +45,11 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV2;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV31;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV4;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_OTHER;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV2;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV3;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV4;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_OTHER;
 
 /**
  * @since 5.7.0
@@ -254,19 +253,18 @@ final class SnykModelConverter {
     }
 
     private static ScoreMethod determineScoreMethod(String vector) {
-        try {
-            final Cvss cvss = Cvss.fromVector(vector);
-            return switch (cvss) {
-                case CvssV4 ignored -> SCORE_METHOD_CVSSV4;
-                case CvssV3_1 ignored -> SCORE_METHOD_CVSSV31;
-                case CvssV3 ignored -> SCORE_METHOD_CVSSV3;
-                case CvssV2 ignored -> SCORE_METHOD_CVSSV2;
-                default -> SCORE_METHOD_OTHER;
-            };
-        } catch (MalformedVectorException e) {
-            LOGGER.warn("Failed to determine score method: CVSS vector {} is malformed", vector, e);
+        final CvssVector cvss = CvssVector.parseVector(vector, true);
+        if (cvss == null) {
+            LOGGER.warn("Failed to determine score method: CVSS vector {} is malformed", vector);
             return SCORE_METHOD_OTHER;
         }
+        return switch (cvss) {
+            case Cvss4P0 ignored -> SCORE_METHOD_CVSSV4;
+            case Cvss3P1 ignored -> SCORE_METHOD_CVSSV31;
+            case Cvss3P0 ignored -> SCORE_METHOD_CVSSV3;
+            case Cvss2 ignored -> SCORE_METHOD_CVSSV2;
+            default -> SCORE_METHOD_OTHER;
+        };
     }
 
     private static @Nullable Source mapSeveritySource(String source) {

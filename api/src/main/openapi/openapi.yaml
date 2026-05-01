@@ -152,6 +152,13 @@ info:
     it (e.g. via a log warning) so that operators are aware of upcoming
     breakages. The respective operation's description points out which
     alternative operation(s) to use.
+
+    ## Internal operations
+
+    Operations under the `/internal` path prefix expose system internals
+    and are reserved for first-party use. They are **not** part of the
+    stable v2 API contract and may change or be removed without notice.
+    Third-party clients should not depend on them.
   version: 2.0.0
   contact:
     name: The Dependency-Track Authors
@@ -176,7 +183,7 @@ tags:
   description: Endpoints related to secrets
 - name: Task Queues
   description: Endpoints related to task queue management
-- name: Vulnerability Policies
+- name: Vuln Policies
   description: Endpoints related to vulnerability policies
 - name: Workflows
   description: Endpoints related to workflows
@@ -186,13 +193,13 @@ paths:
     $ref: "./resources/components/components.yaml"
   /extension-points:
     $ref: "./resources/extensions/extension-points.yaml"
-  /extension-points/{extensionPointName}/extensions:
+  /extension-points/{extension_point_name}/extensions:
     $ref: "./resources/extensions/extensions.yaml"
-  /extension-points/{extensionPointName}/extensions/{extensionName}/config:
+  /extension-points/{extension_point_name}/extensions/{extension_name}/config:
     $ref: "./resources/extensions/extension-config.yaml"
-  /extension-points/{extensionPointName}/extensions/{extensionName}/config-schema:
+  /extension-points/{extension_point_name}/extensions/{extension_name}/config-schema:
     $ref: "./resources/extensions/extension-config-schema.yaml"
-  /extension-points/{extensionPointName}/extensions/{extensionName}/test:
+  /extension-points/{extension_point_name}/extensions/{extension_name}/test:
     $ref: "./resources/extensions/extension-test.yaml"
   /projects/{uuid}/clone:
     $ref: "./resources/projects/project-clone.yaml"
@@ -202,10 +209,6 @@ paths:
     $ref: "./resources/secrets/secrets.yaml"
   /secrets/{name}:
     $ref: "./resources/secrets/secret.yaml"
-  /task-queues/{type}:
-    $ref: "./resources/task-queues/task-queues.yaml"
-  /task-queues/{type}/{name}:
-    $ref: "./resources/task-queues/task-queue.yaml"
   /vuln-policies:
     $ref: "./resources/vuln-policies/vuln-policies.yaml"
   /vuln-policies/{uuid}:
@@ -216,23 +219,31 @@ paths:
     $ref: "./resources/vuln-policies/vuln-policy-bundle.yaml"
   /vuln-policy-bundles/{uuid}/sync:
     $ref: "./resources/vuln-policies/vuln-policy-bundle-sync.yaml"
-  /workflow-instances/{id}:
-    $ref: "./resources/workflows/workflow-instance.yaml"
-  /workflow-runs:
-    $ref: "./resources/workflows/workflow-runs.yaml"
-  /workflow-runs/{id}:
-    $ref: "./resources/workflows/workflow-run.yaml"
-  /workflow-runs/{id}/events:
-    $ref: "./resources/workflows/workflow-run-events.yaml"
+  /internal/task-queues/{type}:
+    $ref: "./resources/internal/task-queues/task-queues.yaml"
+  /internal/task-queues/{type}/{name}:
+    $ref: "./resources/internal/task-queues/task-queue.yaml"
+  /internal/workflow-instances/{id}:
+    $ref: "./resources/internal/workflows/workflow-instance.yaml"
+  /internal/workflow-runs:
+    $ref: "./resources/internal/workflows/workflow-runs.yaml"
+  /internal/workflow-runs/{id}:
+    $ref: "./resources/internal/workflows/workflow-run.yaml"
+  /internal/workflow-runs/{id}/events:
+    $ref: "./resources/internal/workflows/workflow-run-events.yaml"
 
 components:
   securitySchemes:
     apiKeyAuth:
       name: X-Api-Key
-      description: Authentication via API key
+      description: Authentication via API key.
       type: apiKey
       in: header
     bearerAuth:
-      description: Authentication via Bearer token
+      description: |-
+        Authentication via opaque server-issued session token.
+        Tokens are obtained from `POST /api/v1/user/login` or
+        `POST /api/v1/user/oidc/login`.
       type: http
-      scheme: Bearer
+      scheme: bearer
+      bearerFormat: Opaque

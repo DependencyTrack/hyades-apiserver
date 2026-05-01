@@ -90,7 +90,11 @@ public class ProjectsResourceTest extends ResourceTest {
                         "uuid" : "${json-unit.any-string}"
                       }
                   ],
-                  "next_page_token": "${json-unit.any-string}"
+                  "next_page_token": "${json-unit.any-string}",
+                  "total": {
+                    "count": 3,
+                    "type": "EXACT"
+                  }
                 }
                 """);
 
@@ -117,7 +121,11 @@ public class ProjectsResourceTest extends ResourceTest {
                        },
                        "uuid" : "${json-unit.any-string}"
                       }
-                  ]
+                  ],
+                  "total": {
+                    "count": 3,
+                    "type": "EXACT"
+                  }
                 }
                 """);
     }

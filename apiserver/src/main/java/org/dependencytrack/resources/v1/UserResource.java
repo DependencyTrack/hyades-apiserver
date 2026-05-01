@@ -876,8 +876,8 @@ public class UserResource extends AbstractApiResource {
     public Response logout(@HeaderParam("Authorization") String authHeader) {
         if (getPrincipal() instanceof final User user
                 && authHeader != null
-                && authHeader.startsWith("Bearer ")) {
-            final String rawToken = authHeader.substring("Bearer ".length());
+                && authHeader.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            final String rawToken = authHeader.substring(7);
 
             final boolean deleted = sessionTokenService.deleteSession(rawToken, user.getId());
             if (deleted) {

@@ -44,6 +44,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
@@ -1530,11 +1531,24 @@ class TagResourceTest extends ResourceTest {
                 .get();
 
         Assertions.assertEquals(200, response.getStatus());
-        Assertions.assertEquals(String.valueOf(4), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(String.valueOf(0), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
         Assertions.assertNotNull(json);
-        Assertions.assertEquals(4, json.size());
-        Assertions.assertEquals("tag 2", json.getJsonObject(0).getString("name"));
+        Assertions.assertEquals(0, json.size());
+
+        policy.setTags(Set.of(qm.getTagByName("Tag 1"), qm.getTagByName("Tag 4")));
+        response = jersey.target(V1_TAG + "/policy/" + policy.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Assertions.assertEquals(200, response.getStatus());
+        Assertions.assertEquals(String.valueOf(2), response.getHeaderString(TOTAL_COUNT_HEADER));
+        json = parseJsonArray(response);
+        Assertions.assertNotNull(json);
+        Assertions.assertEquals(2, json.size());
+        Assertions.assertEquals("tag 1", json.getJsonObject(0).getString("name"));
+        Assertions.assertEquals("tag 4", json.getJsonObject(1).getString("name"));
     }
 
     @Test
@@ -1556,11 +1570,10 @@ class TagResourceTest extends ResourceTest {
                 .get();
 
         Assertions.assertEquals(200, response.getStatus());
-        Assertions.assertEquals(String.valueOf(3), response.getHeaderString(TOTAL_COUNT_HEADER));
+        Assertions.assertEquals(String.valueOf(0), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
         Assertions.assertNotNull(json);
-        Assertions.assertEquals(3, json.size());
-        Assertions.assertEquals("tag 1", json.getJsonObject(0).getString("name"));
+        Assertions.assertEquals(0, json.size());
     }
 
     @Test

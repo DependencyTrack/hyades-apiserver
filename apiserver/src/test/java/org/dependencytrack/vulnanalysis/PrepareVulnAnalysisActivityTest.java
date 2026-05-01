@@ -20,9 +20,9 @@ package org.dependencytrack.vulnanalysis;
 
 import alpine.model.IConfigProperty;
 import io.smallrye.config.SmallRyeConfigBuilder;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Classification;
-import org.cyclonedx.proto.v1_6.Component;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Classification;
+import org.cyclonedx.proto.v1_7.Component;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.dex.api.ActivityContext;

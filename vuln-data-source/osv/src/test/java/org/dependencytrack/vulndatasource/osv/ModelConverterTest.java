@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.protobuf.util.JsonFormat;
 import net.javacrumbs.jsonunit.core.Option;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Vulnerability;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Vulnerability;
 import org.dependencytrack.vulndatasource.osv.schema.Osv;
 import org.junit.jupiter.api.Test;
 
@@ -453,7 +453,7 @@ public class ModelConverterTest {
                               },
                               "ratings": [
                                 {
-                                  "severity": "SEVERITY_UNKNOWN"
+                                  "severity": "SEVERITY_CRITICAL"
                                 }
                               ],
                               "affects": [
@@ -468,8 +468,8 @@ public class ModelConverterTest {
                               ],
                               "properties": [
                                 {
-                                    "name": "internal:osv:ecosystem",
-                                    "value": "maven"
+                                  "name": "internal:osv:ecosystem",
+                                  "value": "maven"
                                 }]
                             }
                           ]
@@ -565,7 +565,7 @@ public class ModelConverterTest {
                                   "score": 2.6,
                                   "severity": "SEVERITY_LOW",
                                   "method": "SCORE_METHOD_CVSSV2",
-                                  "vector": "AV:N/AC:H/Au:N/C:P/I:N/A:N"
+                                  "vector": "(AV:N/AC:H/Au:N/C:P/I:N/A:N)"
                                 }
                               ],
                               "properties": [

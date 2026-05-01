@@ -24,7 +24,7 @@ delete:
 
     Requires permission `POLICY_MANAGEMENT` or `POLICY_MANAGEMENT_DELETE`.
   tags:
-    - Vulnerability Policies
+    - Vuln Policies
   parameters:
     - name: uuid
       in: path

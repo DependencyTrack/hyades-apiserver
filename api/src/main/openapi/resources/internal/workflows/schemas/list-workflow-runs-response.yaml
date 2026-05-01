@@ -15,26 +15,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
+allOf:
+- $ref: "../../../../shared/schemas/paginated-response.yaml"
 properties:
-  name:
-    type: string
-  status:
-    $ref: "./task-queue-status.yaml"
-  capacity:
-    type: integer
-    format: int32
-    minimum: 1
-  depth:
-    type: integer
-    format: int32
-    minimum: 0
-  created_at:
-    $ref: "../../../shared/schemas/timestamp.yaml"
-  updated_at:
-    $ref: "../../../shared/schemas/timestamp.yaml"
+  items:
+    type: array
+    items:
+      $ref: "./workflow-run-metadata.yaml"
 required:
-- name
-- status
-- capacity
-- depth
-- created_at
+- items

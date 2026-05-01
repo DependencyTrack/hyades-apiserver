@@ -45,15 +45,13 @@ public class LdapSyncTask implements Subscriber {
 
     @Override
     public void inform(final Event e) {
-
-        if (!LdapConnectionWrapper.LDAP_CONFIGURED) {
+        final LdapConnectionWrapper ldap = new LdapConnectionWrapper();
+        if (!ldap.isLdapConfigured()) {
             return;
         }
 
-        if (e instanceof LdapSyncEvent) {
+        if (e instanceof final LdapSyncEvent event) {
             LOGGER.info("Starting LDAP synchronization task");
-            final LdapSyncEvent event = (LdapSyncEvent) e;
-            final LdapConnectionWrapper ldap = new LdapConnectionWrapper();
             DirContext ctx = null;
             try (AlpineQueryManager qm = new AlpineQueryManager()) {
                 ctx = ldap.createDirContext();
@@ -93,10 +91,10 @@ public class LdapSyncTask implements Subscriber {
         final SearchResult result = ldap.searchForSingleUsername(ctx, user.getUsername());
         if (result != null) {
             user.setDN(result.getNameInNamespace());
-            user.setEmail(ldap.getAttribute(result, LdapConnectionWrapper.ATTRIBUTE_MAIL));
+            user.setEmail(ldap.getAttribute(result, ldap.getAttributeMail()));
             user = qm.updateLdapUser(user);
             // Dynamically assign team membership (if enabled)
-            if (LdapConnectionWrapper.TEAM_SYNCHRONIZATION) {
+            if (ldap.isTeamSynchronizationEnabled()) {
                 final List<String> groupDNs = ldap.getGroups(ctx, user);
                 qm.synchronizeTeamMembership(user, groupDNs);
             }
@@ -105,7 +103,7 @@ public class LdapSyncTask implements Subscriber {
             user.setDN("INVALID");
             user.setEmail(null);
             user = qm.updateLdapUser(user);
-            if (LdapConnectionWrapper.TEAM_SYNCHRONIZATION) {
+            if (ldap.isTeamSynchronizationEnabled()) {
                 qm.synchronizeTeamMembership(user, new ArrayList<>());
             }
         }

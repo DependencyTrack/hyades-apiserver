@@ -18,21 +18,22 @@
  */
 package org.dependencytrack.vulnanalysis.vulndb;
 
-import org.cyclonedx.proto.v1_6.Advisory;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.cyclonedx.proto.v1_6.VulnerabilityRating;
-import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import org.cyclonedx.proto.v1_7.Advisory;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.Source;
+import org.cyclonedx.proto.v1_7.Vulnerability;
+import org.cyclonedx.proto.v1_7.VulnerabilityRating;
+import org.cyclonedx.proto.v1_7.VulnerabilityReference;
 import org.dependencytrack.vulnanalysis.vulndb.VulnDbApiResponse.CvssV2Metric;
 import org.dependencytrack.vulnanalysis.vulndb.VulnDbApiResponse.CvssV3Metric;
 import org.dependencytrack.vulnanalysis.vulndb.VulnDbApiResponse.NvdAdditionalInfo;
 import org.jspecify.annotations.Nullable;
+import org.metaeffekt.core.security.cvss.processor.BakedCvssVectorScores;
+import org.metaeffekt.core.security.cvss.v2.Cvss2;
+import org.metaeffekt.core.security.cvss.v3.Cvss3;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P0;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import us.springett.cvss.CvssV2;
-import us.springett.cvss.CvssV3;
-import us.springett.cvss.Score;
 
 import java.util.HashSet;
 import java.util.List;
@@ -40,8 +41,8 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV2;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV2;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV3;
 
 /**
  * @since 5.7.0
@@ -168,16 +169,16 @@ final class VulnDbModelConverter {
             preferred = metrics.getFirst();
         }
 
-        final CvssV2 cvss = buildCvssV2(preferred);
-        if (cvss == null) {
+        final Cvss2 cvss = buildCvssV2(preferred);
+        if (cvss == null || !cvss.isBaseFullyDefined()) {
             return;
         }
 
-        final Score score = cvss.calculateScore();
+        final BakedCvssVectorScores score = cvss.getBakedScores();
         vulnBuilder.addRatings(
                 VulnerabilityRating.newBuilder()
                         .setMethod(SCORE_METHOD_CVSSV2)
-                        .setVector(cvss.getVector())
+                        .setVector("(" + cvss + ")")
                         .setScore(score.getBaseScore())
                         .setSource(SOURCE_VULNDB)
                         .build());
@@ -201,41 +202,41 @@ final class VulnDbModelConverter {
             preferred = metrics.getFirst();
         }
 
-        final CvssV3 cvss = buildCvssV3(preferred);
-        if (cvss == null) {
+        final Cvss3P0 cvss = buildCvssV3(preferred);
+        if (cvss == null || !cvss.isBaseFullyDefined()) {
             return;
         }
 
-        final Score score = cvss.calculateScore();
+        final BakedCvssVectorScores score = cvss.getBakedScores();
         vulnBuilder.addRatings(
                 VulnerabilityRating.newBuilder()
                         .setMethod(SCORE_METHOD_CVSSV3)
-                        .setVector(cvss.getVector())
+                        .setVector(cvss.toString())
                         .setScore(score.getBaseScore())
                         .setSource(SOURCE_VULNDB)
                         .build());
     }
 
-    private static @Nullable CvssV2 buildCvssV2(CvssV2Metric metric) {
+    private static @Nullable Cvss2 buildCvssV2(CvssV2Metric metric) {
         try {
-            final var cvss = new CvssV2();
+            final var cvss = new Cvss2();
             if (metric.accessVector() != null) {
-                cvss.attackVector(mapCvssV2AttackVector(metric.accessVector()));
+                cvss.setAccessVector(mapCvssV2AccessVector(metric.accessVector()));
             }
             if (metric.accessComplexity() != null) {
-                cvss.attackComplexity(mapCvssV2AttackComplexity(metric.accessComplexity()));
+                cvss.setAccessComplexity(mapCvssV2AccessComplexity(metric.accessComplexity()));
             }
             if (metric.authentication() != null) {
-                cvss.authentication(mapCvssV2Authentication(metric.authentication()));
+                cvss.setAuthentication(mapCvssV2Authentication(metric.authentication()));
             }
             if (metric.confidentialityImpact() != null) {
-                cvss.confidentiality(mapCvssV2Cia(metric.confidentialityImpact()));
+                cvss.setConfidentialityImpact(mapCvssV2Cia(metric.confidentialityImpact()));
             }
             if (metric.integrityImpact() != null) {
-                cvss.integrity(mapCvssV2Cia(metric.integrityImpact()));
+                cvss.setIntegrityImpact(mapCvssV2Cia(metric.integrityImpact()));
             }
             if (metric.availabilityImpact() != null) {
-                cvss.availability(mapCvssV2Cia(metric.availabilityImpact()));
+                cvss.setAvailabilityImpact(mapCvssV2Cia(metric.availabilityImpact()));
             }
             return cvss;
         } catch (IllegalArgumentException e) {
@@ -244,32 +245,32 @@ final class VulnDbModelConverter {
         }
     }
 
-    private static @Nullable CvssV3 buildCvssV3(CvssV3Metric metric) {
+    private static @Nullable Cvss3P0 buildCvssV3(CvssV3Metric metric) {
         try {
-            final var cvss = new CvssV3();
+            final var cvss = new Cvss3P0();
             if (metric.attackVector() != null) {
-                cvss.attackVector(mapCvssV3AttackVector(metric.attackVector()));
+                cvss.setAttackVector(mapCvssV3AttackVector(metric.attackVector()));
             }
             if (metric.attackComplexity() != null) {
-                cvss.attackComplexity(mapCvssV3AttackComplexity(metric.attackComplexity()));
+                cvss.setAttackComplexity(mapCvssV3AttackComplexity(metric.attackComplexity()));
             }
             if (metric.privilegesRequired() != null) {
-                cvss.privilegesRequired(mapCvssV3PrivilegesRequired(metric.privilegesRequired()));
+                cvss.setPrivilegesRequired(mapCvssV3PrivilegesRequired(metric.privilegesRequired()));
             }
             if (metric.userInteraction() != null) {
-                cvss.userInteraction(mapCvssV3UserInteraction(metric.userInteraction()));
+                cvss.setUserInteraction(mapCvssV3UserInteraction(metric.userInteraction()));
             }
             if (metric.scope() != null) {
-                cvss.scope(mapCvssV3Scope(metric.scope()));
+                cvss.setScope(mapCvssV3Scope(metric.scope()));
             }
             if (metric.confidentialityImpact() != null) {
-                cvss.confidentiality(mapCvssV3Cia(metric.confidentialityImpact()));
+                cvss.setConfidentialityImpact(mapCvssV3Cia(metric.confidentialityImpact()));
             }
             if (metric.integrityImpact() != null) {
-                cvss.integrity(mapCvssV3Cia(metric.integrityImpact()));
+                cvss.setIntegrityImpact(mapCvssV3Cia(metric.integrityImpact()));
             }
             if (metric.availabilityImpact() != null) {
-                cvss.availability(mapCvssV3Cia(metric.availabilityImpact()));
+                cvss.setAvailabilityImpact(mapCvssV3Cia(metric.availabilityImpact()));
             }
             return cvss;
         } catch (IllegalArgumentException e) {
@@ -278,90 +279,90 @@ final class VulnDbModelConverter {
         }
     }
 
-    private static CvssV2.AttackVector mapCvssV2AttackVector(String value) {
+    private static Cvss2.AccessVector mapCvssV2AccessVector(String value) {
         return switch (value.toUpperCase()) {
-            case "NETWORK" -> CvssV2.AttackVector.NETWORK;
-            case "ADJACENT", "ADJACENT_NETWORK" -> CvssV2.AttackVector.ADJACENT;
-            case "LOCAL" -> CvssV2.AttackVector.LOCAL;
+            case "NETWORK" -> Cvss2.AccessVector.NETWORK;
+            case "ADJACENT", "ADJACENT_NETWORK" -> Cvss2.AccessVector.ADJACENT_NETWORK;
+            case "LOCAL" -> Cvss2.AccessVector.LOCAL;
             default -> throw new IllegalArgumentException("Unknown CVSS v2 access vector: " + value);
         };
     }
 
-    private static CvssV2.AttackComplexity mapCvssV2AttackComplexity(String value) {
+    private static Cvss2.AccessComplexity mapCvssV2AccessComplexity(String value) {
         return switch (value.toUpperCase()) {
-            case "LOW" -> CvssV2.AttackComplexity.LOW;
-            case "MEDIUM" -> CvssV2.AttackComplexity.MEDIUM;
-            case "HIGH" -> CvssV2.AttackComplexity.HIGH;
+            case "LOW" -> Cvss2.AccessComplexity.LOW;
+            case "MEDIUM" -> Cvss2.AccessComplexity.MEDIUM;
+            case "HIGH" -> Cvss2.AccessComplexity.HIGH;
             default -> throw new IllegalArgumentException("Unknown CVSS v2 access complexity: " + value);
         };
     }
 
-    private static CvssV2.Authentication mapCvssV2Authentication(String value) {
+    private static Cvss2.Authentication mapCvssV2Authentication(String value) {
         return switch (value.toUpperCase()) {
-            case "NONE" -> CvssV2.Authentication.NONE;
-            case "SINGLE", "SINGLE_INSTANCE" -> CvssV2.Authentication.SINGLE;
-            case "MULTIPLE", "MULTIPLE_INSTANCES" -> CvssV2.Authentication.MULTIPLE;
+            case "NONE" -> Cvss2.Authentication.NONE;
+            case "SINGLE", "SINGLE_INSTANCE" -> Cvss2.Authentication.SINGLE;
+            case "MULTIPLE", "MULTIPLE_INSTANCES" -> Cvss2.Authentication.MULTIPLE;
             default -> throw new IllegalArgumentException("Unknown CVSS v2 authentication: " + value);
         };
     }
 
-    private static CvssV2.CIA mapCvssV2Cia(String value) {
+    private static Cvss2.CIAImpact mapCvssV2Cia(String value) {
         return switch (value.toUpperCase()) {
-            case "NONE" -> CvssV2.CIA.NONE;
-            case "PARTIAL" -> CvssV2.CIA.PARTIAL;
-            case "COMPLETE" -> CvssV2.CIA.COMPLETE;
+            case "NONE" -> Cvss2.CIAImpact.NONE;
+            case "PARTIAL" -> Cvss2.CIAImpact.PARTIAL;
+            case "COMPLETE" -> Cvss2.CIAImpact.COMPLETE;
             default -> throw new IllegalArgumentException("Unknown CVSS v2 CIA: " + value);
         };
     }
 
-    private static CvssV3.AttackVector mapCvssV3AttackVector(String value) {
+    private static Cvss3.AttackVector mapCvssV3AttackVector(String value) {
         return switch (value.toUpperCase()) {
-            case "NETWORK" -> CvssV3.AttackVector.NETWORK;
-            case "ADJACENT", "ADJACENT_NETWORK" -> CvssV3.AttackVector.ADJACENT;
-            case "LOCAL" -> CvssV3.AttackVector.LOCAL;
-            case "PHYSICAL" -> CvssV3.AttackVector.PHYSICAL;
+            case "NETWORK" -> Cvss3.AttackVector.NETWORK;
+            case "ADJACENT", "ADJACENT_NETWORK" -> Cvss3.AttackVector.ADJACENT_NETWORK;
+            case "LOCAL" -> Cvss3.AttackVector.LOCAL;
+            case "PHYSICAL" -> Cvss3.AttackVector.PHYSICAL;
             default -> throw new IllegalArgumentException("Unknown CVSS v3 attack vector: " + value);
         };
     }
 
-    private static CvssV3.AttackComplexity mapCvssV3AttackComplexity(String value) {
+    private static Cvss3.AttackComplexity mapCvssV3AttackComplexity(String value) {
         return switch (value.toUpperCase()) {
-            case "LOW" -> CvssV3.AttackComplexity.LOW;
-            case "HIGH" -> CvssV3.AttackComplexity.HIGH;
+            case "LOW" -> Cvss3.AttackComplexity.LOW;
+            case "HIGH" -> Cvss3.AttackComplexity.HIGH;
             default -> throw new IllegalArgumentException("Unknown CVSS v3 attack complexity: " + value);
         };
     }
 
-    private static CvssV3.PrivilegesRequired mapCvssV3PrivilegesRequired(String value) {
+    private static Cvss3.PrivilegesRequired mapCvssV3PrivilegesRequired(String value) {
         return switch (value.toUpperCase()) {
-            case "NONE" -> CvssV3.PrivilegesRequired.NONE;
-            case "LOW" -> CvssV3.PrivilegesRequired.LOW;
-            case "HIGH" -> CvssV3.PrivilegesRequired.HIGH;
+            case "NONE" -> Cvss3.PrivilegesRequired.NONE;
+            case "LOW" -> Cvss3.PrivilegesRequired.LOW;
+            case "HIGH" -> Cvss3.PrivilegesRequired.HIGH;
             default -> throw new IllegalArgumentException("Unknown CVSS v3 privileges required: " + value);
         };
     }
 
-    private static CvssV3.UserInteraction mapCvssV3UserInteraction(String value) {
+    private static Cvss3.UserInteraction mapCvssV3UserInteraction(String value) {
         return switch (value.toUpperCase()) {
-            case "NONE" -> CvssV3.UserInteraction.NONE;
-            case "REQUIRED" -> CvssV3.UserInteraction.REQUIRED;
+            case "NONE" -> Cvss3.UserInteraction.NONE;
+            case "REQUIRED" -> Cvss3.UserInteraction.REQUIRED;
             default -> throw new IllegalArgumentException("Unknown CVSS v3 user interaction: " + value);
         };
     }
 
-    private static CvssV3.Scope mapCvssV3Scope(String value) {
+    private static Cvss3.Scope mapCvssV3Scope(String value) {
         return switch (value.toUpperCase()) {
-            case "UNCHANGED" -> CvssV3.Scope.UNCHANGED;
-            case "CHANGED" -> CvssV3.Scope.CHANGED;
+            case "UNCHANGED" -> Cvss3.Scope.UNCHANGED;
+            case "CHANGED" -> Cvss3.Scope.CHANGED;
             default -> throw new IllegalArgumentException("Unknown CVSS v3 scope: " + value);
         };
     }
 
-    private static CvssV3.CIA mapCvssV3Cia(String value) {
+    private static Cvss3.CIAImpact mapCvssV3Cia(String value) {
         return switch (value.toUpperCase()) {
-            case "NONE" -> CvssV3.CIA.NONE;
-            case "LOW" -> CvssV3.CIA.LOW;
-            case "HIGH" -> CvssV3.CIA.HIGH;
+            case "NONE" -> Cvss3.CIAImpact.NONE;
+            case "LOW" -> Cvss3.CIAImpact.LOW;
+            case "HIGH" -> Cvss3.CIAImpact.HIGH;
             default -> throw new IllegalArgumentException("Unknown CVSS v3 CIA: " + value);
         };
     }

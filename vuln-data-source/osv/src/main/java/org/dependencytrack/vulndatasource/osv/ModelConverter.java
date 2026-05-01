@@ -24,21 +24,21 @@ import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import com.google.protobuf.util.Timestamps;
 import org.apache.commons.lang3.StringUtils;
-import org.cyclonedx.proto.v1_6.Advisory;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Component;
-import org.cyclonedx.proto.v1_6.ExternalReference;
-import org.cyclonedx.proto.v1_6.OrganizationalContact;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.ScoreMethod;
-import org.cyclonedx.proto.v1_6.Severity;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
-import org.cyclonedx.proto.v1_6.VulnerabilityCredits;
-import org.cyclonedx.proto.v1_6.VulnerabilityRating;
-import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import org.cyclonedx.proto.v1_7.Advisory;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Component;
+import org.cyclonedx.proto.v1_7.ExternalReference;
+import org.cyclonedx.proto.v1_7.OrganizationalContact;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.ScoreMethod;
+import org.cyclonedx.proto.v1_7.Severity;
+import org.cyclonedx.proto.v1_7.Source;
+import org.cyclonedx.proto.v1_7.Vulnerability;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffectedVersions;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_7.VulnerabilityCredits;
+import org.cyclonedx.proto.v1_7.VulnerabilityRating;
+import org.cyclonedx.proto.v1_7.VulnerabilityReference;
 import org.dependencytrack.vulndatasource.osv.schema.Affected;
 import org.dependencytrack.vulndatasource.osv.schema.Credit;
 import org.dependencytrack.vulndatasource.osv.schema.DatabaseSpecific__1;
@@ -48,15 +48,13 @@ import org.dependencytrack.vulndatasource.osv.schema.Osv;
 import org.dependencytrack.vulndatasource.osv.schema.Package;
 import org.dependencytrack.vulndatasource.osv.schema.Range;
 import org.dependencytrack.vulndatasource.osv.schema.Reference;
+import org.metaeffekt.core.security.cvss.CvssVector;
+import org.metaeffekt.core.security.cvss.v2.Cvss2;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P0;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P1;
+import org.metaeffekt.core.security.cvss.v4P0.Cvss4P0;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import us.springett.cvss.Cvss;
-import us.springett.cvss.CvssV2;
-import us.springett.cvss.CvssV3;
-import us.springett.cvss.CvssV3_1;
-import us.springett.cvss.CvssV4;
-import us.springett.cvss.MalformedVectorException;
-import us.springett.cvss.Score;
 
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
@@ -73,13 +71,13 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static io.github.nscuro.versatile.VersUtils.versFromOsvRange;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_CRITICAL;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_HIGH;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_INFO;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_LOW;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_MEDIUM;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_NONE;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_UNKNOWN;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_CRITICAL;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_HIGH;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_INFO;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_LOW;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_MEDIUM;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_NONE;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_UNKNOWN;
 
 /**
  * @since 5.7.0
@@ -165,6 +163,10 @@ final class ModelConverter {
             // low-priority severity assignment
             vulnerability.addAllAffects(parseAffectedRanges(vulnerability.getId(), osvAffectedArray, cyclonedxBom));
             severity = parseSeverity(osvAffectedArray);
+        }
+
+        if (isOsvMalwareIdentifier(osv.getId())) {
+            severity = SEVERITY_CRITICAL;
         }
 
         // CVSS ratings
@@ -443,14 +445,11 @@ final class ModelConverter {
         String severity = null;
         if (databaseSpecific != null) {
             if (databaseSpecific.getAdditionalProperties().get("cvss") instanceof final String cvssVector) {
-                try {
-                    Cvss cvss = Cvss.fromVector(cvssVector);
-                    if (cvss != null) {
-                        Score score = cvss.calculateScore();
-                        severity = String.valueOf(normalizedCvssV3Score(score.getBaseScore()));
-                    }
-                } catch (MalformedVectorException e) {
-                    LOGGER.warn("Failed to parse severity: CVSS vector {} is malformed; Skipping", cvssVector, e);
+                final CvssVector cvss = CvssVector.parseVector(cvssVector, true);
+                if (cvss != null && cvss.isBaseFullyDefined()) {
+                    severity = String.valueOf(normalizedCvssV3Score(cvss.getBakedScores().getBaseScore()));
+                } else {
+                    LOGGER.warn("Failed to parse severity: CVSS vector {} is malformed; Skipping", cvssVector);
                 }
             }
         }
@@ -512,6 +511,12 @@ final class ModelConverter {
         }
     }
 
+    
+    private static boolean isOsvMalwareIdentifier(final String osvId) {
+        return osvId != null && osvId.startsWith("MAL-");
+    }
+
+
     private static List<VulnerabilityRating> parseCvssRatings(Osv osv, Severity severity) {
         List<VulnerabilityRating> ratings = new ArrayList<>();
         final List<org.dependencytrack.vulndatasource.osv.schema.Severity> cvssList = osv.getSeverity();
@@ -534,38 +539,33 @@ final class ModelConverter {
                 return;
             }
 
-            final Cvss cvss;
-            try {
-                cvss = Cvss.fromVector(vector);
-            } catch (MalformedVectorException e) {
-                LOGGER.warn("Failed to parse CVSS vector: {}", vector, e);
-                return;
-            }
-            if (cvss == null) {
+            final CvssVector cvss = CvssVector.parseVector(vector, true);
+            if (cvss == null || !cvss.isBaseFullyDefined()) {
+                LOGGER.warn("Failed to parse CVSS vector: {}", vector);
                 return;
             }
 
-            double score = cvss.calculateScore().getBaseScore();
+            final double score = cvss.getBakedScores().getBaseScore();
 
-            var rating = VulnerabilityRating.newBuilder();
+            final var rating = VulnerabilityRating.newBuilder();
 
-            rating.setVector(vector);
+            rating.setVector(cvss instanceof Cvss2 ? "(" + cvss + ")" : cvss.toString());
             rating.setScore(Double.parseDouble(NumberFormat.getInstance(Locale.US).format(score)));
 
             switch (cvss) {
-                case CvssV4 ignored -> {
+                case Cvss4P0 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV4);
                     rating.setSeverity(normalizedCvssV4Score(score));
                 }
-                case CvssV3_1 ignored -> {
+                case Cvss3P1 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV31);
                     rating.setSeverity(normalizedCvssV3Score(score));
                 }
-                case CvssV3 ignored -> {
+                case Cvss3P0 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV3);
                     rating.setSeverity(normalizedCvssV3Score(score));
                 }
-                case CvssV2 ignored -> {
+                case Cvss2 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV2);
                     rating.setSeverity(normalizedCvssV2Score(score));
                 }

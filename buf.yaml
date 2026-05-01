@@ -28,4 +28,4 @@ modules:
   name: github.com/DependencyTrack/core
 lint:
   ignore:
-  - support/cyclonedx-proto/src/main/proto/org/cyclonedx/v1_6/cyclonedx.proto
+  - support/cyclonedx-proto/src/main/proto/org/cyclonedx/v1_7/cyclonedx.proto

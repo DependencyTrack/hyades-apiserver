@@ -105,6 +105,7 @@
         <project.parentBaseDir>.</project.parentBaseDir>
 
         <!-- Dependency versions -->
+        <lib.ae-security.version>0.154.0</lib.ae-security.version>
         <lib.archunit.version>1.4.1</lib.archunit.version>
         <lib.assertj.version>3.27.7</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
@@ -113,7 +114,6 @@
         <lib.cel-extensions.version>0.4.1</lib.cel-extensions.version>
         <lib.commons-lang3.version>3.20.0</lib.commons-lang3.version>
         <lib.cpe-parser.version>3.0.1</lib.cpe-parser.version>
-        <lib.cvss-calculator.version>1.5.1</lib.cvss-calculator.version>
         <lib.datanucleus-api-jdo.version>6.0.5</lib.datanucleus-api-jdo.version>
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
@@ -134,11 +134,11 @@
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit-jupiter.version>6.0.3</lib.junit-jupiter.version>
         <lib.kafka-clients.version>4.2.0</lib.kafka-clients.version>
-        <lib.kotlin.version>2.3.20</lib.kotlin.version>
+        <lib.kotlin.version>2.3.21</lib.kotlin.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.logback.version>1.5.32</lib.logback.version>
         <lib.micrometer.version>1.16.5</lib.micrometer.version>
-        <lib.microprofile-config.version>3.1</lib.microprofile-config.version>
+        <lib.microprofile-config.version>3.1.1</lib.microprofile-config.version>
         <lib.microprofile-health.version>4.0.1</lib.microprofile-health.version>
         <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.23.0</lib.mockito.version>
@@ -152,10 +152,10 @@
         <lib.resilience4j.version>2.4.0</lib.resilience4j.version>
         <lib.s3mock.version>5.0.0</lib.s3mock.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
-        <lib.smallrye-config.version>3.17.0</lib.smallrye-config.version>
+        <lib.smallrye-config.version>3.17.2</lib.smallrye-config.version>
         <lib.swagger.version>2.2.48</lib.swagger.version>
         <lib.system-stubs.version>2.1.8</lib.system-stubs.version>
-        <lib.testcontainers.version>2.0.4</lib.testcontainers.version>
+        <lib.testcontainers.version>2.0.5</lib.testcontainers.version>
         <lib.tink.version>1.21.0</lib.tink.version>
         <lib.versatile.version>0.18.0</lib.versatile.version>
         <lib.wiremock.version>3.13.2</lib.wiremock.version>
@@ -174,6 +174,12 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.metaeffekt.core</groupId>
+                <artifactId>ae-security</artifactId>
+                <version>${lib.ae-security.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>com.tngtech.archunit</groupId>
                 <artifactId>archunit-junit5</artifactId>
@@ -219,12 +225,6 @@
                 <groupId>us.springett</groupId>
                 <artifactId>cpe-parser</artifactId>
                 <version>${lib.cpe-parser.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>us.springett</groupId>
-                <artifactId>cvss-calculator</artifactId>
-                <version>${lib.cvss-calculator.version}</version>
             </dependency>
 
             <dependency>

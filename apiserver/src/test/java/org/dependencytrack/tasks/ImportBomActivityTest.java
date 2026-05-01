@@ -24,15 +24,6 @@ import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
-import org.cyclonedx.proto.v1_6.Classification;
-import org.cyclonedx.proto.v1_6.Dependency;
-import org.cyclonedx.proto.v1_6.ExternalReference;
-import org.cyclonedx.proto.v1_6.ExternalReferenceType;
-import org.cyclonedx.proto.v1_6.Metadata;
-import org.cyclonedx.proto.v1_6.OrganizationalContact;
-import org.cyclonedx.proto.v1_6.OrganizationalEntity;
-import org.cyclonedx.proto.v1_6.Service;
-import org.cyclonedx.proto.v1_6.Tool;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.dex.engine.api.DexEngine;
@@ -1514,51 +1505,6 @@ class ImportBomActivityTest extends PersistenceCapableTest {
     }
 
     @Test
-    void informBomWithProtobufFormat() throws Exception {
-        useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultLicenses);
-
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
-
-        final var bomFileMetadata = createTempBomProtoFile();
-        final var bomUploadToken = UUID.randomUUID();
-
-        activity.execute(null, buildArg(project, bomFileMetadata, bomUploadToken));
-        assertBomProcessedNotification();
-        assertThat(qm.getNotificationOutbox()).satisfiesExactly(
-                notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_CONSUMED),
-                notification -> assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSED));
-        qm.getPersistenceManager().refresh(project);
-        assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
-        assertThat(project.getPurl()).asString().isEqualTo("pkg:npm/packageurl-js@1.0.0");
-        assertThat(project.getLastBomImport()).isNotNull();
-        assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.6");
-        assertThat(project.getExternalReferences()).isNotNull();
-        assertThat(project.getExternalReferences()).hasSize(1);
-        assertThat(project.getSupplier()).satisfies(supplier -> {
-            assertThat(supplier.getName()).isEqualTo("Foo Incorporated");
-            assertThat(supplier.getUrls()).containsOnly("https://foo.bar.com");
-            assertThat(supplier.getContacts()).satisfiesExactly(contact -> {
-                assertThat(contact.getName()).isEqualTo("Foo Jr.");
-                assertThat(contact.getEmail()).isEqualTo("foojr@bar.com");
-                assertThat(contact.getPhone()).isEqualTo("123-456-7890");
-            });
-        });
-
-        assertThat(project.getMetadata()).isNotNull();
-        assertThat(project.getMetadata().getAuthors().size()).isEqualTo(1);
-        assertThat(project.getMetadata().getSupplier()).isNotNull();
-
-        final List<Component> components = qm.getAllComponents(project);
-        assertThat(components).hasSize(1);
-
-        final Component component = components.get(0);
-        assertThat(component.getPublisher()).isEqualTo("publisher");
-        assertThat(component.getClassifier()).isEqualTo(Classifier.CONTAINER);
-        assertThat(component.getName()).isEqualTo("acme-test");
-        assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:npm/packageurl-js@1.0.0");
-    }
-
-    @Test
     void informWithComponentOccurrencesTest() throws Exception {
         final var project = new Project();
         project.setName("acme-license-app");
@@ -1725,42 +1671,4 @@ class ImportBomActivityTest extends PersistenceCapableTest {
                 new ByteArrayInputStream(bomBytes));
     }
 
-    private FileMetadata createTempBomProtoFile() throws Exception {
-        final var cdxContact = OrganizationalContact.newBuilder()
-                .setName("Foo Jr.")
-                .setEmail("foojr@bar.com")
-                .setPhone("123-456-7890").build();
-        final org.cyclonedx.proto.v1_6.Bom bomTest = org.cyclonedx.proto.v1_6.Bom
-                .newBuilder()
-                .setSpecVersion("1.6")
-                .addComponents(org.cyclonedx.proto.v1_6.Component.newBuilder()
-                        .setName("acme-test")
-                        .setPublisher("publisher")
-                        .setPurl("pkg:npm/packageurl-js@1.0.0")
-                        .setType(Classification.CLASSIFICATION_CONTAINER)
-                        .build())
-                .addDependencies(Dependency.newBuilder()
-                        .setRef("dependency-ref").build())
-                .setMetadata(Metadata.newBuilder()
-                        .addAuthors(cdxContact)
-                        .setComponent(org.cyclonedx.proto.v1_6.Component.newBuilder()
-                                .setName("acme-test")
-                                .setPublisher("publisher")
-                                .setPurl("pkg:npm/packageurl-js@1.0.0")
-                                .setType(Classification.CLASSIFICATION_APPLICATION)
-                                .setSupplier(OrganizationalEntity.newBuilder()
-                                        .setName("Foo Incorporated")
-                                        .addUrl("https://foo.bar.com")
-                                        .addContact(cdxContact).build())
-                                .addExternalReferences(ExternalReference.newBuilder()
-                                        .setType(ExternalReferenceType.EXTERNAL_REFERENCE_TYPE_BOM).build())
-                                .build())
-                        .setTools(Tool.newBuilder()
-                                .addComponents(org.cyclonedx.proto.v1_6.Component.newBuilder().build())
-                                .addServices(Service.newBuilder().setName("service").build())
-                                .build())
-                        .setSupplier(OrganizationalEntity.newBuilder().addContact(cdxContact).build()))
-                .build();
-        return storeBomFile(bomTest.toByteArray());
-    }
 }

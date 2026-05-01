@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.tasks;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.cyclonedx.exception.ParseException;
@@ -61,7 +60,6 @@ import javax.jdo.Query;
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -104,11 +102,6 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertSe
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProject;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.convertToProjectMetadata;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverter.flatten;
-import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertComponents;
-import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertDependencyGraph;
-import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertServices;
-import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertToProject;
-import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertToProjectMetadata;
 import static org.dependencytrack.proto.internal.workflow.v1.AnalysisTrigger.ANALYSIS_TRIGGER_BOM_UPLOAD;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
@@ -188,31 +181,17 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
     private void processEvent(final ProcessingContext ctx, final byte[] cdxBomBytes) {
         final ConsumedBom consumedBom;
         try {
-            // Validate if bom is in protobuf format
-            final var protoBom = parseBomProtobuf(cdxBomBytes);
-            if (protoBom != null) {
-                ctx.bomSpecVersion = protoBom.getSpecVersion();
-                if (protoBom.hasSerialNumber()) {
-                    ctx.bomSerialNumber = protoBom.getSerialNumber().replaceFirst("urn:uuid:", "");
-                }
-                if (protoBom.hasMetadata() && protoBom.getMetadata().hasTimestamp()) {
-                    ctx.bomTimestamp = Date.from(Instant.ofEpochSecond(protoBom.getMetadata().getTimestamp().getSeconds()));
-                }
-                ctx.bomVersion = protoBom.getVersion();
-                consumedBom = consumeBom(protoBom);
-            } else {
-                final Parser parser = BomParserFactory.createParser(cdxBomBytes);
-                final var cdxBom = parser.parse(cdxBomBytes);
-                ctx.bomSpecVersion = cdxBom.getSpecVersion();
-                if (cdxBom.getSerialNumber() != null) {
-                    ctx.bomSerialNumber = cdxBom.getSerialNumber().replaceFirst("urn:uuid:", "");
-                }
-                if (cdxBom.getMetadata() != null && cdxBom.getMetadata().getTimestamp() != null) {
-                    ctx.bomTimestamp = cdxBom.getMetadata().getTimestamp();
-                }
-                ctx.bomVersion = cdxBom.getVersion();
-                consumedBom = consumeBom(cdxBom);
+            final Parser parser = BomParserFactory.createParser(cdxBomBytes);
+            final var cdxBom = parser.parse(cdxBomBytes);
+            ctx.bomSpecVersion = cdxBom.getSpecVersion();
+            if (cdxBom.getSerialNumber() != null) {
+                ctx.bomSerialNumber = cdxBom.getSerialNumber().replaceFirst("urn:uuid:", "");
             }
+            if (cdxBom.getMetadata() != null && cdxBom.getMetadata().getTimestamp() != null) {
+                ctx.bomTimestamp = cdxBom.getMetadata().getTimestamp();
+            }
+            ctx.bomVersion = cdxBom.getVersion();
+            consumedBom = consumeBom(cdxBom);
         } catch (ParseException | RuntimeException e) {
             LOGGER.error("Failed to consume BOM", e);
             try (final var qm = new QueryManager()) {
@@ -274,14 +253,6 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
 
     }
 
-    private org.cyclonedx.proto.v1_6.Bom parseBomProtobuf(byte[] cdxBomBytes) {
-        try {
-            return org.cyclonedx.proto.v1_6.Bom.parseFrom(cdxBomBytes);
-        } catch (InvalidProtocolBufferException e) {
-            return null;
-        }
-    }
-
     private record ConsumedBom(
             Project project,
             ProjectMetadata projectMetadata,
@@ -323,59 +294,6 @@ public final class ImportBomActivity implements Activity<ImportBomArg, Void> {
         final int numServicesTotal = services.size();
 
         final MultiValuedMap<String, String> dependencyGraph = convertDependencyGraph(cdxBom.getDependencies());
-        final int numDependencyGraphEntries = dependencyGraph.asMap().size();
-
-        components = components.stream().filter(distinctComponentsByIdentity(identitiesByBomRef, bomRefsByIdentity)).toList();
-        services = services.stream().filter(distinctServicesByIdentity(identitiesByBomRef, bomRefsByIdentity)).toList();
-        LOGGER.info("""
-                Consumed %d components (%d before de-duplication), %d services (%d before de-duplication), \
-                and %d dependency graph entries""".formatted(components.size(), numComponentsTotal,
-                services.size(), numServicesTotal, numDependencyGraphEntries));
-
-        return new ConsumedBom(
-                project,
-                projectMetadata,
-                components,
-                services,
-                dependencyGraph,
-                identitiesByBomRef,
-                bomRefsByIdentity
-        );
-    }
-
-    private ConsumedBom consumeBom(final org.cyclonedx.proto.v1_6.Bom cdxBom) {
-        // Keep track of which BOM ref points to which component identity.
-        // During component and service de-duplication, we'll potentially drop
-        // some BOM refs, which can break the dependency graph.
-        final var identitiesByBomRef = new HashMap<String, ComponentIdentity>();
-
-        // Component identities will change once components are persisted to the database.
-        // This means we'll eventually have to update identities in "identitiesByBomRef"
-        // for every BOM ref pointing to them.
-        // We avoid having to iterate over, and compare, all values of "identitiesByBomRef"
-        // by keeping a secondary index on identities to BOM refs.
-        // Note: One identity can point to multiple BOM refs, due to component and service de-duplication.
-        final var bomRefsByIdentity = new HashSetValuedHashMap<ComponentIdentity, String>();
-
-        ProjectMetadata projectMetadata = null;
-        if (cdxBom.hasMetadata()) {
-            projectMetadata = convertToProjectMetadata(cdxBom.getMetadata());
-        }
-        final Project project = convertToProject(cdxBom.getMetadata());
-        List<Component> components = new ArrayList<>();
-        if (cdxBom.hasMetadata() && cdxBom.getMetadata().hasComponent()) {
-            components.addAll(convertComponents(cdxBom.getMetadata().getComponent().getComponentsList()));
-        }
-
-        components.addAll(convertComponents(cdxBom.getComponentsList()));
-        components = flatten(components, Component::getChildren, Component::setChildren);
-        final int numComponentsTotal = components.size();
-
-        List<ServiceComponent> services = convertServices(cdxBom.getServicesList());
-        services = flatten(services, ServiceComponent::getChildren, ServiceComponent::setChildren);
-        final int numServicesTotal = services.size();
-
-        final MultiValuedMap<String, String> dependencyGraph = convertDependencyGraph(cdxBom.getDependenciesList());
         final int numDependencyGraphEntries = dependencyGraph.asMap().size();
 
         components = components.stream().filter(distinctComponentsByIdentity(identitiesByBomRef, bomRefsByIdentity)).toList();

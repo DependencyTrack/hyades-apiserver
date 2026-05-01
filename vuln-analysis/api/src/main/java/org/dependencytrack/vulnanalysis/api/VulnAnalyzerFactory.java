@@ -46,7 +46,7 @@ public interface VulnAnalyzerFactory extends ExtensionFactory<VulnAnalyzer> {
      * {@link VulnAnalyzerRequirement#COMPONENT_CPE}.
      * <p>
      * Requirements are aggregated across all enabled analyzers. The resulting BOM passed to
-     * {@link VulnAnalyzer#analyze(org.cyclonedx.proto.v1_6.Bom)} may thus contain more
+     * {@link VulnAnalyzer#analyze(org.cyclonedx.proto.v1_7.Bom)} may thus contain more
      * data than any single analyzer requested. Requirements are satisfied on a best-effort basis,
      * and components provided to analyzers may lack the requested fields.
      * <p>

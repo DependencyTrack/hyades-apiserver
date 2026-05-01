@@ -19,7 +19,7 @@
 package org.dependencytrack.vulndatasource;
 
 import io.smallrye.config.SmallRyeConfigBuilder;
-import org.cyclonedx.proto.v1_6.Bom;
+import org.cyclonedx.proto.v1_7.Bom;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.dex.api.ActivityContext;

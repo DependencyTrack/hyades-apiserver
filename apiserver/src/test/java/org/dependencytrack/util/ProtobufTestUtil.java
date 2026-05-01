@@ -19,7 +19,7 @@
 package org.dependencytrack.util;
 
 import com.google.protobuf.util.JsonFormat;
-import org.cyclonedx.proto.v1_6.Bom;
+import org.cyclonedx.proto.v1_7.Bom;
 
 import java.io.IOException;
 

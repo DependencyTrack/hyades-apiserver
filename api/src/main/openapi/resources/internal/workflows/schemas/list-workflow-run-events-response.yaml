@@ -16,12 +16,11 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 allOf:
-- $ref: "../../../shared/schemas/paginated-response.yaml"
+- $ref: "../../../../shared/schemas/paginated-response.yaml"
 properties:
   items:
     type: array
     items:
       $ref: "./list-workflow-run-events-response-item.yaml"
 required:
-- total
 - items

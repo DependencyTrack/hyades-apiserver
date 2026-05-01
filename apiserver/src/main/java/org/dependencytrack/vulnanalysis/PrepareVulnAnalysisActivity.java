@@ -18,9 +18,10 @@
  */
 package org.dependencytrack.vulnanalysis;
 
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Component;
-import org.cyclonedx.proto.v1_6.Property;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Classification;
+import org.cyclonedx.proto.v1_7.Component;
+import org.cyclonedx.proto.v1_7.Property;
 import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityContext;
 import org.dependencytrack.dex.api.ActivitySpec;
@@ -28,7 +29,6 @@ import org.dependencytrack.dex.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.filestorage.api.FileStorage;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.Classifier;
-import org.dependencytrack.parser.cyclonedx.util.ModelConverterProto;
 import org.dependencytrack.plugin.runtime.NoSuchExtensionException;
 import org.dependencytrack.plugin.runtime.PluginManager;
 import org.dependencytrack.proto.internal.workflow.v1.PrepareVulnAnalysisArg;
@@ -223,7 +223,7 @@ public final class PrepareVulnAnalysisActivity implements Activity<PrepareVulnAn
                         if (requirements.contains(VulnAnalyzerRequirement.COMPONENT_TYPE)) {
                             Optional.ofNullable(rs.getString("classifier"))
                                     .map(Classifier::valueOf)
-                                    .map(ModelConverterProto::convertClassifier)
+                                    .map(PrepareVulnAnalysisActivity::convertClassifier)
                                     .ifPresent(componentBuilder::setType);
                         }
                         if (requiresProperties) {
@@ -252,6 +252,24 @@ public final class PrepareVulnAnalysisActivity implements Activity<PrepareVulnAn
         } catch (NoSuchExtensionException e) {
             throw new TerminalApplicationFailureException(e);
         }
+    }
+
+    private static Classification convertClassifier(final Classifier classifier) {
+        return switch (classifier) {
+            case APPLICATION -> Classification.CLASSIFICATION_APPLICATION;
+            case FRAMEWORK -> Classification.CLASSIFICATION_FRAMEWORK;
+            case LIBRARY -> Classification.CLASSIFICATION_LIBRARY;
+            case OPERATING_SYSTEM -> Classification.CLASSIFICATION_OPERATING_SYSTEM;
+            case DEVICE -> Classification.CLASSIFICATION_DEVICE;
+            case FILE -> Classification.CLASSIFICATION_FILE;
+            case CONTAINER -> Classification.CLASSIFICATION_CONTAINER;
+            case FIRMWARE -> Classification.CLASSIFICATION_FIRMWARE;
+            case DEVICE_DRIVER -> Classification.CLASSIFICATION_DEVICE_DRIVER;
+            case PLATFORM -> Classification.CLASSIFICATION_PLATFORM;
+            case MACHINE_LEARNING_MODEL -> Classification.CLASSIFICATION_MACHINE_LEARNING_MODEL;
+            case DATA -> Classification.CLASSIFICATION_DATA;
+            case CRYPTOGRAPHIC_ASSET -> Classification.CLASSIFICATION_CRYPTOGRAPHIC_ASSET;
+        };
     }
 
 }

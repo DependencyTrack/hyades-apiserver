@@ -54,52 +54,63 @@ public class LdapConnectionWrapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LdapConnectionWrapper.class);
 
-    private static final String BIND_USERNAME;
-    private static final String BIND_PASSWORD;
-    private static final String LDAP_SECURITY_AUTH;
-    private static final String LDAP_AUTH_USERNAME_FMT;
-    private static final String USER_GROUPS_FILTER;
-    private static final String GROUPS_FILTER;
-    private static final String GROUPS_SEARCH_FILTER;
-    private static final String USERS_SEARCH_FILTER;
+    private final String bindUsername;
+    private final String bindPassword;
+    private final String securityAuth;
+    private final String authUsernameFmt;
+    private final String userGroupsFilter;
+    private final String groupsSearchFilter;
+    private final boolean ldapEnabled;
+    private final String ldapUrl;
+    private final String baseDn;
+    private final String attributeMail;
+    private final String attributeName;
+    private final boolean userProvisioning;
+    private final boolean teamSynchronization;
+    private final boolean ldapSslTls;
 
-    public static final boolean LDAP_ENABLED;
-    public static final String LDAP_URL;
-    public static final String BASE_DN;
-    public static final String ATTRIBUTE_MAIL;
-    public static final String ATTRIBUTE_NAME;
-
-    public static final boolean USER_PROVISIONING;
-    public static final boolean TEAM_SYNCHRONIZATION;
-
-    static {
-        final Config config = ConfigProvider.getConfig();
-        BIND_USERNAME = config.getOptionalValue(AlpineConfigKeys.LDAP_BIND_USERNAME, String.class).orElse(null);
-        BIND_PASSWORD = config.getOptionalValue(AlpineConfigKeys.LDAP_BIND_PASSWORD, String.class).orElse(null);
-        LDAP_SECURITY_AUTH = config.getOptionalValue(AlpineConfigKeys.LDAP_SECURITY_AUTH, String.class).orElse(null);
-        LDAP_AUTH_USERNAME_FMT = config.getOptionalValue(AlpineConfigKeys.LDAP_AUTH_USERNAME_FMT, String.class).orElse(null);
-        USER_GROUPS_FILTER = config.getOptionalValue(AlpineConfigKeys.LDAP_USER_GROUPS_FILTER, String.class).orElse(null);
-        GROUPS_FILTER = config.getOptionalValue(AlpineConfigKeys.LDAP_GROUPS_FILTER, String.class).orElse(null);
-        GROUPS_SEARCH_FILTER = config.getOptionalValue(AlpineConfigKeys.LDAP_GROUPS_SEARCH_FILTER, String.class).orElse(null);
-        USERS_SEARCH_FILTER = config.getOptionalValue(AlpineConfigKeys.LDAP_USERS_SEARCH_FILTER, String.class).orElse(null);
-        LDAP_ENABLED = config.getValue(AlpineConfigKeys.LDAP_ENABLED, Boolean.class);
-        LDAP_URL = config.getOptionalValue(AlpineConfigKeys.LDAP_SERVER_URL, String.class).orElse(null);
-        BASE_DN = config.getOptionalValue(AlpineConfigKeys.LDAP_BASEDN, String.class).orElse(null);
-        ATTRIBUTE_MAIL = config.getValue(AlpineConfigKeys.LDAP_ATTRIBUTE_MAIL, String.class);
-        ATTRIBUTE_NAME = config.getValue(AlpineConfigKeys.LDAP_ATTRIBUTE_NAME, String.class);
-        USER_PROVISIONING = config.getValue(AlpineConfigKeys.LDAP_USER_PROVISIONING, Boolean.class);
-        TEAM_SYNCHRONIZATION = config.getValue(AlpineConfigKeys.LDAP_TEAM_SYNCHRONIZATION, Boolean.class);
+    public LdapConnectionWrapper() {
+        this(ConfigProvider.getConfig());
     }
 
-    public static final boolean LDAP_CONFIGURED = LDAP_ENABLED && StringUtils.isNotBlank(LDAP_URL);
-    private static final boolean IS_LDAP_SSLTLS = StringUtils.isNotBlank(LDAP_URL) && LDAP_URL.startsWith("ldaps:");
+    public LdapConnectionWrapper(Config config) {
+        this.bindUsername = config.getOptionalValue(AlpineConfigKeys.LDAP_BIND_USERNAME, String.class).orElse(null);
+        this.bindPassword = config.getOptionalValue(AlpineConfigKeys.LDAP_BIND_PASSWORD, String.class).orElse(null);
+        this.securityAuth = config.getOptionalValue(AlpineConfigKeys.LDAP_SECURITY_AUTH, String.class).orElse(null);
+        this.authUsernameFmt = config.getOptionalValue(AlpineConfigKeys.LDAP_AUTH_USERNAME_FMT, String.class).orElse(null);
+        this.userGroupsFilter = config.getOptionalValue(AlpineConfigKeys.LDAP_USER_GROUPS_FILTER, String.class).orElse(null);
+        this.groupsSearchFilter = config.getOptionalValue(AlpineConfigKeys.LDAP_GROUPS_SEARCH_FILTER, String.class).orElse(null);
+        this.ldapEnabled = config.getValue(AlpineConfigKeys.LDAP_ENABLED, Boolean.class);
+        this.ldapUrl = config.getOptionalValue(AlpineConfigKeys.LDAP_SERVER_URL, String.class).orElse(null);
+        this.baseDn = config.getOptionalValue(AlpineConfigKeys.LDAP_BASEDN, String.class).orElse(null);
+        this.attributeMail = config.getValue(AlpineConfigKeys.LDAP_ATTRIBUTE_MAIL, String.class);
+        this.attributeName = config.getValue(AlpineConfigKeys.LDAP_ATTRIBUTE_NAME, String.class);
+        this.userProvisioning = config.getValue(AlpineConfigKeys.LDAP_USER_PROVISIONING, Boolean.class);
+        this.teamSynchronization = config.getValue(AlpineConfigKeys.LDAP_TEAM_SYNCHRONIZATION, Boolean.class);
+        this.ldapSslTls = StringUtils.isNotBlank(this.ldapUrl) && this.ldapUrl.startsWith("ldaps:");
+    }
 
+    public boolean isLdapConfigured() {
+        return ldapEnabled && StringUtils.isNotBlank(ldapUrl);
+    }
+
+    public String getAttributeMail() {
+        return attributeMail;
+    }
+
+    public boolean isUserProvisioningEnabled() {
+        return userProvisioning;
+    }
+
+    public boolean isTeamSynchronizationEnabled() {
+        return teamSynchronization;
+    }
 
     /**
      * Asserts a users credentials. Returns an LdapContext if assertion is successful
      * or an exception for any other reason.
      *
-     * @param userDn the users DN to assert
+     * @param userDn   the users DN to assert
      * @param password the password to assert
      * @return the LdapContext upon a successful connection
      * @throws NamingException when unable to establish a connection
@@ -111,21 +122,21 @@ public class LdapConnectionWrapper {
             throw new NamingException("Username or password cannot be empty or null");
         }
         final Hashtable<String, String> env = new Hashtable<>();
-        if (StringUtils.isNotBlank(LDAP_SECURITY_AUTH)) {
-            env.put(Context.SECURITY_AUTHENTICATION, LDAP_SECURITY_AUTH);
+        if (StringUtils.isNotBlank(securityAuth)) {
+            env.put(Context.SECURITY_AUTHENTICATION, securityAuth);
         }
         env.put(Context.SECURITY_PRINCIPAL, userDn);
         env.put(Context.SECURITY_CREDENTIALS, password);
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-        env.put(Context.PROVIDER_URL, LDAP_URL);
-        if (IS_LDAP_SSLTLS) {
+        env.put(Context.PROVIDER_URL, ldapUrl);
+        if (ldapSslTls) {
             env.put("java.naming.ldap.factory.socket", "alpine.security.crypto.RelaxedSSLSocketFactory");
         }
         try {
             return new InitialLdapContext(env, null);
         } catch (CommunicationException e) {
             LOGGER.error("Failed to connect to directory server", e);
-            throw(e);
+            throw (e);
         } catch (NamingException e) {
             throw new NamingException("Failed to authenticate user");
         }
@@ -133,6 +144,7 @@ public class LdapConnectionWrapper {
 
     /**
      * Creates a DirContext with the applications configuration settings.
+     *
      * @return a DirContext
      * @throws NamingException if an exception is thrown
      * @since 1.4.0
@@ -140,11 +152,11 @@ public class LdapConnectionWrapper {
     public DirContext createDirContext() throws NamingException {
         LOGGER.debug("Creating directory service context (DirContext)");
         final Hashtable<String, String> env = new Hashtable<>();
-        env.put(Context.SECURITY_PRINCIPAL, BIND_USERNAME);
-        env.put(Context.SECURITY_CREDENTIALS, BIND_PASSWORD);
+        env.put(Context.SECURITY_PRINCIPAL, bindUsername);
+        env.put(Context.SECURITY_CREDENTIALS, bindPassword);
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-        env.put(Context.PROVIDER_URL, LDAP_URL);
-        if (IS_LDAP_SSLTLS) {
+        env.put(Context.PROVIDER_URL, ldapUrl);
+        if (ldapSslTls) {
             env.put("java.naming.ldap.factory.socket", "alpine.security.crypto.RelaxedSSLSocketFactory");
         }
         return new InitialDirContext(env);
@@ -152,8 +164,9 @@ public class LdapConnectionWrapper {
 
     /**
      * Retrieves a list of all groups the user is a member of.
+     *
      * @param dirContext a DirContext
-     * @param ldapUser the LdapUser to retrieve group membership for
+     * @param ldapUser   the LdapUser to retrieve group membership for
      * @return A list of Strings representing the fully qualified DN of each group
      * @throws NamingException if an exception is thrown
      * @since 1.4.0
@@ -161,10 +174,10 @@ public class LdapConnectionWrapper {
     public List<String> getGroups(final DirContext dirContext, final LdapUser ldapUser) throws NamingException {
         LOGGER.debug("Retrieving groups for: {}", ldapUser.getDN());
         final List<String> groupDns = new ArrayList<>();
-        final String searchFilter = variableSubstitution(USER_GROUPS_FILTER, ldapUser);
+        final String searchFilter = variableSubstitution(userGroupsFilter, ldapUser);
         final SearchControls sc = new SearchControls();
         sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
-        final NamingEnumeration<SearchResult> ne = dirContext.search(BASE_DN, searchFilter, sc);
+        final NamingEnumeration<SearchResult> ne = dirContext.search(baseDn, searchFilter, sc);
         while (hasMoreEnum(ne)) {
             final SearchResult result = ne.next();
             groupDns.add(result.getNameInNamespace());
@@ -175,57 +188,24 @@ public class LdapConnectionWrapper {
     }
 
     /**
-     * Retrieves a list of all the groups in the directory.
-     * @param dirContext a DirContext
-     * @return A list of Strings representing the fully qualified DN of each group
-     * @throws NamingException if an exception if thrown
-     * @since 1.4.0
-     */
-    public List<String> getGroups(final DirContext dirContext) throws NamingException {
-        LOGGER.debug("Retrieving all groups");
-        final List<String> groupDns = new ArrayList<>();
-        final SearchControls sc = new SearchControls();
-        sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
-        final NamingEnumeration<SearchResult> ne = dirContext.search(BASE_DN, GROUPS_FILTER, sc);
-        while (hasMoreEnum(ne)) {
-            final SearchResult result = ne.next();
-            groupDns.add(result.getNameInNamespace());
-            LOGGER.debug("Found group: {}", result.getNameInNamespace());
-        }
-        closeQuietly(ne);
-        return groupDns;
-    }
-
-    /**
      * Retrieves a list of all the groups in the directory that match the specified groupName.
      * This is a convenience method which wraps {@link #search(DirContext, String, String)}.
+     *
      * @param dirContext a DirContext
-     * @param groupName the name (or partial name) of the group to to search for
+     * @param groupName  the name (or partial name) of the group to to search for
      * @return A list of Strings representing the fully qualified DN of each group
      * @throws NamingException if an exception if thrown
      * @since 1.5.0
      */
     public List<String> searchForGroupName(final DirContext dirContext, String groupName) throws NamingException {
-        return search(dirContext, LdapConnectionWrapper.GROUPS_SEARCH_FILTER, groupName);
-    }
-
-    /**
-     * Retrieves a list of all the users in the directory that match the specified userName.
-     * This is a convenience method which wraps {@link #search(DirContext, String, String)}.
-     * @param dirContext a DirContext
-     * @param userName the name (or partial name) of the user to to search for
-     * @return A list of Strings representing the fully qualified DN of each username
-     * @throws NamingException if an exception if thrown
-     * @since 1.5.0
-     */
-    public List<String> searchForUserName(final DirContext dirContext, String userName) throws NamingException {
-        return search(dirContext, LdapConnectionWrapper.USERS_SEARCH_FILTER, userName);
+        return search(dirContext, groupsSearchFilter, groupName);
     }
 
     /**
      * Retrieves a list of all the entries in the directory that match the specified filter and searchTerm
+     *
      * @param dirContext a DirContext
-     * @param filter a pre-defined ldap filter containing a {SEARCH_TERM} as a placeholder
+     * @param filter     a pre-defined ldap filter containing a {SEARCH_TERM} as a placeholder
      * @param searchTerm the search term to query on
      * @return A list of Strings representing the fully qualified DN of each group
      * @throws NamingException if an exception if thrown
@@ -238,7 +218,7 @@ public class LdapConnectionWrapper {
         sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
         final String searchFor = searchTermSubstitution(filter, searchTerm);
         LOGGER.debug("Searching for: {}", searchFor);
-        final NamingEnumeration<SearchResult> ne = dirContext.search(LdapConnectionWrapper.BASE_DN, searchFor, sc);
+        final NamingEnumeration<SearchResult> ne = dirContext.search(baseDn, searchFor, sc);
         while (hasMoreEnum(ne)) {
             final SearchResult result = ne.next();
             entityDns.add(result.getNameInNamespace());
@@ -251,7 +231,8 @@ public class LdapConnectionWrapper {
     /**
      * Performs a search for the specified username. Internally, this method queries on
      * the attribute defined by {@link AlpineConfigKeys#LDAP_ATTRIBUTE_NAME}.
-     * @param ctx the DirContext to use
+     *
+     * @param ctx      the DirContext to use
      * @param username the username to query on
      * @return a list of SearchResult objects. If the username is found, the list should typically only contain one result.
      * @throws NamingException if an exception is thrown
@@ -261,16 +242,16 @@ public class LdapConnectionWrapper {
         LOGGER.debug("Performing a directory search for: {}", username);
         final SearchControls sc = new SearchControls();
         sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
-        final String searchFor = LdapConnectionWrapper.ATTRIBUTE_NAME + "=" +
-                LdapStringSanitizer.sanitize(formatPrincipal(username));
+        final String searchFor = attributeName + "=" + LdapStringSanitizer.sanitize(formatPrincipal(username));
         LOGGER.debug("Searching for: {}", searchFor);
-        return Collections.list(ctx.search(LdapConnectionWrapper.BASE_DN, searchFor, sc));
+        return Collections.list(ctx.search(baseDn, searchFor, sc));
     }
 
     /**
      * Performs a search for the specified username. Internally, this method queries on
      * the attribute defined by {@link AlpineConfigKeys#LDAP_ATTRIBUTE_NAME}.
-     * @param ctx the DirContext to use
+     *
+     * @param ctx      the DirContext to use
      * @param username the username to query on
      * @return a list of SearchResult objects. If the username is found, the list should typically only contain one result.
      * @throws NamingException if an exception is thrown
@@ -291,8 +272,9 @@ public class LdapConnectionWrapper {
 
     /**
      * Retrieves an attribute by its name for the specified dn.
-     * @param ctx the DirContext to use
-     * @param dn the distinguished name of the entry to obtain the attribute value for
+     *
+     * @param ctx           the DirContext to use
+     * @param dn            the distinguished name of the entry to obtain the attribute value for
      * @param attributeName the name of the attribute to return
      * @return the value of the attribute, or null if not found
      * @throws NamingException if an exception is thrown
@@ -305,7 +287,8 @@ public class LdapConnectionWrapper {
 
     /**
      * Retrieves an attribute by its name for the specified search result.
-     * @param result the search result of the entry to obtain the attribute value for
+     *
+     * @param result        the search result of the entry to obtain the attribute value for
      * @param attributeName the name of the attribute to return
      * @return the value of the attribute, or null if not found
      * @throws NamingException if an exception is thrown
@@ -317,7 +300,8 @@ public class LdapConnectionWrapper {
 
     /**
      * Retrieves an attribute by its name.
-     * @param attributes the list of attributes to query on
+     *
+     * @param attributes    the list of attributes to query on
      * @param attributeName the name of the attribute to return
      * @return the value of the attribute, or null if not found
      * @throws NamingException if an exception is thrown
@@ -343,15 +327,16 @@ public class LdapConnectionWrapper {
      * If LDAP_AUTH_USERNAME_FMT is configured to a non-empty value, the substring %s in this value will be replaced with the entered username.
      * The recommended format of this value depends on your LDAP server(Active Directory, OpenLDAP, etc.).
      * Examples:
-     *   alpine.ldap.auth.username.format=%s
-     * 	 alpine.ldap.auth.username.format=%s@company.com
+     * alpine.ldap.auth.username.format=%s
+     * alpine.ldap.auth.username.format=%s@company.com
+     *
      * @param username the username
      * @return a formatted user principal
      * @since 1.4.0
      */
-    private static String formatPrincipal(final String username) {
-        if  (StringUtils.isNotBlank(LDAP_AUTH_USERNAME_FMT)) {
-            return String.format(LDAP_AUTH_USERNAME_FMT, username);
+    private String formatPrincipal(final String username) {
+        if (StringUtils.isNotBlank(authUsernameFmt)) {
+            return String.format(authUsernameFmt, username);
         }
         return username;
     }
@@ -377,8 +362,9 @@ public class LdapConnectionWrapper {
      * Convenience method that wraps {@link NamingEnumeration#hasMore()} but ignores {@link PartialResultException}s
      * that may be thrown as a result. This is typically an issue with a directory server that does not support
      * {@link Context#REFERRAL} being set to 'ignore' (which is the default value).
-     *
+     * <p>
      * Issue: https://github.com/stevespringett/Alpine/issues/19
+     *
      * @since 1.4.3
      */
     private boolean hasMoreEnum(final NamingEnumeration<SearchResult> ne) throws NamingException {
@@ -399,6 +385,7 @@ public class LdapConnectionWrapper {
 
     /**
      * Closes a NamingEnumeration object without throwing any exceptions.
+     *
      * @param object the NamingEnumeration object to close
      * @since 1.4.0
      */
@@ -414,6 +401,7 @@ public class LdapConnectionWrapper {
 
     /**
      * Closes a DirContext object without throwing any exceptions.
+     *
      * @param object the DirContext object to close
      * @since 1.4.0
      */

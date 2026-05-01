@@ -133,6 +133,38 @@ make datanucleus-enhance
 
 Then re-run the test. Ensure your IDE is not cleaning the `target` directory before execution.
 
+## Database Migrations
+
+Schema changes are managed with [Liquibase](https://www.liquibase.com/).
+The API server owns the schema and applies pending migrations at startup.
+
+Changelogs live in [`migration/src/main/resources/migration`](migration/src/main/resources/migration),
+with one file per release version (`changelog-vX.Y.Z.xml`), all included from `changelog-main.xml`.
+
+### Adding a Changeset
+
+1. Create `changelog-vX.Y.Z.xml` for the current release if it doesn't exist,
+   and include it from `changelog-main.xml`.
+2. Append your changeset to the version-specific changelog.
+
+Conventions:
+
+* `id`: `vX.Y.Z-<NUM>`, `<NUM>` starts at `1` and increments per file.
+* `author`: your GitHub username.
+* Prefer Liquibase [built-in change types](https://docs.liquibase.com/change-types/home.html).
+  Fall back to `<sql>`. Use custom changes only when computation is required.
+
+> [!IMPORTANT]
+> Do not modify changesets already merged to `main`.
+> Liquibase rejects checksum mismatches on existing deployments.
+> Add a new changeset instead.
+
+### Stored Procedures and Functions
+
+SQL files under [`migration/.../procedures`](migration/src/main/resources/migration/procedures)
+are reapplied automatically when their content changes.
+Edit the file directly, no new changeset needed.
+
 ## Build Cache
 
 We use Maven [build caching](https://maven.apache.org/extensions/maven-build-cache-extension/) to speed

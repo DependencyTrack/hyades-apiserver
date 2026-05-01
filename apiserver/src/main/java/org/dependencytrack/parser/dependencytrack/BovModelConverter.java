@@ -27,24 +27,24 @@ import io.github.nscuro.versatile.VersException;
 import io.github.nscuro.versatile.spi.InvalidVersionException;
 import io.github.nscuro.versatile.spi.Version;
 import org.apache.commons.lang3.StringUtils;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Component;
-import org.cyclonedx.proto.v1_6.ScoreMethod;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
-import org.cyclonedx.proto.v1_6.VulnerabilityRating;
-import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Component;
+import org.cyclonedx.proto.v1_7.ScoreMethod;
+import org.cyclonedx.proto.v1_7.Source;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffectedVersions;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_7.VulnerabilityRating;
+import org.cyclonedx.proto.v1_7.VulnerabilityReference;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.util.VulnerabilityUtil;
+import org.metaeffekt.core.security.cvss.CvssVector;
+import org.metaeffekt.core.security.cvss.processor.BakedCvssVectorScores;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import us.springett.cvss.Cvss;
-import us.springett.cvss.Score;
 import us.springett.owasp.riskrating.MissingFactorException;
 import us.springett.owasp.riskrating.OwaspRiskRating;
 import us.springett.parsers.cpe.Cpe;
@@ -66,11 +66,11 @@ import java.util.regex.Pattern;
 
 import static io.github.nscuro.versatile.version.KnownVersioningSchemes.SCHEME_GENERIC;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV2;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV31;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV4;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_OWASP;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV2;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV3;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV4;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_OWASP;
 
 public final class BovModelConverter {
 
@@ -83,7 +83,7 @@ public final class BovModelConverter {
 
     public static Vulnerability convert(
             final Bom bov,
-            final org.cyclonedx.proto.v1_6.Vulnerability cdxVuln,
+            final org.cyclonedx.proto.v1_7.Vulnerability cdxVuln,
             final boolean isAliasSyncEnabled) {
         if (cdxVuln == null) {
             return null;
@@ -160,10 +160,13 @@ public final class BovModelConverter {
                 vuln.setCvssV4Vector(trimToNull(rating.getVector()));
                 vuln.setCvssV4Score(BigDecimal.valueOf(rating.getScore()));
                 if (rating.hasVector()) {
-                    final Cvss cvss = Cvss.fromVector(rating.getVector());
-                    final Score score = cvss.calculateScore();
-                    if (rating.getScore() == 0.0) {
-                        vuln.setCvssV4Score(BigDecimal.valueOf(score.getBaseScore()));
+                    final CvssVector cvss = CvssVector.parseVector(rating.getVector(), true);
+                    if (cvss != null && cvss.isBaseFullyDefined()) {
+                        if (rating.getScore() == 0.0) {
+                            vuln.setCvssV4Score(BigDecimal.valueOf(cvss.getBakedScores().getBaseScore()));
+                        }
+                    } else {
+                        LOGGER.debug("Skipping CVSSv4 score derivation: vector '{}' could not be parsed or has incomplete base metrics", rating.getVector());
                     }
                 }
                 appliedMethods.add(SCORE_METHOD_CVSSV4);
@@ -174,12 +177,16 @@ public final class BovModelConverter {
                 vuln.setCvssV3Vector(trimToNull(rating.getVector()));
                 vuln.setCvssV3BaseScore(BigDecimal.valueOf(rating.getScore()));
                 if (rating.hasVector()) {
-                    final Cvss cvss = Cvss.fromVector(rating.getVector());
-                    final Score score = cvss.calculateScore();
-                    vuln.setCvssV3ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
-                    vuln.setCvssV3ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
-                    if (rating.getScore() == 0.0) {
-                        vuln.setCvssV3BaseScore(BigDecimal.valueOf(score.getBaseScore()));
+                    final CvssVector cvss = CvssVector.parseVector(rating.getVector(), true);
+                    if (cvss != null && cvss.isBaseFullyDefined()) {
+                        final BakedCvssVectorScores scores = cvss.getBakedScores();
+                        vuln.setCvssV3ImpactSubScore(BigDecimal.valueOf(scores.getImpactScore()));
+                        vuln.setCvssV3ExploitabilitySubScore(BigDecimal.valueOf(scores.getExploitabilityScore()));
+                        if (rating.getScore() == 0.0) {
+                            vuln.setCvssV3BaseScore(BigDecimal.valueOf(scores.getBaseScore()));
+                        }
+                    } else {
+                        LOGGER.debug("Skipping CVSSv3 sub-score derivation: vector '{}' could not be parsed or has incomplete base metrics", rating.getVector());
                     }
                 }
                 appliedMethods.add(SCORE_METHOD_CVSSV3);
@@ -188,12 +195,16 @@ public final class BovModelConverter {
                 vuln.setCvssV2Vector(trimToNull(rating.getVector()));
                 vuln.setCvssV2BaseScore(BigDecimal.valueOf(rating.getScore()));
                 if (rating.hasVector()) {
-                    final Cvss cvss = Cvss.fromVector(rating.getVector());
-                    final Score score = cvss.calculateScore();
-                    vuln.setCvssV2ImpactSubScore(BigDecimal.valueOf(score.getImpactSubScore()));
-                    vuln.setCvssV2ExploitabilitySubScore(BigDecimal.valueOf(score.getExploitabilitySubScore()));
-                    if (rating.getScore() == 0.0) {
-                        vuln.setCvssV2BaseScore(BigDecimal.valueOf(score.getBaseScore()));
+                    final CvssVector cvss = CvssVector.parseVector(rating.getVector(), true);
+                    if (cvss != null && cvss.isBaseFullyDefined()) {
+                        final BakedCvssVectorScores scores = cvss.getBakedScores();
+                        vuln.setCvssV2ImpactSubScore(BigDecimal.valueOf(scores.getImpactScore()));
+                        vuln.setCvssV2ExploitabilitySubScore(BigDecimal.valueOf(scores.getExploitabilityScore()));
+                        if (rating.getScore() == 0.0) {
+                            vuln.setCvssV2BaseScore(BigDecimal.valueOf(scores.getBaseScore()));
+                        }
+                    } else {
+                        LOGGER.debug("Skipping CVSSv2 sub-score derivation: vector '{}' could not be parsed or has incomplete base metrics", rating.getVector());
                     }
                 }
                 appliedMethods.add(SCORE_METHOD_CVSSV2);
@@ -252,7 +263,7 @@ public final class BovModelConverter {
     }
 
     public static List<VulnerableSoftware> extractVulnerableSoftware(final Bom bov) {
-        final org.cyclonedx.proto.v1_6.Vulnerability vuln = bov.getVulnerabilities(0);
+        final org.cyclonedx.proto.v1_7.Vulnerability vuln = bov.getVulnerabilities(0);
         if (vuln.getAffectsCount() == 0) {
             return Collections.emptyList();
         }
@@ -289,7 +300,7 @@ public final class BovModelConverter {
                 .toList();
     }
 
-    private static VulnerabilityAlias convert(final org.cyclonedx.proto.v1_6.Vulnerability cycloneVuln,
+    private static VulnerabilityAlias convert(final org.cyclonedx.proto.v1_7.Vulnerability cycloneVuln,
                                               final VulnerabilityReference cycloneAlias) {
         final var alias = new VulnerabilityAlias();
         switch (cycloneVuln.getSource().getName()) {
