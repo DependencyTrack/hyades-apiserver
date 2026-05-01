@@ -26,7 +26,6 @@ import org.dependencytrack.event.VexUploadEvent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vex;
-import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.NotificationModelConverter;
 import org.dependencytrack.parser.cyclonedx.CycloneDXVexImporter;
@@ -34,10 +33,11 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.CompressUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.util.Date;
-import java.util.List;
 
+import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.notification.api.NotificationFactory.createVexConsumedNotification;
 import static org.dependencytrack.notification.api.NotificationFactory.createVexProcessedNotification;
 
@@ -58,50 +58,51 @@ public class VexUploadProcessingTask implements Subscriber {
         if (e instanceof VexUploadEvent) {
             final VexUploadEvent event = (VexUploadEvent) e;
             final byte[] vexBytes = CompressUtil.optionallyDecompress(event.getVex());
-            try(final QueryManager qm = new QueryManager()) {
+            try (final QueryManager qm = new QueryManager()) {
                 final Project project = qm.getObjectByUuid(Project.class, event.getProjectUuid());
-                final List<Vulnerability> vulnerabilities;
+                try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, project.getUuid().toString())) {
 
-                final Vex vex = new Vex();
-                vex.setProject(project);
-                vex.setImported(new Date());
+                    final Vex vex = new Vex();
+                    vex.setProject(project);
+                    vex.setImported(new Date());
 
-                if (BomParserFactory.looksLikeCycloneDX(vexBytes)) {
-                    if (qm.isEnabled(ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX)) {
-                        LOGGER.info("Processing CycloneDX VEX uploaded to project: {}", event.getProjectUuid());
-                        vex.setVexFormat(Vex.Format.CYCLONEDX);
-                        final Parser parser = BomParserFactory.createParser(vexBytes);
-                        final org.cyclonedx.model.Bom cycloneDxBom = parser.parse(vexBytes);
-                        vex.setSpecVersion(cycloneDxBom.getSpecVersion());
-                        vex.setVexVersion(cycloneDxBom.getVersion());
-                        vex.setSerialNumber(cycloneDxBom.getSerialNumber());
-                        final CycloneDXVexImporter vexImporter = new CycloneDXVexImporter();
-                        vexImporter.applyVex(qm, cycloneDxBom, project);
-                        LOGGER.info("Completed processing of CycloneDX VEX for project: {}", event.getProjectUuid());
+                    if (BomParserFactory.looksLikeCycloneDX(vexBytes)) {
+                        if (qm.isEnabled(ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX)) {
+                            LOGGER.info("Processing CycloneDX VEX uploaded.");
+                            vex.setVexFormat(Vex.Format.CYCLONEDX);
+                            final Parser parser = BomParserFactory.createParser(vexBytes);
+                            final org.cyclonedx.model.Bom cycloneDxBom = parser.parse(vexBytes);
+                            vex.setSpecVersion(cycloneDxBom.getSpecVersion());
+                            vex.setVexVersion(cycloneDxBom.getVersion());
+                            vex.setSerialNumber(cycloneDxBom.getSerialNumber());
+                            final CycloneDXVexImporter vexImporter = new CycloneDXVexImporter();
+                            vexImporter.applyVex(qm, cycloneDxBom, project);
+                            LOGGER.info("Completed processing of CycloneDX VEX");
+                        } else {
+                            LOGGER.warn("A CycloneDX VEX was uploaded but accepting CycloneDX format is disabled. Aborting");
+                            return;
+                        }
+                        // TODO: Add support for CSAF
                     } else {
-                        LOGGER.warn("A CycloneDX VEX was uploaded but accepting CycloneDX format is disabled. Aborting");
+                        LOGGER.warn("The VEX uploaded is not in a supported format. Supported formats include CycloneDX XML and JSON");
                         return;
                     }
-                    // TODO: Add support for CSAF
-                } else {
-                    LOGGER.warn("The VEX uploaded is not in a supported format. Supported formats include CycloneDX XML and JSON");
-                    return;
+
+                    final var notificationEmitter = new JdoNotificationEmitter(qm);
+
+                    notificationEmitter.emit(
+                            createVexConsumedNotification(
+                                    NotificationModelConverter.convert(project),
+                                    NotificationModelConverter.convert(vex)));
+                    qm.persist(vex);
+
+                    notificationEmitter.emit(
+                            createVexProcessedNotification(
+                                    NotificationModelConverter.convert(project),
+                                    NotificationModelConverter.convert(vex)));
+                } catch (Exception ex) {
+                    LOGGER.error("Error while processing vex", ex);
                 }
-
-                final var notificationEmitter = new JdoNotificationEmitter(qm);
-
-                notificationEmitter.emit(
-                        createVexConsumedNotification(
-                                NotificationModelConverter.convert(project),
-                                NotificationModelConverter.convert(vex)));
-                qm.persist(vex);
-
-                notificationEmitter.emit(
-                        createVexProcessedNotification(
-                                NotificationModelConverter.convert(project),
-                                NotificationModelConverter.convert(vex)));
-            } catch (Exception ex) {
-                LOGGER.error("Error while processing vex", ex);
             }
         }
     }
