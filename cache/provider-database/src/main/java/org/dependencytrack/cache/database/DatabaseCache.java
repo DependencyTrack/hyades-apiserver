@@ -45,6 +45,7 @@ final class DatabaseCache implements Cache {
     private final AtomicLong missCount = new AtomicLong();
     private final AtomicLong putCount = new AtomicLong();
     private final AtomicLong evictionCount = new AtomicLong();
+    private final AtomicLong cachedSize = new AtomicLong(-1L);
 
     DatabaseCache(
             String name,
@@ -235,21 +236,13 @@ final class DatabaseCache implements Cache {
         evictionCount.addAndGet(count);
     }
 
-    long size() {
-        try (final Connection connection = dataSource.getConnection();
-             final PreparedStatement ps = connection.prepareStatement("""
-                     SELECT COUNT(*)
-                       FROM "CACHE_ENTRY"
-                      WHERE "CACHE_NAME" = ?
-                        AND "EXPIRES_AT" > NOW()
-                     """)) {
-            ps.setString(1, this.name);
+    void onSizeRefreshed(long size) {
+        cachedSize.set(size);
+    }
 
-            final ResultSet rs = ps.executeQuery();
-            return rs.next() ? rs.getLong(1) : 0;
-        } catch (SQLException e) {
-            throw new IllegalStateException(e);
-        }
+    @Nullable Long size() {
+        final long size = cachedSize.get();
+        return size < 0 ? null : size;
     }
 
 }
