@@ -29,6 +29,10 @@ import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.filestorage.memory.MemoryFileStorage;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.BomValidationMode;
@@ -40,8 +44,10 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
+import org.glassfish.jersey.inject.hk2.AbstractBinder;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -51,6 +57,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -60,8 +67,14 @@ import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_M
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 
 public class VexResourceTest extends ResourceTest {
+
+    private static final DexEngine DEX_ENGINE_MOCK = mock(DexEngine.class);
 
     @RegisterExtension
     static JerseyTestExtension jersey = new JerseyTestExtension(
@@ -69,12 +82,26 @@ public class VexResourceTest extends ResourceTest {
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
                     .register(AuthorizationFeature.class)
-                    .register(MultiPartFeature.class));
+                    .register(MultiPartFeature.class)
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bindFactory(MemoryFileStorage::new).to(FileStorage.class);
+                            bind(DEX_ENGINE_MOCK).to(DexEngine.class);
+                        }
+                    }));
+
+    private UUID stubbedRunId;
 
     @BeforeEach
-    @Override
-    public void before() throws Exception {
-        super.before();
+    void beforeEach() {
+        stubbedRunId = UUID.randomUUID();
+        doReturn(stubbedRunId).when(DEX_ENGINE_MOCK).createRun(any(CreateWorkflowRunRequest.class));
+    }
+
+    @AfterEach
+    void afterEach() {
+        reset(DEX_ENGINE_MOCK);
     }
 
     @Test
@@ -481,9 +508,10 @@ public class VexResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThatJson(getPlainTextBody(response))
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .withMatcher("runId", equalTo(stubbedRunId.toString()))
                 .isEqualTo(/* language=JSON */ """
                         {
-                          "token": "${json-unit.any-string}",
+                          "token": "${json-unit.matches:runId}",
                           "projectUuid": "${json-unit.matches:projectUuid}"
                         }
                         """);

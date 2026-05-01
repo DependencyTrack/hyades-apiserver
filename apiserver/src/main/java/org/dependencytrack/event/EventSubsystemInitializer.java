@@ -39,7 +39,6 @@ import org.dependencytrack.tasks.FortifySscUploadTask;
 import org.dependencytrack.tasks.InternalComponentIdentificationTask;
 import org.dependencytrack.tasks.KennaSecurityUploadTask;
 import org.dependencytrack.tasks.LdapSyncTaskWrapper;
-import org.dependencytrack.tasks.VexUploadProcessingTask;
 import org.dependencytrack.tasks.VulnerabilityAnalysisTask;
 import org.dependencytrack.tasks.maintenance.MetricsMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.PackageMetadataMaintenanceTask;
@@ -94,7 +93,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         final var secretManager = (SecretManager) event.getServletContext().getAttribute(SecretManager.class.getName());
         requireNonNull(secretManager, "secretManager has not been initialized");
 
-        eventService.subscribe(VexUploadEvent.class, new VexUploadProcessingTask());
         eventService.subscribe(LdapSyncEvent.class, new LdapSyncTaskWrapper());
         eventService.subscribe(
                 PortfolioVulnerabilityAnalysisEvent.class,
@@ -122,7 +120,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
                 .getOptionalValue(ConfigKeys.WORKER_POOL_DRAIN_TIMEOUT_DURATION, Duration.class)
                 .orElse(Duration.ofSeconds(30));
 
-        eventService.unsubscribe(VexUploadProcessingTask.class);
         eventService.unsubscribe(LdapSyncTaskWrapper.class);
         eventService.unsubscribe(VulnerabilityAnalysisTask.class);
         eventService.unsubscribe(VulnerabilityMetricsUpdateTask.class);
