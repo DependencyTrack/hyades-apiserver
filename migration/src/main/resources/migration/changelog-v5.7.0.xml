@@ -2011,4 +2011,14 @@
             CHECK ("SCOPE" IS NULL OR "SCOPE"::TEXT = ANY(ARRAY['REQUIRED', 'OPTIONAL', 'EXCLUDED']));
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-84" author="nscuro">
+        <!--
+            Size-based eviction for the database cache provider was removed
+            in favor of TTL-only eviction. Drop the supporting index and the
+            CREATED_AT column that is no longer needed.
+        -->
+        <dropIndex tableName="CACHE_ENTRY" indexName="CACHE_ENTRY_NAME_CREATED_AT_DESC_IDX"/>
+        <dropColumn tableName="CACHE_ENTRY" columnName="CREATED_AT"/>
+    </changeSet>
 </databaseChangeLog>
