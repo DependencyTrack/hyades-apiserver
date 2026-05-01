@@ -60,8 +60,7 @@ properties:
     format: int64
     minimum: 0
   scope:
-    type: string
-    maxLength: 255
+    $ref: "../../../shared/schemas/scope.yaml"
   last_inherited_risk_score:
     type: number
     format: double

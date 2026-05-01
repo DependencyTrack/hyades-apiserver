@@ -29,8 +29,7 @@ properties:
     type: string
     maxLength: 255
   scope:
-    type: string
-    maxLength: 255
+    $ref: "../../../shared/schemas/scope.yaml"
   hashes:
     $ref: "../../../shared/schemas/hashes.yaml"
   cpe:
