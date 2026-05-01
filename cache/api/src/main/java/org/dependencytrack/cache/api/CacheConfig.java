@@ -44,10 +44,4 @@ public final class CacheConfig {
                 .orElse(Duration.ofHours(1));
     }
 
-    public int maxSize() {
-        return config
-                .getOptionalValue("dt.cache.\"%s\".max-size".formatted(this.name), int.class)
-                .orElse(10000);
-    }
-
 }
