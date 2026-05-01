@@ -124,6 +124,51 @@ class DatabaseCacheMaintenanceWorkerTest {
     }
 
     @Test
+    void performMaintenanceShouldRefreshCachedSize() throws Exception {
+        insertEntry("cache-a", "expired", "v0", Instant.now().minusSeconds(10));
+        insertEntry("cache-a", "valid1", "v1", Instant.now().plusSeconds(3600));
+        insertEntry("cache-a", "valid2", "v2", Instant.now().plusSeconds(3600));
+        insertEntry("cache-b", "valid", "v3", Instant.now().plusSeconds(3600));
+
+        final var cacheA = new DatabaseCache("cache-a", Duration.ofHours(1), dataSource);
+        final var cacheB = new DatabaseCache("cache-b", Duration.ofHours(1), dataSource);
+
+        try (final var worker = new DatabaseCacheMaintenanceWorker(dataSource, Duration.ofMinutes(1), Duration.ofMinutes(5))) {
+            worker.registerCache(cacheA);
+            worker.registerCache(cacheB);
+
+            assertThat(cacheA.size()).isNull();
+            assertThat(cacheB.size()).isNull();
+
+            worker.performMaintenance();
+
+            assertThat(cacheA.size()).isEqualTo(2);
+            assertThat(cacheB.size()).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void performMaintenanceShouldZeroOutCachedSizeWhenAllEntriesAreGone() throws Exception {
+        insertEntry("cache-a", "valid", "v1", Instant.now().plusSeconds(3600));
+
+        final var cacheA = new DatabaseCache("cache-a", Duration.ofHours(1), dataSource);
+
+        try (final var worker = new DatabaseCacheMaintenanceWorker(dataSource, Duration.ofMinutes(1), Duration.ofMinutes(5))) {
+            worker.registerCache(cacheA);
+            worker.performMaintenance();
+            assertThat(cacheA.size()).isEqualTo(1);
+
+            try (final Connection connection = dataSource.getConnection();
+                 final Statement statement = connection.createStatement()) {
+                statement.execute("DELETE FROM \"CACHE_ENTRY\" WHERE \"CACHE_NAME\" = 'cache-a'");
+            }
+
+            worker.performMaintenance();
+            assertThat(cacheA.size()).isZero();
+        }
+    }
+
+    @Test
     void performMaintenanceShouldHandleMultipleCaches() throws Exception {
         insertEntry("cache-a", "expired", "v1", Instant.now().minusSeconds(10));
         insertEntry("cache-a", "valid", "v2", Instant.now().plusSeconds(3600));

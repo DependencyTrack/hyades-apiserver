@@ -29,7 +29,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -90,20 +92,28 @@ final class DatabaseCacheMaintenanceWorker implements Closeable {
     void performMaintenance() throws SQLException {
         LOGGER.debug("Starting cache maintenance");
 
-        try (final Connection connection = dataSource.getConnection();
-             final PreparedStatement expireQuery = connection.prepareStatement("""
-                     WITH cte_expired AS (
-                       DELETE
-                         FROM "CACHE_ENTRY"
-                        WHERE "EXPIRES_AT" < NOW()
-                       RETURNING "CACHE_NAME"
-                     )
-                     SELECT "CACHE_NAME"
-                          , COUNT(*)
-                       FROM cte_expired
-                      GROUP BY "CACHE_NAME"
-                     """);
-             final ResultSet rs = expireQuery.executeQuery()) {
+        try (final Connection connection = dataSource.getConnection()) {
+            deleteExpiredEntries(connection);
+            refreshCachedSizes(connection);
+        }
+
+        LOGGER.debug("Cache maintenance completed");
+    }
+
+    private void deleteExpiredEntries(Connection connection) throws SQLException {
+        try (final PreparedStatement ps = connection.prepareStatement("""
+                WITH cte_expired AS (
+                  DELETE
+                    FROM "CACHE_ENTRY"
+                   WHERE "EXPIRES_AT" < NOW()
+                  RETURNING "CACHE_NAME"
+                )
+                SELECT "CACHE_NAME"
+                     , COUNT(*)
+                  FROM cte_expired
+                 GROUP BY "CACHE_NAME"
+                """);
+             final ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 final String cacheName = rs.getString(1);
                 final int entriesEvicted = rs.getInt(2);
@@ -115,8 +125,43 @@ final class DatabaseCacheMaintenanceWorker implements Closeable {
                 }
             }
         }
+    }
 
-        LOGGER.debug("Cache maintenance completed");
+    private void refreshCachedSizes(Connection connection) throws SQLException {
+        final Set<String> cachesWithoutEntries = new HashSet<>(cacheByName.keySet());
+
+        try (final PreparedStatement ps = connection.prepareStatement("""
+                SELECT "CACHE_NAME"
+                     , COUNT(*)
+                  FROM "CACHE_ENTRY"
+                 WHERE "CACHE_NAME" = ANY(?)
+                   AND "EXPIRES_AT" > NOW()
+                 GROUP BY "CACHE_NAME"
+                """)) {
+            ps.setArray(1, connection.createArrayOf("TEXT", cachesWithoutEntries.toArray(String[]::new)));
+
+            try (final ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    final String cacheName = rs.getString(1);
+                    final long size = rs.getLong(2);
+                    cachesWithoutEntries.remove(cacheName);
+
+                    final DatabaseCache cache = cacheByName.get(cacheName);
+                    if (cache != null) {
+                        cache.onSizeRefreshed(size);
+                    }
+                }
+            }
+        }
+
+        // Zero out caches that have no entries so stale sizes
+        // don't linger after full eviction.
+        for (final String cacheName : cachesWithoutEntries) {
+            final DatabaseCache cache = cacheByName.get(cacheName);
+            if (cache != null) {
+                cache.onSizeRefreshed(0L);
+            }
+        }
     }
 
     @Override
