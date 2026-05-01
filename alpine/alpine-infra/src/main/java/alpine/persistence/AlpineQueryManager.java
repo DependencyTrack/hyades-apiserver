@@ -543,20 +543,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Creates a new Team with the specified name. If createApiKey is true,
-     * then {@link #createApiKey} is invoked and a cryptographically secure
-     * API key is generated.
-     * @param name The name of the team
-     * @param createApiKey whether to create an API key for the team
-     * @deprecated `createApiKey` is deprecated and will be removed in future versions
-     * @return a Team
-     * @since 1.0.0
-     */
-    public Team createTeam(final String name, final boolean createApiKey) {
-        return createTeam(name);
-    }
-
-    /**
      * Creates a new Team with the specified name.
      * @param name The name of the team
      * @return a Team

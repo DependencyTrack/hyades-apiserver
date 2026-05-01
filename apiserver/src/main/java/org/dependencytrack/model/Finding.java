@@ -42,7 +42,7 @@ import java.util.UUID;
  * @since 3.1.0
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class Finding implements Serializable {
+public final class Finding implements Serializable {
 
     private final UUID project;
     private final Map<String, Object> component = new LinkedHashMap<>();

@@ -746,7 +746,7 @@ public class UserResource extends AbstractApiResource {
                 qm.getPersistenceManager().refresh(principal);
                 principal = qm.getObjectById(principal.getClass(), principal.getId());
                 if (modified) {
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added team membership for: " + principal.getName() + " / team: " + team.getName());
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added team membership for: " + principal.getUsername() + " / team: " + team.getName());
                     return Response.ok(principal).build();
                 } else {
                     return Response.status(Response.Status.NOT_MODIFIED).entity("The user is already a member of the specified team.").build();
@@ -792,7 +792,7 @@ public class UserResource extends AbstractApiResource {
                 final boolean modified = qm.removeUserFromTeam(principal, team);
                 principal = qm.getObjectById(principal.getClass(), principal.getId());
                 if (modified) {
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed team membership for: " + principal.getName() + " / team: " + team.getName());
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed team membership for: " + principal.getUsername() + " / team: " + team.getName());
                     return Response.ok(principal).build();
                 } else {
                     return Response.status(Response.Status.NOT_MODIFIED)
@@ -856,7 +856,7 @@ public class UserResource extends AbstractApiResource {
                 principal.setTeams(requestedTeams);
                 qm.persist(principal);
                 super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
-                        "Added team membership for: " + principal.getName() + " / team: " + requestedTeams.toString());
+                        "Added team membership for: " + principal.getUsername() + " / team: " + requestedTeams.toString());
                 return Response.ok(principal).build();
             });
         }

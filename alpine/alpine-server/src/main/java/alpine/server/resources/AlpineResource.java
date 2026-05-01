@@ -36,7 +36,7 @@ import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.glassfish.jersey.server.validation.ValidationError;
 import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
@@ -176,7 +176,7 @@ public abstract class AlpineResource {
             for (final ConstraintViolation violation : violations) {
                 if (violation.getPropertyPath().iterator().next().getName() != null) {
                     final String path = violation.getPropertyPath() != null ? violation.getPropertyPath().toString() : null;
-                    final String message = violation.getMessage() != null ? StringUtils.removeStart(violation.getMessage(), path + ".") : null;
+                    final String message = violation.getMessage() != null ? Strings.CS.removeStart(violation.getMessage(), path + ".") : null;
                     final String messageTemplate = violation.getMessageTemplate();
                     final String invalidValue = violation.getInvalidValue() != null ? violation.getInvalidValue().toString() : null;
                     final ValidationError error = new ValidationError(message, messageTemplate, path, invalidValue);

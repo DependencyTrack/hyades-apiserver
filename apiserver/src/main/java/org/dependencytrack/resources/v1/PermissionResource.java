@@ -133,7 +133,7 @@ public class PermissionResource extends AbstractApiResource {
                     permissions.add(permission);
                     principal.setPermissions(permissions);
                     principal = qm.persist(principal);
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added permission for user: " + principal.getName() + " / permission: " + permission.getName());
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added permission for user: " + principal.getUsername() + " / permission: " + permission.getName());
                     return Response.ok(principal).build();
                 }
                 return Response.status(Response.Status.NOT_MODIFIED).build();
@@ -180,7 +180,7 @@ public class PermissionResource extends AbstractApiResource {
                     permissions.remove(permission);
                     principal.setPermissions(permissions);
                     principal = qm.persist(principal);
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed permission for user: " + principal.getName() + " / permission: " + permission.getName());
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed permission for user: " + principal.getUsername() + " / permission: " + permission.getName());
                     return Response.ok(principal).build();
                 }
                 return Response.status(Response.Status.NOT_MODIFIED).build();

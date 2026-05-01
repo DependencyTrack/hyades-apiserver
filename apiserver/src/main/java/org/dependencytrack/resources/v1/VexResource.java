@@ -338,7 +338,7 @@ public class VexResource extends AbstractApiResource {
                             .build();
                 }
                 try (InputStream in = bodyPartEntity.getInputStream()) {
-                    final byte[] content = IOUtils.toByteArray(new BOMInputStream((in)));
+                    final byte[] content = IOUtils.toByteArray(BOMInputStream.builder().setInputStream(in).get());
                     BomResource.validate(content, project);
                     return startVexImport(project, content);
                 } catch (IOException e) {

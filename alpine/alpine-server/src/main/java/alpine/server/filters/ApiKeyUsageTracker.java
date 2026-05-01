@@ -22,7 +22,6 @@ import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import alpine.model.ApiKey;
 import alpine.persistence.AlpineQueryManager;
 import jakarta.ws.rs.ext.Provider;
-import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.glassfish.jersey.server.monitoring.ApplicationEvent;
 import org.glassfish.jersey.server.monitoring.ApplicationEventListener;
 import org.glassfish.jersey.server.monitoring.RequestEvent;
@@ -61,11 +60,11 @@ public class ApiKeyUsageTracker implements ApplicationEventListener {
     private final Lock flushLock;
 
     public ApiKeyUsageTracker() {
-        final var threadFactory = new BasicThreadFactory.Builder()
-                .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                .namingPattern("Alpine-ApiKeyUsageTracker-%d")
-                .build();
-        this.flushExecutor = Executors.newSingleThreadScheduledExecutor(threadFactory);
+        this.flushExecutor = Executors.newSingleThreadScheduledExecutor(
+                Thread.ofPlatform()
+                        .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
+                        .name("Alpine-ApiKeyUsageTracker")
+                        .factory());
         this.flushLock = new ReentrantLock();
     }
 
@@ -138,7 +137,7 @@ public class ApiKeyUsageTracker implements ApplicationEventListener {
     private void updateLastUsed(final Map<Long, Long> lastUsedByKeyId) throws SQLException {
         try (final var qm = new AlpineQueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
-            final var jdoConnection = (JDOConnection) pm.getDataStoreConnection();
+            final JDOConnection jdoConnection = pm.getDataStoreConnection();
             final var connection = (Connection) jdoConnection.getNativeConnection();
             try (final PreparedStatement ps = connection.prepareStatement("""
                     UPDATE "APIKEY" SET "LAST_USED" = ?

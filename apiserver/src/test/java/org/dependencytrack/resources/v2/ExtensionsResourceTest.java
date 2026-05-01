@@ -785,8 +785,7 @@ class ExtensionsResourceTest extends ResourceTest {
                             }
                             """),
                     config -> {
-                        final var actualConfig = (TestableRuntimeConfig) config;
-                        if (actualConfig.outcome() != null) {
+                        if (config.outcome() != null) {
                             throw new InvalidRuntimeConfigException("Boom!");
                         }
                     });

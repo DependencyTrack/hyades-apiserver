@@ -41,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.assertj.core.api.InstanceOfAssertFactories.list;
 
 public class CycloneDxValidatorTest {
 
@@ -148,7 +149,7 @@ public class CycloneDxValidatorTest {
                         }
                         """.getBytes()))
                 .withMessage("Schema validation failed")
-                .extracting(InvalidBomException::getValidationErrors).asList()
+                .extracting(InvalidBomException::getValidationErrors).asInstanceOf(list(String.class))
                 .containsExactly("""
                         $.components[0].type: does not have a value in the enumeration \
                         ["application", "framework", "library", "container", "operating-system", "device", "firmware", "file"]\
@@ -170,7 +171,7 @@ public class CycloneDxValidatorTest {
                          </bom>
                         """.getBytes()))
                 .withMessage("Schema validation failed")
-                .extracting(InvalidBomException::getValidationErrors).asList()
+                .extracting(InvalidBomException::getValidationErrors).asInstanceOf(list(String.class))
                 .containsExactly(
                         """
                                 cvc-enumeration-valid: Value 'foo' is not facet-valid with respect to enumeration \
@@ -252,12 +253,12 @@ public class CycloneDxValidatorTest {
 
         try {
             final Throwable throwable = catchThrowableOfType(
+                    InvalidBomException.class,
                     () -> validator.validate("""
                             <?xml version="1.0" encoding="UTF-8"?>
                             <!DOCTYPE bom [<!ENTITY %% sp SYSTEM "http://localhost:%d/does-not-exist/file.dtd"> %%sp;]>
                             <bom xmlns="http://cyclonedx.org/schema/bom/1.5"/>
-                            """.formatted(wireMock.port()).getBytes()),
-                    InvalidBomException.class
+                            """.formatted(wireMock.port()).getBytes())
             );
 
             // Ensure we failed for the right reason.

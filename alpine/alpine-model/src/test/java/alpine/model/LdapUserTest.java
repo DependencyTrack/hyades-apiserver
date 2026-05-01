@@ -34,6 +34,7 @@ public class LdapUserTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void usernameTest() {
         LdapUser user = new LdapUser();
         user.setUsername("myUsername");

@@ -281,6 +281,7 @@ public final class NotificationFactory {
                 .build();
     }
 
+    @SuppressWarnings("deprecation")
     public static Notification createNewVulnerabilityNotification(
             Project project,
             Component component,

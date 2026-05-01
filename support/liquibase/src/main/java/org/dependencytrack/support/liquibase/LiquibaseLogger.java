@@ -60,6 +60,7 @@ class LiquibaseLogger extends AbstractLogger {
         }
 
         @Override
+        @SuppressWarnings("rawtypes")
         public liquibase.logging.Logger getLog(final Class clazz) {
             return new LiquibaseLogger(clazz);
         }

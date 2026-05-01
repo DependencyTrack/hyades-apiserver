@@ -99,9 +99,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
 
         relay.start();
 
-        //noinspection unchecked
-        final ArgumentCaptor<Collection<CreateWorkflowRunRequest<?>>> createRunsCaptor =
-                ArgumentCaptor.forClass(Collection.class);
+        final ArgumentCaptor<Collection<CreateWorkflowRunRequest<?>>> createRunsCaptor = ArgumentCaptor.captor();
 
         await("Workflow run creation")
                 .atMost(5, TimeUnit.SECONDS)
@@ -164,9 +162,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
                 .doReturn(List.of(UUID.fromString("2777be5d-5a95-40b3-9226-311874a21bf6")))
                 .when(dexEngineMock).createRuns(anyCollection());
 
-        //noinspection unchecked
-        final ArgumentCaptor<Collection<CreateWorkflowRunRequest<?>>> requestsCaptor =
-                ArgumentCaptor.forClass(Collection.class);
+        final ArgumentCaptor<Collection<CreateWorkflowRunRequest<?>>> requestsCaptor = ArgumentCaptor.captor();
 
         await("Workflow run creation")
                 .atMost(5, TimeUnit.SECONDS)
@@ -203,9 +199,7 @@ class NotificationOutboxRelayTest extends PersistenceCapableTest {
 
         relay.start();
 
-        //noinspection unchecked
-        final ArgumentCaptor<Collection<CreateWorkflowRunRequest<?>>> createRunsCaptor =
-                ArgumentCaptor.forClass(Collection.class);
+        final ArgumentCaptor<Collection<CreateWorkflowRunRequest<?>>> createRunsCaptor = ArgumentCaptor.captor();
 
         await("Workflow run creation")
                 .atMost(5, TimeUnit.SECONDS)

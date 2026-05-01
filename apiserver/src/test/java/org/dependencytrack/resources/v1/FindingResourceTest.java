@@ -59,6 +59,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.math.BigDecimal;
@@ -78,7 +79,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -662,7 +662,7 @@ public class FindingResourceTest extends ResourceTest {
         project = qm.persist(project);
 
         doReturn(UUID.fromString("d93df5a0-f29e-4ee1-9c98-cee4dd243750"))
-                .when(DEX_ENGINE_MOCK).createRun(any(CreateWorkflowRunRequest.class));
+                .when(DEX_ENGINE_MOCK).createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any());
 
         Response response = jersey
                 .target("%s/project/%s/analyze".formatted(V1_FINDING, project.getUuid()))
