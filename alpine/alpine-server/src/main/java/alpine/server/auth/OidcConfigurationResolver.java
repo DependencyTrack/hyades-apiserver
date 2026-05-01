@@ -22,7 +22,6 @@ package alpine.server.auth;
 import alpine.common.util.ProxyConfig;
 import alpine.common.util.ProxyUtil;
 import alpine.config.AlpineConfigKeys;
-import alpine.server.cache.CacheManager;
 import com.nimbusds.oauth2.sdk.GeneralException;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
@@ -47,7 +46,8 @@ public class OidcConfigurationResolver {
             ConfigProvider.getConfig().getOptionalValue(AlpineConfigKeys.OIDC_ISSUER, String.class).orElse(null)
     );
     private static final Logger LOGGER = LoggerFactory.getLogger(OidcConfigurationResolver.class);
-    static final String CONFIGURATION_CACHE_KEY = "OIDC_CONFIGURATION";
+
+    private static volatile OidcConfiguration cachedConfiguration;
 
     private final boolean oidcEnabled;
     private final String issuer;
@@ -78,7 +78,7 @@ public class OidcConfigurationResolver {
             return null;
         }
 
-        OidcConfiguration configuration = CacheManager.getInstance().get(OidcConfiguration.class, CONFIGURATION_CACHE_KEY);
+        OidcConfiguration configuration = cachedConfiguration;
         if (configuration != null) {
             LOGGER.debug("OIDC configuration loaded from cache");
             return configuration;
@@ -116,7 +116,7 @@ public class OidcConfigurationResolver {
             configuration.setUserInfoEndpointUri(op.getUserInfoEndpointURI());
 
             LOGGER.debug("Storing OIDC configuration in cache: {}", configuration);
-            CacheManager.getInstance().put(CONFIGURATION_CACHE_KEY, configuration);
+            cachedConfiguration = configuration;
 
             return configuration;
 
@@ -124,8 +124,14 @@ public class OidcConfigurationResolver {
             LOGGER.error("Failed to fetch OIDC configuration from issuer {}", issuer, e);
             return null;
         }
+    }
 
+    static void resetCache() {
+        cachedConfiguration = null;
+    }
 
+    static void seedCache(OidcConfiguration configuration) {
+        cachedConfiguration = configuration;
     }
 
 }
