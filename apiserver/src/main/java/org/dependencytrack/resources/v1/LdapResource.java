@@ -22,7 +22,6 @@ import alpine.model.MappedLdapGroup;
 import alpine.model.Team;
 import alpine.server.auth.LdapConnectionWrapper;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.cache.CacheManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -54,7 +53,6 @@ import org.slf4j.LoggerFactory;
 import javax.naming.NamingException;
 import javax.naming.SizeLimitExceededException;
 import javax.naming.directory.DirContext;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -82,7 +80,6 @@ public class LdapResource extends AbstractApiResource {
             description = """
                     <p>
                       This API performs a pass-through query to the configured LDAP server.
-                      Search criteria results are cached using default Alpine CacheManager policy.
                     <p>
                     <p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"""
     )
@@ -104,22 +101,19 @@ public class LdapResource extends AbstractApiResource {
         if (getAlpineRequest().getFilter() == null) {
             return Response.status(Response.Status.NO_CONTENT).build();
         }
-        List<String> groups = CacheManager.getInstance().get(ArrayList.class, "ldap-group-search:" + getAlpineRequest().getFilter());
-        if (groups == null) {
-            DirContext dirContext = null;
-            try {
-                dirContext = ldap.createDirContext();
-                groups = ldap.searchForGroupName(dirContext, getAlpineRequest().getFilter());
-                CacheManager.getInstance().put("ldap-group-search:" + getAlpineRequest().getFilter(), groups);
-            } catch (SizeLimitExceededException e) {
-                LOGGER.warn("The LDAP server did not return results from the specified search criteria as the result list would have exceeded the size limit specified by the LDAP server");
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } catch (NamingException e) {
-                LOGGER.error("An error occurred attempting to retrieve a list of groups from the configured LDAP server", e);
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-            } finally {
-                ldap.closeQuietly(dirContext);
-            }
+        final List<String> groups;
+        DirContext dirContext = null;
+        try {
+            dirContext = ldap.createDirContext();
+            groups = ldap.searchForGroupName(dirContext, getAlpineRequest().getFilter());
+        } catch (SizeLimitExceededException e) {
+            LOGGER.warn("The LDAP server did not return results from the specified search criteria as the result list would have exceeded the size limit specified by the LDAP server");
+            return Response.status(Response.Status.NO_CONTENT).build();
+        } catch (NamingException e) {
+            LOGGER.error("An error occurred attempting to retrieve a list of groups from the configured LDAP server", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        } finally {
+            ldap.closeQuietly(dirContext);
         }
         final List<String> result = groups.stream()
                 .skip(getAlpineRequest().getPagination().getOffset())

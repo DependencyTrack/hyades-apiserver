@@ -196,11 +196,6 @@
             <groupId>org.eclipse.microprofile.health</groupId>
             <artifactId>microprofile-health-api</artifactId>
         </dependency>
-        <!-- Object cache -->
-        <dependency>
-            <groupId>com.github.ben-manes.caffeine</groupId>
-            <artifactId>caffeine</artifactId>
-        </dependency>
         <!-- Unit Tests -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
