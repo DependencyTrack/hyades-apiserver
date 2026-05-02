@@ -5,7 +5,7 @@
  * The function name is prefixed with odt_ (*O*WASP *D*ependency-*T*rack) to prevent
  * conflicts with the native uuidv7 function in PostgreSQL 18 and later.
  */
-CREATE FUNCTION odt_uuidv7(timestamptz DEFAULT clock_timestamp()) RETURNS uuid
+CREATE OR REPLACE FUNCTION odt_uuidv7(timestamptz DEFAULT clock_timestamp()) RETURNS uuid
 AS $$
   -- Replace the first 48 bits of a uuidv4 with the current
   -- number of milliseconds since 1970-01-01 UTC

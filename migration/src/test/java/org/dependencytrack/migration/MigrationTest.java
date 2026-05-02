@@ -16,9 +16,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.persistence.migration;
+package org.dependencytrack.migration;
 
-import org.dependencytrack.support.liquibase.MigrationExecutor;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.junit.jupiter.Container;
@@ -46,8 +45,11 @@ class MigrationTest {
         dataSource.setUser(postgresContainer.getUsername());
         dataSource.setPassword(postgresContainer.getPassword());
 
-        assertThatNoException()
-                .isThrownBy(new MigrationExecutor(dataSource, "migration/changelog-main.xml")::executeMigration);
+        final var executor = new MigrationExecutor(dataSource);
+        assertThatNoException().isThrownBy(executor::execute);
+
+        // Re-running must be a no-op (idempotent).
+        assertThatNoException().isThrownBy(executor::execute);
     }
 
 }

@@ -23,7 +23,7 @@ import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
-import org.dependencytrack.support.liquibase.MigrationExecutor;
+import org.dependencytrack.migration.MigrationExecutor;
 import org.eclipse.microprofile.config.Config;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -69,9 +69,7 @@ class DatabaseCacheTest {
         dataSourceRegistry = new DataSourceRegistry(config);
         dataSource = dataSourceRegistry.getDefault();
 
-        final var migrationExecutor = new MigrationExecutor(
-                dataSource, "migration/changelog-main.xml");
-        migrationExecutor.executeMigration();
+        new MigrationExecutor(dataSource).execute();
     }
 
     @BeforeEach
