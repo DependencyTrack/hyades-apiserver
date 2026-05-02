@@ -100,6 +100,14 @@ public final class Application {
     private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
 
     public static void main(final String[] args) {
+        SLF4JBridgeHandler.removeHandlersForRootLogger();
+        SLF4JBridgeHandler.install();
+
+        final Config config = ConfigProvider.getConfig();
+        new LoggingConfiguration(config).apply((LoggerContext) LoggerFactory.getILoggerFactory());
+
+        failOnLegacyFileSecretProperties(config);
+
         var contextPath = "/";
         var host = "0.0.0.0";
         var port = 8080;
@@ -110,14 +118,6 @@ public final class Application {
                 case "-port" -> port = Integer.parseInt(args[++i]);
             }
         }
-
-        SLF4JBridgeHandler.removeHandlersForRootLogger();
-        SLF4JBridgeHandler.install();
-
-        final Config config = ConfigProvider.getConfig();
-        new LoggingConfiguration(config).apply((LoggerContext) LoggerFactory.getILoggerFactory());
-
-        failOnLegacyFileSecretProperties(config);
 
         // Start dev services (if enabled) before anything else.
         final var devServices = new DevServices();

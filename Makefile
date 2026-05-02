@@ -95,6 +95,28 @@ test-single:
 		-Dtest="$(TEST)"
 .PHONY: test-single
 
+new-migration:
+	@if [ -z "$(NAME)" ]; then \
+		echo "Usage: make new-migration NAME=\"short description\""; \
+		exit 1; \
+	fi; \
+	slug=$$(printf '%s' "$(NAME)" | tr '[:upper:]' '[:lower:]' \
+		| sed -e 's/[^a-z0-9]\{1,\}/_/g' -e 's/^_//' -e 's/_$$//'); \
+	if [ -z "$$slug" ]; then \
+		echo "NAME must contain at least one alphanumeric character"; \
+		exit 1; \
+	fi; \
+	ts=$$(date -u +%Y%m%d%H%M); \
+	dir="migration/src/main/resources/org/dependencytrack/migration"; \
+	if ls "$$dir"/V$${ts}__*.sql >/dev/null 2>&1; then \
+		echo "A migration with version $$ts already exists; wait a minute and retry"; \
+		exit 1; \
+	fi; \
+	path="$$dir/V$${ts}__$${slug}.sql"; \
+	: > "$$path"; \
+	echo "$$path"
+.PHONY: new-migration
+
 apiserver-dev:
 	$(MVN) $(MVN_FLAGS) -q -Pquick,dev-services -pl apiserver -am verify
 .PHONY: apiserver-dev

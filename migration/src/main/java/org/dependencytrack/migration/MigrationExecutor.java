@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.dex.engine.migration;
+package org.dependencytrack.migration;
 
 import org.flywaydb.core.Flyway;
 
@@ -24,17 +24,18 @@ import javax.sql.DataSource;
 
 public final class MigrationExecutor {
 
+    private static final String LOCATION = "org/dependencytrack/migration";
+
     private final Flyway flyway;
 
-    public MigrationExecutor(final DataSource dataSource) {
+    public MigrationExecutor(DataSource dataSource) {
         this.flyway = Flyway.configure()
                 .dataSource(dataSource)
-                .baselineVersion("0.0.0")
+                .baselineVersion("202605022031")
                 .baselineOnMigrate(true)
                 .cleanDisabled(true)
                 .placeholderReplacement(false)
-                .table("dex_schema_history")
-                .locations("classpath:org/dependencytrack/dex/engine/migration")
+                .locations("classpath:" + LOCATION)
                 .loggers("slf4j")
                 .load();
     }

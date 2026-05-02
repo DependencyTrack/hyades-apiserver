@@ -23,10 +23,10 @@ import io.smallrye.config.SmallRyeConfigBuilder;
 import org.cyclonedx.proto.v1_7.Bom;
 import org.cyclonedx.proto.v1_7.Component;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
+import org.dependencytrack.migration.MigrationExecutor;
 import org.dependencytrack.plugin.api.MutableServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
-import org.dependencytrack.support.liquibase.MigrationExecutor;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
@@ -77,10 +77,7 @@ class InternalVulnAnalyzerTest {
                         .withDefaultValue("dt.datasource.default.password", POSTGRES_CONTAINER.getPassword())
                         .build());
 
-        new MigrationExecutor(
-                dataSourceRegistry.getDefault(),
-                "/migration/changelog-main.xml")
-                .executeMigration();
+        new MigrationExecutor(dataSourceRegistry.getDefault()).execute();
     }
 
     @BeforeEach

@@ -29,7 +29,6 @@
         <module>support/cyclonedx-proto</module>
         <module>support/datanucleus-plugin</module>
         <module>support/jdbi</module>
-        <module>support/liquibase</module>
         <module>support/smallrye-config-secret-handler-file</module>
         <module>support/smallrye-config-source-memory</module>
         <module>api</module>
@@ -135,7 +134,6 @@
         <lib.junit-jupiter.version>6.0.3</lib.junit-jupiter.version>
         <lib.kafka-clients.version>4.2.0</lib.kafka-clients.version>
         <lib.kotlin.version>2.3.21</lib.kotlin.version>
-        <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.logback.version>1.5.32</lib.logback.version>
         <lib.micrometer.version>1.16.5</lib.micrometer.version>
         <lib.microprofile-config.version>3.1.1</lib.microprofile-config.version>
@@ -390,12 +388,6 @@
                 <version>${lib.kotlin.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
-            </dependency>
-
-            <dependency>
-                <groupId>org.liquibase</groupId>
-                <artifactId>liquibase-core</artifactId>
-                <version>${lib.liquibase.version}</version>
             </dependency>
 
             <dependency>

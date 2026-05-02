@@ -36,7 +36,7 @@
 | [JDO](https://db.apache.org/jdo/)                                                           | Persistence specification |
 | [DataNucleus](https://www.datanucleus.org/products/accessplatform/jdo/getting_started.html) | JDO implementation        |
 | [JDBI](https://jdbi.org/)                                                                   | Database access           |
-| [Liquibase](https://www.liquibase.com/)                                                     | Database migrations       |
+| [Flyway](https://www.red-gate.com/products/flyway/)                                         | Database migrations       |
 | [MicroProfile Config](https://microprofile.io/specifications/microprofile-config/)          | Configuration             |
 | [Jetty](https://www.eclipse.org/jetty/)                                                     | Servlet container         |
 | [Apache Kafka](https://kafka.apache.org/)                                                   | Event streaming           |
@@ -135,35 +135,33 @@ Then re-run the test. Ensure your IDE is not cleaning the `target` directory bef
 
 ## Database Migrations
 
-Schema changes are managed with [Liquibase](https://www.liquibase.com/).
+Schema changes are managed with [Flyway](https://www.red-gate.com/products/flyway/).
 The API server owns the schema and applies pending migrations at startup.
 
-Changelogs live in [`migration/src/main/resources/migration`](migration/src/main/resources/migration),
-with one file per release version (`changelog-vX.Y.Z.xml`), all included from `changelog-main.xml`.
+Migrations live in [`migration/src/main/resources/org/dependencytrack/migration`](migration/src/main/resources/org/dependencytrack/migration)
+and follow Flyway's naming convention:
 
-### Adding a Changeset
+* `V<timestamp>__<description>.sql` for versioned migrations, applied once in timestamp order.
+  `<timestamp>` is `YYYYMMDDHHMM` (UTC).
+* `R__<name>.sql` for repeatable migrations (stored procedures, functions, views).
+  Reapplied automatically when their content changes.
 
-1. Create `changelog-vX.Y.Z.xml` for the current release if it doesn't exist,
-   and include it from `changelog-main.xml`.
-2. Append your changeset to the version-specific changelog.
+### Adding a Migration
 
-Conventions:
+Scaffold a new versioned migration:
 
-* `id`: `vX.Y.Z-<NUM>`, `<NUM>` starts at `1` and increments per file.
-* `author`: your GitHub username.
-* Prefer Liquibase [built-in change types](https://docs.liquibase.com/change-types/home.html).
-  Fall back to `<sql>`. Use custom changes only when computation is required.
+```shell
+make new-migration NAME="add foo column to bar"
+```
+
+This creates an empty `V<timestamp>__add_foo_column_to_bar.sql` file. Add your DDL/DML to it.
+
+For repeatable migrations, edit the relevant `R__*.sql` file directly, no new file needed.
 
 > [!IMPORTANT]
-> Do not modify changesets already merged to `main`.
-> Liquibase rejects checksum mismatches on existing deployments.
-> Add a new changeset instead.
-
-### Stored Procedures and Functions
-
-SQL files under [`migration/.../procedures`](migration/src/main/resources/migration/procedures)
-are reapplied automatically when their content changes.
-Edit the file directly, no new changeset needed.
+> Do not modify versioned migrations already merged to `main`.
+> Flyway rejects checksum mismatches on existing deployments.
+> Add a new migration instead.
 
 ## Build Cache
 

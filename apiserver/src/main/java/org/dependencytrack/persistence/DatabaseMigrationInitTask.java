@@ -20,7 +20,7 @@ package org.dependencytrack.persistence;
 
 import org.dependencytrack.init.InitTask;
 import org.dependencytrack.init.InitTaskContext;
-import org.dependencytrack.support.liquibase.MigrationExecutor;
+import org.dependencytrack.migration.MigrationExecutor;
 
 /**
  * @since 5.6.0
@@ -38,8 +38,8 @@ public final class DatabaseMigrationInitTask implements InitTask {
     }
 
     @Override
-    public void execute(InitTaskContext ctx) throws Exception {
-        new MigrationExecutor(ctx.dataSource(), "migration/changelog-main.xml").executeMigration();
+    public void execute(InitTaskContext ctx) {
+        new MigrationExecutor(ctx.dataSource()).execute();
     }
 
 }
