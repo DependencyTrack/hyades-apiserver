@@ -22,6 +22,10 @@ import alpine.common.validation.RegexSequence;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.ForeignKey;
@@ -31,10 +35,6 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -79,6 +79,7 @@ public class PolicyCondition implements Serializable {
         SWID_TAGID(PolicyViolation.Type.OPERATIONAL),
         VERSION(PolicyViolation.Type.OPERATIONAL),
         COMPONENT_HASH(PolicyViolation.Type.OPERATIONAL),
+        IS_INTERNAL(PolicyViolation.Type.OPERATIONAL),
         CWE(PolicyViolation.Type.SECURITY),
         VULNERABILITY_ID(PolicyViolation.Type.SECURITY),
         VERSION_DISTANCE(PolicyViolation.Type.OPERATIONAL),
