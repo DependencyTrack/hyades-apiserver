@@ -16,14 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.pkgmetadata.resolution.nuget;
+@NullMarked
+package org.dependencytrack.pkgmetadata.resolution.cache;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-
-import java.time.Instant;
-
-@JsonFormat(shape = JsonFormat.Shape.ARRAY)
-record NugetPackageMetadata(
-        Instant resolvedAt,
-        String latestVersion) {
-}
+import org.jspecify.annotations.NullMarked;

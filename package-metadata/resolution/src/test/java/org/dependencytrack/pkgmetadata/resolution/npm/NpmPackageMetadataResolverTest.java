@@ -119,24 +119,6 @@ class NpmPackageMetadataResolverTest {
     }
 
     @Test
-    void shouldSendGzipAcceptEncodingHeader(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
-        stubFor(get(urlPathEqualTo("/mypackage"))
-                .willReturn(aResponse().withStatus(200).withBody(ABBREVIATED_DOC)));
-
-        final var purl = PackageURLBuilder.aPackageURL()
-                .withType("npm")
-                .withName("mypackage")
-                .withVersion("1.0.0")
-                .build();
-
-        final var repo = new PackageRepository("test", wmRuntimeInfo.getHttpBaseUrl(), null, null);
-        resolver.resolve(purl, repo);
-
-        verify(getRequestedFor(urlPathEqualTo("/mypackage"))
-                .withHeader("Accept-Encoding", equalTo("gzip")));
-    }
-
-    @Test
     void shouldReturnNullWhenPackageNotFound(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
         stubFor(get(urlPathEqualTo("/nonexistent"))
                 .willReturn(aResponse().withStatus(404)));

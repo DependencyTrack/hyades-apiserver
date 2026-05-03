@@ -41,7 +41,6 @@ import org.junit.jupiter.api.Test;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Map;
 
@@ -50,12 +49,12 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.head;
+import static com.github.tomakehurst.wiremock.client.WireMock.headRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.within;
 
 @WireMockTest
 class MavenPackageMetadataResolverTest {
@@ -453,10 +452,10 @@ class MavenPackageMetadataResolverTest {
         assertThat(secondResult).isNotNull();
         assertThat(secondResult.latestVersion()).isEqualTo("2.0.0");
 
+        // Second resolution reuses the cached body without contacting upstream.
         verify(1, getRequestedFor(urlPathEqualTo("/com/example/mylib/maven-metadata.xml")));
-
-        assertThat(secondResult.resolvedAt())
-                .isCloseTo(firstResult.resolvedAt(), within(1, ChronoUnit.MILLIS));
+        verify(1, headRequestedFor(urlPathEqualTo("/com/example/mylib/2.0.0/mylib-2.0.0.jar")));
+        verify(1, getRequestedFor(urlPathEqualTo("/com/example/mylib/2.0.0/mylib-2.0.0.jar.sha1")));
     }
 
     @Test

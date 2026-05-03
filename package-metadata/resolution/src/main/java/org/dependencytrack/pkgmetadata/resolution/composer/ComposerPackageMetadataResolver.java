@@ -25,27 +25,20 @@ import com.github.packageurl.PackageURL;
 import io.github.nscuro.versatile.VersionFactory;
 import io.github.nscuro.versatile.spi.InvalidVersionException;
 import io.github.nscuro.versatile.spi.Version;
-import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageArtifactMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
-import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
-import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.cache.CachingHttpClient;
 import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -55,7 +48,6 @@ import java.util.Base64;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.regex.Pattern;
-import java.util.zip.GZIPInputStream;
 
 import static io.github.nscuro.versatile.version.KnownVersioningSchemes.SCHEME_COMPOSER;
 import static java.util.Objects.requireNonNull;
@@ -66,22 +58,13 @@ final class ComposerPackageMetadataResolver implements PackageMetadataResolver {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
     private static final String V1_METADATA_URL_PATTERN = "/p/%package%.json";
     private static final int MAX_INCLUDE_DEPTH = 3;
-    private static final int DEFAULT_MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
 
-    private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private final Cache cache;
-    private final int maxResponseBytes;
+    private final CachingHttpClient cachingHttpClient;
 
-    ComposerPackageMetadataResolver(HttpClient httpClient, ObjectMapper objectMapper, Cache cache) {
-        this(httpClient, objectMapper, cache, DEFAULT_MAX_RESPONSE_BYTES);
-    }
-
-    ComposerPackageMetadataResolver(HttpClient httpClient, ObjectMapper objectMapper, Cache cache, int maxResponseBytes) {
-        this.httpClient = httpClient;
+    ComposerPackageMetadataResolver(ObjectMapper objectMapper, CachingHttpClient cachingHttpClient) {
         this.objectMapper = objectMapper;
-        this.cache = cache;
-        this.maxResponseBytes = maxResponseBytes;
+        this.cachingHttpClient = cachingHttpClient;
     }
 
     @Override
@@ -139,21 +122,9 @@ final class ComposerPackageMetadataResolver implements PackageMetadataResolver {
     }
 
     private @Nullable JsonNode fetchRepoRoot(PackageRepository repository) throws InterruptedException {
-        final String cacheKey = CacheKeys.build(repository, "packages.json");
-        final byte[] cached = cache.get(cacheKey);
-        if (cached != null) {
-            return cached.length == 0 ? null : parseJson(cached);
-        }
-
         final String url = UrlUtils.trimTrailingSlash(repository.url()) + "/packages.json";
         final byte[] body = fetchUrl(url, repository);
-        if (body == null) {
-            cache.put(cacheKey, new byte[0]);
-            return null;
-        }
-
-        cache.put(cacheKey, body);
-        return parseJson(body);
+        return body == null ? null : parseJson(body);
     }
 
     private static boolean isPackageAvailable(JsonNode repoRoot, String packageKey) {
@@ -204,19 +175,14 @@ final class ComposerPackageMetadataResolver implements PackageMetadataResolver {
             String urlPattern,
             String packageKey,
             PackageRepository repository) throws InterruptedException {
-        final String cacheKey = CacheKeys.build(repository, packageKey);
-        byte[] body = cache.get(cacheKey);
-        if (body == null) {
-            final String url = buildUrl(repository, urlPattern, packageKey);
-            if (url == null) {
-                return null;
-            }
+        final String url = buildUrl(repository, urlPattern, packageKey);
+        if (url == null) {
+            return null;
+        }
 
-            body = fetchUrl(url, repository);
-            if (body == null) {
-                return null;
-            }
-            cache.put(cacheKey, body);
+        final byte[] body = fetchUrl(url, repository);
+        if (body == null) {
+            return null;
         }
 
         final JsonNode packageNode = parseJson(body).path("packages").path(packageKey);
@@ -248,14 +214,9 @@ final class ComposerPackageMetadataResolver implements PackageMetadataResolver {
                 continue;
             }
 
-            final String includeCacheKey = CacheKeys.build(repository, "include", includeFilename);
-            byte[] includeBody = cache.get(includeCacheKey);
+            final byte[] includeBody = fetchUrl(includeUrl, repository);
             if (includeBody == null) {
-                includeBody = fetchUrl(includeUrl, repository);
-                if (includeBody == null) {
-                    continue;
-                }
-                cache.put(includeCacheKey, includeBody);
+                continue;
             }
 
             final JsonNode includeData = parseJson(includeBody);
@@ -416,7 +377,6 @@ final class ComposerPackageMetadataResolver implements PackageMetadataResolver {
         final HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(requestUri)
                 .timeout(REQUEST_TIMEOUT)
-                .header("Accept-Encoding", "gzip")
                 .GET();
 
         if (repository.password() != null && UrlUtils.hasSameOrigin(url, repository.url())) {
@@ -432,45 +392,7 @@ final class ComposerPackageMetadataResolver implements PackageMetadataResolver {
             builder.header("Authorization", authHeaderValue);
         }
 
-        final HttpResponse<InputStream> response;
-        try {
-            response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofInputStream());
-        } catch (HttpTimeoutException e) {
-            throw new RetryableResolutionException(e);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        try (final InputStream responseBody = response.body()) {
-            if (response.statusCode() == 200) {
-                final boolean isGzip = response.headers()
-                        .firstValue("Content-Encoding")
-                        .map("gzip"::equalsIgnoreCase)
-                        .orElse(false);
-                try (final InputStream body = isGzip ? new GZIPInputStream(responseBody) : responseBody) {
-                    final byte[] data = body.readNBytes(maxResponseBytes);
-                    if (body.read() != -1) {
-                        throw new IOException(
-                                "Response body exceeds %d bytes for '%s'".formatted(
-                                        maxResponseBytes, url));
-                    }
-
-                    return data;
-                }
-            }
-
-            responseBody.transferTo(OutputStream.nullOutputStream());
-            RetryableResolutionException.throwIfRetryableError(response);
-
-            if (response.statusCode() == 404) {
-                return null;
-            }
-
-            throw new IOException(
-                    "Unexpected status code %d for %s".formatted(response.statusCode(), url));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return cachingHttpClient.get(builder, repository);
     }
 
     private JsonNode parseJson(byte[] body) {

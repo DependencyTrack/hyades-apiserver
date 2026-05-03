@@ -702,7 +702,7 @@ class ComposerPackageMetadataResolverTest {
     }
 
     @Test
-    void shouldNotCache404AndRetryOnSecondCall(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+    void shouldNegativeCache404WithinFreshnessWindow(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
         stubJsonFile("/packages.json", "composer/includes-with-metadata-url-packages.json");
         stubFor(get(urlPathEqualTo("/p2/space/cowboy.json"))
                 .willReturn(aResponse().withStatus(404)));
@@ -718,7 +718,7 @@ class ComposerPackageMetadataResolverTest {
         assertThat(resolver.resolve(purl, repo)).isNull();
         assertThat(resolver.resolve(purl, repo)).isNull();
 
-        verify(2, getRequestedFor(urlPathEqualTo("/p2/space/cowboy.json")));
+        verify(1, getRequestedFor(urlPathEqualTo("/p2/space/cowboy.json")));
         verify(1, getRequestedFor(urlPathEqualTo("/packages.json")));
     }
 
@@ -824,10 +824,12 @@ class ComposerPackageMetadataResolverTest {
     @Test
     void shouldRejectOversizedResponse(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
         final var smallResolver = new ComposerPackageMetadataResolver(
-                HttpClient.newHttpClient(),
                 new ObjectMapper(),
-                cacheManager.getCache("small-test"),
-                1024);
+                new org.dependencytrack.pkgmetadata.resolution.cache.CachingHttpClient(
+                        HttpClient.newHttpClient(),
+                        cacheManager.getCache("small-test"),
+                        java.time.Duration.ofHours(1),
+                        1024));
 
         stubJsonFile("/packages.json", "composer/packagist-v2-packages.json");
 

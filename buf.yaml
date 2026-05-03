@@ -22,6 +22,8 @@ modules:
   name: github.com/DependencyTrack/file-storage
 - path: notification/api/src/main/proto
   name: github.com/DependencyTrack/notification
+- path: package-metadata/resolution/src/main/proto
+  name: github.com/DependencyTrack/package-metadata-resolution
 - path: support/cyclonedx-proto/src/main/proto
   name: github.com/DependencyTrack/cyclonedx
 - path: proto/src/main/proto

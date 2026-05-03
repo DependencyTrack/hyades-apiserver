@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.pkgmetadata.resolution.support;
+package org.dependencytrack.pkgmetadata.resolution.cache;
 
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
 import org.junit.jupiter.api.Test;

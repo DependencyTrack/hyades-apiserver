@@ -16,17 +16,21 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.pkgmetadata.resolution.support;
+package org.dependencytrack.pkgmetadata.resolution.cache;
 
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
 import org.jspecify.annotations.Nullable;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.StringJoiner;
 
+/**
+ * @since 5.7.0
+ */
 public final class CacheKeys {
 
     private CacheKeys() {
@@ -48,7 +52,22 @@ public final class CacheKeys {
         for (final String segment : segments) {
             joiner.add(segment);
         }
-        
+
+        return joiner.toString();
+    }
+
+    public static String forRequest(String method, URI uri, @Nullable PackageRepository repository) {
+        final var joiner = new StringJoiner(":");
+        joiner.add(method);
+        joiner.add(uri.toString());
+
+        if (repository != null) {
+            final String credentialHash = hashCredentials(repository);
+            if (credentialHash != null) {
+                joiner.add(credentialHash);
+            }
+        }
+
         return joiner.toString();
     }
 

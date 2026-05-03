@@ -21,24 +21,19 @@ package org.dependencytrack.pkgmetadata.resolution.cpan;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.pkgmetadata.resolution.api.HashAlgorithm;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageArtifactMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
-import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
-import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.cache.CachingHttpClient;
 import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -52,14 +47,12 @@ final class CpanPackageMetadataResolver implements PackageMetadataResolver {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
 
-    private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private final Cache cache;
+    private final CachingHttpClient cachingHttpClient;
 
-    CpanPackageMetadataResolver(HttpClient httpClient, ObjectMapper objectMapper, Cache cache) {
-        this.httpClient = httpClient;
+    CpanPackageMetadataResolver(ObjectMapper objectMapper, CachingHttpClient cachingHttpClient) {
         this.objectMapper = objectMapper;
-        this.cache = cache;
+        this.cachingHttpClient = cachingHttpClient;
     }
 
     @Override
@@ -67,15 +60,16 @@ final class CpanPackageMetadataResolver implements PackageMetadataResolver {
             throws InterruptedException {
         requireNonNull(repository, "repository must not be null");
 
-        final String cacheKey = CacheKeys.build(repository, purl.getName());
+        final String url = UrlUtils.join(repository.url(), "v1", "release", purl.getName());
 
-        byte[] body = cache.get(cacheKey);
+        final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(REQUEST_TIMEOUT)
+                .GET();
+
+        final byte[] body = cachingHttpClient.get(requestBuilder, repository);
         if (body == null) {
-            body = fetchRelease(purl.getName(), repository);
-            if (body == null) {
-                return null;
-            }
-            cache.put(cacheKey, body);
+            return null;
         }
 
         final JsonNode root = parseJson(body);
@@ -94,36 +88,6 @@ final class CpanPackageMetadataResolver implements PackageMetadataResolver {
         }
 
         return new PackageMetadata(latestVersion, resolvedAt, artifactMetadata);
-    }
-
-    private byte @Nullable [] fetchRelease(String name, PackageRepository repository)
-            throws InterruptedException {
-        final String url = UrlUtils.join(repository.url(), "v1", "release", name);
-
-        final HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .timeout(REQUEST_TIMEOUT)
-                .GET()
-                .build();
-
-        final HttpResponse<byte[]> response;
-        try {
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-        } catch (HttpTimeoutException e) {
-            throw new RetryableResolutionException(e);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        if (response.statusCode() == 404) {
-            return null;
-        }
-        RetryableResolutionException.throwIfRetryableError(response);
-        if (response.statusCode() != 200) {
-            throw new UncheckedIOException(new IOException(
-                    "Unexpected status code %d for %s".formatted(response.statusCode(), url)));
-        }
-        return response.body();
     }
 
     private static @Nullable PackageArtifactMetadata extractArtifactMetadata(JsonNode root, Instant resolvedAt) {
@@ -157,6 +121,5 @@ final class CpanPackageMetadataResolver implements PackageMetadataResolver {
             throw new UncheckedIOException(e);
         }
     }
-
 
 }
