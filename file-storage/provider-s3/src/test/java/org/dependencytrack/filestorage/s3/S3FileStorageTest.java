@@ -163,7 +163,7 @@ class S3FileStorageTest {
 
                 assertThatExceptionOfType(IOException.class)
                         .isThrownBy(() -> storage.get(fileMetadata))
-                        .withCauseInstanceOf(ConnectException.class);
+                        .withRootCauseInstanceOf(ConnectException.class);
             }
         }
 
@@ -176,7 +176,7 @@ class S3FileStorageTest {
 
                 assertThatExceptionOfType(IOException.class)
                         .isThrownBy(() -> storage.delete(fileMetadata))
-                        .withCauseInstanceOf(ConnectException.class);
+                        .withRootCauseInstanceOf(ConnectException.class);
             }
         }
 
