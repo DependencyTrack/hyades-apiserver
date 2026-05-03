@@ -35,13 +35,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -207,6 +212,28 @@ class GemPackageMetadataResolverTest {
         final var repo = new PackageRepository("rubygems", wmRuntimeInfo.getHttpBaseUrl(), null, null);
         assertThatExceptionOfType(RetryableResolutionException.class)
                 .isThrownBy(() -> resolver.resolve(purl, repo));
+    }
+
+    @Test
+    void shouldUseBasicAuthWhenUsernameAndPasswordProvided(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        stubFor(get(urlPathEqualTo("/api/v1/versions/rails.json"))
+                .willReturn(aResponse().withStatus(200).withBody(/* language=JSON */ """
+                        [{"number": "7.1.3", "created_at": "2024-01-15T10:30:00Z"}]
+                        """)));
+
+        final var purl = PackageURLBuilder.aPackageURL()
+                .withType("gem")
+                .withName("rails")
+                .withVersion("7.1.3")
+                .build();
+
+        final var repo = new PackageRepository("rubygems", wmRuntimeInfo.getHttpBaseUrl(), "user", "secret");
+        assertThat(resolver.resolve(purl, repo)).isNotNull();
+
+        final String expected = "Basic " + Base64.getEncoder().encodeToString(
+                "user:secret".getBytes(StandardCharsets.UTF_8));
+        verify(getRequestedFor(urlPathEqualTo("/api/v1/versions/rails.json"))
+                .withHeader("Authorization", equalTo(expected)));
     }
 
 }

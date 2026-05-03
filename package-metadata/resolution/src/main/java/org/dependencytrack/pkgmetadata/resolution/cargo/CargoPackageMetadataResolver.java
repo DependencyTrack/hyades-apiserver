@@ -40,8 +40,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -134,12 +136,13 @@ final class CargoPackageMetadataResolver implements PackageMetadataResolver {
             throws InterruptedException {
         final String url = UrlUtils.join(repository.url(), "api", "v1", "crates", name);
 
-        final HttpRequest request = HttpRequest.newBuilder()
+        final HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Accept-Encoding", "gzip")
                 .timeout(REQUEST_TIMEOUT)
-                .GET()
-                .build();
+                .GET();
+        maybeApplyAuth(builder, repository);
+        final HttpRequest request = builder.build();
 
         final HttpResponse<InputStream> response;
         try {
@@ -193,6 +196,23 @@ final class CargoPackageMetadataResolver implements PackageMetadataResolver {
                 crateMetadata.latestVersion(),
                 crateMetadata.resolvedAt(),
                 artifactMetadata);
+    }
+
+    private static void maybeApplyAuth(HttpRequest.Builder builder, PackageRepository repository) {
+        if (repository.password() == null) {
+            return;
+        }
+
+        final String authHeaderValue;
+        if (repository.username() != null) {
+            final String credentials = repository.username() + ":" + repository.password();
+            authHeaderValue = "Basic " + Base64.getEncoder().encodeToString(
+                    credentials.getBytes(StandardCharsets.UTF_8));
+        } else {
+            authHeaderValue = "Bearer " + repository.password();
+        }
+
+        builder.header("Authorization", authHeaderValue);
     }
 
     private byte[] serialize(Object value) {

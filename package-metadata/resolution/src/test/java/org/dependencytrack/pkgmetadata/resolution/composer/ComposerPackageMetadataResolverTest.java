@@ -39,10 +39,13 @@ import org.junit.jupiter.api.Test;
 
 import java.io.UncheckedIOException;
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 
 import static com.github.packageurl.PackageURLBuilder.aPackageURL;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
@@ -842,6 +845,50 @@ class ComposerPackageMetadataResolverTest {
         final var repo = new PackageRepository("packagist", wmRuntimeInfo.getHttpBaseUrl(), null, null);
         assertThatExceptionOfType(UncheckedIOException.class)
                 .isThrownBy(() -> smallResolver.resolve(purl, repo));
+    }
+
+    @Test
+    void shouldUseBasicAuthWhenUsernameAndPasswordProvided(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        stubJsonFile("/packages.json", "composer/packagist-v2-packages.json");
+        stubJsonFile("/p2/typo3/class-alias-loader.json", "composer/typo3-class-alias-loader.json");
+
+        final var purl = aPackageURL()
+                .withType("composer")
+                .withNamespace("typo3")
+                .withName("class-alias-loader")
+                .withVersion("v1.1.0")
+                .build();
+
+        final var repo = new PackageRepository("packagist", wmRuntimeInfo.getHttpBaseUrl(), "user", "secret");
+        assertThat(resolver.resolve(purl, repo)).isNotNull();
+
+        final String expected = "Basic " + Base64.getEncoder().encodeToString(
+                "user:secret".getBytes(StandardCharsets.UTF_8));
+        verify(getRequestedFor(urlPathEqualTo("/packages.json"))
+                .withHeader("Authorization", equalTo(expected)));
+        verify(getRequestedFor(urlPathEqualTo("/p2/typo3/class-alias-loader.json"))
+                .withHeader("Authorization", equalTo(expected)));
+    }
+
+    @Test
+    void shouldUseBearerAuthWhenOnlyPasswordProvided(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        stubJsonFile("/packages.json", "composer/packagist-v2-packages.json");
+        stubJsonFile("/p2/typo3/class-alias-loader.json", "composer/typo3-class-alias-loader.json");
+
+        final var purl = aPackageURL()
+                .withType("composer")
+                .withNamespace("typo3")
+                .withName("class-alias-loader")
+                .withVersion("v1.1.0")
+                .build();
+
+        final var repo = new PackageRepository("packagist", wmRuntimeInfo.getHttpBaseUrl(), null, "token");
+        assertThat(resolver.resolve(purl, repo)).isNotNull();
+
+        verify(getRequestedFor(urlPathEqualTo("/packages.json"))
+                .withHeader("Authorization", equalTo("Bearer token")));
+        verify(getRequestedFor(urlPathEqualTo("/p2/typo3/class-alias-loader.json"))
+                .withHeader("Authorization", equalTo("Bearer token")));
     }
 
     private static void stubJsonFile(String path, String bodyFile) {

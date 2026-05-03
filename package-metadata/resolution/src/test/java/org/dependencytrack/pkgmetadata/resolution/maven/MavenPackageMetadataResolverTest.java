@@ -39,11 +39,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
 import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.head;
@@ -482,6 +485,64 @@ class MavenPackageMetadataResolverTest {
         assertThat(result).isNotNull();
         assertThat(result.latestVersion()).isEqualTo("2.0.0");
         assertThat(result.artifactMetadata()).isNull();
+    }
+
+    @Test
+    void shouldUseBasicAuthWhenUsernameAndPasswordProvided(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        stubFor(get(urlPathEqualTo("/com/example/mylib/maven-metadata.xml"))
+                .willReturn(aResponse().withStatus(200).withBody(/* language=XML */ """
+                        <?xml version="1.0" encoding="UTF-8"?>
+                        <metadata>
+                          <versioning><latest>1.0.0</latest></versioning>
+                        </metadata>
+                        """)));
+        stubFor(head(urlPathEqualTo("/com/example/mylib/1.0.0/mylib-1.0.0.jar"))
+                .willReturn(aResponse().withStatus(404)));
+        stubFor(get(urlPathEqualTo("/com/example/mylib/1.0.0/mylib-1.0.0.jar.sha1"))
+                .willReturn(aResponse().withStatus(404)));
+
+        final var purl = PackageURLBuilder.aPackageURL()
+                .withType("maven")
+                .withNamespace("com.example")
+                .withName("mylib")
+                .withVersion("1.0.0")
+                .build();
+
+        final var repo = new PackageRepository("test", wmRuntimeInfo.getHttpBaseUrl(), "user", "secret");
+        assertThat(resolver.resolve(purl, repo)).isNotNull();
+
+        final String expected = "Basic " + Base64.getEncoder().encodeToString(
+                "user:secret".getBytes(StandardCharsets.UTF_8));
+        verify(getRequestedFor(urlPathEqualTo("/com/example/mylib/maven-metadata.xml"))
+                .withHeader("Authorization", equalTo(expected)));
+    }
+
+    @Test
+    void shouldUseBearerAuthWhenOnlyPasswordProvided(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        stubFor(get(urlPathEqualTo("/com/example/mylib/maven-metadata.xml"))
+                .willReturn(aResponse().withStatus(200).withBody(/* language=XML */ """
+                        <?xml version="1.0" encoding="UTF-8"?>
+                        <metadata>
+                          <versioning><latest>1.0.0</latest></versioning>
+                        </metadata>
+                        """)));
+        stubFor(head(urlPathEqualTo("/com/example/mylib/1.0.0/mylib-1.0.0.jar"))
+                .willReturn(aResponse().withStatus(404)));
+        stubFor(get(urlPathEqualTo("/com/example/mylib/1.0.0/mylib-1.0.0.jar.sha1"))
+                .willReturn(aResponse().withStatus(404)));
+
+        final var purl = PackageURLBuilder.aPackageURL()
+                .withType("maven")
+                .withNamespace("com.example")
+                .withName("mylib")
+                .withVersion("1.0.0")
+                .build();
+
+        final var repo = new PackageRepository("test", wmRuntimeInfo.getHttpBaseUrl(), null, "token");
+        assertThat(resolver.resolve(purl, repo)).isNotNull();
+
+        verify(getRequestedFor(urlPathEqualTo("/com/example/mylib/maven-metadata.xml"))
+                .withHeader("Authorization", equalTo("Bearer token")));
     }
 
 }

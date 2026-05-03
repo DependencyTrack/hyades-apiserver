@@ -205,7 +205,7 @@ public class RepositoryResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createRepositoryTest() {
+    public void createRepositoryWithBasicAuthTest() {
         initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE);
 
         Response response = jersey
@@ -236,6 +236,41 @@ public class RepositoryResourceTest extends ResourceTest {
                   "authenticationRequired": true,
                   "username": "testuser",
                   "password": "testPassword",
+                  "uuid": "${json-unit.any-string}"
+                }
+                """);
+    }
+
+    @Test
+    public void createRepositoryWithBearerAuthTest() {
+        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION_CREATE);
+
+        Response response = jersey
+                .target(V1_REPOSITORY)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(/* language=JSON */ """
+                        {
+                          "identifier": "test2",
+                          "url": "https://www.foobar2.com",
+                          "internal": true,
+                          "authenticationRequired": true,
+                          "password": "letoken",
+                          "enabled": true,
+                          "type": "MAVEN"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type": "MAVEN",
+                  "identifier": "test2",
+                  "url": "https://www.foobar2.com",
+                  "resolutionOrder": "${json-unit.any-number}",
+                  "enabled": true,
+                  "internal": true,
+                  "authenticationRequired": true,
+                  "password": "letoken",
                   "uuid": "${json-unit.any-string}"
                 }
                 """);

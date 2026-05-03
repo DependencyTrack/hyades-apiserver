@@ -40,9 +40,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.util.Base64;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
@@ -124,11 +126,12 @@ final class GemPackageMetadataResolver implements PackageMetadataResolver {
             throws InterruptedException {
         final String url = UrlUtils.join(repository.url(), "api", "v1", "versions", name + ".json");
 
-        final HttpRequest request = HttpRequest.newBuilder()
+        final HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(REQUEST_TIMEOUT)
-                .GET()
-                .build();
+                .GET();
+        maybeApplyAuth(builder, repository);
+        final HttpRequest request = builder.build();
 
         final HttpResponse<byte[]> response;
         try {
@@ -148,6 +151,20 @@ final class GemPackageMetadataResolver implements PackageMetadataResolver {
                     "Unexpected status code %d for %s".formatted(response.statusCode(), url)));
         }
         return response.body();
+    }
+
+    private static void maybeApplyAuth(HttpRequest.Builder builder, PackageRepository repository) {
+        // NB: Private gem mirrors (Gemstash, Gemfury, GitLab, Artifactory) use Basic auth.
+        // rubygems.org uses a raw API key header, but its read endpoints don't require auth.
+        if (repository.username() == null || repository.password() == null) {
+            return;
+        }
+
+        final String credentials = repository.username() + ":" + repository.password();
+        builder.header(
+                "Authorization",
+                "Basic " + Base64.getEncoder().encodeToString(
+                        credentials.getBytes(StandardCharsets.UTF_8)));
     }
 
     private JsonNode parseJson(byte[] body) {

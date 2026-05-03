@@ -419,13 +419,17 @@ final class ComposerPackageMetadataResolver implements PackageMetadataResolver {
                 .header("Accept-Encoding", "gzip")
                 .GET();
 
-        if (repository.username() != null && repository.password() != null
-                && UrlUtils.hasSameOrigin(url, repository.url())) {
-            final String credentials = repository.username() + ":" + repository.password();
-            builder.header(
-                    "Authorization",
-                    "Basic " + Base64.getEncoder().encodeToString(
-                            credentials.getBytes(StandardCharsets.UTF_8)));
+        if (repository.password() != null && UrlUtils.hasSameOrigin(url, repository.url())) {
+            final String authHeaderValue;
+            if (repository.username() != null) {
+                final String credentials = repository.username() + ":" + repository.password();
+                authHeaderValue = "Basic " + Base64.getEncoder().encodeToString(
+                        credentials.getBytes(StandardCharsets.UTF_8));
+            } else {
+                authHeaderValue = "Bearer " + repository.password();
+            }
+
+            builder.header("Authorization", authHeaderValue);
         }
 
         final HttpResponse<InputStream> response;

@@ -36,13 +36,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -313,6 +318,42 @@ class CargoPackageMetadataResolverTest {
         final PackageMetadata result = resolver.resolve(purl, repo);
 
         assertThat(result).isNull();
+    }
+
+    @Test
+    void shouldUseBasicAuthWhenUsernameAndPasswordProvided(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        stubFor(get(urlPathEqualTo("/api/v1/crates/serde"))
+                .willReturn(aResponse().withStatus(200).withBody(/* language=JSON */ """
+                        {"crate": {"newest_version": "1.0.0"}, "versions": []}
+                        """)));
+
+        final var purl = PackageURLBuilder.aPackageURL()
+                .withType("cargo").withName("serde").withVersion("1.0.0").build();
+
+        final var repo = new PackageRepository("crates", wmRuntimeInfo.getHttpBaseUrl(), "user", "secret");
+        assertThat(resolver.resolve(purl, repo)).isNotNull();
+
+        final String expected = "Basic " + Base64.getEncoder().encodeToString(
+                "user:secret".getBytes(StandardCharsets.UTF_8));
+        verify(getRequestedFor(urlPathEqualTo("/api/v1/crates/serde"))
+                .withHeader("Authorization", equalTo(expected)));
+    }
+
+    @Test
+    void shouldUseBearerAuthWhenOnlyPasswordProvided(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        stubFor(get(urlPathEqualTo("/api/v1/crates/serde"))
+                .willReturn(aResponse().withStatus(200).withBody(/* language=JSON */ """
+                        {"crate": {"newest_version": "1.0.0"}, "versions": []}
+                        """)));
+
+        final var purl = PackageURLBuilder.aPackageURL()
+                .withType("cargo").withName("serde").withVersion("1.0.0").build();
+
+        final var repo = new PackageRepository("crates", wmRuntimeInfo.getHttpBaseUrl(), null, "token");
+        assertThat(resolver.resolve(purl, repo)).isNotNull();
+
+        verify(getRequestedFor(urlPathEqualTo("/api/v1/crates/serde"))
+                .withHeader("Authorization", equalTo("Bearer token")));
     }
 
 }
