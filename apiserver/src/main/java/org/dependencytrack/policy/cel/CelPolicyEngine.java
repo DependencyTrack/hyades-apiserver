@@ -41,6 +41,7 @@ import org.dependencytrack.policy.cel.compat.CoordinatesCelPolicyScriptSourceBui
 import org.dependencytrack.policy.cel.compat.CpeCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.CweCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.EpssCelPolicyScriptSourceBuilder;
+import org.dependencytrack.policy.cel.compat.InternalStatusCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.LicenseCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.LicenseGroupCelPolicyScriptSourceBuilder;
 import org.dependencytrack.policy.cel.compat.PackageUrlCelPolicyScriptSourceBuilder;
@@ -84,26 +85,23 @@ import static org.dependencytrack.policy.cel.CelPolicyTypes.TYPE_VULNERABILITY;
 public final class CelPolicyEngine {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CelPolicyEngine.class);
-    private static final Map<Subject, CelPolicyScriptSourceBuilder> SCRIPT_BUILDERS;
-
-    static {
-        SCRIPT_BUILDERS = new HashMap<>();
-        SCRIPT_BUILDERS.put(Subject.CPE, new CpeCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.COMPONENT_HASH, new ComponentHashCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.COORDINATES, new CoordinatesCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.CWE, new CweCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.EXPRESSION, PolicyCondition::getValue);
-        SCRIPT_BUILDERS.put(Subject.LICENSE, new LicenseCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.LICENSE_GROUP, new LicenseGroupCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.PACKAGE_URL, new PackageUrlCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.SEVERITY, new SeverityCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.SWID_TAGID, new SwidTagIdCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.VULNERABILITY_ID, new VulnerabilityIdCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.VERSION, new VersionCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.AGE, new ComponentAgeCelPolicyScriptSourceBuilder());
-        SCRIPT_BUILDERS.put(Subject.VERSION_DISTANCE, new VersionDistanceCelScriptBuilder());
-        SCRIPT_BUILDERS.put(Subject.EPSS, new EpssCelPolicyScriptSourceBuilder());
-    }
+    private static final Map<Subject, CelPolicyScriptSourceBuilder> SCRIPT_BUILDERS = Map.ofEntries(
+            Map.entry(Subject.AGE, new ComponentAgeCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.COMPONENT_HASH, new ComponentHashCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.COORDINATES, new CoordinatesCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.CPE, new CpeCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.CWE, new CweCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.EPSS, new EpssCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.EXPRESSION, PolicyCondition::getValue),
+            Map.entry(Subject.IS_INTERNAL, new InternalStatusCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.LICENSE, new LicenseCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.LICENSE_GROUP, new LicenseGroupCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.PACKAGE_URL, new PackageUrlCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.SEVERITY, new SeverityCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.SWID_TAGID, new SwidTagIdCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.VERSION, new VersionCelPolicyScriptSourceBuilder()),
+            Map.entry(Subject.VERSION_DISTANCE, new VersionDistanceCelScriptBuilder()),
+            Map.entry(Subject.VULNERABILITY_ID, new VulnerabilityIdCelPolicyScriptSourceBuilder()));
 
     private final CelPolicyCompiler scriptHost;
 
