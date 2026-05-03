@@ -69,7 +69,7 @@ RUN mkdir -p ${APP_DIR} ${DATA_DIR} \
     && adduser -S -D -G dtrack -H -h ${DATA_DIR} -g "dtrack user" -s /bin/false -u ${UID} dtrack \
     && chown -R dtrack:0 ${DATA_DIR} ${APP_DIR} \
     && chmod -R g=u ${DATA_DIR} ${APP_DIR} \
-    && apk add --no-cache gcompat tzdata curl
+    && apk add --no-cache curl gcompat tini tzdata
 
 WORKDIR ${APP_DIR}
 USER ${UID}
@@ -77,6 +77,8 @@ USER ${UID}
 COPY --from=jre-build --chown=${UID}:0 /work/jre ${JAVA_HOME}
 COPY --chown=${UID}:0 ./target/lib/ ./lib/
 COPY --chown=${UID}:0 ./target/dependency-track-apiserver.jar ./src/main/docker/logback-json.xml ./
+
+ENTRYPOINT ["/sbin/tini", "--"]
 
 # Launch Dependency-Track
 CMD [ \
@@ -97,7 +99,7 @@ EXPOSE 8080
 EXPOSE 9000
 
 # Health check against the management port
-HEALTHCHECK --interval=30s --start-period=60s --timeout=3s CMD [ \
+HEALTHCHECK --interval=30s --start-period=60s --timeout=5s CMD [ \
     "/bin/sh", "-c", \
     "curl -f -s --max-time 3 --noproxy '*' -o /dev/null http://127.0.0.1:9000/health" \
 ]
