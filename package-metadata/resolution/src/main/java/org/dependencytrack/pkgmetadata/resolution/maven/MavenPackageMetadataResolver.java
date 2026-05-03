@@ -290,16 +290,25 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
                 .uri(uri)
                 .method(method, HttpRequest.BodyPublishers.noBody())
                 .timeout(REQUEST_TIMEOUT);
+        maybeApplyAuth(builder, repository);
+        return builder.build();
+    }
 
-        if (repository.username() != null && repository.password() != null) {
-            final String credentials = repository.username() + ":" + repository.password();
-            builder.header(
-                    "Authorization",
-                    "Basic " + Base64.getEncoder().encodeToString(
-                            credentials.getBytes(StandardCharsets.UTF_8)));
+    private static void maybeApplyAuth(HttpRequest.Builder builder, PackageRepository repository) {
+        if (repository.password() == null) {
+            return;
         }
 
-        return builder.build();
+        final String authHeaderValue;
+        if (repository.username() != null) {
+            final String credentials = repository.username() + ":" + repository.password();
+            authHeaderValue = "Basic " + Base64.getEncoder().encodeToString(
+                    credentials.getBytes(StandardCharsets.UTF_8));
+        } else {
+            authHeaderValue = "Bearer " + repository.password();
+        }
+
+        builder.header("Authorization", authHeaderValue);
     }
 
     private static String formatArtifactFileName(PackageURL purl) {

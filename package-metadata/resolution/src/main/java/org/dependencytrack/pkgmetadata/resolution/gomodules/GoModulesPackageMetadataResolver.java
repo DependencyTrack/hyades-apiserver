@@ -38,9 +38,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.util.Base64;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
@@ -116,11 +118,12 @@ final class GoModulesPackageMetadataResolver implements PackageMetadataResolver 
         final String[] moduleSegments = modulePath.split("/");
         final String url = UrlUtils.join(UrlUtils.join(repository.url(), moduleSegments), "@latest");
 
-        final HttpRequest request = HttpRequest.newBuilder()
+        final HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(REQUEST_TIMEOUT)
-                .GET()
-                .build();
+                .GET();
+        maybeApplyAuth(builder, repository);
+        final HttpRequest request = builder.build();
 
         final HttpResponse<byte[]> response;
         try {
@@ -150,11 +153,12 @@ final class GoModulesPackageMetadataResolver implements PackageMetadataResolver 
         final String url = UrlUtils.join(
                 UrlUtils.join(repository.url(), moduleSegments), "@v", version + ".info");
 
-        final HttpRequest request = HttpRequest.newBuilder()
+        final HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(REQUEST_TIMEOUT)
-                .GET()
-                .build();
+                .GET();
+        maybeApplyAuth(builder, repository);
+        final HttpRequest request = builder.build();
 
         final HttpResponse<byte[]> response;
         try {
@@ -170,6 +174,23 @@ final class GoModulesPackageMetadataResolver implements PackageMetadataResolver 
             return null;
         }
         return response.body();
+    }
+
+    private static void maybeApplyAuth(HttpRequest.Builder builder, PackageRepository repository) {
+        if (repository.password() == null) {
+            return;
+        }
+
+        final String authHeaderValue;
+        if (repository.username() != null) {
+            final String credentials = repository.username() + ":" + repository.password();
+            authHeaderValue = "Basic " + Base64.getEncoder().encodeToString(
+                    credentials.getBytes(StandardCharsets.UTF_8));
+        } else {
+            authHeaderValue = "Bearer " + repository.password();
+        }
+
+        builder.header("Authorization", authHeaderValue);
     }
 
     private static @Nullable PackageArtifactMetadata extractArtifactMetadata(JsonNode root, Instant resolvedAt) {

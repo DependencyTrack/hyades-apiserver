@@ -35,13 +35,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -194,6 +199,50 @@ class GoModulesPackageMetadataResolverTest {
         final var repo = new PackageRepository("go-proxy", wmRuntimeInfo.getHttpBaseUrl(), null, null);
         assertThatExceptionOfType(RetryableResolutionException.class)
                 .isThrownBy(() -> resolver.resolve(purl, repo));
+    }
+
+    @Test
+    void shouldUseBasicAuthWhenUsernameAndPasswordProvided(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        stubFor(get(urlPathEqualTo("/golang.org/x/text/@latest"))
+                .willReturn(aResponse().withStatus(200).withBody(/* language=JSON */ """
+                        {"Version": "v1.0.0", "Time": "2024-01-01T00:00:00Z"}
+                        """)));
+
+        final var purl = PackageURLBuilder.aPackageURL()
+                .withType("golang")
+                .withNamespace("golang.org/x")
+                .withName("text")
+                .withVersion("v1.0.0")
+                .build();
+
+        final var repo = new PackageRepository("go-proxy", wmRuntimeInfo.getHttpBaseUrl(), "user", "secret");
+        assertThat(resolver.resolve(purl, repo)).isNotNull();
+
+        final String expected = "Basic " + Base64.getEncoder().encodeToString(
+                "user:secret".getBytes(StandardCharsets.UTF_8));
+        verify(getRequestedFor(urlPathEqualTo("/golang.org/x/text/@latest"))
+                .withHeader("Authorization", equalTo(expected)));
+    }
+
+    @Test
+    void shouldUseBearerAuthWhenOnlyPasswordProvided(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        stubFor(get(urlPathEqualTo("/golang.org/x/text/@latest"))
+                .willReturn(aResponse().withStatus(200).withBody(/* language=JSON */ """
+                        {"Version": "v1.0.0", "Time": "2024-01-01T00:00:00Z"}
+                        """)));
+
+        final var purl = PackageURLBuilder.aPackageURL()
+                .withType("golang")
+                .withNamespace("golang.org/x")
+                .withName("text")
+                .withVersion("v1.0.0")
+                .build();
+
+        final var repo = new PackageRepository("go-proxy", wmRuntimeInfo.getHttpBaseUrl(), null, "token");
+        assertThat(resolver.resolve(purl, repo)).isNotNull();
+
+        verify(getRequestedFor(urlPathEqualTo("/golang.org/x/text/@latest"))
+                .withHeader("Authorization", equalTo("Bearer token")));
     }
 
 }
