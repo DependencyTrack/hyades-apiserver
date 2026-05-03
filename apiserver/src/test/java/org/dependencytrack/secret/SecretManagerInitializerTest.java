@@ -22,7 +22,6 @@ import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import org.dependencytrack.secret.management.SecretManager;
-import org.dependencytrack.secret.management.cache.CachingSecretManager;
 import org.eclipse.microprofile.config.Config;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -47,10 +46,9 @@ public class SecretManagerInitializerTest {
     }
 
     @Test
-    public void shouldInitializeSecretManagerWithoutCaching() {
+    public void shouldInitializeSecretManager() {
         final Config config = new SmallRyeConfigBuilder()
                 .withDefaultValue("dt.secret-management.provider", "test")
-                .withDefaultValue("dt.secret-management.cache.enabled", "false")
                 .build();
 
         final var servletContextMock = mock(ServletContext.class);
@@ -64,37 +62,8 @@ public class SecretManagerInitializerTest {
                 secretManagerCaptor.capture());
         assertThat(SecretManagerInitializer.secretManager).isEqualTo(secretManagerCaptor.getValue());
 
-        assertThat(secretManagerCaptor.getValue())
-                .isInstanceOf(TestSecretManager.class)
-                .isNotInstanceOf(CachingSecretManager.class);
+        assertThat(secretManagerCaptor.getValue()).isInstanceOf(TestSecretManager.class);
         assertThat(secretManagerCaptor.getValue().name()).isEqualTo("test");
-    }
-
-    @Test
-    public void shouldInitializeSecretManagerWithCaching() {
-        final Config config = new SmallRyeConfigBuilder()
-                .withDefaultValue("dt.secret-management.provider", "test")
-                .withDefaultValue("dt.secret-management.cache.enabled", "true")
-                .withDefaultValue("dt.secret-management.cache.expire-after-write-ms", "60000")
-                .withDefaultValue("dt.secret-management.cache.max-size", "100")
-                .build();
-
-        final var servletContextMock = mock(ServletContext.class);
-
-        new SecretManagerInitializer(config).contextInitialized(
-                new ServletContextEvent(servletContextMock));
-
-        final var secretManagerCaptor = ArgumentCaptor.forClass(SecretManager.class);
-        verify(servletContextMock).setAttribute(
-                eq(SecretManager.class.getName()),
-                secretManagerCaptor.capture());
-
-        assertThat(secretManagerCaptor.getValue()).isInstanceOf(CachingSecretManager.class);
-        assertThat(SecretManagerInitializer.secretManager).isEqualTo(secretManagerCaptor.getValue());
-
-        final var cachingManager = (CachingSecretManager) secretManagerCaptor.getValue();
-        assertThat(cachingManager.name()).isEqualTo("test");
-        assertThat(cachingManager.getDelegate()).isInstanceOf(TestSecretManager.class);
     }
 
     @Test
