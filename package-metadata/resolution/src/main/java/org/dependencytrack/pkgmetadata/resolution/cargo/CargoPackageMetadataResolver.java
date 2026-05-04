@@ -20,52 +20,39 @@ package org.dependencytrack.pkgmetadata.resolution.cargo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.pkgmetadata.resolution.api.HashAlgorithm;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageArtifactMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
-import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
+import org.dependencytrack.pkgmetadata.resolution.cache.CachingHttpClient;
 import org.dependencytrack.pkgmetadata.resolution.cargo.CargoCrateDocument.Version;
-import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
 import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.zip.GZIPInputStream;
 
-import static java.io.OutputStream.nullOutputStream;
 import static java.util.Objects.requireNonNull;
 
 final class CargoPackageMetadataResolver implements PackageMetadataResolver {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
-    private static final String PACKAGE_CACHE_KEY_SUFFIX = ":latest";
-    private static final String VERSION_CACHE_KEY_SUFFIX = ":v:";
 
-    private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private final Cache cache;
+    private final CachingHttpClient cachingHttpClient;
 
-    CargoPackageMetadataResolver(HttpClient httpClient, ObjectMapper objectMapper, Cache cache) {
-        this.httpClient = httpClient;
+    CargoPackageMetadataResolver(ObjectMapper objectMapper, CachingHttpClient cachingHttpClient) {
         this.objectMapper = objectMapper;
-        this.cache = cache;
+        this.cachingHttpClient = cachingHttpClient;
     }
 
     @Override
@@ -74,26 +61,20 @@ final class CargoPackageMetadataResolver implements PackageMetadataResolver {
             @Nullable PackageRepository repository) throws InterruptedException {
         requireNonNull(repository, "repository must not be null");
 
-        final var cacheKeyPrefix = CacheKeys.build(repository, purl.getName());
-        final var crateMetadataCacheKey = cacheKeyPrefix + PACKAGE_CACHE_KEY_SUFFIX;
-        final var versionMetadataCacheKey = cacheKeyPrefix + VERSION_CACHE_KEY_SUFFIX + purl.getVersion();
-        final var cacheKeys = Set.of(crateMetadataCacheKey, versionMetadataCacheKey);
+        final String url = UrlUtils.join(repository.url(), "api", "v1", "crates", purl.getName());
 
-        final Map<String, byte[]> cachedBytesByKey = cache.getMany(cacheKeys);
-        final byte[] cachedCrateBytes = cachedBytesByKey.get(crateMetadataCacheKey);
-        final byte[] cachedVersionBytes = cachedBytesByKey.get(versionMetadataCacheKey);
+        final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(REQUEST_TIMEOUT)
+                .GET();
+        maybeApplyAuth(requestBuilder, repository);
 
-        if (cachedCrateBytes != null && cachedVersionBytes != null) {
-            final var crateMetadata = deserialize(cachedCrateBytes, CargoCrateMetadata.class);
-            final var versionMetadata = deserialize(cachedVersionBytes, CargoCrateVersionMetadata.class);
-            return buildResult(crateMetadata, versionMetadata);
-        }
-
-        final CargoCrateDocument crateDoc = fetchCrate(purl.getName(), repository);
-        if (crateDoc == null) {
+        final byte[] body = cachingHttpClient.get(requestBuilder, repository);
+        if (body == null) {
             return null;
         }
 
+        final CargoCrateDocument crateDoc = parseDocument(body);
         final String latestVersion = crateDoc.crate() != null
                 ? crateDoc.crate().newestVersion()
                 : null;
@@ -102,100 +83,48 @@ final class CargoPackageMetadataResolver implements PackageMetadataResolver {
         }
 
         final var resolvedAt = Instant.now();
-        final var crateMetadata = new CargoCrateMetadata(resolvedAt, latestVersion);
-        final var entriesToCache = new HashMap<String, byte[]>(
-                1 + (crateDoc.versions() != null ? crateDoc.versions().size() : 0));
-        entriesToCache.put(crateMetadataCacheKey, serialize(crateMetadata));
 
-        CargoCrateVersionMetadata requestedVersionMetadata = null;
+        Version requestedVersion = null;
         if (crateDoc.versions() != null) {
             for (final Version crateVersion : crateDoc.versions()) {
-                if (crateVersion.num() == null) {
-                    continue;
-                }
-
-                final var versionMetadata = CargoCrateVersionMetadata.of(crateVersion);
-                if (versionMetadata != null) {
-                    entriesToCache.put(
-                            cacheKeyPrefix + VERSION_CACHE_KEY_SUFFIX + crateVersion.num(),
-                            serialize(versionMetadata));
-                }
-
-                if (crateVersion.num().equals(purl.getVersion())) {
-                    requestedVersionMetadata = versionMetadata;
+                if (purl.getVersion().equals(crateVersion.num())) {
+                    requestedVersion = crateVersion;
+                    break;
                 }
             }
-        }
-
-        cache.putMany(entriesToCache);
-
-        return buildResult(crateMetadata, requestedVersionMetadata);
-    }
-
-    private @Nullable CargoCrateDocument fetchCrate(String name, PackageRepository repository)
-            throws InterruptedException {
-        final String url = UrlUtils.join(repository.url(), "api", "v1", "crates", name);
-
-        final HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Accept-Encoding", "gzip")
-                .timeout(REQUEST_TIMEOUT)
-                .GET();
-        maybeApplyAuth(builder, repository);
-        final HttpRequest request = builder.build();
-
-        final HttpResponse<InputStream> response;
-        try {
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-        } catch (HttpTimeoutException e) {
-            throw new RetryableResolutionException(e);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        try (final InputStream rawBody = response.body()) {
-            if (response.statusCode() == 200) {
-                final boolean isGzip = response.headers()
-                        .firstValue("Content-Encoding")
-                        .map("gzip"::equalsIgnoreCase)
-                        .orElse(false);
-                try (final InputStream body = isGzip ? new GZIPInputStream(rawBody) : rawBody) {
-                    return objectMapper.readValue(body, CargoCrateDocument.class);
-                }
-            }
-
-            rawBody.transferTo(nullOutputStream());
-            RetryableResolutionException.throwIfRetryableError(response);
-
-            if (response.statusCode() == 404) {
-                return null;
-            }
-
-            throw new IOException(
-                    "Unexpected status code %d for %s".formatted(
-                            response.statusCode(), url));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private static PackageMetadata buildResult(
-            CargoCrateMetadata crateMetadata,
-            @Nullable CargoCrateVersionMetadata versionMetadata) {
-        PackageArtifactMetadata artifactMetadata = null;
-        if (versionMetadata != null) {
-            artifactMetadata = new PackageArtifactMetadata(
-                    crateMetadata.resolvedAt(),
-                    versionMetadata.publishedAt(),
-                    versionMetadata.sha256() != null
-                            ? Map.of(HashAlgorithm.SHA256, versionMetadata.sha256())
-                            : Map.of());
         }
 
         return new PackageMetadata(
-                crateMetadata.latestVersion(),
-                crateMetadata.resolvedAt(),
-                artifactMetadata);
+                latestVersion,
+                resolvedAt,
+                buildArtifactMetadata(resolvedAt, requestedVersion));
+    }
+
+    private static @Nullable PackageArtifactMetadata buildArtifactMetadata(
+            Instant resolvedAt, @Nullable Version crateVersion) {
+        if (crateVersion == null) {
+            return null;
+        }
+
+        Instant publishedAt = null;
+        if (crateVersion.createdAt() != null) {
+            try {
+                publishedAt = Instant.parse(crateVersion.createdAt());
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        Map<HashAlgorithm, String> hashes = Map.of();
+        if (crateVersion.checksum() != null
+                && HashAlgorithm.SHA256.isValid(crateVersion.checksum())) {
+            hashes = Map.of(HashAlgorithm.SHA256, crateVersion.checksum().toLowerCase());
+        }
+
+        if (publishedAt == null && hashes.isEmpty()) {
+            return null;
+        }
+
+        return new PackageArtifactMetadata(resolvedAt, publishedAt, hashes);
     }
 
     private static void maybeApplyAuth(HttpRequest.Builder builder, PackageRepository repository) {
@@ -215,17 +144,9 @@ final class CargoPackageMetadataResolver implements PackageMetadataResolver {
         builder.header("Authorization", authHeaderValue);
     }
 
-    private byte[] serialize(Object value) {
+    private CargoCrateDocument parseDocument(byte[] body) {
         try {
-            return objectMapper.writeValueAsBytes(value);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private <T> T deserialize(byte[] bytes, Class<T> type) {
-        try {
-            return objectMapper.readValue(bytes, type);
+            return objectMapper.readValue(body, CargoCrateDocument.class);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

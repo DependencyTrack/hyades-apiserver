@@ -21,13 +21,11 @@ package org.dependencytrack.pkgmetadata.resolution.gem;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageArtifactMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
-import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
-import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.cache.CachingHttpClient;
 import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -36,10 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -54,14 +49,12 @@ final class GemPackageMetadataResolver implements PackageMetadataResolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(GemPackageMetadataResolver.class);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
 
-    private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private final Cache cache;
+    private final CachingHttpClient cachingHttpClient;
 
-    GemPackageMetadataResolver(HttpClient httpClient, ObjectMapper objectMapper, Cache cache) {
-        this.httpClient = httpClient;
+    GemPackageMetadataResolver(ObjectMapper objectMapper, CachingHttpClient cachingHttpClient) {
         this.objectMapper = objectMapper;
-        this.cache = cache;
+        this.cachingHttpClient = cachingHttpClient;
     }
 
     @Override
@@ -69,15 +62,17 @@ final class GemPackageMetadataResolver implements PackageMetadataResolver {
             throws InterruptedException {
         requireNonNull(repository, "repository must not be null");
 
-        final String cacheKey = CacheKeys.build(repository, purl.getName());
+        final String url = UrlUtils.join(repository.url(), "api", "v1", "versions", purl.getName() + ".json");
 
-        byte[] body = cache.get(cacheKey);
+        final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(REQUEST_TIMEOUT)
+                .GET();
+        maybeApplyAuth(requestBuilder, repository);
+
+        final byte[] body = cachingHttpClient.get(requestBuilder, repository);
         if (body == null) {
-            body = fetchVersions(purl.getName(), repository);
-            if (body == null) {
-                return null;
-            }
-            cache.put(cacheKey, body);
+            return null;
         }
 
         final JsonNode root = parseJson(body);
@@ -120,37 +115,6 @@ final class GemPackageMetadataResolver implements PackageMetadataResolver {
                 publishedAt != null
                         ? new PackageArtifactMetadata(resolvedAt, publishedAt, Map.of())
                         : null);
-    }
-
-    private byte @Nullable [] fetchVersions(String name, PackageRepository repository)
-            throws InterruptedException {
-        final String url = UrlUtils.join(repository.url(), "api", "v1", "versions", name + ".json");
-
-        final HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .timeout(REQUEST_TIMEOUT)
-                .GET();
-        maybeApplyAuth(builder, repository);
-        final HttpRequest request = builder.build();
-
-        final HttpResponse<byte[]> response;
-        try {
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-        } catch (HttpTimeoutException e) {
-            throw new RetryableResolutionException(e);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        if (response.statusCode() == 404) {
-            return null;
-        }
-        RetryableResolutionException.throwIfRetryableError(response);
-        if (response.statusCode() != 200) {
-            throw new UncheckedIOException(new IOException(
-                    "Unexpected status code %d for %s".formatted(response.statusCode(), url)));
-        }
-        return response.body();
     }
 
     private static void maybeApplyAuth(HttpRequest.Builder builder, PackageRepository repository) {

@@ -21,23 +21,18 @@ package org.dependencytrack.pkgmetadata.resolution.github;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageArtifactMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
-import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
-import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.cache.CachingHttpClient;
 import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -48,14 +43,13 @@ import static java.util.Objects.requireNonNull;
 final class GithubPackageMetadataResolver implements PackageMetadataResolver {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
-    private final HttpClient httpClient;
-    private final ObjectMapper objectMapper;
-    private final Cache cache;
 
-    GithubPackageMetadataResolver(HttpClient httpClient, ObjectMapper objectMapper, Cache cache) {
-        this.httpClient = httpClient;
+    private final ObjectMapper objectMapper;
+    private final CachingHttpClient cachingHttpClient;
+
+    GithubPackageMetadataResolver(ObjectMapper objectMapper, CachingHttpClient cachingHttpClient) {
         this.objectMapper = objectMapper;
-        this.cache = cache;
+        this.cachingHttpClient = cachingHttpClient;
     }
 
     @Override
@@ -64,18 +58,12 @@ final class GithubPackageMetadataResolver implements PackageMetadataResolver {
             @Nullable PackageRepository repository) throws InterruptedException {
         requireNonNull(repository, "repository must not be null");
 
-        final String cacheKey = CacheKeys.build(repository, purl.getNamespace(), purl.getName());
-
-        byte[] body = cache.get(cacheKey);
-        if (body == null) {
-            body = fetchLatestRelease(purl.getNamespace(), purl.getName(), repository);
-            if (body == null) {
-                return null;
-            }
-            cache.put(cacheKey, body);
+        final byte[] latestBody = fetchLatestRelease(purl.getNamespace(), purl.getName(), repository);
+        if (latestBody == null) {
+            return null;
         }
 
-        final JsonNode root = parseJson(body);
+        final JsonNode root = parseJson(latestBody);
         final String tagName = root.path("tag_name").asText(null);
         if (tagName == null) {
             return null;
@@ -87,16 +75,8 @@ final class GithubPackageMetadataResolver implements PackageMetadataResolver {
         if (purl.getVersion() != null && purl.getVersion().equals(tagName)) {
             artifactMetadata = extractArtifactMetadata(root, resolvedAt);
         } else if (purl.getVersion() != null) {
-            final String versionCacheKey = CacheKeys.build(
-                    repository, purl.getNamespace(), purl.getName(), purl.getVersion());
-            byte[] versionBody = cache.get(versionCacheKey);
-            if (versionBody == null) {
-                versionBody = fetchReleaseByTag(
-                        purl.getNamespace(), purl.getName(), purl.getVersion(), repository);
-                if (versionBody != null) {
-                    cache.put(versionCacheKey, versionBody);
-                }
-            }
+            final byte[] versionBody = fetchReleaseByTag(
+                    purl.getNamespace(), purl.getName(), purl.getVersion(), repository);
             if (versionBody != null) {
                 artifactMetadata = extractArtifactMetadata(parseJson(versionBody), resolvedAt);
             }
@@ -110,37 +90,7 @@ final class GithubPackageMetadataResolver implements PackageMetadataResolver {
             String name,
             PackageRepository repository) throws InterruptedException {
         final String url = UrlUtils.join(repository.url(), "repos", owner, name, "releases", "latest");
-
-        final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .timeout(REQUEST_TIMEOUT)
-                .header("Accept", "application/vnd.github+json")
-                .GET();
-
-        if (repository.password() != null) {
-            requestBuilder.header("Authorization", "Bearer " + repository.password());
-        }
-
-        final HttpResponse<byte[]> response;
-        try {
-            response = httpClient.send(
-                    requestBuilder.build(),
-                    HttpResponse.BodyHandlers.ofByteArray());
-        } catch (HttpTimeoutException e) {
-            throw new RetryableResolutionException(e);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        if (response.statusCode() == 404) {
-            return null;
-        }
-        RetryableResolutionException.throwIfRetryableError(response);
-        if (response.statusCode() != 200) {
-            throw new UncheckedIOException(new IOException(
-                    "Unexpected status code %d for %s".formatted(response.statusCode(), url)));
-        }
-        return response.body();
+        return fetch(url, repository);
     }
 
     private byte @Nullable [] fetchReleaseByTag(
@@ -149,7 +99,10 @@ final class GithubPackageMetadataResolver implements PackageMetadataResolver {
             String tag,
             PackageRepository repository) throws InterruptedException {
         final String url = UrlUtils.join(repository.url(), "repos", owner, name, "releases", "tags", tag);
+        return fetch(url, repository);
+    }
 
+    private byte @Nullable [] fetch(String url, PackageRepository repository) throws InterruptedException {
         final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(REQUEST_TIMEOUT)
@@ -160,26 +113,7 @@ final class GithubPackageMetadataResolver implements PackageMetadataResolver {
             requestBuilder.header("Authorization", "Bearer " + repository.password());
         }
 
-        final HttpResponse<byte[]> response;
-        try {
-            response = httpClient.send(
-                    requestBuilder.build(),
-                    HttpResponse.BodyHandlers.ofByteArray());
-        } catch (HttpTimeoutException e) {
-            throw new RetryableResolutionException(e);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        if (response.statusCode() == 404) {
-            return null;
-        }
-        RetryableResolutionException.throwIfRetryableError(response);
-        if (response.statusCode() != 200) {
-            throw new UncheckedIOException(new IOException(
-                    "Unexpected status code %d for %s".formatted(response.statusCode(), url)));
-        }
-        return response.body();
+        return cachingHttpClient.get(requestBuilder, repository);
     }
 
     private static @Nullable PackageArtifactMetadata extractArtifactMetadata(JsonNode root, Instant resolvedAt) {

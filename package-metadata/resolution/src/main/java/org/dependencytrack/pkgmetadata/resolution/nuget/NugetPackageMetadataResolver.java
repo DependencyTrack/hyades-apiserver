@@ -21,49 +21,35 @@ package org.dependencytrack.pkgmetadata.resolution.nuget;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageArtifactMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
-import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
-import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.cache.CachingHttpClient;
 import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.zip.GZIPInputStream;
 
-import static java.io.OutputStream.nullOutputStream;
 import static java.util.Objects.requireNonNull;
 
 final class NugetPackageMetadataResolver implements PackageMetadataResolver {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
-    private static final String PACKAGE_CACHE_KEY_SUFFIX = ":latest";
-    private static final String VERSION_CACHE_KEY_SUFFIX = ":v:";
 
-    private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private final Cache cache;
+    private final CachingHttpClient cachingHttpClient;
 
-    NugetPackageMetadataResolver(HttpClient httpClient, ObjectMapper objectMapper, Cache cache) {
-        this.httpClient = httpClient;
+    NugetPackageMetadataResolver(ObjectMapper objectMapper, CachingHttpClient cachingHttpClient) {
         this.objectMapper = objectMapper;
-        this.cache = cache;
+        this.cachingHttpClient = cachingHttpClient;
     }
 
     @Override
@@ -72,35 +58,20 @@ final class NugetPackageMetadataResolver implements PackageMetadataResolver {
             @Nullable PackageRepository repository) throws InterruptedException {
         requireNonNull(repository, "repository must not be null");
 
-        final String cacheKeyBase = CacheKeys.build(repository, purl.getName().toLowerCase());
-        final String latestVersionKey = cacheKeyBase + PACKAGE_CACHE_KEY_SUFFIX;
-        final String versionKey = purl.getVersion() != null
-                ? cacheKeyBase + VERSION_CACHE_KEY_SUFFIX + purl.getVersion()
-                : null;
+        final String url = UrlUtils.join(repository.url(),
+                "v3", "registration5-gz-semver2", purl.getName().toLowerCase(), "index.json");
 
-        final var keysToLookup = new LinkedHashSet<String>(2);
-        keysToLookup.add(latestVersionKey);
-        if (versionKey != null) {
-            keysToLookup.add(versionKey);
-        }
+        final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(REQUEST_TIMEOUT)
+                .GET();
 
-        final Map<String, byte[]> cached = cache.getMany(keysToLookup);
-        final byte[] latestVersionBytes = cached.get(latestVersionKey);
-        final byte[] versionMetaBytes = versionKey != null ? cached.get(versionKey) : null;
-
-        if (latestVersionBytes != null && (versionKey == null || versionMetaBytes != null)) {
-            final var packageMeta = deserialize(latestVersionBytes, NugetPackageMetadata.class);
-            final var versionMeta = versionMetaBytes != null
-                    ? deserialize(versionMetaBytes, NugetVersionMetadata.class) : null;
-            return buildResult(packageMeta.latestVersion(), packageMeta.resolvedAt(),
-                    versionMeta != null ? versionMeta.publishedAt() : null);
-        }
-
-        final JsonNode root = fetchDocument(purl, repository);
-        if (root == null) {
+        final byte[] body = cachingHttpClient.get(requestBuilder, repository);
+        if (body == null) {
             return null;
         }
 
+        final JsonNode root = parseJson(body);
         final JsonNode items = root.path("items");
         if (!items.isArray() || items.isEmpty()) {
             return null;
@@ -119,85 +90,40 @@ final class NugetPackageMetadataResolver implements PackageMetadataResolver {
             return null;
         }
 
-        // Extract published timestamps for all versions and cache them.
         final Instant resolvedAt = Instant.now();
-        final var entriesToCache = new HashMap<String, byte[]>();
-        entriesToCache.put(latestVersionKey,
-                serialize(new NugetPackageMetadata(resolvedAt, latestVersion)));
+        final Instant requestedVersionPublishedAt = purl.getVersion() != null
+                ? findPublishedAt(items, purl.getVersion())
+                : null;
 
-        Instant requestedVersionPublishedAt = null;
+        final PackageArtifactMetadata artifactMetadata = requestedVersionPublishedAt != null
+                ? new PackageArtifactMetadata(resolvedAt, requestedVersionPublishedAt, Map.of())
+                : null;
+
+        return new PackageMetadata(latestVersion, resolvedAt, artifactMetadata);
+    }
+
+    private static @Nullable Instant findPublishedAt(JsonNode items, String version) {
         for (final JsonNode page : items) {
             final JsonNode pageItems = page.path("items");
             if (!pageItems.isArray()) {
                 continue;
             }
+
             for (final JsonNode item : pageItems) {
                 final JsonNode catalogEntry = item.path("catalogEntry");
-                final String version = catalogEntry.path("version").asText(null);
-                final String published = catalogEntry.path("published").asText(null);
-                if (version == null || published == null) {
-                    continue;
-                }
-
-                final Instant publishedAt = parsePublished(published);
-                if (publishedAt != null) {
-                    entriesToCache.put(cacheKeyBase + VERSION_CACHE_KEY_SUFFIX + version,
-                            serialize(new NugetVersionMetadata(publishedAt)));
-                    if (purl.getVersion() != null && version.equals(purl.getVersion())) {
-                        requestedVersionPublishedAt = publishedAt;
-                    }
+                if (version.equals(catalogEntry.path("version").asText(null))) {
+                    final String published = catalogEntry.path("published").asText(null);
+                    return published != null ? parsePublished(published) : null;
                 }
             }
         }
 
-        if (!entriesToCache.isEmpty()) {
-            cache.putMany(entriesToCache);
-        }
-
-        return buildResult(latestVersion, resolvedAt, requestedVersionPublishedAt);
+        return null;
     }
 
-    private @Nullable JsonNode fetchDocument(
-            PackageURL purl,
-            PackageRepository repository) throws InterruptedException {
-        final String url = UrlUtils.join(repository.url(),
-                "v3", "registration5-gz-semver2", purl.getName().toLowerCase(), "index.json");
-
-        final HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .timeout(REQUEST_TIMEOUT)
-                .GET()
-                .build();
-
-        final HttpResponse<InputStream> response;
+    private JsonNode parseJson(byte[] body) {
         try {
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-        } catch (HttpTimeoutException e) {
-            throw new RetryableResolutionException(e);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        final boolean isGzip = response.headers()
-                .firstValue("Content-Encoding")
-                .map("gzip"::equalsIgnoreCase)
-                .orElse(false);
-
-        try (final InputStream rawBody = response.body();
-             final InputStream body = isGzip ? new GZIPInputStream(rawBody) : rawBody) {
-            if (response.statusCode() == 200) {
-                return objectMapper.readTree(body);
-            }
-
-            body.transferTo(nullOutputStream());
-            RetryableResolutionException.throwIfRetryableError(response);
-
-            if (response.statusCode() == 404) {
-                return null;
-            }
-
-            throw new IOException("Unexpected status code %d for %s"
-                    .formatted(response.statusCode(), url));
+            return objectMapper.readTree(body);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -208,33 +134,6 @@ final class NugetPackageMetadataResolver implements PackageMetadataResolver {
             return Instant.parse(published);
         } catch (DateTimeParseException e) {
             return null;
-        }
-    }
-
-    private static @Nullable PackageMetadata buildResult(
-            String latestVersion,
-            Instant resolvedAt,
-            @Nullable Instant publishedAt) {
-        final PackageArtifactMetadata artifactMetadata = publishedAt != null
-                ? new PackageArtifactMetadata(resolvedAt, publishedAt, Map.of())
-                : null;
-
-        return new PackageMetadata(latestVersion, resolvedAt, artifactMetadata);
-    }
-
-    private byte[] serialize(Object value) {
-        try {
-            return objectMapper.writeValueAsBytes(value);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private <T> T deserialize(byte[] bytes, Class<T> type) {
-        try {
-            return objectMapper.readValue(bytes, type);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
         }
     }
 

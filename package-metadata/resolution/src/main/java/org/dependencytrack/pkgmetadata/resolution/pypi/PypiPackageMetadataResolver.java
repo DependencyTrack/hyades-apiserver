@@ -20,29 +20,22 @@ package org.dependencytrack.pkgmetadata.resolution.pypi;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.pkgmetadata.resolution.api.HashAlgorithm;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageArtifactMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
-import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
-import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.cache.CachingHttpClient;
 import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -51,18 +44,13 @@ import static java.util.Objects.requireNonNull;
 final class PypiPackageMetadataResolver implements PackageMetadataResolver {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
-    private static final String PACKAGE_CACHE_KEY_SUFFIX = ":latest";
-    private static final String VERSION_CACHE_KEY_SUFFIX = ":v:";
-    private static final PypiVersionMetadata EMPTY_VERSION_METADATA = new PypiVersionMetadata(null, null);
 
-    private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private final Cache cache;
+    private final CachingHttpClient cachingHttpClient;
 
-    PypiPackageMetadataResolver(HttpClient httpClient, ObjectMapper objectMapper, Cache cache) {
-        this.httpClient = httpClient;
+    PypiPackageMetadataResolver(ObjectMapper objectMapper, CachingHttpClient cachingHttpClient) {
         this.objectMapper = objectMapper;
-        this.cache = cache;
+        this.cachingHttpClient = cachingHttpClient;
     }
 
     @Override
@@ -74,32 +62,6 @@ final class PypiPackageMetadataResolver implements PackageMetadataResolver {
         final String fileName = purl.getQualifiers() != null
                 ? purl.getQualifiers().get("file_name") : null;
 
-        final String cacheKeyBase = CacheKeys.build(repository, purl.getName());
-        final String packageMetadataCacheKey = cacheKeyBase + PACKAGE_CACHE_KEY_SUFFIX;
-        final String versionMetadataCacheKey = fileName != null
-                ? cacheKeyBase + VERSION_CACHE_KEY_SUFFIX + purl.getVersion() + ":" + fileName
-                : null;
-
-        final var cacheKeys = new HashSet<String>(2);
-        cacheKeys.add(packageMetadataCacheKey);
-        if (versionMetadataCacheKey != null) {
-            cacheKeys.add(versionMetadataCacheKey);
-        }
-
-        final Map<String, byte[]> cached = cache.getMany(cacheKeys);
-        final byte[] cachedPackageMetadataBytes = cached.get(packageMetadataCacheKey);
-        final byte[] cachedVersionMetadataBytes = versionMetadataCacheKey != null
-                ? cached.get(versionMetadataCacheKey)
-                : null;
-
-        if (cachedPackageMetadataBytes != null && (versionMetadataCacheKey == null || cachedVersionMetadataBytes != null)) {
-            final var packageMeta = deserialize(cachedPackageMetadataBytes, PypiPackageMetadata.class);
-            final var versionMeta = cachedVersionMetadataBytes != null
-                    ? deserialize(cachedVersionMetadataBytes, PypiVersionMetadata.class)
-                    : null;
-            return buildResult(packageMeta.latestVersion(), packageMeta.resolvedAt(), versionMeta);
-        }
-
         final PypiPackageDocument doc = fetchDocument(purl, repository);
         if (doc == null) {
             return null;
@@ -110,42 +72,21 @@ final class PypiPackageMetadataResolver implements PackageMetadataResolver {
                 doc.releases() != null ? doc.releases() : Map.of();
 
         final Instant resolvedAt = Instant.now();
-        final var entriesToCache = new HashMap<String, byte[]>();
-        if (latestVersion != null) {
-            entriesToCache.put(packageMetadataCacheKey,
-                    serialize(new PypiPackageMetadata(resolvedAt, latestVersion)));
-        }
 
-        PypiVersionMetadata matchedVersionMeta = null;
-        final List<PypiPackageDocument.ReleaseFile> releaseFiles = releases.get(purl.getVersion());
-        if (releaseFiles != null) {
-            for (final PypiPackageDocument.ReleaseFile file : releaseFiles) {
-                final var fileMeta = extractFileMetadata(file);
-                if (fileMeta == null || file.filename() == null) {
-                    continue;
-                }
-
-                entriesToCache.put(
-                        cacheKeyBase + VERSION_CACHE_KEY_SUFFIX + purl.getVersion() + ":" + file.filename(),
-                        serialize(fileMeta));
-
-                if (file.filename().equals(fileName)) {
-                    matchedVersionMeta = fileMeta;
+        ArtifactHashes matched = null;
+        if (fileName != null) {
+            final List<PypiPackageDocument.ReleaseFile> releaseFiles = releases.get(purl.getVersion());
+            if (releaseFiles != null) {
+                for (final PypiPackageDocument.ReleaseFile file : releaseFiles) {
+                    if (fileName.equals(file.filename())) {
+                        matched = extractHashes(file);
+                        break;
+                    }
                 }
             }
         }
 
-        // Negative-cache when the requested file_name didn't match any release file,
-        // to avoid re-fetching the full document on subsequent lookups.
-        if (versionMetadataCacheKey != null && matchedVersionMeta == null) {
-            entriesToCache.put(versionMetadataCacheKey, serialize(EMPTY_VERSION_METADATA));
-        }
-
-        if (!entriesToCache.isEmpty()) {
-            cache.putMany(entriesToCache);
-        }
-
-        return buildResult(latestVersion, resolvedAt, matchedVersionMeta);
+        return buildResult(latestVersion, resolvedAt, matched);
     }
 
     private @Nullable PypiPackageDocument fetchDocument(
@@ -153,36 +94,24 @@ final class PypiPackageMetadataResolver implements PackageMetadataResolver {
             PackageRepository repository) throws InterruptedException {
         final String url = UrlUtils.join(repository.url(), "pypi", purl.getName(), "json");
 
-        final HttpRequest request = HttpRequest.newBuilder()
+        final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(REQUEST_TIMEOUT)
-                .GET()
-                .build();
+                .GET();
 
-        final HttpResponse<String> response;
-        try {
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        } catch (HttpTimeoutException e) {
-            throw new RetryableResolutionException(e);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        final byte[] body = cachingHttpClient.get(requestBuilder, repository);
+        if (body == null) {
+            return null;
         }
 
         try {
-            if (response.statusCode() == 404) {
-                return null;
-            }
-            RetryableResolutionException.throwIfRetryableError(response);
-            if (response.statusCode() != 200) {
-                throw new IOException("Unexpected status code %d for %s".formatted(response.statusCode(), url));
-            }
-            return objectMapper.readValue(response.body(), PypiPackageDocument.class);
+            return objectMapper.readValue(body, PypiPackageDocument.class);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    private static @Nullable PypiVersionMetadata extractFileMetadata(PypiPackageDocument.ReleaseFile file) {
+    private static @Nullable ArtifactHashes extractHashes(PypiPackageDocument.ReleaseFile file) {
         if (file.digests() == null) {
             return null;
         }
@@ -194,46 +123,33 @@ final class PypiPackageMetadataResolver implements PackageMetadataResolver {
             return null;
         }
 
-        return new PypiVersionMetadata(md5, sha256);
+        return new ArtifactHashes(md5, sha256);
     }
 
     private static @Nullable PackageMetadata buildResult(
             @Nullable String latestVersion,
             Instant resolvedAt,
-            @Nullable PypiVersionMetadata versionMeta) {
-        if (latestVersion == null && versionMeta == null) {
+            @Nullable ArtifactHashes hashes) {
+        if (latestVersion == null && hashes == null) {
             return null;
         }
 
         PackageArtifactMetadata artifactMetadata = null;
-        if (versionMeta != null && (versionMeta.md5() != null || versionMeta.sha256() != null)) {
-            final var hashes = new EnumMap<HashAlgorithm, String>(HashAlgorithm.class);
-            if (versionMeta.md5() != null) {
-                hashes.put(HashAlgorithm.MD5, versionMeta.md5());
+        if (hashes != null) {
+            final var algoHashes = new EnumMap<HashAlgorithm, String>(HashAlgorithm.class);
+            if (hashes.md5() != null) {
+                algoHashes.put(HashAlgorithm.MD5, hashes.md5());
             }
-            if (versionMeta.sha256() != null) {
-                hashes.put(HashAlgorithm.SHA256, versionMeta.sha256());
+            if (hashes.sha256() != null) {
+                algoHashes.put(HashAlgorithm.SHA256, hashes.sha256());
             }
-            artifactMetadata = new PackageArtifactMetadata(resolvedAt, null, hashes);
+            artifactMetadata = new PackageArtifactMetadata(resolvedAt, null, algoHashes);
         }
 
         return new PackageMetadata(latestVersion, resolvedAt, artifactMetadata);
     }
 
-    private byte[] serialize(Object value) {
-        try {
-            return objectMapper.writeValueAsBytes(value);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private <T> T deserialize(byte[] bytes, Class<T> type) {
-        try {
-            return objectMapper.readValue(bytes, type);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+    private record ArtifactHashes(@Nullable String md5, @Nullable String sha256) {
     }
 
 }
