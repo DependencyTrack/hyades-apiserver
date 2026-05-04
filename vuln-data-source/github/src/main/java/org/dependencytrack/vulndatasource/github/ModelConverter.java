@@ -88,7 +88,7 @@ final class ModelConverter {
         Optional.ofNullable(advisory.getSummary()).ifPresent(title -> vulnBuilder.addProperties(
                 Property.newBuilder().setName(TITLE_PROPERTY_NAME).setValue(abbreviate(title, 255)).build()));
 
-        parseRating(advisory).ifPresent(vulnBuilder::addRatings);
+        vulnBuilder.addAllRatings(parseRatings(advisory));
 
         // Alias is mapped only if aliasSync is enabled
         if (aliasSyncEnabled) {
@@ -164,46 +164,56 @@ final class ModelConverter {
         return bomBuilder.build();
     }
 
-    private static Optional<VulnerabilityRating> parseRating(final SecurityAdvisory advisory) {
-        String cvssVector = null;
+    private static List<VulnerabilityRating> parseRatings(final SecurityAdvisory advisory) {
+        final var ratings = new ArrayList<VulnerabilityRating>();
 
         if (advisory.getCvssSeverities() != null) {
-            if (advisory.getCvssSeverities().getCvssV4() != null
-                    && StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV4().getVectorString()) != null) {
-                cvssVector = StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV4().getVectorString());
-            } else if (advisory.getCvssSeverities().getCvssV3() != null
-                    && StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV3().getVectorString()) != null) {
-                cvssVector = StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV3().getVectorString());
+            if (advisory.getCvssSeverities().getCvssV4() != null) {
+                buildCvssRating(StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV4().getVectorString()))
+                        .ifPresent(ratings::add);
+            }
+            if (advisory.getCvssSeverities().getCvssV3() != null) {
+                buildCvssRating(StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV3().getVectorString()))
+                        .ifPresent(ratings::add);
             }
         }
 
-        if (cvssVector != null) {
-            final CvssVector cvss = CvssVector.parseVector(cvssVector, true);
-            if (cvss == null || !cvss.isBaseFullyDefined()) {
-                LOGGER.warn("Failed to parse rating: CVSS vector {} is malformed; Skipping", cvssVector);
-                return Optional.empty();
-            }
-
-            final VulnerabilityRating.Builder cvssRatingBuilder = VulnerabilityRating.newBuilder()
-                    .setSource(SOURCE)
-                    .setVector(cvss.toString())
-                    .setScore(cvss.getBakedScores().getBaseScore())
-                    .setSeverity(calculateCvssSeverity(cvss));
-            if (cvss instanceof Cvss4P0) {
-                return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV4).build());
-            } else if (cvss instanceof Cvss3P1) {
-                return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV31).build());
-            } else if (cvss instanceof Cvss3P0) {
-                return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV3).build());
-            }
+        if (!ratings.isEmpty()) {
+            return ratings;
         }
 
         if (advisory.getSeverity() != null && StringUtils.trimToNull(advisory.getSeverity().value()) != null) {
-            return Optional.of(VulnerabilityRating.newBuilder()
+            return List.of(VulnerabilityRating.newBuilder()
                     .setSource(SOURCE)
                     .setMethod(ScoreMethod.SCORE_METHOD_OTHER)
                     .setSeverity(mapSeverity(StringUtils.trimToNull(advisory.getSeverity().value())))
                     .build());
+        }
+        return List.of();
+    }
+
+    private static Optional<VulnerabilityRating> buildCvssRating(final String cvssVector) {
+        if (cvssVector == null) {
+            return Optional.empty();
+        }
+
+        final CvssVector cvss = CvssVector.parseVector(cvssVector, true);
+        if (cvss == null || !cvss.isBaseFullyDefined()) {
+            LOGGER.warn("Failed to parse rating: CVSS vector {} is malformed; Skipping", cvssVector);
+            return Optional.empty();
+        }
+
+        final VulnerabilityRating.Builder ratingBuilder = VulnerabilityRating.newBuilder()
+                .setSource(SOURCE)
+                .setVector(cvss.toString())
+                .setScore(cvss.getBakedScores().getBaseScore())
+                .setSeverity(calculateCvssSeverity(cvss));
+        if (cvss instanceof Cvss4P0) {
+            return Optional.of(ratingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV4).build());
+        } else if (cvss instanceof Cvss3P1) {
+            return Optional.of(ratingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV31).build());
+        } else if (cvss instanceof Cvss3P0) {
+            return Optional.of(ratingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV3).build());
         }
         return Optional.empty();
     }

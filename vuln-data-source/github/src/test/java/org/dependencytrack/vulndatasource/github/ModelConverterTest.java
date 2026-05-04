@@ -303,4 +303,33 @@ class ModelConverterTest {
                          }
                         """);
     }
+
+    @Test
+    void shouldEmitBothCvssV3AndCvssV4RatingsWhenBothPresent() throws IOException {
+        var securityAdvisory = MAPPER.readValue(getClass().getResourceAsStream("/advisory-04.json"), SecurityAdvisory.class);
+
+        Bom bom = ModelConverter.convert(securityAdvisory, true);
+
+        assertThatJson(JsonFormat.printer().print(bom))
+                .when(Option.IGNORING_ARRAY_ORDER)
+                .inPath("$.vulnerabilities[0].ratings")
+                .isEqualTo("""
+                        [
+                          {
+                            "method": "SCORE_METHOD_CVSSV4",
+                            "score": 10.0,
+                            "severity": "SEVERITY_CRITICAL",
+                            "source": { "name": "GITHUB" },
+                            "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H"
+                          },
+                          {
+                            "method": "SCORE_METHOD_CVSSV31",
+                            "score": 9.8,
+                            "severity": "SEVERITY_CRITICAL",
+                            "source": { "name": "GITHUB" },
+                            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+                          }
+                        ]
+                        """);
+    }
 }
