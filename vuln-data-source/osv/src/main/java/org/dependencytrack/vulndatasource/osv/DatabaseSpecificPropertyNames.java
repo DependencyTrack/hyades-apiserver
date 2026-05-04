@@ -21,12 +21,12 @@ package org.dependencytrack.vulndatasource.osv;
 /**
  * @since 5.7.0
  */
-final class CycloneDxPropertyNames {
+final class DatabaseSpecificPropertyNames {
 
-    static final String OSV_ECOSYSTEM = "internal:osv:ecosystem";
-    static final String VULN_TITLE = "dependency-track:vuln:title";
+    static final String CWE_IDS = "cwe_ids";
+    static final String SEVERITY = "severity";
 
-    private CycloneDxPropertyNames() {
+    private DatabaseSpecificPropertyNames() {
     }
 
 }
