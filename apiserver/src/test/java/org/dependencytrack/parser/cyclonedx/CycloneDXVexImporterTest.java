@@ -63,7 +63,7 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
         unknownVexSourceVulnerability.setSource(Vulnerability.Source.NVD);
         unknownVexSourceVulnerability.setSeverity(Severity.HIGH);
         unknownVexSourceVulnerability.setComponents(List.of(component));
-        unknownVexSourceVulnerability = qm.createVulnerability(unknownVexSourceVulnerability, false);
+        unknownVexSourceVulnerability = qm.createVulnerability(unknownVexSourceVulnerability);
         qm.addVulnerability(unknownVexSourceVulnerability, component, "none");
 
         var mismatchVexSourceVulnerability = new Vulnerability();
@@ -71,7 +71,7 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
         mismatchVexSourceVulnerability.setSource(Vulnerability.Source.NVD);
         mismatchVexSourceVulnerability.setSeverity(Severity.HIGH);
         mismatchVexSourceVulnerability.setComponents(List.of(component));
-        mismatchVexSourceVulnerability = qm.createVulnerability(mismatchVexSourceVulnerability, false);
+        mismatchVexSourceVulnerability = qm.createVulnerability(mismatchVexSourceVulnerability);
         qm.addVulnerability(mismatchVexSourceVulnerability, component, "none");
 
         var noVexSourceVulnerability = new Vulnerability();
@@ -79,7 +79,7 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
         noVexSourceVulnerability.setSource(Vulnerability.Source.GITHUB);
         noVexSourceVulnerability.setSeverity(Severity.HIGH);
         noVexSourceVulnerability.setComponents(List.of(component));
-        noVexSourceVulnerability = qm.createVulnerability(noVexSourceVulnerability, false);
+        noVexSourceVulnerability = qm.createVulnerability(noVexSourceVulnerability);
         qm.addVulnerability(noVexSourceVulnerability, component, "none");
 
         // Build vulnerabilities for each available and known vulnerability source
@@ -90,7 +90,7 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
             vulnerability.setSource(source);
             vulnerability.setSeverity(Severity.HIGH);
             vulnerability.setComponents(List.of(component));
-            vulnerability = qm.createVulnerability(vulnerability, false);
+            vulnerability = qm.createVulnerability(vulnerability);
             qm.addVulnerability(vulnerability, component, "none");
 
             var audit = new org.cyclonedx.model.vulnerability.Vulnerability();

@@ -1445,7 +1445,7 @@ public class FindingResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(severity);
         vulnerability.setCwes(List.of(80, 666));
-        return qm.createVulnerability(vulnerability, false);
+        return qm.createVulnerability(vulnerability);
     }
 
     private Vulnerability createVulnerability(String vulnId, Severity severity, String title, String description, String recommendation, Integer cweId, Vulnerability.Source source) {
@@ -1457,7 +1457,7 @@ public class FindingResourceTest extends ResourceTest {
         vulnerability.setDescription(description);
         vulnerability.setRecommendation(recommendation);
         vulnerability.setCwes(List.of(cweId));
-        return qm.createVulnerability(vulnerability, false);
+        return qm.createVulnerability(vulnerability);
     }
 
     private Vulnerability createVulnerabilityWithEpss(String vulnId, Severity severity, BigDecimal epssScore) {
@@ -1466,7 +1466,7 @@ public class FindingResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(severity);
         vulnerability.setCwes(List.of(80, 666));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         var epss = new Epss();
         epss.setCve(vulnId);
@@ -1482,7 +1482,7 @@ public class FindingResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(severity);
         vulnerability.setCwes(List.of(80, 666));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         var epss = new Epss();
         epss.setCve(vulnId);

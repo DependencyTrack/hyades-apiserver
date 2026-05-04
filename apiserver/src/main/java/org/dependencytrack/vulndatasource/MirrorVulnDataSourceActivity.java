@@ -175,7 +175,10 @@ public final class MirrorVulnDataSourceActivity implements Activity<MirrorVulnDa
             qm.runInTransaction(() -> {
                 for (final Vulnerability vuln : vulns) {
                     LOGGER.debug("Synchronizing vulnerability {}", vuln.getVulnId());
-                    final Vulnerability persistentVuln = qm.synchronizeVulnerability(vuln, false);
+                    final Vulnerability existingVuln = qm.getVulnerabilityByVulnId(vuln.getSource(), vuln.getVulnId());
+                    final Vulnerability persistentVuln = existingVuln == null
+                            ? qm.createVulnerability(vuln)
+                            : qm.updateVulnerability(existingVuln, vuln);
                     final List<VulnerableSoftware> vsList = vsListByVulnId.get(persistentVuln.getVulnId());
                     qm.synchronizeVulnerableSoftware(persistentVuln, vsList, source);
                 }
