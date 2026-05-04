@@ -307,6 +307,10 @@ public class FindingResource extends AbstractApiResource {
                                    @QueryParam("cvssv3From") String cvssv3From,
                                    @Parameter(description = "Filter CVSSv3 from this Value")
                                    @QueryParam("cvssv3To") String cvssv3To,
+                                   @Parameter(description = "Filter CVSSv4 from this value")
+                                   @QueryParam("cvssv4From") String cvssv4From,
+                                   @Parameter(description = "Filter CVSSv4 to this value")
+                                   @QueryParam("cvssv4To") String cvssv4To,
                                    @Parameter(description = "Filter EPSS from this value")
                                    @QueryParam("epssFrom") String epssFrom,
                                    @Parameter(description = "Filter EPSS to this value")
@@ -329,6 +333,8 @@ public class FindingResource extends AbstractApiResource {
         filters.put("cvssv2To", cvssv2To);
         filters.put("cvssv3From", cvssv3From);
         filters.put("cvssv3To", cvssv3To);
+        filters.put("cvssv4From", cvssv4From);
+        filters.put("cvssv4To", cvssv4To);
         filters.put("epssFrom", epssFrom);
         filters.put("epssTo", epssTo);
         filters.put("epssPercentileFrom", epssPercentileFrom);
@@ -379,6 +385,10 @@ public class FindingResource extends AbstractApiResource {
                                    @QueryParam("cvssv3From") String cvssv3From,
                                    @Parameter(description = "Filter CVSSv3 to this value")
                                    @QueryParam("cvssv3To") String cvssv3To,
+                                   @Parameter(description = "Filter CVSSv4 from this value")
+                                   @QueryParam("cvssv4From") String cvssv4From,
+                                   @Parameter(description = "Filter CVSSv4 to this value")
+                                   @QueryParam("cvssv4To") String cvssv4To,
                                    @Parameter(description = "Filter EPSS from this value")
                                    @QueryParam("epssFrom") String epssFrom,
                                    @Parameter(description = "Filter EPSS to this value")
@@ -401,6 +411,8 @@ public class FindingResource extends AbstractApiResource {
         filters.put("cvssv2To", cvssv2To);
         filters.put("cvssv3From", cvssv3From);
         filters.put("cvssv3To", cvssv3To);
+        filters.put("cvssv4From", cvssv4From);
+        filters.put("cvssv4To", cvssv4To);
         filters.put("epssFrom", epssFrom);
         filters.put("epssTo", epssTo);
         filters.put("epssPercentileFrom", epssPercentileFrom);

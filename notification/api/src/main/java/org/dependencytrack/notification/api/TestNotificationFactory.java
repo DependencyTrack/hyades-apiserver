@@ -435,6 +435,7 @@ public final class TestNotificationFactory {
                 .setRecommendation("vulnerabilityRecommendation")
                 .setCvssV2(5.5)
                 .setCvssV3(6.6)
+                .setCvssV4(7.7)
                 .setOwaspRrLikelihood(1.1)
                 .setOwaspRrTechnicalImpact(2.2)
                 .setOwaspRrBusinessImpact(3.3)
