@@ -88,7 +88,7 @@ class OsvVulnDataSourceTest {
                 .addVulnerabilities(Vulnerability.newBuilder()
                         .setUpdated(Timestamps.fromMillis(updatedAt.toEpochMilli()))
                         .addProperties(Property.newBuilder()
-                                .setName(CycloneDxPropertyNames.PROPERTY_OSV_ECOSYSTEM)
+                                .setName(CycloneDxPropertyNames.OSV_ECOSYSTEM)
                                 .setValue("maven"))
                         .build())
                 .build();
@@ -133,7 +133,7 @@ class OsvVulnDataSourceTest {
     void testNoExceptionWhenMissingUpdated() {
         Vulnerability vuln = Vulnerability.newBuilder()
                 .addProperties(Property.newBuilder()
-                        .setName(CycloneDxPropertyNames.PROPERTY_OSV_ECOSYSTEM)
+                        .setName(CycloneDxPropertyNames.OSV_ECOSYSTEM)
                         .setValue("maven"))
                 .build();
 

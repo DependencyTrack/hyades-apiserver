@@ -61,6 +61,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -122,18 +123,14 @@ public final class BovModelConverter {
             vuln.setCredits(String.join(", ", cdxVuln.getCredits().toString()));
         }
 
-        // external links
+        // External links: collect from both BOM-level external references and the
+        // vulnerability's advisories so neither source is silently dropped.
         final StringBuilder sb = new StringBuilder();
-        if (!bov.getExternalReferencesList().isEmpty()) {
-            bov.getExternalReferencesList().forEach(externalReference -> {
-                sb.append("* [").append(externalReference.getUrl()).append("](").append(externalReference.getUrl()).append(")\n");
-            });
-            vuln.setReferences(sb.toString());
-        }
-        if (!cdxVuln.getAdvisoriesList().isEmpty()) {
-            cdxVuln.getAdvisoriesList().forEach(advisory -> {
-                sb.append("* [").append(advisory.getUrl()).append("](").append(advisory.getUrl()).append(")\n");
-            });
+        final Consumer<String> appendLink = url ->
+                sb.append("* [").append(url).append("](").append(url).append(")\n");
+        bov.getExternalReferencesList().forEach(ref -> appendLink.accept(ref.getUrl()));
+        cdxVuln.getAdvisoriesList().forEach(advisory -> appendLink.accept(advisory.getUrl()));
+        if (!sb.isEmpty()) {
             vuln.setReferences(sb.toString());
         }
 
