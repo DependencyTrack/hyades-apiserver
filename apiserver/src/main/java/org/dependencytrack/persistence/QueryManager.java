@@ -629,16 +629,12 @@ public class QueryManager extends AlpineQueryManager {
         return getPolicyQueryManager().createLicenseGroup(name);
     }
 
-    public Vulnerability createVulnerability(Vulnerability vulnerability, boolean commitIndex) {
-        return getVulnerabilityQueryManager().createVulnerability(vulnerability, commitIndex);
+    public Vulnerability createVulnerability(Vulnerability transientVuln) {
+        return getVulnerabilityQueryManager().createVulnerability(transientVuln);
     }
 
-    public Vulnerability updateVulnerability(Vulnerability transientVulnerability, boolean commitIndex) {
-        return getVulnerabilityQueryManager().updateVulnerability(transientVulnerability, commitIndex);
-    }
-
-    public Vulnerability synchronizeVulnerability(Vulnerability vulnerability, boolean commitIndex) {
-        return getVulnerabilityQueryManager().synchronizeVulnerability(vulnerability, commitIndex);
+    public Vulnerability updateVulnerability(Vulnerability persistentVuln, Vulnerability transientVuln) {
+        return getVulnerabilityQueryManager().updateVulnerability(persistentVuln, transientVuln);
     }
 
     public Vulnerability getVulnerabilityByVulnId(String source, String vulnId) {

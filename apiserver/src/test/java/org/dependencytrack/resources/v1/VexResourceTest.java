@@ -112,13 +112,13 @@ public class VexResourceTest extends ResourceTest {
         vulnA.setVulnId("INT-001");
         vulnA.setSource(Vulnerability.Source.INTERNAL);
         vulnA.setSeverity(Severity.HIGH);
-        qm.createVulnerability(vulnA, false);
+        vulnA = qm.createVulnerability(vulnA);
 
         var vulnB = new Vulnerability();
         vulnB.setVulnId("INT-002");
         vulnB.setSource(Vulnerability.Source.INTERNAL);
         vulnB.setSeverity(Severity.LOW);
-        qm.createVulnerability(vulnB, false);
+        vulnB = qm.createVulnerability(vulnB);
 
         final var project = new Project();
         project.setName("acme-app");
@@ -543,7 +543,7 @@ public class VexResourceTest extends ResourceTest {
         vuln.setVulnId("INT-001");
         vuln.setSource(Vulnerability.Source.INTERNAL);
         vuln.setSeverity(Severity.HIGH);
-        qm.createVulnerability(vuln, false);
+        vuln = qm.createVulnerability(vuln);
         qm.addVulnerability(vuln, componentAWithVuln, "none");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentAWithVuln, vuln)
@@ -652,7 +652,7 @@ public class VexResourceTest extends ResourceTest {
         vuln.setVulnId("INT-001");
         vuln.setSource(Vulnerability.Source.INTERNAL);
         vuln.setSeverity(Severity.HIGH);
-        qm.createVulnerability(vuln, false);
+        vuln = qm.createVulnerability(vuln);
         qm.addVulnerability(vuln, componentAWithVuln, "none");
         qm.makeAnalysis(
                 new MakeAnalysisCommand(componentAWithVuln, vuln)

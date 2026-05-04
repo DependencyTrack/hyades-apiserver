@@ -129,7 +129,7 @@ class UpdateProjectMetricsActivityTest extends AbstractMetricsUpdateTaskTest {
         vuln.setVulnId("INTERNAL-001");
         vuln.setSource(Vulnerability.Source.INTERNAL);
         vuln.setSeverity(Severity.HIGH);
-        qm.createVulnerability(vuln, false);
+        vuln = qm.createVulnerability(vuln);
 
         // Create a component with an unaudited vulnerability.
         var componentUnaudited = new Component();

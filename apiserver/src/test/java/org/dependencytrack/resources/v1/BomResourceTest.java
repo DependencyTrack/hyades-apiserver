@@ -286,7 +286,7 @@ class BomResourceTest extends ResourceTest {
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         final var projectManufacturer = new OrganizationalEntity();
         projectManufacturer.setName("projectManufacturer");
@@ -601,7 +601,7 @@ class BomResourceTest extends ResourceTest {
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         var project = new Project();
         project.setName("acme-app");
@@ -819,7 +819,7 @@ class BomResourceTest extends ResourceTest {
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         var project = new Project();
         project.setName("acme-app");
