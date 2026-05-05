@@ -18,11 +18,17 @@
  */
 package org.dependencytrack.vulnanalysis.internal;
 
+import com.github.packageurl.PackageURL;
+import org.jdbi.v3.core.config.ConfigRegistry;
+import org.jdbi.v3.core.mapper.ColumnMapper;
+import org.jdbi.v3.core.mapper.ColumnMappers;
 import org.jdbi.v3.core.statement.StatementContext;
 import org.jspecify.annotations.Nullable;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @since 5.7.0
@@ -43,6 +49,7 @@ record MatchingCriteria(
         @Nullable String cpeTargetSw,
         @Nullable String cpeTargetHw,
         @Nullable String cpeOther,
+        @Nullable PackageURL purl,
         @Nullable String purlType,
         @Nullable String purlNamespace,
         @Nullable String purlName,
@@ -61,8 +68,17 @@ record MatchingCriteria(
 
     static class RowMapper implements org.jdbi.v3.core.mapper.RowMapper<MatchingCriteria> {
 
+        private @Nullable ColumnMapper<PackageURL> purlColumnMapper;
+
+        @Override
+        public void init(ConfigRegistry registry) {
+            purlColumnMapper = registry.get(ColumnMappers.class).findFor(PackageURL.class).orElseThrow();
+        }
+
         @Override
         public MatchingCriteria map(ResultSet rs, StatementContext ctx) throws SQLException {
+            requireNonNull(purlColumnMapper);
+
             return new MatchingCriteria(
                     rs.getLong("vuln_db_id"),
                     rs.getString("vuln_id"),
@@ -79,6 +95,7 @@ record MatchingCriteria(
                     rs.getString("targetsw"),
                     rs.getString("targethw"),
                     rs.getString("other"),
+                    purlColumnMapper.map(rs, rs.findColumn("purl"), ctx),
                     rs.getString("purl_type"),
                     rs.getString("purl_namespace"),
                     rs.getString("purl_name"),

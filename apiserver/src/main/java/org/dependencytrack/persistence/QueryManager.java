@@ -740,6 +740,30 @@ public class QueryManager extends AlpineQueryManager {
                 versionStartIncluding);
     }
 
+    public VulnerableSoftware getVulnerableSoftwareByPurl(
+            final String purlType,
+            final String purlNamespace,
+            final String purlName,
+            final String purlQualifiers,
+            final String purlSubpath,
+            final String version,
+            final String versionEndExcluding,
+            final String versionEndIncluding,
+            final String versionStartExcluding,
+            final String versionStartIncluding) {
+        return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByPurl(
+                purlType,
+                purlNamespace,
+                purlName,
+                purlQualifiers,
+                purlSubpath,
+                version,
+                versionEndExcluding,
+                versionEndIncluding,
+                versionStartExcluding,
+                versionStartIncluding);
+    }
+
     public List<Component> matchIdentity(final Project project, final ComponentIdentity cid) {
         return getComponentQueryManager().matchIdentity(project, cid);
     }

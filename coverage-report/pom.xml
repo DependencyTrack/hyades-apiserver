@@ -184,6 +184,13 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>jdbi-support</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>notification-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -197,6 +204,13 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>notification-templating</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>os-distro-metadata</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>

@@ -27,6 +27,7 @@ import com.github.packageurl.PackageURL;
 import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.VulnerableSoftware;
+import org.dependencytrack.util.PurlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import us.springett.parsers.cpe.Cpe;
@@ -230,15 +231,10 @@ public class AffectedComponent {
                 vs.setPurlName(purl.getName());
                 vs.setPurlVersion(purl.getVersion());
                 vs.setVersion(purl.getVersion());
-                if (purl.getQualifiers() != null) {
-                    vs.setPurlQualifiers(Mappers.jsonMapper().writeValueAsString(purl.getQualifiers()));
-                }
+                vs.setPurlQualifiers(PurlUtil.serializeQualifiers(purl));
                 vs.setPurlSubpath(purl.getSubpath());
             } catch (MalformedPackageURLException e) {
                 LOGGER.warn("Error parsing PURL: {} (skipping)", this.identity, e);
-                return null;
-            } catch (JsonProcessingException e) {
-                LOGGER.warn("Error serializing PURL qualifiers: {} (skipping)", this.identity, e);
                 return null;
             }
         }

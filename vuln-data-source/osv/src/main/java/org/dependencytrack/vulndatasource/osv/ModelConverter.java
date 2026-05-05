@@ -40,6 +40,7 @@ import org.cyclonedx.proto.v1_7.VulnerabilityAffects;
 import org.cyclonedx.proto.v1_7.VulnerabilityCredits;
 import org.cyclonedx.proto.v1_7.VulnerabilityRating;
 import org.cyclonedx.proto.v1_7.VulnerabilityReference;
+import org.dependencytrack.support.distrometadata.OsDistribution;
 import org.dependencytrack.vulndatasource.osv.schema.Affected;
 import org.dependencytrack.vulndatasource.osv.schema.Credit;
 import org.dependencytrack.vulndatasource.osv.schema.DatabaseSpecific__1;
@@ -433,18 +434,21 @@ final class ModelConverter {
             return null;
         }
 
-        final String purl = pkg.getPurl();
-        if (purl == null) {
+        final String rawPurl = pkg.getPurl();
+        if (rawPurl == null) {
             LOGGER.debug("affected node for vulnerability {} does not provide a PURL; Skipping", vulnId);
             return null;
         }
 
+        final PackageURL parsedPurl;
         try {
-            new PackageURL(purl);
+            parsedPurl = new PackageURL(rawPurl);
         } catch (MalformedPackageURLException ex) {
-            LOGGER.warn("Failed to parse PURL \"{}\" from affected node for vulnerability {}", purl, vulnId, ex);
+            LOGGER.warn("Failed to parse PURL '{}' from affected node for vulnerability {}", rawPurl, vulnId, ex);
             return null;
         }
+
+        final String purl = tryEnrichDistroQualifier(parsedPurl, pkg.getEcosystem(), vulnId);
 
         final String bomRef = purlToBomRef.computeIfAbsent(purl, p -> {
             final Component component = newComponent(pkg, p);
@@ -456,6 +460,35 @@ final class ModelConverter {
                 .setRef(bomRef)
                 .addAllVersions(convertVersions(entry))
                 .build();
+    }
+
+    private static String tryEnrichDistroQualifier(
+            PackageURL purl,
+            @Nullable String ecosystem,
+            @Nullable String vulnId) {
+        // Some PURLs already include the distro qualifier, e.g. "pkg:deb/ubuntu/php7.0?distro=xenial".
+        // For others, infer it from the OSV ecosystem string, e.g. "Debian:13".
+        final Map<String, String> qualifiers = purl.getQualifiers();
+        if (qualifiers != null && qualifiers.get("distro") != null) {
+            return purl.toString();
+        }
+
+        final OsDistribution distro = OsvEcosystems.toOsDistribution(ecosystem);
+        if (distro == null) {
+            return purl.toString();
+        }
+
+        try {
+            return purl.toBuilder()
+                    .withQualifier("distro", distro.purlQualifierValue())
+                    .build()
+                    .toString();
+        } catch (MalformedPackageURLException e) {
+            LOGGER.warn(
+                    "Failed to add distro qualifier to PURL '{}' for vulnerability {}; Using original PURL",
+                    purl, vulnId, e);
+            return purl.toString();
+        }
     }
 
     private static Component newComponent(Package pkg, String purl) {

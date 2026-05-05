@@ -40,6 +40,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.parser.common.resolver.CweResolver;
+import org.dependencytrack.util.PurlUtil;
 import org.dependencytrack.util.VulnerabilityUtil;
 import org.metaeffekt.core.security.cvss.CvssVector;
 import org.metaeffekt.core.security.cvss.processor.BakedCvssVectorScores;
@@ -594,6 +595,8 @@ public final class BovModelConverter {
                 vs.setPurlNamespace(purl.getNamespace());
                 vs.setPurlName(purl.getName());
                 vs.setPurlVersion(purl.getVersion());
+                vs.setPurlQualifiers(PurlUtil.serializeQualifiers(purl));
+                vs.setPurlSubpath(purl.getSubpath());
                 vs.setPurl(purl.canonicalize());
                 vs.setVersion(version);
                 vs.setVersionStartIncluding(versionStartIncluding);
