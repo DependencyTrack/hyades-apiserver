@@ -714,6 +714,108 @@ class InternalVulnAnalyzerTest {
                 .containsExactlyInAnyOrder("CVE-2022-00001", "GHSA-0000-0000-0001");
     }
 
+    @Test
+    void shouldUseCpeVersionNotComponentVersionForCpeMatching() throws Exception {
+        jdbi.useTransaction(handle -> {
+            final long vulnDbId = createVulnerability(handle, "CVE-2023-00001", "NVD");
+            createCpeVulnerableSoftware(
+                    handle,
+                    "cpe:2.3:o:st:stm32l4_firmware:-:*:*:*:*:*:*:*",
+                    WITHOUT_RANGE,
+                    vulnDbId);
+        });
+
+        final var bom = Bom.newBuilder()
+                .addComponents(Component.newBuilder()
+                        .setBomRef("1")
+                        .setName("stm32l4_firmware")
+                        .setVersion("1.2.3")
+                        .setCpe("cpe:2.3:o:st:stm32l4_firmware:-:*:*:*:*:*:*:*")
+                        .build())
+                .build();
+
+        final Bom vdr = analyzer.analyze(bom);
+
+        assertThat(vdr.getVulnerabilitiesList()).hasSize(1);
+        assertThat(vdr.getVulnerabilitiesList().getFirst().getId()).isEqualTo("CVE-2023-00001");
+    }
+
+    @Test
+    void shouldNotMatchWhenCpeVersionOutsideRangeEvenIfComponentVersionInRange() throws Exception {
+        jdbi.useTransaction(handle -> {
+            final long vulnDbId = createVulnerability(handle, "CVE-2023-00002", "NVD");
+            createCpeVulnerableSoftware(
+                    handle,
+                    "cpe:2.3:a:vendor:product:*:*:*:*:*:*:*:*",
+                    Range.withRange().havingStartIncluding("1.0.0").havingEndExcluding("2.0.0"),
+                    vulnDbId);
+        });
+
+        final var bom = Bom.newBuilder()
+                .addComponents(Component.newBuilder()
+                        .setBomRef("1")
+                        .setName("product")
+                        .setVersion("1.5.0")
+                        .setCpe("cpe:2.3:a:vendor:product:5.0:*:*:*:*:*:*:*")
+                        .build())
+                .build();
+
+        final Bom vdr = analyzer.analyze(bom);
+
+        assertThat(vdr.getVulnerabilitiesList()).isEmpty();
+    }
+
+    @Test
+    void shouldUsePurlVersionNotComponentVersionForPurlMatching() throws Exception {
+        jdbi.useTransaction(handle -> {
+            final long vulnDbId = createVulnerability(handle, "CVE-2023-00003", "NVD");
+            createPurlVulnerableSoftware(
+                    handle,
+                    "pkg:maven/com.example/lib",
+                    Range.withRange().havingEndExcluding("1.0.1"),
+                    vulnDbId);
+        });
+
+        final var bom = Bom.newBuilder()
+                .addComponents(Component.newBuilder()
+                        .setBomRef("1")
+                        .setName("lib")
+                        .setVersion("1.0-SNAPSHOT")
+                        .setPurl("pkg:maven/com.example/lib@1.0.0")
+                        .build())
+                .build();
+
+        final Bom vdr = analyzer.analyze(bom);
+
+        assertThat(vdr.getVulnerabilitiesList()).hasSize(1);
+        assertThat(vdr.getVulnerabilitiesList().getFirst().getId()).isEqualTo("CVE-2023-00003");
+    }
+
+    @Test
+    void shouldNotMatchWhenPurlHasNoVersion() throws Exception {
+        jdbi.useTransaction(handle -> {
+            final long vulnDbId = createVulnerability(handle, "CVE-2023-00005", "NVD");
+            createPurlVulnerableSoftware(
+                    handle,
+                    "pkg:maven/com.example/lib",
+                    Range.withRange().havingEndExcluding("2.0.0"),
+                    vulnDbId);
+        });
+
+        final var bom = Bom.newBuilder()
+                .addComponents(Component.newBuilder()
+                        .setBomRef("1")
+                        .setName("lib")
+                        .setVersion("1.0.0")
+                        .setPurl("pkg:maven/com.example/lib")
+                        .build())
+                .build();
+
+        final Bom vdr = analyzer.analyze(bom);
+
+        assertThat(vdr.getVulnerabilitiesList()).isEmpty();
+    }
+
     public record Range(String startIncluding, String startExcluding, String endIncluding, String endExcluding) {
 
         public static Range withRange() {
