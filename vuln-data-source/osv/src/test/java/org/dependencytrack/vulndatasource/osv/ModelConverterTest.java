@@ -815,6 +815,70 @@ class ModelConverterTest {
                         """);
     }
 
+    @Nested
+    final class DistroQualifierEnrichmentTest {
+
+        @Test
+        void shouldEnrichPurlsForRealDebianAdvisory() throws IOException {
+            final Bom bov = new ModelConverter(MAPPER).convert(
+                    loadOsvAdvisory("osv-DSA-5474-1.json"), false, "Debian");
+
+            assertThatBov(bov)
+                    .when(Option.IGNORING_ARRAY_ORDER)
+                    .inPath("$.components")
+                    .isEqualTo(/* language=JSON */ """
+                            [
+                              {
+                                "type": "CLASSIFICATION_LIBRARY",
+                                "bomRef": "${json-unit.any-string}",
+                                "name": "intel-microcode",
+                                "purl": "pkg:deb/debian/intel-microcode?arch=source&distro=debian-11"
+                              },
+                              {
+                                "type": "CLASSIFICATION_LIBRARY",
+                                "bomRef": "${json-unit.any-string}",
+                                "name": "intel-microcode",
+                                "purl": "pkg:deb/debian/intel-microcode?arch=source&distro=debian-12"
+                              }
+                            ]
+                            """);
+        }
+
+        @Test
+        void shouldPreserveExistingDistroQualifier() throws IOException {
+            final var advisory = MAPPER.readValue(/* language=JSON */ """
+                    {
+                      "id": "DSA-TEST-1",
+                      "affected": [
+                        {
+                          "package": {
+                            "name": "intel-microcode",
+                            "ecosystem": "Debian:13",
+                            "purl": "pkg:deb/debian/intel-microcode?distro=bullseye"
+                          },
+                          "ranges": [
+                            {
+                              "type": "ECOSYSTEM",
+                              "events": [
+                                { "introduced": "0" },
+                                { "fixed": "1.0" }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                    """, Osv.class);
+
+            final Bom bov = new ModelConverter(MAPPER).convert(advisory, false, "Debian");
+
+            assertThatBov(bov)
+                    .inPath("$.components[0].purl")
+                    .isEqualTo("pkg:deb/debian/intel-microcode?distro=bullseye");
+        }
+
+    }
+
     private static Osv loadOsvAdvisory(String resource) throws IOException {
         return MAPPER.readValue(ModelConverterTest.class.getResourceAsStream("/" + resource), Osv.class);
     }

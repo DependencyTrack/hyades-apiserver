@@ -37,15 +37,20 @@
     <dependencies>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>vuln-data-source-api</artifactId>
+            <artifactId>os-distro-metadata</artifactId>
             <version>${project.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>plugin-testing</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>vuln-data-source-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>

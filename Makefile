@@ -132,3 +132,12 @@ clean:
 clean-build-cache:
 	rm -r "$${HOME}/.m2/build-cache/v1.1/org.dependencytrack/"
 .PHONY: clean-build-cache
+
+update-distro-info:
+	curl -fsSL -o support/os-distro-metadata/src/main/resources/org/dependencytrack/support/distrometadata/debian.csv \
+		https://debian.pages.debian.net/distro-info-data/debian.csv
+	curl -fsSL -o support/os-distro-metadata/src/main/resources/org/dependencytrack/support/distrometadata/ubuntu.csv \
+		https://debian.pages.debian.net/distro-info-data/ubuntu.csv
+	curl -fsSL -o support/os-distro-metadata/src/main/resources/org/dependencytrack/support/distrometadata/LICENSE \
+		https://salsa.debian.org/debian/distro-info-data/-/raw/main/debian/copyright
+.PHONY: update-distro-info

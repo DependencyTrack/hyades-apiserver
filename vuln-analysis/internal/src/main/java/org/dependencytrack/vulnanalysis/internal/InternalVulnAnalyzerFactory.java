@@ -23,6 +23,7 @@ import org.dependencytrack.plugin.api.RuntimeConfigurable;
 import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
+import org.dependencytrack.support.jdbi.mapping.PurlColumnMapper;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzerFactory;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzerRequirement;
@@ -70,7 +71,8 @@ final class InternalVulnAnalyzerFactory implements VulnAnalyzerFactory, RuntimeC
                 .getValue("datasource.name", String.class);
         final DataSource dataSource = dataSourceRegistry.get(dataSourceName);
         jdbi = Jdbi.create(dataSource)
-                .registerRowMapper(new MatchingCriteria.RowMapper());
+                .registerRowMapper(new MatchingCriteria.RowMapper())
+                .registerColumnMapper(new PurlColumnMapper());
     }
 
     @Override

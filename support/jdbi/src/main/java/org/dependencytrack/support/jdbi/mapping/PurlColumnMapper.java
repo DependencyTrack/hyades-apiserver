@@ -16,13 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.persistence.jdbi.mapping;
+package org.dependencytrack.support.jdbi.mapping;
 
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.statement.StatementContext;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import java.sql.ResultSet;
@@ -31,7 +30,6 @@ import java.sql.SQLException;
 /**
  * @since 5.7.0
  */
-@NullMarked
 public final class PurlColumnMapper implements ColumnMapper<PackageURL> {
 
     @Override
