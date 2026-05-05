@@ -49,6 +49,13 @@ public final class UrlUtils {
         final URI target = URI.create(url);
         final URI reference = URI.create(referenceUrl);
 
+        // Restrict same-origin to http(s). Anything else (file, ftp, custom schemes)
+        // must never be treated as a trusted origin. Auth headers and other
+        // origin-gated decisions depend on this.
+        if (!isHttpScheme(target.getScheme()) || !isHttpScheme(reference.getScheme())) {
+            return false;
+        }
+
         return equalsIgnoreCaseNullable(target.getScheme(), reference.getScheme())
                 && equalsIgnoreCaseNullable(target.getHost(), reference.getHost())
                 && effectivePort(target) == effectivePort(reference);
@@ -110,6 +117,10 @@ public final class UrlUtils {
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException("Invalid path segment: " + segment, e);
         }
+    }
+
+    private static boolean isHttpScheme(@Nullable String scheme) {
+        return "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
     }
 
 }
