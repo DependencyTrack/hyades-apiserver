@@ -548,7 +548,18 @@ public final class BovModelConverter {
                 vs.setPart(cpe.getPart().getAbbreviation());
                 vs.setVendor(cpe.getVendor());
                 vs.setProduct(cpe.getProduct());
-                vs.setVersion(version != null ? version : cpe.getVersion());
+                final String cpeVersion = cpe.getVersion();
+                if (version != null && !version.equals(cpeVersion)) {
+                    // NB: It doesn't make sense for CPE version and version to diverge
+                    // (e.g. "*" vs "1.2.3"). CPEs either have an explicit version,
+                    // or a wildcard with version ranges. This is a safeguard for a situation
+                    // that *should* never happen, unless the upstream reports bad data.
+                    LOGGER.warn("""
+                                    BOV for {} reports CPE '{}' (version: '{}') alongside a diverging
+                                    exact version '{}'; using the CPE's version.""",
+                            vulnId, affectedComponent.getCpe(), cpeVersion, version);
+                }
+                vs.setVersion(cpeVersion);
                 vs.setUpdate(cpe.getUpdate());
                 vs.setEdition(cpe.getEdition());
                 vs.setLanguage(cpe.getLanguage());

@@ -712,13 +712,12 @@ public class QueryManager extends AlpineQueryManager {
 
     public VulnerableSoftware getVulnerableSoftwareByCpe23(
             String cpe23,
-            String version,
             String versionEndExcluding,
             String versionEndIncluding,
             String versionStartExcluding,
             String versionStartIncluding) {
         return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByCpe23(
-                cpe23, version, versionEndExcluding, versionEndIncluding, versionStartExcluding, versionStartIncluding);
+                cpe23, versionEndExcluding, versionEndIncluding, versionStartExcluding, versionStartIncluding);
     }
 
     public VulnerableSoftware getVulnerableSoftwareByPurl(
