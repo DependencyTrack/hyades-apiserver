@@ -780,7 +780,7 @@ class InternalVulnAnalyzerTest {
                 .addComponents(Component.newBuilder()
                         .setBomRef("1")
                         .setName("lib")
-                        .setVersion("1.0-SNAPSHOT")
+                        .setVersion("2.0.0")
                         .setPurl("pkg:maven/com.example/lib@1.0.0")
                         .build())
                 .build();
