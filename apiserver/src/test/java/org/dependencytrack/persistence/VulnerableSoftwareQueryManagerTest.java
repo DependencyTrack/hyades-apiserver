@@ -22,8 +22,8 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -238,7 +238,6 @@ public class VulnerableSoftwareQueryManagerTest extends PersistenceCapableTest {
 
         final VulnerableSoftware found = qm.getVulnerableSoftwareByCpe23(
                 "cpe:2.3:a:acme:product:1.0.0:*:*:*:*:*:*:*",
-                null,
                 "1.1.0",
                 null,
                 null,
@@ -258,7 +257,6 @@ public class VulnerableSoftwareQueryManagerTest extends PersistenceCapableTest {
 
         final VulnerableSoftware found = qm.getVulnerableSoftwareByCpe23(
                 "cpe:2.3:a:acme:product:1.0.0:*:*:*:*:*:*:*",
-                null,
                 null,
                 null,
                 null,

@@ -437,21 +437,19 @@ class BovModelConverterTest {
 
         @Test
         void shouldProduceTwoEntriesForRangeWithExactVersion() {
-            final Bom bov = createBovWithCpeAndVersionRange(
-                    "cpe:2.3:a:vendor:product:*:*:*:*:*:*:*:*",
-                    "vers:generic/>5|<6|6.0.1");
+            final Bom bov = createBovWithVersionRange("vers:npm/>=1.0.0|<2.0.0|2.5.0");
             final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
 
             assertThat(vsList).satisfiesExactlyInAnyOrder(
                     vs -> {
-                        assertThat(vs.getVersion()).isEqualTo("*");
-                        assertThat(vs.getVersionStartIncluding()).isNull();
-                        assertThat(vs.getVersionStartExcluding()).isEqualTo("5");
+                        assertThat(vs.getVersion()).isNull();
+                        assertThat(vs.getVersionStartIncluding()).isEqualTo("1.0.0");
+                        assertThat(vs.getVersionStartExcluding()).isNull();
                         assertThat(vs.getVersionEndIncluding()).isNull();
-                        assertThat(vs.getVersionEndExcluding()).isEqualTo("6");
+                        assertThat(vs.getVersionEndExcluding()).isEqualTo("2.0.0");
                     },
                     vs -> {
-                        assertThat(vs.getVersion()).isEqualTo("6.0.1");
+                        assertThat(vs.getVersion()).isEqualTo("2.5.0");
                         assertThat(vs.getVersionStartIncluding()).isNull();
                         assertThat(vs.getVersionStartExcluding()).isNull();
                         assertThat(vs.getVersionEndIncluding()).isNull();
