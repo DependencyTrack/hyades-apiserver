@@ -22,6 +22,7 @@ import com.github.packageurl.PackageURL;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import org.cyclonedx.proto.v1_7.Bom;
 import org.cyclonedx.proto.v1_7.Component;
+import org.cyclonedx.proto.v1_7.Vulnerability;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.migration.MigrationExecutor;
 import org.dependencytrack.plugin.api.MutableServiceRegistry;
@@ -35,6 +36,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -484,7 +486,7 @@ class InternalVulnAnalyzerTest {
                 String targetCpe) throws Exception {
             jdbi.useTransaction(handle -> {
                 final long vulnDbId = createVulnerability(handle);
-                createVulnerableSoftware(handle, sourceCpe, sourceRange, vulnDbId);
+                createCpeVulnerableSoftware(handle, sourceCpe, sourceRange, vulnDbId);
             });
 
             final var bom = Bom.newBuilder()
@@ -503,69 +505,6 @@ class InternalVulnAnalyzerTest {
             } else {
                 assertThat(vdr.getVulnerabilitiesList()).isEmpty();
             }
-        }
-
-        private void createVulnerableSoftware(Handle handle, String cpe23, Range range, long vulnDbId) throws Exception {
-            final Cpe cpe = CpeParser.parse(cpe23);
-
-            final long vsId = handle
-                    .createUpdate("""
-                            INSERT INTO "VULNERABLESOFTWARE" (
-                              "CPE23"
-                            , "PART"
-                            , "VENDOR"
-                            , "PRODUCT"
-                            , "VERSION"
-                            , "UPDATE"
-                            , "EDITION"
-                            , "LANGUAGE"
-                            , "SWEDITION"
-                            , "TARGETSW"
-                            , "TARGETHW"
-                            , "OTHER"
-                            , "VERSIONSTARTINCLUDING"
-                            , "VERSIONSTARTEXCLUDING"
-                            , "VERSIONENDEXCLUDING"
-                            , "VERSIONENDINCLUDING"
-                            , "VULNERABLE"
-                            , "UUID"
-                            ) VALUES (
-                              :cpe23
-                            , LOWER(:cpe.part.abbreviation)
-                            , LOWER(:cpe.vendor)
-                            , LOWER(:cpe.product)
-                            , :cpe.version
-                            , :cpe.update
-                            , :cpe.edition
-                            , :cpe.language
-                            , :cpe.swEdition
-                            , :cpe.targetSw
-                            , :cpe.targetHw
-                            , :cpe.other
-                            , :range.startIncluding
-                            , :range.startExcluding
-                            , :range.endExcluding
-                            , :range.endIncluding
-                            , TRUE
-                            , GEN_RANDOM_UUID()
-                            )
-                            RETURNING "ID"
-                            """)
-                    .bind("cpe23", cpe23)
-                    .bindBean("cpe", cpe)
-                    .bindMethods("range", range)
-                    .executeAndReturnGeneratedKeys()
-                    .mapTo(Long.class)
-                    .one();
-
-            handle
-                    .createUpdate("""
-                            INSERT INTO "VULNERABLESOFTWARE_VULNERABILITIES" ("VULNERABILITY_ID", "VULNERABLESOFTWARE_ID")
-                            VALUES (:vulnId, :vsId)
-                            """)
-                    .bind("vulnId", vulnDbId)
-                    .bind("vsId", vsId)
-                    .execute();
         }
 
     }
@@ -597,7 +536,7 @@ class InternalVulnAnalyzerTest {
                 String targetPurlString) throws Exception {
             jdbi.useTransaction(handle -> {
                 final long vulnDbId = createVulnerability(handle);
-                createVulnerableSoftware(handle, sourcePurlString, sourceRange, vulnDbId);
+                createPurlVulnerableSoftware(handle, sourcePurlString, sourceRange, vulnDbId);
             });
 
             final var bom = Bom.newBuilder()
@@ -616,55 +555,6 @@ class InternalVulnAnalyzerTest {
             } else {
                 assertThat(vdr.getVulnerabilitiesList()).isEmpty();
             }
-        }
-
-        private void createVulnerableSoftware(Handle handle, String purlStr, Range range, long vulnDbId) throws Exception {
-            final var purl = new PackageURL(purlStr);
-
-            final long vsId = handle
-                    .createUpdate("""
-                            INSERT INTO "VULNERABLESOFTWARE" (
-                              "PURL"
-                            , "PURL_TYPE"
-                            , "PURL_NAMESPACE"
-                            , "PURL_NAME"
-                            , "VERSION"
-                            , "VERSIONSTARTINCLUDING"
-                            , "VERSIONSTARTEXCLUDING"
-                            , "VERSIONENDEXCLUDING"
-                            , "VERSIONENDINCLUDING"
-                            , "VULNERABLE"
-                            , "UUID"
-                            ) VALUES (
-                              :purlStr
-                            , :purl.type
-                            , :purl.namespace
-                            , :purl.name
-                            , :purl.version
-                            , :range.startIncluding
-                            , :range.startExcluding
-                            , :range.endExcluding
-                            , :range.endIncluding
-                            , TRUE
-                            , GEN_RANDOM_UUID()
-                            )
-                            RETURNING "ID"
-                            """)
-                    .bind("purlStr", purlStr)
-                    .bindBean("purl", purl)
-                    .bindMethods("range", range)
-                    .executeAndReturnGeneratedKeys()
-                    .mapTo(Long.class)
-                    .one();
-
-            handle
-                    .createUpdate("""
-                            INSERT INTO "VULNERABLESOFTWARE_VULNERABILITIES" ("VULNERABILITY_ID", "VULNERABLESOFTWARE_ID")
-                            VALUES (:vulnId, :vsId)
-                            """)
-                    .bind("vulnId", vulnDbId)
-                    .bind("vsId", vsId)
-                    .execute();
         }
 
     }
@@ -741,7 +631,7 @@ class InternalVulnAnalyzerTest {
                 String targetPurlString) throws Exception {
             jdbi.useTransaction(handle -> {
                 final long vulnDbId = createVulnerability(handle);
-                createVulnerableSoftware(handle, sourcePurlString, sourceRange, vulnDbId);
+                createPurlVulnerableSoftware(handle, sourcePurlString, sourceRange, vulnDbId);
             });
 
             final var bom = Bom.newBuilder()
@@ -762,67 +652,66 @@ class InternalVulnAnalyzerTest {
             }
         }
 
-        private void createVulnerableSoftware(Handle handle, String purlStr, Range range, long vulnDbId) throws Exception {
-            final var purl = new PackageURL(purlStr);
-
-            final long vsId = handle
-                    .createUpdate("""
-                            INSERT INTO "VULNERABLESOFTWARE" (
-                              "PURL"
-                            , "PURL_TYPE"
-                            , "PURL_NAMESPACE"
-                            , "PURL_NAME"
-                            , "VERSION"
-                            , "VERSIONSTARTINCLUDING"
-                            , "VERSIONSTARTEXCLUDING"
-                            , "VERSIONENDEXCLUDING"
-                            , "VERSIONENDINCLUDING"
-                            , "VULNERABLE"
-                            , "UUID"
-                            ) VALUES (
-                              :purlStr
-                            , :purl.type
-                            , :purl.namespace
-                            , :purl.name
-                            , :purl.version
-                            , :range.startIncluding
-                            , :range.startExcluding
-                            , :range.endExcluding
-                            , :range.endIncluding
-                            , TRUE
-                            , GEN_RANDOM_UUID()
-                            )
-                            RETURNING "ID"
-                            """)
-                    .bind("purlStr", purlStr)
-                    .bindBean("purl", purl)
-                    .bindMethods("range", range)
-                    .executeAndReturnGeneratedKeys()
-                    .mapTo(Long.class)
-                    .one();
-
-            handle
-                    .createUpdate("""
-                            INSERT INTO "VULNERABLESOFTWARE_VULNERABILITIES" ("VULNERABILITY_ID", "VULNERABLESOFTWARE_ID")
-                            VALUES (:vulnId, :vsId)
-                            """)
-                    .bind("vulnId", vulnDbId)
-                    .bind("vsId", vsId)
-                    .execute();
-        }
-
     }
 
-    private long createVulnerability(Handle handle) {
-        return handle
-                .createUpdate("""
-                        INSERT INTO "VULNERABILITY" ("VULNID", "SOURCE", "UUID")
-                        VALUES ('CVE-123', 'NVD', GEN_RANDOM_UUID())
-                        RETURNING "ID"
-                        """)
-                .executeAndReturnGeneratedKeys()
-                .mapTo(Long.class)
-                .one();
+    @Test
+    void shouldNotSkipPurlAnalysisWhenCpeIsInvalid() throws Exception {
+        jdbi.useTransaction(handle -> {
+            final long vulnDbId = createVulnerability(handle, "GHSA-0000-0000-0001", "GITHUB");
+            createPurlVulnerableSoftware(
+                    handle,
+                    "pkg:maven/com.fasterxml.jackson.core/jackson-databind",
+                    Range.withRange().havingEndExcluding("2.13.1"),
+                    vulnDbId);
+        });
+
+        final var bom = Bom.newBuilder()
+                .addComponents(Component.newBuilder()
+                        .setBomRef("1")
+                        .setName("jackson-databind")
+                        .setCpe("cpe:invalid")
+                        .setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.0")
+                        .build())
+                .build();
+
+        final Bom vdr = analyzer.analyze(bom);
+
+        assertThat(vdr.getVulnerabilitiesList()).hasSize(1);
+        assertThat(vdr.getVulnerabilitiesList().getFirst().getId()).isEqualTo("GHSA-0000-0000-0001");
+    }
+
+    @Test
+    void shouldMatchOnBothCpeAndPurlWhenComponentHasBoth() throws Exception {
+        jdbi.useTransaction(handle -> {
+            final long cveVulnDbId = createVulnerability(handle, "CVE-2022-00001", "NVD");
+            createCpeVulnerableSoftware(
+                    handle,
+                    "cpe:2.3:a:fasterxml:jackson-databind:2.13.0:*:*:*:*:*:*:*",
+                    WITHOUT_RANGE,
+                    cveVulnDbId);
+
+            final long ghsaVulnDbId = createVulnerability(handle, "GHSA-0000-0000-0001", "GITHUB");
+            createPurlVulnerableSoftware(
+                    handle,
+                    "pkg:maven/com.fasterxml.jackson.core/jackson-databind",
+                    Range.withRange().havingEndExcluding("2.13.1"),
+                    ghsaVulnDbId);
+        });
+
+        final var bom = Bom.newBuilder()
+                .addComponents(Component.newBuilder()
+                        .setBomRef("1")
+                        .setName("jackson-databind")
+                        .setCpe("cpe:2.3:a:fasterxml:jackson-databind:2.13.0:*:*:*:*:*:*:*")
+                        .setPurl("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.13.0")
+                        .build())
+                .build();
+
+        final Bom vdr = analyzer.analyze(bom);
+
+        assertThat(vdr.getVulnerabilitiesList())
+                .extracting(Vulnerability::getId)
+                .containsExactlyInAnyOrder("CVE-2022-00001", "GHSA-0000-0000-0001");
     }
 
     public record Range(String startIncluding, String startExcluding, String endIncluding, String endExcluding) {
@@ -847,6 +736,136 @@ class InternalVulnAnalyzerTest {
             return new Range(this.startIncluding, this.startExcluding, this.endIncluding, endExcluding);
         }
 
+    }
+
+    private long createVulnerability(Handle handle) {
+        return createVulnerability(handle, "CVE-123", "NVD");
+    }
+
+    private long createVulnerability(Handle handle, String vulnId, String source) {
+        return handle
+                .createUpdate("""
+                        INSERT INTO "VULNERABILITY" ("VULNID", "SOURCE", "UUID")
+                        VALUES (:vulnId, :source, GEN_RANDOM_UUID())
+                        RETURNING "ID"
+                        """)
+                .bind("vulnId", vulnId)
+                .bind("source", source)
+                .executeAndReturnGeneratedKeys()
+                .mapTo(Long.class)
+                .one();
+    }
+
+    private static void createCpeVulnerableSoftware(Handle handle, String cpe23, Range range, long vulnDbId) throws Exception {
+        final Cpe cpe = CpeParser.parse(cpe23);
+
+        final long vsId = handle
+                .createUpdate("""
+                        INSERT INTO "VULNERABLESOFTWARE" (
+                          "CPE23"
+                        , "PART"
+                        , "VENDOR"
+                        , "PRODUCT"
+                        , "VERSION"
+                        , "UPDATE"
+                        , "EDITION"
+                        , "LANGUAGE"
+                        , "SWEDITION"
+                        , "TARGETSW"
+                        , "TARGETHW"
+                        , "OTHER"
+                        , "VERSIONSTARTINCLUDING"
+                        , "VERSIONSTARTEXCLUDING"
+                        , "VERSIONENDEXCLUDING"
+                        , "VERSIONENDINCLUDING"
+                        , "VULNERABLE"
+                        , "UUID"
+                        ) VALUES (
+                          :cpe23
+                        , LOWER(:cpe.part.abbreviation)
+                        , LOWER(:cpe.vendor)
+                        , LOWER(:cpe.product)
+                        , :cpe.version
+                        , :cpe.update
+                        , :cpe.edition
+                        , :cpe.language
+                        , :cpe.swEdition
+                        , :cpe.targetSw
+                        , :cpe.targetHw
+                        , :cpe.other
+                        , :range.startIncluding
+                        , :range.startExcluding
+                        , :range.endExcluding
+                        , :range.endIncluding
+                        , TRUE
+                        , GEN_RANDOM_UUID()
+                        )
+                        RETURNING "ID"
+                        """)
+                .bind("cpe23", cpe23)
+                .bindBean("cpe", cpe)
+                .bindMethods("range", range)
+                .executeAndReturnGeneratedKeys()
+                .mapTo(Long.class)
+                .one();
+
+        handle
+                .createUpdate("""
+                        INSERT INTO "VULNERABLESOFTWARE_VULNERABILITIES" ("VULNERABILITY_ID", "VULNERABLESOFTWARE_ID")
+                        VALUES (:vulnId, :vsId)
+                        """)
+                .bind("vulnId", vulnDbId)
+                .bind("vsId", vsId)
+                .execute();
+    }
+
+    private static void createPurlVulnerableSoftware(Handle handle, String purlStr, Range range, long vulnDbId) throws Exception {
+        final var purl = new PackageURL(purlStr);
+
+        final long vsId = handle
+                .createUpdate("""
+                        INSERT INTO "VULNERABLESOFTWARE" (
+                          "PURL"
+                        , "PURL_TYPE"
+                        , "PURL_NAMESPACE"
+                        , "PURL_NAME"
+                        , "VERSION"
+                        , "VERSIONSTARTINCLUDING"
+                        , "VERSIONSTARTEXCLUDING"
+                        , "VERSIONENDEXCLUDING"
+                        , "VERSIONENDINCLUDING"
+                        , "VULNERABLE"
+                        , "UUID"
+                        ) VALUES (
+                          :purlStr
+                        , :purl.type
+                        , :purl.namespace
+                        , :purl.name
+                        , :purl.version
+                        , :range.startIncluding
+                        , :range.startExcluding
+                        , :range.endExcluding
+                        , :range.endIncluding
+                        , TRUE
+                        , GEN_RANDOM_UUID()
+                        )
+                        RETURNING "ID"
+                        """)
+                .bind("purlStr", purlStr)
+                .bindBean("purl", purl)
+                .bindMethods("range", range)
+                .executeAndReturnGeneratedKeys()
+                .mapTo(Long.class)
+                .one();
+
+        handle
+                .createUpdate("""
+                        INSERT INTO "VULNERABLESOFTWARE_VULNERABILITIES" ("VULNERABILITY_ID", "VULNERABLESOFTWARE_ID")
+                        VALUES (:vulnId, :vsId)
+                        """)
+                .bind("vulnId", vulnDbId)
+                .bind("vsId", vsId)
+                .execute();
     }
 
 }
