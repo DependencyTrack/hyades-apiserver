@@ -28,7 +28,7 @@
     "username": {
       "type": "string",
       "title": "Username",
-      "description": "Username",
+      "description": "Username to authenticate with the OSS Index REST API. Optional when using Sonatype PATs.",
       "minLength": 1
     },
     "apiToken": {
