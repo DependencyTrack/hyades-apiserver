@@ -768,6 +768,7 @@
                                     <goal>single</goal>
                                 </goals>
                                 <configuration>
+                                    <tarlongfilemode>posix</tarlongfilemode>
                                     <descriptors>
                                         <descriptor>src/main/assembly/dist.xml</descriptor>
                                     </descriptors>
