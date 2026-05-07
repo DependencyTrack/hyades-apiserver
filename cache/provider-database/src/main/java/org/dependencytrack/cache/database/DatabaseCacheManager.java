@@ -72,7 +72,7 @@ final class DatabaseCacheManager implements CacheManager {
         LOGGER.debug("Creating cache '{}'", name);
 
         final var cacheConfig = new CacheConfig(config, name);
-        final var cache = new DatabaseCache(name, cacheConfig.maxSize(), cacheConfig.ttl(), dataSource);
+        final var cache = new DatabaseCache(name, cacheConfig.ttl(), dataSource);
         maintenanceWorker.registerCache(cache);
 
         new DatabaseCacheMeterBinder(cache, name)

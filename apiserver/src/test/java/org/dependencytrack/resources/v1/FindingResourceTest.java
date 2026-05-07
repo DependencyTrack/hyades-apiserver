@@ -59,6 +59,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.math.BigDecimal;
@@ -78,7 +79,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -338,7 +338,7 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals("Acme Example", json.getJsonObject("project").getString("name"));
         assertEquals("1.0", json.getJsonObject("project").getString("version"));
         assertEquals(p1.getUuid().toString(), json.getJsonObject("project").getString("uuid"));
-        assertEquals("1.2", json.getString("version")); // FPF version
+        assertEquals("1.3", json.getString("version")); // FPF version
         JsonArray findings = json.getJsonArray("findings");
         assertThat(findings).satisfiesExactlyInAnyOrder(
                 jsonValue -> {
@@ -666,7 +666,7 @@ public class FindingResourceTest extends ResourceTest {
         project = qm.persist(project);
 
         doReturn(UUID.fromString("d93df5a0-f29e-4ee1-9c98-cee4dd243750"))
-                .when(DEX_ENGINE_MOCK).createRun(any(CreateWorkflowRunRequest.class));
+                .when(DEX_ENGINE_MOCK).createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any());
 
         Response response = jersey
                 .target("%s/project/%s/analyze".formatted(V1_FINDING, project.getUuid()))
@@ -1449,7 +1449,7 @@ public class FindingResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(severity);
         vulnerability.setCwes(List.of(80, 666));
-        return qm.createVulnerability(vulnerability, false);
+        return qm.createVulnerability(vulnerability);
     }
 
     private Vulnerability createVulnerability(String vulnId, Severity severity, String title, String description, String recommendation, Integer cweId, Vulnerability.Source source) {
@@ -1461,7 +1461,7 @@ public class FindingResourceTest extends ResourceTest {
         vulnerability.setDescription(description);
         vulnerability.setRecommendation(recommendation);
         vulnerability.setCwes(List.of(cweId));
-        return qm.createVulnerability(vulnerability, false);
+        return qm.createVulnerability(vulnerability);
     }
 
     private Vulnerability createVulnerabilityWithEpss(String vulnId, Severity severity, BigDecimal epssScore) {
@@ -1470,7 +1470,7 @@ public class FindingResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(severity);
         vulnerability.setCwes(List.of(80, 666));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         var epss = new Epss();
         epss.setCve(vulnId);
@@ -1486,7 +1486,7 @@ public class FindingResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(severity);
         vulnerability.setCwes(List.of(80, 666));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         var epss = new Epss();
         epss.setCve(vulnId);

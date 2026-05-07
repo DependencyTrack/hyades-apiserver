@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
@@ -65,6 +64,8 @@ import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.Query;
 import java.security.Principal;
@@ -92,7 +93,7 @@ import static org.dependencytrack.notification.api.NotificationFactory.createUse
 })
 public class UserResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(UserResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserResource.class);
 
     private final SessionTokenService sessionTokenService = new SessionTokenService();
 
@@ -745,7 +746,7 @@ public class UserResource extends AbstractApiResource {
                 qm.getPersistenceManager().refresh(principal);
                 principal = qm.getObjectById(principal.getClass(), principal.getId());
                 if (modified) {
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added team membership for: " + principal.getName() + " / team: " + team.getName());
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added team membership for: " + principal.getUsername() + " / team: " + team.getName());
                     return Response.ok(principal).build();
                 } else {
                     return Response.status(Response.Status.NOT_MODIFIED).entity("The user is already a member of the specified team.").build();
@@ -791,7 +792,7 @@ public class UserResource extends AbstractApiResource {
                 final boolean modified = qm.removeUserFromTeam(principal, team);
                 principal = qm.getObjectById(principal.getClass(), principal.getId());
                 if (modified) {
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed team membership for: " + principal.getName() + " / team: " + team.getName());
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed team membership for: " + principal.getUsername() + " / team: " + team.getName());
                     return Response.ok(principal).build();
                 } else {
                     return Response.status(Response.Status.NOT_MODIFIED)
@@ -855,7 +856,7 @@ public class UserResource extends AbstractApiResource {
                 principal.setTeams(requestedTeams);
                 qm.persist(principal);
                 super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
-                        "Added team membership for: " + principal.getName() + " / team: " + requestedTeams.toString());
+                        "Added team membership for: " + principal.getUsername() + " / team: " + requestedTeams.toString());
                 return Response.ok(principal).build();
             });
         }
@@ -875,8 +876,8 @@ public class UserResource extends AbstractApiResource {
     public Response logout(@HeaderParam("Authorization") String authHeader) {
         if (getPrincipal() instanceof final User user
                 && authHeader != null
-                && authHeader.startsWith("Bearer ")) {
-            final String rawToken = authHeader.substring("Bearer ".length());
+                && authHeader.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            final String rawToken = authHeader.substring(7);
 
             final boolean deleted = sessionTokenService.deleteSession(rawToken, user.getId());
             if (deleted) {

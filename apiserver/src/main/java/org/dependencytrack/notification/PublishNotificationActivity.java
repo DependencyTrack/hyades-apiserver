@@ -47,10 +47,10 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.nio.file.NoSuchFileException;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -122,6 +122,10 @@ public final class PublishNotificationActivity implements Activity<PublishNotifi
             LOGGER.debug("Publishing notification");
             try (final NotificationPublisher publisher = publisherFactory.create()) {
                 publisher.publish(publishCtx, notification);
+
+                if (ruleMetadata.logSuccessfulPublish()) {
+                    LOGGER.info("Notification published successfully");
+                }
             } catch (RuntimeException | IOException e) {
                 if (e instanceof final RetryablePublishException rpe) {
                     throw new ApplicationFailureException(
@@ -140,7 +144,8 @@ public final class PublishNotificationActivity implements Activity<PublishNotifi
             String extensionName,
             @Nullable String publisherConfig,
             @Nullable String template,
-            @Nullable String templateMimeType) {
+            @Nullable String templateMimeType,
+            boolean logSuccessfulPublish) {
     }
 
     private @Nullable RuleMetadata getRuleMetadata(String ruleName) {
@@ -150,6 +155,7 @@ public final class PublishNotificationActivity implements Activity<PublishNotifi
                          , r."PUBLISHER_CONFIG"
                          , p."TEMPLATE"
                          , p."TEMPLATE_MIME_TYPE"
+                         , r."LOG_SUCCESSFUL_PUBLISH"
                       FROM "NOTIFICATIONRULE" AS r
                      INNER JOIN "NOTIFICATIONPUBLISHER" AS p
                         ON p."ID" = r."PUBLISHER"
@@ -162,7 +168,8 @@ public final class PublishNotificationActivity implements Activity<PublishNotifi
                             rs.getString(1),
                             rs.getString(2),
                             rs.getString(3),
-                            rs.getString(4)))
+                            rs.getString(4),
+                            rs.getBoolean(5)))
                     .findOne()
                     .orElse(null);
         });
@@ -177,7 +184,7 @@ public final class PublishNotificationActivity implements Activity<PublishNotifi
 
             try (final InputStream fileInputStream = fileStorage.get(argument.getNotificationFileMetadata())) {
                 return Notification.parseFrom(fileInputStream);
-            } catch (FileNotFoundException e) {
+            } catch (NoSuchFileException e) {
                 throw new TerminalApplicationFailureException("Notification file not found", e);
             } catch (IOException e) {
                 throw new UncheckedIOException("Failed to get notification file", e);

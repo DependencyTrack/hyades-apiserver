@@ -25,7 +25,7 @@ import com.google.crypto.tink.TinkJsonProtoKeysetFormat;
 import com.google.crypto.tink.aead.AeadKeyTemplates;
 import com.google.crypto.tink.aead.PredefinedAeadParameters;
 import io.smallrye.config.SmallRyeConfigBuilder;
-import org.dependencytrack.support.liquibase.MigrationExecutor;
+import org.dependencytrack.migration.MigrationExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +67,7 @@ class CryptoTest {
         dataSource.setUser(postgresContainer.getUsername());
         dataSource.setPassword(postgresContainer.getPassword());
 
-        new MigrationExecutor(dataSource, "/migration/changelog-main.xml").executeMigration();
+        new MigrationExecutor(dataSource).execute();
     }
 
     @BeforeEach

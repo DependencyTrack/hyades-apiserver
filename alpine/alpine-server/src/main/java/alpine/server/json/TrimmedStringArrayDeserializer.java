@@ -48,9 +48,9 @@ public class TrimmedStringArrayDeserializer extends JsonDeserializer<String[]> {
         final List<String> list = new ArrayList<>();
         final JsonNode node = jsonParser.readValueAsTree();
         if (node.isArray()) {
-            final Iterator elements = node.elements();
+            final Iterator<JsonNode> elements = node.elements();
             while (elements.hasNext()) {
-                final JsonNode childNode = (JsonNode) elements.next();
+                final JsonNode childNode = elements.next();
                 final String value = StringUtils.trimToNull(childNode.asText());
                 if (value != null) {
                     list.add(value);

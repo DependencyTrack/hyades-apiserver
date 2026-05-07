@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.model.About;
 import alpine.server.auth.PermissionRequired;
 import com.github.packageurl.PackageURL;
@@ -67,6 +66,8 @@ import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.util.PurlUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -98,7 +99,7 @@ import static org.dependencytrack.proto.internal.workflow.v1.AnalysisTrigger.ANA
 })
 public class FindingResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(FindingResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FindingResource.class);
     public static final String MEDIA_TYPE_SARIF_JSON = "application/sarif+json";
 
     private final DexEngine dexEngine;
@@ -306,6 +307,10 @@ public class FindingResource extends AbstractApiResource {
                                    @QueryParam("cvssv3From") String cvssv3From,
                                    @Parameter(description = "Filter CVSSv3 from this Value")
                                    @QueryParam("cvssv3To") String cvssv3To,
+                                   @Parameter(description = "Filter CVSSv4 from this value")
+                                   @QueryParam("cvssv4From") String cvssv4From,
+                                   @Parameter(description = "Filter CVSSv4 to this value")
+                                   @QueryParam("cvssv4To") String cvssv4To,
                                    @Parameter(description = "Filter EPSS from this value")
                                    @QueryParam("epssFrom") String epssFrom,
                                    @Parameter(description = "Filter EPSS to this value")
@@ -328,6 +333,8 @@ public class FindingResource extends AbstractApiResource {
         filters.put("cvssv2To", cvssv2To);
         filters.put("cvssv3From", cvssv3From);
         filters.put("cvssv3To", cvssv3To);
+        filters.put("cvssv4From", cvssv4From);
+        filters.put("cvssv4To", cvssv4To);
         filters.put("epssFrom", epssFrom);
         filters.put("epssTo", epssTo);
         filters.put("epssPercentileFrom", epssPercentileFrom);
@@ -378,6 +385,10 @@ public class FindingResource extends AbstractApiResource {
                                    @QueryParam("cvssv3From") String cvssv3From,
                                    @Parameter(description = "Filter CVSSv3 to this value")
                                    @QueryParam("cvssv3To") String cvssv3To,
+                                   @Parameter(description = "Filter CVSSv4 from this value")
+                                   @QueryParam("cvssv4From") String cvssv4From,
+                                   @Parameter(description = "Filter CVSSv4 to this value")
+                                   @QueryParam("cvssv4To") String cvssv4To,
                                    @Parameter(description = "Filter EPSS from this value")
                                    @QueryParam("epssFrom") String epssFrom,
                                    @Parameter(description = "Filter EPSS to this value")
@@ -400,6 +411,8 @@ public class FindingResource extends AbstractApiResource {
         filters.put("cvssv2To", cvssv2To);
         filters.put("cvssv3From", cvssv3From);
         filters.put("cvssv3To", cvssv3To);
+        filters.put("cvssv4From", cvssv4From);
+        filters.put("cvssv4To", cvssv4To);
         filters.put("epssFrom", epssFrom);
         filters.put("epssTo", epssTo);
         filters.put("epssPercentileFrom", epssPercentileFrom);

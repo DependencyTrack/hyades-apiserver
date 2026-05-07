@@ -28,6 +28,7 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Scope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -173,6 +174,7 @@ public class ComponentsResourceTest extends ResourceTest {
                         "cpe": "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*",
                         "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
                         "internal": false,
+                        "scope": "OPTIONAL",
                         "uuid": "${json-unit.any-string}",
                         "project": {
                             "name": "projectB",
@@ -266,6 +268,7 @@ public class ComponentsResourceTest extends ResourceTest {
                         "cpe": "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*",
                         "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
                         "internal": false,
+                        "scope": "OPTIONAL",
                         "uuid": "${json-unit.any-string}",
                         "project": {
                             "name": "projectB",
@@ -319,6 +322,7 @@ public class ComponentsResourceTest extends ResourceTest {
                         "cpe": "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*",
                         "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
                         "internal": false,
+                        "scope": "OPTIONAL",
                         "uuid": "${json-unit.any-string}",
                         "project": {
                             "name": "projectB",
@@ -355,6 +359,7 @@ public class ComponentsResourceTest extends ResourceTest {
                         "cpe": "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*",
                         "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
                         "internal": false,
+                        "scope": "OPTIONAL",
                         "uuid": "${json-unit.any-string}",
                         "project": {
                             "name": "projectB",
@@ -405,6 +410,7 @@ public class ComponentsResourceTest extends ResourceTest {
                         "cpe": "cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*",
                         "purl":"pkg:maven/groupB/nameB@versionB?baz=qux",
                         "internal": false,
+                        "scope": "OPTIONAL",
                         "uuid": "${json-unit.any-string}",
                         "project": {
                             "name": "projectB",
@@ -521,6 +527,7 @@ public class ComponentsResourceTest extends ResourceTest {
         componentB.setGroup("groupB");
         componentB.setName("nameB");
         componentB.setVersion("versionB");
+        componentB.setScope(Scope.OPTIONAL);
         componentB.setCpe("cpe:2.3:a:groupB:nameB:versionB:*:*:*:*:*:*:*");
         componentB.setPurl("pkg:maven/groupB/nameB@versionB?baz=qux");
         qm.createComponent(componentB, false);

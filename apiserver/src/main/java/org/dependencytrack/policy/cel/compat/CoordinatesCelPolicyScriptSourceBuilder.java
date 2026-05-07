@@ -18,13 +18,14 @@
  */
 package org.dependencytrack.policy.cel.compat;
 
-import alpine.common.logging.Logger;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.github.nscuro.versatile.Comparator;
 import io.github.nscuro.versatile.Vers;
 import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.PolicyCondition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.UncheckedIOException;
 import java.util.Optional;
@@ -36,7 +37,7 @@ import static org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder
 
 public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
 
-    private static final Logger LOGGER = Logger.getLogger(CoordinatesCelPolicyScriptSourceBuilder.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CoordinatesCelPolicyScriptSourceBuilder.class);
     private static final Pattern VERSION_OPERATOR_PATTERN = Pattern.compile("^(?<operator>[<>]=?|[!=]=)\\s*");
 
     @Override
@@ -93,7 +94,7 @@ public class CoordinatesCelPolicyScriptSourceBuilder implements CelPolicyScriptS
         };
         if (versionComparator == null) {
             // Shouldn't ever happen because the regex won't match anything else
-            LOGGER.error("Failed to infer version operator from " + versionOperatorMatcher.group(1));
+            LOGGER.error("Failed to infer version operator from {}", versionOperatorMatcher.group(1));
             return null;
         }
         String condition = VERSION_OPERATOR_PATTERN.split(conditionVersionPart)[1];

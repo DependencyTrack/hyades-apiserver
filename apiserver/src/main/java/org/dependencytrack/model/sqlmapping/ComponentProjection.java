@@ -25,6 +25,7 @@ import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Scope;
 import org.dependencytrack.persistence.converter.OrganizationalContactsJsonConverter;
 
 import java.util.Date;
@@ -67,6 +68,8 @@ public class ComponentProjection {
     public String purl;
 
     public String purlCoordinates;
+
+    public String scope;
 
     public String swidTagId;
 
@@ -185,6 +188,7 @@ public class ComponentProjection {
         if (result.internal != null) {
             componentPersistent.setInternal(result.internal);
         }
+        componentPersistent.setScope(result.scope != null ? Scope.valueOf(result.scope) : null);
         componentPersistent.setNotes(result.text);
         componentPersistent.setSwidTagId(result.swidTagId);
         componentPersistent.setLastInheritedRiskScore(result.lastInheritedRiskScore);

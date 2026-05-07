@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import net.javacrumbs.shedlock.core.LockConfiguration;
@@ -31,6 +30,8 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.jdbi.v3.core.statement.PreparedBatch;
 import org.jdbi.v3.core.statement.SqlStatements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -53,7 +54,7 @@ import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
  */
 public class InternalComponentIdentificationTask implements Subscriber {
 
-    private static final Logger LOGGER = Logger.getLogger(InternalComponentIdentificationTask.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(InternalComponentIdentificationTask.class);
 
     @Override
     public void inform(final Event e) {
@@ -102,16 +103,14 @@ public class InternalComponentIdentificationTask implements Subscriber {
 
                 final boolean internal = internalComponentIdentifier.isInternal(component);
                 if (internal && LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Component " + coordinates + " (" + component.getUuid() + ") was identified to be internal");
+                    LOGGER.debug("Component {} ({}) was identified to be internal", coordinates, component.getUuid());
                 }
 
                 if (component.isInternal() != internal) {
                     if (internal) {
-                        LOGGER.info("Component " + coordinates + " (" + component.getUuid()
-                                    + ") was identified to be internal. It was previously not an internal component.");
+                        LOGGER.info("Component {} ({}) was identified to be internal. It was previously not an internal component.", coordinates, component.getUuid());
                     } else {
-                        LOGGER.info("Component " + coordinates + " (" + component.getUuid()
-                                    + ") was previously identified as internal. It is no longer identified as internal.");
+                        LOGGER.info("Component {} ({}) was previously identified as internal. It is no longer identified as internal.", coordinates, component.getUuid());
                     }
 
                     changedInternalStatusByComponentId.put(component.getId(), internal);
@@ -125,8 +124,7 @@ public class InternalComponentIdentificationTask implements Subscriber {
             components = fetchNextComponentsPage(lastId);
         }
 
-        LOGGER.info("Internal component identification completed in "
-                    + DateFormatUtils.format(Duration.between(startTime, Instant.now()).toMillis(), "mm:ss:SS"));
+        LOGGER.info("Internal component identification completed in {}", DateFormatUtils.format(Duration.between(startTime, Instant.now()).toMillis(), "mm:ss:SS"));
     }
 
     private boolean internalComponentsExist() {

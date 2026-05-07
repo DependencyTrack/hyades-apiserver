@@ -22,22 +22,25 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolverFactory;
+import org.dependencytrack.pkgmetadata.resolution.cache.CachingHttpClient;
 import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.jspecify.annotations.Nullable;
 
 import java.net.http.HttpClient;
+import java.time.Duration;
 
 import static com.github.packageurl.PackageURLBuilder.aPackageURL;
 
 public final class HexPackageMetadataResolverFactory implements PackageMetadataResolverFactory {
 
-    private @Nullable HttpClient httpClient;
+    private static final Duration FRESH_FOR = Duration.ofHours(12);
+    private static final long MAX_BYTES = 4L * 1024 * 1024;
+
     private @Nullable ObjectMapper objectMapper;
-    private @Nullable Cache cache;
+    private @Nullable CachingHttpClient cachingHttpClient;
 
     @Override
     public String extensionName() {
@@ -76,15 +79,18 @@ public final class HexPackageMetadataResolverFactory implements PackageMetadataR
 
     @Override
     public void init(ServiceRegistry serviceRegistry) {
-        httpClient = serviceRegistry.require(HttpClient.class);
         objectMapper = new ObjectMapper()
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        cache = serviceRegistry.require(CacheManager.class).getCache("responses");
+        cachingHttpClient = new CachingHttpClient(
+                serviceRegistry.require(HttpClient.class),
+                serviceRegistry.require(CacheManager.class).getCache("responses"),
+                FRESH_FOR,
+                MAX_BYTES);
     }
 
     @Override
     public PackageMetadataResolver create() {
-        return new HexPackageMetadataResolver(httpClient, objectMapper, cache);
+        return new HexPackageMetadataResolver(objectMapper, cachingHttpClient);
     }
 
 }

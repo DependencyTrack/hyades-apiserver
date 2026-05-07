@@ -46,6 +46,7 @@ import org.dependencytrack.proto.internal.workflow.v1.PublishNotificationWorkflo
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -60,7 +61,6 @@ import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_POLICY_V
 import static org.dependencytrack.notification.proto.v1.Group.GROUP_NEW_VULNERABILITIES_SUMMARY;
 import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
 import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -144,7 +144,7 @@ class ProcessScheduledNotificationRuleActivityTest extends PersistenceCapableTes
         rule.setEnabled(true);
 
         final var dexEngine = mock(DexEngine.class);
-        doReturn(UUID.randomUUID()).when(dexEngine).createRun(any(CreateWorkflowRunRequest.class));
+        doReturn(UUID.randomUUID()).when(dexEngine).createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any());
 
         final var activity = new ProcessScheduledNotificationRuleActivity(
                 dexEngine, mock(FileStorage.class), Integer.MAX_VALUE);
@@ -353,7 +353,7 @@ class ProcessScheduledNotificationRuleActivityTest extends PersistenceCapableTes
         rule.setEnabled(true);
 
         final var dexEngine = mock(DexEngine.class);
-        doReturn(UUID.randomUUID()).when(dexEngine).createRun(any(CreateWorkflowRunRequest.class));
+        doReturn(UUID.randomUUID()).when(dexEngine).createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any());
 
         final var activity = new ProcessScheduledNotificationRuleActivity(
                 dexEngine, mock(FileStorage.class), Integer.MAX_VALUE);
@@ -474,7 +474,7 @@ class ProcessScheduledNotificationRuleActivityTest extends PersistenceCapableTes
         rule.setEnabled(true);
 
         final var dexEngine = mock(DexEngine.class);
-        doReturn(UUID.randomUUID()).when(dexEngine).createRun(any(CreateWorkflowRunRequest.class));
+        doReturn(UUID.randomUUID()).when(dexEngine).createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any());
 
         final var activity = new ProcessScheduledNotificationRuleActivity(
                 dexEngine, mock(FileStorage.class), Integer.MAX_VALUE);
@@ -511,7 +511,7 @@ class ProcessScheduledNotificationRuleActivityTest extends PersistenceCapableTes
         rule.setEnabled(true);
 
         final var dexEngine = mock(DexEngine.class);
-        doReturn(UUID.randomUUID()).when(dexEngine).createRun(any(CreateWorkflowRunRequest.class));
+        doReturn(UUID.randomUUID()).when(dexEngine).createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any());
 
         final var activity = new ProcessScheduledNotificationRuleActivity(
                 dexEngine, mock(FileStorage.class), Integer.MAX_VALUE);
@@ -561,7 +561,7 @@ class ProcessScheduledNotificationRuleActivityTest extends PersistenceCapableTes
             rule.setFilterExpression("\"CRITICAL\" in subject.overview.new_vulnerabilities_count_by_severity");
 
             final var dexEngine = mock(DexEngine.class);
-            doReturn(UUID.randomUUID()).when(dexEngine).createRun(any(CreateWorkflowRunRequest.class));
+            doReturn(UUID.randomUUID()).when(dexEngine).createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any());
 
             final var activity = new ProcessScheduledNotificationRuleActivity(
                     dexEngine, mock(FileStorage.class), Integer.MAX_VALUE);
@@ -571,7 +571,7 @@ class ProcessScheduledNotificationRuleActivityTest extends PersistenceCapableTes
                             .setRuleName(rule.getName())
                             .build());
 
-            verify(dexEngine).createRun(any(CreateWorkflowRunRequest.class));
+            verify(dexEngine).createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any());
         }
 
         @Test
@@ -660,7 +660,7 @@ class ProcessScheduledNotificationRuleActivityTest extends PersistenceCapableTes
             rule.setFilterExpression("this is not valid CEL");
 
             final var dexEngine = mock(DexEngine.class);
-            doReturn(UUID.randomUUID()).when(dexEngine).createRun(any(CreateWorkflowRunRequest.class));
+            doReturn(UUID.randomUUID()).when(dexEngine).createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any());
 
             final var activity = new ProcessScheduledNotificationRuleActivity(
                     dexEngine, mock(FileStorage.class), Integer.MAX_VALUE);
@@ -670,7 +670,7 @@ class ProcessScheduledNotificationRuleActivityTest extends PersistenceCapableTes
                             .setRuleName(rule.getName())
                             .build());
 
-            verify(dexEngine).createRun(any(CreateWorkflowRunRequest.class));
+            verify(dexEngine).createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any());
         }
 
     }

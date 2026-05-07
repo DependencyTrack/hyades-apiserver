@@ -25,13 +25,16 @@ import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import io.github.nscuro.versatile.spi.InvalidVersionException;
 import io.github.nscuro.versatile.version.KnownVersioningSchemes;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Component;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Component;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.Source;
+import org.cyclonedx.proto.v1_7.Vulnerability;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffects;
+import org.dependencytrack.support.distrometadata.OsDistribution;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
+import org.dependencytrack.vulnanalysis.internal.Coordinate.CpeCoordinate;
+import org.dependencytrack.vulnanalysis.internal.Coordinate.PurlCoordinate;
 import org.jdbi.v3.core.Jdbi;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -46,6 +49,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -115,7 +119,11 @@ final class InternalVulnAnalyzer implements VulnAnalyzer {
                             continue;
                         }
 
-                        if (isAffected(candidate, criteria)) {
+                        final boolean affected = switch (coordinate) {
+                            case CpeCoordinate ignored -> isAffectedByCpe(candidate, criteria);
+                            case PurlCoordinate ignored -> isAffectedByPurl(candidate, criteria);
+                        };
+                        if (affected) {
                             findingsByVuln
                                     .computeIfAbsent(criteria.vulnDbId(), k -> new HashSet<>())
                                     .add(candidate.id());
@@ -163,7 +171,7 @@ final class InternalVulnAnalyzer implements VulnAnalyzer {
             final Coordinate coordinate = coordinates.get(i);
 
             switch (coordinate) {
-                case Coordinate.CpeCoordinate(String part, String vendor, String product) -> {
+                case CpeCoordinate(String part, String vendor, String product) -> {
                     final var partParam = "cpePart" + i;
                     final var vendorParam = "cpeVendor" + i;
                     final var productParam = "cpeProduct" + i;
@@ -252,7 +260,7 @@ final class InternalVulnAnalyzer implements VulnAnalyzer {
 
                     queries.add(queryBuilder.toString());
                 }
-                case Coordinate.PurlCoordinate(String type, String namespace, String name) -> {
+                case PurlCoordinate(String type, String namespace, String name) -> {
                     final var typeParam = "purlType" + i;
                     final var namespaceParam = "purlNamespace" + i;
                     final var nameParam = "purlName" + i;
@@ -295,88 +303,134 @@ final class InternalVulnAnalyzer implements VulnAnalyzer {
                         criteria -> coordinates.get(criteria.coordinateIndex()))));
     }
 
-    private boolean isAffected(CandidateComponent component, MatchingCriteria criteria) {
-        final String componentVersion;
-        if (component.parsedPurl() != null && component.parsedPurl().getVersion() != null) {
-            componentVersion = component.parsedPurl().getVersion();
-        } else if (component.parsedCpe() != null && component.parsedCpe().getVersion() != null) {
-            componentVersion = component.parsedCpe().getVersion();
-        } else {
+    private boolean isAffectedByCpe(CandidateComponent component, MatchingCriteria criteria) {
+        final Cpe targetCpe = component.parsedCpe();
+        if (targetCpe == null || criteria.cpe23() == null) {
+            return false;
+        }
+        if (!matchesCpe(targetCpe, criteria)) {
             return false;
         }
 
-        if (criteria.cpe23() != null && component.parsedCpe() != null) {
-            if (!matchesCpe(component.parsedCpe(), criteria)) {
-                return false;
-            }
+        final String targetVersion = targetCpe.getVersion();
 
-            // Special cases for CPE matching of ANY (*) and NA (*) versions.
-            // These don't make sense to use for version range comparison and
-            // can be dealt with upfront based on the matching documentation:
-            // https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir7696.pdf
-            if ("*".equals(componentVersion)) {
-                // | No. | Source A-V     | Target A-V | Relation |
-                // | :-- | :------------- | :--------- | :------- |
-                // | 1   | ANY            | ANY        | EQUAL    |
-                // | 5   | NA             | ANY        | SUBSET   |
-                // | 13  | i              | ANY        | SUBSET   |
-                // | 15  | m + wild cards | ANY        | SUBSET   |
-                return true;
-            } else if ("-".equals(componentVersion)) {
-                // | No. | Source A-V     | Target A-V | Relation |
-                // | :-- | :------------- | :--------- | :------- |
-                // | 2   | ANY            | NA         | SUPERSET |
-                // | 6   | NA             | NA         | EQUAL    |
-                // | 12  | i              | NA         | DISJOINT |
-                // | 16  | m + wild cards | NA         | DISJOINT |
-                return "*".equals(criteria.version()) || "-".equals(criteria.version());
-            }
-
-            // Modified from original by Steve Springett
-            // Added null check: vs.version() != null as purl sources that use version ranges may not have version populated.
-            if (!criteria.hasRange()
-                    && criteria.version() != null
-                    && Cpe.compareAttribute(criteria.version(), componentVersion) != Relation.DISJOINT) {
-                return true;
-            }
+        // Special cases for CPE matching of ANY (*) and NA (-) versions.
+        // These don't make sense to use for version range comparison and
+        // can be dealt with upfront based on the matching documentation:
+        // https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir7696.pdf
+        if ("*".equals(targetVersion)) {
+            // | No. | Source A-V     | Target A-V | Relation |
+            // | :-- | :------------- | :--------- | :------- |
+            // | 1   | ANY            | ANY        | EQUAL    |
+            // | 5   | NA             | ANY        | SUBSET   |
+            // | 13  | i              | ANY        | SUBSET   |
+            // | 15  | m + wild cards | ANY        | SUBSET   |
+            return true;
+        } else if ("-".equals(targetVersion)) {
+            // | No. | Source A-V     | Target A-V | Relation |
+            // | :-- | :------------- | :--------- | :------- |
+            // | 2   | ANY            | NA         | SUPERSET |
+            // | 6   | NA             | NA         | EQUAL    |
+            // | 12  | i              | NA         | DISJOINT |
+            // | 16  | m + wild cards | NA         | DISJOINT |
+            return "*".equals(criteria.version()) || "-".equals(criteria.version());
         }
 
+        // Modified from original by Steve Springett
+        // Added null check: vs.version() != null as purl sources that use version ranges may not have version populated.
+        if (!criteria.hasRange()
+                && criteria.version() != null
+                && Cpe.compareAttribute(criteria.version(), targetVersion) != Relation.DISJOINT) {
+            return true;
+        }
+
+        // If the component also has a PURL, use that to derive the versioning scheme.
         final String versioningScheme = Optional
                 .ofNullable(component.parsedPurl())
                 .flatMap(KnownVersioningSchemes::fromPurl)
                 .orElse(SCHEME_GENERIC);
 
-        try {
-            final var versBuilder = Vers.builder(versioningScheme);
+        return compareWithVers(criteria, targetVersion, versioningScheme);
+    }
 
-            if (criteria.versionStartIncluding() != null && !criteria.versionStartIncluding().isEmpty()) {
-                versBuilder.withConstraint(Comparator.GREATER_THAN_OR_EQUAL, criteria.versionStartIncluding());
-            }
-            if (criteria.versionStartExcluding() != null && !criteria.versionStartExcluding().isEmpty()) {
-                versBuilder.withConstraint(Comparator.GREATER_THAN, criteria.versionStartExcluding());
-            }
-            if (criteria.versionEndExcluding() != null && !criteria.versionEndExcluding().isEmpty()) {
-                versBuilder.withConstraint(Comparator.LESS_THAN, criteria.versionEndExcluding());
-            }
-            if (criteria.versionEndIncluding() != null && !criteria.versionEndIncluding().isEmpty()) {
-                versBuilder.withConstraint(Comparator.LESS_THAN_OR_EQUAL, criteria.versionEndIncluding());
-            }
-
-            if (criteria.version() == null && !versBuilder.hasConstraints()) {
-                versBuilder.withConstraint(Comparator.WILDCARD, null);
-            } else if (criteria.version() != null
-                    && !"*".equals(criteria.version())
-                    && !"-".equals(criteria.version())) {
-                versBuilder.withConstraint(Comparator.EQUAL, criteria.version());
-            }
-
-            final Vers vers = versBuilder.build().simplify();
-            return vers.contains(componentVersion);
-        } catch (VersException | InvalidVersionException e) {
-            // Don't log the full stack trace here, it's too noisy.
-            LOGGER.warn("Failed to compare versions: {}", e.getMessage());
+    private boolean isAffectedByPurl(CandidateComponent component, MatchingCriteria criteria) {
+        final PackageURL componentPurl = component.parsedPurl();
+        if (componentPurl == null || componentPurl.getVersion() == null) {
             return false;
         }
+        if (!matchesPurl(componentPurl, criteria)) {
+            return false;
+        }
+        if (!matchesDistro(componentPurl, criteria)) {
+            return false;
+        }
+
+        final String versioningScheme =
+                KnownVersioningSchemes.fromPurl(componentPurl)
+                        .orElse(SCHEME_GENERIC);
+
+        return compareWithVers(criteria, componentPurl.getVersion(), versioningScheme);
+    }
+
+    private static boolean matchesPurl(PackageURL componentPurl, MatchingCriteria criteria) {
+        return Objects.equals(criteria.purlType(), componentPurl.getType())
+                && Objects.equals(criteria.purlNamespace(), componentPurl.getNamespace())
+                && Objects.equals(criteria.purlName(), componentPurl.getName());
+    }
+
+    private boolean compareWithVers(MatchingCriteria criteria, String targetVersion, String versioningScheme) {
+        try {
+            return buildVers(criteria, versioningScheme).contains(targetVersion);
+        } catch (VersException | InvalidVersionException e) {
+            // It's always possible that versatile has a bug, or that components / vulnerabilities
+            // do not strictly follow versioning schemes. Fall back to the generic scheme to
+            // prevent false negatives.
+            if (!SCHEME_GENERIC.equals(versioningScheme)) {
+                LOGGER.warn(
+                        "Failed to compare {} against {} with scheme {}: {}; retrying with scheme {}",
+                        targetVersion, criteria, versioningScheme, e.getMessage(), SCHEME_GENERIC);
+                try {
+                    return buildVers(criteria, SCHEME_GENERIC).contains(targetVersion);
+                } catch (VersException | InvalidVersionException e2) {
+                    LOGGER.warn(
+                            "Failed to compare {} against {} with fallback: {}",
+                            targetVersion, criteria, e2.getMessage());
+                }
+            } else {
+                LOGGER.warn(
+                        "Failed to compare {} against {}: {}",
+                        targetVersion, criteria, e.getMessage());
+            }
+
+            return false;
+        }
+    }
+
+    private static Vers buildVers(MatchingCriteria criteria, String versioningScheme) {
+        final var versBuilder = Vers.builder(versioningScheme);
+
+        if (criteria.versionStartIncluding() != null && !criteria.versionStartIncluding().isEmpty()) {
+            versBuilder.withConstraint(Comparator.GREATER_THAN_OR_EQUAL, criteria.versionStartIncluding());
+        }
+        if (criteria.versionStartExcluding() != null && !criteria.versionStartExcluding().isEmpty()) {
+            versBuilder.withConstraint(Comparator.GREATER_THAN, criteria.versionStartExcluding());
+        }
+        if (criteria.versionEndExcluding() != null && !criteria.versionEndExcluding().isEmpty()) {
+            versBuilder.withConstraint(Comparator.LESS_THAN, criteria.versionEndExcluding());
+        }
+        if (criteria.versionEndIncluding() != null && !criteria.versionEndIncluding().isEmpty()) {
+            versBuilder.withConstraint(Comparator.LESS_THAN_OR_EQUAL, criteria.versionEndIncluding());
+        }
+
+        if (criteria.version() == null && !versBuilder.hasConstraints()) {
+            versBuilder.withConstraint(Comparator.WILDCARD, null);
+        } else if (criteria.version() != null
+                && !"*".equals(criteria.version())
+                && !"-".equals(criteria.version())) {
+            versBuilder.withConstraint(Comparator.EQUAL, criteria.version());
+        }
+
+        return versBuilder.build();
     }
 
     private static boolean matchesCpe(Cpe targetCpe, MatchingCriteria criteria) {
@@ -429,7 +483,7 @@ final class InternalVulnAnalyzer implements VulnAnalyzer {
             }
 
             final Cpe parsedCpe = tryParseCpe(component);
-            final PackageURL parsedPurl = tryParsePurl(component);
+            final PackageURL parsedPurl = tryParsePurl(component.getPurl());
 
             if (parsedCpe == null && parsedPurl == null) {
                 continue;
@@ -456,17 +510,62 @@ final class InternalVulnAnalyzer implements VulnAnalyzer {
         }
     }
 
-    private static @Nullable PackageURL tryParsePurl(Component component) {
-        if (!component.hasPurl()) {
+    private static @Nullable PackageURL tryParsePurl(@Nullable String purl) {
+        if (purl == null || purl.isEmpty()) {
             return null;
         }
 
         try {
-            return new PackageURL(component.getPurl());
+            return new PackageURL(purl);
         } catch (MalformedPackageURLException e) {
-            LOGGER.warn("Failed to parse PURL '{}'", component.getPurl(), e);
+            LOGGER.warn("Failed to parse PURL '{}'", purl, e);
             return null;
         }
+    }
+
+    private static boolean matchesDistro(PackageURL componentPurl, MatchingCriteria criteria) {
+        final String componentDistroQualifier = distroQualifierOf(componentPurl);
+        final String vsDistroQualifier = distroQualifierOf(criteria.purl());
+
+        // When both the component and the vulnerable software record have a distro
+        // qualifier, they must match *before* we perform the actual version comparison.
+        if (componentDistroQualifier != null && vsDistroQualifier != null) {
+            // Simplest case: the qualifiers just match without special interpretation.
+            if (!componentDistroQualifier.equals(vsDistroQualifier)) {
+                // Could still match, but depends on distro semantics.
+                // e.g. "debian-13" should match "trixie".
+                final OsDistribution componentDistro = OsDistribution.of(componentPurl);
+                final OsDistribution vsDistro = OsDistribution.of(criteria.purl());
+
+                if (componentDistro != null && vsDistro != null) {
+                    if (!componentDistro.matches(vsDistro)) {
+                        // Actual mismatch, e.g. "debian-13" != "sid".
+                        return false;
+                    }
+                } else if (componentDistro != null || vsDistro != null) {
+                    // One side was parsed, the other wasn't. The raw qualifier
+                    // strings already differ, so this is a mismatch.
+                    return false;
+                } else {
+                    // Neither side could be parsed. The raw qualifier strings
+                    // already differ, so treat as mismatch to avoid false positives.
+                    LOGGER.debug("Neither distro qualifier could be parsed for comparison: {} vs {}",
+                            componentDistroQualifier, vsDistroQualifier);
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static @Nullable String distroQualifierOf(@Nullable PackageURL purl) {
+        if (purl == null) {
+            return null;
+        }
+
+        final Map<String, String> qualifiers = purl.getQualifiers();
+        return qualifiers != null ? qualifiers.get("distro") : null;
     }
 
     private record VulnMetadata(String vulnId, String source) {

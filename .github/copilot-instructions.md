@@ -7,7 +7,7 @@ These instructions steer GitHub Copilot's automatic PR reviews. They complement 
 Dependency-Track is an intelligent component analysis platform that allows organizations to identify and reduce risk in the software supply chain.
 The repo is a multi-module Maven project. Relevant modules: `apiserver` (main application),
 `api` (REST API v2, OpenAPI v3, spec-first), `alpine` (legacy framework being dissolved), `cache`, `common`, `dex` (durable execution),
-`migration` (Liquibase), `notification`, `plugin`, `proto`.
+`migration` (Flyway), `notification`, `plugin`, `proto`.
 
 ## Review priorities
 
@@ -37,7 +37,7 @@ This is a security product. Be unapologetic about flagging insecure patterns.
 ## 2. Persistence
 
 - **New persistence code must use JDBI + raw SQL.** Flag new code in non-legacy paths that uses JDO (`PersistenceManager`, `@PersistenceCapable`, DataNucleus extensions). Existing JDO code in `apiserver` may be modified, but new entities and queries should be JDBI.
-- **Schema changes need a Liquibase changelog.** If a PR adds/modifies a `@PersistenceCapable` field, JDBI mapping, or raw DDL without a corresponding changelog under `migration/src/main/resources/migration/`, flag it.
+- **Schema changes need a Flyway migration.** If a PR adds/modifies a `@PersistenceCapable` field, JDBI mapping, or raw DDL without a corresponding migration under `migration/src/main/resources/org/dependencytrack/migration/`, flag it.
 - **Strong consistency by default.** Flag transaction boundaries that look incorrect (long-running transactions, cross-service calls inside a transaction, missing rollback on error).
 - **Throughput over latency.** Flag obvious N+1 patterns (loops issuing one query per element); suggest batching.
 

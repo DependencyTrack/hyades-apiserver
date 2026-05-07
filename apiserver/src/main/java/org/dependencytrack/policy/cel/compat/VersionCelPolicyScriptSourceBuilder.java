@@ -18,16 +18,17 @@
  */
 package org.dependencytrack.policy.cel.compat;
 
-import alpine.common.logging.Logger;
 import io.github.nscuro.versatile.Comparator;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
 import org.dependencytrack.model.PolicyCondition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static io.github.nscuro.versatile.version.KnownVersioningSchemes.SCHEME_GENERIC;
 
 public class VersionCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
-    private static final Logger LOGGER = Logger.getLogger(VersionCelPolicyScriptSourceBuilder.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(VersionCelPolicyScriptSourceBuilder.class);
 
     @Override
     public String apply(PolicyCondition policyCondition) {
@@ -69,7 +70,7 @@ public class VersionCelPolicyScriptSourceBuilder implements CelPolicyScriptSourc
                             .withConstraint(Comparator.GREATER_THAN_OR_EQUAL, policyCondition.getValue())
                             .build();
                 default:
-                    LOGGER.warn("Unsupported operation " + policyCondition.getOperator());
+                    LOGGER.warn("Unsupported operation {}", policyCondition.getOperator());
                     return null;
             }
         } catch (VersException versException) {

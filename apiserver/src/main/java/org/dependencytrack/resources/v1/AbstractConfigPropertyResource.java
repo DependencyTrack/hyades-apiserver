@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.common.util.BooleanUtil;
 import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
@@ -35,17 +34,21 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.secret.management.SecretManager;
 import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
 abstract class AbstractConfigPropertyResource extends AbstractApiResource {
 
-    private final Logger LOGGER = Logger.getLogger(this.getClass()); // Use the classes that extend this, not this class itself
+    private final Logger LOGGER = LoggerFactory.getLogger(this.getClass()); // Use the classes that extend this, not this class itself
     private final SecretManager secretManager;
 
     AbstractConfigPropertyResource(SecretManager secretManager) {
@@ -124,9 +127,9 @@ abstract class AbstractConfigPropertyResource extends AbstractApiResource {
                 property.setPropertyValue(null);
             } else {
                 try {
-                    final URL url = new URL(json.getPropertyValue());
+                    final URL url = new URI(json.getPropertyValue()).toURL();
                     property.setPropertyValue(url.toExternalForm());
-                } catch (MalformedURLException e) {
+                } catch (MalformedURLException | URISyntaxException | IllegalArgumentException e) {
                     return Response.status(Response.Status.BAD_REQUEST).entity("The property expected a URL but the URL was malformed.").build();
                 }
             }

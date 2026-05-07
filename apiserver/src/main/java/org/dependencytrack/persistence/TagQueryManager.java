@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.User;
 import alpine.persistence.NotSortableException;
@@ -33,28 +32,31 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class TagQueryManager extends QueryManager implements IQueryManager {
 
     private static final Comparator<Tag> TAG_COMPARATOR = Comparator.comparingInt(
             (Tag tag) -> tag.getProjects().size()).reversed();
 
-    private static final Logger LOGGER = Logger.getLogger(ProjectQueryManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProjectQueryManager.class);
 
     /**
      * Constructs a new QueryManager.
@@ -586,25 +588,11 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public PaginatedResult getTagsForPolicy(String policyUuid) {
-
-        LOGGER.debug("Retrieving tags under policy " + policyUuid);
-
-        Policy policy = getObjectByUuid(Policy.class, policyUuid);
-        List<Project> projects = policy.getProjects();
-
-        final Stream<Tag> tags;
-        if (projects != null && !projects.isEmpty()) {
-            tags = projects.stream()
-                    .map(Project::getTags)
-                    .flatMap(Set::stream)
-                    .distinct();
-        } else {
-            tags = pm.newQuery(Tag.class).executeList().stream();
-        }
-
-        List<Tag> tagsToShow = tags.sorted(TAG_COMPARATOR).toList();
-
-        return (new PaginatedResult()).objects(tagsToShow).total(tagsToShow.size());
+        LOGGER.debug("Retrieving tags under policy {}", policyUuid);
+        final var policy = getObjectByUuid(Policy.class, policyUuid);
+        final var tags = Optional.ofNullable(policy.getTags())
+                .orElse(Collections.emptySet()).stream().sorted(TAG_COMPARATOR).toList();
+        return (new PaginatedResult()).objects(tags).total(tags.size());
     }
 
     /**

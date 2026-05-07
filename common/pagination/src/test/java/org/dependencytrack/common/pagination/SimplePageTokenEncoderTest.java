@@ -33,6 +33,7 @@ class SimplePageTokenEncoderTest {
     public static class TestPageToken implements PageToken {
 
         public int offset;
+        public String value;
 
     }
 
@@ -72,6 +73,25 @@ class SimplePageTokenEncoderTest {
 
         assertThatExceptionOfType(InvalidPageTokenException.class)
                 .isThrownBy(() -> encoder.decode(encoded, TestPageToken.class));
+    }
+
+    @Test
+    void encodeShouldThrowWhenEncodedExceedsMaximumLength() {
+        final var token = new TestPageToken();
+        token.value = "A".repeat(7000);
+
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> encoder.encode(token))
+                .withMessageContaining("exceeds maximum size");
+    }
+
+    @Test
+    void decodeShouldThrowWhenEncodedExceedsMaximumLength() {
+        final String encoded = "A".repeat(8193);
+
+        assertThatExceptionOfType(InvalidPageTokenException.class)
+                .isThrownBy(() -> encoder.decode(encoded, TestPageToken.class))
+                .withMessageContaining("exceeds maximum size");
     }
 
 }

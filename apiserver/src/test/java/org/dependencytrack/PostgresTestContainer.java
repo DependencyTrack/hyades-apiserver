@@ -19,14 +19,16 @@
 package org.dependencytrack;
 
 import com.github.dockerjava.api.command.InspectContainerResponse;
-import org.dependencytrack.support.liquibase.MigrationExecutor;
+import org.dependencytrack.migration.MigrationExecutor;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.util.Map;
 
-public class PostgresTestContainer extends PostgreSQLContainer {
+public final class PostgresTestContainer extends PostgreSQLContainer {
 
     @SuppressWarnings("resource")
     public PostgresTestContainer() {
@@ -63,11 +65,13 @@ public class PostgresTestContainer extends PostgreSQLContainer {
         dataSource.setUser(getUsername());
         dataSource.setPassword(getPassword());
 
-        try {
-            new MigrationExecutor(dataSource, "migration/changelog-main.xml").executeMigration();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to execute migrations", e);
-        }
+        new MigrationExecutor(dataSource).execute();
+
+        // Mirror DatabasePartitionMaintenanceInitTask: production runs this on startup,
+        // and tests have no equivalent init chain. Without it, inserts dated to today
+        // hit "no partition" because the schema baseline carries no metric partitions.
+        final var jdbi = JdbiFactory.createLocalJdbi(dataSource);
+        jdbi.useTransaction(handle -> handle.attach(MetricsDao.class).createMetricsPartitions());
     }
 
 }

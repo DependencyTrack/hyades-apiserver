@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>dependency-track-parent</artifactId>
-        <version>5.7.0-alpha.4-SNAPSHOT</version>
+        <version>5.7.0-alpha.6-SNAPSHOT</version>
     </parent>
 
     <artifactId>api</artifactId>
@@ -69,7 +69,7 @@
             <plugin>
                 <groupId>org.openapitools</groupId>
                 <artifactId>openapi-generator-maven-plugin</artifactId>
-                <version>7.21.0</version>
+                <version>7.22.0</version>
                 <executions>
                     <execution>
                         <id>generate-api-v2</id>

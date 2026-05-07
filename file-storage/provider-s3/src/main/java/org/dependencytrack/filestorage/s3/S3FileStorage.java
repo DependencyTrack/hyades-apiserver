@@ -144,8 +144,8 @@ final class S3FileStorage implements FileStorage {
                     .object(fileLocation.object())
                     .stream(
                             pipedInputStream,
-                            /* objectSize */ -1,
-                            /* partSize */ 10485760 /* (10MiB) */)
+                            /* objectSize */ -1L,
+                            /* partSize */ 10485760L /* (10MiB) */)
                     .build());
 
             compressionFuture.join();

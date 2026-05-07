@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.integrations.fortifyssc;
 
-import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
@@ -28,10 +27,12 @@ import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.secret.management.SecretManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -43,7 +44,7 @@ import static org.dependencytrack.model.ConfigPropertyConstants.FORTIFY_SSC_URL;
 
 public class FortifySscUploader extends AbstractIntegrationPoint implements ProjectFindingUploader {
 
-    private static final Logger LOGGER = Logger.getLogger(FortifySscUploader.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FortifySscUploader.class);
     private static final String APPID_PROPERTY = "fortify.ssc.applicationId";
 
     private final HttpClient httpClient;
@@ -97,7 +98,7 @@ public class FortifySscUploader extends AbstractIntegrationPoint implements Proj
             return;
         }
         try {
-            final FortifySscClient client = new FortifySscClient(httpClient, this, new URL(sscUrl.getPropertyValue()));
+            final FortifySscClient client = new FortifySscClient(httpClient, this, URI.create(sscUrl.getPropertyValue()).toURL());
             final String tokenValue = secretManager.getSecretValue(tokenSecretName);
             if (tokenValue == null) {
                 LOGGER.warn("Fortify SSC secret '%s' could not be resolved. Aborting".formatted(tokenSecretName));

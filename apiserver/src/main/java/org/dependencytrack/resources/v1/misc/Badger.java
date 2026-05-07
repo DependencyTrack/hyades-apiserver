@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.resources.v1.misc;
 
-import alpine.common.logging.Logger;
 import io.pebbletemplates.pebble.PebbleEngine;
 import io.pebbletemplates.pebble.template.PebbleTemplate;
 import org.dependencytrack.model.ProjectMetrics;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -88,7 +88,7 @@ public class Badger {
             template.evaluate(writer, context);
             return writer.toString();
         } catch (IOException e) {
-            Logger.getLogger(this.getClass()).error("An error was encountered evaluating template", e);
+            LoggerFactory.getLogger(this.getClass()).error("An error was encountered evaluating template", e);
             return null;
         }
     }

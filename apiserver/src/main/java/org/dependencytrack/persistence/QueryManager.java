@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.common.logging.Logger;
 import alpine.common.util.BooleanUtil;
 import alpine.common.validation.RegexSequence;
 import alpine.model.ApiKey;
@@ -74,6 +73,8 @@ import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.command.MakeViolationAnalysisCommand;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.jspecify.annotations.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
@@ -107,7 +108,7 @@ public class QueryManager extends AlpineQueryManager {
 
     protected AlpineRequest request;
 
-    private static final Logger LOGGER = Logger.getLogger(QueryManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(QueryManager.class);
     private BomQueryManager bomQueryManager;
     private ComponentQueryManager componentQueryManager;
     private AnalysisQueryManager analysisQueryManager;
@@ -628,16 +629,12 @@ public class QueryManager extends AlpineQueryManager {
         return getPolicyQueryManager().createLicenseGroup(name);
     }
 
-    public Vulnerability createVulnerability(Vulnerability vulnerability, boolean commitIndex) {
-        return getVulnerabilityQueryManager().createVulnerability(vulnerability, commitIndex);
+    public Vulnerability createVulnerability(Vulnerability transientVuln) {
+        return getVulnerabilityQueryManager().createVulnerability(transientVuln);
     }
 
-    public Vulnerability updateVulnerability(Vulnerability transientVulnerability, boolean commitIndex) {
-        return getVulnerabilityQueryManager().updateVulnerability(transientVulnerability, commitIndex);
-    }
-
-    public Vulnerability synchronizeVulnerability(Vulnerability vulnerability, boolean commitIndex) {
-        return getVulnerabilityQueryManager().synchronizeVulnerability(vulnerability, commitIndex);
+    public Vulnerability updateVulnerability(Vulnerability persistentVuln, Vulnerability transientVuln) {
+        return getVulnerabilityQueryManager().updateVulnerability(persistentVuln, transientVuln);
     }
 
     public Vulnerability getVulnerabilityByVulnId(String source, String vulnId) {
@@ -715,13 +712,12 @@ public class QueryManager extends AlpineQueryManager {
 
     public VulnerableSoftware getVulnerableSoftwareByCpe23(
             String cpe23,
-            String version,
             String versionEndExcluding,
             String versionEndIncluding,
             String versionStartExcluding,
             String versionStartIncluding) {
         return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByCpe23(
-                cpe23, version, versionEndExcluding, versionEndIncluding, versionStartExcluding, versionStartIncluding);
+                cpe23, versionEndExcluding, versionEndIncluding, versionStartExcluding, versionStartIncluding);
     }
 
     public VulnerableSoftware getVulnerableSoftwareByPurl(
@@ -737,6 +733,30 @@ public class QueryManager extends AlpineQueryManager {
                 purlType,
                 purlNamespace,
                 purlName,
+                version,
+                versionEndExcluding,
+                versionEndIncluding,
+                versionStartExcluding,
+                versionStartIncluding);
+    }
+
+    public VulnerableSoftware getVulnerableSoftwareByPurl(
+            final String purlType,
+            final String purlNamespace,
+            final String purlName,
+            final String purlQualifiers,
+            final String purlSubpath,
+            final String version,
+            final String versionEndExcluding,
+            final String versionEndIncluding,
+            final String versionStartExcluding,
+            final String versionStartIncluding) {
+        return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByPurl(
+                purlType,
+                purlNamespace,
+                purlName,
+                purlQualifiers,
+                purlSubpath,
                 version,
                 versionEndExcluding,
                 versionEndIncluding,

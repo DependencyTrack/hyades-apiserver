@@ -18,15 +18,16 @@
  */
 package org.dependencytrack.policy.cel.compat;
 
-import alpine.common.logging.Logger;
 import org.dependencytrack.model.PolicyCondition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @since 5.6.0
  */
 public class EpssCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
 
-    private static final Logger LOGGER = Logger.getLogger(EpssCelPolicyScriptSourceBuilder.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EpssCelPolicyScriptSourceBuilder.class);
 
     @Override
     public String apply(final PolicyCondition policyCondition) {

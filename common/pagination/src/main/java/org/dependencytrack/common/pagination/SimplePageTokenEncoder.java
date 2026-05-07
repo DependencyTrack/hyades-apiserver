@@ -18,11 +18,14 @@
  */
 package org.dependencytrack.common.pagination;
 
+import com.fasterxml.jackson.core.StreamReadConstraints;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
@@ -30,7 +33,23 @@ import java.util.Base64;
  */
 public final class SimplePageTokenEncoder implements PageTokenEncoder {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final int MAX_ENCODED_LENGTH = 8192;
+    private static final ObjectMapper OBJECT_MAPPER = new CBORMapper(
+            CBORFactory
+                    .builder()
+                    .streamReadConstraints(
+                            StreamReadConstraints.builder()
+                                    .maxStringLength(1024)
+                                    .maxNumberLength(20)
+                                    .maxNestingDepth(4)
+                                    .maxDocumentLength(4096)
+                                    .build())
+                    .build())
+            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+
+    public SimplePageTokenEncoder() {
+
+    }
 
     @Override
     public @Nullable String encode(@Nullable PageToken pageToken) {
@@ -39,8 +58,14 @@ public final class SimplePageTokenEncoder implements PageTokenEncoder {
         }
 
         try {
-            final String pageTokenJson = objectMapper.writeValueAsString(pageToken);
-            return Base64.getUrlEncoder().encodeToString(pageTokenJson.getBytes(StandardCharsets.UTF_8));
+            final byte[] pageTokenBytes = OBJECT_MAPPER.writeValueAsBytes(pageToken);
+            final String encoded = Base64.getUrlEncoder().encodeToString(pageTokenBytes);
+            if (encoded.length() > MAX_ENCODED_LENGTH) {
+                throw new IllegalStateException(
+                        "Encoded token of size %d exceeds maximum size %d".formatted(
+                                encoded.length(), MAX_ENCODED_LENGTH));
+            }
+            return encoded;
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -51,10 +76,15 @@ public final class SimplePageTokenEncoder implements PageTokenEncoder {
         if (encoded == null) {
             return null;
         }
+        if (encoded.length() > MAX_ENCODED_LENGTH) {
+            throw new InvalidPageTokenException(
+                    "Token of size %d exceeds maximum size %d".formatted(
+                            encoded.length(), MAX_ENCODED_LENGTH));
+        }
 
         try {
-            final byte[] pageTokenJson = Base64.getUrlDecoder().decode(encoded);
-            return objectMapper.readValue(pageTokenJson, pageTokenClass);
+            final byte[] pageTokenBytes = Base64.getUrlDecoder().decode(encoded);
+            return OBJECT_MAPPER.readValue(pageTokenBytes, pageTokenClass);
         } catch (IOException | IllegalArgumentException e) {
             throw new InvalidPageTokenException(e);
         }

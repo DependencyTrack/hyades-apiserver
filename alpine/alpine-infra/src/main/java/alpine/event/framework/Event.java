@@ -18,7 +18,8 @@
  */
 package alpine.event.framework;
 
-import alpine.common.logging.Logger;
+
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
@@ -53,7 +54,7 @@ public interface Event {
             SingleThreadedEventService.getInstance().publish(event);
         }
         if (!informed) {
-            Logger.getLogger(Event.class).debug("No subscribers to inform from event: " + event.getClass().getName());
+            LoggerFactory.getLogger(Event.class).debug("No subscribers to inform from event: " + event.getClass().getName());
         }
     }
 

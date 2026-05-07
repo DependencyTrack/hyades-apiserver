@@ -586,7 +586,7 @@ public interface ProjectDao extends SqlObject {
              WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
              AND "PROJECT"."NAME" = :projectName
              AND "PROJECT"."ID" NOT IN (
-                 SELECT "PROJECT"."ID" 
+                 SELECT "PROJECT"."ID"
                   FROM "PROJECT"
                   WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
                   AND "PROJECT"."NAME" = :projectName

@@ -19,7 +19,7 @@
 package org.dependencytrack.vulndatasource;
 
 import com.google.protobuf.util.Timestamps;
-import org.cyclonedx.proto.v1_6.Bom;
+import org.cyclonedx.proto.v1_7.Bom;
 import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityContext;
@@ -175,7 +175,10 @@ public final class MirrorVulnDataSourceActivity implements Activity<MirrorVulnDa
             qm.runInTransaction(() -> {
                 for (final Vulnerability vuln : vulns) {
                     LOGGER.debug("Synchronizing vulnerability {}", vuln.getVulnId());
-                    final Vulnerability persistentVuln = qm.synchronizeVulnerability(vuln, false);
+                    final Vulnerability existingVuln = qm.getVulnerabilityByVulnId(vuln.getSource(), vuln.getVulnId());
+                    final Vulnerability persistentVuln = existingVuln == null
+                            ? qm.createVulnerability(vuln)
+                            : qm.updateVulnerability(existingVuln, vuln);
                     final List<VulnerableSoftware> vsList = vsListByVulnId.get(persistentVuln.getVulnId());
                     qm.synchronizeVulnerableSoftware(persistentVuln, vsList, source);
                 }

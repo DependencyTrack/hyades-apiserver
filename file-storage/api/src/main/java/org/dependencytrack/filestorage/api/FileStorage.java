@@ -21,9 +21,9 @@ package org.dependencytrack.filestorage.api;
 import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 
 import java.io.Closeable;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.NoSuchFileException;
 import java.util.regex.Pattern;
 
 import static java.util.Objects.requireNonNull;
@@ -73,8 +73,8 @@ public interface FileStorage extends Closeable {
      *
      * @param fileMetadata Metadata of the file to retrieve.
      * @return The file's content stream.
-     * @throws IOException           When retrieving the file failed.
-     * @throws FileNotFoundException When the requested file was not found.
+     * @throws IOException         When retrieving the file failed.
+     * @throws NoSuchFileException When the requested file was not found.
      */
     InputStream get(FileMetadata fileMetadata) throws IOException;
 

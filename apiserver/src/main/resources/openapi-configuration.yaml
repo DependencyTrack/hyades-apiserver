@@ -118,7 +118,8 @@ openAPI:
           Tokens are obtained from `POST /api/v1/user/login` or
           `POST /api/v1/user/oidc/login`.
         type: http
-        scheme: Bearer
+        scheme: bearer
+        bearerFormat: Opaque
 prettyPrint: true
 resourcePackages:
 - alpine.server.resources

@@ -97,6 +97,7 @@ public @interface DefineApiProjectAclCondition {
         }
 
         @Override
+        @SuppressWarnings("removal") // Binding#findForName is the only way to inspect bindings.
         public void beforeTemplating(final PreparedStatement stmt, final StatementContext ctx) {
             if (!(ctx.getAttribute(ATTRIBUTE_API_PROJECT_ACL_CONDITION) instanceof final String aclCondition)) {
                 // No condition was defined by ApiRequestStatementCustomizer; Nothing to do.

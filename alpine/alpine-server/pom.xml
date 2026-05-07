@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>alpine-parent</artifactId>
-        <version>5.7.0-alpha.4-SNAPSHOT</version>
+        <version>5.7.0-alpha.6-SNAPSHOT</version>
     </parent>
 
     <artifactId>alpine-server</artifactId>
@@ -196,11 +196,6 @@
             <groupId>org.eclipse.microprofile.health</groupId>
             <artifactId>microprofile-health-api</artifactId>
         </dependency>
-        <!-- Object cache -->
-        <dependency>
-            <groupId>com.github.ben-manes.caffeine</groupId>
-            <artifactId>caffeine</artifactId>
-        </dependency>
         <!-- Unit Tests -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -235,6 +230,16 @@
         <dependency>
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock-standalone</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-ldap</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

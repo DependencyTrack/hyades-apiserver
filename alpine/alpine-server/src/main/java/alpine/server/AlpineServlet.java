@@ -18,7 +18,6 @@
  */
 package alpine.server;
 
-import alpine.common.logging.Logger;
 import alpine.config.AlpineConfigKeys;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
@@ -26,6 +25,8 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.owasp.security.logging.util.SecurityUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The AlpineServlet is the main servlet which extends
@@ -38,7 +39,7 @@ import org.owasp.security.logging.util.SecurityUtil;
 public class AlpineServlet extends ServletContainer {
 
     private static final long serialVersionUID = -133386507668410112L;
-    private static final Logger LOGGER = Logger.getLogger(AlpineServlet.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AlpineServlet.class);
 
     public AlpineServlet() {
     }
@@ -50,17 +51,17 @@ public class AlpineServlet extends ServletContainer {
     @Override
     public void init(ServletConfig config) throws ServletException {
         final String appName = ConfigProvider.getConfig().getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_NAME, String.class);
-        LOGGER.info("Starting " + appName);
+        LOGGER.info("Starting {}", appName);
         super.init(config);
 
         SecurityUtil.logJavaSystemProperties();
 
-        LOGGER.info(appName + " is ready");
+        LOGGER.info("{} is ready", appName);
     }
 
     @Override
     public void destroy() {
-        LOGGER.info("Stopping " + ConfigProvider.getConfig().getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_NAME, String.class));
+        LOGGER.info("Stopping {}", ConfigProvider.getConfig().getValue(AlpineConfigKeys.BUILD_INFO_APPLICATION_NAME, String.class));
         super.destroy();
     }
 

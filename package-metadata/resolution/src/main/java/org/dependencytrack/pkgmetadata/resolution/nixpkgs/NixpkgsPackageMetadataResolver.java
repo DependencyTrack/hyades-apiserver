@@ -23,7 +23,7 @@ import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
-import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.cache.CacheKeys;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.charset.StandardCharsets;

@@ -47,6 +47,7 @@ import java.util.UUID;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapHashes;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapLicense;
+import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapScope;
 
 @Provider
 public class ProjectsResource extends AbstractApiResource implements ProjectsApi {
@@ -75,6 +76,7 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
                                             .name(componentRow.getName())
                                             .hashes(mapHashes(componentRow))
                                             .classifier(componentRow.getClassifier() != null ? componentRow.getClassifier().name() : null)
+                                            .scope(mapScope(componentRow.getScope()))
                                             .copyright(componentRow.getCopyright())
                                             .cpe(componentRow.getCpe())
                                             .group(componentRow.getGroup())

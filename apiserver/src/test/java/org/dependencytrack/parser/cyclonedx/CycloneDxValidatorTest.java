@@ -19,10 +19,6 @@
 package org.dependencytrack.parser.cyclonedx;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
-import jakarta.ws.rs.core.MediaType;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,11 +41,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.assertj.core.api.InstanceOfAssertFactories.list;
 
 public class CycloneDxValidatorTest {
 
     private CycloneDxValidator validator;
-    private final MediaType mediaTypeProtobuf = new MediaType("application", "x.vnd.cyclonedx+protobuf");
 
     @BeforeEach
     public void setUp() {
@@ -153,7 +149,7 @@ public class CycloneDxValidatorTest {
                         }
                         """.getBytes()))
                 .withMessage("Schema validation failed")
-                .extracting(InvalidBomException::getValidationErrors).asList()
+                .extracting(InvalidBomException::getValidationErrors).asInstanceOf(list(String.class))
                 .containsExactly("""
                         $.components[0].type: does not have a value in the enumeration \
                         ["application", "framework", "library", "container", "operating-system", "device", "firmware", "file"]\
@@ -175,7 +171,7 @@ public class CycloneDxValidatorTest {
                          </bom>
                         """.getBytes()))
                 .withMessage("Schema validation failed")
-                .extracting(InvalidBomException::getValidationErrors).asList()
+                .extracting(InvalidBomException::getValidationErrors).asInstanceOf(list(String.class))
                 .containsExactly(
                         """
                                 cvc-enumeration-valid: Value 'foo' is not facet-valid with respect to enumeration \
@@ -257,12 +253,12 @@ public class CycloneDxValidatorTest {
 
         try {
             final Throwable throwable = catchThrowableOfType(
+                    InvalidBomException.class,
                     () -> validator.validate("""
                             <?xml version="1.0" encoding="UTF-8"?>
                             <!DOCTYPE bom [<!ENTITY %% sp SYSTEM "http://localhost:%d/does-not-exist/file.dtd"> %%sp;]>
                             <bom xmlns="http://cyclonedx.org/schema/bom/1.5"/>
-                            """.formatted(wireMock.port()).getBytes()),
-                    InvalidBomException.class
+                            """.formatted(wireMock.port()).getBytes())
             );
 
             // Ensure we failed for the right reason.
@@ -281,28 +277,4 @@ public class CycloneDxValidatorTest {
         }
     }
 
-    @Test
-    public void testValidateProtobufWithUnsupportedSpecVersion() {
-        assertThatExceptionOfType(InvalidBomException.class)
-                .isThrownBy(() -> validator.validate(Bom.newBuilder().setSpecVersion("1.1").build().toByteArray(), mediaTypeProtobuf))
-                .withMessage("Protobuf is not supported for specVersion 1.1");
-    }
-
-    @Test
-    public void testValidateProtobufWithUnknownSpecVersion() {
-        assertThatExceptionOfType(InvalidBomException.class)
-                .isThrownBy(() -> validator.validate(Bom.newBuilder().setSpecVersion("666").build().toByteArray(), mediaTypeProtobuf))
-                .withMessage("Unrecognized specVersion 666");
-    }
-
-    @Test
-    public void testValidateWithValidBomProtobuf() {
-        final Bom bom = Bom.newBuilder()
-                .setSpecVersion("1.6")
-                .addVulnerabilities(Vulnerability.newBuilder()
-                        .setId("CVE-test")
-                        .setSource(Source.newBuilder().setName("NVD").build()).build()).build();
-
-        assertThatNoException().isThrownBy(() -> validator.validate(bom.toByteArray(), mediaTypeProtobuf));
-    }
 }

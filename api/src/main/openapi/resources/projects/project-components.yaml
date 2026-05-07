@@ -17,7 +17,7 @@
 get:
   operationId: listProjectComponents
   summary: Retrieves a list of all components for a given project.
-  description: Requires permission <strong>VIEW_PORTFOLIO</strong>
+  description: Requires permission `VIEW_PORTFOLIO`
   tags:
     - Projects
   parameters:

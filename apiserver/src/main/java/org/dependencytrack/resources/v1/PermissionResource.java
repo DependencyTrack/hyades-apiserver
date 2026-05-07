@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
@@ -50,6 +49,8 @@ import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.vo.TeamPermissionsSetRequest;
 import org.dependencytrack.resources.v1.vo.UserPermissionsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.Query;
 import java.util.List;
@@ -69,7 +70,7 @@ import java.util.Map;
 })
 public class PermissionResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(PermissionResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PermissionResource.class);
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -132,7 +133,7 @@ public class PermissionResource extends AbstractApiResource {
                     permissions.add(permission);
                     principal.setPermissions(permissions);
                     principal = qm.persist(principal);
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added permission for user: " + principal.getName() + " / permission: " + permission.getName());
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added permission for user: " + principal.getUsername() + " / permission: " + permission.getName());
                     return Response.ok(principal).build();
                 }
                 return Response.status(Response.Status.NOT_MODIFIED).build();
@@ -179,7 +180,7 @@ public class PermissionResource extends AbstractApiResource {
                     permissions.remove(permission);
                     principal.setPermissions(permissions);
                     principal = qm.persist(principal);
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed permission for user: " + principal.getName() + " / permission: " + permission.getName());
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed permission for user: " + principal.getUsername() + " / permission: " + permission.getName());
                     return Response.ok(principal).build();
                 }
                 return Response.status(Response.Status.NOT_MODIFIED).build();

@@ -18,12 +18,13 @@
  */
 package alpine.server.auth;
 
-import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.persistence.AlpineQueryManager;
 import alpine.security.ApiKeyDecoder;
 import alpine.security.InvalidApiKeyFormatException;
 import org.glassfish.jersey.server.ContainerRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.naming.AuthenticationException;
 import java.security.MessageDigest;
@@ -37,7 +38,7 @@ import java.security.Principal;
  */
 public class ApiKeyAuthenticationService implements AuthenticationService {
 
-    private static final Logger LOGGER = Logger.getLogger(ApiKeyAuthenticationService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiKeyAuthenticationService.class);
 
     private final String assertedApiKey;
 
@@ -80,7 +81,7 @@ public class ApiKeyAuthenticationService implements AuthenticationService {
         try (final var qm = new AlpineQueryManager()) {
             final ApiKey apiKey = qm.getApiKeyByPublicId(decodedApiKey.getPublicId());
             if (apiKey == null) {
-                LOGGER.debug("No API key found for public ID " + decodedApiKey.getPublicId());
+                LOGGER.debug("No API key found for public ID {}", decodedApiKey.getPublicId());
                 throw new AuthenticationException();
             }
 

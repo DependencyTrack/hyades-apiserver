@@ -155,6 +155,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "A0"."SWIDTAGID" AS "swidTagId",
                         "A0"."UUID" AS "uuid",
                         "A0"."VERSION" AS "version",
+                        "A0"."SCOPE" AS "scope",
                         "B0"."INACTIVE_SINCE" AS "projectInactiveSince",
                         "B0"."AUTHORS" AS "projectAuthors",
                         "B0"."CLASSIFIER" AS "projectClassifier",

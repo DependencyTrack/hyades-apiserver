@@ -18,18 +18,16 @@
  */
 package org.dependencytrack.parser.cyclonedx;
 
-import alpine.common.logging.Logger;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.google.protobuf.InvalidProtocolBufferException;
-import jakarta.ws.rs.core.MediaType;
 import org.cyclonedx.Version;
 import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.parsers.JsonParser;
 import org.cyclonedx.parsers.Parser;
 import org.cyclonedx.parsers.XmlParser;
-import org.cyclonedx.proto.v1_6.Bom;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.XMLConstants;
 import javax.xml.stream.XMLInputFactory;
@@ -62,7 +60,7 @@ import static org.cyclonedx.Version.VERSION_16;
  */
 public class CycloneDxValidator {
 
-    private static final Logger LOGGER = Logger.getLogger(CycloneDxValidator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CycloneDxValidator.class);
     private static final CycloneDxValidator INSTANCE = new CycloneDxValidator();
 
     private final JsonMapper jsonMapper = new JsonMapper();
@@ -75,42 +73,21 @@ public class CycloneDxValidator {
     }
 
     public void validate(final byte[] bomBytes) {
-        validate(bomBytes, null);
-    }
-
-    public void validate(final byte[] bomBytes, MediaType mediaType) {
-        // Validating protobuf format
-        if (mediaType != null && mediaType.toString().equalsIgnoreCase("application/x.vnd.cyclonedx+protobuf")) {
-            try {
-                final var bom = Bom.parseFrom(bomBytes);
-                switch (bom.getSpecVersion()) {
-                    case "1.0", "1.1", "1.2", "1.3", "1.4" ->
-                            throw new InvalidBomException("Protobuf is not supported for specVersion %s".formatted(bom.getSpecVersion()));
-                    case "1.5", "1.6" -> {}
-                    default ->
-                            throw new InvalidBomException("Unrecognized specVersion %s".formatted(bom.getSpecVersion()));
-                }
-            } catch (InvalidProtocolBufferException e) {
-                throw new InvalidBomException("Protobuf Schema validation failed", e);
-            }
-        } else {
-            // Validating JSON/XML format
-            final FormatAndVersion formatAndVersion = detectFormatAndSchemaVersion(bomBytes);
-            final Parser bomParser = switch (formatAndVersion.format()) {
-                case JSON -> new JsonParser();
-                case XML -> new XmlParser();
-            };
-            final List<ParseException> validationErrors;
-            try {
-                validationErrors = bomParser.validate(bomBytes, formatAndVersion.version());
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to validate BOM", e);
-            }
-            if (!validationErrors.isEmpty()) {
-                throw new InvalidBomException("Schema validation failed", validationErrors.stream()
-                        .map(ParseException::getMessage)
-                        .toList());
-            }
+        final FormatAndVersion formatAndVersion = detectFormatAndSchemaVersion(bomBytes);
+        final Parser bomParser = switch (formatAndVersion.format()) {
+            case JSON -> new JsonParser();
+            case XML -> new XmlParser();
+        };
+        final List<ParseException> validationErrors;
+        try {
+            validationErrors = bomParser.validate(bomBytes, formatAndVersion.version());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to validate BOM", e);
+        }
+        if (!validationErrors.isEmpty()) {
+            throw new InvalidBomException("Schema validation failed", validationErrors.stream()
+                    .map(ParseException::getMessage)
+                    .toList());
         }
     }
 
@@ -156,7 +133,7 @@ public class CycloneDxValidator {
 
             Version schemaVersion = null;
             while (jsonParser.nextToken() != null) {
-                final String fieldName = jsonParser.getCurrentName();
+                final String fieldName = jsonParser.currentName();
                 if ("specVersion".equals(fieldName)) {
                     if (jsonParser.nextToken() == JsonToken.VALUE_STRING) {
                         final String specVersion = jsonParser.getValueAsString();

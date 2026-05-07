@@ -20,10 +20,10 @@ package org.dependencytrack.vulnanalysis;
 
 import io.github.resilience4j.core.IntervalFunction;
 import io.smallrye.config.SmallRyeConfigBuilder;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
-import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Source;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_7.VulnerabilityReference;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.cache.api.NoopCacheManager;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
@@ -1170,7 +1170,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
 
         mockAnalyzerFunction.set(bom -> Bom.newBuilder()
                 .addVulnerabilities(
-                        org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                        org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                                 .setId("CVE-2024-1234")
                                 .setSource(Source.newBuilder().setName("NVD"))
                                 .addAffects(VulnerabilityAffects.newBuilder().setRef(bom.getComponents(0).getBomRef()))
@@ -1218,7 +1218,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
 
         mockAnalyzerFunction.set(bom -> Bom.newBuilder()
                 .addVulnerabilities(
-                        org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                        org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                                 .setId("CVE-2024-1234")
                                 .setSource(Source.newBuilder().setName("NVD"))
                                 .addAffects(VulnerabilityAffects.newBuilder().setRef(bom.getComponents(0).getBomRef()))
@@ -1238,7 +1238,7 @@ class VulnAnalysisWorkflowTest extends PersistenceCapableTest {
 
         mockAnalyzerFunction.set(bom -> Bom.newBuilder()
                 .addVulnerabilities(
-                        org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                        org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                                 .setId("CVE-2024-1234")
                                 .setSource(Source.newBuilder().setName("NVD"))
                                 .addAffects(VulnerabilityAffects.newBuilder().setRef(bom.getComponents(0).getBomRef())))

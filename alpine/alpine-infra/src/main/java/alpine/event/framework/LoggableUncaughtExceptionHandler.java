@@ -18,7 +18,8 @@
  */
 package alpine.event.framework;
 
-import alpine.common.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class simply creates a log entry for any uncaught exceptions that may arise
@@ -29,7 +30,7 @@ import alpine.common.logging.Logger;
  */
 public class LoggableUncaughtExceptionHandler implements Thread.UncaughtExceptionHandler {
 
-    private static final Logger LOGGER = Logger.getLogger(LoggableUncaughtExceptionHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LoggableUncaughtExceptionHandler.class);
 
     public void uncaughtException(Thread myThread, Throwable e) {
         LOGGER.error("An unknown error occurred in an asynchronous event thread", e);

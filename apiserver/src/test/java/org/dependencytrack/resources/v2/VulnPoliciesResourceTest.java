@@ -45,6 +45,7 @@ import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.ArgumentMatchers;
 
 import java.net.URI;
 import java.time.Instant;
@@ -490,7 +491,7 @@ class VulnPoliciesResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
 
         final var runId = UUID.fromString("00000000-0000-0000-0000-000000000006");
-        when(DEX_ENGINE_MOCK.createRun(any(CreateWorkflowRunRequest.class)))
+        when(DEX_ENGINE_MOCK.createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any()))
                 .thenReturn(runId)
                 .thenReturn(null)
                 .thenReturn(runId);
@@ -522,7 +523,7 @@ class VulnPoliciesResourceTest extends ResourceTest {
     void shouldRejectBundleSyncWhenAlreadyInProgress() {
         initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
 
-        when(DEX_ENGINE_MOCK.createRun(any(CreateWorkflowRunRequest.class)))
+        when(DEX_ENGINE_MOCK.createRun(ArgumentMatchers.<CreateWorkflowRunRequest<?>>any()))
                 .thenReturn(UUID.fromString("00000000-0000-0000-0000-000000000007"))
                 .thenReturn(null);
 

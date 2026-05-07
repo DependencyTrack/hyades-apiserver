@@ -163,7 +163,7 @@ class UpdatePortfolioMetricsWorkflowTest extends AbstractMetricsUpdateTaskTest {
         vuln.setVulnId("INTERNAL-001");
         vuln.setSource(Vulnerability.Source.INTERNAL);
         vuln.setSeverity(Severity.HIGH);
-        qm.createVulnerability(vuln, false);
+        vuln = qm.createVulnerability(vuln);
 
         // Create a project with an unaudited vulnerability.
         var projectUnaudited = new Project();
@@ -398,7 +398,7 @@ class UpdatePortfolioMetricsWorkflowTest extends AbstractMetricsUpdateTaskTest {
         vuln.setVulnId("INTERNAL-001");
         vuln.setSource(Vulnerability.Source.INTERNAL);
         vuln.setSeverity(Severity.HIGH);
-        qm.createVulnerability(vuln, false);
+        vuln = qm.createVulnerability(vuln);
 
         var regularProject = new Project();
         regularProject.setName("acme-app-regular");

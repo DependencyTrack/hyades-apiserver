@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
 import alpine.server.auth.PermissionRequired;
 import com.fasterxml.uuid.Generators;
@@ -87,7 +86,8 @@ import org.dependencytrack.tasks.ImportBomWorkflow;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
-import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -128,7 +128,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransactio
 })
 public class BomResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(BomResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BomResource.class);
     private static final String DEFAULT_EXPORT_VERSION = "1.5";
 
     @Inject
@@ -315,7 +315,7 @@ public class BomResource extends AbstractApiResource {
                       then the <code>projectName</code> and <code>projectVersion</code> must be specified.
                       Optionally, if <code>autoCreate</code> is specified and <code>true</code> and the project does not exist,
                       the project will be created. In this scenario, the principal making the request will
-                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>, 
+                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>,
                       or <strong>PROJECT_CREATION_UPLOAD</strong> permission.
                     </p>
                     <p>
@@ -461,14 +461,14 @@ public class BomResource extends AbstractApiResource {
         final byte[] bomBytes;
         try (final var encodedInputStream = new ByteArrayInputStream(request.getBom().getBytes(StandardCharsets.UTF_8));
              final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
-             final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
+             final var byteOrderMarkInputStream = BOMInputStream.builder().setInputStream(decodedInputStream).get()) {
             bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
         } catch (IOException e) {
-            LOGGER.error("An unexpected error occurred while decoding BOM uploaded to project: " + projectInfo.uuid(), e);
+            LOGGER.error("An unexpected error occurred while decoding BOM uploaded to project: {}", projectInfo.uuid(), e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
 
-        return processUpload(projectInfo, bomBytes, null);
+        return processUpload(projectInfo, bomBytes);
     }
 
     @POST
@@ -482,11 +482,11 @@ public class BomResource extends AbstractApiResource {
                       then the <code>projectName</code> and <code>projectVersion</code> must be specified.
                       Optionally, if <code>autoCreate</code> is specified and <code>true</code> and the project does not exist,
                       the project will be created. In this scenario, the principal making the request will
-                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>, 
+                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>,
                       or <strong>PROJECT_CREATION_UPLOAD</strong> permission.
                     </p>
                     <p>
-                      MediaType supported for BOM artifact is 'application/xml', 'application/json' or 'application/x.vnd.cyclonedx+protobuf'.
+                      MediaType supported for BOM artifact is 'application/xml' or 'application/json'.
                       The BOM will be validated against the CycloneDX schema. If schema validation fails,
                       a response with problem details in RFC 9457 format will be returned. In this case,
                       the response's content type will be <code>application/problem+json</code>.
@@ -630,15 +630,14 @@ public class BomResource extends AbstractApiResource {
         final FormDataBodyPart firstPart = artifactParts.getFirst();
         final byte[] bomBytes;
         try (final var inputStream = ((BodyPartEntity) firstPart.getEntity()).getInputStream();
-             final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
+             final var byteOrderMarkInputStream = BOMInputStream.builder().setInputStream(inputStream).get()) {
             bomBytes = IOUtils.toByteArray(byteOrderMarkInputStream);
         } catch (IOException e) {
             LOGGER.error("An unexpected error occurred while reading BOM from upload", e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
-        final MediaType mediaType = firstPart.getMediaType();
 
-        return processUpload(projectInfo, bomBytes, mediaType);
+        return processUpload(projectInfo, bomBytes);
     }
 
     private record ProjectInfo(UUID uuid, String name, String version, List<String> tagNames) {
@@ -656,8 +655,8 @@ public class BomResource extends AbstractApiResource {
 
     // todo: make option to combine all the bom data so components are reconciled in a single pass.
     // todo: https://github.com/DependencyTrack/dependency-track/issues/130
-    private Response processUpload(ProjectInfo project, byte[] bomBytes, @Nullable MediaType mediaType) {
-        validateBom(bomBytes, project.tagNames(), mediaType, project.uuid());
+    private Response processUpload(ProjectInfo project, byte[] bomBytes) {
+        validateBom(bomBytes, project.tagNames(), project.uuid());
 
         final UUID bomUploadToken = Generators.timeBasedEpochRandomGenerator().generate();
 
@@ -666,14 +665,13 @@ public class BomResource extends AbstractApiResource {
             // TODO: Provide mediaType to FileStorage#store. Should be any of:
             //   * application/vnd.cyclonedx+json
             //   * application/vnd.cyclonedx+xml
-            //   * application/x.vnd.cyclonedx+protobuf
             //  Consider also attaching the detected version, i.e. application/vnd.cyclonedx+xml; version=1.6
             //  See https://cyclonedx.org/specification/overview/ -> Media Types.
             bomFileMetadata = fileStorage.store(
                     "bom-upload/%s".formatted(bomUploadToken),
                     new ByteArrayInputStream(bomBytes));
         } catch (IOException e) {
-            LOGGER.error("Failed to store BOM for project: " + project.uuid(), e);
+            LOGGER.error("Failed to store BOM for project: {}", project.uuid(), e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
 
@@ -707,27 +705,22 @@ public class BomResource extends AbstractApiResource {
     }
 
     static void validate(byte[] bomBytes, Project project) {
-        validate(bomBytes, project, null);
-    }
-
-    static void validate(byte[] bomBytes, Project project, @Nullable MediaType mediaType) {
         final List<String> tagNames = project.getTags() != null
                 ? project.getTags().stream().map(org.dependencytrack.model.Tag::getName).toList()
                 : List.of();
-        validateBom(bomBytes, tagNames, mediaType, project.getUuid());
+        validateBom(bomBytes, tagNames, project.getUuid());
     }
 
     private static void validateBom(
             byte[] bomBytes,
             List<String> projectTagNames,
-            @Nullable MediaType mediaType,
             UUID projectUuid) {
         if (!shouldValidate(projectTagNames)) {
             return;
         }
 
         try {
-            CycloneDxValidator.getInstance().validate(bomBytes, mediaType);
+            CycloneDxValidator.getInstance().validate(bomBytes);
         } catch (InvalidBomException e) {
             final var problemDetails = new InvalidBomProblemDetails();
             problemDetails.setStatus(400);

@@ -23,11 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Component;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Component;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.Vulnerability;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffects;
 import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
 import org.jspecify.annotations.Nullable;
@@ -77,7 +77,7 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final URI apiUrl;
-    private final String basicAuthCredentials;
+    private final String authHeaderValue;
     private final boolean aliasSyncEnabled;
 
     OssIndexVulnAnalyzer(
@@ -92,8 +92,13 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
         this.apiUrl = apiUrl;
-        this.basicAuthCredentials = Base64.getEncoder().encodeToString(
-                "%s:%s".formatted(username, apiToken).getBytes(StandardCharsets.UTF_8));
+        if (username != null && apiToken != null) {
+            final String basicAuthCredentials = Base64.getEncoder().encodeToString(
+                    "%s:%s".formatted(username, apiToken).getBytes(StandardCharsets.UTF_8));
+            this.authHeaderValue = "Basic " + basicAuthCredentials;
+        } else {
+            this.authHeaderValue = "Bearer " + apiToken;
+        }
         this.aliasSyncEnabled = aliasSyncEnabled;
     }
 
@@ -243,7 +248,7 @@ final class OssIndexVulnAnalyzer implements VulnAnalyzer {
                 .uri(URI.create(apiUrl + "/api/v3/component-report"))
                 .header("Accept", "application/json")
                 .header("Content-Type", "application/json")
-                .header("Authorization", "Basic " + basicAuthCredentials)
+                .header("Authorization", authHeaderValue)
                 .timeout(Duration.ofSeconds(10))
                 .POST(BodyPublishers.ofByteArray(requestBytes))
                 .build();

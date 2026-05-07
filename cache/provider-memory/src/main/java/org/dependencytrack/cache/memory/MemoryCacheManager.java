@@ -64,7 +64,6 @@ final class MemoryCacheManager implements CacheManager {
         final com.github.benmanes.caffeine.cache.Cache<String, Optional<byte[]>> caffeineCache =
                 Caffeine.newBuilder()
                         .expireAfterWrite(cacheConfig.ttl())
-                        .maximumSize(cacheConfig.maxSize())
                         .build();
 
         return new MemoryCache(caffeineCache);

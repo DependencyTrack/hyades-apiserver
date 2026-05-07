@@ -21,13 +21,11 @@ package org.dependencytrack.pkgmetadata.resolution.gem;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageArtifactMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadata;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageRepository;
-import org.dependencytrack.pkgmetadata.resolution.api.RetryableResolutionException;
-import org.dependencytrack.pkgmetadata.resolution.support.CacheKeys;
+import org.dependencytrack.pkgmetadata.resolution.cache.CachingHttpClient;
 import org.dependencytrack.pkgmetadata.resolution.support.UrlUtils;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -36,13 +34,12 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.util.Base64;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
@@ -52,14 +49,12 @@ final class GemPackageMetadataResolver implements PackageMetadataResolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(GemPackageMetadataResolver.class);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
 
-    private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private final Cache cache;
+    private final CachingHttpClient cachingHttpClient;
 
-    GemPackageMetadataResolver(HttpClient httpClient, ObjectMapper objectMapper, Cache cache) {
-        this.httpClient = httpClient;
+    GemPackageMetadataResolver(ObjectMapper objectMapper, CachingHttpClient cachingHttpClient) {
         this.objectMapper = objectMapper;
-        this.cache = cache;
+        this.cachingHttpClient = cachingHttpClient;
     }
 
     @Override
@@ -67,15 +62,17 @@ final class GemPackageMetadataResolver implements PackageMetadataResolver {
             throws InterruptedException {
         requireNonNull(repository, "repository must not be null");
 
-        final String cacheKey = CacheKeys.build(repository, purl.getName());
+        final String url = UrlUtils.join(repository.url(), "api", "v1", "versions", purl.getName() + ".json");
 
-        byte[] body = cache.get(cacheKey);
+        final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(REQUEST_TIMEOUT)
+                .GET();
+        maybeApplyAuth(requestBuilder, repository);
+
+        final byte[] body = cachingHttpClient.get(requestBuilder, repository);
         if (body == null) {
-            body = fetchVersions(purl.getName(), repository);
-            if (body == null) {
-                return null;
-            }
-            cache.put(cacheKey, body);
+            return null;
         }
 
         final JsonNode root = parseJson(body);
@@ -87,7 +84,6 @@ final class GemPackageMetadataResolver implements PackageMetadataResolver {
         if (latestVersion == null) {
             return null;
         }
-        Instant latestVersionPublishedAt = getCreatedAt(root.get(0));
 
         final String requestedVersion = purl.getVersion();
         JsonNode matchingEntry = null;
@@ -100,62 +96,39 @@ final class GemPackageMetadataResolver implements PackageMetadataResolver {
 
         final var resolvedAt = Instant.now();
         if (matchingEntry == null) {
-            return new PackageMetadata(latestVersion, latestVersionPublishedAt, resolvedAt, null);
+            return new PackageMetadata(latestVersion, resolvedAt, null);
         }
 
-        Instant publishedAt = latestVersion.equals(requestedVersion)
-                ? latestVersionPublishedAt
-                : getCreatedAt(matchingEntry);
+        Instant publishedAt = null;
+        final String createdAt = matchingEntry.path("created_at").asText(null);
+        if (createdAt != null) {
+            try {
+                publishedAt = Instant.parse(createdAt);
+            } catch (DateTimeParseException e) {
+                LOGGER.debug("Failed to parse created_at '{}'", createdAt, e);
+            }
+        }
 
         return new PackageMetadata(
                 latestVersion,
-                latestVersionPublishedAt,
                 resolvedAt,
                 publishedAt != null
                         ? new PackageArtifactMetadata(resolvedAt, publishedAt, Map.of())
                         : null);
     }
 
-    private @Nullable Instant getCreatedAt(JsonNode entry) {
-        final String createdAt = entry.path("created_at").asText(null);
-        if (createdAt != null) {
-            try {
-                return Instant.parse(createdAt);
-            } catch (DateTimeParseException e) {
-                LOGGER.debug("Failed to parse created_at '{}'", createdAt, e);
-            }
-        }
-        return null;
-    }
-
-    private byte @Nullable [] fetchVersions(String name, PackageRepository repository)
-            throws InterruptedException {
-        final String url = UrlUtils.join(repository.url(), "api", "v1", "versions", name + ".json");
-
-        final HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .timeout(REQUEST_TIMEOUT)
-                .GET()
-                .build();
-
-        final HttpResponse<byte[]> response;
-        try {
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-        } catch (HttpTimeoutException e) {
-            throw new RetryableResolutionException(e);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+    private static void maybeApplyAuth(HttpRequest.Builder builder, PackageRepository repository) {
+        // NB: Private gem mirrors (Gemstash, Gemfury, GitLab, Artifactory) use Basic auth.
+        // rubygems.org uses a raw API key header, but its read endpoints don't require auth.
+        if (repository.username() == null || repository.password() == null) {
+            return;
         }
 
-        if (response.statusCode() == 404) {
-            return null;
-        }
-        RetryableResolutionException.throwIfRetryableError(response);
-        if (response.statusCode() != 200) {
-            throw new UncheckedIOException(new IOException(
-                    "Unexpected status code %d for %s".formatted(response.statusCode(), url)));
-        }
-        return response.body();
+        final String credentials = repository.username() + ":" + repository.password();
+        builder.header(
+                "Authorization",
+                "Basic " + Base64.getEncoder().encodeToString(
+                        credentials.getBytes(StandardCharsets.UTF_8)));
     }
 
     private JsonNode parseJson(byte[] body) {

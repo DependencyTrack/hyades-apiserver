@@ -35,7 +35,6 @@ import net.javacrumbs.jsonunit.core.Option;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
-import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -287,7 +286,7 @@ class BomResourceTest extends ResourceTest {
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         final var projectManufacturer = new OrganizationalEntity();
         projectManufacturer.setName("projectManufacturer");
@@ -602,7 +601,7 @@ class BomResourceTest extends ResourceTest {
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         var project = new Project();
         project.setName("acme-app");
@@ -820,7 +819,7 @@ class BomResourceTest extends ResourceTest {
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         var project = new Project();
         project.setName("acme-app");
@@ -1634,40 +1633,6 @@ class BomResourceTest extends ResourceTest {
         assertThat(project.getTags())
                 .extracting(Tag::getName)
                 .containsExactlyInAnyOrder("tag1", "tag2");
-    }
-
-    @Test
-    void uploadBomProtobufFormatTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
-        final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
-        final var bomProto = Bom.newBuilder().setSpecVersion("1.6").build();
-        final var multiPart = new FormDataMultiPart()
-                .field("project", project.getUuid().toString())
-                .field("bom", bomProto.toByteArray(), new MediaType("application", "x.vnd.cyclonedx+protobuf"))
-                .field("autoCreate", "true");
-
-        // NB: The GrizzlyConnectorProvider doesn't work with MultiPart requests.
-        // https://github.com/eclipse-ee4j/jersey/issues/5094
-        final var client = ClientBuilder.newClient(new ClientConfig()
-                .register(MultiPartFeature.class)
-                .connectorProvider(new HttpUrlConnectorProvider()));
-
-        final Response response = client.target(jersey.target(V1_BOM).getUri()).request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.entity(multiPart, multiPart.getMediaType()));
-        assertThat(response.getStatus()).isEqualTo(200);
-        assertThatJson(getPlainTextBody(response))
-                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
-                .isEqualTo(/* language=JSON */ """
-                        {
-                          "token": "${json-unit.any-string}",
-                          "projectUuid": "${json-unit.matches:projectUuid}"
-                        }
-                        """);
-
-        final var projectResponse = qm.getProject("Acme Example", "1.0");
-        assertThat(projectResponse).isNotNull();
-        assertThat(projectResponse.getName()).isEqualTo(project.getName());
     }
 
     @Test

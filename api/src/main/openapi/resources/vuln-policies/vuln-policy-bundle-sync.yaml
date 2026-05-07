@@ -25,7 +25,7 @@ get:
 
     Requires permission `POLICY_MANAGEMENT` or `POLICY_MANAGEMENT_READ`.
   tags:
-    - Vulnerability Policies
+    - Vuln Policies
   parameters:
     - name: uuid
       in: path
@@ -58,7 +58,7 @@ post:
 
     Requires permission `POLICY_MANAGEMENT` or `POLICY_MANAGEMENT_UPDATE`.
   tags:
-    - Vulnerability Policies
+    - Vuln Policies
   parameters:
     - name: uuid
       in: path

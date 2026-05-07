@@ -18,9 +18,8 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
-import alpine.event.framework.Event;
 import alpine.server.auth.PermissionRequired;
+import com.fasterxml.uuid.Generators;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -30,6 +29,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.inject.Inject;
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -48,25 +48,38 @@ import org.cyclonedx.CycloneDxMediaType;
 import org.cyclonedx.Version;
 import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.VexUploadEvent;
+import org.dependencytrack.dex.engine.api.DexEngine;
+import org.dependencytrack.dex.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.filestorage.api.FileStorage;
+import org.dependencytrack.filestorage.proto.v1.FileMetadata;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.internal.workflow.v1.ImportVexArg;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.resources.v1.vo.VexSubmitRequest;
+import org.dependencytrack.tasks.ImportVexWorkflow;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
+
+import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_PROJECT_UUID;
+import static org.dependencytrack.dex.DexWorkflowLabels.WF_LABEL_VEX_UPLOAD_TOKEN;
 
 /**
  * JAX-RS resources for processing VEX documents.
@@ -82,8 +95,17 @@ import java.util.Objects;
 })
 public class VexResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(VexResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(VexResource.class);
     private static final String DEFAULT_EXPORT_VERSION = "1.5";
+
+    private final DexEngine dexEngine;
+    private final FileStorage fileStorage;
+
+    @Inject
+    public VexResource(DexEngine dexEngine, FileStorage fileStorage) {
+        this.dexEngine = dexEngine;
+        this.fileStorage = fileStorage;
+    }
 
     @GET
     @Path("/cyclonedx/project/{uuid}")
@@ -118,9 +140,9 @@ public class VexResource extends AbstractApiResource {
             @QueryParam("version") String version
     ) {
         try (QueryManager qm = new QueryManager()) {
-            String versionParameter =  Objects.toString(StringUtils.trimToNull(version), DEFAULT_EXPORT_VERSION);
+            String versionParameter = Objects.toString(StringUtils.trimToNull(version), DEFAULT_EXPORT_VERSION);
             Version cdxOutputVersion = Version.fromVersionString(versionParameter);
-            if(cdxOutputVersion == null) {
+            if (cdxOutputVersion == null) {
                 return Response.status(Response.Status.BAD_REQUEST).entity("Invalid CycloneDX version specified.").build();
             }
 
@@ -295,12 +317,7 @@ public class VexResource extends AbstractApiResource {
             }
             final byte[] decoded = Base64.getDecoder().decode(encodedVexData);
             BomResource.validate(decoded, project);
-            final VexUploadEvent vexUploadEvent = new VexUploadEvent(project.getUuid(), decoded);
-            Event.dispatch(vexUploadEvent);
-
-            final var bomUploadResponse = new BomUploadResponse(
-                    vexUploadEvent.getChainIdentifier(), project.getUuid());
-            return Response.ok(bomUploadResponse).build();
+            return startVexImport(project, decoded);
         } else {
             return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
         }
@@ -321,14 +338,9 @@ public class VexResource extends AbstractApiResource {
                             .build();
                 }
                 try (InputStream in = bodyPartEntity.getInputStream()) {
-                    final byte[] content = IOUtils.toByteArray(new BOMInputStream((in)));
+                    final byte[] content = IOUtils.toByteArray(BOMInputStream.builder().setInputStream(in).get());
                     BomResource.validate(content, project);
-                    final VexUploadEvent vexUploadEvent = new VexUploadEvent(project.getUuid(), content);
-                    Event.dispatch(vexUploadEvent);
-
-                    final var bomUploadResponse = new BomUploadResponse(
-                            vexUploadEvent.getChainIdentifier(), project.getUuid());
-                    return Response.ok(bomUploadResponse).build();
+                    return startVexImport(project, content);
                 } catch (IOException e) {
                     return Response.status(Response.Status.BAD_REQUEST).build();
                 }
@@ -337,6 +349,51 @@ public class VexResource extends AbstractApiResource {
             }
         }
         return Response.ok().build();
+    }
+
+    private Response startVexImport(Project project, byte[] vexBytes) {
+        final UUID vexUploadToken = Generators.timeBasedEpochRandomGenerator().generate();
+
+        final FileMetadata vexFileMetadata;
+        try {
+            vexFileMetadata = fileStorage.store(
+                    "vex-upload/%s".formatted(vexUploadToken),
+                    new ByteArrayInputStream(vexBytes));
+        } catch (IOException e) {
+            LOGGER.error("Failed to store VEX for project: {}", project.getUuid(), e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+
+        final UUID runId;
+        try {
+            runId = dexEngine.createRun(
+                    new CreateWorkflowRunRequest<>(ImportVexWorkflow.class)
+                            .withConcurrencyKey("import-vex:%s".formatted(project.getUuid()))
+                            .withLabels(Map.ofEntries(
+                                    Map.entry(WF_LABEL_VEX_UPLOAD_TOKEN, vexUploadToken.toString()),
+                                    Map.entry(WF_LABEL_PROJECT_UUID, project.getUuid().toString())))
+                            .withArgument(ImportVexArg.newBuilder()
+                                    .setProjectUuid(project.getUuid().toString())
+                                    .setProjectName(project.getName())
+                                    .setProjectVersion(project.getVersion() != null
+                                            ? project.getVersion()
+                                            : "")
+                                    .setVexUploadToken(vexUploadToken.toString())
+                                    .setVexFileMetadata(vexFileMetadata)
+                                    .build()));
+        } catch (RuntimeException e) {
+            try {
+                fileStorage.delete(vexFileMetadata);
+            } catch (IOException ex) {
+                LOGGER.warn("Failed to cleanup VEX file {}", vexFileMetadata.getLocation(), ex);
+                e.addSuppressed(ex);
+            }
+            throw e;
+        }
+
+        return Response
+                .ok(new BomUploadResponse(runId, project.getUuid()))
+                .build();
     }
 
 }

@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1.vo;
 
-import alpine.common.logging.Logger;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -28,6 +27,9 @@ import com.github.packageurl.PackageURL;
 import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.VulnerableSoftware;
+import org.dependencytrack.util.PurlUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import us.springett.parsers.cpe.Cpe;
 import us.springett.parsers.cpe.CpeParser;
 import us.springett.parsers.cpe.exceptions.CpeEncodingException;
@@ -40,7 +42,7 @@ import java.util.UUID;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AffectedComponent {
 
-    private static final Logger LOGGER = Logger.getLogger(AffectedComponent.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AffectedComponent.class);
     private static final ObjectReader QUALIFIER_READER = Mappers.jsonMapper()
             .readerFor(new TypeReference<TreeMap<String, String>>() {
             });
@@ -86,7 +88,7 @@ public class AffectedComponent {
                 try {
                     qualifiers = QUALIFIER_READER.readValue(vs.getPurlQualifiers());
                 } catch (JsonProcessingException e) {
-                    LOGGER.warn("Error deserializing PURL qualifiers: " + vs.getPurlQualifiers() + " (skipping)");
+                    LOGGER.warn("Error deserializing PURL qualifiers: {} (skipping)", vs.getPurlQualifiers());
                 }
             }
 
@@ -217,7 +219,7 @@ public class AffectedComponent {
                 vs.setTargetHw(cpe.getTargetHw());
                 vs.setOther(cpe.getOther());
             } catch (CpeParsingException | CpeEncodingException e) {
-                LOGGER.warn("Error parsing CPE: " + this.identity + " (skipping)", e);
+                LOGGER.warn("Error parsing CPE: {} (skipping)", this.identity, e);
                 return null;
             }
         } else if (IdentityType.PURL == this.identityType && this.identity != null) {
@@ -229,15 +231,10 @@ public class AffectedComponent {
                 vs.setPurlName(purl.getName());
                 vs.setPurlVersion(purl.getVersion());
                 vs.setVersion(purl.getVersion());
-                if (purl.getQualifiers() != null) {
-                    vs.setPurlQualifiers(Mappers.jsonMapper().writeValueAsString(purl.getQualifiers()));
-                }
+                vs.setPurlQualifiers(PurlUtil.serializeQualifiers(purl));
                 vs.setPurlSubpath(purl.getSubpath());
             } catch (MalformedPackageURLException e) {
-                LOGGER.warn("Error parsing PURL: " + this.identity + " (skipping)", e);
-                return null;
-            } catch (JsonProcessingException e) {
-                LOGGER.warn("Error serializing PURL qualifiers: " + this.identity + " (skipping)", e);
+                LOGGER.warn("Error parsing PURL: {} (skipping)", this.identity, e);
                 return null;
             }
         }

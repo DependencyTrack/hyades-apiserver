@@ -27,25 +27,25 @@ import io.github.jeremylong.openvulnerability.client.ghsa.Identifier;
 import io.github.jeremylong.openvulnerability.client.ghsa.Package;
 import io.github.jeremylong.openvulnerability.client.ghsa.SecurityAdvisory;
 import org.apache.commons.lang3.StringUtils;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Component;
-import org.cyclonedx.proto.v1_6.ExternalReference;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.ScoreMethod;
-import org.cyclonedx.proto.v1_6.Severity;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
-import org.cyclonedx.proto.v1_6.VulnerabilityRating;
-import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Component;
+import org.cyclonedx.proto.v1_7.ExternalReference;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.ScoreMethod;
+import org.cyclonedx.proto.v1_7.Severity;
+import org.cyclonedx.proto.v1_7.Source;
+import org.cyclonedx.proto.v1_7.Vulnerability;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffectedVersions;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_7.VulnerabilityRating;
+import org.cyclonedx.proto.v1_7.VulnerabilityReference;
+import org.metaeffekt.core.security.cvss.CvssVector;
+import org.metaeffekt.core.security.cvss.v3.Cvss3;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P0;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P1;
+import org.metaeffekt.core.security.cvss.v4P0.Cvss4P0;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import us.springett.cvss.Cvss;
-import us.springett.cvss.CvssV3;
-import us.springett.cvss.CvssV3_1;
-import us.springett.cvss.CvssV4;
-import us.springett.cvss.MalformedVectorException;
 
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -58,13 +58,13 @@ import java.util.UUID;
 
 import static com.github.packageurl.PackageURLBuilder.aPackageURL;
 import static io.github.nscuro.versatile.VersUtils.versFromGhsaRange;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_CRITICAL;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_HIGH;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_INFO;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_LOW;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_MEDIUM;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_NONE;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_UNKNOWN;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_CRITICAL;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_HIGH;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_INFO;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_LOW;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_MEDIUM;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_NONE;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_UNKNOWN;
 
 /**
  * @since 5.7.0
@@ -88,7 +88,7 @@ final class ModelConverter {
         Optional.ofNullable(advisory.getSummary()).ifPresent(title -> vulnBuilder.addProperties(
                 Property.newBuilder().setName(TITLE_PROPERTY_NAME).setValue(abbreviate(title, 255)).build()));
 
-        parseRating(advisory).ifPresent(vulnBuilder::addRatings);
+        vulnBuilder.addAllRatings(parseRatings(advisory));
 
         // Alias is mapped only if aliasSync is enabled
         if (aliasSyncEnabled) {
@@ -164,51 +164,56 @@ final class ModelConverter {
         return bomBuilder.build();
     }
 
-    private static Optional<VulnerabilityRating> parseRating(final SecurityAdvisory advisory) {
-        String cvssVector = null;
+    private static List<VulnerabilityRating> parseRatings(final SecurityAdvisory advisory) {
+        final var ratings = new ArrayList<VulnerabilityRating>();
 
         if (advisory.getCvssSeverities() != null) {
-            if (advisory.getCvssSeverities().getCvssV4() != null
-                    && StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV4().getVectorString()) != null) {
-                cvssVector = StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV4().getVectorString());
-            } else if (advisory.getCvssSeverities().getCvssV3() != null
-                    && StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV3().getVectorString()) != null) {
-                cvssVector = StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV3().getVectorString());
+            if (advisory.getCvssSeverities().getCvssV4() != null) {
+                buildCvssRating(StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV4().getVectorString()))
+                        .ifPresent(ratings::add);
+            }
+            if (advisory.getCvssSeverities().getCvssV3() != null) {
+                buildCvssRating(StringUtils.trimToNull(advisory.getCvssSeverities().getCvssV3().getVectorString()))
+                        .ifPresent(ratings::add);
             }
         }
 
-        if (cvssVector != null) {
-            final Cvss cvss;
-            try {
-                cvss = Cvss.fromVector(cvssVector);
-                if (cvss == null) {
-                    return Optional.empty();
-                }
-            } catch (MalformedVectorException e) {
-                LOGGER.warn("Failed to parse rating: CVSS vector {} is malformed; Skipping", cvssVector, e);
-                return Optional.empty();
-            }
-
-            final VulnerabilityRating.Builder cvssRatingBuilder = VulnerabilityRating.newBuilder()
-                    .setSource(SOURCE)
-                    .setVector(cvss.getVector())
-                    .setScore(cvss.calculateScore().getBaseScore())
-                    .setSeverity(calculateCvssSeverity(cvss));
-            if (cvss instanceof CvssV4) {
-                return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV4).build());
-            } else if (cvss instanceof CvssV3_1) {
-                return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV31).build());
-            } else if (cvss instanceof CvssV3) {
-                return Optional.of(cvssRatingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV3).build());
-            }
+        if (!ratings.isEmpty()) {
+            return ratings;
         }
 
         if (advisory.getSeverity() != null && StringUtils.trimToNull(advisory.getSeverity().value()) != null) {
-            return Optional.of(VulnerabilityRating.newBuilder()
+            return List.of(VulnerabilityRating.newBuilder()
                     .setSource(SOURCE)
                     .setMethod(ScoreMethod.SCORE_METHOD_OTHER)
                     .setSeverity(mapSeverity(StringUtils.trimToNull(advisory.getSeverity().value())))
                     .build());
+        }
+        return List.of();
+    }
+
+    private static Optional<VulnerabilityRating> buildCvssRating(final String cvssVector) {
+        if (cvssVector == null) {
+            return Optional.empty();
+        }
+
+        final CvssVector cvss = CvssVector.parseVector(cvssVector, true);
+        if (cvss == null || !cvss.isBaseFullyDefined()) {
+            LOGGER.warn("Failed to parse rating: CVSS vector {} is malformed; Skipping", cvssVector);
+            return Optional.empty();
+        }
+
+        final VulnerabilityRating.Builder ratingBuilder = VulnerabilityRating.newBuilder()
+                .setSource(SOURCE)
+                .setVector(cvss.toString())
+                .setScore(cvss.getBakedScores().getBaseScore())
+                .setSeverity(calculateCvssSeverity(cvss));
+        if (cvss instanceof Cvss4P0) {
+            return Optional.of(ratingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV4).build());
+        } else if (cvss instanceof Cvss3P1) {
+            return Optional.of(ratingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV31).build());
+        } else if (cvss instanceof Cvss3P0) {
+            return Optional.of(ratingBuilder.setMethod(ScoreMethod.SCORE_METHOD_CVSSV3).build());
         }
         return Optional.empty();
     }
@@ -337,20 +342,20 @@ final class ModelConverter {
         }
     }
 
-    private static Severity calculateCvssSeverity(final Cvss cvss) {
+    private static Severity calculateCvssSeverity(final CvssVector cvss) {
         if (cvss == null) {
             return SEVERITY_UNKNOWN;
         }
 
-        final double baseScore = cvss.calculateScore().getBaseScore();
-        if (cvss instanceof us.springett.cvss.CvssV3 || cvss instanceof us.springett.cvss.CvssV4) {
-            if (baseScore >= 9) {
+        final double score = cvss.getBakedScores().getBaseScore();
+        if (cvss instanceof Cvss3 || cvss instanceof Cvss4P0) {
+            if (score >= 9) {
                 return SEVERITY_CRITICAL;
-            } else if (baseScore >= 7) {
+            } else if (score >= 7) {
                 return SEVERITY_HIGH;
-            } else if (baseScore >= 4) {
+            } else if (score >= 4) {
                 return SEVERITY_MEDIUM;
-            } else if (baseScore > 0) {
+            } else if (score > 0) {
                 return SEVERITY_LOW;
             }
         }

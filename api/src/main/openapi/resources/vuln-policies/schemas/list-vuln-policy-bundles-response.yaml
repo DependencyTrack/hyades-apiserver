@@ -24,4 +24,3 @@ properties:
       $ref: "./list-vuln-policy-bundles-response-item.yaml"
 required:
 - items
-- total

@@ -36,5 +36,6 @@ public enum Classifier {
     PLATFORM,
     DEVICE_DRIVER,
     MACHINE_LEARNING_MODEL,
-    DATA
+    DATA,
+    CRYPTOGRAPHIC_ASSET
 }

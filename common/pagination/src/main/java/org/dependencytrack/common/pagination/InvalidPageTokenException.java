@@ -23,7 +23,11 @@ package org.dependencytrack.common.pagination;
  */
 public final class InvalidPageTokenException extends IllegalArgumentException {
 
-    public InvalidPageTokenException(Throwable cause) {
+    InvalidPageTokenException(String message) {
+        super(message);
+    }
+
+    InvalidPageTokenException(Throwable cause) {
         super(cause);
     }
 

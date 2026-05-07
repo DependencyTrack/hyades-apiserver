@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>vuln-data-source-parent</artifactId>
-        <version>5.7.0-alpha.4-SNAPSHOT</version>
+        <version>5.7.0-alpha.6-SNAPSHOT</version>
     </parent>
 
     <artifactId>vuln-data-source-osv</artifactId>
@@ -37,15 +37,20 @@
     <dependencies>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>vuln-data-source-api</artifactId>
+            <artifactId>os-distro-metadata</artifactId>
             <version>${project.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>plugin-testing</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>vuln-data-source-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -54,8 +59,8 @@
         </dependency>
 
         <dependency>
-            <groupId>us.springett</groupId>
-            <artifactId>cvss-calculator</artifactId>
+            <groupId>org.metaeffekt.core</groupId>
+            <artifactId>ae-security</artifactId>
         </dependency>
 
         <dependency>

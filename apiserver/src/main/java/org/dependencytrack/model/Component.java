@@ -156,6 +156,12 @@ public class Component implements Serializable {
     private String version;
 
     @Persistent
+    @Column(name = "SCOPE", jdbcType = "VARCHAR",length = 255)
+    @Size(max = 255)
+    @Index(name = "COMPONENT_SCOPE_IDX")
+    private Scope scope;
+
+    @Persistent
     @Column(name = "CLASSIFIER", jdbcType = "VARCHAR")
     @Index(name = "COMPONENT_CLASSIFIER_IDX")
     @Extension(vendorName = "datanucleus", key = "enum-check-constraint", value = "true")
@@ -496,6 +502,14 @@ public class Component implements Serializable {
 
     public void setVersion(String version) {
         this.version = StringUtils.abbreviate(version, 255);
+    }
+
+    public Scope getScope() {
+        return scope;
+    }
+
+    public void setScope(Scope scope) {
+        this.scope = scope;
     }
 
     public Classifier getClassifier() {

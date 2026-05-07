@@ -46,24 +46,4 @@ class CacheConfigTest {
         assertThat(cacheConfig.ttl()).hasHours(1);
     }
 
-    @Test
-    void maxSizeShouldReturnConfiguredValue() {
-        final var config = new SmallRyeConfigBuilder()
-                .withDefaultValue("dt.cache.\"foo.bar\".max-size", "123")
-                .build();
-
-        final var cacheConfig = new CacheConfig(config, "foo.bar");
-
-        assertThat(cacheConfig.maxSize()).isEqualTo(123);
-    }
-
-    @Test
-    void maxSizeShouldReturnDefaultWhenPropertyIsNotDefined() {
-        final var config = new SmallRyeConfigBuilder().build();
-
-        final var cacheConfig = new CacheConfig(config, "foo.bar");
-
-        assertThat(cacheConfig.maxSize()).isEqualTo(10000);
-    }
-
 }

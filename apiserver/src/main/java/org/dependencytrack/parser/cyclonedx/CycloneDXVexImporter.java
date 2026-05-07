@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.parser.cyclonedx;
 
-import alpine.common.logging.Logger;
 import org.apache.commons.collections4.CollectionUtils;
 import org.cyclonedx.model.Bom;
 import org.cyclonedx.util.BomLink;
@@ -34,6 +33,8 @@ import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
 import org.dependencytrack.persistence.jdbi.VulnerabilityDao;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +47,7 @@ import static org.dependencytrack.util.PersistenceUtil.isPersistent;
 
 public class CycloneDXVexImporter {
 
-    private static final Logger LOGGER = Logger.getLogger(CycloneDXVexImporter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CycloneDXVexImporter.class);
 
     private static final String COMMENTER = "CycloneDX VEX";
 

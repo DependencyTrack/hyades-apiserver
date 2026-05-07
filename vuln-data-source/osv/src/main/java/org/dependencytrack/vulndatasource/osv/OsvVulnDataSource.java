@@ -20,9 +20,9 @@ package org.dependencytrack.vulndatasource.osv;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.util.Timestamps;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.Vulnerability;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.Vulnerability;
 import org.dependencytrack.vulndatasource.api.VulnDataSource;
 import org.dependencytrack.vulndatasource.osv.schema.Osv;
 import org.slf4j.Logger;
@@ -55,7 +55,7 @@ import java.util.zip.ZipInputStream;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Predicate.not;
-import static org.dependencytrack.vulndatasource.osv.CycloneDxPropertyNames.PROPERTY_OSV_ECOSYSTEM;
+import static org.dependencytrack.vulndatasource.osv.CycloneDxPropertyNames.OSV_ECOSYSTEM;
 
 /**
  * @since 5.7.0
@@ -70,6 +70,7 @@ final class OsvVulnDataSource implements VulnDataSource {
     private final List<String> ecosystems;
     private final Set<String> successfullyCompletedEcosystems;
     private final HttpClient httpClient;
+    private final ModelConverter modelConverter;
     private String currentEcosystem;
     private int currentEcosystemIndex;
     private Path currentEcosystemDirPath;
@@ -93,6 +94,7 @@ final class OsvVulnDataSource implements VulnDataSource {
         this.isAliasSyncEnabled = isAliasSyncEnabled;
         this.successfullyCompletedEcosystems = new HashSet<>();
         this.httpClient = httpClient;
+        this.modelConverter = new ModelConverter(objectMapper);
     }
 
     @Override
@@ -204,7 +206,7 @@ final class OsvVulnDataSource implements VulnDataSource {
             throw new UncheckedIOException("Failed to read OSV advisory", e);
         }
 
-        return ModelConverter.convert(osv, isAliasSyncEnabled, currentEcosystem);
+        return modelConverter.convert(osv, isAliasSyncEnabled, currentEcosystem);
     }
 
     private boolean openNextEcosystem() {
@@ -240,7 +242,7 @@ final class OsvVulnDataSource implements VulnDataSource {
         if (watermarkManager == null) {
             LOGGER.debug("Incremental mirroring disabled; Downloading all advisories");
             downloadEcosystemFilesAll(ecosystem, tempDirPath);
-        }else {
+        } else {
             final Instant watermark = watermarkManager.getWatermark(ecosystem);
             if (watermark == null) {
                 LOGGER.debug("No watermark found; Downloading all advisories");
@@ -399,7 +401,7 @@ final class OsvVulnDataSource implements VulnDataSource {
 
     private static String extractEcosystem(final Vulnerability vuln) {
         for (final Property property : vuln.getPropertiesList()) {
-            if (PROPERTY_OSV_ECOSYSTEM.equals(property.getName())) {
+            if (OSV_ECOSYSTEM.equals(property.getName())) {
                 return property.getValue();
             }
         }
@@ -416,7 +418,8 @@ final class OsvVulnDataSource implements VulnDataSource {
         }
     }
 
-     WatermarkManager getWatermarkManager() {
+    WatermarkManager getWatermarkManager() {
         return watermarkManager;
     }
+
 }

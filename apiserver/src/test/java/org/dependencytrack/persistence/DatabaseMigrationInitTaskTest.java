@@ -69,22 +69,9 @@ public class DatabaseMigrationInitTaskTest {
 
     @Test
     public void test() throws Exception {
-        MemoryConfigSource.setProperty("dt.database.url", "${testcontainers.postgresql.jdbc-url}");
-        MemoryConfigSource.setProperty("dt.database.username", "${testcontainers.postgresql.username}");
-        MemoryConfigSource.setProperty("dt.database.password", "${testcontainers.postgresql.password}");
-
-        new DatabaseMigrationInitTask().execute(new InitTaskContext(ConfigProvider.getConfig(), dataSource));
-
-        assertMigrationExecuted(/* expectExecuted */ true);
-    }
-
-    @Test
-    public void testWithMigrationCredentials() throws Exception {
-        MemoryConfigSource.setProperty("dt.database.url", "${testcontainers.postgresql.jdbc-url}");
-        MemoryConfigSource.setProperty("dt.database.username", "username");
-        MemoryConfigSource.setProperty("dt.database.password", "password");
-        MemoryConfigSource.setProperty("dt.init.tasks.database.username", "${testcontainers.postgresql.username}");
-        MemoryConfigSource.setProperty("dt.init.tasks.database.password", "${testcontainers.postgresql.password}");
+        MemoryConfigSource.setProperty("dt.datasource.url", "${testcontainers.postgresql.jdbc-url}");
+        MemoryConfigSource.setProperty("dt.datasource.username", "${testcontainers.postgresql.username}");
+        MemoryConfigSource.setProperty("dt.datasource.password", "${testcontainers.postgresql.password}");
 
         new DatabaseMigrationInitTask().execute(new InitTaskContext(ConfigProvider.getConfig(), dataSource));
 

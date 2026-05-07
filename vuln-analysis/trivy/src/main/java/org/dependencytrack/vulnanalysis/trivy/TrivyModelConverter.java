@@ -18,12 +18,12 @@
  */
 package org.dependencytrack.vulnanalysis.trivy;
 
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.ScoreMethod;
-import org.cyclonedx.proto.v1_6.Severity;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.cyclonedx.proto.v1_6.VulnerabilityRating;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.ScoreMethod;
+import org.cyclonedx.proto.v1_7.Severity;
+import org.cyclonedx.proto.v1_7.Source;
+import org.cyclonedx.proto.v1_7.Vulnerability;
+import org.cyclonedx.proto.v1_7.VulnerabilityRating;
 import trivy.proto.common.CVSS;
 
 import java.util.regex.Matcher;
@@ -72,7 +72,7 @@ final class TrivyModelConverter {
         // References as advisories
         for (final String ref : trivyVuln.getReferencesList()) {
             vulnBuilder.addAdvisories(
-                    org.cyclonedx.proto.v1_6.Advisory.newBuilder()
+                    org.cyclonedx.proto.v1_7.Advisory.newBuilder()
                             .setUrl(ref)
                             .build());
         }

@@ -20,12 +20,12 @@ package org.dependencytrack.parser.dependencytrack;
 
 import com.google.protobuf.Timestamp;
 import io.github.nscuro.versatile.Vers;
-import org.cyclonedx.proto.v1_6.Advisory;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.VulnerabilityRating;
-import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import org.cyclonedx.proto.v1_7.Advisory;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.Source;
+import org.cyclonedx.proto.v1_7.VulnerabilityRating;
+import org.cyclonedx.proto.v1_7.VulnerabilityReference;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.junit.jupiter.api.Nested;
@@ -35,11 +35,11 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV2;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV31;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV4;
-import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_OWASP;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV2;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV3;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV4;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_OWASP;
 
 class BovModelConverterTest {
 
@@ -51,7 +51,7 @@ class BovModelConverterTest {
     @Test
     void testConvert() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                         .setId("CVE-2021-44228")
                         .setSource(Source.newBuilder().setName("NVD").build())
                         .setDescription("Foo Bar Description")
@@ -118,7 +118,7 @@ class BovModelConverterTest {
     @Test
     void testConvertWithRatingFromSnykAsAuthoritativeSource() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                         .setId("SNYK-PYTHON-DJANGO-2968205")
                         .setSource(Source.newBuilder().setName("SNYK").build())
                         .addRatings(VulnerabilityRating.newBuilder()
@@ -154,7 +154,7 @@ class BovModelConverterTest {
     @Test
     void testConvertWithRatingsWithoutVector() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                         .setId("SNYK-PYTHON-DJANGO-2968205")
                         .setSource(Source.newBuilder().setName("SNYK").build())
                         .addRatings(VulnerabilityRating.newBuilder()
@@ -184,7 +184,7 @@ class BovModelConverterTest {
     @Test
     void testConvertWithNoRatings() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                         .setId("Foo")
                         .setSource(Source.newBuilder().setName("OSSINDEX").build())
                         .build()).build();
@@ -207,7 +207,7 @@ class BovModelConverterTest {
     @Test
     void testConvertWithOnlyThirdPartyRatings() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                         .setId("SONATYPE-001")
                         .setSource(Source.newBuilder().setName("OSSINDEX").build())
                         .addRatings(VulnerabilityRating.newBuilder()
@@ -238,7 +238,7 @@ class BovModelConverterTest {
     @Test
     void testConvertWithRatingWithoutMethod() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                         .setId("SONATYPE-001")
                         .setSource(Source.newBuilder().setName("OSSINDEX").build())
                         .addRatings(VulnerabilityRating.newBuilder()
@@ -259,7 +259,7 @@ class BovModelConverterTest {
     @Test
     public void testConvertWithRatingsWithCvssV4() {
         final Bom bovInput = Bom.newBuilder().addVulnerabilities(
-                org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+                org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                         .setId("SNYK-PYTHON-DJANGO-2968205")
                         .setSource(Source.newBuilder().setName("SNYK").build())
                         .addRatings(VulnerabilityRating.newBuilder()
@@ -437,21 +437,19 @@ class BovModelConverterTest {
 
         @Test
         void shouldProduceTwoEntriesForRangeWithExactVersion() {
-            final Bom bov = createBovWithCpeAndVersionRange(
-                    "cpe:2.3:a:vendor:product:*:*:*:*:*:*:*:*",
-                    "vers:generic/>5|<6|6.0.1");
+            final Bom bov = createBovWithVersionRange("vers:npm/>=1.0.0|<2.0.0|2.5.0");
             final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
 
             assertThat(vsList).satisfiesExactlyInAnyOrder(
                     vs -> {
-                        assertThat(vs.getVersion()).isEqualTo("*");
-                        assertThat(vs.getVersionStartIncluding()).isNull();
-                        assertThat(vs.getVersionStartExcluding()).isEqualTo("5");
+                        assertThat(vs.getVersion()).isNull();
+                        assertThat(vs.getVersionStartIncluding()).isEqualTo("1.0.0");
+                        assertThat(vs.getVersionStartExcluding()).isNull();
                         assertThat(vs.getVersionEndIncluding()).isNull();
-                        assertThat(vs.getVersionEndExcluding()).isEqualTo("6");
+                        assertThat(vs.getVersionEndExcluding()).isEqualTo("2.0.0");
                     },
                     vs -> {
-                        assertThat(vs.getVersion()).isEqualTo("6.0.1");
+                        assertThat(vs.getVersion()).isEqualTo("2.5.0");
                         assertThat(vs.getVersionStartIncluding()).isNull();
                         assertThat(vs.getVersionStartExcluding()).isNull();
                         assertThat(vs.getVersionEndIncluding()).isNull();
@@ -509,19 +507,19 @@ class BovModelConverterTest {
         }
 
         private static Bom createBovWithVersionRange(String versionRange) {
-            final var component = org.cyclonedx.proto.v1_6.Component.newBuilder()
+            final var component = org.cyclonedx.proto.v1_7.Component.newBuilder()
                     .setBomRef("test-component")
                     .setPurl("pkg:npm/test-package@1.0.0")
                     .build();
 
-            final var vulnAffects = org.cyclonedx.proto.v1_6.VulnerabilityAffects.newBuilder()
+            final var vulnAffects = org.cyclonedx.proto.v1_7.VulnerabilityAffects.newBuilder()
                     .setRef("test-component")
-                    .addVersions(org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions.newBuilder()
+                    .addVersions(org.cyclonedx.proto.v1_7.VulnerabilityAffectedVersions.newBuilder()
                             .setRange(versionRange)
                             .build())
                     .build();
 
-            final var vuln = org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+            final var vuln = org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                     .setId("CVE-2024-0001")
                     .setSource(Source.newBuilder().setName("NVD").build())
                     .addAffects(vulnAffects)
@@ -534,19 +532,19 @@ class BovModelConverterTest {
         }
 
         private static Bom createBovWithCpeAndVersionRange(String cpe, String versionRange) {
-            final var component = org.cyclonedx.proto.v1_6.Component.newBuilder()
+            final var component = org.cyclonedx.proto.v1_7.Component.newBuilder()
                     .setBomRef("test-component")
                     .setCpe(cpe)
                     .build();
 
-            final var vulnAffects = org.cyclonedx.proto.v1_6.VulnerabilityAffects.newBuilder()
+            final var vulnAffects = org.cyclonedx.proto.v1_7.VulnerabilityAffects.newBuilder()
                     .setRef("test-component")
-                    .addVersions(org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions.newBuilder()
+                    .addVersions(org.cyclonedx.proto.v1_7.VulnerabilityAffectedVersions.newBuilder()
                             .setRange(versionRange)
                             .build())
                     .build();
 
-            final var vuln = org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+            final var vuln = org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                     .setId("CVE-2024-0001")
                     .setSource(Source.newBuilder().setName("NVD").build())
                     .addAffects(vulnAffects)
@@ -559,20 +557,20 @@ class BovModelConverterTest {
         }
 
         private static Bom createBovWithCpePurlAndVersionRange(String cpe, String purl, String versionRange) {
-            final var component = org.cyclonedx.proto.v1_6.Component.newBuilder()
+            final var component = org.cyclonedx.proto.v1_7.Component.newBuilder()
                     .setBomRef("test-component")
                     .setCpe(cpe)
                     .setPurl(purl)
                     .build();
 
-            final var vulnAffects = org.cyclonedx.proto.v1_6.VulnerabilityAffects.newBuilder()
+            final var vulnAffects = org.cyclonedx.proto.v1_7.VulnerabilityAffects.newBuilder()
                     .setRef("test-component")
-                    .addVersions(org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions.newBuilder()
+                    .addVersions(org.cyclonedx.proto.v1_7.VulnerabilityAffectedVersions.newBuilder()
                             .setRange(versionRange)
                             .build())
                     .build();
 
-            final var vuln = org.cyclonedx.proto.v1_6.Vulnerability.newBuilder()
+            final var vuln = org.cyclonedx.proto.v1_7.Vulnerability.newBuilder()
                     .setId("CVE-2024-0001")
                     .setSource(Source.newBuilder().setName("NVD").build())
                     .addAffects(vulnAffects)

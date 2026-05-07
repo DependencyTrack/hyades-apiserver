@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.User;
@@ -36,6 +35,8 @@ import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.ProjectVersion;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -60,7 +61,7 @@ import static org.dependencytrack.util.PersistenceUtil.assertPersistentAll;
 
 final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
-    private static final Logger LOGGER = Logger.getLogger(ProjectQueryManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProjectQueryManager.class);
 
     /**
      * Constructs a new QueryManager.

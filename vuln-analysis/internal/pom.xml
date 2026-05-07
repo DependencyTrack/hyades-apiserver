@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>vuln-analysis-parent</artifactId>
-        <version>5.7.0-alpha.4-SNAPSHOT</version>
+        <version>5.7.0-alpha.6-SNAPSHOT</version>
     </parent>
 
     <artifactId>vuln-analyzer-internal</artifactId>
@@ -43,15 +43,19 @@
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>liquibase-support</artifactId>
+            <artifactId>jdbi-support</artifactId>
             <version>${project.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>migration</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>os-distro-metadata</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>

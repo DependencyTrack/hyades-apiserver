@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
@@ -69,6 +68,8 @@ import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
 import org.jdbi.v3.core.Handle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -92,7 +93,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 })
 public class ComponentResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(ComponentResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ComponentResource.class);
 
     @GET
     @Path("/project/{uuid}")

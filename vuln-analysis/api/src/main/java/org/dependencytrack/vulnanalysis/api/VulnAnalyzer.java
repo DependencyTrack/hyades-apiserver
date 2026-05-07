@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.vulnanalysis.api;
 
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffects;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionPointSpec;
 

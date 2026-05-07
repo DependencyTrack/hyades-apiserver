@@ -18,7 +18,6 @@
  */
 package alpine.server.persistence;
 
-import alpine.common.logging.Logger;
 import alpine.persistence.IPersistenceManagerFactory;
 import alpine.persistence.JdoProperties;
 import io.micrometer.core.instrument.FunctionCounter;
@@ -31,6 +30,8 @@ import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.JDOHelper;
 import javax.jdo.PersistenceManager;
@@ -45,7 +46,7 @@ import java.util.Properties;
  */
 public class PersistenceManagerFactory implements IPersistenceManagerFactory, ServletContextListener {
 
-    private static final Logger LOGGER = Logger.getLogger(PersistenceManagerFactory.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PersistenceManagerFactory.class);
     private static final String DATANUCLEUS_METRICS_PREFIX = "datanucleus_";
 
     private static JDOPersistenceManagerFactory pmf;

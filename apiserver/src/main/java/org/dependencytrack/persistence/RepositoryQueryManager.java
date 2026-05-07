@@ -18,12 +18,13 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.common.logging.Logger;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -32,7 +33,7 @@ import java.util.UUID;
 
 public class RepositoryQueryManager extends QueryManager implements IQueryManager {
 
-    private static final Logger LOGGER = Logger.getLogger(RepositoryQueryManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RepositoryQueryManager.class);
 
 
     /**

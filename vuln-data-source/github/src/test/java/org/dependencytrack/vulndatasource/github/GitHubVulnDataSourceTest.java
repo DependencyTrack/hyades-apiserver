@@ -24,7 +24,7 @@ import com.google.protobuf.util.JsonFormat;
 import io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityAdvisoryClient;
 import io.github.jeremylong.openvulnerability.client.ghsa.SecurityAdvisory;
 import net.javacrumbs.jsonunit.core.Option;
-import org.cyclonedx.proto.v1_6.Bom;
+import org.cyclonedx.proto.v1_7.Bom;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,7 +58,7 @@ class GitHubVulnDataSourceTest {
     @Test
     void test() throws Exception {
         final var advisory = objectMapper.readValue(
-                getClass().getResource("/advisory.json"), SecurityAdvisory.class);
+                getClass().getResourceAsStream("/advisory.json"), SecurityAdvisory.class);
 
         when(advisoryClientMock.hasNext())
                 .thenReturn(true)

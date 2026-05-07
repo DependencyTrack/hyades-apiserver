@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.policy.cel;
 
-import alpine.common.logging.Logger;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import io.github.nscuro.versatile.Vers;
@@ -33,6 +32,8 @@ import org.dependencytrack.proto.policy.v1.VersionDistance;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -65,7 +66,7 @@ import static org.dependencytrack.policy.cel.CelPolicyLibrary.Function.VERSION_D
 
 final class CelPolicyFunctions {
 
-    private static final Logger LOGGER = Logger.getLogger(CelPolicyFunctions.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CelPolicyFunctions.class);
 
     private CelPolicyFunctions() {
     }

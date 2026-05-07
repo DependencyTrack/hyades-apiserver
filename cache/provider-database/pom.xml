@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>cache-parent</artifactId>
-        <version>5.7.0-alpha.4-SNAPSHOT</version>
+        <version>5.7.0-alpha.6-SNAPSHOT</version>
     </parent>
 
     <artifactId>cache-provider-database</artifactId>
@@ -45,12 +45,6 @@
             <groupId>org.dependencytrack</groupId>
             <artifactId>common-datasource</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>liquibase-support</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>

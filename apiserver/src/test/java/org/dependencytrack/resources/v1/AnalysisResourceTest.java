@@ -91,7 +91,7 @@ class AnalysisResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         qm.makeAnalysis(
                 new MakeAnalysisCommand(component, vulnerability)
@@ -146,7 +146,7 @@ class AnalysisResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .queryParam("project", project.getUuid())
@@ -176,7 +176,7 @@ class AnalysisResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .queryParam("component", component.getUuid())
@@ -205,7 +205,7 @@ class AnalysisResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .queryParam("project", UUID.randomUUID())
@@ -236,7 +236,7 @@ class AnalysisResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .queryParam("project", project.getUuid())
@@ -262,12 +262,12 @@ class AnalysisResourceTest extends ResourceTest {
         component.setVersion("1.0");
         component = qm.createComponent(component, false);
 
-        final var vulnerability = new Vulnerability();
+        var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .queryParam("project", project.getUuid())
@@ -367,7 +367,7 @@ class AnalysisResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         final var analysisRequest = new AnalysisRequest(project.getUuid().toString(), component.getUuid().toString(),
                 vulnerability.getUuid().toString(), AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
@@ -439,7 +439,7 @@ class AnalysisResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         final var analysisRequest = new AnalysisRequest(project.getUuid().toString(), component.getUuid().toString(),
                 vulnerability.getUuid().toString(), AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
@@ -505,7 +505,7 @@ class AnalysisResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         final var analysisRequest = new AnalysisRequest(project.getUuid().toString(), component.getUuid().toString(),
                 vulnerability.getUuid().toString(), null, null, null, null, null, null);
@@ -548,7 +548,7 @@ class AnalysisResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         qm.makeAnalysis(
                 new MakeAnalysisCommand(component, vulnerability)
@@ -632,7 +632,7 @@ class AnalysisResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         qm.makeAnalysis(
                 new MakeAnalysisCommand(component, vulnerability)
@@ -693,7 +693,7 @@ class AnalysisResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         qm.makeAnalysis(
                 new MakeAnalysisCommand(component, vulnerability)
@@ -766,7 +766,7 @@ class AnalysisResourceTest extends ResourceTest {
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         final var analysisRequest = new AnalysisRequest(project.getUuid().toString(), UUID.randomUUID().toString(),
                 vulnerability.getUuid().toString(), AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
@@ -793,12 +793,12 @@ class AnalysisResourceTest extends ResourceTest {
         component.setVersion("1.0");
         component = qm.createComponent(component, false);
 
-        final var vulnerability = new Vulnerability();
+        var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         final var analysisRequest = new AnalysisRequest(project.getUuid().toString(), component.getUuid().toString(),
                 UUID.randomUUID().toString(), AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
@@ -831,12 +831,12 @@ class AnalysisResourceTest extends ResourceTest {
         component.setVersion("1.0");
         qm.createComponent(component, false);
 
-        final var vulnerability = new Vulnerability();
+        var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        qm.createVulnerability(vulnerability, false);
+        vulnerability = qm.createVulnerability(vulnerability);
 
         qm.makeAnalysis(
                 new MakeAnalysisCommand(component, vulnerability)

@@ -28,6 +28,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.model.Scope;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
@@ -39,8 +40,8 @@ import java.util.Date;
 import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class ProjectsResourceTest extends ResourceTest {
 
@@ -76,6 +77,7 @@ public class ProjectsResourceTest extends ResourceTest {
                         "group" : "component-group",
                         "purl" : "pkg:maven/foo/bar@2.0",
                         "internal" : false,
+                        "scope": "REQUIRED",
                         "resolved_license" : {
                               "name" : "MIT License",
                               "license_id" : "MIT",
@@ -88,7 +90,11 @@ public class ProjectsResourceTest extends ResourceTest {
                         "uuid" : "${json-unit.any-string}"
                       }
                   ],
-                  "next_page_token": "${json-unit.any-string}"
+                  "next_page_token": "${json-unit.any-string}",
+                  "total": {
+                    "count": 3,
+                    "type": "EXACT"
+                  }
                 }
                 """);
 
@@ -115,7 +121,11 @@ public class ProjectsResourceTest extends ResourceTest {
                        },
                        "uuid" : "${json-unit.any-string}"
                       }
-                  ]
+                  ],
+                  "total": {
+                    "count": 3,
+                    "type": "EXACT"
+                  }
                 }
                 """);
     }
@@ -392,6 +402,7 @@ public class ProjectsResourceTest extends ResourceTest {
         component.setName("component-name");
         component.setVersion("2.0");
         component.setPurl("pkg:maven/foo/bar@2.0");
+        component.setScope(Scope.REQUIRED);
         component.setResolvedLicense(license);
         qm.createComponent(component, false);
 

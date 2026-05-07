@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.User;
@@ -58,6 +57,8 @@ import org.dependencytrack.resources.v1.problems.TeamAlreadyExistsProblemDetails
 import org.dependencytrack.resources.v1.vo.TeamSelfResponse;
 import org.dependencytrack.resources.v1.vo.VisibleTeams;
 import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,7 +80,7 @@ import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolati
 })
 public class TeamResource extends AbstractApiResource {
 
-    private static final Logger LOGGER = Logger.getLogger(TeamResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(TeamResource.class);
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -170,7 +171,7 @@ public class TeamResource extends AbstractApiResource {
                     return new TeamAlreadyExistsProblemDetails(existingTeam).toResponse();
                 }
 
-                LOGGER.error("Failed to create team with name: " + jsonTeam.getName(), e);
+                LOGGER.error("Failed to create team with name: {}", jsonTeam.getName(), e);
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
 

@@ -21,23 +21,42 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -P -- "$(dirname "$0")" && pwd -P)"
 ROOT_DIR="$(cd -P -- "${SCRIPT_DIR}/../../" && pwd -P)"
-MIGRATION_DIR="$(cd -P -- "${ROOT_DIR}/migration" && pwd -P)"
-CONTAINER_ID="$(docker run -d --rm -e 'POSTGRES_DB=dtrack' -e 'POSTGRES_USER=dtrack' -e 'POSTGRES_PASSWORD=dtrack' -p '5432' postgres:14-alpine)"
+APISERVER_JAR="${ROOT_DIR}/apiserver/target/dependency-track-apiserver.jar"
+
+if [[ ! -f "${APISERVER_JAR}" ]]; then
+  echo "Building apiserver jar..."
+  (cd "${ROOT_DIR}" && make build)
+fi
+
+CONTAINER_ID="$(docker run -d --rm \
+  -e 'POSTGRES_DB=dtrack' \
+  -e 'POSTGRES_USER=dtrack' \
+  -e 'POSTGRES_PASSWORD=dtrack' \
+  -p '5432' postgres:14-alpine)"
+trap 'docker stop "${CONTAINER_ID}" >/dev/null' EXIT
+
 CONTAINER_PORT="$(docker port "${CONTAINER_ID}" "5432/tcp" | cut -d ':' -f 2)"
-TMP_LIQUIBASE_CONFIG_FILE="$(mktemp -p "${MIGRATION_DIR}")"
 
-while ! docker exec "${CONTAINER_ID}" pg_isready -U dtrack -d dtrack; do echo 'Waiting for Postgres readiness...'; sleep 1; done
+while ! docker exec "${CONTAINER_ID}" pg_isready -U dtrack -d dtrack >/dev/null 2>&1; do
+  echo 'Waiting for Postgres readiness...'
+  sleep 1
+done
 
-cat << EOF > "${TMP_LIQUIBASE_CONFIG_FILE}"
-changeLogFile=migration/changelog-main.xml
-url=jdbc:postgresql://localhost:${CONTAINER_PORT}/dtrack
-username=dtrack
-password=dtrack
-EOF
+java \
+  -Ddt.datasource.url="jdbc:postgresql://localhost:${CONTAINER_PORT}/dtrack" \
+  -Ddt.datasource.username="dtrack" \
+  -Ddt.datasource.password="dtrack" \
+  -Ddt.init.and.exit=true \
+  -jar "${APISERVER_JAR}"
 
-mvn -pl migration liquibase:update \
-  -Dliquibase.analytics.enabled=false \
-  -Dliquibase.propertyFile="$(basename "${TMP_LIQUIBASE_CONFIG_FILE}")"; \
-  docker exec "${CONTAINER_ID}" pg_dump -Udtrack --schema-only --no-owner --no-privileges dtrack | sed -e '/^--/d' | cat -s > "${ROOT_DIR}/schema.sql"; \
-  docker stop "${CONTAINER_ID}"; \
-  rm "${TMP_LIQUIBASE_CONFIG_FILE}"
+docker exec "${CONTAINER_ID}" pg_dump -Udtrack --schema-only --no-owner --no-privileges dtrack \
+  | sed -E \
+      -e '/^--/d' \
+      -e '/^\\/d' \
+      -e '/^SET (statement_timeout|lock_timeout|idle_in_transaction_session_timeout|client_encoding|standard_conforming_strings|check_function_bodies|xmloption|client_min_messages|row_security|default_tablespace|default_table_access_method)\b/d' \
+      -e "/^SELECT pg_catalog\\.set_config\\('search_path'/d" \
+      -e '/^ WITH SCHEMA public/d' \
+      -e 's/ WITH SCHEMA public//g' \
+      -e 's/public\.//g' \
+  | cat -s \
+  > "${ROOT_DIR}/schema.sql"

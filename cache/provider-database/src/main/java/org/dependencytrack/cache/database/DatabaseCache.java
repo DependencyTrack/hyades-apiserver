@@ -39,21 +39,19 @@ import java.util.function.Function;
 final class DatabaseCache implements Cache {
 
     private final String name;
-    private final int maxSize;
     private final Duration ttl;
     private final DataSource dataSource;
     private final AtomicLong hitCount = new AtomicLong();
     private final AtomicLong missCount = new AtomicLong();
     private final AtomicLong putCount = new AtomicLong();
     private final AtomicLong evictionCount = new AtomicLong();
+    private final AtomicLong cachedSize = new AtomicLong(-1L);
 
     DatabaseCache(
             String name,
-            int maxSize,
             Duration ttl,
             DataSource dataSource) {
         this.name = name;
-        this.maxSize = maxSize;
         this.ttl = ttl;
         this.dataSource = dataSource;
     }
@@ -129,7 +127,6 @@ final class DatabaseCache implements Cache {
                      VALUES (?, ?, ?, NOW() + (INTERVAL '1 millisecond' * ?))
                      ON CONFLICT ("CACHE_NAME", "KEY") DO UPDATE
                      SET "VALUE" = EXCLUDED."VALUE"
-                       , "CREATED_AT" = EXCLUDED."CREATED_AT"
                        , "EXPIRES_AT" = EXCLUDED."EXPIRES_AT"
                      """)) {
             ps.setString(1, this.name);
@@ -168,7 +165,6 @@ final class DatabaseCache implements Cache {
                          AS t(cache_name, key, value)
                      ON CONFLICT ("CACHE_NAME", "KEY") DO UPDATE
                      SET "VALUE" = EXCLUDED."VALUE"
-                       , "CREATED_AT" = EXCLUDED."CREATED_AT"
                        , "EXPIRES_AT" = EXCLUDED."EXPIRES_AT"
                      """)) {
             ps.setLong(1, ttl.toMillis());
@@ -220,10 +216,6 @@ final class DatabaseCache implements Cache {
         return name;
     }
 
-    int maxSize() {
-        return maxSize;
-    }
-
     long hitCount() {
         return hitCount.get();
     }
@@ -244,21 +236,13 @@ final class DatabaseCache implements Cache {
         evictionCount.addAndGet(count);
     }
 
-    long size() {
-        try (final Connection connection = dataSource.getConnection();
-             final PreparedStatement ps = connection.prepareStatement("""
-                     SELECT COUNT(*)
-                       FROM "CACHE_ENTRY"
-                      WHERE "CACHE_NAME" = ?
-                        AND "EXPIRES_AT" > NOW()
-                     """)) {
-            ps.setString(1, this.name);
+    void onSizeRefreshed(long size) {
+        cachedSize.set(size);
+    }
 
-            final ResultSet rs = ps.executeQuery();
-            return rs.next() ? rs.getLong(1) : 0;
-        } catch (SQLException e) {
-            throw new IllegalStateException(e);
-        }
+    @Nullable Long size() {
+        final long size = cachedSize.get();
+        return size < 0 ? null : size;
     }
 
 }

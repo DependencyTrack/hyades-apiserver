@@ -19,7 +19,6 @@
 
 package alpine.server.auth;
 
-import alpine.server.cache.CacheManager;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -40,8 +39,7 @@ public class OidcConfigurationResolverTest {
 
     @AfterEach
     public void tearDown() {
-        // Remove configs from cache to keep testing environment clean
-        CacheManager.getInstance().remove(OidcConfiguration.class, OidcConfigurationResolver.CONFIGURATION_CACHE_KEY);
+        OidcConfigurationResolver.resetCache();
     }
 
     @Test
@@ -57,7 +55,7 @@ public class OidcConfigurationResolverTest {
     @Test
     public void resolveShouldReturnCachedValueWhenAvailable(final WireMockRuntimeInfo wmRuntimeInfo) {
         final OidcConfiguration cachedConfiguration = new OidcConfiguration();
-        CacheManager.getInstance().put(OidcConfigurationResolver.CONFIGURATION_CACHE_KEY, cachedConfiguration);
+        OidcConfigurationResolver.seedCache(cachedConfiguration);
 
         assertThat(new OidcConfigurationResolver(true, wmRuntimeInfo.getHttpBaseUrl()).resolve()).isEqualTo(cachedConfiguration);
     }

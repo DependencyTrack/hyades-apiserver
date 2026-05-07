@@ -18,12 +18,13 @@
  */
 package org.dependencytrack.policy.cel.compat;
 
-import alpine.common.logging.Logger;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.cyclonedx.model.Hash;
 import org.dependencytrack.common.Mappers;
 import org.dependencytrack.model.PolicyCondition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.UncheckedIOException;
 
@@ -31,7 +32,7 @@ import static org.dependencytrack.policy.cel.compat.CelPolicyScriptSourceBuilder
 
 public class ComponentHashCelPolicyScriptSourceBuilder implements CelPolicyScriptSourceBuilder {
 
-    private static final Logger LOGGER = Logger.getLogger(ComponentHashCelPolicyScriptSourceBuilder.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ComponentHashCelPolicyScriptSourceBuilder.class);
 
     @Override
     public String apply(final PolicyCondition policyCondition) {

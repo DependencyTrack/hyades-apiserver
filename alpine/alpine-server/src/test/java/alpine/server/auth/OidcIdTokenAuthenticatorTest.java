@@ -19,7 +19,6 @@
 
 package alpine.server.auth;
 
-import alpine.server.cache.CacheManager;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -80,8 +79,7 @@ public class OidcIdTokenAuthenticatorTest {
 
     @AfterEach
     public void tearDown() {
-        // Remove JWK sets from cache to keep testing environment clean
-        CacheManager.getInstance().remove(JWKSet.class, OidcIdTokenAuthenticator.JWK_SET_CACHE_KEY);
+        OidcIdTokenAuthenticator.resetCache();
     }
 
     @Test
@@ -247,7 +245,7 @@ public class OidcIdTokenAuthenticatorTest {
     @Test
     public void resolveJwkSetShouldReturnCachedValueWhenAvailable() throws Exception {
         final var cachedJwkSet = new JWKSet();
-        CacheManager.getInstance().put(OidcIdTokenAuthenticator.JWK_SET_CACHE_KEY, cachedJwkSet);
+        OidcIdTokenAuthenticator.seedCache(cachedJwkSet);
 
         final var authenticator = new OidcIdTokenAuthenticator(oidcConfiguration, "clientId");
         assertThat(authenticator.resolveJwkSet()).isEqualTo(cachedJwkSet);

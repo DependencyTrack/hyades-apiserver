@@ -20,7 +20,7 @@ package org.dependencytrack.cache.database;
 
 import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
-import org.dependencytrack.support.liquibase.MigrationExecutor;
+import org.dependencytrack.migration.MigrationExecutor;
 import org.eclipse.microprofile.config.Config;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -64,9 +64,7 @@ class DatabaseCacheMaintenanceWorkerTest {
         dataSourceRegistry = new DataSourceRegistry(config);
         dataSource = dataSourceRegistry.getDefault();
 
-        final var migrationExecutor = new MigrationExecutor(
-                dataSource, "migration/changelog-main.xml");
-        migrationExecutor.executeMigration();
+        new MigrationExecutor(dataSource).execute();
     }
 
     @AfterEach
@@ -86,9 +84,9 @@ class DatabaseCacheMaintenanceWorkerTest {
 
     @Test
     void performMaintenanceShouldDeleteExpiredEntries() throws Exception {
-        insertEntry("cache-a", "expired1", "v1", Instant.now().minusSeconds(60), Instant.now().minusSeconds(10));
-        insertEntry("cache-a", "expired2", "v2", Instant.now().minusSeconds(60), Instant.now().minusSeconds(5));
-        insertEntry("cache-a", "valid", "v3", Instant.now().minusSeconds(60), Instant.now().plusSeconds(3600));
+        insertEntry("cache-a", "expired1", "v1", Instant.now().minusSeconds(10));
+        insertEntry("cache-a", "expired2", "v2", Instant.now().minusSeconds(5));
+        insertEntry("cache-a", "valid", "v3", Instant.now().plusSeconds(3600));
 
         try (final var worker = new DatabaseCacheMaintenanceWorker(dataSource, Duration.ofMinutes(1), Duration.ofMinutes(5))) {
             worker.performMaintenance();
@@ -100,7 +98,7 @@ class DatabaseCacheMaintenanceWorkerTest {
 
     @Test
     void performMaintenanceShouldDeleteExpiredEntriesFromUnregisteredCaches() throws Exception {
-        insertEntry("unregistered", "key1", "v1", Instant.now().minusSeconds(60), Instant.now().minusSeconds(10));
+        insertEntry("unregistered", "key1", "v1", Instant.now().minusSeconds(10));
 
         try (final var worker = new DatabaseCacheMaintenanceWorker(dataSource, Duration.ofMinutes(1), Duration.ofMinutes(5))) {
             worker.performMaintenance();
@@ -110,33 +108,10 @@ class DatabaseCacheMaintenanceWorkerTest {
     }
 
     @Test
-    void performMaintenanceShouldDeleteEntriesExceedingMaxSize() throws Exception {
-        for (int i = 1; i <= 5; i++) {
-            insertEntry("cache-a", "key" + i, "v" + i,
-                    Instant.now().minusSeconds(60 - i),
-                    Instant.now().plusSeconds(3600));
-        }
-
-        final var cache = new DatabaseCache("cache-a", 3, Duration.ofHours(1), dataSource);
-
-        try (final var worker = new DatabaseCacheMaintenanceWorker(dataSource, Duration.ofMinutes(1), Duration.ofMinutes(5))) {
-            worker.registerCache(cache);
-            worker.performMaintenance();
-
-            assertThat(countEntries("cache-a")).isEqualTo(3);
-            assertThat(entryExists("cache-a", "key1")).isFalse();
-            assertThat(entryExists("cache-a", "key2")).isFalse();
-            assertThat(entryExists("cache-a", "key3")).isTrue();
-            assertThat(entryExists("cache-a", "key4")).isTrue();
-            assertThat(entryExists("cache-a", "key5")).isTrue();
-        }
-    }
-
-    @Test
     void performMaintenanceShouldIncrementEvictionCountForExpiredEntries() throws Exception {
-        insertEntry("cache-a", "expired", "v1", Instant.now().minusSeconds(60), Instant.now().minusSeconds(10));
+        insertEntry("cache-a", "expired", "v1", Instant.now().minusSeconds(10));
 
-        final var cache = new DatabaseCache("cache-a", 10000, Duration.ofHours(1), dataSource);
+        final var cache = new DatabaseCache("cache-a", Duration.ofHours(1), dataSource);
 
         try (final var worker = new DatabaseCacheMaintenanceWorker(dataSource, Duration.ofMinutes(1), Duration.ofMinutes(5))) {
             worker.registerCache(cache);
@@ -147,34 +122,60 @@ class DatabaseCacheMaintenanceWorkerTest {
     }
 
     @Test
-    void performMaintenanceShouldIncrementEvictionCountForMaxSizeEvictions() throws Exception {
-        for (int i = 1; i <= 5; i++) {
-            insertEntry("cache-a", "key" + i, "v" + i,
-                    Instant.now().minusSeconds(60 - i),
-                    Instant.now().plusSeconds(3600));
-        }
+    void performMaintenanceShouldRefreshCachedSize() throws Exception {
+        insertEntry("cache-a", "expired", "v0", Instant.now().minusSeconds(10));
+        insertEntry("cache-a", "valid1", "v1", Instant.now().plusSeconds(3600));
+        insertEntry("cache-a", "valid2", "v2", Instant.now().plusSeconds(3600));
+        insertEntry("cache-b", "valid", "v3", Instant.now().plusSeconds(3600));
 
-        final var cache = new DatabaseCache("cache-a", 2, Duration.ofHours(1), dataSource);
+        final var cacheA = new DatabaseCache("cache-a", Duration.ofHours(1), dataSource);
+        final var cacheB = new DatabaseCache("cache-b", Duration.ofHours(1), dataSource);
 
         try (final var worker = new DatabaseCacheMaintenanceWorker(dataSource, Duration.ofMinutes(1), Duration.ofMinutes(5))) {
-            worker.registerCache(cache);
+            worker.registerCache(cacheA);
+            worker.registerCache(cacheB);
+
+            assertThat(cacheA.size()).isNull();
+            assertThat(cacheB.size()).isNull();
+
             worker.performMaintenance();
 
-            assertThat(cache.evictionCount()).isEqualTo(3);
+            assertThat(cacheA.size()).isEqualTo(2);
+            assertThat(cacheB.size()).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void performMaintenanceShouldZeroOutCachedSizeWhenAllEntriesAreGone() throws Exception {
+        insertEntry("cache-a", "valid", "v1", Instant.now().plusSeconds(3600));
+
+        final var cacheA = new DatabaseCache("cache-a", Duration.ofHours(1), dataSource);
+
+        try (final var worker = new DatabaseCacheMaintenanceWorker(dataSource, Duration.ofMinutes(1), Duration.ofMinutes(5))) {
+            worker.registerCache(cacheA);
+            worker.performMaintenance();
+            assertThat(cacheA.size()).isEqualTo(1);
+
+            try (final Connection connection = dataSource.getConnection();
+                 final Statement statement = connection.createStatement()) {
+                statement.execute("DELETE FROM \"CACHE_ENTRY\" WHERE \"CACHE_NAME\" = 'cache-a'");
+            }
+
+            worker.performMaintenance();
+            assertThat(cacheA.size()).isZero();
         }
     }
 
     @Test
     void performMaintenanceShouldHandleMultipleCaches() throws Exception {
-        insertEntry("cache-a", "key1", "v1", Instant.now().minusSeconds(10), Instant.now().plusSeconds(3600));
-        insertEntry("cache-a", "key2", "v2", Instant.now().minusSeconds(20), Instant.now().plusSeconds(3600));
-        insertEntry("cache-a", "key3", "v3", Instant.now().minusSeconds(30), Instant.now().plusSeconds(3600));
+        insertEntry("cache-a", "expired", "v1", Instant.now().minusSeconds(10));
+        insertEntry("cache-a", "valid", "v2", Instant.now().plusSeconds(3600));
 
-        insertEntry("cache-b", "key1", "v1", Instant.now().minusSeconds(10), Instant.now().plusSeconds(3600));
-        insertEntry("cache-b", "key2", "v2", Instant.now().minusSeconds(20), Instant.now().plusSeconds(3600));
+        insertEntry("cache-b", "expired1", "v1", Instant.now().minusSeconds(10));
+        insertEntry("cache-b", "expired2", "v2", Instant.now().minusSeconds(5));
 
-        final var cacheA = new DatabaseCache("cache-a", 1, Duration.ofHours(1), dataSource);
-        final var cacheB = new DatabaseCache("cache-b", 1, Duration.ofHours(1), dataSource);
+        final var cacheA = new DatabaseCache("cache-a", Duration.ofHours(1), dataSource);
+        final var cacheB = new DatabaseCache("cache-b", Duration.ofHours(1), dataSource);
 
         try (final var worker = new DatabaseCacheMaintenanceWorker(dataSource, Duration.ofMinutes(1), Duration.ofMinutes(5))) {
             worker.registerCache(cacheA);
@@ -182,25 +183,9 @@ class DatabaseCacheMaintenanceWorkerTest {
             worker.performMaintenance();
 
             assertThat(countEntries("cache-a")).isEqualTo(1);
-            assertThat(countEntries("cache-b")).isEqualTo(1);
-            assertThat(cacheA.evictionCount()).isEqualTo(2);
-            assertThat(cacheB.evictionCount()).isEqualTo(1);
-        }
-    }
-
-    @Test
-    void performMaintenanceShouldNotDeleteEntriesWithinMaxSize() throws Exception {
-        insertEntry("cache-a", "key1", "v1", Instant.now().minusSeconds(10), Instant.now().plusSeconds(3600));
-        insertEntry("cache-a", "key2", "v2", Instant.now().minusSeconds(20), Instant.now().plusSeconds(3600));
-
-        final var cache = new DatabaseCache("cache-a", 10, Duration.ofHours(1), dataSource);
-
-        try (final var worker = new DatabaseCacheMaintenanceWorker(dataSource, Duration.ofMinutes(1), Duration.ofMinutes(5))) {
-            worker.registerCache(cache);
-            worker.performMaintenance();
-
-            assertThat(countEntries("cache-a")).isEqualTo(2);
-            assertThat(cache.evictionCount()).isZero();
+            assertThat(countEntries("cache-b")).isZero();
+            assertThat(cacheA.evictionCount()).isEqualTo(1);
+            assertThat(cacheB.evictionCount()).isEqualTo(2);
         }
     }
 
@@ -208,18 +193,16 @@ class DatabaseCacheMaintenanceWorkerTest {
             String cacheName,
             String key,
             String value,
-            Instant createdAt,
             Instant expiresAt) throws Exception {
         try (final Connection connection = dataSource.getConnection();
              final PreparedStatement ps = connection.prepareStatement("""
-                     INSERT INTO "CACHE_ENTRY" ("CACHE_NAME", "KEY", "VALUE", "CREATED_AT", "EXPIRES_AT")
-                     VALUES (?, ?, ?, ?, ?)
+                     INSERT INTO "CACHE_ENTRY" ("CACHE_NAME", "KEY", "VALUE", "EXPIRES_AT")
+                     VALUES (?, ?, ?, ?)
                      """)) {
             ps.setString(1, cacheName);
             ps.setString(2, key);
             ps.setBytes(3, value.getBytes());
-            ps.setTimestamp(4, Timestamp.from(createdAt));
-            ps.setTimestamp(5, Timestamp.from(expiresAt));
+            ps.setTimestamp(4, Timestamp.from(expiresAt));
             ps.executeUpdate();
         }
     }

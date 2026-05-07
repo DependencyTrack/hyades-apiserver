@@ -19,11 +19,9 @@
 
 package alpine.server.auth;
 
-import alpine.common.logging.Logger;
 import alpine.common.util.ProxyConfig;
 import alpine.common.util.ProxyUtil;
 import alpine.config.AlpineConfigKeys;
-import alpine.server.cache.CacheManager;
 import com.nimbusds.oauth2.sdk.GeneralException;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
@@ -32,6 +30,8 @@ import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import jakarta.annotation.Nullable;
 import net.minidev.json.JSONObject;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
@@ -45,8 +45,9 @@ public class OidcConfigurationResolver {
             ConfigProvider.getConfig().getValue(AlpineConfigKeys.OIDC_ENABLED, Boolean.class),
             ConfigProvider.getConfig().getOptionalValue(AlpineConfigKeys.OIDC_ISSUER, String.class).orElse(null)
     );
-    private static final Logger LOGGER = Logger.getLogger(OidcConfigurationResolver.class);
-    static final String CONFIGURATION_CACHE_KEY = "OIDC_CONFIGURATION";
+    private static final Logger LOGGER = LoggerFactory.getLogger(OidcConfigurationResolver.class);
+
+    private static volatile OidcConfiguration cachedConfiguration;
 
     private final boolean oidcEnabled;
     private final String issuer;
@@ -77,13 +78,13 @@ public class OidcConfigurationResolver {
             return null;
         }
 
-        OidcConfiguration configuration = CacheManager.getInstance().get(OidcConfiguration.class, CONFIGURATION_CACHE_KEY);
+        OidcConfiguration configuration = cachedConfiguration;
         if (configuration != null) {
             LOGGER.debug("OIDC configuration loaded from cache");
             return configuration;
         }
 
-        LOGGER.debug("Fetching OIDC configuration from issuer " + issuer);
+        LOGGER.debug("Fetching OIDC configuration from issuer {}", issuer);
         try {
             Issuer issuerObject = new Issuer(this.issuer);
             URL configURL = OIDCProviderMetadata.resolveURL(issuerObject);
@@ -114,17 +115,23 @@ public class OidcConfigurationResolver {
             configuration.setJwksUri(op.getJWKSetURI());
             configuration.setUserInfoEndpointUri(op.getUserInfoEndpointURI());
 
-            LOGGER.debug("Storing OIDC configuration in cache: " + configuration);
-            CacheManager.getInstance().put(CONFIGURATION_CACHE_KEY, configuration);
+            LOGGER.debug("Storing OIDC configuration in cache: {}", configuration);
+            cachedConfiguration = configuration;
 
             return configuration;
 
         } catch (IOException | GeneralException e) {
-            LOGGER.error("Failed to fetch OIDC configuration from issuer " + issuer, e);
+            LOGGER.error("Failed to fetch OIDC configuration from issuer {}", issuer, e);
             return null;
         }
+    }
 
+    static void resetCache() {
+        cachedConfiguration = null;
+    }
 
+    static void seedCache(OidcConfiguration configuration) {
+        cachedConfiguration = configuration;
     }
 
 }

@@ -34,10 +34,8 @@ final class DatabaseCacheMeterBinder extends CacheMeterBinder<DatabaseCache> {
 
     @Override
     protected Long size() {
-        return Optional
-                .ofNullable(getCache())
-                .map(DatabaseCache::size)
-                .orElse(0L);
+        final DatabaseCache cache = getCache();
+        return cache != null ? cache.size() : null;
     }
 
     @Override

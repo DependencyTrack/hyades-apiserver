@@ -74,7 +74,7 @@ public class ComponentOccurrence {
     private Component component;
 
     @Persistent
-    @Column(name = "LOCATION")
+    @Column(name = "LOCATION", jdbcType = "CLOB")
     private String location;
 
     @Persistent

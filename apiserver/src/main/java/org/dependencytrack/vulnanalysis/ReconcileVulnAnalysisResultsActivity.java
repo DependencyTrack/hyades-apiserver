@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.vulnanalysis;
 
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
-import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_7.VulnerabilityReference;
 import org.dependencytrack.dex.api.Activity;
 import org.dependencytrack.dex.api.ActivityContext;
 import org.dependencytrack.dex.api.ActivitySpec;
@@ -57,8 +57,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -156,7 +156,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
                     final Bom vdr;
                     try (final InputStream vdrInputStream = fileStorage.get(result.getVdrFileMetadata())) {
                         vdr = Bom.parseFrom(vdrInputStream);
-                    } catch (FileNotFoundException e) {
+                    } catch (NoSuchFileException e) {
                         LOGGER.warn("Could not find VDR file from analyzer; Considering it to have failed", e);
                         failedAnalyzers.add(analyzerName);
                         continue;
@@ -199,7 +199,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
     }
 
     private record ReportedVulnerability(
-            org.cyclonedx.proto.v1_6.Vulnerability vdrVuln,
+            org.cyclonedx.proto.v1_7.Vulnerability vdrVuln,
             @Nullable Long internalVulnId) {
     }
 
@@ -216,7 +216,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
             List<ReportedFinding> findings,
             Map<VulnerabilityKey, ReportedVulnerability> reportedVulnByVulnKey,
             Map<String, Map<VulnerabilityKey, Set<VulnerabilityKey>>> aliasAssertionsByAnalyzer) {
-        for (final org.cyclonedx.proto.v1_6.Vulnerability vdrVuln : vdr.getVulnerabilitiesList()) {
+        for (final org.cyclonedx.proto.v1_7.Vulnerability vdrVuln : vdr.getVulnerabilitiesList()) {
             final Vulnerability.Source source =
                     BovModelConverter.extractSource(vdrVuln.getId(), vdrVuln.getSource());
             final var vulnKey = new VulnerabilityKey(vdrVuln.getId(), source);
@@ -278,7 +278,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         }
     }
 
-    private static @Nullable Long extractInternalVulnId(org.cyclonedx.proto.v1_6.Vulnerability vuln) {
+    private static @Nullable Long extractInternalVulnId(org.cyclonedx.proto.v1_7.Vulnerability vuln) {
         for (final Property prop : vuln.getPropertiesList()) {
             if (INTERNAL_VULN_ID_PROPERTY.equals(prop.getName())) {
                 try {
@@ -292,7 +292,7 @@ public final class ReconcileVulnAnalysisResultsActivity implements Activity<Reco
         return null;
     }
 
-    private static @Nullable String extractReferenceUrl(org.cyclonedx.proto.v1_6.Vulnerability vuln) {
+    private static @Nullable String extractReferenceUrl(org.cyclonedx.proto.v1_7.Vulnerability vuln) {
         for (final Property prop : vuln.getPropertiesList()) {
             if (REFERENCE_URL_PROPERTY.equals(prop.getName())
                     && (prop.getValue().startsWith("http://") || prop.getValue().startsWith("https://"))) {

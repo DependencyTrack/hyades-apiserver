@@ -18,7 +18,6 @@
  */
 package alpine.persistence;
 
-import alpine.common.logging.Logger;
 import alpine.event.LdapSyncEvent;
 import alpine.event.framework.EventService;
 import alpine.model.ApiKey;
@@ -36,12 +35,13 @@ import alpine.model.UserSession;
 import alpine.resources.AlpineRequest;
 import alpine.security.ApiKeyGenerator;
 import org.datanucleus.store.rdbms.query.JDOQLQuery;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.security.Principal;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -57,7 +57,7 @@ import java.util.Set;
  */
 public class AlpineQueryManager extends AbstractAlpineQueryManager {
 
-    private static final Logger LOGGER = Logger.getLogger(AlpineQueryManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AlpineQueryManager.class);
 
     /**
      * Default constructor.
@@ -141,14 +141,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
             apiKey.setCreated(new Date());
             apiKey.setTeams(List.of(team));
             return pm.makePersistent(apiKey);
-        });
-    }
-
-    public ApiKey updateApiKey(final ApiKey transientApiKey) {
-        return callInTransaction(() -> {
-            final ApiKey apiKey = getObjectById(ApiKey.class, transientApiKey.getId());
-            apiKey.setComment(transientApiKey.getComment());
-            return apiKey;
         });
     }
 
@@ -271,41 +263,41 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * @since 1.8.0
      */
     public OidcUser synchronizeTeamMembership(final OidcUser user, final List<String> groupNames) {
-        LOGGER.debug("Synchronizing team membership for OpenID Connect user " + user.getUsername());
+        LOGGER.debug("Synchronizing team membership for OpenID Connect user {}", user.getUsername());
         return callInTransaction(() -> {
             final List<Team> removeThese = new ArrayList<>();
             if (user.getTeams() != null) {
                 for (final Team team : user.getTeams()) {
-                    LOGGER.debug(user.getUsername() + " is a member of team: " + team.getName());
+                    LOGGER.debug("{} is a member of team: {}", user.getUsername(), team.getName());
                     if (team.getMappedOidcGroups() != null && !team.getMappedOidcGroups().isEmpty()) {
                         for (final MappedOidcGroup mappedOidcGroup : team.getMappedOidcGroups()) {
-                            LOGGER.debug(mappedOidcGroup.getGroup().getName() + " is mapped to team: " + team.getName());
+                            LOGGER.debug("{} is mapped to team: {}", mappedOidcGroup.getGroup().getName(), team.getName());
                             if (!groupNames.contains(mappedOidcGroup.getGroup().getName())) {
-                                LOGGER.debug(mappedOidcGroup.getGroup().getName() + " is not identified in the List of groups specified. Queuing removal of membership for user " + user.getUsername());
+                                LOGGER.debug("{} is not identified in the List of groups specified. Queuing removal of membership for user {}", mappedOidcGroup.getGroup().getName(), user.getUsername());
                                 removeThese.add(team);
                             }
                         }
                     } else {
-                        LOGGER.debug(team.getName() + " does not have any mapped OpenID Connect groups. Queuing removal of " + user.getUsername() + " from team: " + team.getName());
+                        LOGGER.debug("{} does not have any mapped OpenID Connect groups. Queuing removal of {} from team: {}", team.getName(), user.getUsername(), team.getName());
                         removeThese.add(team);
                     }
                 }
             }
 
             for (final Team team : removeThese) {
-                LOGGER.debug("Removing user: " + user.getUsername() + " from team: " + team.getName());
+                LOGGER.debug("Removing user: {} from team: {}", user.getUsername(), team.getName());
                 removeUserFromTeam(user, team);
             }
 
             for (final String groupName : groupNames) {
                 final OidcGroup group = getOidcGroup(groupName);
                 if (group == null) {
-                    LOGGER.debug("Unknown OpenID Connect group " + groupName);
+                    LOGGER.debug("Unknown OpenID Connect group {}", groupName);
                     continue;
                 }
 
                 for (final MappedOidcGroup mappedOidcGroup : getMappedOidcGroups(group)) {
-                    LOGGER.debug("Adding user: " + user.getUsername() + " to team: " + mappedOidcGroup.getTeam().getName());
+                    LOGGER.debug("Adding user: {} to team: {}", user.getUsername(), mappedOidcGroup.getTeam().getName());
                     addUserToTeam(user, mappedOidcGroup.getTeam());
                 }
             }
@@ -323,15 +315,15 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * @since 2.2.5
      */
     public OidcUser addUserToTeams(final OidcUser user, final List<String> teamNames) {
-        LOGGER.debug("Synchronizing team membership for OpenID Connect user " + user.getUsername());
+        LOGGER.debug("Synchronizing team membership for OpenID Connect user {}", user.getUsername());
 
         return callInTransaction(() -> {
             for (final String teamName : teamNames) {
                 Team team = getTeam(teamName);
                 if (team == null) {
-                    LOGGER.warn("Cannot add user " + user.getUsername() + " to team " + teamName + ", because no team with that name exists");
+                    LOGGER.warn("Cannot add user {} to team {}, because no team with that name exists", user.getUsername(), teamName);
                 } else {
-                    LOGGER.debug("Adding user: " + user.getUsername() + " to team: " + teamName);
+                    LOGGER.debug("Adding user: {} to team: {}", user.getUsername(), teamName);
                     addUserToTeam(user, team);
                 }
             }
@@ -406,33 +398,33 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * @since 1.4.0
      */
     public LdapUser synchronizeTeamMembership(final LdapUser user, final List<String> groupDNs) {
-        LOGGER.debug("Synchronizing team membership for " + user.getUsername());
+        LOGGER.debug("Synchronizing team membership for {}", user.getUsername());
         return callInTransaction(() -> {
             final List<Team> removeThese = new ArrayList<>();
             if (user.getTeams() != null) {
                 for (final Team team : user.getTeams()) {
-                    LOGGER.debug(user.getUsername() + " is a member of team: " + team.getName());
+                    LOGGER.debug("{} is a member of team: {}", user.getUsername(), team.getName());
                     if (team.getMappedLdapGroups() != null) {
                         for (final MappedLdapGroup mappedLdapGroup : team.getMappedLdapGroups()) {
-                            LOGGER.debug(mappedLdapGroup.getDn() + " is mapped to team: " + team.getName());
+                            LOGGER.debug("{} is mapped to team: {}", mappedLdapGroup.getDn(), team.getName());
                             if (!groupDNs.contains(mappedLdapGroup.getDn())) {
-                                LOGGER.debug(mappedLdapGroup.getDn() + " is not identified in the List of group DNs specified. Queuing removal of membership for user " + user.getUsername());
+                                LOGGER.debug("{} is not identified in the List of group DNs specified. Queuing removal of membership for user {}", mappedLdapGroup.getDn(), user.getUsername());
                                 removeThese.add(team);
                             }
                         }
                     } else {
-                        LOGGER.debug(team.getName() + " does not have any mapped LDAP groups. Queuing removal of " + user.getUsername() + " from team: " + team.getName());
+                        LOGGER.debug("{} does not have any mapped LDAP groups. Queuing removal of {} from team: {}", team.getName(), user.getUsername(), team.getName());
                         removeThese.add(team);
                     }
                 }
             }
             for (final Team team: removeThese) {
-                LOGGER.debug("Removing user: " + user.getUsername() + " from team: " + team.getName());
+                LOGGER.debug("Removing user: {} from team: {}", user.getUsername(), team.getName());
                 removeUserFromTeam(user, team);
             }
             for (final String groupDN: groupDNs) {
                 for (final MappedLdapGroup mappedLdapGroup: getMappedLdapGroups(groupDN)) {
-                    LOGGER.debug("Adding user: " + user.getUsername() + " to team: " + mappedLdapGroup.getTeam());
+                    LOGGER.debug("Adding user: {} to team: {}", user.getUsername(), mappedLdapGroup.getTeam());
                     addUserToTeam(user, mappedLdapGroup.getTeam());
                 }
             }
@@ -548,20 +540,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         query.setFilter("tokenHash == :tokenHash && expiresAt > :now");
         query.setParameters(tokenHash, new Date());
         return executeAndCloseUnique(query);
-    }
-
-    /**
-     * Creates a new Team with the specified name. If createApiKey is true,
-     * then {@link #createApiKey} is invoked and a cryptographically secure
-     * API key is generated.
-     * @param name The name of the team
-     * @param createApiKey whether to create an API key for the team
-     * @deprecated `createApiKey` is deprecated and will be removed in future versions
-     * @return a Team
-     * @since 1.0.0
-     */
-    public Team createTeam(final String name, final boolean createApiKey) {
-        return createTeam(name);
     }
 
     /**
@@ -715,21 +693,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         final Query<Permission> query = pm.newQuery(Permission.class, "name == :name");
         query.setParameters(name);
         return executeAndCloseUnique(query);
-    }
-
-    /**
-     * Retrieves a list of {@link Permission}s having the given {@code names}.
-     * @param names The permission names
-     * @return a list of {@link Permission}s
-     * @since 5.6.0
-     */
-    public List<Permission> getPermissionsByName(final Collection<String> names) {
-        final Query<Permission> query = pm.newQuery(Permission.class)
-                .filter(":permissions.contains(name)")
-                .setNamedParameters(Map.of("permissions", names))
-                .orderBy("name ASC");
-
-        return executeAndCloseList(query);
     }
 
     /**
@@ -963,18 +926,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Retrieves a List of MappedOidcGroup objects for the specified Team.
-     * @param team The team to retrieve mappings for
-     * @return a List of MappedOidcGroup objects
-     * @since 1.8.0
-     */
-    public List<MappedOidcGroup> getMappedOidcGroups(final Team team) {
-        final Query<MappedOidcGroup> query = pm.newQuery(MappedOidcGroup.class, "team == :team");
-        query.setParameters(team);
-        return executeAndCloseList(query);
-    }
-
-    /**
      * Retrieves a List of MappedOidcGroup objects for the specified group.
      * @param group The group to retrieve mappings for
      * @return a List of MappedOidcGroup objects
@@ -984,17 +935,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         final Query<MappedOidcGroup> query = pm.newQuery(MappedOidcGroup.class, "group == :group");
         query.setParameters(group);
         return executeAndCloseList(query);
-    }
-
-    /**
-     * Determines if the specified Team is mapped to the specified OpenID Connect group.
-     * @param team a Team object
-     * @param group a OidcGroup object
-     * @return true if a mapping exists, false if not
-     * @since 1.8.0
-     */
-    public boolean isOidcGroupMapped(final Team team, final OidcGroup group) {
-        return getMappedOidcGroup(team, group) != null;
     }
 
     /**
@@ -1008,19 +948,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         final Query<ConfigProperty> query = pm.newQuery(ConfigProperty.class, "groupName == :groupName && propertyName == :propertyName");
         query.setParameters(groupName, propertyName);
         return executeAndCloseUnique(query);
-    }
-
-    /**
-     * Returns a list of ConfigProperty objects with the specified groupName.
-     * @param groupName the group name of the properties
-     * @return a List of ConfigProperty objects
-     * @since 1.3.0
-     */
-    public List<ConfigProperty> getConfigProperties(final String groupName) {
-        final Query<ConfigProperty> query = pm.newQuery(ConfigProperty.class, "groupName == :groupName");
-        query.setParameters(groupName);
-        query.setOrdering("propertyName asc");
-        return executeAndCloseList(query);
     }
 
     /**

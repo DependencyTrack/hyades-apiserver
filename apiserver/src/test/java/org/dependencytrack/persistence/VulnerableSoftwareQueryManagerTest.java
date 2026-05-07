@@ -22,8 +22,8 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -238,7 +238,6 @@ public class VulnerableSoftwareQueryManagerTest extends PersistenceCapableTest {
 
         final VulnerableSoftware found = qm.getVulnerableSoftwareByCpe23(
                 "cpe:2.3:a:acme:product:1.0.0:*:*:*:*:*:*:*",
-                null,
                 "1.1.0",
                 null,
                 null,
@@ -258,7 +257,6 @@ public class VulnerableSoftwareQueryManagerTest extends PersistenceCapableTest {
 
         final VulnerableSoftware found = qm.getVulnerableSoftwareByCpe23(
                 "cpe:2.3:a:acme:product:1.0.0:*:*:*:*:*:*:*",
-                null,
                 null,
                 null,
                 null,
@@ -323,6 +321,250 @@ public class VulnerableSoftwareQueryManagerTest extends PersistenceCapableTest {
         assertThat(found.getPurlType()).isEqualTo("npm");
         assertThat(found.getPurlNamespace()).isNull();
         assertThat(found.getPurlName()).isEqualTo("product");
+    }
+
+    @Test
+    public void shouldDistinguishVulnerableSoftwareByPurlQualifiers() {
+        final VulnerableSoftware vsBullseye = new VulnerableSoftware();
+        vsBullseye.setPurl("pkg:deb/debian/sudo@1.9.5?distro=debian-11");
+        vsBullseye.setPurlType("deb");
+        vsBullseye.setPurlNamespace("debian");
+        vsBullseye.setPurlName("sudo");
+        vsBullseye.setPurlQualifiers("{\"distro\":\"debian-11\"}");
+        vsBullseye.setVersion("1.9.5");
+        qm.persist(vsBullseye);
+
+        final VulnerableSoftware vsBookworm = new VulnerableSoftware();
+        vsBookworm.setPurl("pkg:deb/debian/sudo@1.9.5?distro=debian-12");
+        vsBookworm.setPurlType("deb");
+        vsBookworm.setPurlNamespace("debian");
+        vsBookworm.setPurlName("sudo");
+        vsBookworm.setPurlQualifiers("{\"distro\":\"debian-12\"}");
+        vsBookworm.setVersion("1.9.5");
+        qm.persist(vsBookworm);
+
+        final VulnerableSoftware vsNoQualifiers = new VulnerableSoftware();
+        vsNoQualifiers.setPurl("pkg:deb/debian/sudo@1.9.5");
+        vsNoQualifiers.setPurlType("deb");
+        vsNoQualifiers.setPurlNamespace("debian");
+        vsNoQualifiers.setPurlName("sudo");
+        vsNoQualifiers.setVersion("1.9.5");
+        qm.persist(vsNoQualifiers);
+
+        final VulnerableSoftware foundBullseye = qm.getVulnerableSoftwareByPurl(
+                "deb", "debian", "sudo", "{\"distro\":\"debian-11\"}", null,
+                "1.9.5", null, null, null, null);
+        assertThat(foundBullseye).isNotNull();
+        assertThat(foundBullseye.getId()).isEqualTo(vsBullseye.getId());
+
+        final VulnerableSoftware foundBookworm = qm.getVulnerableSoftwareByPurl(
+                "deb", "debian", "sudo", "{\"distro\":\"debian-12\"}", null,
+                "1.9.5", null, null, null, null);
+        assertThat(foundBookworm).isNotNull();
+        assertThat(foundBookworm.getId()).isEqualTo(vsBookworm.getId());
+
+        final VulnerableSoftware foundNone = qm.getVulnerableSoftwareByPurl(
+                "deb", "debian", "sudo", null, null,
+                "1.9.5", null, null, null, null);
+        assertThat(foundNone).isNotNull();
+        assertThat(foundNone.getId()).isEqualTo(vsNoQualifiers.getId());
+
+        final VulnerableSoftware foundUnknown = qm.getVulnerableSoftwareByPurl(
+                "deb", "debian", "sudo", "{\"distro\":\"debian-13\"}", null,
+                "1.9.5", null, null, null, null);
+        assertThat(foundUnknown).isNull();
+    }
+
+    @Test
+    public void shouldSynchronizeVulnerableSoftwareByPurlQualifiersWithoutCollapsingRows() {
+        final VulnerableSoftware vsBullseye = new VulnerableSoftware();
+        vsBullseye.setPurl("pkg:deb/debian/sudo@1.9.5?distro=debian-11");
+        vsBullseye.setPurlType("deb");
+        vsBullseye.setPurlNamespace("debian");
+        vsBullseye.setPurlName("sudo");
+        vsBullseye.setPurlQualifiers("{\"distro\":\"debian-11\"}");
+        vsBullseye.setVersion("1.9.5");
+
+        final VulnerableSoftware vsBookworm = new VulnerableSoftware();
+        vsBookworm.setPurl("pkg:deb/debian/sudo@1.9.5?distro=debian-12");
+        vsBookworm.setPurlType("deb");
+        vsBookworm.setPurlNamespace("debian");
+        vsBookworm.setPurlName("sudo");
+        vsBookworm.setPurlQualifiers("{\"distro\":\"debian-12\"}");
+        vsBookworm.setVersion("1.9.5");
+
+        qm.synchronizeVulnerableSoftware(
+                vulnerability, List.of(vsBullseye, vsBookworm), Vulnerability.Source.NVD);
+
+        final Vulnerability persistedVuln =
+                qm.getVulnerabilityByVulnId(Vulnerability.Source.NVD, "CVE-2024-0001", true);
+        assertThat(persistedVuln.getVulnerableSoftware())
+                .extracting(VulnerableSoftware::getPurlQualifiers)
+                .containsExactlyInAnyOrder(
+                        "{\"distro\":\"debian-11\"}",
+                        "{\"distro\":\"debian-12\"}");
+    }
+
+    @Test
+    public void shouldReuseVulnerableSoftwareByPurlQualifiersOnSubsequentSync() {
+        final VulnerableSoftware preExisting = new VulnerableSoftware();
+        preExisting.setPurl("pkg:deb/debian/sudo@1.9.5?distro=debian-11");
+        preExisting.setPurlType("deb");
+        preExisting.setPurlNamespace("debian");
+        preExisting.setPurlName("sudo");
+        preExisting.setPurlQualifiers("{\"distro\":\"debian-11\"}");
+        preExisting.setVersion("1.9.5");
+        qm.persist(preExisting);
+
+        final VulnerableSoftware otherDistro = new VulnerableSoftware();
+        otherDistro.setPurl("pkg:deb/debian/sudo@1.9.5?distro=debian-12");
+        otherDistro.setPurlType("deb");
+        otherDistro.setPurlNamespace("debian");
+        otherDistro.setPurlName("sudo");
+        otherDistro.setPurlQualifiers("{\"distro\":\"debian-12\"}");
+        otherDistro.setVersion("1.9.5");
+        qm.persist(otherDistro);
+
+        final VulnerableSoftware reported = new VulnerableSoftware();
+        reported.setPurl("pkg:deb/debian/sudo@1.9.5?distro=debian-11");
+        reported.setPurlType("deb");
+        reported.setPurlNamespace("debian");
+        reported.setPurlName("sudo");
+        reported.setPurlQualifiers("{\"distro\":\"debian-11\"}");
+        reported.setVersion("1.9.5");
+
+        qm.synchronizeVulnerableSoftware(
+                vulnerability, List.of(reported), Vulnerability.Source.NVD);
+
+        final Vulnerability persistedVuln =
+                qm.getVulnerabilityByVulnId(Vulnerability.Source.NVD, "CVE-2024-0001", true);
+        assertThat(persistedVuln.getVulnerableSoftware()).satisfiesExactly(vs -> {
+                    assertThat(vs.getId()).isEqualTo(preExisting.getId());
+                    final AffectedVersionAttribution attribution = qm.getAffectedVersionAttribution(
+                            persistedVuln, vs, Vulnerability.Source.NVD);
+                    assertThat(attribution).isNotNull();
+                });
+    }
+
+    @Test
+    public void shouldDistinguishVulnerableSoftwareByPurlSubpath() {
+        final VulnerableSoftware vsSubA = new VulnerableSoftware();
+        vsSubA.setPurl("pkg:generic/acme/product@1.0.0#a");
+        vsSubA.setPurlType("generic");
+        vsSubA.setPurlNamespace("acme");
+        vsSubA.setPurlName("product");
+        vsSubA.setPurlSubpath("a");
+        vsSubA.setVersion("1.0.0");
+        qm.persist(vsSubA);
+
+        final VulnerableSoftware vsSubB = new VulnerableSoftware();
+        vsSubB.setPurl("pkg:generic/acme/product@1.0.0#b");
+        vsSubB.setPurlType("generic");
+        vsSubB.setPurlNamespace("acme");
+        vsSubB.setPurlName("product");
+        vsSubB.setPurlSubpath("b");
+        vsSubB.setVersion("1.0.0");
+        qm.persist(vsSubB);
+
+        final VulnerableSoftware vsNoSubpath = new VulnerableSoftware();
+        vsNoSubpath.setPurl("pkg:generic/acme/product@1.0.0");
+        vsNoSubpath.setPurlType("generic");
+        vsNoSubpath.setPurlNamespace("acme");
+        vsNoSubpath.setPurlName("product");
+        vsNoSubpath.setVersion("1.0.0");
+        qm.persist(vsNoSubpath);
+
+        final VulnerableSoftware foundA = qm.getVulnerableSoftwareByPurl(
+                "generic", "acme", "product", null, "a",
+                "1.0.0", null, null, null, null);
+        assertThat(foundA).isNotNull();
+        assertThat(foundA.getId()).isEqualTo(vsSubA.getId());
+
+        final VulnerableSoftware foundB = qm.getVulnerableSoftwareByPurl(
+                "generic", "acme", "product", null, "b",
+                "1.0.0", null, null, null, null);
+        assertThat(foundB).isNotNull();
+        assertThat(foundB.getId()).isEqualTo(vsSubB.getId());
+
+        final VulnerableSoftware foundNone = qm.getVulnerableSoftwareByPurl(
+                "generic", "acme", "product", null, null,
+                "1.0.0", null, null, null, null);
+        assertThat(foundNone).isNotNull();
+        assertThat(foundNone.getId()).isEqualTo(vsNoSubpath.getId());
+
+        final VulnerableSoftware foundUnknown = qm.getVulnerableSoftwareByPurl(
+                "generic", "acme", "product", null, "c",
+                "1.0.0", null, null, null, null);
+        assertThat(foundUnknown).isNull();
+    }
+
+    @Test
+    public void shouldSynchronizeVulnerableSoftwareByPurlSubpathWithoutCollapsingRows() {
+        final VulnerableSoftware vsSubA = new VulnerableSoftware();
+        vsSubA.setPurl("pkg:generic/acme/product@1.0.0#a");
+        vsSubA.setPurlType("generic");
+        vsSubA.setPurlNamespace("acme");
+        vsSubA.setPurlName("product");
+        vsSubA.setPurlSubpath("a");
+        vsSubA.setVersion("1.0.0");
+
+        final VulnerableSoftware vsSubB = new VulnerableSoftware();
+        vsSubB.setPurl("pkg:generic/acme/product@1.0.0#b");
+        vsSubB.setPurlType("generic");
+        vsSubB.setPurlNamespace("acme");
+        vsSubB.setPurlName("product");
+        vsSubB.setPurlSubpath("b");
+        vsSubB.setVersion("1.0.0");
+
+        qm.synchronizeVulnerableSoftware(
+                vulnerability, List.of(vsSubA, vsSubB), Vulnerability.Source.NVD);
+
+        final Vulnerability persistedVuln =
+                qm.getVulnerabilityByVulnId(Vulnerability.Source.NVD, "CVE-2024-0001", true);
+        assertThat(persistedVuln.getVulnerableSoftware())
+                .extracting(VulnerableSoftware::getPurlSubpath)
+                .containsExactlyInAnyOrder("a", "b");
+    }
+
+    @Test
+    public void shouldReuseVulnerableSoftwareByPurlSubpathOnSubsequentSync() {
+        final VulnerableSoftware preExisting = new VulnerableSoftware();
+        preExisting.setPurl("pkg:generic/acme/product@1.0.0#a");
+        preExisting.setPurlType("generic");
+        preExisting.setPurlNamespace("acme");
+        preExisting.setPurlName("product");
+        preExisting.setPurlSubpath("a");
+        preExisting.setVersion("1.0.0");
+        qm.persist(preExisting);
+
+        final VulnerableSoftware otherSubpath = new VulnerableSoftware();
+        otherSubpath.setPurl("pkg:generic/acme/product@1.0.0#b");
+        otherSubpath.setPurlType("generic");
+        otherSubpath.setPurlNamespace("acme");
+        otherSubpath.setPurlName("product");
+        otherSubpath.setPurlSubpath("b");
+        otherSubpath.setVersion("1.0.0");
+        qm.persist(otherSubpath);
+
+        final VulnerableSoftware reported = new VulnerableSoftware();
+        reported.setPurl("pkg:generic/acme/product@1.0.0#a");
+        reported.setPurlType("generic");
+        reported.setPurlNamespace("acme");
+        reported.setPurlName("product");
+        reported.setPurlSubpath("a");
+        reported.setVersion("1.0.0");
+
+        qm.synchronizeVulnerableSoftware(
+                vulnerability, List.of(reported), Vulnerability.Source.NVD);
+
+        final Vulnerability persistedVuln =
+                qm.getVulnerabilityByVulnId(Vulnerability.Source.NVD, "CVE-2024-0001", true);
+        assertThat(persistedVuln.getVulnerableSoftware()).satisfiesExactly(vs -> {
+                    assertThat(vs.getId()).isEqualTo(preExisting.getId());
+                    final AffectedVersionAttribution attribution = qm.getAffectedVersionAttribution(
+                            persistedVuln, vs, Vulnerability.Source.NVD);
+                    assertThat(attribution).isNotNull();
+                });
     }
 
     @Test

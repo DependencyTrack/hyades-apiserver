@@ -18,22 +18,23 @@
  */
 package org.dependencytrack.policy.cel.compat;
 
-import alpine.common.logging.Logger;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.proto.policy.v1.VersionDistance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class VersionDistanceCelScriptBuilder implements CelPolicyScriptSourceBuilder {
 
-    private static final Logger LOGGER = Logger.getLogger(VersionDistanceCelScriptBuilder.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(VersionDistanceCelScriptBuilder.class);
 
     @Override
     public String apply(PolicyCondition policyCondition) {
         return """
                 component.version_distance("%s", %s)
-                    """.formatted(comparator(policyCondition.getOperator()), toProtoString(policyCondition.getValue()));
+                """.formatted(comparator(policyCondition.getOperator()), toProtoString(policyCondition.getValue()));
     }
 
 
@@ -43,7 +44,7 @@ public class VersionDistanceCelScriptBuilder implements CelPolicyScriptSourceBui
             JsonFormat.parser().ignoringUnknownFields().merge(conditionValue, structBuilder);
             return convertToString(structBuilder.build());
         } catch (InvalidProtocolBufferException e) {
-            LOGGER.error("Invalid version distance proto " + e);
+            LOGGER.error("Invalid version distance proto {}", e);
             return convertToString(VersionDistance.newBuilder().build());
         }
     }

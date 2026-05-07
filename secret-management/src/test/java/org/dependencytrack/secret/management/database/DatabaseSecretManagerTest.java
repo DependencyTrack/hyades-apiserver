@@ -27,10 +27,10 @@ import io.smallrye.config.SmallRyeConfigBuilder;
 import org.dependencytrack.common.datasource.DataSourceRegistry;
 import org.dependencytrack.common.pagination.Page;
 import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
+import org.dependencytrack.migration.MigrationExecutor;
 import org.dependencytrack.secret.management.ListSecretsRequest;
 import org.dependencytrack.secret.management.SecretAlreadyExistsException;
 import org.dependencytrack.secret.management.SecretManager;
-import org.dependencytrack.support.liquibase.MigrationExecutor;
 import org.eclipse.microprofile.config.Config;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -81,7 +81,7 @@ class DatabaseSecretManagerTest {
         dataSource.setUser(postgresContainer.getUsername());
         dataSource.setPassword(postgresContainer.getPassword());
 
-        new MigrationExecutor(dataSource, "/migration/changelog-main.xml").executeMigration();
+        new MigrationExecutor(dataSource).execute();
 
         kekKeysetPath = tempDir.resolve("kek-keyset.json");
 

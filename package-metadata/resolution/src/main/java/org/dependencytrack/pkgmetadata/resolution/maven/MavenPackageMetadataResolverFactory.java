@@ -18,27 +18,26 @@
  */
 package org.dependencytrack.pkgmetadata.resolution.maven;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import com.github.packageurl.PackageURLBuilder;
-import org.dependencytrack.cache.api.Cache;
 import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolver;
 import org.dependencytrack.pkgmetadata.resolution.api.PackageMetadataResolverFactory;
+import org.dependencytrack.pkgmetadata.resolution.cache.CachingHttpClient;
 import org.dependencytrack.plugin.api.ServiceRegistry;
 import org.jspecify.annotations.Nullable;
 
 import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.Map;
 
 public final class MavenPackageMetadataResolverFactory implements PackageMetadataResolverFactory {
 
-    private @Nullable HttpClient httpClient;
-    private @Nullable ObjectMapper objectMapper;
-    private @Nullable Cache cache;
+    private static final Duration FRESH_FOR = Duration.ofHours(12);
+    private static final long MAX_BYTES = 4L * 1024 * 1024;
+
+    private @Nullable CachingHttpClient cachingHttpClient;
 
     @Override
     public String extensionName() {
@@ -89,16 +88,16 @@ public final class MavenPackageMetadataResolverFactory implements PackageMetadat
 
     @Override
     public void init(ServiceRegistry serviceRegistry) {
-        httpClient = serviceRegistry.require(HttpClient.class);
-        objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule())
-                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        cache = serviceRegistry.require(CacheManager.class).getCache("responses");
+        cachingHttpClient = new CachingHttpClient(
+                serviceRegistry.require(HttpClient.class),
+                serviceRegistry.require(CacheManager.class).getCache("responses"),
+                FRESH_FOR,
+                MAX_BYTES);
     }
 
     @Override
     public PackageMetadataResolver create() {
-        return new MavenPackageMetadataResolver(httpClient, objectMapper, cache);
+        return new MavenPackageMetadataResolver(cachingHttpClient);
     }
 
 }

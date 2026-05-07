@@ -142,11 +142,11 @@ final class OssIndexVulnAnalyzerFactory implements VulnAnalyzerFactory, RuntimeC
                     if (config.getApiUrl() == null) {
                         throw new InvalidRuntimeConfigException("No API URL provided");
                     }
-                    if (config.getUsername() == null) {
-                        throw new InvalidRuntimeConfigException("No username provided");
-                    }
                     if (config.getApiToken() == null) {
                         throw new InvalidRuntimeConfigException("No API token provided");
+                    }
+                    if (!config.getApiToken().startsWith("sonatype_pat_") && config.getUsername() == null) {
+                        throw new InvalidRuntimeConfigException("No username provided");
                     }
                 });
     }
@@ -166,7 +166,7 @@ final class OssIndexVulnAnalyzerFactory implements VulnAnalyzerFactory, RuntimeC
         if (config.getApiUrl() == null) {
             return testResult.fail("connection", "No API URL provided");
         }
-        if (config.getUsername() == null || config.getApiToken() == null) {
+        if (config.getApiToken() == null) {
             return testResult.fail("authentication", "No credentials provided");
         }
 
@@ -177,15 +177,22 @@ final class OssIndexVulnAnalyzerFactory implements VulnAnalyzerFactory, RuntimeC
                     but local connections are not allowed""".formatted(config.getApiUrl()));
         }
 
-        final String basicAuthCredentials = Base64.getEncoder().encodeToString(
-                "%s:%s".formatted(config.getUsername(), config.getApiToken())
-                        .getBytes(StandardCharsets.UTF_8));
+        final String authHeader;
+        if (config.getUsername() != null && config.getApiToken() != null) {
+            final String basicAuthCredentials = Base64.getEncoder().encodeToString(
+                    "%s:%s".formatted(config.getUsername(), config.getApiToken())
+                            .getBytes(StandardCharsets.UTF_8));
+            authHeader = "Basic " + basicAuthCredentials;
+        } else {
+            authHeader = "Bearer " + config.getApiToken();
+        }
+
 
         final var request = HttpRequest.newBuilder()
                 .uri(config.getApiUrl().resolve("/api/v3/component-report"))
                 .header("Accept", "application/json")
                 .header("Content-Type", "application/json")
-                .header("Authorization", "Basic " + basicAuthCredentials)
+                .header("Authorization", authHeader)
                 .timeout(Duration.ofSeconds(10))
                 .POST(HttpRequest.BodyPublishers.ofString(
                         "{\"coordinates\":[\"pkg:maven/org.dependencytrack/noop@0.0.0\"]}"))

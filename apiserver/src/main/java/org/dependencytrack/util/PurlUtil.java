@@ -18,8 +18,13 @@
  */
 package org.dependencytrack.util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import org.dependencytrack.common.Mappers;
+import org.jspecify.annotations.Nullable;
+
+import java.util.Map;
 
 import static com.github.packageurl.PackageURLBuilder.aPackageURL;
 
@@ -66,6 +71,26 @@ public class PurlUtil {
                     .build();
         } catch (MalformedPackageURLException e) {
             throw new IllegalArgumentException("Failed to derive package PURL from: " + purl, e);
+        }
+    }
+
+    /**
+     * Serialize the qualifiers of a {@link PackageURL} to a JSON string suitable for storage
+     * on {@code VulnerableSoftware.purlQualifiers}. Returns {@code null} when the PURL has no
+     * qualifiers, so equality lookups in JDOQL line up with rows that omit qualifiers entirely.
+     *
+     * @since 4.14.0
+     */
+    public static @Nullable String serializeQualifiers(final PackageURL purl) {
+        final Map<String, String> qualifiers = purl.getQualifiers();
+        if (qualifiers == null || qualifiers.isEmpty()) {
+            return null;
+        }
+
+        try {
+            return Mappers.jsonMapper().writeValueAsString(qualifiers);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize PURL qualifiers: " + qualifiers, e);
         }
     }
 

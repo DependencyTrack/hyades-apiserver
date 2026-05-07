@@ -18,7 +18,6 @@
  */
 package alpine.server.filters;
 
-import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.server.auth.ApiKeyAuthenticationService;
 import alpine.server.auth.SessionTokenAuthenticationService;
@@ -33,6 +32,8 @@ import jakarta.ws.rs.container.ContainerResponseFilter;
 import jakarta.ws.rs.core.Response;
 import org.glassfish.jersey.server.ContainerRequest;
 import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import javax.naming.AuthenticationException;
@@ -51,7 +52,7 @@ import java.security.Principal;
 public class AuthenticationFilter implements ContainerRequestFilter, ContainerResponseFilter {
 
     // Setup logging
-    private static final Logger LOGGER = Logger.getLogger(AuthenticationFilter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticationFilter.class);
 
     @Override
     public void filter(ContainerRequestContext requestContext) {

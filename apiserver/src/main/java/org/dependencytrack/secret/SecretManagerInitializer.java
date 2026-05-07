@@ -24,7 +24,6 @@ import org.dependencytrack.common.ConfigKeys;
 import org.dependencytrack.common.pagination.SimplePageTokenEncoder;
 import org.dependencytrack.secret.management.SecretManager;
 import org.dependencytrack.secret.management.SecretManagerProvider;
-import org.dependencytrack.secret.management.cache.CachingSecretManager;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jspecify.annotations.Nullable;
@@ -65,9 +64,7 @@ public final class SecretManagerInitializer implements ServletContextListener {
                         .orElseThrow(() -> new IllegalStateException(
                                 "No secret management provider found for name: " + providerName));
 
-        secretManager = CachingSecretManager.maybeWrap(
-                secretManagerProvider.create(config, new SimplePageTokenEncoder()),
-                config);
+        secretManager = secretManagerProvider.create(config, new SimplePageTokenEncoder());
 
         event.getServletContext().setAttribute(
                 SecretManager.class.getName(),

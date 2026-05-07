@@ -27,6 +27,8 @@ import org.dependencytrack.plugin.api.ExtensionTestCheck.Status;
 import org.dependencytrack.plugin.api.ExtensionTestResult;
 import org.dependencytrack.plugin.api.MutableServiceRegistry;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.InvalidRuntimeConfigException;
+import org.dependencytrack.plugin.api.config.RuntimeConfigSpec;
 import org.dependencytrack.plugin.testing.AbstractExtensionFactoryTest;
 import org.dependencytrack.plugin.testing.MockConfigRegistry;
 import org.dependencytrack.vulnanalysis.api.VulnAnalyzer;
@@ -37,14 +39,21 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 class OssIndexVulnAnalyzerFactoryTest extends AbstractExtensionFactoryTest<VulnAnalyzer, OssIndexVulnAnalyzerFactory> {
 
@@ -175,6 +184,45 @@ class OssIndexVulnAnalyzerFactoryTest extends AbstractExtensionFactoryTest<VulnA
         }
 
         @Test
+        void shouldUseBasicAuthHeaderWhenUsernameIsPresent(WireMockRuntimeInfo wmRuntimeInfo) {
+            stubFor(post(urlPathEqualTo("/api/v3/component-report"))
+                    .willReturn(aResponse().withStatus(200).withBody("[]")));
+
+            final OssIndexVulnAnalyzerFactory factory = createFactory();
+            final OssIndexVulnAnalyzerConfigV1 config = new OssIndexVulnAnalyzerConfigV1()
+                    .withEnabled(true)
+                    .withApiUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()))
+                    .withUsername("foo@example.com")
+                    .withApiToken("test-token");
+
+            final ExtensionTestResult result = factory.test(config);
+            assertThat(result.isFailed()).isFalse();
+
+            final String expected = "Basic " + Base64.getEncoder().encodeToString(
+                    "foo@example.com:test-token".getBytes(StandardCharsets.UTF_8));
+            verify(postRequestedFor(urlPathEqualTo("/api/v3/component-report"))
+                    .withHeader("Authorization", equalTo(expected)));
+        }
+
+        @Test
+        void shouldUseBearerAuthHeaderWhenUsernameIsAbsent(WireMockRuntimeInfo wmRuntimeInfo) {
+            stubFor(post(urlPathEqualTo("/api/v3/component-report"))
+                    .willReturn(aResponse().withStatus(200).withBody("[]")));
+
+            final OssIndexVulnAnalyzerFactory factory = createFactory();
+            final OssIndexVulnAnalyzerConfigV1 config = new OssIndexVulnAnalyzerConfigV1()
+                    .withEnabled(true)
+                    .withApiUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()))
+                    .withApiToken("sonatype_pat_test");
+
+            final ExtensionTestResult result = factory.test(config);
+            assertThat(result.isFailed()).isFalse();
+
+            verify(postRequestedFor(urlPathEqualTo("/api/v3/component-report"))
+                    .withHeader("Authorization", equalTo("Bearer sonatype_pat_test")));
+        }
+
+        @Test
         void shouldFailConnectionForLocalAddress() {
             final var factory = new OssIndexVulnAnalyzerFactory();
             final var configRegistry = new MockConfigRegistry(
@@ -233,6 +281,84 @@ class OssIndexVulnAnalyzerFactoryTest extends AbstractExtensionFactoryTest<VulnA
                     .withApiUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()))
                     .withUsername("foo@example.com")
                     .withApiToken("test-token");
+        }
+
+    }
+
+    @Nested
+    class RuntimeConfigValidationTest {
+
+        @Test
+        void shouldSkipValidationWhenDisabled() {
+            try (final var factory = new OssIndexVulnAnalyzerFactory()) {
+                final RuntimeConfigSpec spec = factory.runtimeConfigSpec();
+                final var config = (OssIndexVulnAnalyzerConfigV1) spec.defaultConfig();
+
+                assertThatNoException().isThrownBy(() -> spec.validator().validate(config));
+            }
+        }
+
+        @Test
+        void shouldRejectConfigWithoutApiUrl() {
+            try (final var factory = new OssIndexVulnAnalyzerFactory()) {
+                final RuntimeConfigSpec spec = factory.runtimeConfigSpec();
+                final var config = (OssIndexVulnAnalyzerConfigV1) spec.defaultConfig();
+                config.withEnabled(true).withApiUrl(null);
+
+                assertThatExceptionOfType(InvalidRuntimeConfigException.class)
+                        .isThrownBy(() -> spec.validator().validate(config))
+                        .withMessageContaining("No API URL provided");
+            }
+        }
+
+        @Test
+        void shouldRejectConfigWithoutApiToken() {
+            try (final var factory = new OssIndexVulnAnalyzerFactory()) {
+                final RuntimeConfigSpec spec = factory.runtimeConfigSpec();
+                final var config = (OssIndexVulnAnalyzerConfigV1) spec.defaultConfig();
+                config.withEnabled(true).withUsername("foo@example.com");
+
+                assertThatExceptionOfType(InvalidRuntimeConfigException.class)
+                        .isThrownBy(() -> spec.validator().validate(config))
+                        .withMessageContaining("No API token provided");
+            }
+        }
+
+        @Test
+        void shouldRejectConfigWithoutUsernameWhenTokenIsNotPat() {
+            try (final var factory = new OssIndexVulnAnalyzerFactory()) {
+                final RuntimeConfigSpec spec = factory.runtimeConfigSpec();
+                final var config = (OssIndexVulnAnalyzerConfigV1) spec.defaultConfig();
+                config.withEnabled(true).withApiToken("some-token");
+
+                assertThatExceptionOfType(InvalidRuntimeConfigException.class)
+                        .isThrownBy(() -> spec.validator().validate(config))
+                        .withMessageContaining("No username provided");
+            }
+        }
+
+        @Test
+        void shouldAcceptConfigWithoutUsernameWhenTokenIsPat() {
+            try (final var factory = new OssIndexVulnAnalyzerFactory()) {
+                final RuntimeConfigSpec spec = factory.runtimeConfigSpec();
+                final var config = (OssIndexVulnAnalyzerConfigV1) spec.defaultConfig();
+                config.withEnabled(true).withApiToken("sonatype_pat_test");
+
+                assertThatNoException().isThrownBy(() -> spec.validator().validate(config));
+            }
+        }
+
+        @Test
+        void shouldAcceptConfigWithUsernameAndToken() {
+            try (final var factory = new OssIndexVulnAnalyzerFactory()) {
+                final RuntimeConfigSpec spec = factory.runtimeConfigSpec();
+                final var config = (OssIndexVulnAnalyzerConfigV1) spec.defaultConfig();
+                config.withEnabled(true)
+                        .withUsername("foo@example.com")
+                        .withApiToken("test-token");
+
+                assertThatNoException().isThrownBy(() -> spec.validator().validate(config));
+            }
         }
 
     }

@@ -18,12 +18,13 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.common.logging.Logger;
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerableSoftware;
 import org.dependencytrack.util.PersistenceUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -40,7 +41,7 @@ import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 
 final class VulnerableSoftwareQueryManager extends QueryManager implements IQueryManager {
 
-    private static final Logger LOGGER = Logger.getLogger(VulnerableSoftwareQueryManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(VulnerableSoftwareQueryManager.class);
 
     /**
      * Constructs a new QueryManager.
@@ -67,7 +68,6 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
     @Override
     public VulnerableSoftware getVulnerableSoftwareByCpe23(
             String cpe23,
-            String version,
             String versionEndExcluding,
             String versionEndIncluding,
             String versionStartExcluding,
@@ -81,12 +81,6 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
         // cache. This method is called very frequently during NVD mirroring,
         // we should avoid the overhead of repeated re-compilation if possible.
         // See also: https://github.com/DependencyTrack/dependency-track/issues/2540
-        if (version != null) {
-            filter += " && version == :version";
-            parameters.put("version", version);
-        } else {
-            filter += " && version == null";
-        }
         if (versionEndExcluding != null) {
             filter += " && versionEndExcluding == :vee";
             parameters.put("vee", versionEndExcluding);
@@ -130,6 +124,34 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
             final String versionEndIncluding,
             final String versionStartExcluding,
             final String versionStartIncluding) {
+        return getVulnerableSoftwareByPurl(
+                purlType,
+                purlNamespace,
+                purlName,
+                /* purlQualifiers */ null,
+                /* purlSubpath */ null,
+                version,
+                versionEndExcluding,
+                versionEndIncluding,
+                versionStartExcluding,
+                versionStartIncluding);
+    }
+
+    /**
+     * @since 4.14.0
+     */
+    @Override
+    public VulnerableSoftware getVulnerableSoftwareByPurl(
+            final String purlType,
+            final String purlNamespace,
+            final String purlName,
+            final String purlQualifiers,
+            final String purlSubpath,
+            final String version,
+            final String versionEndExcluding,
+            final String versionEndIncluding,
+            final String versionStartExcluding,
+            final String versionStartIncluding) {
         final var queryFilterParts = new ArrayList<>(List.of(
                 "purlType == :purlType",
                 "purlName == :purlName"));
@@ -142,6 +164,20 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
         } else {
             queryFilterParts.add("purlNamespace == :purlNamespace");
             queryParams.put("purlNamespace", purlNamespace);
+        }
+
+        if (purlQualifiers == null) {
+            queryFilterParts.add("purlQualifiers == null");
+        } else {
+            queryFilterParts.add("purlQualifiers == :purlQualifiers");
+            queryParams.put("purlQualifiers", purlQualifiers);
+        }
+
+        if (purlSubpath == null) {
+            queryFilterParts.add("purlSubpath == null");
+        } else {
+            queryFilterParts.add("purlSubpath == :purlSubpath");
+            queryParams.put("purlSubpath", purlSubpath);
         }
 
         if (version != null) {
@@ -297,7 +333,6 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
                 if (vs.getCpe23() != null) {
                     existingVs = getVulnerableSoftwareByCpe23(
                             vs.getCpe23(),
-                            vs.getVersion(),
                             vs.getVersionEndExcluding(),
                             vs.getVersionEndIncluding(),
                             vs.getVersionStartExcluding(),
@@ -307,6 +342,8 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
                             vs.getPurlType(),
                             vs.getPurlNamespace(),
                             vs.getPurlName(),
+                            vs.getPurlQualifiers(),
+                            vs.getPurlSubpath(),
                             vs.getVersion(),
                             vs.getVersionEndExcluding(),
                             vs.getVersionEndIncluding(),

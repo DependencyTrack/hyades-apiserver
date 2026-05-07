@@ -49,6 +49,7 @@ public class FindingTest extends PersistenceCapableTest {
         Assertions.assertEquals("component-group", map.get("group"));
         Assertions.assertEquals("component-version", map.get("version"));
         Assertions.assertEquals("pkg:maven/foo/bar@1.2.3", map.get("purl"));
+        Assertions.assertEquals(Scope.REQUIRED.name(), map.get("scope"));
     }
 
     @Test
@@ -112,7 +113,7 @@ public class FindingTest extends PersistenceCapableTest {
         final var project = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
 
         FindingDao.FindingRow findingRow = new FindingDao.FindingRow(project.getUuid(), UUID.randomUUID(), project.getName(), project.getVersion(),
-                "component-name", "component-group", "component-version", "pkg:maven/foo/bar@1.2.3", "component-cpe",
+                "component-name", "component-group", "component-version", "pkg:maven/foo/bar@1.2.3", "component-cpe", Scope.REQUIRED.name(),
                 true, UUID.randomUUID(), Vulnerability.Source.GITHUB, "vuln-vulnId", "vuln-title", "vuln-subtitle", "vuln-description",
                 "vuln-recommendation", "vuln-references", Instant.now(), Severity.HIGH, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), BigDecimal.valueOf(8.4),
                 "cvssV2-vector", "cvssV3-vector", "cvssV4-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),

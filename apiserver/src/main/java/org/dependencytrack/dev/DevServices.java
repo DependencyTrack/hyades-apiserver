@@ -18,9 +18,10 @@
  */
 package org.dependencytrack.dev;
 
-import alpine.common.logging.Logger;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -39,7 +40,7 @@ import static org.dependencytrack.common.ConfigKeys.DEV_SERVICES_PORT_FRONTEND;
  */
 public class DevServices implements AutoCloseable {
 
-    private static final Logger LOGGER = Logger.getLogger(DevServices.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DevServices.class);
 
     private final Config config = ConfigProvider.getConfig();
     private AutoCloseable postgresContainer;

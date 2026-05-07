@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.resources;
 
-import alpine.common.logging.Logger;
 import alpine.server.resources.AlpineResource;
 import org.dependencytrack.api.v2.model.TotalCount;
 import org.dependencytrack.api.v2.model.TotalCountType;
@@ -32,6 +31,8 @@ import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.jdbi.v3.core.Handle;
 import org.jspecify.annotations.Nullable;
 import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -48,7 +49,7 @@ import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
  */
 public abstract class AbstractApiResource extends AlpineResource {
 
-    private final Logger logger = Logger.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /**
      * @see #requireAccess(QueryManager, Project, String)

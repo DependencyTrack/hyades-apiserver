@@ -18,12 +18,13 @@
  */
 package alpine.common.util;
 
-import alpine.common.logging.Logger;
 import alpine.config.AlpineConfigKeys;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -41,7 +42,7 @@ import java.util.Set;
  */
 public final class ProxyUtil {
 
-    private static final Logger LOGGER = Logger.getLogger(ProxyUtil.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProxyUtil.class);
 
     private ProxyUtil() {
     }

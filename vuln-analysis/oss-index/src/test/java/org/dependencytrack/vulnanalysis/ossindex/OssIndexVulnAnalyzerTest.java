@@ -22,9 +22,9 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.google.protobuf.util.JsonFormat;
 import io.smallrye.config.SmallRyeConfigBuilder;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Component;
-import org.cyclonedx.proto.v1_6.Property;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Component;
+import org.cyclonedx.proto.v1_7.Property;
 import org.dependencytrack.cache.api.CacheManager;
 import org.dependencytrack.cache.memory.MemoryCacheProvider;
 import org.dependencytrack.plugin.api.MutableServiceRegistry;
@@ -43,6 +43,7 @@ import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -61,21 +62,32 @@ class OssIndexVulnAnalyzerTest {
 
     @BeforeEach
     void beforeEach(WireMockRuntimeInfo wmRuntimeInfo) {
+        analyzer = createAnalyzer(wmRuntimeInfo, "foo@example.com", "710bcaff-790b-494d-872a-eb97cdc676ef");
+    }
+
+    private VulnAnalyzer createAnalyzer(
+            WireMockRuntimeInfo wmRuntimeInfo,
+            String username,
+            String apiToken) {
         final var cacheProvider = new MemoryCacheProvider(new SmallRyeConfigBuilder().build());
         cacheManager = cacheProvider.create();
 
         analyzerFactory = new OssIndexVulnAnalyzerFactory();
 
+        final var config = new OssIndexVulnAnalyzerConfigV1()
+                .withEnabled(true)
+                .withAliasSyncEnabled(true)
+                .withApiUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()))
+                .withApiToken(apiToken);
+        if (username != null) {
+            config.withUsername(username);
+        }
+
         final var configRegistry = new MockConfigRegistry(
                 Map.of("allow-local-connections", "true"),
                 analyzerFactory.runtimeConfigSpec(),
                 RuntimeConfigMapper.getInstance(),
-                new OssIndexVulnAnalyzerConfigV1()
-                        .withEnabled(true)
-                        .withAliasSyncEnabled(true)
-                        .withApiUrl(URI.create(wmRuntimeInfo.getHttpBaseUrl()))
-                        .withUsername("foo@example.com")
-                        .withApiToken("710bcaff-790b-494d-872a-eb97cdc676ef"));
+                config);
 
         analyzerFactory.init(
                 new MutableServiceRegistry()
@@ -83,7 +95,7 @@ class OssIndexVulnAnalyzerTest {
                         .register(CacheManager.class, cacheManager)
                         .register(HttpClient.class, HttpClient.newHttpClient()));
 
-        analyzer = analyzerFactory.create();
+        return analyzerFactory.create();
     }
 
     @AfterEach
@@ -305,6 +317,31 @@ class OssIndexVulnAnalyzerTest {
                 .withRequestBody(matchingJsonPath("$[?(@.coordinates.size() == 128)]")));
         verify(1, postRequestedFor(anyUrl())
                 .withRequestBody(matchingJsonPath("$[?(@.coordinates.size() == 22)]")));
+    }
+
+    @Test
+    void shouldUseBearerAuthHeaderWhenUsernameIsAbsent(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        analyzerFactory.close();
+        cacheManager.close();
+        analyzer = createAnalyzer(wmRuntimeInfo, null, "sonatype_pat_test");
+
+        stubFor(post(urlPathEqualTo("/api/v3/component-report"))
+                .willReturn(aResponse().withStatus(200).withBody("[]")));
+
+        final var bom = Bom.newBuilder()
+                .addComponents(
+                        Component.newBuilder()
+                                .setBomRef("1")
+                                .setName("acme-lib")
+                                .setPurl("pkg:maven/com.acme/acme-lib@1.0.0")
+                                .build())
+                .build();
+
+        final Bom vdr = analyzer.analyze(bom);
+        assertThat(vdr).isEqualTo(Bom.getDefaultInstance());
+
+        verify(postRequestedFor(urlPathEqualTo("/api/v3/component-report"))
+                .withHeader("Authorization", equalTo("Bearer sonatype_pat_test")));
     }
 
 }

@@ -35,6 +35,7 @@ public class ManagedUserTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void usernameTest() {
         ManagedUser user = new ManagedUser();
         user.setUsername("myUsername");

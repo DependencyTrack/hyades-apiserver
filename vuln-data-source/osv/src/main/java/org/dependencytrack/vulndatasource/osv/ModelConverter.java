@@ -22,23 +22,25 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
-import org.apache.commons.lang3.StringUtils;
-import org.cyclonedx.proto.v1_6.Advisory;
-import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Component;
-import org.cyclonedx.proto.v1_6.ExternalReference;
-import org.cyclonedx.proto.v1_6.OrganizationalContact;
-import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.ScoreMethod;
-import org.cyclonedx.proto.v1_6.Severity;
-import org.cyclonedx.proto.v1_6.Source;
-import org.cyclonedx.proto.v1_6.Vulnerability;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffectedVersions;
-import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
-import org.cyclonedx.proto.v1_6.VulnerabilityCredits;
-import org.cyclonedx.proto.v1_6.VulnerabilityRating;
-import org.cyclonedx.proto.v1_6.VulnerabilityReference;
+import io.github.nscuro.versatile.Vers;
+import org.cyclonedx.proto.v1_7.Advisory;
+import org.cyclonedx.proto.v1_7.Bom;
+import org.cyclonedx.proto.v1_7.Classification;
+import org.cyclonedx.proto.v1_7.Component;
+import org.cyclonedx.proto.v1_7.OrganizationalContact;
+import org.cyclonedx.proto.v1_7.Property;
+import org.cyclonedx.proto.v1_7.ScoreMethod;
+import org.cyclonedx.proto.v1_7.Severity;
+import org.cyclonedx.proto.v1_7.Source;
+import org.cyclonedx.proto.v1_7.Vulnerability;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffectedVersions;
+import org.cyclonedx.proto.v1_7.VulnerabilityAffects;
+import org.cyclonedx.proto.v1_7.VulnerabilityCredits;
+import org.cyclonedx.proto.v1_7.VulnerabilityRating;
+import org.cyclonedx.proto.v1_7.VulnerabilityReference;
+import org.dependencytrack.support.distrometadata.OsDistribution;
 import org.dependencytrack.vulndatasource.osv.schema.Affected;
 import org.dependencytrack.vulndatasource.osv.schema.Credit;
 import org.dependencytrack.vulndatasource.osv.schema.DatabaseSpecific__1;
@@ -48,38 +50,40 @@ import org.dependencytrack.vulndatasource.osv.schema.Osv;
 import org.dependencytrack.vulndatasource.osv.schema.Package;
 import org.dependencytrack.vulndatasource.osv.schema.Range;
 import org.dependencytrack.vulndatasource.osv.schema.Reference;
+import org.jspecify.annotations.Nullable;
+import org.metaeffekt.core.security.cvss.CvssVector;
+import org.metaeffekt.core.security.cvss.v2.Cvss2;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P0;
+import org.metaeffekt.core.security.cvss.v3.Cvss3P1;
+import org.metaeffekt.core.security.cvss.v4P0.Cvss4P0;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import us.springett.cvss.Cvss;
-import us.springett.cvss.CvssV2;
-import us.springett.cvss.CvssV3;
-import us.springett.cvss.CvssV3_1;
-import us.springett.cvss.CvssV4;
-import us.springett.cvss.MalformedVectorException;
-import us.springett.cvss.Score;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static io.github.nscuro.versatile.VersUtils.versFromOsvRange;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_CRITICAL;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_HIGH;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_INFO;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_LOW;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_MEDIUM;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_NONE;
-import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_UNKNOWN;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV2;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV3;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.cyclonedx.proto.v1_7.ScoreMethod.SCORE_METHOD_CVSSV4;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_CRITICAL;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_HIGH;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_INFO;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_LOW;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_MEDIUM;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_NONE;
+import static org.cyclonedx.proto.v1_7.Severity.SEVERITY_UNKNOWN;
 
 /**
  * @since 5.7.0
@@ -88,495 +92,616 @@ final class ModelConverter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ModelConverter.class);
     private static final Pattern WILDCARD_VERS_PATTERN = Pattern.compile("^vers:\\w+/(\\*|>=0(\\.0)*)$");
-    private static final String TITLE_PROPERTY_NAME = "dependency-track:vuln:title";
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final Pattern CWE_PATTERN = Pattern.compile("^(?:CWE-)?(\\d+)\\b");
+    private static final int MAX_TITLE_LEN = 255;
 
-    static Bom convert(final Osv osv, final boolean isAliasSyncEnabled, final String currentEcosystem) {
-        Bom.Builder cyclonedxBom = Bom.newBuilder();
-        return cyclonedxBom
-                .addVulnerabilities(extractVulnerability(osv, isAliasSyncEnabled, cyclonedxBom, currentEcosystem))
-                .build();
+    private static final Map<String, Severity> SEVERITY_BY_NAME = Map.ofEntries(
+            Map.entry("CRITICAL", SEVERITY_CRITICAL),
+            Map.entry("HIGH", SEVERITY_HIGH),
+            Map.entry("MEDIUM", SEVERITY_MEDIUM),
+            Map.entry("MODERATE", SEVERITY_MEDIUM),
+            Map.entry("LOW", SEVERITY_LOW),
+            Map.entry("INFO", SEVERITY_INFO),
+            Map.entry("NONE", SEVERITY_NONE));
+
+    private static final Map<String, String> SOURCE_NAME_BY_PREFIX = Map.of(
+            "GHSA", "GITHUB",
+            "CVE", "NVD");
+
+    private static final TypeReference<Map.Entry<String, String>> RANGE_EVENT_TYPE_REF = new TypeReference<>() {
+    };
+
+    private final ObjectMapper objectMapper;
+
+    ModelConverter(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
     }
 
-    private static Vulnerability extractVulnerability(final Osv osv, final boolean isAliasSyncEnabled, Bom.Builder cyclonedxBom, final String currentEcosystem) {
-        Vulnerability.Builder vulnerability = Vulnerability.newBuilder();
-        var severity = SEVERITY_UNKNOWN;
+    Bom convert(Osv osv, boolean isAliasSyncEnabled, String currentEcosystem) {
+        final var bovBuilder = Bom.newBuilder();
+        bovBuilder.addVulnerabilities(convertVulnerability(osv, isAliasSyncEnabled, currentEcosystem, bovBuilder));
+        return bovBuilder.build();
+    }
 
-        Optional.ofNullable(osv.getId()).ifPresent(vulnerability::setId);
-        vulnerability.setSource(extractSource(osv.getId()));
-        vulnerability.addProperties(Property.newBuilder()
-                .setName(CycloneDxPropertyNames.PROPERTY_OSV_ECOSYSTEM)
-                .setValue(currentEcosystem));
-        Optional.ofNullable(osv.getSummary()).ifPresent(summary -> vulnerability.addProperties(
-                Property.newBuilder().setName(TITLE_PROPERTY_NAME).setValue(trimSummary(summary)).build()));
-        Optional.ofNullable(osv.getDetails()).ifPresent(vulnerability::setDescription);
+    private Vulnerability convertVulnerability(
+            Osv osv,
+            boolean isAliasSyncEnabled,
+            String currentEcosystem,
+            Bom.Builder bom) {
+        final var vuln = Vulnerability.newBuilder();
+        final String id = osv.getId();
 
-        Optional.ofNullable(osv.getPublished())
-                .map(Date::toInstant)
-                .map(instant -> {
-                    try {
-                        return Timestamps.fromMillis(instant.toEpochMilli());
-                    } catch (IllegalArgumentException e) {
-                        LOGGER.warn("Ignoring invalid published timestamp for advisory {}", osv.getId(), e);
-                        return null;
-                    }
-                })
-                .ifPresent(vulnerability::setPublished);
+        if (id != null) {
+            vuln.setId(id);
+            vuln.setSource(extractSource(id));
+        }
 
-        Optional.ofNullable(osv.getModified())
-                .map(Date::toInstant)
-                .map(instant -> {
-                    try {
-                        return Timestamps.fromMillis(instant.toEpochMilli());
-                    } catch (IllegalArgumentException e) {
-                        LOGGER.warn("Ignoring invalid modified timestamp for advisory {}", osv.getId(), e);
-                        return null;
-                    }
-                })
-                .ifPresent(vulnerability::setUpdated);
+        vuln.addProperties(
+                Property.newBuilder()
+                        .setName(CycloneDxPropertyNames.OSV_ECOSYSTEM)
+                        .setValue(currentEcosystem));
 
+        if (osv.getSummary() != null) {
+            vuln.addProperties(
+                    Property.newBuilder()
+                            .setName(CycloneDxPropertyNames.VULN_TITLE)
+                            .setValue(trimSummary(osv.getSummary())));
+        }
+        if (osv.getDetails() != null) {
+            vuln.setDescription(osv.getDetails());
+        }
+
+        final Timestamp published = toTimestamp(osv.getPublished(), id, "published");
+        if (published != null) {
+            vuln.setPublished(published);
+        }
+        final Timestamp modified = toTimestamp(osv.getModified(), id, "modified");
+        if (modified != null) {
+            vuln.setUpdated(modified);
+        }
+
+        // CWEs and a fallback severity from OSV's top-level database_specific.
+        Severity dbSeverity = SEVERITY_UNKNOWN;
         if (osv.getDatabaseSpecific() != null) {
-            if (osv.getDatabaseSpecific().getAdditionalProperties().containsKey("cwe_ids")) {
-                @SuppressWarnings("unchecked")
-                List<String> cwes = (List<String>) osv.getDatabaseSpecific()
-                        .getAdditionalProperties()
-                        .get("cwe_ids");
-                vulnerability.addAllCwes(getCweIds(cwes));
+            final Map<String, Object> dbProps = osv.getDatabaseSpecific().getAdditionalProperties();
+            if (dbProps.get(DatabaseSpecificPropertyNames.CWE_IDS) instanceof final List<?> rawCwes) {
+                for (final Object cwe : rawCwes) {
+                    if (cwe instanceof final String cweString) {
+                        final Integer cweId = parseCweString(cweString);
+                        if (cweId != null) {
+                            vuln.addCwes(cweId);
+                        }
+                    }
+                }
             }
-            if (osv.getDatabaseSpecific().getAdditionalProperties().containsKey("severity")) {
-                //this severity is compared with affected package severities and highest set
-                String severityObj = (String) osv.getDatabaseSpecific().getAdditionalProperties().get("severity");
-                severity = mapSeverity(severityObj);
+            if (dbProps.get(DatabaseSpecificPropertyNames.SEVERITY) instanceof final String dbSeverityString) {
+                dbSeverity = convertSeverity(dbSeverityString);
             }
         }
 
         if (isAliasSyncEnabled) {
-            vulnerability.addAllReferences(mapAliases(osv.getAliases()));
+            vuln.addAllReferences(convertAliases(id, osv.getAliases()));
         }
 
-        Optional.ofNullable(mapCredits(osv.getCredits())).ifPresent(vulnerability::setCredits);
-        Optional.ofNullable(mapReferences(osv.getReferences()).get("ADVISORY")).ifPresent(vulnerability::addAllAdvisories);
-        Optional.ofNullable(mapReferences(osv.getReferences()).get("EXTERNAL")).ifPresent(cyclonedxBom::addAllExternalReferences);
-
-        //affected ranges
-        List<Affected> osvAffectedArray = osv.getAffected();
-        if (osvAffectedArray != null) {
-            // affected packages and versions
-            // low-priority severity assignment
-            vulnerability.addAllAffects(parseAffectedRanges(vulnerability.getId(), osvAffectedArray, cyclonedxBom));
-            severity = parseSeverity(osvAffectedArray);
+        final VulnerabilityCredits credits = convertCredits(osv.getCredits());
+        if (credits != null) {
+            vuln.setCredits(credits);
         }
 
-        // CVSS ratings
-        vulnerability.addAllRatings(parseCvssRatings(osv, severity));
+        vuln.addAllAdvisories(convertReferences(osv.getReferences()));
 
-        return vulnerability.build();
+        Severity affectedSeverity = SEVERITY_UNKNOWN;
+        final List<Affected> affected = osv.getAffected();
+        if (affected != null && !affected.isEmpty()) {
+            final var purlToBomRef = new HashMap<String, String>();
+            for (final Affected entry : affected) {
+                final VulnerabilityAffects affects = convertAffected(id, entry, bom, purlToBomRef);
+                if (affects != null) {
+                    vuln.addAffects(affects);
+                }
+            }
+
+            affectedSeverity = highestAffectedSeverity(affected);
+        }
+
+        // Pick the strongest signal we have.
+        // Malware advisories are always treated as critical.
+        final Severity severity = !isOsvMalwareIdentifier(id)
+                ? moreSevere(affectedSeverity, dbSeverity)
+                : SEVERITY_CRITICAL;
+
+        vuln.addAllRatings(convertRatings(osv, severity));
+
+        return vuln.build();
     }
 
-    static String trimSummary(String summary) {
-        int MAX_LEN = 255;
-        if (summary != null && summary.length() > 255) {
-            return StringUtils.substring(summary, 0, MAX_LEN - 2) + "..";
+    private record DerivedCvss(ScoreMethod method, double score, Severity severity, String vector) {
+    }
+
+    private static @Nullable DerivedCvss deriveCvss(@Nullable String vectorString) {
+        if (vectorString == null || vectorString.isBlank()) {
+            return null;
         }
+
+        final CvssVector cvss = CvssVector.parseVector(vectorString, true);
+        if (cvss == null || !cvss.isBaseFullyDefined()) {
+            return null;
+        }
+
+        final double score = cvss.getBakedScores().getBaseScore();
+        final String stored = cvss instanceof Cvss2
+                ? "(" + cvss + ")"
+                : cvss.toString();
+        return switch (cvss) {
+            case Cvss4P0 ignored -> new DerivedCvss(SCORE_METHOD_CVSSV4, score, scoreToSeverityCvssV4(score), stored);
+            case Cvss3P1 ignored -> new DerivedCvss(SCORE_METHOD_CVSSV31, score, scoreToSeverityCvssV3(score), stored);
+            case Cvss3P0 ignored -> new DerivedCvss(SCORE_METHOD_CVSSV3, score, scoreToSeverityCvssV3(score), stored);
+            case Cvss2 ignored -> new DerivedCvss(SCORE_METHOD_CVSSV2, score, scoreToSeverityCvssV2(score), stored);
+            default -> null;
+        };
+    }
+
+    // https://www.first.org/cvss/v4-0/specification-document#Qualitative-Severity-Rating-Scale
+    private static Severity scoreToSeverityCvssV4(double score) {
+        if (score >= 9) {
+            return SEVERITY_CRITICAL;
+        }
+        if (score >= 7) {
+            return SEVERITY_HIGH;
+        }
+        if (score >= 4) {
+            return SEVERITY_MEDIUM;
+        }
+        if (score >= 0.1) {
+            return SEVERITY_LOW;
+        }
+        if (score == 0) {
+            return SEVERITY_NONE;
+        }
+
+        return SEVERITY_UNKNOWN;
+    }
+
+    // https://www.first.org/cvss/v3-1/specification-document#Qualitative-Severity-Rating-Scale
+    private static Severity scoreToSeverityCvssV3(double score) {
+        if (score >= 9) {
+            return SEVERITY_CRITICAL;
+        }
+        if (score >= 7) {
+            return SEVERITY_HIGH;
+        }
+        if (score >= 4) {
+            return SEVERITY_MEDIUM;
+        }
+        if (score > 0) {
+            return SEVERITY_LOW;
+        }
+        if (score == 0) {
+            return SEVERITY_NONE;
+        }
+
+        return SEVERITY_UNKNOWN;
+    }
+
+    // https://nvd.nist.gov/vuln-metrics/cvss
+    private static Severity scoreToSeverityCvssV2(double score) {
+        if (score >= 7) {
+            return SEVERITY_HIGH;
+        }
+        if (score >= 4) {
+            return SEVERITY_MEDIUM;
+        }
+        if (score > 0) {
+            return SEVERITY_LOW;
+        }
+
+        return SEVERITY_UNKNOWN;
+    }
+
+    private static Severity convertSeverity(@Nullable String severity) {
+        if (severity == null) {
+            return SEVERITY_UNKNOWN;
+        }
+
+        return SEVERITY_BY_NAME.getOrDefault(severity.toUpperCase(Locale.ROOT), SEVERITY_UNKNOWN);
+    }
+
+    private static Severity moreSevere(Severity a, Severity b) {
+        return severityPriority(a) >= severityPriority(b) ? a : b;
+    }
+
+    private static int severityPriority(Severity severity) {
+        if (severity == SEVERITY_UNKNOWN || severity == Severity.UNRECOGNIZED) {
+            return Integer.MIN_VALUE;
+        }
+
+        return -severity.getNumber();
+    }
+
+    private static Severity highestAffectedSeverity(List<Affected> affected) {
+        Severity highest = SEVERITY_UNKNOWN;
+        for (final Affected entry : affected) {
+            highest = moreSevere(highest, severityForAffected(entry));
+        }
+
+        return highest;
+    }
+
+    private static Severity severityForAffected(Affected entry) {
+        final EcosystemSpecific ecosystemSpecific = entry.getEcosystemSpecific();
+        if (ecosystemSpecific != null
+                && ecosystemSpecific.getAdditionalProperties().get(DatabaseSpecificPropertyNames.SEVERITY) instanceof final String ecosystemSeverity) {
+            return convertSeverity(ecosystemSeverity);
+        }
+
+        return SEVERITY_UNKNOWN;
+    }
+
+    private static List<VulnerabilityRating> convertRatings(Osv osv, Severity fallbackSeverity) {
+        final List<org.dependencytrack.vulndatasource.osv.schema.Severity> osvSeverities = osv.getSeverity();
+        if (osvSeverities == null || osvSeverities.isEmpty()) {
+            return List.of(
+                    VulnerabilityRating.newBuilder()
+                            .setSeverity(fallbackSeverity)
+                            .build());
+        }
+
+        final var ratings = new ArrayList<VulnerabilityRating>(osvSeverities.size());
+        for (final org.dependencytrack.vulndatasource.osv.schema.Severity osvSeverity : osvSeverities) {
+            // https://ossf.github.io/osv-schema/#severitytype-field
+            if (osvSeverity.getType() != org.dependencytrack.vulndatasource.osv.schema.Severity.Type.CVSS_V_2
+                    && osvSeverity.getType() != org.dependencytrack.vulndatasource.osv.schema.Severity.Type.CVSS_V_3
+                    && osvSeverity.getType() != org.dependencytrack.vulndatasource.osv.schema.Severity.Type.CVSS_V_4) {
+                continue;
+            }
+
+            final String vector = osvSeverity.getScore();
+            final DerivedCvss derived = deriveCvss(vector);
+            if (derived == null) {
+                LOGGER.warn("Failed to parse CVSS vector: {}", vector);
+                continue;
+            }
+
+            ratings.add(
+                    VulnerabilityRating.newBuilder()
+                            .setMethod(derived.method())
+                            .setScore(derived.score())
+                            .setSeverity(derived.severity())
+                            .setVector(derived.vector())
+                            .build());
+        }
+
+        if (ratings.isEmpty()) {
+            return List.of(
+                    VulnerabilityRating.newBuilder()
+                            .setSeverity(fallbackSeverity)
+                            .build());
+        }
+
+        return ratings;
+    }
+
+    private static List<Advisory> convertReferences(@Nullable List<Reference> references) {
+        if (references == null || references.isEmpty()) {
+            return List.of();
+        }
+
+        final var advisories = new ArrayList<Advisory>(references.size());
+        for (final Reference reference : references) {
+            if (reference.getUrl() == null || reference.getUrl().isBlank()) {
+                continue;
+            }
+
+            advisories.add(
+                    Advisory.newBuilder()
+                            .setUrl(reference.getUrl())
+                            .build());
+        }
+
+        return advisories;
+    }
+
+    private static List<VulnerabilityReference> convertAliases(
+            @Nullable String selfId,
+            @Nullable List<String> aliases) {
+        if (aliases == null || aliases.isEmpty()) {
+            return List.of();
+        }
+
+        final var result = new ArrayList<VulnerabilityReference>(aliases.size());
+        for (final String alias : aliases) {
+            if (alias == null || alias.isBlank() || alias.equals(selfId)) {
+                continue;
+            }
+
+            result.add(
+                    VulnerabilityReference.newBuilder()
+                            .setId(alias)
+                            .setSource(extractSource(alias))
+                            .build());
+        }
+
+        return result;
+    }
+
+    private @Nullable VulnerabilityAffects convertAffected(
+            @Nullable String vulnId,
+            Affected entry,
+            Bom.Builder bom,
+            Map<String, String> purlToBomRef) {
+        final Package pkg = entry.getPackage();
+        if (pkg == null) {
+            return null;
+        }
+
+        final String rawPurl = pkg.getPurl();
+        if (rawPurl == null) {
+            LOGGER.debug("affected node for vulnerability {} does not provide a PURL; Skipping", vulnId);
+            return null;
+        }
+
+        final PackageURL parsedPurl;
+        try {
+            parsedPurl = new PackageURL(rawPurl);
+        } catch (MalformedPackageURLException ex) {
+            LOGGER.warn("Failed to parse PURL '{}' from affected node for vulnerability {}", rawPurl, vulnId, ex);
+            return null;
+        }
+
+        final String purl = tryEnrichDistroQualifier(parsedPurl, pkg.getEcosystem(), vulnId);
+
+        final String bomRef = purlToBomRef.computeIfAbsent(purl, p -> {
+            final Component component = newComponent(pkg, p);
+            bom.addComponents(component);
+            return component.getBomRef();
+        });
+
+        return VulnerabilityAffects.newBuilder()
+                .setRef(bomRef)
+                .addAllVersions(convertVersions(entry))
+                .build();
+    }
+
+    private static String tryEnrichDistroQualifier(
+            PackageURL purl,
+            @Nullable String ecosystem,
+            @Nullable String vulnId) {
+        // Some PURLs already include the distro qualifier, e.g. "pkg:deb/ubuntu/php7.0?distro=xenial".
+        // For others, infer it from the OSV ecosystem string, e.g. "Debian:13".
+        final Map<String, String> qualifiers = purl.getQualifiers();
+        if (qualifiers != null && qualifiers.get("distro") != null) {
+            return purl.toString();
+        }
+
+        final OsDistribution distro = OsvEcosystems.toOsDistribution(ecosystem);
+        if (distro == null) {
+            return purl.toString();
+        }
+
+        try {
+            return purl.toBuilder()
+                    .withQualifier("distro", distro.purlQualifierValue())
+                    .build()
+                    .toString();
+        } catch (MalformedPackageURLException e) {
+            LOGGER.warn(
+                    "Failed to add distro qualifier to PURL '{}' for vulnerability {}; Using original PURL",
+                    purl, vulnId, e);
+            return purl.toString();
+        }
+    }
+
+    private static Component newComponent(Package pkg, String purl) {
+        final UUID uuid = UUID.nameUUIDFromBytes(purl.getBytes(StandardCharsets.UTF_8));
+        final var builder = Component.newBuilder()
+                .setBomRef(uuid.toString())
+                .setType(Classification.CLASSIFICATION_LIBRARY)
+                .setPurl(purl);
+        if (pkg.getName() != null) {
+            builder.setName(pkg.getName());
+        }
+
+        return builder.build();
+    }
+
+    private List<VulnerabilityAffectedVersions> convertVersions(Affected entry) {
+        final List<Range> ranges = entry.getRanges();
+        final var parsedRanges = new ArrayList<VulnerabilityAffectedVersions>();
+        if (ranges != null) {
+            final String ecosystem = entry.getPackage() != null ? entry.getPackage().getEcosystem() : null;
+            for (final Range range : ranges) {
+                parsedRanges.addAll(convertRange(range, ecosystem, entry.getDatabaseSpecific()));
+            }
+        }
+
+        // OSV typically provides BOTH ranges (introduced/fixed events) and a redundant `versions` array
+        // expanded from those ranges. Consume the ranges by default, and fall back to discrete versions only
+        // when no usable range was parsed, or when only wildcard ranges (e.g. `>=0`) survived. The latter
+        // case mirrors advisories like https://osv-vulnerabilities.storage.googleapis.com/npm/MAL-2023-995.json,
+        // where the wildcard range alongside an exact version would otherwise produce false positives.
+        final boolean onlyWildcardRanges = !parsedRanges.isEmpty() && parsedRanges.stream()
+                .map(VulnerabilityAffectedVersions::getRange)
+                .allMatch(WILDCARD_VERS_PATTERN.asPredicate());
+        final List<String> exactVersions = entry.getVersions();
+        if ((parsedRanges.isEmpty() || onlyWildcardRanges)
+                && exactVersions != null
+                && !exactVersions.isEmpty()) {
+            final var fallback = new ArrayList<VulnerabilityAffectedVersions>(exactVersions.size());
+            for (final String version : exactVersions) {
+                fallback.add(
+                        VulnerabilityAffectedVersions.newBuilder()
+                                .setVersion(version)
+                                .build());
+            }
+
+            return fallback;
+        }
+
+        return parsedRanges;
+    }
+
+    private List<VulnerabilityAffectedVersions> convertRange(
+            Range range,
+            @Nullable String ecosystem,
+            @Nullable DatabaseSpecific__1 databaseSpecific) {
+        final Range.Type rangeType = range.getType();
+        if (rangeType == null || rangeType == Range.Type.GIT || ecosystem == null) {
+            // CycloneDX `range` MUST be valid `vers` syntax. OSV `GIT` ranges contain commit hashes,
+            // not versions, so they cannot be expressed as a version range and are therefore skipped.
+            return List.of();
+        }
+
+        final List<Event> events = range.getEvents();
+        if (events == null || events.isEmpty()) {
+            return List.of();
+        }
+
+        final List<Map.Entry<String, String>> rangeEvents = new ArrayList<>(events.size());
+        for (final Event event : events) {
+            rangeEvents.add(objectMapper.convertValue(event, RANGE_EVENT_TYPE_REF));
+        }
+
+        final boolean lastIsUpperBound = isUpperBound(rangeEvents.getLast().getKey());
+        final Map<String, Object> dbProps = !lastIsUpperBound && databaseSpecific != null
+                ? databaseSpecific.getAdditionalProperties()
+                : null;
+
+        try {
+            final Vers vers = versFromOsvRange(rangeType.value(), ecosystem, rangeEvents, dbProps);
+            return List.of(
+                    VulnerabilityAffectedVersions.newBuilder()
+                            .setRange(vers.toString())
+                            .build());
+        } catch (Exception e) {
+            LOGGER.debug("Exception while parsing OSV version range.", e);
+            return List.of();
+        }
+    }
+
+    private static boolean isUpperBound(String eventKey) {
+        return "fixed".equals(eventKey) || "limit".equals(eventKey) || "last_affected".equals(eventKey);
+    }
+
+    private static @Nullable VulnerabilityCredits convertCredits(@Nullable List<Credit> credits) {
+        if (credits == null || credits.isEmpty()) {
+            return null;
+        }
+
+        final var builder = VulnerabilityCredits.newBuilder();
+        for (final Credit credit : credits) {
+            final OrganizationalContact contact = convertCredit(credit);
+            if (contact != null) {
+                builder.addIndividuals(contact);
+            }
+        }
+
+        return builder.getIndividualsCount() == 0 ? null : builder.build();
+    }
+
+    private static @Nullable OrganizationalContact convertCredit(Credit credit) {
+        if (credit == null) {
+            return null;
+        }
+
+        final var builder = OrganizationalContact.newBuilder();
+        if (credit.getName() != null) {
+            builder.setName(credit.getName());
+        }
+
+        final List<String> contacts = credit.getContact();
+        if (contacts != null) {
+            contacts.stream()
+                    .map(ModelConverter::extractEmail)
+                    .filter(email -> email != null && !email.isEmpty())
+                    .findFirst()
+                    .ifPresent(builder::setEmail);
+        }
+
+        if (!builder.hasName() && !builder.hasEmail()) {
+            return null;
+        }
+
+        return builder.build();
+    }
+
+    private static @Nullable String extractEmail(@Nullable String contact) {
+        if (contact == null || contact.isBlank()) {
+            return null;
+        }
+
+        final String trimmed = contact.trim();
+        final URI uri;
+        try {
+            uri = new URI(trimmed);
+        } catch (URISyntaxException e) {
+            return null;
+        }
+
+        final String scheme = uri.getScheme();
+        if (scheme == null) {
+            return trimmed.indexOf('@') > 0 ? trimmed : null;
+        }
+        if ("mailto".equalsIgnoreCase(scheme)) {
+            final String address = uri.getSchemeSpecificPart();
+            return address != null ? address.trim() : null;
+        }
+
+        return null;
+    }
+
+    static String trimSummary(@Nullable String summary) {
+        if (summary == null) {
+            return null;
+        }
+
+        if (summary.length() > MAX_TITLE_LEN) {
+            return summary.substring(0, MAX_TITLE_LEN - 2) + "..";
+        }
+
         return summary;
     }
 
     private static Source extractSource(String vulnId) {
-        final String sourceId = vulnId.split("-")[0];
-        var source = Source.newBuilder();
-        return switch (sourceId) {
-            case "GHSA" -> source.setName("GITHUB").build();
-            case "CVE" -> source.setName("NVD").build();
-            default -> source.setName("OSV").build();
-        };
+        final String prefix = vulnId.split("-", 2)[0];
+        final String name = SOURCE_NAME_BY_PREFIX.getOrDefault(prefix, "OSV");
+        return Source.newBuilder().setName(name).build();
     }
 
-    private static List<Integer> getCweIds(final List<String> cwes) {
-        List<Integer> cweIds = new ArrayList<>();
-        if (cwes == null) {
-            return cweIds;
-        }
-        cwes.forEach(cwe -> cweIds.add(parseCweString(cwe)));
-        return cweIds;
+    private static boolean isOsvMalwareIdentifier(@Nullable String osvId) {
+        return osvId != null && osvId.startsWith("MAL-");
     }
 
-    private static Integer parseCweString(final String cweString) {
-        if (StringUtils.isNotBlank(cweString)) {
-            final String string = cweString.trim();
-            String lookupString = "";
-            if (string.startsWith("CWE-") && string.contains(" ")) {
-                // This is likely to be in the following format:
-                // CWE-264 Permissions, Privileges, and Access Controls
-                lookupString = string.substring(4, string.indexOf(" "));
-            } else if (string.startsWith("CWE-") && string.length() < 9) {
-                // This is likely to be in the following format:
-                // CWE-264
-                lookupString = string.substring(4);
-            } else if (string.length() < 5) {
-                // This is likely to be in the following format:
-                // 264
-                lookupString = string;
-            }
-            try {
-                return Integer.valueOf(lookupString);
-            } catch (NumberFormatException e) {
-                // throw it away
-            }
-        }
-        return null;
-    }
-
-    private static Severity mapSeverity(String severity) {
-        if (severity == null) {
-            return SEVERITY_UNKNOWN;
-        }
-        return switch (severity) {
-            case "CRITICAL" -> SEVERITY_CRITICAL;
-            case "HIGH" -> SEVERITY_HIGH;
-            case "MEDIUM", "MODERATE" -> SEVERITY_MEDIUM;
-            case "LOW" -> SEVERITY_LOW;
-            case "INFO" -> SEVERITY_INFO;
-            case "NONE" -> SEVERITY_NONE;
-            default -> SEVERITY_UNKNOWN;
-        };
-    }
-
-    private static List<VulnerabilityReference> mapAliases(List<String> aliases) {
-        List<VulnerabilityReference> aliasReferences = new ArrayList<>();
-        if (aliases == null) {
-            return aliasReferences;
-        }
-        aliases.stream().forEach(alias -> {
-            var reference = VulnerabilityReference.newBuilder()
-                    .setId(alias)
-                    .setSource(Source.newBuilder()
-                            .setName(extractSource(alias).getName())
-                            .build())
-                    .build();
-            aliasReferences.add(reference);
-        });
-        return aliasReferences;
-    }
-
-    private static VulnerabilityCredits mapCredits(List<Credit> credits) {
-        if (credits == null || credits.isEmpty()) {
+    private static @Nullable Integer parseCweString(@Nullable String cweString) {
+        if (cweString == null || cweString.isBlank()) {
             return null;
         }
-        var vulnerabilityCredits = VulnerabilityCredits.newBuilder();
-        List<OrganizationalContact> creditArray = new ArrayList<>();
-        credits.forEach(credit -> {
-            var orgContact = OrganizationalContact.newBuilder();
-            orgContact.setName(credit.getName());
-            if (credit.getContact() != null) {
-                String contactLink = String.join(";", credit.getContact());
-                if (!contactLink.isEmpty()) {
-                    orgContact.setEmail(contactLink);
-                }
-            }
-            creditArray.add(orgContact.build());
-        });
-        vulnerabilityCredits.addAllIndividuals(creditArray);
-        return vulnerabilityCredits.build();
-    }
 
-    private static Map<String, List> mapReferences(List<Reference> references) {
-        if (references == null) {
-            return Collections.emptyMap();
+        final Matcher matcher = CWE_PATTERN.matcher(cweString.trim());
+        if (!matcher.find()) {
+            return null;
         }
-        List<ExternalReference> externalReferences = new ArrayList<>();
-        List<Advisory> advisories = new ArrayList<>();
-
-        references.forEach(reference -> {
-            String url = reference.getUrl();
-            if (reference.getType() != null && reference.getType().value().equalsIgnoreCase("ADVISORY")) {
-                var advisory = Advisory.newBuilder()
-                        .setUrl(url).build();
-                advisories.add(advisory);
-            } else {
-                var externalReference = ExternalReference.newBuilder().setUrl(url).build();
-                externalReferences.add(externalReference);
-            }
-        });
-        return Map.of("ADVISORY", advisories, "EXTERNAL", externalReferences);
-    }
-
-    private static List<VulnerabilityAffects> parseAffectedRanges(final String vulnId, List<Affected> osvAffectedArray, Bom.Builder bom) {
-        List<VulnerabilityAffects> affects = new ArrayList<>();
-
-        for (Affected osvAffectedObj : osvAffectedArray) {
-            Package packageObj = osvAffectedObj.getPackage();
-            if (packageObj == null) {
-                continue;
-            }
-            String purl = packageObj.getPurl();
-            if (purl == null) {
-                LOGGER.debug("affected node for vulnerability {} does not provide a PURL; Skipping", vulnId);
-                continue;
-            }
-            try {
-                new PackageURL(purl);
-            } catch (MalformedPackageURLException ex) {
-                LOGGER.warn("Failed to parse PURL \"{}\" from affected node for vulnerability {}", purl, vulnId, ex);
-                continue;
-            }
-            String bomReference = getBomRefIfComponentExists(bom.build(), purl);
-            if (bomReference == null) {
-                Component component = createNewComponentWithPurl(packageObj, purl);
-                bom.addComponents(component);
-                bomReference = component.getBomRef();
-            }
-            VulnerabilityAffects versionRangeAffected = getAffectedPackageVersionRange(osvAffectedObj);
-            VulnerabilityAffects rangeWithBomReference = VulnerabilityAffects.newBuilder(versionRangeAffected)
-                    .setRef(bomReference).build();
-            affects.add(rangeWithBomReference);
-        }
-        return affects;
-    }
-
-    private static String getBomRefIfComponentExists(Bom cyclonedxBom, String purl) {
-        if (purl != null) {
-            Optional<Component> existingComponent = cyclonedxBom.getComponentsList().stream().filter(c ->
-                    c.getPurl().equalsIgnoreCase(purl)).findFirst();
-            if (existingComponent.isPresent()) {
-                return existingComponent.get().getBomRef();
-            }
-        }
-        return null;
-    }
-
-    private static Component createNewComponentWithPurl(Package packageObj, String purl) {
-        UUID uuid = UUID.nameUUIDFromBytes((purl).getBytes(StandardCharsets.UTF_8));
-        Component.Builder component = Component.newBuilder().setBomRef(uuid.toString());
-        Optional.ofNullable(packageObj.getName()).ifPresent(component::setName);
-        Optional.ofNullable(purl).ifPresent(component::setPurl);
-        return component.build();
-    }
-
-    private static VulnerabilityAffects getAffectedPackageVersionRange(Affected osvAffectedObj) {
-        // Ranges and Versions for each affected package
-        final List<Range> rangesArr = osvAffectedObj.getRanges();
-        final List<String> versions = osvAffectedObj.getVersions();
-        final DatabaseSpecific__1 databaseSpecific = osvAffectedObj.getDatabaseSpecific();
-
-        var versionRangeAffected = VulnerabilityAffects.newBuilder();
-        List<VulnerabilityAffectedVersions> versionRanges = new ArrayList<>();
-
-        if (rangesArr != null) {
-            rangesArr.forEach(item -> {
-                versionRanges.addAll(
-                        generateRangeSpecifier(item,
-                                osvAffectedObj.getPackage().getEcosystem(),
-                                databaseSpecific));
-            });
-        }
-
-        // OSV expands ranges into exact versions. While this is a nice service to offer, it means
-        // that we'll get duplicate data if we consume both the ranges and exact versions.
-        //
-        // On the other hand, there are cases like https://osv-vulnerabilities.storage.googleapis.com/npm/MAL-2023-995.json,
-        // where the range is expressing a `>=0` constraint, but an exact version (`103.99.99`) is provided.
-        // Consuming only the range, or both range and exact version will yield false positives.
-        //
-        // Thus, we only consume exact versions when either:
-        //   * No ranges could be parsed at all
-        //   * Only wildcard ranges (`>=0`) were parsed
-        // In the latter case, wildcard ranges will be dropped in favor of the exact versions.
-        final boolean hasOnlyWildcardRanges = versionRanges.stream()
-                .map(VulnerabilityAffectedVersions::getRange)
-                .allMatch(WILDCARD_VERS_PATTERN.asPredicate());
-        if ((versionRanges.isEmpty() || hasOnlyWildcardRanges) && versions != null) {
-            versionRanges.clear(); // Remove any existing wildcard ranges.
-
-            versions.forEach(version -> {
-                var versionRange = VulnerabilityAffectedVersions.newBuilder();
-                versionRange.setVersion(String.valueOf(version));
-                versionRanges.add(versionRange.build());
-            });
-        }
-        versionRangeAffected.addAllVersions(versionRanges);
-        return versionRangeAffected.build();
-    }
-
-    private static List<VulnerabilityAffectedVersions> generateRangeSpecifier(Range range, String ecoSystem, DatabaseSpecific__1 databaseSpecific) {
-        final List<Event> rangeEvents = range.getEvents();
-
-        if (rangeEvents == null) {
-            return List.of();
-        }
-        TypeReference<Map.Entry<String, String>> typeRef = new TypeReference<>() {
-        };
-
-        List<Map.Entry<String, String>> rangeEventList = rangeEvents.stream()
-                .map(rangeEvent -> objectMapper.convertValue(rangeEvent, typeRef))
-                .collect(Collectors.toList());
-
-        final var versionRanges = new ArrayList<VulnerabilityAffectedVersions>();
-        String rangeType = range.getType().value();
 
         try {
-            var isLastRangeUpperbound = List.of("fixed", "limit", "last_affected").contains(rangeEventList.getLast().getKey());
-            var vers = versFromOsvRange(rangeType, ecoSystem, rangeEventList, isLastRangeUpperbound ? null : databaseSpecific.getAdditionalProperties());
-            versionRanges.add(VulnerabilityAffectedVersions.newBuilder().setRange(String.valueOf(vers)).build());
-            return versionRanges;
-        } catch (Exception exception) {
-            LOGGER.debug("Exception while parsing OSV version range.", exception);
-        }
-        return List.of();
-    }
-
-    private static Severity parseSeverity(List<Affected> osvAffectedArray) {
-        List<Severity> severities = new ArrayList<>();
-        osvAffectedArray.forEach(osvAffected -> {
-            final EcosystemSpecific ecosystemSpecific = osvAffected.getEcosystemSpecific();
-            final DatabaseSpecific__1 databaseSpecific = osvAffected.getDatabaseSpecific();
-            severities.add(
-                    parseAffectedPackageSeverity(ecosystemSpecific, databaseSpecific));
-        });
-        // sort in reverse order (highest severity first)
-        return severities.stream()
-                .max(Comparator.comparingInt(Severity::getNumber))
-                .orElse(Severity.SEVERITY_UNKNOWN);
-    }
-
-    private static Severity parseAffectedPackageSeverity(EcosystemSpecific ecosystemSpecific, DatabaseSpecific__1 databaseSpecific) {
-
-        String severity = null;
-        if (databaseSpecific != null) {
-            if (databaseSpecific.getAdditionalProperties().get("cvss") instanceof final String cvssVector) {
-                try {
-                    Cvss cvss = Cvss.fromVector(cvssVector);
-                    if (cvss != null) {
-                        Score score = cvss.calculateScore();
-                        severity = String.valueOf(normalizedCvssV3Score(score.getBaseScore()));
-                    }
-                } catch (MalformedVectorException e) {
-                    LOGGER.warn("Failed to parse severity: CVSS vector {} is malformed; Skipping", cvssVector, e);
-                }
-            }
-        }
-        if (severity == null && ecosystemSpecific != null) {
-            if (ecosystemSpecific.getAdditionalProperties().containsKey("severity")) {
-                severity = (String) ecosystemSpecific.getAdditionalProperties().get("severity");
-            }
-
-        }
-        return mapSeverity(severity);
-    }
-
-    // https://www.first.org/cvss/v4.0/specification-document#Qualitative-Severity-Rating-Scale
-    private static Severity normalizedCvssV4Score(double score) {
-        if (score >= 9) {
-            return SEVERITY_CRITICAL;
-        } else if (score >= 7) {
-            return SEVERITY_HIGH;
-        } else if (score >= 4) {
-            return SEVERITY_MEDIUM;
-        } else if (score >= 0.1) {
-            return SEVERITY_LOW;
-        } else if (score >= 0) {
-            return SEVERITY_NONE;
-        } else {
-            return SEVERITY_UNKNOWN;
+            return Integer.valueOf(matcher.group(1));
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
-    /**
-     * Returns the severity based on the numerical CVSS score.
-     *
-     * @return the severity of the vulnerability
-     * @since 3.1.0
-     */
-    private static Severity normalizedCvssV3Score(final double score) {
-        if (score >= 9) {
-            return SEVERITY_CRITICAL;
-        } else if (score >= 7) {
-            return SEVERITY_HIGH;
-        } else if (score >= 4) {
-            return SEVERITY_MEDIUM;
-        } else if (score > 0) {
-            return SEVERITY_LOW;
-        } else {
-            return SEVERITY_UNKNOWN;
+    private static @Nullable Timestamp toTimestamp(
+            @Nullable Date date,
+            @Nullable String advisoryId,
+            String fieldName) {
+        if (date == null) {
+            return null;
+        }
+
+        try {
+            return Timestamps.fromMillis(date.toInstant().toEpochMilli());
+        } catch (IllegalArgumentException e) {
+            LOGGER.warn("Ignoring invalid {} timestamp for advisory {}", fieldName, advisoryId, e);
+            return null;
         }
     }
 
-    private static Severity normalizedCvssV2Score(final double score) {
-        if (score >= 7) {
-            return SEVERITY_HIGH;
-        } else if (score >= 4) {
-            return SEVERITY_MEDIUM;
-        } else if (score > 0) {
-            return SEVERITY_LOW;
-        } else {
-            return SEVERITY_UNKNOWN;
-        }
-    }
-
-    private static List<VulnerabilityRating> parseCvssRatings(Osv osv, Severity severity) {
-        List<VulnerabilityRating> ratings = new ArrayList<>();
-        final List<org.dependencytrack.vulndatasource.osv.schema.Severity> cvssList = osv.getSeverity();
-
-        if (cvssList == null || cvssList.isEmpty()) {
-            var rating = VulnerabilityRating.newBuilder()
-                    .setSeverity(severity).build();
-            ratings.add(rating);
-            return ratings;
-        }
-        cvssList.forEach(cvssItem -> {
-            // https://ossf.github.io/osv-schema/#severitytype-field
-            if (cvssItem.getType() != org.dependencytrack.vulndatasource.osv.schema.Severity.Type.CVSS_V_2
-                    && cvssItem.getType() != org.dependencytrack.vulndatasource.osv.schema.Severity.Type.CVSS_V_3
-                    && cvssItem.getType() != org.dependencytrack.vulndatasource.osv.schema.Severity.Type.CVSS_V_4) {
-                return;
-            }
-            String vector = cvssItem.getScore();
-            if (vector == null) {
-                return;
-            }
-
-            final Cvss cvss;
-            try {
-                cvss = Cvss.fromVector(vector);
-            } catch (MalformedVectorException e) {
-                LOGGER.warn("Failed to parse CVSS vector: {}", vector, e);
-                return;
-            }
-            if (cvss == null) {
-                return;
-            }
-
-            double score = cvss.calculateScore().getBaseScore();
-
-            var rating = VulnerabilityRating.newBuilder();
-
-            rating.setVector(vector);
-            rating.setScore(Double.parseDouble(NumberFormat.getInstance(Locale.US).format(score)));
-
-            switch (cvss) {
-                case CvssV4 ignored -> {
-                    rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV4);
-                    rating.setSeverity(normalizedCvssV4Score(score));
-                }
-                case CvssV3_1 ignored -> {
-                    rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV31);
-                    rating.setSeverity(normalizedCvssV3Score(score));
-                }
-                case CvssV3 ignored -> {
-                    rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV3);
-                    rating.setSeverity(normalizedCvssV3Score(score));
-                }
-                case CvssV2 ignored -> {
-                    rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV2);
-                    rating.setSeverity(normalizedCvssV2Score(score));
-                }
-                default -> {
-                    rating.setMethod(ScoreMethod.SCORE_METHOD_OTHER);
-                    rating.setSeverity(SEVERITY_UNKNOWN);
-                }
-            }
-
-            ratings.add(rating.build());
-        });
-        return ratings;
-    }
 }

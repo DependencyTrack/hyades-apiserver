@@ -26,6 +26,7 @@ public final class DexWorkflowLabels {
     public static final String WF_LABEL_BOM_UPLOAD_TOKEN = "bom_upload_token";
     public static final String WF_LABEL_PROJECT_UUID = "project_uuid";
     public static final String WF_LABEL_TRIGGERED_BY = "triggered_by";
+    public static final String WF_LABEL_VEX_UPLOAD_TOKEN = "vex_upload_token";
 
     private DexWorkflowLabels() {
     }

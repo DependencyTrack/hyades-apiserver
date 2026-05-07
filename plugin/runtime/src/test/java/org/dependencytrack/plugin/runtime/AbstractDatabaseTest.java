@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.plugin.runtime;
 
-import org.dependencytrack.support.liquibase.MigrationExecutor;
+import org.dependencytrack.migration.MigrationExecutor;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.postgres.PostgresPlugin;
 import org.junit.jupiter.api.BeforeAll;
@@ -49,11 +49,7 @@ abstract class AbstractDatabaseTest {
         dataSource.setUser(POSTGRES_CONTAINER.getUsername());
         dataSource.setPassword(POSTGRES_CONTAINER.getPassword());
 
-        try {
-            new MigrationExecutor(dataSource, "migration/changelog-main.xml").executeMigration();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to execute migrations", e);
-        }
+        new MigrationExecutor(dataSource).execute();
 
         jdbi = Jdbi
                 .create(dataSource)
