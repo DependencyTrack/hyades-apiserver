@@ -22,7 +22,7 @@
     <groupId>org.dependencytrack</groupId>
     <artifactId>dependency-track-parent</artifactId>
     <packaging>pom</packaging>
-    <version>5.7.0-alpha.6-SNAPSHOT</version>
+    <version>5.7.0-alpha.7-SNAPSHOT</version>
 
     <modules>
         <module>common</module>
@@ -32,6 +32,7 @@
         <module>support/os-distro-metadata</module>
         <module>support/smallrye-config-secret-handler-file</module>
         <module>support/smallrye-config-source-memory</module>
+        <module>support/swagger-model-converters</module>
         <module>api</module>
         <module>alpine</module>
         <module>dex</module>
@@ -128,7 +129,7 @@
         <lib.jackson.version>2.21.3</lib.jackson.version>
         <lib.jdbi.version>3.53.0</lib.jdbi.version>
         <lib.jersey.version>4.0.2</lib.jersey.version>
-        <lib.jetty.version>12.1.8</lib.jetty.version>
+        <lib.jetty.version>12.1.9</lib.jetty.version>
         <lib.json-schema-validator.version>1.5.9</lib.json-schema-validator.version>
         <lib.json-unit.version>5.1.1</lib.json-unit.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
@@ -146,7 +147,7 @@
         <lib.open-vulnerability-clients.version>9.0.5</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.pebble.version>4.1.1</lib.pebble.version>
-        <lib.postgresql.version>42.7.10</lib.postgresql.version>
+        <lib.postgresql.version>42.7.11</lib.postgresql.version>
         <lib.protobuf-java.version>4.34.1</lib.protobuf-java.version>
         <lib.resilience4j.version>2.4.0</lib.resilience4j.version>
         <lib.s3mock.version>5.0.0</lib.s3mock.version>
@@ -158,7 +159,7 @@
         <lib.tink.version>1.21.0</lib.tink.version>
         <lib.versatile.version>0.18.0</lib.versatile.version>
         <lib.wiremock.version>3.13.2</lib.wiremock.version>
-        <lib.zstd-jni.version>1.5.7-7</lib.zstd-jni.version>
+        <lib.zstd-jni.version>1.5.7-8</lib.zstd-jni.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>1</unitTestForkCount>
 

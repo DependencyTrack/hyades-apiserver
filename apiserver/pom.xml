@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>dependency-track-parent</artifactId>
-        <version>5.7.0-alpha.6-SNAPSHOT</version>
+        <version>5.7.0-alpha.7-SNAPSHOT</version>
     </parent>
 
     <artifactId>apiserver</artifactId>
@@ -23,7 +23,7 @@
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>12.1.0</lib.cyclonedx-java.version>
         <lib.micrometer-jvm-extras.version>0.3.0</lib.micrometer-jvm-extras.version>
-        <lib.swagger-parser.version>2.1.40</lib.swagger-parser.version>
+        <lib.swagger-parser.version>2.1.41</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.woodstox.version>7.1.1</lib.woodstox.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
@@ -607,6 +607,13 @@
                 <groupId>io.swagger.core.v3</groupId>
                 <artifactId>swagger-maven-plugin-jakarta</artifactId>
                 <version>${lib.swagger.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.dependencytrack</groupId>
+                        <artifactId>swagger-model-converters</artifactId>
+                        <version>${project.version}</version>
+                    </dependency>
+                </dependencies>
                 <executions>
                     <execution>
                         <id>resolve-openapi</id>

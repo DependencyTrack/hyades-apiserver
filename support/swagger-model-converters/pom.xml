@@ -26,10 +26,10 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>smallrye-config-source-memory</artifactId>
+    <artifactId>swagger-model-converters</artifactId>
     <packaging>jar</packaging>
 
-    <name>Support :: SmallRye Config Source Memory</name>
+    <name>Support :: Swagger Model Converters</name>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
@@ -37,15 +37,15 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.smallrye.config</groupId>
-            <artifactId>smallrye-config-core</artifactId>
-            <scope>provided</scope>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-core-jakarta</artifactId>
+            <version>${lib.swagger.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
