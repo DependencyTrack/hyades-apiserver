@@ -89,8 +89,7 @@ final class GoModulesPackageMetadataResolver implements PackageMetadataResolver 
             if (versionBody != null) {
                 final var publishedAt = extractPublishedAt(parseJson(versionBody));
                 artifactMetadata = publishedAt != null
-                        ? new PackageArtifactMetadata(resolvedAt, extractPublishedAt(parseJson(versionBody)), Map.of())
-                : null;
+                        ? new PackageArtifactMetadata(resolvedAt, publishedAt, Map.of()) : null;
             }
         }
 

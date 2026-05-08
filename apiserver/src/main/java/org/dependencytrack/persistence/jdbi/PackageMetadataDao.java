@@ -127,7 +127,8 @@ public final class PackageMetadataDao {
                         ON CONFLICT ("PURL") DO UPDATE
                         SET "LATEST_VERSION" = COALESCE(EXCLUDED."LATEST_VERSION", pm."LATEST_VERSION")
                            , "LATEST_VERSION_PUBLISHED_AT" = CASE
-                                WHEN EXCLUDED."LATEST_VERSION" IS DISTINCT FROM pm."LATEST_VERSION"
+                                WHEN EXCLUDED."LATEST_VERSION" IS NOT NULL
+                                    AND EXCLUDED."LATEST_VERSION" IS DISTINCT FROM pm."LATEST_VERSION"
                                     THEN EXCLUDED."LATEST_VERSION_PUBLISHED_AT"
                                 ELSE COALESCE(EXCLUDED."LATEST_VERSION_PUBLISHED_AT", pm."LATEST_VERSION_PUBLISHED_AT")
                                 END

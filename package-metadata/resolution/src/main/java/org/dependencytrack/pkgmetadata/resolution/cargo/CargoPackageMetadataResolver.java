@@ -98,7 +98,6 @@ final class CargoPackageMetadataResolver implements PackageMetadataResolver {
                 }
                 if (purl.getVersion().equals(crateVersion.num())) {
                     requestedVersion = crateVersion;
-                    break;
                 }
             }
         }

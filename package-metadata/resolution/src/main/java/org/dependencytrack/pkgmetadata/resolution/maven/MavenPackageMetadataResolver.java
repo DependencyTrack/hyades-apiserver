@@ -234,7 +234,7 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
         builder.header("Authorization", authHeaderValue);
     }
 
-    private static String formatArtifactFileName(PackageURL purl, String otherVersion) {
+    private static String formatArtifactFileName(PackageURL purl, String versionOverride) {
         final Map<String, String> qualifiers = purl.getQualifiers();
 
         final String extension = qualifiers != null
@@ -247,7 +247,7 @@ final class MavenPackageMetadataResolver implements PackageMetadataResolver {
         final var sb = new StringBuilder()
                 .append(purl.getName())
                 .append('-')
-                .append(otherVersion == null ? purl.getVersion() :  otherVersion);
+                .append(versionOverride == null ? purl.getVersion() :  versionOverride);
         if (classifier != null) {
             sb.append('-').append(classifier);
         }

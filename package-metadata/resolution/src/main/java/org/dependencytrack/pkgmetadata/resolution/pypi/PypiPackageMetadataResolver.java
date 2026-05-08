@@ -35,6 +35,7 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -72,10 +73,12 @@ final class PypiPackageMetadataResolver implements PackageMetadataResolver {
                 doc.releases() != null ? doc.releases() : Map.of();
 
         final Instant resolvedAt = Instant.now();
+        Instant latestVersionPublishedAt = null;
 
         ArtifactHashes matched = null;
+        List<PypiPackageDocument.ReleaseFile> releaseFiles;
         if (fileName != null) {
-            final List<PypiPackageDocument.ReleaseFile> releaseFiles = releases.get(purl.getVersion());
+            releaseFiles = releases.get(purl.getVersion());
             if (releaseFiles != null) {
                 for (final PypiPackageDocument.ReleaseFile file : releaseFiles) {
                     if (fileName.equals(file.filename())) {
@@ -85,8 +88,17 @@ final class PypiPackageMetadataResolver implements PackageMetadataResolver {
                 }
             }
         }
+        if (latestVersion != null) {
+            releaseFiles = releases.get(latestVersion);
+            if (releaseFiles != null) {
+                final PypiPackageDocument.ReleaseFile file = releaseFiles.get(0);
+                try {
+                    latestVersionPublishedAt = Instant.parse(file.uploadTime());
+                } catch (DateTimeParseException ignored) {}
+            }
+        }
 
-        return buildResult(latestVersion, resolvedAt, matched);
+        return buildResult(latestVersion, latestVersionPublishedAt, resolvedAt, matched);
     }
 
     private @Nullable PypiPackageDocument fetchDocument(
@@ -128,6 +140,7 @@ final class PypiPackageMetadataResolver implements PackageMetadataResolver {
 
     private static @Nullable PackageMetadata buildResult(
             @Nullable String latestVersion,
+            @Nullable Instant latestVersionPublishedAt,
             Instant resolvedAt,
             @Nullable ArtifactHashes hashes) {
         if (latestVersion == null && hashes == null) {
@@ -146,7 +159,7 @@ final class PypiPackageMetadataResolver implements PackageMetadataResolver {
             artifactMetadata = new PackageArtifactMetadata(resolvedAt, null, algoHashes);
         }
 
-        return new PackageMetadata(latestVersion, null, resolvedAt, artifactMetadata);
+        return new PackageMetadata(latestVersion, latestVersionPublishedAt, resolvedAt, artifactMetadata);
     }
 
     private record ArtifactHashes(@Nullable String md5, @Nullable String sha256) {
