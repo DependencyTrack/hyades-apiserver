@@ -312,8 +312,8 @@ final class ComposerPackageMetadataResolver implements PackageMetadataResolver {
 
     private static VersionMetadata findVersionMetadata(
             JsonNode packageVersions,
-            String latestVersion,
-            String requestedVersion,
+            @Nullable String latestVersion,
+            @Nullable String requestedVersion,
             Instant resolvedAt) {
         Version requested = null;
         Version requestedLatest = null;

@@ -83,7 +83,8 @@ final class GoModulesPackageMetadataResolver implements PackageMetadataResolver 
 
         PackageArtifactMetadata artifactMetadata = null;
         if (purl.getVersion().equals(latestVersion)) {
-            artifactMetadata = new PackageArtifactMetadata(resolvedAt, latestVersionPublishedAt, Map.of());
+            artifactMetadata = latestVersionPublishedAt != null
+                    ? new PackageArtifactMetadata(resolvedAt, latestVersionPublishedAt, Map.of()) : null;
         } else {
             final byte[] versionBody = fetchVersionInfo(modulePath, purl.getVersion(), repository);
             if (versionBody != null) {

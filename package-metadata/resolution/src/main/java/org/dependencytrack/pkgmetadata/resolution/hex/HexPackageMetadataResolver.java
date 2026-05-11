@@ -87,7 +87,10 @@ final class HexPackageMetadataResolver implements PackageMetadataResolver {
         if (purl.getVersion() != null) {
             for (final JsonNode release : releases) {
                 if (purl.getVersion().equals(release.path("version").asText(null))) {
-                    artifactMetadata = new PackageArtifactMetadata(resolvedAt, extractPublishedAt(release), Map.of());
+                    final var publishedAt = extractPublishedAt(release);
+                    artifactMetadata = publishedAt != null
+                            ? new PackageArtifactMetadata(resolvedAt, publishedAt, Map.of())
+                            : null;
                     break;
                 }
             }

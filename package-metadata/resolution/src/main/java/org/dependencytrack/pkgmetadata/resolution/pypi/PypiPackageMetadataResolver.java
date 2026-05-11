@@ -90,11 +90,19 @@ final class PypiPackageMetadataResolver implements PackageMetadataResolver {
         }
         if (latestVersion != null) {
             releaseFiles = releases.get(latestVersion);
-            if (releaseFiles != null) {
-                final PypiPackageDocument.ReleaseFile file = releaseFiles.get(0);
-                try {
-                    latestVersionPublishedAt = Instant.parse(file.uploadTime());
-                } catch (DateTimeParseException ignored) {}
+            if (releaseFiles != null && !releaseFiles.isEmpty()) {
+                Instant mostRecentUploadTime = null;
+                for (PypiPackageDocument.ReleaseFile file : releaseFiles) {
+                    if (file.uploadTime() != null) {
+                        try {
+                            Instant instant = Instant.parse(file.uploadTime());
+                            if (mostRecentUploadTime == null || instant.isAfter(mostRecentUploadTime)) {
+                                mostRecentUploadTime = instant;
+                            }
+                        } catch (DateTimeParseException ignored) {}
+                    }
+                }
+                latestVersionPublishedAt = mostRecentUploadTime;
             }
         }
 
