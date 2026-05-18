@@ -70,6 +70,9 @@ message Component {
   optional google.protobuf.Timestamp published_at = 53;
   optional string latest_version = 54;
 
+  // Whether the component is direct dependency of the project.
+  optional bool is_direct = 55;
+
   message Property {
     string group = 1;
     string name = 2;

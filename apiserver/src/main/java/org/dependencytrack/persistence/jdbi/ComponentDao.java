@@ -129,12 +129,8 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             }
             if (Boolean.TRUE.equals(onlyDirect)) {
                 countWhere.append("""
-                        AND EXISTS (
-                         SELECT 1
-                           FROM "PROJECT"
-                          WHERE "PROJECT"."ID" = "C"."PROJECT_ID"
-                            AND "PROJECT"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "C"."UUID"))
-                        )""");
+                    AND "C"."DIRECT" IS TRUE
+                    """);
             }
             totalCount = getBoundedTotalCountWithProjectAcl(
                     "FROM \"COMPONENT\" \"C\" WHERE " + countWhere,
@@ -182,6 +178,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                         "C"."PURL",
                         "C"."GROUP",
                         "C"."INTERNAL",
+                        "C"."DIRECT",
                         "C"."LAST_RISKSCORE",
                         "C"."LICENSE" AS "componentLicenseName",
                         "C"."LICENSE_EXPRESSION" AS "licenseExpression",
@@ -225,7 +222,7 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
                            AND "PM"."LATEST_VERSION" <> "C"."VERSION")
                 </#if>
                 <#if onlyDirect && onlyDirect == true>
-                    AND "PROJECT"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "C"."UUID"))
+                    AND "C"."IS_DIRECT" IS TRUE
                 </#if>
                 ORDER BY "NAME" ASC, "VERSION" DESC, "ID" ASC
                 LIMIT :limit
@@ -496,6 +493,17 @@ public interface ComponentDao extends SqlObject, PaginationSupport {
             @Define String sortDirection,
             @Define boolean hasCursor
     );
+
+    @SqlUpdate("""
+            UPDATE "COMPONENT"
+             SET "DIRECT" = ("UUID"::TEXT IN (
+                SELECT JSONB_ARRAY_ELEMENTS(
+                     COALESCE("DIRECT_DEPENDENCIES", '[]'::jsonb)) ->> 'uuid'
+                FROM "PROJECT" WHERE "ID" = :projectId
+             ))
+            WHERE "PROJECT_ID" = :projectId
+            """)
+    void setDirect(@Bind Long projectId);
 
     enum SortBy {
         NAME,

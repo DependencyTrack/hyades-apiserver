@@ -426,6 +426,11 @@ public class Component implements Serializable {
     @NotNull
     private UUID uuid;
 
+    @Persistent
+    @Column(name = "DIRECT", allowsNull = "true")
+    @JsonProperty("isDirect")
+    private Boolean direct;
+
     private transient String bomRef;
     private transient List<org.cyclonedx.model.License> licenseCandidates;
     private transient DependencyMetrics metrics;
@@ -964,6 +969,18 @@ public class Component implements Serializable {
     public void setOccurrenceCount(final Long occurrenceCount) {
         this.occurrenceCount = occurrenceCount;
     }
+
+    public boolean isDirect() {
+        if (direct == null) {
+            return false;
+        }
+        return direct;
+    }
+
+    public void setDirect(boolean direct) {
+        this.direct = direct;
+    }
+
 
     @Override
     public String toString() {
