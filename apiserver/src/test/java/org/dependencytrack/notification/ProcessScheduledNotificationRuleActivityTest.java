@@ -100,9 +100,10 @@ class ProcessScheduledNotificationRuleActivityTest extends PersistenceCapableTes
                 null, null, Date.from(afterRuleLastFiredAt));
         qm.addVulnerability(vulnB, parentProjectComponent, "internal",
                 null, null, Date.from(afterRuleLastFiredAt));
-        qm.makeAnalysis(new MakeAnalysisCommand(
-                parentProjectComponent, vulnB, AnalysisState.FALSE_POSITIVE,
-                null, null, null, true, null, null, Set.of()));
+        qm.makeAnalysis(new MakeAnalysisCommand(parentProjectComponent, vulnB)
+                .withState(AnalysisState.FALSE_POSITIVE)
+                .withSuppress(true)
+                .withOptions(Set.of()));
 
         // Child project affected by vulnA (BEFORE) and vulnB (AFTER).
         final var childProject = new Project();
