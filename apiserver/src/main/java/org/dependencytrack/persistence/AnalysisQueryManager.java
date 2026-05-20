@@ -27,6 +27,7 @@ import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.RatingSource;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.NotificationModelConverter;
@@ -102,27 +103,49 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
             boolean stateChanged = false;
             boolean suppressionChanged = false;
 
-            if (command.state() != null && command.state() != analysis.getAnalysisState()) {
-                auditTrailComments.add("Analysis: %s → %s".formatted(analysis.getAnalysisState(), command.state()));
-                analysis.setAnalysisState(command.state());
-                stateChanged = true;
-            }
-            if (command.justification() != null && command.justification() != analysis.getAnalysisJustification()) {
-                auditTrailComments.add("Justification: %s → %s".formatted(analysis.getAnalysisJustification(), command.justification()));
-                analysis.setAnalysisJustification(command.justification());
-            }
-            if (command.response() != null && command.response() != analysis.getAnalysisResponse()) {
-                auditTrailComments.add("Vendor Response: %s → %s".formatted(analysis.getAnalysisResponse(), command.response()));
-                analysis.setAnalysisResponse(command.response());
-            }
-            if (command.details() != null && !command.details().equals(analysis.getAnalysisDetails())) {
-                auditTrailComments.add("Details: %s".formatted(command.details()));
-                analysis.setAnalysisDetails(command.details());
-            }
-            if (command.suppress() != null && command.suppress() != analysis.isSuppressed()) {
-                auditTrailComments.add(command.suppress() ? "Suppressed" : "Unsuppressed");
-                analysis.setSuppressed(command.suppress());
-                suppressionChanged = true;
+            final boolean canUpdate = canUpdateAnalysis(analysis.getSource(), command.source());
+
+            if (canUpdate) {
+                if (command.state() != null && command.state() != analysis.getAnalysisState()) {
+                    auditTrailComments.add("Analysis: %s → %s".formatted(analysis.getAnalysisState(), command.state()));
+                    analysis.setAnalysisState(command.state());
+                    stateChanged = true;
+                }
+                if (command.justification() != null && command.justification() != analysis.getAnalysisJustification()) {
+                    auditTrailComments.add("Justification: %s → %s".formatted(analysis.getAnalysisJustification(), command.justification()));
+                    analysis.setAnalysisJustification(command.justification());
+                }
+                if (command.response() != null && command.response() != analysis.getAnalysisResponse()) {
+                    auditTrailComments.add("Vendor Response: %s → %s".formatted(analysis.getAnalysisResponse(), command.response()));
+                    analysis.setAnalysisResponse(command.response());
+                }
+                if (command.details() != null && !command.details().equals(analysis.getAnalysisDetails())) {
+                    auditTrailComments.add("Details: %s".formatted(command.details()));
+                    analysis.setAnalysisDetails(command.details());
+                }
+                if (command.suppress() != null && command.suppress() != analysis.isSuppressed()) {
+                    auditTrailComments.add(command.suppress() ? "Suppressed" : "Unsuppressed");
+                    analysis.setSuppressed(command.suppress());
+                    suppressionChanged = true;
+                }
+
+                if (command.owaspVector() != null && !command.owaspVector().equals(analysis.getOwaspVector())) {
+                    auditTrailComments.add("OWASP RR Vector: %s → %s".formatted(
+                            analysis.getOwaspVector(), command.owaspVector()));
+                    analysis.setOwaspVector(command.owaspVector());
+                }
+                if (command.owaspScore() != null && !command.owaspScore().equals(analysis.getOwaspScore())) {
+                    auditTrailComments.add("OWASP RR Score: %s → %s".formatted(
+                            analysis.getOwaspScore(), command.owaspScore()));
+                    analysis.setOwaspScore(command.owaspScore());
+                }
+
+                if (command.source() != null && analysis.getSource() != command.source()) {
+                    if (analysis.getSource() != null) {
+                        auditTrailComments.add("Source: %s → %s".formatted(analysis.getSource(), command.source()));
+                    }
+                    analysis.setSource(command.source());
+                }
             }
 
             final List<String> comments =
@@ -196,6 +219,13 @@ public class AnalysisQueryManager extends QueryManager implements IQueryManager 
                 analysis.setAnalysisComments(analysisComments);
             }
         });
+    }
+
+    private boolean canUpdateAnalysis(final RatingSource existingSource, final RatingSource newSource) {
+        if (newSource == null || existingSource == null) {
+            return true;
+        }
+        return newSource.canOverwrite(existingSource);
     }
 
 }

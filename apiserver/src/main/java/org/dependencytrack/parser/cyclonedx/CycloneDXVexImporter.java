@@ -27,6 +27,7 @@ import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.RatingSource;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
@@ -142,9 +143,9 @@ public class CycloneDXVexImporter {
                         vexVulnSource, vexVulnId, vexVulnPos);
                 continue;
             }
-            if (vexVuln.getAnalysis() == null) {
+            if (vexVuln.getAnalysis() == null && CollectionUtils.isEmpty(vexVuln.getRatings())) {
                 LOGGER.debug(
-                        "VEX vulnerability {}/{} at position #{} does not have an analysis; Skipping it",
+                        "VEX vulnerability {}/{} at position #{} does not have an analysis or ratings; Skipping it",
                         vexVulnSource, vexVulnId, vexVulnPos);
                 continue;
             }
@@ -195,38 +196,58 @@ public class CycloneDXVexImporter {
 
     private static void updateAnalysis(final QueryManager qm, final Component component, final Vulnerability vuln,
                                        final org.cyclonedx.model.vulnerability.Vulnerability cdxVuln) {
-        final AnalysisState state =
-                convertCdxVulnAnalysisStateToDtAnalysisState(cdxVuln.getAnalysis().getState());
-        final AnalysisJustification justification =
-                convertCdxVulnAnalysisJustificationToDtAnalysisJustification(cdxVuln.getAnalysis().getJustification());
+        MakeAnalysisCommand command = new MakeAnalysisCommand(component, vuln)
+                .withCommenter(COMMENTER)
+                .withSource(RatingSource.VEX);
 
-        // CycloneDX supports multiple responses, DT only one.
-        // The decision to effectively pick the last one is legacy behavior,
-        // there's no other particular reason for doing it.
-        final AnalysisResponse response;
-        if (cdxVuln.getAnalysis().getResponses() != null
-                && !cdxVuln.getAnalysis().getResponses().isEmpty()) {
-            response = cdxVuln.getAnalysis().getResponses().stream()
-                    .map(ModelConverter::convertCdxVulnAnalysisResponseToDtAnalysisResponse)
-                    .toList()
-                    .getLast();
-        } else {
-            response = null;
+        if (cdxVuln.getAnalysis() != null) {
+            final AnalysisState state = convertCdxVulnAnalysisStateToDtAnalysisState(cdxVuln.getAnalysis().getState());
+            final AnalysisJustification justification = convertCdxVulnAnalysisJustificationToDtAnalysisJustification(cdxVuln.getAnalysis().getJustification());
+
+            // CycloneDX supports multiple responses, DT only one.
+            // The decision to effectively pick the last one is legacy behavior,
+            // there's no other particular reason for doing it.
+            final AnalysisResponse response;
+            if (cdxVuln.getAnalysis().getResponses() != null
+                    && !cdxVuln.getAnalysis().getResponses().isEmpty()) {
+                response = cdxVuln.getAnalysis().getResponses().stream()
+                        .map(ModelConverter::convertCdxVulnAnalysisResponseToDtAnalysisResponse)
+                        .toList()
+                        .getLast();
+            } else {
+                response = null;
+            }
+
+            final boolean isSuppressed = state == AnalysisState.FALSE_POSITIVE
+                    || state == AnalysisState.NOT_AFFECTED
+                    || state == AnalysisState.RESOLVED;
+
+            command = command
+                    .withState(state)
+                    .withJustification(justification)
+                    .withResponse(response)
+                    .withDetails(cdxVuln.getAnalysis().getDetail())
+                    .withSuppress(isSuppressed);
         }
 
-        final boolean isSuppressed =
-                state == AnalysisState.FALSE_POSITIVE
-                        || state == AnalysisState.NOT_AFFECTED
-                        || state == AnalysisState.RESOLVED;
+        if (cdxVuln.getRatings() != null && !cdxVuln.getRatings().isEmpty()) {
+            for (final org.cyclonedx.model.vulnerability.Vulnerability.Rating rating : cdxVuln.getRatings()) {
+                if (rating.getMethod() == org.cyclonedx.model.vulnerability.Vulnerability.Rating.Method.OWASP) {
+                    if (rating.getVector() == null && rating.getScore() == null) {
+                        LOGGER.warn("VEX OWASP rating has neither vector nor score - skipping");
+                        continue;
+                    }
 
-        qm.makeAnalysis(
-                new MakeAnalysisCommand(component, vuln)
-                        .withState(state)
-                        .withJustification(justification)
-                        .withResponse(response)
-                        .withDetails(cdxVuln.getAnalysis().getDetail())
-                        .withCommenter(COMMENTER)
-                        .withSuppress(isSuppressed));
+                    final java.math.BigDecimal score = rating.getScore() != null
+                            ? java.math.BigDecimal.valueOf(rating.getScore())
+                            : null;
+                    command = command.withOwasp(rating.getVector(), score);
+                    break;
+                }
+            }
+        }
+
+        qm.makeAnalysis(command);
     }
 
 }

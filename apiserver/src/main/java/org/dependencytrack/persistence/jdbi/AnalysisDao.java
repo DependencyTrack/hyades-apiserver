@@ -284,6 +284,7 @@ public final class AnalysisDao {
                         , "CVSSV4SCORE"
                         , "OWASPVECTOR"
                         , "OWASPSCORE"
+                        , "SOURCE"
                         )
                         SELECT project_id
                              , component_id
@@ -303,6 +304,7 @@ public final class AnalysisDao {
                              , cvss_v4_score
                              , owasp_vector
                              , owasp_score
+                             , 'POLICY'
                           FROM UNNEST (
                             :projectIds
                           , :componentIds
@@ -363,6 +365,7 @@ public final class AnalysisDao {
                           , "CVSSV4SCORE" = EXCLUDED."CVSSV4SCORE"
                           , "OWASPVECTOR" = EXCLUDED."OWASPVECTOR"
                           , "OWASPSCORE" = EXCLUDED."OWASPSCORE"
+                          , "SOURCE" = EXCLUDED."SOURCE"
                         WHERE (
                             a."VULNERABILITY_POLICY_ID"
                           , a."STATE"
@@ -379,6 +382,7 @@ public final class AnalysisDao {
                           , a."CVSSV4SCORE"
                           , a."OWASPVECTOR"
                           , a."OWASPSCORE"
+                          , a."SOURCE"
                           ) IS DISTINCT FROM (
                             EXCLUDED."VULNERABILITY_POLICY_ID"
                           , EXCLUDED."STATE"
@@ -395,6 +399,7 @@ public final class AnalysisDao {
                           , EXCLUDED."CVSSV4SCORE"
                           , EXCLUDED."OWASPVECTOR"
                           , EXCLUDED."OWASPSCORE"
+                          , EXCLUDED."SOURCE"
                           )
                         RETURNING "ID"
                                 , "COMPONENT_ID"
