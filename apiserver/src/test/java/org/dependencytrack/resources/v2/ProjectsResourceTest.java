@@ -69,6 +69,7 @@ public class ProjectsResourceTest extends ResourceTest {
                         "group" : "component-group",
                         "purl" : "pkg:maven/foo/bar@3.0",
                         "internal" : false,
+                        "direct" : true,
                         "occurrence_count" : 0,
                         "uuid" : "${json-unit.any-string}"
                       }, {
@@ -77,6 +78,7 @@ public class ProjectsResourceTest extends ResourceTest {
                         "group" : "component-group",
                         "purl" : "pkg:maven/foo/bar@2.0",
                         "internal" : false,
+                        "direct": false,
                         "scope": "REQUIRED",
                         "resolved_license" : {
                               "name" : "MIT License",
@@ -115,6 +117,7 @@ public class ProjectsResourceTest extends ResourceTest {
                        "group" : "component-group",
                        "purl" : "pkg:maven/foo/bar@1.0",
                        "internal" : false,
+                       "direct": false,
                        "occurrence_count" : 0,
                        "hashes": {
                             "md5": "hash-md5"
@@ -412,6 +415,7 @@ public class ProjectsResourceTest extends ResourceTest {
         component.setName("component-name");
         component.setVersion("3.0");
         component.setPurl("pkg:maven/foo/bar@3.0");
+        component.setDirect(true);
         qm.createComponent(component, false);
 
         return project;
